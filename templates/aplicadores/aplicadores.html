@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Datos de Aplicadores</title>
+
+    <!-- Incluye Bootstrap y jQuery -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0/dist/js/bootstrap.min.js"></script>
+
+    <style>
+        /* Agrega estilos personalizados aquí */
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Formulario de Datos de Aplicadores</h1>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+    </div>
+
+    <script>
+        // Función para mostrar un popup
+        function showPopup(element, message) {
+            element.setAttribute('data-bs-toggle', 'popover');
+            element.setAttribute('data-bs-content', message);
+            element.setAttribute('data-bs-trigger', 'focus');
+            new bootstrap.Popover(element);
+        }
+
+        // Asignar eventos clic a los campos para mostrar los popups
+        document.addEventListener("DOMContentLoaded", function () {
+            var cueanexoField = document.getElementById('id_cueanexo');
+            showPopup(cueanexoField, 'Debe comenzar con "22" y tener 9 dígitos en total.');
+
+            var dniField = document.getElementById('id_dni');
+            showPopup(dniField, 'Debe consistir en 8 dígitos distintos de 0 sin puntos ni comas.');
+
+            var cuilField = document.getElementById('id_cuil');
+            showPopup(cuilField, 'Debe consistir en 11 dígitos con los dos primeros siendo 20, 27, 23 o 24 sin puntos, comas ni guiones.');
+
+            // Puedes continuar agregando más campos aquí
+        });
+    </script>
+</body>
+</html>

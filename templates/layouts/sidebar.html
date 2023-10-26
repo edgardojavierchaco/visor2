@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Lateral</title>
+
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+</head>
+<body id="body">    
+    <header>
+        <div class="icon__menu">
+            <i class="fas fa-bars" id="btn_open"></i>
+        </div>        
+    </header>        
+    <div class="menu__side" id="menu_side">
+        <div class="name__page">
+            <i class="fas fa-users-cog"></i>
+            <h4>{{request.user.username}}</h4>
+        </div>
+        <div class="options__menu">
+            <a href="{% url 'home'%}" class="selected">
+                <div class="option">                    
+                    <i class="fa fa-home"></i>
+                    <h4>Inicio</h4>
+                    <div class="description">Ir a la página de inicio</div>
+                </div>                
+            </a>
+            <a href="#" class="selected">
+                <div class="option">
+                    <img src="{% static '/img/mapadatos.png' %}">
+                    <h4>Mapa</h4>
+                    <i class="fas fa-chevron-down"></i>
+                    <div class="description">Explorar el mapa</div>
+                </div>
+            </a>
+            <div class="submenu">
+                <a href="{% url 'mapas:puntos' %}">
+                    <div class="option">
+                        <img src="{% static '/img/forma.png' %}">
+                        <h4>Por área dibujada</h4>
+                        <div class="description">Ver puntos en el mapa</div>
+                    </div>                
+                </a>
+                <a href="{% url 'mapas:filtrado' %}">
+                    <div class "option">
+                        <img src="{% static '/img/prueba.png' %}">
+                        <h5>Por Selección de Criterios</h5>
+                        <div class="description">Filtrar elementos en el mapa</div>
+                    </div>                
+                </a>
+                <a href="{% url 'mapas:filcueradio' %}">
+                    <div class="option">
+                        <img src="{% static '/img/radar.png'%}">
+                        <h4>Por radio</h4>
+                        <div class="description">Buscar CUE por radio</div>
+                    </div>                
+                </a>
+            </div>
+            <a href="{% url 'reportes:panel' %}">
+                <div class="option">
+                    <img src="{% static '/img/analitica.png' %}">
+                    <h4>Reportes</h4>
+                    <div class="description">Ver opciones de reportes</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Agrega jQuery (asegúrate de incluirlo en tu proyecto) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        // Al hacer clic en la opción "Mapa"
+        $(".selected").click(function() {
+            // Alternar la clase "active" en la opción "Mapa"
+            $(this).toggleClass("active");
+            // Mostrar u ocultar el submenu
+            $(this).next(".submenu").slideToggle();
+        });
+    });
+    </script>
+
+    {% block content %}{% endblock %}
+    <script src="{% static 'js/sidebars.js' %}"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

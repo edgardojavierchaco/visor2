@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infografía Niveles Educativos</title>
+    <link rel="stylesheet" href="{% static 'css/infografia.css'%}">
+</head>
+<body>
+    <div class="infografias-container">
+        <div class="infografia nivel-inicial">
+            <span class="pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/nivel_inicial.jpg'%}" alt="Nivel Inicial"></div>
+            <div class="datos">
+                <h2>Nivel Inicial</h2>
+                <p>Estudiantes: 500</p>
+                <p>Cargos Docentes: 20</p>
+                <p>Unidades de Servicios: 10</p>
+            </div>
+        </div>
+
+        <div class="infografia nivel-primario">
+            <span class="pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/nivel_primario.jpg'%}" alt="Nivel Primario"></div>
+            <div class="datos">
+                <h2>Nivel Primario</h2>
+                <p>Estudiantes: 1000</p>
+                <p>Cargos Docentes: 40</p>
+                <p>Unidades de Servicios: 20</p>
+            </div>
+        </div>
+
+        <div class="infografia nivel-secundario">
+            <span class "pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/nivel_secundario.jpg'%}" alt="Nivel Secundario"></div>
+            <div class="datos">
+                <h2>Nivel Secundario</h2>
+                <p>Estudiantes: 800</p>
+                <p>Cargos Docentes: 30</p>
+                <p>Unidades de Servicios: 15</p>
+            </div>
+        </div>
+
+        <div class="infografia nivel-superior">
+            <span class="pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/nivel_superior.jpg'%}" alt="Nivel Superior"></div>
+            <div class="datos">
+                <h2>Nivel Superior</h2>
+                <p>Estudiantes: 1200</p>
+                <p>Cargos Docentes: 50</p>
+                <p>Unidades de Servicios: 25</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

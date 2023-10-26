@@ -1,0 +1,9 @@
+{% extends "base.html" %} 
+
+{% block title %}Forbidden (403){% endblock %} 
+
+{% block content %}
+
+{% if exception %}{{ exception }}{% else %}No tienes los permisos para ingresar.{% endif %}
+
+{% endblock content %} 

@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Panel de Reportes{% endblock %}
+
+{% block styles %}    
+    <style>
+        /* Estilos de los contenedores de tarjetas */
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Estilos de las tarjetas */
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            text-align: left;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Estilos del pinche */
+        .pin {
+            font-size: 24px;
+            position: absolute;
+            top: 0;
+            left: 10px;
+        }
+
+        /* Colores de fondo */
+        .card-red {
+            background-color: #ff5733; /* Color de fondo tarjeta roja */
+        }
+
+        .card-green {
+            background-color: #33ff57; /* Color de fondo tarjeta verde */
+        }
+
+        .card-blue {
+            background-color: #007bff; /* Color de fondo tarjeta azul */
+        }
+
+        .card-orange {
+            background-color: #ffaa00; /* Color de fondo tarjeta naranja */
+        }
+
+        .card-purple {
+            background-color: #aa33ff; /* Color de fondo tarjeta morada */
+        }
+
+        .card-yellow {
+            background-color: #ffff33; /* Color de fondo tarjeta amarilla */
+        }
+
+        /* Imágenes en el lateral izquierdo */
+        .card img {
+            width: 80px;
+            height: auto;
+            border-radius: 50%;
+            float: left;
+            margin-right: 20px;
+        }
+
+        .card p {
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}    
+
+{% block content %}
+    
+    <div class="containerpanel mt-4">
+        <div class="titularpanel">
+            <h1>PANEL DE REPORTES</h1>
+        </div>        
+        <div class="wave__container">
+            <div class="wave__background w1"></div>
+            <div class="wave__background w2"></div>
+        </div>
+        <div class="container__allpanel" id="container_allpanel">        
+            <div class="cover">
+                <div class="container__cover">                
+                    <div class="card-container">
+                        <div class="card card-red">
+                            <a href="{% url 'reportes:filtrado_docentes'%}">
+                                <span class="pin">📌</span>
+                                <img src="{% static 'img/docenactiv.gif'%}" alt="docentes en actividad">
+                                <p>Docentes en Actividad</p>
+                            </a>
+                        </div>
+                        <div class="card card-green">
+                            <a href="{% url 'reportes:filtrado_horas'%}">
+                                <span class="pin">📌</span>
+                                <img src="{% static 'img/time-clock.gif'%}" alt="distribución de horas">
+                                <p>Distribución de Horas</p>
+                            </a>
+                        </div>
+                        <div class="card card-blue">
+                            <a href="{% url 'reportes:filtrado_cargos'%}">
+                                <span class="pin">📌</span>
+                                <img src="{% static 'img/liscargos.gif'%}" alt="Listado de cargos">
+                                <p>Distribución de Cargos</p>
+                            </a>
+                        </div>
+                        <div class="card card-orange">
+                            <a href="{% url 'reportes:filtrado_aborigen'%}">
+                                <span class="pin">📌</span>
+                                <img src="{% static 'img/wiphala.gif'%}" alt="Matrícula Aborigen">
+                                <p>Matrícula Aborigen</p>
+                            </a>
+                        </div>
+                        <div class="card card-purple">
+                            <a href="{% url 'reportes:filtrado_comesp'%}">
+                                <span class="pin">📌</span>
+                                <img src="{% static 'img/reportes.gif'%}" alt="Matrícula Común y Especial">
+                                <p>Matrícula Adultos, Común y Especial</p>
+                            </a>
+                        </div>
+                        <div class="card card-yellow">
+                            <a href="{% url 'reportes:filtrado_snu'%}">
+                                <span class "pin">📌</span>
+                                <img src="{% static 'img/Site-Stats.gif'%}" alt="Matrícula SNU">
+                                <p>Matrícula SNU</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+
+
+

@@ -1,0 +1,29 @@
+<!-- ofertas.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Capas Unicas de Ofertas</title>
+</head>
+<body>
+    <h1>Lista de Capas Unicas de Ofertas</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Cueanexo</th>
+                <th>Nombre Est</th>
+                <!-- Agrega aquí los encabezados de las otras columnas que deseas mostrar -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for registro in data %}
+            <tr>
+                <td>{{ registro.0 }}</td>
+                <td>{{ registro.4 }}</td>
+                <!-- Agrega aquí las celdas correspondientes a las otras columnas -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

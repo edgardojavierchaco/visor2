@@ -1,0 +1,10 @@
+{% extends "base.html" %} 
+
+{% block title %}Page not found{% endblock %} 
+
+{% block content %}
+Pagina no encontrada
+
+{% if exception %}{{ exception }}{% else %}Esta no es la página que estabas buscando.{% endif %}
+
+{% endblock content %} 

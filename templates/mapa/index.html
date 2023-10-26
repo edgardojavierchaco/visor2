@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css' rel='stylesheet' integrity='sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC' crossorigin='anonymous'>
+    <title>Document</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class='form-check form-switch'>
+        <input class='form-check-input' type='checkbox' id='SwitchCheckAmbito' onchange='toggleDropdown('Ambito')'>
+        <label class='form-check-label' for='SwitchCheckAmbito'>Ámbito</label>
+        <select class='form-select hidden' id='AmbitoDropdown' disabled>
+            <option value='Urbano'>Urbano</option>
+            <option value='Rural Disperso'>Rural Disperso</option>
+            <option value='Rural Aglomerado'>Rural Aglomerado</option>
+        </select>
+    </div>
+    <div class='form-check form-switch'>
+        <input class='form-check-input' type='checkbox' id='SwitchCheckSector' onchange='toggleDropdown('Sector')'>
+        <label class='form-check-label' for='SwitchCheckSector'>Sector</label>
+        <select class='form-select hidden' id='SectorDropdown' disabled>
+            <option value='Estatal'>Estatal</option>
+            <option value='Privado'>Privado</option>
+            <option value='Gestión Social'>Gestión Social</option>
+        </select>
+    </div>
+    <div class='form-check form-switch'>
+        <input class='form-check-input' type='checkbox' id='SwitchCheckRegion' onchange='toggleDropdown('Region')'>
+        <label class='form-check-label' for='SwitchCheckRegion'>Región</label>
+        <select class='form-select hidden' id='RegionDropdown' disabled>
+            <option value='R.E. 10-A'>1</option>
+            <option value='2'>2</option>
+            <option value='3'>3</option>
+            <!-- Agrega más opciones de regiones si es necesario -->
+        </select>
+    </div>
+    <div class='form-check form-switch'>
+        <input class='form-check-input' type='checkbox' id='SwitchCheckDepartamento' onchange='toggleDropdown('Departamento')'>
+        <label class='form-check-label' for='SwitchCheckDepartamento'>Departamento</label>
+        <select class='form-select hidden' id='DepartamentoDropdown' disabled>
+            <option value='SAN FERNANDO'>SAN FERNANDO</option>
+            <option value='Eva Perón'>Eva Perón</option>
+            <option value='Sargento Cabral'>Sargento Cabral</option>
+            <!-- Agrega más opciones de departamentos si es necesario -->
+        </select>
+    </div>
+
+    <button onclick='sendFormData()'>Enviar</button>
+    <button onclick='resetForm()'>Limpiar</button>
+
+    <script>
+        // Guarda los valores iniciales de los switches
+        const initialSwitchStates = {
+            'Ambito': false,
+            'Sector': false,
+            'Region': false,
+            'Departamento': false
+        };
+
+        // Espera a que el DOM esté completamente cargado
+        document.addEventListener('DOMContentLoaded', function() {
+            // Desactiva los dropdowns al cargar el template
+            toggleDropdown('Ambito');
+            toggleDropdown('Sector');
+            toggleDropdown('Region');
+            toggleDropdown('Departamento');
+        });
+
+        function toggleDropdown(id) {
+            const switchElement = document.getElementById(`SwitchCheck${id}`);
+            const dropdown = document.getElementById(`${id}Dropdown`);
+
+            if (switchElement.checked) {
+                dropdown.classList.remove('hidden');
+                dropdown.disabled = false;
+            } else {
+                dropdown.classList.add('hidden');
+                dropdown.disabled = true;
+            }
+        }
+
+        function sendFormData() {
+            const ambitoDropdown = document.getElementById('AmbitoDropdown');
+            const sectorDropdown = document.getElementById('SectorDropdown');
+            const regionDropdown = document.getElementById('RegionDropdown');
+            const departamentoDropdown = document.getElementById('DepartamentoDropdown');
+
+            const ambito = ambitoDropdown.value;
+            const sector = sectorDropdown.value;
+            const region = regionDropdown.value;
+            const departamento = departamentoDropdown.value;
+
+            const url = `/mapas/get_filtered_rows?ambito=${ambito}&sector=${sector}&region=${region}&departamento=${departamento}`;
+
+            // Realiza la solicitud GET al servidor usando fetch()
+            fetch(url)
+                .then(response => {
+                    // Verifica si la respuesta del servidor es exitosa
+                    if (response.ok) {
+                        // Aquí puedes manejar la respuesta exitosa del servidor
+                        console.log('Solicitud enviada con éxito');
+                    } else {
+                        // Aquí puedes manejar la respuesta de error del servidor
+                        console.error('Error en la solicitud');
+                    }
+                })
+                .catch(error => {
+                    // Aquí puedes manejar errores de red u otros errores relacionados con la solicitud
+                    console.error('Error en la solicitud', error);
+                });
+        }
+        
+        function resetForm() {
+            // Restaura los switches a sus valores iniciales
+            Object.keys(initialSwitchStates).forEach(function(id) {
+                const switchElement = document.getElementById(`SwitchCheck${id}`);
+                switchElement.checked = initialSwitchStates[id];
+                toggleDropdown(id);
+            });
+
+            // Restaura los valores de los dropdowns
+            const dropdowns = document.getElementsByClassName('form-select');
+            for (let i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].selectedIndex = 0;
+            }
+        }
+    </script>
+</body>
+</html>

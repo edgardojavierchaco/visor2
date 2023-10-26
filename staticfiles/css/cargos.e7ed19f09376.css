@@ -1,0 +1,15 @@
+.centered{
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.caption {
+    background-color: hsl(244, 89%, 42%) !important; /* Color de fondo para el caption */
+    color: #ece3e3 !important; /* Color del texto en el caption */
+    font-size: 20px !important; /* Tamaño de letra para el caption */
+    font-weight: bold !important; /* Texto en negrita en el caption */
+    padding: 10px !important; /* Espaciado interno alrededor del texto del caption */
+}
+
+
+

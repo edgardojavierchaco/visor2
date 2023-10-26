@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{% static 'css/login.css'%}">
+    <style>
+        body{
+            background-image: url("{% static 'img/bg4.jpg' %}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+    </style>
+</head>
+<body>
+    <main>
+
+        <div class="contenedor__todo">
+
+            <div class="caja__trasera">
+                <div class="caja__trasera-login">
+                    <h3></h3>
+                    <p></p>
+                    
+                </div>
+                <div class="caja__trasera-register">
+                    <h3>¿Aún no tienes una cuenta?</h3>
+                    <p>Comunicate con el Administrador</p>
+                    <button id="btn__salir">Cerrar</button>
+                </div>
+            </div>
+            <div class="contenedor__login">
+                <form action="." class="formulario__login" method="post">
+                    {%csrf_token%}
+                    <h2>Iniciar Sesión</h2>
+                    <input type="text" name="{{ form.username.name }}" placeholder="Nombre de usuario">
+                    <input type="password" name="{{ form.password.name }}" placeholder="Contraseña">
+                    <button>Entrar</button>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

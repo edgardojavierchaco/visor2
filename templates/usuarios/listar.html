@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% block title%}Lista de usuarios{%endblock title%}
+{% block page_tittle %}Creación de credenciales{% endblock page_tittle%}
+
+{% block styles %}
+   <!-- Custom styles for this page -->
+   <link href="{% static 'dash/vendor/datatables/dataTables.bootstrap4.min.css'%}" rel="stylesheet">
+{% endblock styles %}
+
+{% block sidebar %} {% include 'dash/sidebar.html' %} {%endblock sidebar %}
+{% block topbar %}  {% include 'dash/topbar.html' %}  {%endblock topbar %}
+
+
+{% block content %}
+
+<div class="content col-lg-12 mx-auto">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <div class="row">
+                <div class="col-10">
+                    <h5 class="m-0 font-weight-bold text-primary">Lista de usuarios</h5>
+                </div>
+                <div class="col-2">
+                    <a name="" id="" class="btn btn-primary float-end" href="{% url 'usuarios:crear' %}" role="button">Agregar usuario</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Apellido, Nombre</th>
+                            <th>DNI</th>
+                            <th>Teléfono</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    <thead>
+                    <tbody>
+                        {% for object in object_list %}
+                        <tr>
+                            <td>{{ object.last_name }}, {{ object.first_name }}</td>
+                            <td>{{ object.dni }}</td>
+                            <td>{{ object.telefono }}</td>
+                            <td>{{ object.groups.first }}</td>
+
+                            <td>
+                                <a name="" id="" class="btn btn-primary btn-sm" href="{% url 'usuarios:actualizar' object.id %}" role="button"><i class="fa fa-edit" aria-hidden="true"></i></a>
+                                {% if object.documentacion %}
+                                    <a name="" id="" class="btn btn-success btn-sm" href="{% url 'aprender:descargar_documentacion' tipo='usuario' pk=object.id %}" title="Descargar documentación" role="button"><i class="fa fa-download" aria-hidden="true"></i></a>
+                                {% endif %}
+                                {% if user.is_superuser%}
+                                <a name="" id="" class="btn btn-danger btn-sm" href="{% url 'usuarios:eliminar' object.id %}" role="button"><i class="fa fa-bomb" aria-hidden="true"></i></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+    <!-- Page level plugins -->
+    <script src="{% static 'dash/vendor/datatables/jquery.dataTables.min.js'%}"></script>
+    <script src="{% static 'dash/vendor/datatables/dataTables.bootstrap4.min.js'%}"></script>
+
+    <!-- Page level custom scripts -->
+    <script src="{% static 'dash/js/demo/datatables-demo.js'%}"></script>
+
+    <script> 
+
+        aplicadorShow = document.getElementById('collapseUsuarios');
+        aplicadorShow.classList.add('show');
+      
+        aplicadorActive = document.getElementById('listarUsuarios');
+        aplicadorActive.classList.add('active');
+      
+    </script>
+      
+{% endblock scripts %}

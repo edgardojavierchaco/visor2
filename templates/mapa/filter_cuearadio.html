@@ -1,0 +1,160 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <title>Filtro de Búsqueda</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+        .is-invalid {
+            border-color: red;
+        }
+
+    </style>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.js"></script>     
+    <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+
+</head>
+
+<body onload="openModal()">
+    <!-- Button to trigger the modal
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
+        Abrir Filtro de Consulta
+    </button>
+-->
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="model-title" id="myModalLabel">Mapa</h3>
+                    
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h5 class="modal-title" id="myModalLabel">Seleccionar Criterios de Búsqueda</h5>
+                    <form action="{% url 'mapas:filter_cueradio' %}" method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="SwitchCheckCueanexo" onchange="toggleDropdown('Cueanexo')">
+                            <label class="form-check-label" for="SwitchCheckCueanexo">Cueanexo</label>
+                            <div>
+                                <input class="form-control form-text-input hidden" type="text" id="CueanexoDropdown" name="Cueanexo" onblur="validateCueanexo(this)" onkeypress="return event.charCode >= 48 && event.charCode <= 57" style="width: 100px;" disabled>
+                            </div>
+                        </div>
+                          
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="SwitchCheckRadio" onchange="toggleDropdown('Radio')">
+                            <label class="form-check-label" for="SwitchCheckRadio">Radio</label>
+                            <div class="form-floating">
+                                <select class="form-select hidden" id="RadioDropdown" name="Radio" disabled>
+                                    <option selected>Seleccione un radio</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                    <option value="1500">1500</option>
+                                    <option value="2000">2000</option>
+                                    <option value="2500">2500</option>
+                                </select>
+                            </div>
+                        </div>
+                      
+                        <div class="modal-footer">                            
+                            
+                            <button type="submit" class="btn btn-success">Enviar</button>
+                            <button type="button" class="btn btn-warning" onclick="resetForm()">Limpiar</button>
+                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="cerrarBtn">Cerrar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+   
+    <script src="{% static 'js/funciones.js' %}"></script>
+
+    <script>
+        function openModal() {
+            const myModal = new bootstrap.Modal(document.getElementById('myModal'));
+            myModal.show();
+        }
+    </script>
+    <script>
+        function toggleDropdown(elementId) {
+            const dropdown = document.getElementById(elementId + 'Dropdown');
+            const checkbox = document.getElementById('SwitchCheck' + elementId);              
+            
+            
+
+            if (checkbox.checked) {
+                dropdown.classList.remove('hidden');
+                dropdown.disabled = false;
+                
+                if (elementId === 'Region') {
+                    avisoregion()
+                }
+            } else {
+                dropdown.classList.add('hidden');
+                dropdown.disabled = true;
+                
+                
+            }
+        }
+
+        function resetForm() {
+            const form = document.querySelector('form');
+            form.reset();
+
+            const dropdowns = document.querySelectorAll('.form-select');
+            dropdowns.forEach((dropdown) => {
+                dropdown.classList.add('hidden');
+                dropdown.disabled = true;
+            });    
+            
+            const cueanexoInput = document.querySelector('.form-control.form-text-input');
+            cueanexoInput.classList.add('hidden');
+            cueanexoInput.disabled = true;
+        
+            
+        }
+
+        function validateCueanexo(input) {
+                const cueanexo = input.value.trim();
+                const isValid = /^22\d{7}$/.test(cueanexo);
+                const errorMessage = 'Ingrese un Cueanexo válido (9 dígitos, los dos primeros deben ser "22")';
+                
+                if (!isValid) {
+                //input.classList.add('is-invalid');
+                //input.setCustomValidity(errorMessage);
+                //alert(errorMessage)
+                    alert_jqueryvalidacion()
+                } else {
+                input.classList.remove('is-invalid');
+                input.setCustomValidity('');
+                }
+            }
+            
+                        
+    </script>
+    <script>
+        document.getElementById("cerrarBtn").addEventListener("click", function() {
+          window.location.href = "/cards";
+        });
+      </script>
+
+</body>
+
+</html>

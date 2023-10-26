@@ -1,0 +1,111 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadistica Educativa</title>
+    <link rel="stylesheet" href="{% static 'css/estilos-headers.css'%}">
+    <style>
+        .wave__background {
+            position: absolute;
+            width: 6000px;
+            height: 100%;
+            background-image: url("{% static 'img/wd1.svg' %}");
+            position: absolute;
+            top: 90px;
+            left: 0;
+            background-position: bottom;
+        }
+
+        .w1 {
+            animation: w1 7s linear infinite;
+        }
+
+        .w2 {
+            animation: w2 7s linear -.125s infinite, desplazamiento 7s ease -.125s infinite;
+            opacity: 0.5;
+        }
+
+        @keyframes w1 {
+            0% {
+                margin-left: 0;
+            }
+            100% {
+                margin-left: -1600px;
+            }
+        }
+
+        @keyframes w2 {
+            0% {
+                margin-left: 0;
+            }
+            100% {
+                margin-left: -1600px;
+            }
+        }
+
+        @keyframes desplazamiento {
+            0% {
+                transform: translateY(-25px);
+            }
+            50% {
+                transform: translateY(10px);
+            }
+        }
+
+        @media only screen and (max-width: 420px) {
+            /* Ajustes de estilo para pantallas menores de 420px */
+            .container__all {
+                padding: 10px; /* Reduzca el espacio alrededor del contenido en pantallas pequeñas */
+                transform: scale(0.8); /* Reduzca el tamaño de todo al 80% */
+            }
+            .container__info {
+                transform: scale(0.8);
+            }
+
+            /* Agregue otras reglas de estilo necesarias para pantallas pequeñas aquí */
+        }
+
+        @media only screen and (min-width: 769px) {
+            /* Estilos para dispositivos móviles y tablets */
+            .wave__background {
+                display: block; /* Mostrar el fondo de ondas en pantallas pequeñas */
+            }
+
+            .container__all {
+                padding: 20px; /* Añadir espacio alrededor del contenido en pantallas pequeñas */
+            }
+
+            /* Otros ajustes de estilo para pantallas pequeñas */
+        }
+    </style>
+
+    <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="wave__container">
+        <div class="wave__background w1"></div>
+        <div class="wave__background w2"></div>
+    </div>
+    <div class="container__all" id="container_all">
+        <div class="cover">
+            <div class="container__cover">
+                <div class="container__info">
+                    <h1>BIENVENIDOS</h1>
+                    <input type="button" value="Ingresar" onclick="redirectToTemplate()">
+                </div>
+                <div class="container__vector">
+                    <img src="{% static 'img/logoEst.png'%}" alt="">
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function redirectToTemplate(){
+            window.location.href="{% url 'cards'%}";
+        }
+    </script>
+    {% include 'layouts/footer.html' %}
+</body>
+</html>
