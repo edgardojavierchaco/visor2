@@ -55,3 +55,4 @@ services:
       - production_django_media_volume:/usr/share/nginx/media:ro
     ports:
       - "8000:80"
+      

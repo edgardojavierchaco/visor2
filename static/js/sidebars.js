@@ -29,3 +29,4 @@ window.addEventListener('resize', function () {
         sideMenu.classList.add('menu__side_move');
     }
 });
+

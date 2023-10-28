@@ -7,8 +7,8 @@ bcrypt==4.0.1
 cffi==1.15.1
 cryptography==41.0.2
 Django==4.2.5
-django-autocomplete-light 
-django-bootstrap5>=0.7 # https://github.com/django-crispy-forms/crispy-bootstrap5
+django-autocomplete-light==3.9.7
+django-bootstrap5==23.3
 django-cors-headers==4.2.0
 django-crispy-forms==2.0
 django-debug-toolbar==4.1.0
@@ -126,8 +126,7 @@ wcwidth==0.2.6
 wrapt==1.15.0
 et-xmlfile==1.1.0
 numpy==1.25.2
-openpyxl
-#openpyxl==3.1.2
+openpyxl==3.1.2
 platformdirs==3.10.0
 psycopg2-binary==2.9.7
 pyarrow==12.0.1
@@ -135,3 +134,6 @@ pylance==0.6.2
 PyYAML==6.0.1
 sentry-sdk==1.29.2
 typing_extensions==4.7.1
+tzdata==2023.3
+uritemplate==4.1.1
+

@@ -156,3 +156,4 @@ async def filtrar_tablas_view(request):
     # Cerrar la conexión a la base de datos
     await connection.close()
     return render(request, 'mapa/otro_template.html', {'resultados': resultados, 'resultados1':resultados1, 'resultados2':resultados2, 'resultados3':resultados3})
+

@@ -32,3 +32,4 @@ services:
       - visor_local_postgres_data_backups:/backups
     env_file:
       - ./.env
+      

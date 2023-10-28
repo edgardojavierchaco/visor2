@@ -60,5 +60,4 @@ def filter_data_infografia(request):
             return render(request, 'error_conexion.html')
 
         cursor = connection.cursor()
-        
-        
+ 

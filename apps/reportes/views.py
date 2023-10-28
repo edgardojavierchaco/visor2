@@ -452,3 +452,4 @@ def filter_data_horas(request):
         except psycopg2.Error as e:
             # Manejar el error de conexión
             return render(request, 'error_conexion.html',{'mensaje': 'Error en la consulta: ' + str(e)})
+

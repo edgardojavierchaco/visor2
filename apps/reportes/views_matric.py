@@ -418,4 +418,5 @@ def filter_data_snu(request):
             return render(request, 'consulta_vacia.html')
         
         # Devolver los datos como contexto a la plantilla 'cargos.html'
-        return render(request, 'reportes/snu.html', {'datasnu': datasnu, 'nvistasnu': nvistasnu, 'nrelevamiento':nrelevamiento})    
+        return render(request, 'reportes/snu.html', {'datasnu': datasnu, 'nvistasnu': nvistasnu, 'nrelevamiento':nrelevamiento})   
+     

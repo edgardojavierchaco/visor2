@@ -146,8 +146,3 @@ SPECTACULAR_SETTINGS = {
         {'url': 'https://relevamientoanual.com.ar', 'description': 'Production server'},
     ],
 }
-
-
-
-
-

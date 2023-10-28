@@ -15,3 +15,4 @@ class Command(BaseCommand):
                 time.sleep(1)
 
         self.stdout.write(self.style.SUCCESS('La base de datos está disponible, continuando...'))
+        

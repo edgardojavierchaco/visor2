@@ -35,3 +35,4 @@ backup_filename="${BACKUP_FILE_PREFIX}_$(date +'%Y_%m_%dT%H_%M_%S').sql.gz"
 pg_dump | gzip >"${BACKUP_DIR_PATH}/${backup_filename}"
 
 message_success "'${POSTGRES_DB}' database backup '${backup_filename}' fue creado y localizado en '${BACKUP_DIR_PATH}'."
+

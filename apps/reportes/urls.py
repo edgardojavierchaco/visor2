@@ -23,3 +23,4 @@ urlpatterns=[
     path('panel/', TemplateView.as_view(template_name='reportes/panel_reportes.html'),name='panel')
 ]
 
+
