@@ -1,10 +1,3 @@
-/* Estilos generales para la infografía */
-.infografias-container {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-}
-
 /* Estilos para cada nivel educativo */
 .infografia {
     display: flex;
@@ -17,30 +10,24 @@
     width: 200px; /* Ancho fijo para cada infografía */
 }
 
-.nivel-inicial {
-    background-color: #FFB6C1; /* Color de fondo */
+.nivel-inicial, .nivel-secundario {
+    background-color: #FFB6C1; /* Color de fondo para nivel-inicial */
     color: #000; /* Color de texto */
+    justify-content: flex-start; /* Alinear contenido al inicio (izquierda) */
+    text-align: left; /* Alinear texto a la izquierda */
 }
 
-.nivel-primario {
-    background-color: #87CEEB;
-    color: #000;
+.nivel-primario, .nivel-superior {
+    background-color: #87CEEB; /* Color de fondo para nivel-primario */
+    color: #000; /* Color de texto */
+    justify-content: flex-end; /* Alinear contenido al final (derecha) */
+    text-align: right; /* Alinear texto a la derecha */
 }
 
-.nivel-secundario {
-    background-color: #FFD700;
-    color: #000;
-}
-
-.nivel-superior {
-    background-color: #98FB98;
-    color: #000;
-}
-
-.imagen-representativa {
-    max-width: 100px;
-    max-height: 100px;
-    border-radius: 50%;
+.imagen-representativa img {
+    width: 50%; /* Reducir el tamaño de la imagen al 50% */
+    height: auto; /* Mantener la proporción de la imagen */
+    border-radius: 50%; /* Aplicar bordes redondos */
     margin: 10px 0; /* Espacio entre la imagen y el contenido de texto */
 }
 
@@ -52,4 +39,5 @@
     font-size: 1.5em;
     margin-bottom: 10px; /* Espacio debajo del pinche */
 }
+
 

@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Panel de Infografias{% endblock %}
+
+{% block styles %}    
+    <style>
+        /* Estilos de los contenedores de tarjetas */
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Estilos de las tarjetas */
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            text-align: left;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Estilos del pinche */
+        .pin {
+            font-size: 24px;
+            position: absolute;
+            top: 0;
+            left: 10px;
+        }
+
+        /* Colores de fondo */
+        .card-red {
+            background-color: #ff5733; /* Color de fondo tarjeta roja */
+        }
+
+        .card-green {
+            background-color: #33ff57; /* Color de fondo tarjeta verde */
+        }
+
+        .card-blue {
+            background-color: #007bff; /* Color de fondo tarjeta azul */
+        }
+
+        .card-orange {
+            background-color: #ffaa00; /* Color de fondo tarjeta naranja */
+        }
+
+        .card-purple {
+            background-color: #aa33ff; /* Color de fondo tarjeta morada */
+        }
+
+        .card-yellow {
+            background-color: #ffff33; /* Color de fondo tarjeta amarilla */
+        }
+
+        /* Imágenes en el lateral izquierdo */
+        .card img {
+            width: 80px;
+            height: auto;
+            border-radius: 50%;
+            float: left;
+            margin-right: 20px;
+        }
+
+        .card p {
+            font-weight: bold;
+        }
+
+        body {
+            text-align: center; /* Alinear texto al centro */
+            background-color: #f4f4f4;
+        }
+        h1 {
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: inline-block; /* Evitar que el recuadro tome todo el ancho disponible */
+        }
+    </style>
+{% endblock %}    
+
+{% block content %}
+    
+    <div class="containerpanel mt-4">
+        <div class="titularpanel">
+            <h1>PANEL DE INFOGRAFIAS</h1>
+        </div>        
+        <div class="wave__container">
+            <div class="wave__background w1"></div>
+            <div class="wave__background w2"></div>
+        </div>
+        <div class="container__allpanel" id="container_allpanel">        
+            <div class="cover">
+                <div class="container__cover">                
+                    <div class="card-container">
+                        
+                        <div class="card card-orange">
+                            <a href="{% url 'reportes:info1'%}">
+                                
+                                <img src="{% static 'img/info1.png'%}" alt="Matricula - Cargos - Horas">
+                                <p>Estudiantes</p>
+                                <p>Cargos</p>
+                                <p>Horas</p>
+                                <p>Unidades de Servicios</p>
+                            </a>
+                        </div>
+                        <div class="card card-purple">
+                            <a href="{% url 'reportes:info2'%}">
+                                
+                                <img src="{% static 'img/info2.png'%}" alt="Establecimientos - Secciones">
+                                <p>Establecimientos</p>
+                                <p>Secciones</p>
+                            </a>
+                        </div>
+                        <!---
+                        <div class="card card-yellow">
+                            <a href="{% url 'reportes:filtrado_snu'%}">
+                                
+                                <img src="{% static 'img/Site-Stats.gif'%}" alt="Matrícula SNU">
+                                <p>Matrícula SNU</p>
+                            </a>
+                        </div>
+                        -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
