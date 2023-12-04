@@ -204,15 +204,7 @@ def filter_data_comesp(request):
         nvistacomesp = opciones_descriptivas.get(tvistacomesp, 'Especial Primaria')
 
         # Asignar un valor descriptivo a la opción de relevamiento seleccionado
-        opciones_relevamiento={
-            'ra_carga2011':'Relevamiento 2011',
-            'ra_carga2012':'Relevamiento 2012',
-            'ra_carga2013':'Relevamiento 2013',
-            'ra_carga2014':'Relevamiento 2014',
-            'ra_carga2015':'Relevamiento 2015',
-            'ra_carga2016':'Relevamiento 2016',
-            'ra_carga2017':'Relevamiento 2017',
-            'ra_carga2018':'Relevamiento 2018',
+        opciones_relevamiento={            
             'ra_carga2019':'Relevamiento 2019',
             'ra_carga2020':'Relevamiento 2020',
             'ra_carga2021':'Relevamiento 2021',

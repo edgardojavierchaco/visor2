@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Equipo{% endblock %}
+
+{% block styles %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: rgb(9, 74, 136);
+        }
+
+
+        .card {
+            position: relative;
+            width: 300px;
+            height: 350px;
+            margin: 20px;
+        }
+
+        .card .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: .5s;
+        }
+
+        .card .front {
+            transform: perspective(600px) rotateY(0deg);
+            box-shadow: 0 5px 10px #000;
+        }
+
+        .card .front img {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card .front h3 {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 45px;
+            line-height: 45px;
+            color: #fff;
+            background: rgba(0,0,0,.4);
+            text-align: center;
+        }
+
+        .card .back {
+            transform: perspective(600px) rotateY(180deg);
+            background: rgb(3, 35, 54);
+            padding: 15px;
+            color: #f3f3f3;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+            box-shadow: 0 5px 10px #000;
+        }
+
+        .card .back .link {
+            border-top: solid 1px #f3f3f3;
+            height: 50px;
+            line-height: 50px;
+        }
+
+        .card .back .link a {
+            color: #f3f3f3;
+        }
+
+        .card .back h3 {
+            font-size: 30px;
+            margin-top: 20px;
+            letter-spacing: 2px;
+        }
+
+        .card .back p {
+            letter-spacing: 1px;
+        } 
+
+        .card:hover .front {
+            transform: perspective(600px) rotateY(180deg);
+        }
+
+        .card:hover .back {
+            transform: perspective(600px) rotateY(360deg);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/pablogonzalez.png' %}" alt="">
+        <h3>Pablo</h3>
+    </div>
+    <div class="face back">
+        <h3>Pablo González</h3>
+        <p>Jefe de Departamento Estadísticas Educativas</p>            
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+        
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/sonia.png' %}" alt="">
+        <h3>Sonia</h3>
+    </div>
+    <div class="face back">
+        <h3>Sonia Cuevas</h3>
+        <p>Referente Jurisdiccional</p>
+        <p>Relevamiento Anual</p>
+        <div class="link">
+           <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/aleparras.png' %}" alt="">
+        <h3>Alejandro</h3>
+    </div>
+    <div class="face back">
+        <h3>Alejandro Parras</h3>
+        <p>Referente Jurisdiccional</p>
+        <p>Cartografía Educativa y GIS</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/alegonzalez.png' %}" alt="">
+        <h3>Alejandro</h3>
+    </div>
+    <div class="face back">
+        <h3>Alejandro González</h3>            
+        <p>Cartografía Educativa y GIS</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/hugoduarte.png' %}" alt="">
+        <h3>Hugo</h3>
+    </div>
+    <div class="face back">
+        <h3>Hugo Duarte</h3>            
+        <p>Análisis de Información Educativa</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/giorginaibarra.png' %}" alt="">
+        <h3>Georgina</h3>
+    </div>
+    <div class="face back">
+        <h3>Georgina Ibarra</h3>
+        <p>Referente SIE</p>
+        <p>Módulo Alumnos - Regiones 8 A y Sub 5</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/malvimaggio.png' %}" alt="">
+        <h3>Malvina</h3>
+    </div>
+    <div class="face back">
+        <h3>Malvina Maggio</h3>
+        <p>Referente Relevamiento Anual</p>
+        <p>Nivel Inicial y EPJA</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/yamiletorres.png' %}" alt="">
+        <h3>Yamile</h3>
+    </div>
+    <div class="face back">
+        <h3>Yamile Torres</h3>
+        <p>Referente Jurisdiccional</p>
+        <p>Sistema Padrón</p>
+        <p>Relevamiento Anual Inical, Secundario y Superior</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/monicasilva.png' %}" alt="">
+        <h3>Mónica</h3>
+    </div>
+    <div class="face back">
+        <h3>Mónica Silva</h3>
+        <p>Referente Relevamiento Anual</p>
+        <p>Nivel Primario</p>
+        <div class="link">
+           <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/fernandomotter.png' %}" alt="">
+        <h3>Fernando</h3>
+    </div>
+    <div class="face back">
+        <h3>Fernando Motter</h3>
+        <p>Referente SIE</p>
+        <p>Módulo Alumos - Regiones Sub 1A y B, Sub 2-3-6</p>
+        <p>Relevamiento Anual - Formación Profesional</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/paulofrete.png' %}" alt="">
+        <h3>Paulo</h3>
+    </div>
+    <div class="face back">
+        <h3>Paulo Frete</h3>
+        <p>Referente SIE</p>
+        <p>Módulo Alumnos - Regiones 10 A y 10 C</p>
+        <p>Referente Relevamiento Anual - Educación Especial</p>
+        <p></p>
+        <div class="link">
+           <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/gustabohellbach.png' %}" alt="">
+        <h3>Gustavo</h3>
+    </div>
+    <div class="face back">
+        <h3>Gustavo Hellbach</h3>
+        <p>Referente Relevamiento Anual</p>
+        <p>Bibliotecas y CEF</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/danteacuña.png' %}" alt="">
+        <h3>Dante</h3>
+    </div>
+    <div class="face back">
+        <h3>Dante Acuña</h3>
+        <p>Referente SIE</p>
+        <p>Módulo Alumnos - Regiones 4B, 5 y 7</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/nicolasmestre.png' %}" alt="">
+        <h3>Nicolas</h3>
+    </div>
+    <div class="face back">
+        <h3>Nicolas Mestres</h3>
+        <p>Desarrollador Sistema de Información</p>            
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>    
+
+<div class="card">
+    <div class="face front">
+        <img src="{% static 'img/edgardogomez.png' %}" alt="">
+        <h3>Edgardo</h3>
+    </div>
+    <div class="face back">
+        <h3>Edgardo Gómez</h3>
+        <p>Desarrollador Full Stack Stack</p>
+        <p>Administrador de Base de Datos</p>
+        <div class="link">
+            <!---
+            <a href="#">Details</a>
+            -->
+        </div>
+    </div>
+</div>
+    {% include 'layouts/footer.html' %}
+{% endblock %}

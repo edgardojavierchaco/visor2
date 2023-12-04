@@ -20,6 +20,7 @@ urlpatterns = [
     path('error_conexion/', TemplateView.as_view(template_name='error_conexion.html'), name='error_conexion'),
     path('consulta_vacia/', TemplateView.as_view(template_name='consulta_vacia.html'), name='consulta_vacia'),
     path('repo/', include('apps.reportes.urls', namespace='repo')),       
+    path('equipo/',TemplateView.as_view(template_name='equipo.html'),name='equipo'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
