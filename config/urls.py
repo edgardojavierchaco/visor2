@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 from django.views import defaults as default_views
 
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),    
@@ -21,6 +22,7 @@ urlpatterns = [
     path('consulta_vacia/', TemplateView.as_view(template_name='consulta_vacia.html'), name='consulta_vacia'),
     path('repo/', include('apps.reportes.urls', namespace='repo')),       
     path('equipo/',TemplateView.as_view(template_name='equipo.html'),name='equipo'),
+    path('videoteca/',include('apps.videoteca.urls',namespace='videoteca')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 

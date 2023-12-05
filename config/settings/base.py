@@ -28,6 +28,7 @@ LOCAL_APPS = [
     'apps.users',
     'apps.reportes',
     'apps.core',
+    'apps.videoteca',
     
 ]
 

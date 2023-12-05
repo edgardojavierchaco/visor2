@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Videoteca {% endblock %}
+
+{% block styles %}   
+    <style>
+        body{
+            padding-top: 50px;
+            padding-left: 50px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+{% endblock %}
+
+{% block content %}
+    <div class="jumbotron text-center shadow">
+        <h1 class="display-4 text-danger">Videoteca</h1>
+    </div>
+    <div class="container mt-5">
+        {% for video in videos %}
+            <div class="mb-4">
+                <h4>{{ video.titulo }}</h4>
+                <!-- Enlace directo a la página de YouTube -->
+                <a href="{{ video.url }}" target="_blank">Ver en YouTube</a>
+            </div>
+        {% endfor %}
+    </div>
+    <!-- Agrega los scripts de Bootstrap y otros scripts necesarios aquí -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-Wj18W8WIZqDRM9a2ZNAC6Jw5/DVQOEmK7dDmO9g03DaOeO5/c4ZleMEXqTxI0jk" crossorigin="anonymous"></script>
+   
+{% endblock %}
