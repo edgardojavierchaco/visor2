@@ -25,8 +25,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'visualizador',
         'USER': 'visualizador',
-        'PASSWORD': 'Estadisticas23',
-        'HOST': 'relevamientoanual.com.ar',
+        'PASSWORD': 'Estadisticas24',
+        'HOST': 'sigechaco.com.ar',
         'PORT': '5432',
     }
 }

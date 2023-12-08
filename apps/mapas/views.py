@@ -26,9 +26,9 @@ def filter_data(request):
 
         # Conectarse a la base de datos
         connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
-            password='Estadisticas23',
+            password='Estadisticas24',
             database='visualizador'
         )
 
@@ -98,9 +98,9 @@ async def filtrar_tablas_view(request):
     # Establecer la conexión a la base de datos
     try:
         connection = await asyncpg.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
-            password='Estadisticas23',
+            password='Estadisticas24',
             database='Padron'
         )
     except asyncpg.PostgresError as e:

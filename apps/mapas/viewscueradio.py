@@ -20,9 +20,9 @@ def filter_cueradio(request):
 
         # Conectarse a la base de datos
         connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
-            password='Estadisticas23',
+            password='Estadisticas24',
             database='visualizador'
         )
 
