@@ -1,14 +1,14 @@
 version: '3'
 
-volumes:
-  production_postgres_data_visor: {}
-  production_postgres_data_backups_visor: {}
-  production_traefik_visor: {}
+#volumes:
+  #production_postgres_data_visor: {}
+  #production_postgres_data_backups_visor: {}
+  #production_traefik_visor: {}
 
 services:
   django:
     build:
-      context: /home/visor
+      context: .
       dockerfile: ./compose/production/django/Dockerfile
     image: visor_production_django
     platform: linux/x86_64
@@ -17,27 +17,32 @@ services:
     env_file:
       - ./.env
     command: /start
+    volumes:
+      - /home/visor/django_data:/var/lib/django_data:Z
     
   postgres:
     build:
-      context: /home/visor
+      context: .
       dockerfile: ./compose/production/postgres/Dockerfile
     image: visor_production_postgres
     volumes:
-      - production_postgres_data_visor:/var/lib/postgresql/data_visor:Z
-      - production_postgres_data_backups_visor:/backups_visor:z
+      #- production_postgres_data_visor:/var/lib/postgresql/data_visor:Z
+      #- production_postgres_data_backups_visor:/backups_visor:z
+      - /home/visor/postgres_data:/var/lib/postgresql/data_visor:Z
+      - /home/visor/postgres_backups:/backups_visor:z
     env_file:
       - ./.env
           
   traefik:
     build:
-      context: /home/visor
+      context: .
       dockerfile: ./compose/production/traefik/Dockerfile
     image: visor_production_traefik
     depends_on:
       - django
     volumes:
-      - production_traefik_visor:/etc/traefik/acme:z      
+      #- production_traefik_visor:/etc/traefik/acme:z      
+      - /home/visor/traefik_acme:/etc/traefik/acme:z
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443" 
