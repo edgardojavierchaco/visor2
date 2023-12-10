@@ -8,7 +8,7 @@ volumes:
 services:
   django:
     build:
-      context: .
+      context: /home/visor
       dockerfile: ./compose/production/django/Dockerfile
     image: visor_production_django
     platform: linux/x86_64
@@ -20,7 +20,7 @@ services:
     
   postgres:
     build:
-      context: .
+      context: /home/visor
       dockerfile: ./compose/production/postgres/Dockerfile
     image: visor_production_postgres
     volumes:
@@ -31,7 +31,7 @@ services:
           
   traefik:
     build:
-      context: .
+      context: /home/visor
       dockerfile: ./compose/production/traefik/Dockerfile
     image: visor_production_traefik
     depends_on:
