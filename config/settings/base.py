@@ -43,7 +43,7 @@ BASE_MIDDLEWARE = [
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',    
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',    
@@ -56,6 +56,12 @@ THIRD_MIDDLEWARE = [
 
 MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
 
+AUTH_USER_MODEL = 'users.Usuarios'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    
+]
 ROOT_URLCONF = 'config.urls'
 
 # Configuración de plantillas
@@ -79,6 +85,7 @@ TEMPLATES = [
     },
 ]
 
+LOGIN_REDIRECT_URL = 'cards/'  # Ajusta esto según la estructura de tu proyecto
 
 # Configuración de internacionalización y zona horaria
 LANGUAGE_CODE = 'es-ar'
@@ -144,6 +151,6 @@ SPECTACULAR_SETTINGS = {
     'SERVE_PERMISSIONS': ["rest_framework.permissions.IsAdminUser"],
     'SERVERS': [
         {'url': 'http://127.0.0.1:8000', 'description': 'Local Development server'},
-        {'url': 'https://relevamientoanual.com.ar', 'description': 'Production server'},
+        {'url': 'https://sigechaco.com.ar', 'description': 'Production server'},
     ],
 }

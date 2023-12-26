@@ -94,7 +94,7 @@ def filter_data_aborigen(request):
             FROM funcion.{tvistaaborigen}('{relevamiento}')  
             LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas23 host=relevamientoanual.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -229,7 +229,7 @@ def filter_data_comesp(request):
             FROM funcion.{tvistacomesp}('{relevamiento}')  
             LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas23 host=relevamientoanual.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -350,7 +350,7 @@ def filter_data_snu(request):
             FROM funcion.{tvistasnu}('{relevamiento}')         
             LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas23 host=relevamientoanual.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,

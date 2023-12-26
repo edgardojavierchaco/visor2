@@ -1,9 +1,9 @@
 #from django.urls import path
 from config.urls import path
-from apps.users.views import LoginFormView
+from apps.users.views import tu_vista
 
 app_name='users'
 
 urlpatterns=[
-    path('login/', LoginFormView.as_view(), name='login'),
+    path('login/', view=tu_vista, name='login'),
 ]

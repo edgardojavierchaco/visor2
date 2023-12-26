@@ -108,7 +108,7 @@ def filter_data_cargos(request):
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas23 host=relevamientoanual.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -246,7 +246,7 @@ def filter_data_docentes(request):
                 FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas23 host=relevamientoanual.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -325,10 +325,10 @@ def filter_data_horas(request):
         relevamiento = request.POST.get('Relevamiento')
 
         # Validar que tvista esté en la lista de opciones válidas
-        opciones_validas = [            
+        opciones_validas = [    
+            'visor_horas_adulto_fp',        
             'visor_horas_adulto_primaria',
-            'visor_horas_adulto_secundaria',
-            'visor_horas_comun_artistica',
+            'visor_horas_adulto_secundaria',            
             'visor_horas_comun_inicial',
             'visor_horas_comun_primaria',
             'visor_horas_comun_secundaria',
@@ -349,8 +349,7 @@ def filter_data_horas(request):
         opciones_descriptivas = {
             'visor_horas_adulto_fp': 'Adulto Formación Profesional',
             'visor_horas_adulto_primaria': 'Adulto Primaria',
-            'visor_horas_adulto_secundaria': 'Adulto Secundaria',
-            'visor_horas_comun_artistica': 'Común Artística',
+            'visor_horas_adulto_secundaria': 'Adulto Secundaria',            
             'visor_horas_comun_inicial': 'Común Inicial',
             'visor_horas_comun_primaria': 'Común Primaria',
             'visor_horas_comun_secundaria': 'Común Secundaria',
@@ -387,7 +386,7 @@ def filter_data_horas(request):
                 FROM {tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas23 host=relevamientoanual.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -443,9 +442,7 @@ def filter_data_horas(request):
 
                 # Cerrar la conexión a la base de datos
                 connection.close()
-                print(data2)
-
-                
+                print(data2)               
             
                 # Devolver los datos como contexto a la plantilla 'docentes.html'
                 return render(request, 'reportes/horas.html', {'data2': data2, 'nvista': nvista, 'nrelevamiento':nrelevamiento})

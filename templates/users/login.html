@@ -33,11 +33,11 @@
                 </div>
             </div>
             <div class="contenedor__login">
-                <form action="." class="formulario__login" method="post">
+                <form action="{% url 'users:login' %}" class="formulario__login" method="post">
                     {%csrf_token%}
                     <h2>Iniciar Sesión</h2>
-                    <input type="text" name="{{ form.username.name }}" placeholder="Nombre de usuario">
-                    <input type="password" name="{{ form.password.name }}" placeholder="Contraseña">
+                    <input type="text" name="username" placeholder="Nombre de usuario">
+                    <input type="password" name="password" placeholder="Contraseña">
                     <button>Entrar</button>
                 </form>
             </div>

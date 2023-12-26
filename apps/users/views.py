@@ -1,20 +1,32 @@
-from typing import Any, Dict
-from django import http
-from django.contrib.auth.views import LoginView
-from django.forms import TextInput
-from django.shortcuts import redirect
+# apps/users/views.py
 
-class LoginFormView(LoginView):
-    template_name='users/login.html'
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.hashers import check_password  # Importa esta línea
+from django.shortcuts import render, redirect
+from apps.users.models import Usuarios
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            return redirect('/cards/')
-        print(request.user)
-        return super().dispatch(request, *args, **kwargs)
+def tu_vista(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        print(f"Username: {username}, Password: {password}")
 
-    def get_context_data(self, **kwargs):
-        context=super().get_context_data(**kwargs)
-        context['title']='Iniciar Sesión'
-        return context
-    
+        # Autenticar al usuario en la base de datos 'visualizador'
+        user = authenticate(request, username=username, password=password)
+        print(f"User: {user}")
+
+        if user is not None:
+            # Las credenciales son válidas, iniciar sesión
+            print("Credenciales válidas")
+            if user.check_password(password):
+                print("Contraseña válida")
+                login(request, user)
+                return redirect('cards/')
+            else:
+                print("Contraseña no válida")
+        else:
+            # Las credenciales no son válidas, puedes manejar esto como desees
+            print("Credenciales no válidas")
+            return render(request, 'users/login.html', {'error_message': 'Credenciales no válidas'})
+
+    return render(request, 'users/login.html')

@@ -5,14 +5,16 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 
-def filtrado(request):
+def filtrado(request):    
     return render(request,'mapa/filter.html')
 
 #####################################################################
 #      PARA RENDERIZAR LOS MARCADORES EN EL MAPA DE LEAFLET         #
 #####################################################################
+
 @csrf_exempt
-def filter_data(request):
+def filter_data(request):   
+    
     if request.method == 'POST':
         cueanexo=request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -26,7 +28,7 @@ def filter_data(request):
 
         # Conectarse a la base de datos
         connection = psycopg2.connect(
-            host='sigechaco.com.ar',
+            host='sigechaco.com.ar',            
             user='visualizador',
             password='Estadisticas24',
             database='visualizador'
@@ -34,7 +36,7 @@ def filter_data(request):
 
         # Realizar la consulta en la base de datos
         cursor = connection.cursor()
-        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1"
+        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1 "
         parameters=[]
         if cueanexo:
             query += "AND cueanexo = %s"
@@ -87,7 +89,9 @@ def filter_data(request):
 #####################################################################
 #      PARA MOSTRAR DATOS MARCADOR SELLECIONADO EN EL MAPA          #
 #####################################################################
-async def filtrar_tablas_view(request):
+async def filtrar_tablas_view(request):      
+    
+    
     cueanexo = request.GET.get('cueanexo')
 
     # Validar y sanitizar el valor de cueanexo
@@ -154,6 +158,7 @@ async def filtrar_tablas_view(request):
         return render(request, 'error.html', {'mensaje': 'Error al ejecutar la consulta'})
 
     # Cerrar la conexión a la base de datos
-    await connection.close()
+    await connection.close()    
+    
     return render(request, 'mapa/otro_template.html', {'resultados': resultados, 'resultados1':resultados1, 'resultados2':resultados2, 'resultados3':resultados3})
 

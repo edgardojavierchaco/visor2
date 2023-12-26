@@ -19,7 +19,6 @@ CACHES = {
 }
 
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -30,6 +29,7 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
 
 INSTALLED_APPS += ['debug_toolbar']  # noqa F405
 MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']  # noqa F405
