@@ -365,6 +365,7 @@ def filter_data_horas(request):
             'ra_carga2020':'Relevamiento 2020',
             'ra_carga2021':'Relevamiento 2021',
             'ra_carga2022':'Relevamiento 2022',
+            'ra_carga2023':'Relevamiento 2023',
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
@@ -383,7 +384,7 @@ def filter_data_horas(request):
                     SUM(CAST(titular AS INT)) AS titular,
                     SUM(CAST(interinos AS INT)) AS interinos,
                     SUM(CAST(sin_cubrir AS INT)) AS sin_cubrir                        
-                FROM {tvista}('{relevamiento}')   
+                FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
                         'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',

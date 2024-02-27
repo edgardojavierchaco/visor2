@@ -28,7 +28,7 @@ def filtrado_snu(request):
     return render(request, 'reportes/filter_snu.html')
 
 #####################################################################
-#               PARA REPORTE DE MATRICULA AGORIGEN                  #
+#               PARA REPORTE DE MATRICULA ABORIGEN                  #
 #####################################################################
 
 # Vista para procesar los datos del formulario de filtrado de matricula aborigen
@@ -76,7 +76,11 @@ def filter_data_aborigen(request):
 
         # Asignar un valor descriptivo a la opción de relevamiento seleccionado
         opciones_relevamiento={      
-            'ra_carga2022':'Relevamiento 2022',            
+            'ra_carga2019':'Relevamiento 2019',
+            'ra_carga2020':'Relevamiento 2020',
+            'ra_carga2021':'Relevamiento 2021',                  
+            'ra_carga2022':'Relevamiento 2022',  
+            'ra_carga2023':'Relevamiento 2023',             
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
@@ -327,6 +331,7 @@ def filter_data_snu(request):
 
         # Asignar un valor descriptivo a la opción de relevamiento seleccionado
         opciones_relevamiento={            
+            'ra_carga2019':'Relevamiento 2019',
             'ra_carga2020':'Relevamiento 2020',
             'ra_carga2021':'Relevamiento 2021',
             'ra_carga2022':'Relevamiento 2022',
@@ -396,9 +401,9 @@ def filter_data_snu(request):
             datasnu.append({
                 'titulo': row[0],
                 'total': row[1],
-                'ingresantes': int(row[2]),
-                'pasantia': int(row[3]),
-                'residencia': int(row[4])
+                'ingresantes': int(row[2]) if row[2] is not None else 0,
+                'pasantia': int(row[3]) if row[3] is not None else 0,
+                'residencia': int(row[4]) if row[4] is not None else 0,
             })
 
         # Cerrar la conexión a la base de datos

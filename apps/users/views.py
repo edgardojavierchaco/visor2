@@ -21,7 +21,7 @@ def tu_vista(request):
             if user.check_password(password):
                 print("Contraseña válida")
                 login(request, user)
-                return redirect('cards/')
+                return redirect('/cards/')
             else:
                 print("Contraseña no válida")
         else:
