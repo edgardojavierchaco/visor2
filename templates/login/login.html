@@ -1,0 +1,64 @@
+{% load static %}
+
+{% load widget_tweaks %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{% static 'css/login.css'%}">
+    <style>
+        body{
+            background-image: url("{% static 'img/bg4.jpg' %}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+    </style>
+</head>
+<body>
+    <main>
+
+        <div class="contenedor__todo">
+
+            <div class="caja__trasera">
+                <div class="caja__trasera-login">
+                    <h3></h3>
+                    <p></p>
+                    
+                </div>
+                <div class="caja__trasera-register">
+                    <h3>¿Aún no tienes una cuenta?</h3>
+                    <p>Comunicate con el Administrador</p>
+                    <button id="btn__salir">Cerrar</button>
+                </div>
+            </div>
+            <div class="contenedor__login">
+                <form action="{% url 'acceso:acceso_login' %}" class="formulario__login" method="post">
+                    {%csrf_token%}
+                    <h2>Iniciar Sesión</h2>
+                    {{ form.username | add_class:'form-control'| attr:'autocomplet:off' | attr:'placeholder: Ingrese su usurio'}}
+                    {{ form.password | add_class:'form-control'| attr:'autocomplet:off' | attr:'placeholder: Ingrese su contraseña'}}
+                    
+                    <button>Entrar</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Obtenemos una referencia al botón de cerrar
+            var cerrarBtn = document.getElementById("btn__salir");
+
+            // Añadimos un event listener para el evento click
+            cerrarBtn.addEventListener("click", function() {
+                // Redirigimos al usuario a home.html
+                window.location.href = "../";
+            });
+        });
+    </script>
+</body>
+</html>

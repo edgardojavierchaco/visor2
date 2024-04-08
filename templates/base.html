@@ -70,7 +70,7 @@
     <div class="menu__side" id="menu_side">
         <div class="name__page">
             <i class="fas fa-users-cog"></i>
-            <h4>{{request.user.username}}</h4>
+            <h4>{{ request.user.username }} - {{ request.user.apellido }} {{ request.user.nombres }}</h4>
         </div>
         <div class="options__menu">
             <a href="{% url 'home'%}" class="selected">

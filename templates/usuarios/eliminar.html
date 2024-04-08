@@ -1,30 +1,32 @@
-{% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% extends 'usuarios/body.html' %}
 
-{% block title%}Eliminar credenciales<{%endblock title%}
-{% block page_tittle %}Eliminar credenciales<{% endblock page_tittle%}
-
-{% block sidebar %} {% include 'dash/sidebar.html' %} {%endblock sidebar %}
+{% load static %}
 
 {% block content %}
-<div class="content col-lg-10 mx-auto">
-  <div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Eliminar credenciales</h6>
+    <form method="post" action="{% url 'usuarios:Eliminar_usuario' object.id %}">
+         <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-plus"></i>
+                {{ title }}
+            </h3>
+        </div>
+        <div class="card-body">
+           {% csrf_token %}
+           <div class="alert alert-danger alert-dismissable">                
+                <h5><i class="icon fas fa-btn"></i>Notificación!</h5>
+                ¿Estás seguro de eliminar el registro nro {{ object.id }}?
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary btn-flat">
+                <i class="fas fa-save"></i> Sí, aceptar
+            </button>
+            <a href="{{ list_url }}" class="btn btn-info btn-flat">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+        </div>
     </div>
-    <div class="card-body">
-        <form class="" method="post" enctype="multipart/form-data">{% csrf_token %}
-          <p>¿Estás seguro que quieres eliminar "{{object}}"?</p>
-          {{ form | crispy }}
-          <hr>
-          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <a name="" id="" class="btn btn-outline-danger" href="{% url 'usuarios:listar' %}" role="button">Cancelar</a> &nbsp
-            <button class="btn btn-primary" type="submit">Confirmar</button>
-          </div>
-        </form>
-    </div>
-  </div>
-</div>
-
-
-{% endblock content %}
+    </form>
+   
+{% endblock %}

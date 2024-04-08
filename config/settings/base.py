@@ -14,21 +14,25 @@ APPS_DIR = ROOT_DIR / 'apps'
 
 # Configuración de aplicaciones
 BASE_APPS =[        
+   'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.admin',  
+    'widget_tweaks', 
     
 ]
 
 LOCAL_APPS = [
     'apps.mapas',
-    'apps.users',
     'apps.reportes',
     'apps.core',
     'apps.videoteca',
+    'apps.usuarios',
+    'apps.login',
+    'apps.confidencial',
+    
     
 ]
 
@@ -56,10 +60,11 @@ THIRD_MIDDLEWARE = [
 
 MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
 
-AUTH_USER_MODEL = 'users.Usuarios'
+#AUTH_USER_MODEL = 'users.CustomUser'
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
+    
+    'apps.usuarios.backends.UsuariosVisualizadorBackend',
     
 ]
 ROOT_URLCONF = 'config.urls'
@@ -85,7 +90,7 @@ TEMPLATES = [
     },
 ]
 
-LOGIN_REDIRECT_URL = 'cards/'  # Ajusta esto según la estructura de tu proyecto
+LOGIN_REDIRECT_URL = 'cards/'  
 
 # Configuración de internacionalización y zona horaria
 LANGUAGE_CODE = 'es-ar'
@@ -103,8 +108,9 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
+
 MEDIA_ROOT = os.path.join(APPS_DIR, 'media')
-MEDIA_URL = 'media/'
+
 
 # Configuración de migraciones
 MIGRATION_MODULES = {'sites': 'apps.contrib.sites.migrations'}
@@ -154,3 +160,7 @@ SPECTACULAR_SETTINGS = {
         {'url': 'https://sigechaco.com.ar', 'description': 'Production server'},
     ],
 }
+
+LOGIN_URL = '/login/'
+
+AUTH_USER_MODEL = 'usuarios.UsuariosVisualizador'

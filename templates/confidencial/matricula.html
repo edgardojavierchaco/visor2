@@ -1,0 +1,98 @@
+{% extends 'usuarios/body.html' %}
+{% load static %}
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/custom_styles.css' %}"/>    
+    {% endblock %}
+
+{% block content %}
+    <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-search"></i>
+                Consulta de Matrícula
+            </h3>
+        </div>
+        <div class="card-body">
+            <form action="" method="GET">
+                <div class="form-group">
+                    <label for="cueanexo">CUE Anexo:</label>
+                    <select name="cueanexo" id="cueanexo" class="form-control">
+                        {% for cueanexo in cueanexos_filtrados %}
+                            {% if cueanexo == request.GET.cueanexo %}
+                                <option value="{{ cueanexo }}" selected>{{ cueanexo }}</option>
+                            {% else %}
+                                <option value="{{ cueanexo }}">{{ cueanexo }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" name="filtrar_cueanexo" class="btn btn-primary">Filtrar cueanexo</button>
+                </div>
+                <div class="form-group">
+                    <label for="ciclo_etapa">Sala/Grado/Año/Ciclo/Etapa:</label>
+                    <select name="ciclo_etapa" id="ciclo_etapa" class="form-control">
+                        {% for ciclo in ciclos %}
+                            {% if ciclo == request.GET.ciclo_etapa %}
+                                <option value="{{ ciclo }}" selected>{{ ciclo }}</option>
+                            {% else %}
+                                <option value="{{ ciclo }}">{{ ciclo }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" name="filtrar_ciclo" class="btn btn-primary">Filtrar ciclo</button>
+                </div>
+                <div class="form-group">
+                    <label for="nom_seccion">Sección/División:</label>
+                    <select name="nom_seccion" id="nom_seccion" class="form-control">
+                        {% for seccion in secciones %}
+                            {% if seccion == request.GET.nom_seccion %}
+                                <option value="{{ seccion }}" selected>{{ seccion }}</option>
+                            {% else %}
+                                <option value="{{ seccion }}">{{ seccion }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" name="filtrar_seccion" class="btn btn-primary">Filtrar seccion</button>
+                </div>
+                
+            </form>
+        </div>
+    </div>
+
+    <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-table"></i>
+                Resultados
+            </h3>
+        </div>
+        <div class="card-body">
+            {% if totales %}
+                <table id="data" class="table table-striped table-bordered">
+                    {{ totales|safe }}
+                </table>
+            {% else %}
+                <p>No hay resultados</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script type="text/javascript">
+        $(function(){
+            $('#data').DataTable({
+                responsive: true,
+                autoWidth: true,
+                "language":{
+                    url: '{% static 'lib/datatables-1.10.20/spanish.txt' %}'
+                }
+            });
+        });
+    </script>    
+{% endblock %}

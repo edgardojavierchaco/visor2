@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 
+
 def filtrado(request):    
     return render(request,'mapa/filter.html')
 
@@ -87,7 +88,7 @@ def filter_data(request):
         return render(request, 'mapa/ofertasmark.html', context)
     
 #####################################################################
-#      PARA MOSTRAR DATOS MARCADOR SELLECIONADO EN EL MAPA          #
+#      PARA MOSTRAR DATOS MARCADOR SELECIONADO EN EL MAPA          #
 #####################################################################
 async def filtrar_tablas_view(request):      
     

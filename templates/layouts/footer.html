@@ -7,14 +7,50 @@
    
     <link rel="stylesheet" href="{% static 'css/footers.css'%}">
     <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
-    
+    <style>
+        .ball-container {
+            width: 150px;
+            height: 150px;            
+            border-radius: 50%;
+            position: relative;
+            perspective: 500px; /* agregar perspectiva para efecto 3D */
+            overflow: hidden; /* Ocultamos el fondo gris que sobresale */
+        }
+        .ball {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-style: preserve-3d;
+            animation: rotate 4s infinite linear;
+        }
+        .ball img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transform: translateZ(75px); /* Añadimos preservación de 3D */
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotateY(0deg);
+            }
+            to {
+                transform: rotateY(360deg);
+            }
+        }
+        
+    </style>     
 </head>
 <body>
     <footer>
         <div class="container__footer">
             <div class="box__footer">
-                <div class="logo">
-                    <img src="{% static 'img/logoEstMini.png' %}" alt="">
+                <div class="ball-container">
+                    <div class="ball">
+                        <img src="{% static 'img/logoEstMini.png' %}" alt="">
+                    </div>
                 </div>
             </div>
             <div class="box__footer">
@@ -28,6 +64,130 @@
             <p>Todos los derechos reservados © 2023 - Desarrollo y mantenimiento: Edgardo Javier Gómez<b></b></p>
         </div>
     </footer>
+    <script>
+        // Script de WebGL
+        window.onload = function() {
+            var canvas = document.createElement('canvas');
+            var gl = canvas.getContext('webgl');
+
+            if (!gl) {
+                console.error('No se pudo iniciar WebGL.');
+                return;
+            }
+
+            // Definir los vértices de la esfera
+            var vertices = [];
+            var numLatitude = 30;
+            var numLongitude = 30;
+            for (var lat = 0; lat <= numLatitude; lat++) {
+                var theta = lat * Math.PI / numLatitude;
+                var sinTheta = Math.sin(theta);
+                var cosTheta = Math.cos(theta);
+
+                for (var lon = 0; lon <= numLongitude; lon++) {
+                    var phi = lon * 2 * Math.PI / numLongitude;
+                    var sinPhi = Math.sin(phi);
+                    var cosPhi = Math.cos(phi);
+
+                    var x = cosPhi * sinTheta;
+                    var y = cosTheta;
+                    var z = sinPhi * sinTheta;
+
+                    vertices.push(x, y, z);
+                }
+            }
+
+            // Definir los índices de los triángulos
+            var indices = [];
+            for (var lat = 0; lat < numLatitude; lat++) {
+                for (var lon = 0; lon < numLongitude; lon++) {
+                    var first = (lat * (numLongitude + 1)) + lon;
+                    var second = first + numLongitude + 1;
+
+                    indices.push(first, second, first + 1);
+                    indices.push(second, second + 1, first + 1);
+                }
+            }
+
+            // Crear los buffers de vértices e índices
+            var vertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+            var indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+            // Definir los shaders
+            var vertexShaderSource = `
+                attribute vec3 aPosition;
+                uniform mat4 uModelViewMatrix;
+                uniform mat4 uProjectionMatrix;
+                void main() {
+                    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+                }
+            `;
+
+            var fragmentShaderSource = `
+                precision mediump float;
+                void main() {
+                    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Color rojo (se puede cambiar)
+                }
+            `;
+
+            // Compilar los shaders
+            var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, vertexShaderSource);
+            gl.compileShader(vertexShader);
+
+            var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, fragmentShaderSource);
+            gl.compileShader(fragmentShader);
+
+            // Crear el programa de shaders
+            var shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+            gl.useProgram(shaderProgram);
+
+            // Asignar el atributo de posición
+            var aPosition = gl.getAttribLocation(shaderProgram, 'aPosition');
+            gl.enableVertexAttribArray(aPosition);
+            gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+
+            // Definir las matrices de proyección y modelo-vista
+            var projectionMatrix = mat4.create();
+            var modelViewMatrix = mat4.create();
+
+            // Asignar las matrices a los uniforms
+            var uProjectionMatrix = gl.getUniformLocation(shaderProgram, 'uProjectionMatrix');
+            var uModelViewMatrix = gl.getUniformLocation(shaderProgram, 'uModelViewMatrix');
+            gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+            gl.uniformMatrix4fv(uModelViewMatrix, false, modelViewMatrix);
+
+            // Habilitar la profundidad
+            gl.enable(gl.DEPTH_TEST);
+
+            // Definir la función de renderizado
+            function render() {
+                gl.clearColor(0.0, 0.0, 0.0, 1.0); // Color de fondo (negro)
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                mat4.perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 100.0); // Definir la proyección
+
+                mat4.identity(modelViewMatrix);
+                mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -5.0]); // Posicionar la esfera
+
+                gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+
+                requestAnimationFrame(render);
+            }
+
+            render();
+        };
+    </script>
 </body>
 </html>
+
 

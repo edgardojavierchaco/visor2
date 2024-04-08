@@ -2,7 +2,7 @@ window.onscroll = function(){
 
     scroll = document.documentElement.scrollTop;
 
-    header = document.getElementById("encabezado");
+    header = document.getElementById('encabezado');
 
     if (scroll > 20){
         header.classList.add('nav__mod');
@@ -12,11 +12,11 @@ window.onscroll = function(){
 
 }
 
-document.getElementById("btn_menu").addEventListener("click", mostrar_menu);
+document.getElementById('btn_menu').addEventListener('click', mostrar_menu);
 
-    menu = document.getElementById("encabezado");
-    body = document.getElementById("container_all");
-    nav = document.getElementById("nav");
+    menu = document.getElementById('encabezado');
+    body = document.getElementById('container_all');
+    nav = document.getElementById('nav');
 
 function mostrar_menu(){
 
@@ -25,7 +25,7 @@ function mostrar_menu(){
     nav.classList.toggle('move__nav');
 }
 
-window.addEventListener("resize", function(){
+window.addEventListener('resize', function(){
 
     if (window.innerWidth > 760)  {
         body.classList.remove('move__content');

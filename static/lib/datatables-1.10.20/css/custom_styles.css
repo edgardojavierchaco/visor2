@@ -1,0 +1,5 @@
+/* Estilos para centrar encabezados y contenido de columnas */
+#data th,
+#data td {
+    text-align: center;
+}
