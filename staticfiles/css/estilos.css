@@ -114,6 +114,7 @@ header {
     cursor: pointer;
 }
 
+
 .options__menu .option h4 {
     font-weight: 300;
     cursor: pointer;
@@ -152,39 +153,4 @@ a.selected {
         width: 80px;
         left: -80px;
     }
-}
-
-/* Estilo para los submenús */
-.submenu {
-    position: relative;
-}
-
-/* Estilo para el ícono de submenú */
-.submenu-icon {
-    position: absolute;
-    right: 10px;
-    transition: transform 0.3s;
-}
-
-/* Estilo para los elementos de submenú */
-.submenu-content {
-    flex-direction: column; /* Cambia "display: none" a "flex-direction: column" para mostrar submenús verticalmente */
-    background-color: #fff; /* Fondo blanco para los submenús */
-    position: absolute;
-    z-index: 1;
-    border: 1px solid #ccc;
-    border-top: none;
-    min-width: 200px;
-    top: 100%;
-    display: none; /* Oculta submenús por defecto */
-}
-
-/* Mostrar el submenú al hacer clic en el elemento principal */
-.submenu-toggle.active .submenu-content {
-    display: flex;
-}
-
-/* Girar el ícono de submenú cuando se abre el submenú */
-.submenu-toggle.active .submenu-icon {
-    transform: rotate(180deg);
 }
