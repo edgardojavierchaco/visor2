@@ -24,11 +24,13 @@ BASE_APPS =[
 ]
 
 LOCAL_APPS = [
-    'apps.mapas',
-    'apps.users',
+    'apps.mapas',    
     'apps.reportes',
     'apps.core',
     'apps.videoteca',
+    'apps.usuarios',
+    'apps.login',
+    'apps.publico',
     
 ]
 
@@ -56,9 +58,10 @@ THIRD_MIDDLEWARE = [
 
 MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
 
-AUTH_USER_MODEL = 'users.Usuarios'
+AUTH_USER_MODEL = 'usuarios.UsuariosVisualizador'
 
 AUTHENTICATION_BACKENDS = [
+    'apps.usuarios.backends.CustomAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
     
 ]

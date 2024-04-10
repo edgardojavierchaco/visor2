@@ -7,9 +7,10 @@ from django.views.generic import TemplateView
 from django.views import defaults as default_views
 
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('login/',include('apps.login.urls',namespace='login')),
+    path('publico/',include('apps.publico.urls',namespace='publico')),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),    
     path('cards/', TemplateView.as_view(template_name='presentacion.html'), name='cards'),  
     path('favicon.ico', RedirectView.as_view(url='/static/img/favicon.ico')),    
@@ -17,7 +18,7 @@ urlpatterns = [
     path('sidebar/', TemplateView.as_view(template_name='layouts/sidebar.html'), name='menu_lateral'),
     path('footer/', TemplateView.as_view(template_name='layouts/footer.html'), name='footer'),
     path('map/', include('apps.mapas.urls', namespace='map')),
-    path('usua/', include('apps.users.urls', namespace='usua')),    
+    path('usua/', include('apps.usuarios.urls', namespace='usua')),    
     path('error_conexion/', TemplateView.as_view(template_name='error_conexion.html'), name='error_conexion'),
     path('consulta_vacia/', TemplateView.as_view(template_name='consulta_vacia.html'), name='consulta_vacia'),
     path('repo/', include('apps.reportes.urls', namespace='repo')),       
