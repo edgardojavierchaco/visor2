@@ -154,7 +154,7 @@ def filter_data_aborigen(request):
             return render(request, 'consulta_vacia.html')
         
         # Devolver los datos como contexto a la plantilla 'cargos.html'
-        return render(request, 'reportes/aborigenes.html', {'dataaborigen': dataaborigen, 'nvistaaborigen': nvistaaborigen, 'nrelevamiento':nrelevamiento})
+        return render(request, 'publico/repomataborigen.html', {'dataaborigen': dataaborigen, 'nvistaaborigen': nvistaaborigen, 'nrelevamiento':nrelevamiento})
     
 #####################################################################
 #           PARA REPORTE DE MATRICULA COMÚN Y ESPECIAL              #
@@ -292,7 +292,7 @@ def filter_data_comesp(request):
             return render(request, 'consulta_vacia.html')
         
         # Devolver los datos como contexto a la plantilla 'cargos.html'
-        return render(request, 'reportes/comunespecial.html', {'datacomesp': datacomesp, 'nvistacomesp': nvistacomesp, 'nrelevamiento':nrelevamiento})
+        return render(request, 'publico/repomatricula.html', {'datacomesp': datacomesp, 'nvistacomesp': nvistacomesp, 'nrelevamiento':nrelevamiento})
 
 #####################################################################
 #                     PARA REPORTE DE MATRICULA SNU                 #
@@ -415,5 +415,5 @@ def filter_data_snu(request):
             return render(request, 'consulta_vacia.html')
         
         # Devolver los datos como contexto a la plantilla 'cargos.html'
-        return render(request, 'reportes/snu.html', {'datasnu': datasnu, 'nvistasnu': nvistasnu, 'nrelevamiento':nrelevamiento})   
+        return render(request, 'publico/repomatsnu.html', {'datasnu': datasnu, 'nvistasnu': nvistasnu, 'nrelevamiento':nrelevamiento})   
      

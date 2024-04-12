@@ -6,7 +6,7 @@ from .base import *
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # Configuración de entorno de producción: modo de depuración desactivado
-DEBUG = True
+DEBUG = False
 
 # Lista de hosts permitidos en producción
 ALLOWED_HOSTS = ['0.0.0.0', 'relevamientoanual.com.ar', 'www.relevamientoanual.com.ar']

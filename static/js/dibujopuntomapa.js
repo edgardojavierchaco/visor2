@@ -10,7 +10,7 @@ var capa = L.tileLayer(
 
 
 let misDatos = null;
-fetch("/static/js/v_capa_unica_ofertas.geojson")
+fetch("map/filter")
     .then(function (response) {
         return response.json();
     })
@@ -275,4 +275,3 @@ map.addEventListener("draw:created", function (e) {
         }
     }
 });
-

@@ -1,30 +1,28 @@
 import json
 import psycopg2
-import asyncpg
+import asyncpg # type: ignore
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-
+from django.http import JsonResponse
 
 def filtrado(request):    
-    return render(request,'mapa/filter.html')
+    return render(request, 'mapa/filter.html')
 
-#####################################################################
-#      PARA RENDERIZAR LOS MARCADORES EN EL MAPA DE LEAFLET         #
-#####################################################################
+def filtrado_list(request):
+    return render(request,'mapa/filter_listadomap.html')
 
 @csrf_exempt
-def filter_data(request):   
-    
+def operaciones_comunes(request, template_name='publico/basecriterios.html'):   
     if request.method == 'POST':
-        cueanexo=request.POST.get('Cueanexo')
+        cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
         sector = request.POST.get('Sector')
         region = request.POST.get('Region')
         departamento = request.POST.get('Departamento')
-        localidad=request.POST.get('Localidad')
-        oferta=request.POST.get('Oferta')
+        localidad = request.POST.get('Localidad')
+        oferta = request.POST.get('Oferta')
 
-        print(ambito,sector,localidad, oferta)
+        print("Parámetros de la solicitud:", ambito, sector, localidad, oferta)
 
         # Conectarse a la base de datos
         connection = psycopg2.connect(
@@ -37,7 +35,7 @@ def filter_data(request):
         # Realizar la consulta en la base de datos
         cursor = connection.cursor()
         query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1 "
-        parameters=[]
+        parameters = []
         if cueanexo:
             query += "AND cueanexo = %s"
             parameters.append(cueanexo)
@@ -60,31 +58,48 @@ def filter_data(request):
             query += "AND acronimo LIKE %s"
             parameters.append('%'+oferta+'%')
 
-
         cursor.execute(query, parameters)
         rows = cursor.fetchall()
-        #for row in rows:
-        #print(row)
-        
-        #Filtrar los marcadores con latitud y longitud distintas de 0 o vacías
-        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad) for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad in rows if lat != 0 and lng != '' and lng != 0 and lat != '']
-        
+
+        # Filtrar los marcadores con latitud y longitud distintas de 0 o vacías
+        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad) 
+                         for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad in rows 
+                         if lat != 0 and lng != '' and lng != 0 and lat != '']
+
         # Obtener los nombres de las columnas
-        column_names = [desc[0] for desc in cursor.description]
+        column_names = [desc[0] for desc in cursor.description] # type: ignore
         filtered_rows = [row for row in rows if row[1] != 0 and row[2] != 0]
 
         # Cerrar la conexión a la base de datos
         cursor.close()
         connection.close()
+
         context = {
-            'title':'Mapa',
+            'title': 'Mapa',
             'data_json': json.dumps(filtered_rows),
             'column_names_json': json.dumps(column_names)
-            
         }
-       
-        # Abrir el template en el navegador con los marcadores como contexto
-        return render(request, 'mapa/ofertasmark.html', context)
+
+        print("Contexto en operaciones_comunes:", context)
+
+        if template_name == 'publico/basecriterios.html':
+            return context
+        elif template_name == 'publico/listadomap.html':
+            return context
+        else:
+            return context
+        
+def filter_data(request):
+    context = operaciones_comunes(request, template_name='publico/basecriterios.html')
+    print("Contexto en filter_data:", context)
+    return render(request, 'publico/basecriterios.html', context)
+
+def filter_listado_map(request):
+    context = operaciones_comunes(request, template_name='publico/listadomap.html')
+    print("Contexto en filter_listado_map:", context)
+    return render(request, 'publico/listadomap.html', context)
+
+
     
 #####################################################################
 #      PARA MOSTRAR DATOS MARCADOR SELLECIONADO EN EL MAPA          #
@@ -160,5 +175,4 @@ async def filtrar_tablas_view(request):
     # Cerrar la conexión a la base de datos
     await connection.close()    
     
-    return render(request, 'mapa/otro_template.html', {'resultados': resultados, 'resultados1':resultados1, 'resultados2':resultados2, 'resultados3':resultados3})
-
+    return render(request, 'publico/otro_templatemap.html', {'resultados': resultados, 'resultados1':resultados1, 'resultados2':resultados2, 'resultados3':resultados3})

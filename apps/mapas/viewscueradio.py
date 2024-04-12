@@ -1,6 +1,6 @@
 import json
 import psycopg2
-import asyncpg
+import asyncpg # type: ignore
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
@@ -83,5 +83,5 @@ def filter_cueradio(request):
         }
         print(context)
         # Abrir el template en el navegador con los marcadores como contexto
-        return render(request, 'mapa/cueradio.html', context)
+        return render(request, 'publico/baseradio.html', context)
         

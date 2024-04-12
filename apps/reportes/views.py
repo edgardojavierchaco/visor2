@@ -167,7 +167,7 @@ def filter_data_cargos(request):
             return render(request, 'consulta_vacia.html')
         
         # Devolver los datos como contexto a la plantilla 'cargos.html'
-        return render(request, 'reportes/cargos.html', {'data': data, 'nvista': nvista,'nrelevamiento':nrelevamiento})
+        return render(request, 'publico/repocargos.html', {'data': data, 'nvista': nvista,'nrelevamiento':nrelevamiento})
 
 
 #####################################################################
@@ -302,7 +302,7 @@ def filter_data_docentes(request):
                 return render(request, 'consulta_vacia.html')
         
             # Devolver los datos como contexto a la plantilla 'docentes.html'
-            return render(request, 'reportes/docentes.html', {'data1': data1, 'nvista': nvista, 'nrelevamiento':nrelevamiento})
+            return render(request, 'publico/repodocentes.html', {'data1': data1, 'nvista': nvista, 'nrelevamiento':nrelevamiento})
         except psycopg2.Error as e:
             # Manejar el error de conexión
             return render(request, 'error_conexion.html')
@@ -446,7 +446,7 @@ def filter_data_horas(request):
                 print(data2)               
             
                 # Devolver los datos como contexto a la plantilla 'docentes.html'
-                return render(request, 'reportes/horas.html', {'data2': data2, 'nvista': nvista, 'nrelevamiento':nrelevamiento})
+                return render(request, 'publico/repohoras.html', {'data2': data2, 'nvista': nvista, 'nrelevamiento':nrelevamiento})
         except psycopg2.Error as e:
             # Manejar el error de conexión
             return render(request, 'error_conexion.html',{'mensaje': 'Error en la consulta: ' + str(e)})

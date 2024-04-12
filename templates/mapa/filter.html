@@ -330,9 +330,10 @@
                         
     </script>
     <script>
-        document.getElementById("cerrarBtn").addEventListener("click", function() {
-          window.location.href = "/cards";
-        });
+       document.getElementById("cerrarBtn").addEventListener("click", function(event) {
+                event.preventDefault(); // Evita el comportamiento predeterminado del enlace
+                window.history.go(-1); // Regresa a la página anterior en el historial del navegador
+            }); 
       </script>
 
 </body>

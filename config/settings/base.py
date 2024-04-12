@@ -20,6 +20,7 @@ BASE_APPS =[
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.admin',  
+    'widget_tweaks',
     
 ]
 
@@ -31,6 +32,7 @@ LOCAL_APPS = [
     'apps.usuarios',
     'apps.login',
     'apps.publico',
+    'apps.establecimientos',
     
 ]
 
@@ -88,7 +90,7 @@ TEMPLATES = [
     },
 ]
 
-LOGIN_REDIRECT_URL = 'cards/'  # Ajusta esto según la estructura de tu proyecto
+LOGIN_REDIRECT_URL = '/cards/'  # Ajusta esto según la estructura de tu proyecto
 
 # Configuración de internacionalización y zona horaria
 LANGUAGE_CODE = 'es-ar'
