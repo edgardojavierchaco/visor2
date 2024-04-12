@@ -5,7 +5,7 @@ from .base import *
 SECRET_KEY = environ.get('DJANGO_SECRET_KEY')
 
 # Configuración de entorno de desarrollo: activar el modo de depuración
-DEBUG = False
+DEBUG = True
 
 # Lista de hosts permitidos en entorno de desarrollo
 ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
