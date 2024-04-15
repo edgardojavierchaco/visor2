@@ -1,0 +1,43 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+    <form method="post">
+        <div class="card card-default">
+            <div class="card-header">
+                <h3 class="title">
+                    <i class="fas fa-edit"></i> {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                {{ form.as_p }}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <a href="{{ list_url }}" class="btn btn-secondary btn-flat">
+                    <i class="fas fa-arrow-left"></i> Volver al Listado
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Código JavaScript para manejar errores -->
+    <script>
+        {% if form.errors %}
+            var errors = '';
+            {% for field, field_errors in form.errors.items %}
+                {% for error in field_errors %}
+                    errors += '{{ error }}\n';
+                {% endfor %}
+            {% endfor %}
+            Swal.fire({
+                title: 'Error!',
+                text: errors,
+                icon: 'error'
+            });
+        {% endif %}
+    </script>
+{% endblock %}

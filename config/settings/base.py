@@ -21,6 +21,7 @@ BASE_APPS =[
     'django.contrib.staticfiles',
     'django.contrib.admin',  
     'widget_tweaks',
+    'django.contrib.gis',
     
 ]
 

@@ -1,0 +1,43 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <form action="{% url 'usua:crear' %}" method="post">
+        <div class="card card-default">
+            <div class="card-header">
+                <h3 class="title">
+                    <i class="fas fa-plus"></i>
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action }}">
+                {{ form }}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat btnTest">
+                    <i class="fas fa-plus"></i>Guardar Usuario
+                </button>
+            </div>
+        </div>
+    </form>
+    <script>
+        {% if form.errors %}
+            var errors = '';
+            {% for field, field_errors in form.errors.items %}
+                {% for error in field_errors %}
+                    errors += '{{ error }}\n';
+                {% endfor %}
+            {% endfor %}
+            Swal.fire({
+                title: 'Error!',
+                text: errors,
+                icon: 'error'
+            });
+        {% endif %}
+
+        
+    </script>
+{% endblock %}

@@ -83,21 +83,21 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         print("Contexto en operaciones_comunes:", context)
 
         if template_name == 'publico/basecriterios.html':
-            return context
+            return render (request,template_name,context)
         elif template_name == 'publico/listadomap.html':
-            return context
+            return render(request,template_name,context)
         else:
-            return context
+            return render(request,template_name,context)
         
 def filter_data(request):
     context = operaciones_comunes(request, template_name='publico/basecriterios.html')
     print("Contexto en filter_data:", context)
-    return render(request, 'publico/basecriterios.html', context)
+    return render(request, 'publico/basecriterios.html', context if isinstance(context, dict) else None)
 
 def filter_listado_map(request):
     context = operaciones_comunes(request, template_name='publico/listadomap.html')
-    print("Contexto en filter_listado_map:", context)
-    return render(request, 'publico/listadomap.html', context)
+    return context
+
 
 
     

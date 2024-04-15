@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.forms import model_to_dict
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
@@ -61,3 +62,7 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = 'Usuarios_Visualizadores'
         ordering = ['apellido', 'nombres']
         db_table = 'Usuario_Visualizador'
+
+    """ def toJSON(self):
+        item = model_to_dict(self)
+        return item """

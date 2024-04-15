@@ -5,11 +5,12 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.views.generic import TemplateView
 from django.views import defaults as default_views
-
+from apps.regionales.views import regionalesview
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/',include('apps.login.urls',namespace='login')),
+    path('regionales/',regionalesview, name='regionales'),
     path('publico/',include('apps.publico.urls',namespace='publico')),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),    
     path('cards/', TemplateView.as_view(template_name='presentacion.html'), name='cards'),  

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="map" style="height: 500px;"></div>
+
+    <script>
+        var map = L.map('map').setView([-27.4518622,-58.9855547], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var perimeterCoords = [
+        {% for coord in perimeter_coords %}
+            [{{ coord.0 }}, {{ coord.1 }}],
+        {% endfor %}
+    ];
+    console.log(perimeterCoords);
+        var polygon = L.polygon(perimeterCoords, {color: 'red'}).addTo(map);
+    </script>
+</body>
+</html>
