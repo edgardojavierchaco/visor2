@@ -1,0 +1,59 @@
+
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrícula</title>
+</head>
+<body>
+    <h1>Selección de Criterios</h1>
+    <form action="" method="GET">
+        <label for="cueanexo">CUE Anexo:</label>
+        <select name="cueanexo" id="cueanexo">
+            {% for cueanexo in cueanexos_filtrados %}
+                {% if cueanexo == request.GET.cueanexo %}
+                    <option value='{{ cueanexo }}' selected>{{ cueanexo }}</option>
+                {% else %}
+                    <option value='{{ cueanexo }}'>{{ cueanexo }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <input type="submit" name="filtrar_cueanexo" value="Filtrar cueanexo">
+        <br><br>
+        <label for="ciclo_etapa">Ciclo/Etapa:</label>
+        <select name="ciclo_etapa" id="ciclo_etapa">
+            {% for ciclo in ciclos %}
+                {% if ciclo == request.GET.ciclo_etapa %}
+                    <option value='{{ ciclo }}' selected>{{ ciclo }}</option>
+                {% else %}
+                    <option value='{{ ciclo }}'>{{ ciclo }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <input type="submit" name="filtrar_ciclo" value="Filtrar ciclo">
+        <br><br>
+        <label for="nom_seccion">Sección:</label>
+        <select name="nom_seccion" id="nom_seccion">
+            {% for seccion in secciones %}
+                {% if seccion == request.GET.nom_seccion %}
+                    <option value='{{ seccion }}' selected>{{ seccion }}</option>
+                {% else %}
+                    <option value='{{ seccion }}'>{{ seccion }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <br><br>
+        <input type="submit" value="Buscar">
+    </form>
+    <h1>Resultados</h1>
+    
+    {{ tabla_totales }}
+</body>
+</html>
+{% endblock %}

@@ -27,7 +27,8 @@ DATABASES = {
         'PASSWORD': 'Estadisticas24',
         'HOST': 'sigechaco.com.ar',
         'PORT': '5432',
-    }
+    },
+    
 }
 
 

@@ -10,6 +10,7 @@ from apps.regionales.views import regionalesview
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/',include('apps.login.urls',namespace='login')),
+    path('director/',include('apps.director.urls',namespace='director')),
     path('regionales/',regionalesview, name='regionales'),
     path('publico/',include('apps.publico.urls',namespace='publico')),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),    

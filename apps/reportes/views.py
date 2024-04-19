@@ -255,7 +255,7 @@ def filter_data_docentes(request):
                         telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar
                     )
                 ) AS p using (cueanexo)         
-                WHERE 1=1 AND docentes <> 'Total docentes en actividad'         
+                WHERE 1=1 AND docentes = 'Total docentes en actividad'         
             """
 
             parameters = []

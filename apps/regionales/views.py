@@ -1,58 +1,30 @@
 from django.shortcuts import render
-from django.contrib.gis.geos import Point
-from shapely.geometry import MultiPoint
-import psycopg2
+from django.contrib.gis.geos import Point, Polygon
+from shapely.geometry import shape
+import json
 
 def regionalesview(request):
-    # Supongamos que tienes una lista de cueanexo que quieres pasar al query
-    lista_cueanexo = ['220005800','220005801','220005807','220005809']
+    # Cargar el archivo GeoJSON
+    with open('Regiones.geojson', 'r') as f:
+        geojson_data = json.load(f)
 
-    # Crear la lista de cueanexo en formato de cadena separada por comas
-    lista_cueanexo_str = ','.join([f"'{cueanexo}'" for cueanexo in lista_cueanexo])
+    # Obtener las características (features) del GeoJSON
+    features = geojson_data['features']
 
-    # Construir la consulta SQL con la lista de cueanexo filtrados
-    coordenadas = f"SELECT cueanexo, lat, long FROM v_capa_unica_ofertas WHERE cueanexo IN ({lista_cueanexo_str})"
+    # Lista para almacenar las coordenadas de los polígonos
+    perimeter_coords = []
 
-    # Realizar la conexión a la base de datos y ejecutar la consulta
-    conn = psycopg2.connect(
-        database="visualizador", 
-        user="visualizador", 
-        password="Estadisticas24", 
-        host="sigechaco.com.ar", 
-        port="5432"
-    )
-    cursor = conn.cursor()
-    cursor.execute(coordenadas)
-
-    # Obtener los resultados de la consulta
-    resultados = cursor.fetchall()
-
-    # Filtrar las coordenadas para eliminar los valores nulos o vacíos
-    markers_coords = [(float(row[1]), float(row[2])) for row in resultados if row[1] is not None and row[2] is not None]
-
-    # Si no hay coordenadas válidas, retornar un mensaje de error
-    if not markers_coords:
-        return render(request, 'mapa/error.html', {'error_message': 'No se encontraron coordenadas válidas para mostrar.'})
-
-    # Convertir las coordenadas de los marcadores en objetos Point de Django
-    points = [Point(lat, lon) for lat, lon in markers_coords]
-
-    # Crear un objeto MultiPoint de Shapely
-    multi_point = MultiPoint(points)
-
-    # Calcular el contorno convexo
-    convex_hull = multi_point.convex_hull
-
-    # Obtener las coordenadas del contorno convexo
-    perimeter_coords = list(convex_hull.exterior.coords)
-    
-    for coord in perimeter_coords:
-        lat_lon_pair = [coord[i] for i in range(0, len(coord), 2)]
-        perimeter_coords.append(lat_lon_pair)
-    print(perimeter_coords)
-    
-    # Cerrar el cursor y la conexión
-    cursor.close()
-    conn.close()
-
+    # Iterar sobre las características y extraer las coordenadas de los polígonos
+    for feature in features:
+        geometry = feature['geometry']
+        # Convertir la geometría en un objeto shapely
+        shapely_geom = shape(geometry)
+        # Si la geometría es un MultiPolygon, extraer las coordenadas
+        if shapely_geom.geom_type == 'MultiPolygon':
+            for polygon in shapely_geom.geoms:  # Utilizamos la propiedad geoms
+                perimeter_coords.append(list(polygon.exterior.coords))
+        # Si es un Polygon, solo hay un conjunto de coordenadas
+        elif shapely_geom.geom_type == 'Polygon':
+            perimeter_coords.append(list(shapely_geom.exterior.coords))
+        print(perimeter_coords)
     return render(request, 'mapa/regionales.html', {'perimeter_coords': perimeter_coords})

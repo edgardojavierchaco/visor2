@@ -1,4 +1,5 @@
 import json
+from django.db import connections
 import psycopg2
 import asyncpg # type: ignore
 from django.shortcuts import render
@@ -19,12 +20,7 @@ def filter_cueradio(request):
         radio = request.POST.get('Radio')  # Captura el valor del campo de radio        
 
         # Conectarse a la base de datos
-        connection = psycopg2.connect(
-            host='sigechaco.com.ar',
-            user='visualizador',
-            password='Estadisticas24',
-            database='visualizador'
-        )
+        connection = connections['default']
 
         # Realizar la consulta en la base de datos
         cursor = connection.cursor()

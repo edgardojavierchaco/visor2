@@ -1,0 +1,22 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <form method="post" action="." enctype="multipart/form-data">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">                    
+                    <i class="fas fa-plus"></i>                    
+                    {{ titel }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class='form-group'>
+                    <label>Cueanexos</label>
+                    {{ form.cueanexo }}
+            </div>
+        </div>
+    </form>
+    <script></script>
+{% endblock %}

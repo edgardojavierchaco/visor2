@@ -1,6 +1,7 @@
 import json
 import psycopg2
-import asyncpg # type: ignore
+import asyncpg
+import asyncio
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -92,12 +93,11 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
 def filter_data(request):
     context = operaciones_comunes(request, template_name='publico/basecriterios.html')
     print("Contexto en filter_data:", context)
-    return render(request, 'publico/basecriterios.html', context if isinstance(context, dict) else None)
+    return render(request, 'mapa/ofertasmark.html', context if isinstance(context, dict) else None)
 
 def filter_listado_map(request):
     context = operaciones_comunes(request, template_name='publico/listadomap.html')
     return context
-
 
 
     
@@ -175,4 +175,4 @@ async def filtrar_tablas_view(request):
     # Cerrar la conexión a la base de datos
     await connection.close()    
     
-    return render(request, 'publico/otro_templatemap.html', {'resultados': resultados, 'resultados1':resultados1, 'resultados2':resultados2, 'resultados3':resultados3})
+    return render(request, 'mapa/otro_template.html', {'resultados': resultados, 'resultados1':resultados1, 'resultados2':resultados2, 'resultados3':resultados3})

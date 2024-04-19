@@ -12,5 +12,5 @@ urlpatterns=[
     path('puntos/',views2.mapapuntos,name='puntos'), 
     path('filcueradio/',viewscueradio.filtrado_cueradio,name='filcueradio'),
     path('filter_cueradio/',viewscueradio.filter_cueradio,name='filter_cueradio'), # type: ignore
-    path('listadomap/',views.filter_listado_map,name='filter_listado_map'),
+    path('listadomap/',views.filter_listado_map,name='filter_listado_map'), # type: ignore
 ]

@@ -22,6 +22,8 @@ BASE_APPS =[
     'django.contrib.admin',  
     'widget_tweaks',
     'django.contrib.gis',
+    'pandas',
+    
     
 ]
 
@@ -34,6 +36,8 @@ LOCAL_APPS = [
     'apps.login',
     'apps.publico',
     'apps.establecimientos',
+    'apps.vpn',
+    'apps.director',
     
 ]
 

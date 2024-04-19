@@ -1,143 +1,203 @@
+
+
 {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    <style>
-        #map-container {
-            position: relative;
-        }
 
-        #map {
-            height: 550px;
-        }
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+        <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+        <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+        <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+        <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+        <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+        <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
 
-    </style>
-</head>
-<body>
-    <h2>Ubicación Geográfica de CUE N°: {{cueanexo}} y los cercanos en un radio de: {{radio}} metros</h2>
-    <div id="map-container">
-        <div id="map"></div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-    <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js"
-    integrity="sha512-myckXhaJsP7Q7MZva03Tfme/MSF5a6HC2xryjAM4FxPLHGqlh5VALCbywHnzs2uPoF/4G/QVXyYDDSkp5nPfig=="
-    crossorigin=""></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
-    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
-    <!-- Incluir Leaflet.Draw -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-
-    <script>
-        var cueanexo = '{{ cueanexo }}';
-        var markers = JSON.parse('{{ data_json|escapejs }}');
-        var drawnItems = new L.FeatureGroup();
-        console.log(markers)
-        var map = L.map('map');
-        var bounds = L.latLngBounds();
-        var blueMarkers = L.layerGroup(); // Capa para marcadores "azul"
-        var greenMarkers = L.layerGroup(); // Capa para marcadores "verde"
-
-        var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-            maxZoom: 18,
-        }).addTo(map);
-
-        for (var i = 0; i < markers.length; i++) {
-            var lat = markers[i][1];
-            var lng = markers[i][2];
-            var cueanexoMarker = markers[i][0];
-            var nom_est = markers[i][3];
-            var oferta = markers[i][4];
-            var ambito = markers[i][5];
-            var sector = markers[i][6];
-            var region_loc = markers[i][7];
-            var calle = markers[i][8];
-            var numero = markers[i][9];
-            var localidad = markers[i][10];
-            var markerColor = markers[i][11];
-
-            
-
-            if (lat !== 0 && lng !== '') {
-                var markerIcon = L.icon({
-                    iconUrl: "{% static '/img/marker-icon-2x-' %}" + markerColor + ".png",
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    popupAnchor: [1, -34],
-                    tooltipAnchor: [16, -28]
-                });
-
-                var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexoMarker + '\')">' + cueanexoMarker + '</a>';
-                var marker = L.marker([lat, lng], { icon: markerIcon });
-                marker.bindPopup('<strong>Cueanexo:</strong> ' + filterLink + '<br>' +
-                    '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
-                    '<strong>Ofertas:</strong> ' + oferta + '<br>' +
-                    '<strong>Ámbito:</strong> ' + ambito + '<br>' +
-                    '<strong>Sector:</strong> ' + sector + '<br>' +
-                    '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
-                    '<strong>Calle:</strong> ' + calle + ' ' +
-                    '<strong>Nro:</strong> ' + numero + ' - ' + localidad + '<br>');
-
-                if (markerColor === 'blue') {
-                    blueMarkers.addLayer(marker);
-                } else {
-                    greenMarkers.addLayer(marker);
-                }
-                bounds.extend(marker.getLatLng());
+        <style>
+            #map-container {
+                position: relative;
             }
-        }
 
-        map.addLayer(blueMarkers); // Agregar la capa de marcadores "red" al mapa
-        map.addLayer(greenMarkers); // Agregar la capa de marcadores "green"         
-        map.fitBounds(bounds);
+            #map {
+                height: 550px;
+            }
+            .red-highlight{
+                color: red !important;
+                font-weight: bold;
+            }
 
-        var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-            maxZoom: 18,
-        });
+        </style>
+    </head>
+    <body>
+        <h2>Ubicación Geográfica de CUE N°: {{cueanexo}} y los cercanos en un radio de: {{radio}} metros</h2>
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+        <div>
+            <table id="dataTable" class="table">
+                <thead>
+                    <tr>
+                        <th>Cueanexo</th>
+                        <th>Establecimiento</th>
+                        <th>Oferta</th>
+                        <th>Ámbito</th>
+                        <th>Sector</th>
+                        <th>Región</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Los datos se cargarán aquí mediante JavaScript -->
+                </tbody>
+            </table>
+        </div>
 
-        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 18
-        });
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+        <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js"
+        integrity="sha512-myckXhaJsP7Q7MZva03Tfme/MSF5a6HC2xryjAM4FxPLHGqlh5VALCbywHnzs2uPoF/4G/QVXyYDDSkp5nPfig=="
+        crossorigin=""></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+        <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+        <!-- Incluir Leaflet.Draw -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-        var baseLayers = {
-            "Mosaico": openStreetMap,
-            "Satélite": esriSatellite
-        };
+        <script>
+            var cueanexo = '{{ cueanexo }}';
+            var markers = JSON.parse('{{ data_json|escapejs }}');
+            var drawnItems = new L.FeatureGroup();
+            console.log(markers)
+            var map = L.map('map');
+            var bounds = L.latLngBounds();
+            var blueMarkers = L.layerGroup(); // Capa para marcadores "azul"
+            var greenMarkers = L.layerGroup(); // Capa para marcadores "verde"
 
-        var overlayMaps = {
-            "Cue cercanos": greenMarkers,
-            "Cue Buscado": blueMarkers
-        };
+            var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            }).addTo(map);
 
-        L.control.layers(baseLayers, overlayMaps, {
-            collapsed: true,
-            icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
-        }).addTo(map);
+            for (var i = 0; i < markers.length; i++) {
+                var lat = markers[i][1];
+                var lng = markers[i][2];
+                var cueanexoMarker = markers[i][0];
+                var nom_est = markers[i][3];
+                var oferta = markers[i][4];
+                var ambito = markers[i][5];
+                var sector = markers[i][6];
+                var region_loc = markers[i][7];
+                var calle = markers[i][8];
+                var numero = markers[i][9];
+                var localidad = markers[i][10];
+                var markerColor = markers[i][11];
 
-        var center_lat = '{{ center_lat }}'.replace(',', '.');
-        var center_lng = '{{ center_lng }}'.replace(',', '.');
-        var radio = parseInt('{{ radio }}');
+                
 
-        var circle = L.circle([center_lat, center_lng], {
-            color: 'red',
-            fillColor: 'red',
-            fillOpacity: 0.2,
-            radius: radio
-        }).addTo(map);
+                if (lat !== 0 && lng !== '') {
+                    var markerIcon = L.icon({
+                        iconUrl: "{% static '/img/marker-icon-2x-' %}" + markerColor + ".png",
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        tooltipAnchor: [16, -28]
+                    });
 
-        function filterTable(cueanexoMarker) {
-            window.location.href = '/map/listados/?cueanexo=' + cueanexoMarker;
-        }
-    </script>
-</body>
-</html>
+                    var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexoMarker + '\')">' + cueanexoMarker + '</a>';
+                    var marker = L.marker([lat, lng], { icon: markerIcon });
+                    marker.bindPopup('<strong>Cueanexo:</strong> ' + filterLink + '<br>' +
+                        '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
+                        '<strong>Ofertas:</strong> ' + oferta + '<br>' +
+                        '<strong>Ámbito:</strong> ' + ambito + '<br>' +
+                        '<strong>Sector:</strong> ' + sector + '<br>' +
+                        '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
+                        '<strong>Calle:</strong> ' + calle + ' ' +
+                        '<strong>Nro:</strong> ' + numero + ' - ' + localidad + '<br>');
+
+                    if (markerColor === 'blue') {
+                        blueMarkers.addLayer(marker);
+                    } else {
+                        greenMarkers.addLayer(marker);
+                    }
+                    bounds.extend(marker.getLatLng());
+                }
+            }
+
+            map.addLayer(blueMarkers); // Agregar la capa de marcadores "red" al mapa
+            map.addLayer(greenMarkers); // Agregar la capa de marcadores "green"         
+            map.fitBounds(bounds);
+
+            var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            });
+
+            var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 18
+            });
+
+            var baseLayers = {
+                "Mosaico": openStreetMap,
+                "Satélite": esriSatellite
+            };
+
+            var overlayMaps = {
+                "Cue cercanos": greenMarkers,
+                "Cue Buscado": blueMarkers
+            };
+
+            L.control.layers(baseLayers, overlayMaps, {
+                collapsed: true,
+                icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
+            }).addTo(map);
+
+            var center_lat = '{{ center_lat }}'.replace(',', '.');
+            var center_lng = '{{ center_lng }}'.replace(',', '.');
+            var radio = parseInt('{{ radio }}');
+
+            var circle = L.circle([center_lat, center_lng], {
+                color: 'red',
+                fillColor: 'red',
+                fillOpacity: 0.2,
+                radius: radio
+            }).addTo(map);
+
+            function filterTable(cueanexoMarker) {
+                window.location.href = '/map/listados/?cueanexo=' + cueanexoMarker;
+            }
+        </script>
+        <script>
+            // Obtén una referencia a la tabla de datos cuando el documento esté listo
+            $(document).ready(function() {
+                var dataTable = $('#dataTable').DataTable();
+                var cueBuscado='{{ cueanexo }}'
+                // Recorre los datos y agrega filas a la tabla
+                for (var i = 0; i < markers.length; i++) {
+                    var cueanexoMarker = markers[i][0];
+                    var nom_est = markers[i][3];
+                    var oferta = markers[i][4];
+                    var ambito = markers[i][5];
+                    var sector = markers[i][6];
+                    var region_loc = markers[i][7];
+                    
+                    // Crea un enlace HTML para cada cueanexoMarker
+                    var cueanexoLink = '<a href="#" onclick="filterTable(\'' + cueanexoMarker + '\')">' + cueanexoMarker + '</a>';
+                    // Determina si este es el "cue" buscado
+                    var isCueBuscado = (cueanexoMarker === '{{ cueanexo }}');
+                    
+                    // Agrega una nueva fila a la tabla con los datos correspondientes
+                    var row = dataTable.row.add([cueanexoLink, nom_est, oferta, ambito, sector, region_loc]).draw().node();
+                    
+                    // Si es el "cue" buscado, añade la clase CSS para resaltarlo en rojo
+                    if (isCueBuscado) {
+                        $(row).addClass('red-highlight');
+                    }
+                }
+            });
+        </script>
+    </body>
+    </html>

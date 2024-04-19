@@ -1,27 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Mapa</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Regiones</title>
+
+    <!-- Agregar aquí los enlaces a las bibliotecas de mapas (por ejemplo, Leaflet, Mapbox) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-    <div id="map" style="height: 500px;"></div>
+    <div id="map" style="width: 100%; height: 600px;"></div>
 
     <script>
-        var map = L.map('map').setView([-27.4518622,-58.9855547], 13);
+        // Inicializar el mapa
+        var map = L.map('map').setView([-26.5857656,-60.9540073], 10); // Centrar el mapa en la primera coordenada
 
+        // Agregar un fondo de mapa (por ejemplo, OpenStreetMap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        var perimeterCoords = [
-        {% for coord in perimeter_coords %}
-            [{{ coord.0 }}, {{ coord.1 }}],
-        {% endfor %}
-    ];
-    console.log(perimeterCoords);
-        var polygon = L.polygon(perimeterCoords, {color: 'red'}).addTo(map);
+        // Recorrer las coordenadas de los polígonos y dibujarlos en el mapa
+        var perimeterCoords = {{ perimeter_coords|safe }}; // Obtener las coordenadas desde el contexto de Django
+        console.log("perimeter_coords:",perimeter_coords)
+        perimeterCoords.forEach(function(coords) {
+            var polygon = L.polygon(coords, {color: 'blue'}).addTo(map);
+        });
     </script>
 </body>
 </html>
