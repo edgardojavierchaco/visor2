@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link rel="stylesheet" href="{% static 'css/estilos-headers.css'%}">
+    <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+
+</head>
+<body>
+    <header id="encabezado">
+        <div class="container__header">
+            <div class="logo">
+                <img src="{% static 'img/ministerio-educacion.jpg'%}" alt="">
+            </div>
+            <div class="container__nav">
+                <nav id="nav">
+                    <ul>
+                        <li><a href="#" class="selected">INICIO</a></li>                            
+                            
+                        <li><a href="#">CONTACTANOS</a></li>
+                        <li>{{request.user.username}}</li>
+                    </ul>
+                </nav>
+                <div class="btn__menu" id="btn_menu"><i class="fas fa-bars"></i></div>
+            </div>            
+        </div>
+    </header>
+
+    {% block content %}
+
+    {% endblock %}
+    
+    <script src="{% static 'js/headers.js' %}"></script>
+</body>
+</html>

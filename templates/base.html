@@ -1,0 +1,166 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Título del sitio{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+    {% block styles %}{% endblock %}
+    {% block extra_styles %}{% endblock %}
+    <style>
+        /* Estilo inicial del submenu (oculto) */
+        .submenu {
+            display: none;
+        }
+
+        /* Estilo del icono de flecha hacia abajo cuando el submenu está oculto */
+        .selected i.fas.fa-chevron-down:before {
+            content: "\f078"; /* Icono de flecha hacia abajo */
+        }
+
+        /* Estilo del icono de flecha hacia arriba cuando el submenu está visible */
+        .selected.active i.fas.fa-chevron-down:before {
+            content: "\f077"; /* Icono de flecha hacia arriba */
+        }
+
+        /* Mostrar el submenu cuando se hace clic en "Mapa" */
+        .selected.active + .submenu {
+            display: block;
+        }
+
+        /* Estilos para descripciones de opciones */
+        .description {
+            display: none;
+            font-size: 12px;
+            margin-top: -5px;
+        }
+
+        .selected:hover .description {
+            display: block;
+        }
+
+        /* Resaltar texto al pasar el mouse sobre la opción */
+        .selected:hover h4 {
+            color: #3498db; /* Cambia el color al pasar el mouse */
+        }
+        /* Estilo para el tooltip */
+        .tooltip {
+            position: absolute;
+            z-index: 1;
+            background-color: #3498db;
+            color: #fff;
+            padding: 5px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .option:hover .tooltip {
+            display: block;
+        }
+    </style>
+</head>
+<body id="body">    
+    <header>
+        <div class="icon__menu">
+            <i class="fas fa-bars" id="btn_open"></i>
+        </div>        
+    </header>        
+    <div class="menu__side" id="menu_side">
+        <div class="name__page">
+            <i class="fas fa-users-cog"></i>
+            <h4>{{request.user.username}}</h4>
+        </div>
+        <div class="options__menu">
+            <a href="{% url 'home'%}" class="selected">
+                <div class="option" title="Ir al inicio">                    
+                    <i class="fa fa-home"></i>
+                    <h4>Inicio</h4>
+                    <div class="description">Ir a la página de inicio</div>
+                </div>                
+            </a>
+            <a href="#" class="selected">
+                <div class="option" title="Explorar mapas">
+                    <img src="{% static '/img/mapadatos.png' %}">
+                    <h4>Mapa</h4>
+                    <i class="fas fa-chevron-down"></i>
+                    <div class="description">Explorar el mapa</div>
+                </div>
+            </a>
+            <div class="submenu">
+                <a href="{% url 'mapas:puntos' %}">
+                    <div class="option" title="Dibujar área de búsqueda">
+                        <img src="{% static '/img/forma.png' %}">
+                        <h4>Por área dibujada</h4>
+                        <div class="description">Ver puntos en el mapa</div>
+                    </div>                
+                </a>
+                <a href="{% url 'mapas:filtrado' %}">
+                    <div class= "option" title="Búsqueda por criterios">
+                        <img src="{% static '/img/prueba.png' %}">
+                        <h5>Por Selección de Criterios</h5>
+                        <div class="description">Filtrar elementos en el mapa</div>
+                    </div>                
+                </a>
+                <a href="{% url 'mapas:filcueradio' %}">
+                    <div class="option" title="Búsqueda por radio">
+                        <img src="{% static '/img/radar.png'%}">
+                        <h4>Por radio</h4>
+                        <div class="description">Buscar CUE por radio</div>
+                    </div>                
+                </a>
+            </div>
+            <a href="{% url 'reportes:panel' %}">
+                <div class="option" title="Reportes">
+                    <img src="{% static '/img/analitica.png' %}">
+                    <h4>Reportes</h4>
+                    <div class="description">Ver opciones de reportes</div>
+                </div>
+            </a>
+            <a href="{% url 'reportes:infografia' %}">
+                <div class="option" title="Infografías">
+                    <img src="{% static '/img/infograf.jpg' %}">
+                    <h4>Infografias</h4>
+                    <div class="description">Infografías</div>
+                </div>
+            </a>
+            <a href="{% url 'equipo' %}">
+                <div class="option" title="Equipo de trabajo">
+                    <img src="{% static '/img/equipo.png' %}">
+                    <h4>Equipo</h4>
+                    <div class="description">Equipo</div>
+                </div>
+            </a>
+            <a href="{% url 'videoteca:videos' %}">
+                <div class="option" title="Videoteca">
+                    <img src="{% static '/img/videoteca.png' %}">
+                    <h4>Videoteca</h4>
+                    <div class="description">Videoteca</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Agrega jQuery (asegúrate de incluirlo en tu proyecto) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        // Al hacer clic en la opción "Mapa"
+        $(".selected").click(function() {
+            // Alternar la clase "active" en la opción "Mapa"
+            $(this).toggleClass("active");
+            // Mostrar u ocultar el submenu
+            $(this).next(".submenu").slideToggle();
+        });
+    });
+    </script>
+
+    {% block content %}{% endblock %}
+    <script src="{% static 'js/sidebars.js' %}"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

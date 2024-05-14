@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Establecimientos</title>
+    <!-- Incluir las bibliotecas de DataTables y jQuery -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+</head>
+<body>
+    <h1>Listado de Establecimientos</h1>
+    <table id="establecimientos_table">
+        <thead>
+            <tr>
+                <th>Cueanexo</th>
+                <th>Nombre Establecimiento</th>
+                <th>Sector</th>
+                <th>Ámbito</th>
+                <th>Categoría</th>
+                <th>Localidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for establecimiento in establecimientos %}
+            <tr>
+                <td><a href="{% url 'detalle_establecimiento' establecimiento.id %}">{{ establecimiento.cueanexo }}</a></td>
+                <td>{{ establecimiento.nom_est }}</td>
+                <td>{{ establecimiento.sector }}</td>
+                <td>{{ establecimiento.ambito }}</td>
+                <td>{{ establecimiento.categoria }}</td>
+                <td>{{ establecimiento.localidad }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        // Inicializar DataTables en la tabla
+        $(document).ready( function () {
+            $('#establecimientos_table').DataTable();
+        });
+    </script>
+</body>
+</html>

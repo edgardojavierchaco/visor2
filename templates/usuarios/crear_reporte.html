@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title%}Crear reporte{%endblock title%}
+{% block page_tittle %}Crear reporte{% endblock page_tittle%}
+
+  {% block sidebar %}
+  {% if grupo == 'dech' %} 
+    {% include 'dash/sidebar-dech.html' %}
+  {% else %}
+    {% include 'dash/sidebar.html' %}
+  {% endif %}
+  {%endblock sidebar %}
+
+{% block topbar %} {% include 'dash/topbar.html' %} {%endblock topbar %}
+
+{% block content %}
+<div class="content col-lg-10 mx-auto">
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Crear reporte</h6>
+    </div>
+    <div class="card-body">
+        <form class="" method="post" enctype="multipart/form-data">{% csrf_token %}
+          {{ form | crispy }}
+          <hr>
+          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <a name="" id="" class="btn btn-outline-danger" href="{% url 'aprender:home' %}" role="button">Cancelar</a> &nbsp
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+
+<script> 
+
+  aplicadorShow = document.getElementById('collapseUsuarios');
+  aplicadorShow.classList.add('show');
+
+  aplicadorActive = document.getElementById('crearUsuarios');
+  aplicadorActive.classList.add('active');
+
+</script>
+
+{% endblock scripts %}

@@ -1,0 +1,125 @@
+{% extends 'publico/body.html' %}
+
+{% load static %}
+{% block content %}
+   <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Listado de Unidades de Servicio</title>
+        <!-- Incluir DataTables CSS -->
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.css">
+        <style>
+            /* Estilos adicionales si es necesario */
+        </style>
+    </head>
+    <body>
+        {% block content_header %}
+        <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">  <small></small></h1>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+                                <li class="breadcrumb-item"><a href="#" id="enlace-regresar">Regresar</a></li>
+                                
+                                <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endblock %}
+        <h1>Listado de Unidades de Servicio</h1>
+        <table id="data_table" class="display">
+            <thead>
+                <tr>
+                    <th>Cueanexo</th>
+                    <th>Establecimiento</th>
+                    <th>Oferta</th>
+                    <th>Ambito</th>
+                    <th>Sector</th>
+                    <th>Region</th>
+                    <th>Localidad</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <!-- Incluir jQuery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <!-- Incluir DataTables JavaScript -->
+        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.js"></script>
+        <script>
+            $(document).ready( function () {
+                // Obtener los datos JSON del contexto
+                var datas = JSON.parse('{{ data_json|escapejs }}');
+                console.log(datas)
+                // Inicializar DataTables con los datos JSON
+                $('#data_table').DataTable({
+                    responsive: true,
+                    autoWidth: true,
+                    "language": {
+                        url: '{% static 'lib/datatables-1.10.20/spanish.txt' %}'
+                    },
+                    data: datas,
+                    columns: [
+                        { 
+                            title: "Cueanexo", 
+                            data: "0",
+                            render: function(data, type, row, meta) {
+                                // Aquí construimos el enlace HTML
+                                return '<a href="/map/listados/?cueanexo=' + row[0] + '">' + row[0] + '</a>';
+                            }
+                        },
+                        { title: "Establecimiento", data: "3" },
+                        { title: "Oferta", data: "4" },
+                        { title: "Ámbito", data: "5" },
+                        { title: "Sector", data: "6" },
+                        { title: "Región", data: "7" },
+                        { title: "Localidad", data: "10" }
+                    ]
+                });
+                // Agregar evento de clic a los enlaces generados dinámicamente
+                $(document).on('click', '.enlace-cueanexo', function(e) {
+                    e.preventDefault(); // Prevenir el comportamiento predeterminado del enlace
+                    var cueanexo = $(this).data('cueanexo'); // Obtener el valor de cueanexo del atributo data-cueanexo
+                    llamarVista(cueanexo); // Llamar a la función para hacer la solicitud AJAX
+            
+                });
+            });
+            // Función para hacer la solicitud AJAX
+            function llamarVista(cueanexo) {
+                $.ajax({
+                    url: '{% url 'mapas:listados' %}', // URL de la vista Django
+                    type: 'GET', // Tipo de solicitud (puedes cambiar a POST si es necesario)
+                    data: {
+                        'cueanexo': cueanexo // Parámetro que se enviará a la vista
+                    },
+                    success: function(response) {
+                        // Manejar la respuesta
+                        console.log(response);
+                        // Por ejemplo, puedes mostrar la respuesta en una alerta
+                        alert(response);
+                    },
+                    error: function(xhr, status, error) {
+                        // Manejar el error
+                        console.error(xhr);
+                    }
+                });
+            }
+        </script>
+        <script>
+            document.getElementById("enlace-regresar").addEventListener("click", function(event) {
+                event.preventDefault(); // Evita el comportamiento predeterminado del enlace
+                window.history.go(-2); // Regresa a la página anterior en el historial del navegador
+            });
+        </script>
+    </body>
+    </html>
+ 
+{% endblock %}

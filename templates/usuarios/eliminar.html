@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title%}Eliminar credenciales<{%endblock title%}
+{% block page_tittle %}Eliminar credenciales<{% endblock page_tittle%}
+
+{% block sidebar %} {% include 'dash/sidebar.html' %} {%endblock sidebar %}
+
+{% block content %}
+<div class="content col-lg-10 mx-auto">
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Eliminar credenciales</h6>
+    </div>
+    <div class="card-body">
+        <form class="" method="post" enctype="multipart/form-data">{% csrf_token %}
+          <p>¿Estás seguro que quieres eliminar "{{object}}"?</p>
+          {{ form | crispy }}
+          <hr>
+          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <a name="" id="" class="btn btn-outline-danger" href="{% url 'usuarios:listar' %}" role="button">Cancelar</a> &nbsp
+            <button class="btn btn-primary" type="submit">Confirmar</button>
+          </div>
+        </form>
+    </div>
+  </div>
+</div>
+
+
+{% endblock content %}

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Archivos</title>
+</head>
+<body>
+    <h2>Lista de Archivos</h2>
+    <ul>
+        {% for archivo in archivos %}
+            <li>{{ archivo.archivo.name }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

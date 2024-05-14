@@ -1,0 +1,43 @@
+version: '3'
+
+volumes:
+  production_postgres_data_visor: {}
+  production_postgres_data_backups_visor: {}
+  production_traefik_visor: {}
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+    image: visor_production_django
+    platform: linux/x86_64
+    depends_on:
+      - postgres
+    env_file:
+      - ./.env
+    command: /start    
+    
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: visor_production_postgres
+    volumes:
+      - production_postgres_data_visor:/var/lib/postgresql/data_visor:Z
+      - production_postgres_data_backups_visor:/backups_visor:z      
+    env_file:
+      - ./.env
+          
+  traefik:
+    build:
+      context: .
+      dockerfile: ./compose/production/traefik/Dockerfile
+    image: visor_production_traefik
+    depends_on:
+      - django
+    volumes:
+      - production_traefik_visor:/etc/traefik/acme:z 
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443" 

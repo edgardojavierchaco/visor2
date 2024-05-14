@@ -1,0 +1,316 @@
+<!---
+**************************************************************************
+* PLANTILLA PARA MOSTRAR EL MAPA Y DATATABLE SEGUN CRITERIO SELECCIONADO *
+**************************************************************************
+-->
+
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <head>
+        <!-- Bootstrap CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <!-- Bootstrap Bundle JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+        <!-- Popper JS -->
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+        <!-- Leaflet CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+        <!-- Leaflet MarkerCluster CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+        <!-- Leaflet Measure CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+        <!-- Leaflet Draw CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+        <!-- DataTables Bootstrap 5 CSS -->
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+        <!-- Leaflet JS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet-src.js" integrity="sha512-x4B5AXtD8SqDqEpzOFXxCE0OOUhQ0Fep3Qka6WtUa3tw7z4fC7eOI4Vjm191HB63//4Y554Zxydbt2Hi8b+bVQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet-src.min.js" integrity="sha512-3/WyQrhTdqSVmSifQS62akgtNBhZha2lS44TnoN9Jk3J01FvsKK4suVmz6t5FtccGb5iJw58GoFhBjPE5EPc8Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+        <style>
+            #map-container {
+                position: relative;
+            }
+
+            #map {
+                height: 550px;
+            }
+            
+            
+        </style>
+    </head>
+    <body>
+        {% block content_header %}
+            <div class="content-header">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <h1 class="m-0 text-dark">  <small></small></h1>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-right">
+                                    <li class="breadcrumb-item"><a href="{% url 'dash:portada'%}">Regresar</a><li>                                    
+                                    <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        {% endblock %}
+        <h1>Ubicación Geográfica de Unidades de Servicio</h1>
+        <div id="map-container">
+            <div id="map"></div>            
+        </div>
+        
+        <div id="table-container">
+            <table id="marker-table" class="display">
+                <thead>
+                    <tr>
+                        <th>Cueanexo</th>
+                        <th>Establecimiento</th>
+                        <th>Ofertas</th>
+                        <th>Ámbito</th>
+                        <th>Sector</th>
+                        <th>Región Educativa</th>
+                        <th>Calle</th>
+                        <th>Número</th>
+                        <th>Localidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Aquí se llenará la tabla dinámicamente con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Agrega el enlace al archivo JavaScript de DataTables -->
+        <script src='https://code.jquery.com/jquery-3.7.0.js'></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js'></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js'></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+        <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js"
+        integrity="sha512-myckXhaJsP7Q7MZva03Tfme/MSF5a6HC2xryjAM4FxPLHGqlh5VALCbywHnzs2uPoF/4G/QVXyYDDSkp5nPfig=="
+        crossorigin=""></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+        <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>    
+        <!-- Incluir Leaflet.Draw -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js'></script>
+        <script src='https://cdn.datatables.net/buttons/2.0.0/js/dataTables.buttons.min.js'></script>
+        <script src='https://cdn.datatables.net/buttons/2.0.0/js/buttons.print.min.js'></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
+        <!-- Lenguaje para los botones -->
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.colVis.min.js"></script>
+    
+        <script>
+            var markers = JSON.parse('{{ data_json|escapejs }}');
+            var drawnItems = new L.FeatureGroup();
+            
+            var map = L.map('map');
+            var bounds = L.latLngBounds();
+            var selectedMarkers = []; // Almacena los marcadores seleccionados para medir distancias
+
+            var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            }).addTo(map);
+
+            var regionColors = {
+                'R.E. 1': 'orange',
+                'R.E. 2': 'blue',
+                'R.E. 3': 'violet',
+                'R.E. 4-B': 'red',
+                'R.E. 4-A':'green',
+                'R.E. 5': 'orange',
+                'R.E. 6': 'blue',
+                'R.E. 7': 'violet',
+                'R.E. 8-A': 'red',
+                'R.E. 8-B':'green',
+                'R.E. 9': 'orange',
+                'R.E. 10-A': 'red',
+                'R.E. 10-B': 'blue',
+                'R.E. 10-C': 'green',
+                'SUB. R.E. 1-B':'green',
+                'SUB. R.E. 1-A':'blue',
+                'SUB. R.E. 3':'green',
+                'SUB. R.E. 2':'red',
+                'SUB. R.E. 5':'violet',
+                // Agrega más regiones y colores según sea necesario
+            };
+            
+
+
+            function getMarkerColor(region) {
+                return regionColors[region] || 'gray';
+            }
+            
+            var markerClusterGroup = L.markerClusterGroup();
+
+            for (var i = 0; i < markers.length; i++) {
+                var lat = markers[i][1];
+                var lng = markers[i][2];
+                var cueanexo = markers[i][0];
+                var nom_est = markers[i][3];
+                var oferta = markers[i][4];
+                var ambito = markers[i][5];
+                var sector = markers[i][6];
+                var region_loc = markers[i][7];
+                var calle = markers[i][8];
+                var numero = markers[i][9];
+                var localidad=markers[i][10];
+
+                if (lat !== 0 && lng !== '') {
+                    var regionColor = getMarkerColor(region_loc);
+                    var markerIcon = L.icon({
+                        iconUrl: '/static/img/marker-icon-2x-' + regionColor + '.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        tooltipAnchor: [16, -28]
+                    });
+                    var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexo + '\',\'' + oferta + '\')">' + cueanexo + '</a>';
+                    var marker = L.marker([lat, lng], { icon: markerIcon });
+                    marker.bindPopup('<strong>Cueanexo:</strong> ' + filterLink + '<br>' +
+                                    '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
+                                    '<strong>Ofertas:</strong> ' + oferta + '<br>' +
+                                    '<strong>Ámbito:</strong> ' + ambito + '<br>' +
+                                    '<strong>Sector:</strong> ' + sector + '<br>' +
+                                    '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
+                                    '<strong>Calle:</strong> ' + calle + ' ' +
+                                    '<strong>Nro:</strong> ' + numero + ' - '+ localidad + '<br>');
+
+                    markerClusterGroup.addLayer(marker);
+                    bounds.extend(marker.getLatLng());
+
+                    
+                }
+            }
+
+            map.addLayer(markerClusterGroup);
+            map.fitBounds(bounds);
+
+            var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            });
+
+            var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 18
+            });
+
+            var baseLayers = {
+                "Mosaico": openStreetMap,
+                "Satélite": esriSatellite
+            };
+
+            L.control.layers(baseLayers, null, {
+                collapsed: true,
+                icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
+            }).addTo(map);           
+            
+                
+
+            function filterTable(cueanexo, oferta) {
+                // Redireccionar a la nueva página y pasar el parámetro 'cueanexo' en la URL
+                window.location.href = '/map/listados/?cueanexo=' + cueanexo + '&oferta='+oferta;
+                console.log("Cueanexo:", cueanexo);
+                console.log("Oferta:", oferta);
+            }
+        </script>
+        <script>
+            $(document).ready(function() {
+                var markers = JSON.parse('{{ data_json|escapejs }}');
+                
+                for (var i = 0; i < markers.length; i++) {
+                    var marker = markers[i];
+                    var cueanexo = marker[0];
+                    var nom_est = marker[3];
+                    var oferta = marker[4];
+                    var ambito = marker[5];
+                    var sector = marker[6];
+                    var region_loc = marker[7];
+                    var calle = marker[8];
+                    var numero = marker[9];
+                    var localidad = marker[10];
+
+                    // Agrega una fila a la tabla con los datos del marcador
+                    $('#marker-table tbody').append(
+                        '<tr>' +
+                        '<td><a href="#" onclick="filterTable(\'' + cueanexo + '\', \'' + oferta + '\')">' + cueanexo + '</a></td>' +
+                        '<td>' + nom_est + '</td>' +
+                        '<td>' + oferta + '</td>' +
+                        '<td>' + ambito + '</td>' +
+                        '<td>' + sector + '</td>' +
+                        '<td>' + region_loc + '</td>' +
+                        '<td>' + calle + '</td>' +
+                        '<td>' + numero + '</td>' +
+                        '<td>' + localidad + '</td>' +
+                        '</tr>'
+                    );
+                }
+
+                // Inicializa DataTables después de agregar todas las filas
+                $('#marker-table').DataTable({
+                   responsive: true,
+                    autoWidth: false,
+                    language: {
+                        url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
+                    },      
+                    dom: '<"top"lBf>rt<"bottom"ip>',
+                    buttons: [
+                        {
+                            extend: 'excel',
+                            text: '<i class="fas fa-file-excel"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Exportar a Excel',
+                            title: 'Nombre_del_archivo'
+                        },
+                        {
+                            extend: 'csv',
+                            text: '<i class="fas fa-file-csv"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Exportar a CSV',
+                            title: 'Nombre_del_archivo'
+                        },
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fas fa-file-pdf"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Exportar a PDF',
+                            title: 'Nombre_del_archivo'
+                        },
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Imprimir',
+                            title: 'Nombre_del_archivo'
+                        }
+                    ]
+                }); 
+            });
+        </script>
+
+
+    </body>
+    
+{% endblock %}
