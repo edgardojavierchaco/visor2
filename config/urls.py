@@ -9,7 +9,7 @@ from apps import establecimientos
 from apps.dashboard.views import dash
 from apps.mapas.views2 import *
 from apps.establecimientos.views import establecimientos
-from apps.chat.views import homeChat, roomChat, private_chat
+#from apps.chat.views import homeChat, roomChat, private_chat
 from apps.archivar.views import cargar_archivo, archivos_lista, buscar_pdf
 
 
@@ -19,9 +19,9 @@ urlpatterns = [
     path('cargar/', cargar_archivo, name='cargar_archivo'), 
     path('archivos_lista/', archivos_lista, name='archivos_lista'),
     path('buscar_pdf/', buscar_pdf, name='buscar_pdf'),
-    path('chat/',homeChat,name='chat'),
-    path('room/<int:room_id>/',roomChat,name='room'),
-    path('roomp/<int:room_id>/private_chat/',private_chat, name='private_chat'),
+    #path('chat/',homeChat,name='chat'),
+    #path('room/<int:room_id>/',roomChat,name='room'),
+    #path('roomp/<int:room_id>/private_chat/',private_chat, name='private_chat'),
     path('mapapuntos/',mapapuntos,name='mapapuntos'),
     path('dibujararea/',obtenerdatos,name='dibujararea'),
     path('login/',include('apps.login.urls',namespace='login')),

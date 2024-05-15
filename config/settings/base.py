@@ -14,8 +14,8 @@ APPS_DIR = ROOT_DIR / 'apps'
 
 # Configuración de aplicaciones
 BASE_APPS =[ 
-    'channels',      
-    'daphne',
+    #'channels',      
+    #'daphne',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -166,13 +166,13 @@ SPECTACULAR_SETTINGS = {
 
 ASGI_APPLICATION = 'config.asgi.application'
 
-CHANNEL_LAYERS = {
+""" CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             'hosts': [('redis', 6379)],
         },
     },
-}
+} """
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
