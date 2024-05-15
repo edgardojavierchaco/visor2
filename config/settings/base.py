@@ -34,8 +34,7 @@ LOCAL_APPS = [
     'apps.usuarios',
     'apps.login',
     'apps.establecimientos',
-    'apps.dashboard',  
-    'apps.chat' ,
+    'apps.dashboard', 
     'apps.archivar',
 ]
 
