@@ -10,15 +10,13 @@ from apps.dashboard.views import dash
 from apps.mapas.views2 import *
 from apps.establecimientos.views import establecimientos
 #from apps.chat.views import homeChat, roomChat, private_chat
-from apps.archivar.views import cargar_archivo, archivos_lista, buscar_pdf
+from apps.archivar.views import ArchivoCreateView, ArchivosListView, BuscarPDFView
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('dash/',dash,name='dash'),   
-    path('cargar/', cargar_archivo, name='cargar_archivo'), 
-    path('archivos_lista/', archivos_lista, name='archivos_lista'),
-    path('buscar_pdf/', buscar_pdf, name='buscar_pdf'),
+    path('cargar/', include('apps.archivar.urls', namespace='cargar')),        
     #path('chat/',homeChat,name='chat'),
     #path('room/<int:room_id>/',roomChat,name='room'),
     #path('roomp/<int:room_id>/private_chat/',private_chat, name='private_chat'),

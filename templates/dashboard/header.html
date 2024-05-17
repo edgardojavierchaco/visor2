@@ -37,7 +37,24 @@
                         <li><a href="{% url 'reportes:filtrado_comesp' %}" class="dropdown-item">Matrícula común y especial</a></li> 
                         <li><a href="{% url 'reportes:filtrado_snu' %}" class="dropdown-item">Matrícula SNU</a></li> 
                     </ul>
-                </li>
+                </li>                
+                <li class="nav-item dropdown">
+                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                        class="nav-link dropdown-toggle"><i class="fas fa-book-reader" style="color:black"></i> Archivos</a>
+                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                        <script type="text/javascript">
+                            var nivelAcceso = "{{ nivelAcceso }}";
+                            console.log("Nivel de acceso del usuario:", nivelAcceso);
+                        </script>
+                        {% if user.is_authenticated %}                            
+                            <li><a href="{% url 'archivos:crear' %}" class="dropdown-item">Agregar</a></li>
+                            <li><a href="{% url 'archivos:listar' %}" class="dropdown-item">Listado</a></li>
+                        {% else %}
+                            <li><a href="#" class="dropdown-item disabled">Agregar</a></li>
+                            <li><a href="#" class="dropdown-item disabled">Listado</a></li>                                                 
+                        {% endif %}
+                    </ul>
+                </li>                
                 {% if user.is_authenticated %}
                 <li class="nav-item">
                     <span class="nav-link">Usuario: {{ user.username }}</span>
@@ -57,6 +74,7 @@
                     </a>
                 </li>
                 {% endif %}
+                
             </ul>
         </div>
         {% comment %} <ul class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">

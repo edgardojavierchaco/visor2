@@ -1,10 +1,23 @@
-{% extends "base.html" %} 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>403 - Forbidden</title>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+</head>
+<body>
+    <script>
+        swal({
+            title: "Acceso denegado",
+            text: "No tiene permisos para acceder a esta página",
+            icon: "error",
+            button: "OK",
+        }).then((value) => {
+            window.history.back();  // Redirige atrás después de hacer clic en OK
+        });
+    </script>
+</body>
+</html>
 
-{% block title %}Forbidden (403){% endblock %} 
-
-{% block content %}
-
-{% if exception %}{{ exception }}{% else %}No tienes los permisos para ingresar.{% endif %}
-
-{% endblock content %}
  

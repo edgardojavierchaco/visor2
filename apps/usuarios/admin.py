@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import UsuariosVisualizador, NivelAcceso
 
 
+
 class UsuariosVisualizadorAdmin(UserAdmin):
     list_display = ('username', 'apellido', 'nombres', 'correo', 'telefono', 'nivelacceso', 'activo', 'is_staff', 'is_superuser')
     list_filter = ('nivelacceso', 'activo', 'is_staff', 'is_superuser')
@@ -10,7 +11,7 @@ class UsuariosVisualizadorAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Información Personal', {'fields': ('apellido', 'nombres', 'correo', 'telefono', 'nivelacceso')}),
-        ('Permisos', {'fields': ('activo', 'is_staff', 'is_superuser')}),
+        ('Permisos', {'fields': ('activo', 'is_staff', 'is_superuser','groups')}),
     )
     add_fieldsets = (
         (None, {
@@ -29,4 +30,5 @@ class NivelAccesoAdmin(admin.ModelAdmin):
 
 admin.site.register(UsuariosVisualizador, UsuariosVisualizadorAdmin)
 admin.site.register(NivelAcceso, NivelAccesoAdmin)
+
 

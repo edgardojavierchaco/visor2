@@ -195,7 +195,7 @@
                     var distance = latlng.distanceTo(layer.getLatLng());
 
                     // Si el marcador actual está dentro del radio de 1000 metros, agrégalo a la lista de marcadores cercanos
-                    if (distance <= 500) {
+                    if (distance <= 1000) {
                         nearbyMarkers.push(layer);
                     }
                 });
@@ -217,7 +217,7 @@
                 // Crear un marcador en las coordenadas de la dirección seleccionada
                 var selectedMarker = L.marker(latlng, { icon: redIcon }).addTo(map);
                 
-                // Encontrar marcadores cercanos en un radio de 500 metros y agregarlos al mapa
+                // Encontrar marcadores cercanos en un radio de 1000 metros y agregarlos al mapa
                 var nearbyMarkers = findNearbyMarkers(latlng);
                 nearbyMarkers.forEach(function(nearbyMarker) {
                     nearbyMarker.addTo(map);
@@ -386,8 +386,25 @@
                     "Mosaico": openStreetMap,
                     "Satélite": esriSatellite
                 };
-                L.control.layers(baseLayers).addTo(map);
-                openStreetMap.addTo(map); // Añade una capa por defecto al mapa
+                
+                L.control.layers(baseLayers, null, {
+                collapsed: true,
+                icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
+            }).addTo(map);   
+
+                // Evento que se activa al cambiar de capa en el control de capas
+                map.on('baselayerchange', function(event) {
+                    // Verifica qué capa se seleccionó
+                    if (event.name === 'Satélite') {
+                        // Si se selecciona la capa de satélite, cambia la capa base del mapa
+                        map.removeLayer(openStreetMap);
+                        esriSatellite.addTo(map);
+                    } else {
+                        // Si se selecciona cualquier otra capa, cambia a la capa de mosaico
+                        map.removeLayer(esriSatellite);
+                        openStreetMap.addTo(map);
+                    }
+                });
             
         });
     </script>   

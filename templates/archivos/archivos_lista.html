@@ -1,15 +1,143 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Lista de Archivos</title>
-</head>
-<body>
-    <h2>Lista de Archivos</h2>
-    <ul>
-        {% for archivo in archivos %}
-            <li>{{ archivo.archivo.name }}</li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+{% extends "dashboard/body.html" %}
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card card-default">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-search"></i>
+            {{ title }}
+        </h3>
+    </div>
+</div>
+<div class="card-body">
+    <table class="table" id="data">
+        <thead>
+            <tr>
+                <th scope="col">Nro</th>
+                <th scope="col">Cueanexo</th>
+                <th scope="col">Asunto</th>
+                <th scope="col">Tipo Norma</th>
+                <th scope="col">N°</th>
+                <th scope="col">Año</th>   
+                <th scope="col">Acción</th>               
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in archivos %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td>{{ u.cueanexo }}</td>
+                    <td>{{ u.asunto }}</td>
+                    <td>{{ u.t_norma }}</td>
+                    <td>{{ u.nro_normativa }}</td>
+                    <td>{{ u.año }}</td>                           
+                    <td>
+                        <button type="button" class="btn btn-success btn-xs btn-search"><i class="fas fa-search"></i></button>
+                        <button type="button" class="btn btn-primary btn-xs btn-edit" data-id="{{ u.id }}"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block javascript %}
+    <script type="application/javascript">
+        $(document).ready(function() {
+            // Manejo de evento para el botón btn-search
+            $(document).on('click', '.btn-search', function() {
+                var cueanexo = $(this).closest('tr').find('td:eq(1)').text(); // Índice 1 para la columna cueanexo
+                var asunto = $(this).closest('tr').find('td:eq(2)').text(); // Índice 2 para la columna asunto
+                
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "archivos:buscar" %}',
+                    data: {
+                        'cueanexo': cueanexo,
+                        'asunto': asunto,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.ruta_pdf) {
+                            window.open(response.ruta_pdf, '_blank');
+                        } else {
+                            Swal.fire({
+                                title: 'Error',
+                                text: response.error,
+                                icon: 'error',
+                                confirmButtonText: 'Cerrar'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Ocurrió un error al procesar la solicitud.',
+                            icon: 'error',
+                            confirmButtonText: 'Cerrar'
+                        });
+                    }
+                });
+            });
+
+            // Manejo de evento para el botón btn-edit
+            $(document).on('click', '.btn-edit', function() {
+                var id = $(this).closest('tr').find('td:eq(0)').text();
+                console.log("id del registro:",id);
+                // Redirigir a la página de edición
+                window.location.href = "{% url 'archivos:editar' %}?id=" + id;                
+            });
+
+            $(document).on('click', '.btn-delete', function() {
+            var id = $(this).closest('tr').find('td:first-child').text();
+
+            // Mostrar SweetAlert para confirmar la eliminación
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡No podrás revertir esto!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminarlo!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Si se confirma la eliminación, redirigir al servidor para eliminar el registro
+                    window.location.href = "{% url 'archivos:eliminar' %}?id=" + id;
+                }
+            });
+        });
+
+            // Inicialización de DataTable
+            $('#data').DataTable({
+                responsive: true,
+                autoWidth: False,
+                "language": {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
+                },
+                "columns": [
+                    { "data": "id" },
+                    { "data": "cueanexo" },
+                    { "data": "asunto" },
+                    { "data": "t_norma" },
+                    { "data": "nro_normativa" },
+                    { "data": "año" },
+                    { "data": null, "defaultContent": "<button type='button' class='btn btn-success btn-xs btn-search'><i class='fas fa-search'></i></button><button type='button' class='btn btn-primary btn-xs btn-edit'><i class='fas fa-edit'></i></button> <button type='button' class='btn btn-danger btn-xs btn-delete'><i class='fas fa-trash-alt'></i></button>" }
+                ]
+            });
+        });
+    </script>
+{% endblock %}

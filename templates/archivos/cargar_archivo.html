@@ -4,59 +4,68 @@
 
 {% block content %}
     <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cargar Archivo</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cargar Archivo</title>
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
     </head>
-    <body>
-    <h1>Cargar Archivo</h1>
-
+    
+    <body>    
     {% if error_alert %}
-    <div class="alert alert-danger" role="alert">
-        Ocurrió un error al guardar el archivo. Por favor, inténtalo de nuevo.
-    </div>
-    {% endif %}
-
-    <form id="archivoForm" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Cargar Archivo</button>
-    </form>
-
-    <div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-            <h5 class="modal-title" id="successModalLabel">¡Éxito!</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-            </div>
-            <div class="modal-body">
-            <p class="text-success">El archivo se ha guardado correctamente en la siguiente ruta:</p>
-            <span id="rutaArchivo" class="text-success"></span>
-            </div>
-            <div class="modal-footer">
-            <button type="button" class="btn btn-success" data-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-        </div>
-    </div>
-
-    {% if ruta_archivo %}
     <script>
-        // Mostrar el modal de éxito si hay una ruta de archivo disponible
-        $(document).ready(function() {
-        $('#rutaArchivo').text("{{ ruta_archivo }}");
-        $('#successModal').modal('show');
-        setTimeout(function() {
-            window.location.href = "{% url 'archivos_lista' %}";
-        }, 3000);  // Redirigir después de 3 segundos (3000 milisegundos)
+        // Mostrar el SweetAlert con el mensaje de error
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Error',
+                text: "{{ error_alert }}", // Mostrar el tipo de error recibido
+                icon: 'error',
+                confirmButtonText: 'Cerrar',
+            });
         });
     </script>
+    {% endif %}
+    <form id="archivoForm" method="post" enctype="multipart/form-data">
+        <div class="card card-default">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-plus"></i>
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                {{ form }}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i>Guardar archivo
+                </button>
+            </div>
+        </div>
+        
+    </form>
+    
+    {% if ruta_archivo %}
+        <script>
+            // Mostrar el mensaje de éxito si hay una ruta de archivo disponible
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: 'El archivo se ha guardado correctamente',
+                    icon: 'success',
+                    confirmButtonText: 'Cerrar',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Redirigir después de cerrar el mensaje de éxito
+                        window.location.href = "{% url 'archivos_lista' %}";
+                    }
+                });
+            });
+        
+        </script>
     {% endif %}
 
     <!-- Bootstrap JS -->
