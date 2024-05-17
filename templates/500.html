@@ -1,11 +1,24 @@
-{% extends "base.html" %} 
+<!DOCTYPE html>
+<html lang="es-ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Server Error</title>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+</head>
+<body>
+    <script>
+        swal({
+            title: "Error Servidor",
+            text: "Vuelve a intentarlo más tarde",
+            icon: "error",
+            button: "OK",
+        }).then((value) => {
+            window.history.back();  // Redirige atrás después de hacer clic en OK
+        });
+    </script>
+</body>
+</html>
 
-{% block title %}Server Error{% endblock %} 
 
-{% block content %}
-Ooops!!!
-¡Parece que algo salió mal!
-
-Realizamos un seguimiento de estos errores automáticamente, pero si el problema persiste, no dude en ponerse en contacto con nosotros. Mientras tanto, intente actualizar.
-{% endblock content %}
  

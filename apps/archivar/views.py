@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView, DeleteView
 from .forms import ArchRegisterForm
 from .models import ArchRegister
-from .mixins import GroupRequiredMixin
+from .mixins import GroupRequiredMixin, ReadOnlyAccessMixin
 
 class ArchivoCreateView(GroupRequiredMixin,CreateView):
     model = ArchRegister
@@ -18,7 +18,7 @@ class ArchivoCreateView(GroupRequiredMixin,CreateView):
         context['title']='Cargar Archivo'
         return context
 
-class ArchivosListView(GroupRequiredMixin,ListView):
+class ArchivosListView(ReadOnlyAccessMixin,GroupRequiredMixin,ListView):
     model=ArchRegister
     template_name='archivos/archivos_lista.html'
     context_object_name='archivos' 

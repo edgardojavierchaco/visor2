@@ -1,11 +1,22 @@
-{% extends "base.html" %} 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page not found</title>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+</head>
+<body>
+    <script>
+        swal({
+            title: "Página no encontrada",
+            text: "No está la página que estás buscando",
+            icon: "error",
+            button: "OK",
+        }).then((value) => {
+            window.history.back();  // Redirige atrás después de hacer clic en OK
+        });
+    </script>
+</body>
+</html>
 
-{% block title %}Page not found{% endblock %} 
-
-{% block content %}
-Pagina no encontrada
-
-{% if exception %}{{ exception }}{% else %}Esta no es la página que estabas buscando.{% endif %}
-
-{% endblock content %}
- 
