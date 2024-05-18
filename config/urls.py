@@ -11,14 +11,15 @@ from apps.mapas.views2 import *
 from apps.establecimientos.views import establecimientos
 #from apps.chat.views import homeChat, roomChat, private_chat
 from apps.archivar.views import ArchivoCreateView, ArchivosListView, BuscarPDFView
-
+from apps.mapoteca.views import ver_mapas
+from apps.normativa.views import ver_normas
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('dash/',dash,name='dash'),   
     path('cargar/', include('apps.archivar.urls', namespace='cargar')),        
-    #path('chat/',homeChat,name='chat'),
-    #path('room/<int:room_id>/',roomChat,name='room'),
+    path('mapoteca/',include('apps.mapoteca.urls',namespace='mapoteca')),
+    path('lex/',include('apps.normativa.urls',namespace='lex')),
     #path('roomp/<int:room_id>/private_chat/',private_chat, name='private_chat'),
     path('mapapuntos/',mapapuntos,name='mapapuntos'),
     path('dibujararea/',obtenerdatos,name='dibujararea'),

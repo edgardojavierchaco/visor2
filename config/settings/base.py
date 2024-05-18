@@ -36,6 +36,8 @@ LOCAL_APPS = [
     'apps.establecimientos',
     'apps.dashboard', 
     'apps.archivar',
+    'apps.mapoteca',
+    'apps.normativa',
 ]
 
 

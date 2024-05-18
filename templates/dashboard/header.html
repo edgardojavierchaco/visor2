@@ -38,9 +38,25 @@
                         <li><a href="{% url 'reportes:filtrado_snu' %}" class="dropdown-item">Matrícula SNU</a></li> 
                     </ul>
                 </li>                
+                 <li class="nav-item dropdown">
+                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                       class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Repositorio</a>
+                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                        <li><a href="{% url 'mapoteca:mapas' %}" class="dropdown-item">Mapoteca</a></li>
+                        <li><a href="{% url 'videoteca:videos' %}" class="dropdown-item">Videoteca</a></li>
+                        <li><a href="{% url 'digesto:norma' %}" class="dropdown-item">Normativa</a></li>  
+                    </ul>
+                </li>       
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle"><i class="fas fa-book-reader" style="color:black"></i> Archivos</a>
+                        class="nav-link dropdown-toggle">
+                        {% if user.is_authenticated %}
+                            <i class="fas fa-lock-open" style="color:green"></i>
+                        {% else %}
+                            <i class="fas fa-lock" style="color:red"></i>
+                        {% endif %}
+                        Archivos
+                    </a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <script type="text/javascript">
                             var nivelAcceso = "{{ nivelAcceso }}";
@@ -57,7 +73,7 @@
                 </li>                
                 {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <span class="nav-link">Usuario: {{ user.username }}</span>
+                    <span class="nav-link">Usuario: {{ user.nombres }}</span>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'login:logout' %}" >

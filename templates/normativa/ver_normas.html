@@ -1,0 +1,40 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}   
+    <head>
+        <meta charset="UTF-8">
+        <title>Digesto</title>
+        <style>
+            .container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .norma {
+                flex: 1 0 30%; /* Ajusta el tamaño para tres columnas */
+                margin: 10px;
+                box-sizing: border-box;
+                text-align:center;
+            }
+            .norma embed {
+                width: 100%;
+                height: 200px;
+                border: 1px solid #ccc;
+            }
+        </style>
+    </head>
+    <body>
+        <h3>Normas</h3>
+        <div class="container">
+            {% for lex in norma %}
+                <div class="norma">            
+                    <h5 style="color:blue">{{ lex.asunto }}</h5>
+                    <embed src="{{ lex.archivo.url }}" type="application/pdf">
+                </div>
+            {% endfor %}
+        </div>      
+    </body>
+   
+{% endblock %}
