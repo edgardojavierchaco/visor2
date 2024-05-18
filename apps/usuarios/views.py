@@ -1,12 +1,14 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from apps.usuarios.forms import UsuariosForm
 from apps.usuarios.models import UsuariosVisualizador
+from .mixins import AdminRequiredMixin
 import hashlib
 
-class listado_usuarios(ListView):
+class listado_usuarios(AdminRequiredMixin,ListView):
     model=UsuariosVisualizador        
     template_name='usuarios/listado.html' 
     context_object_name='usuarios'   
@@ -17,7 +19,7 @@ class listado_usuarios(ListView):
         context['title']='Listado de Usuarios'
         return context
 
-class crear_usuarios(CreateView):
+class crear_usuarios(AdminRequiredMixin,CreateView):
     model=UsuariosVisualizador
     form_class=UsuariosForm
     template_name='usuarios/crear.html'
@@ -45,7 +47,7 @@ class crear_usuarios(CreateView):
         return super().form_valid(form)
 
 
-class editar_usuarios(UpdateView):
+class editar_usuarios(AdminRequiredMixin,UpdateView):
     model = UsuariosVisualizador
     form_class = UsuariosForm
     template_name = 'usuarios/editar.html'
@@ -60,7 +62,7 @@ class editar_usuarios(UpdateView):
         context['title'] = 'Editar Usuario'
         return context
 
-class EliminarUsuarioView(DeleteView):
+class EliminarUsuarioView(AdminRequiredMixin,DeleteView):
     def get(self, request):
         user_id = request.GET.get('id')
         user = get_object_or_404(UsuariosVisualizador, id=user_id)
