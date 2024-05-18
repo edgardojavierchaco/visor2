@@ -11,14 +11,14 @@ class ArchivoCreateView(GroupRequiredMixin,CreateView):
     model = ArchRegister
     form_class = ArchRegisterForm
     template_name = 'archivos/cargar_archivo.html'
-    success_url = reverse_lazy('archivos_lista')
+    success_url = reverse_lazy('archivos:listar')
 
     def get_context_data(self, **kwargs):
         context=super().get_context_data(**kwargs)
         context['title']='Cargar Archivo'
         return context
 
-class ArchivosListView(ReadOnlyAccessMixin,GroupRequiredMixin,ListView):
+class ArchivosListView(ReadOnlyAccessMixin,ListView):
     model=ArchRegister
     template_name='archivos/archivos_lista.html'
     context_object_name='archivos' 
