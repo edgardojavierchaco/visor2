@@ -1,16 +1,39 @@
 {% extends 'dashboard/body.html' %}
-
 {% load static %}
 
 {% block content %}
-    <div class="jumbotron text-center shadow">
-        <h2 class="display-4 text-danger">Videoteca</h2>
+    <style>
+        .custom-jumbotron {
+            position: relative;
+            padding: 1rem; /* Ajusta el padding para reducir el espacio interno */
+            background: linear-gradient(45deg, #3498db 0%, #ffffff 50%, #3498db 100%); /* Fondo celeste-blanco-celeste */
+            background-size: 200% 100%; /* Doble del tamaño para simular el movimiento */
+            animation: wave 6s infinite alternate; /* Animación para mover el gradiente */
+            overflow: hidden; /* Oculta cualquier parte del gradiente que se salga del div */
+        }
+        @keyframes wave {
+            0% {
+                background-position: 0 0; /* Inicio de la animación */
+            }
+            100% {
+                background-position: 100% 0; /* Fin de la animación */
+            }
+        }
+        .custom-title {
+            font-size: 2rem; /* Ajusta el tamaño del título según tus necesidades */
+            margin-bottom: 0; /* Elimina el margen inferior del título */
+            color: #000; /* Color del texto */
+            font-weight: bold;
+            z-index: 1; /* Coloca el texto sobre el fondo */
+        }
+    </style>
+    <div class="jumbotron text-center shadow custom-jumbotron">
+        <h4 class="display-5 custom-title">Videoteca</h4>
     </div>
     <div class="container mt-5">
         {% for video in videos %}
             <div class="mb-4">
-                <h4>{{ video.titulo }}</h4>
-                <!-- Enlace directo a la página de YouTube -->
+                <h5>{{ video.titulo }}</h5>
                 <a href="{{ video.url }}" target="_blank">Ver en YouTube</a>
             </div>
         {% endfor %}
@@ -18,5 +41,4 @@
     <!-- Agrega los scripts de Bootstrap y otros scripts necesarios aquí -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-Wj18W8WIZqDRM9a2ZNAC6Jw5/DVQOEmK7dDmO9g03DaOeO5/c4ZleMEXqTxI0jk" crossorigin="anonymous"></script>
-   
 {% endblock %}

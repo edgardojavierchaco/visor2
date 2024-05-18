@@ -12,46 +12,46 @@
 {% endblock %}
 
 {% block content %}
-<div class="card card-default">
-    <div class="card-header">
-        <h3 class="card-title">
-            <i class="fas fa-search"></i>
-            {{ title }}
-        </h3>
+    <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-search"></i>
+                {{ title }}
+            </h3>
+        </div>
     </div>
-</div>
-<div class="card-body">
-    <table class="table" id="data">
-        <thead>
-            <tr>
-                <th scope="col">Nro</th>
-                <th scope="col">Cueanexo</th>
-                <th scope="col">Asunto</th>
-                <th scope="col">Tipo Norma</th>
-                <th scope="col">N°</th>
-                <th scope="col">Año</th>   
-                <th scope="col">Acción</th>               
-            </tr>
-        </thead>
-        <tbody>
-            {% for u in archivos %}
+    <div class="card-body">
+        <table class="table" id="data">
+            <thead>
                 <tr>
-                    <td>{{ u.id }}</td>
-                    <td>{{ u.cueanexo }}</td>
-                    <td>{{ u.asunto }}</td>
-                    <td>{{ u.t_norma }}</td>
-                    <td>{{ u.nro_normativa }}</td>
-                    <td>{{ u.año }}</td>                           
-                    <td>
-                        <button type="button" class="btn btn-success btn-xs btn-search"><i class="fas fa-search"></i></button>
-                        <button type="button" class="btn btn-primary btn-xs btn-edit" data-id="{{ u.id }}"><i class="fas fa-edit"></i></button>
-                        <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
-                    </td>
+                    <th scope="col">Nro</th>
+                    <th scope="col">Cueanexo</th>
+                    <th scope="col">Asunto</th>
+                    <th scope="col">Tipo Norma</th>
+                    <th scope="col">N°</th>
+                    <th scope="col">Año</th>   
+                    <th scope="col">Acción</th>               
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+            </thead>
+            <tbody>
+                {% for u in archivos %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.cueanexo }}</td>
+                        <td>{{ u.asunto }}</td>
+                        <td>{{ u.t_norma }}</td>
+                        <td>{{ u.nro_normativa }}</td>
+                        <td>{{ u.año }}</td>                           
+                        <td>
+                            <button type="button" class="btn btn-success btn-xs btn-search"><i class="fas fa-search"></i></button>
+                            <button type="button" class="btn btn-primary btn-xs btn-edit" data-id="{{ u.id }}"><i class="fas fa-edit"></i></button>
+                            <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}
 
 {% block javascript %}
@@ -124,7 +124,7 @@
             // Inicialización de DataTable
             $('#data').DataTable({
                 responsive: true,
-                autoWidth: False,
+                autoWidth: false,
                 "language": {
                     url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
                 },
