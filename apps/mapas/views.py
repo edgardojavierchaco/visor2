@@ -55,8 +55,8 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
             query += "AND localidad = %s"
             parameters.append(localidad)
         if oferta:
-            query += "AND acronimo LIKE %s"
-            parameters.append('%'+oferta+'%')
+            query += "AND oferta LIKE %s"
+            parameters.append(oferta+'%')
 
         cursor.execute(query, parameters)
         rows = cursor.fetchall()
