@@ -38,6 +38,7 @@ LOCAL_APPS = [
     'apps.archivar',
     'apps.mapoteca',
     'apps.normativa',
+    'apps.oplectura',
 ]
 
 

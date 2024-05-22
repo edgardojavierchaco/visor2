@@ -39,6 +39,7 @@ urlpatterns = [
     path('repo/', include('apps.reportes.urls', namespace='repo')),       
     path('equipo/',TemplateView.as_view(template_name='equipo.html'),name='equipo'),
     path('videoteca/',include('apps.videoteca.urls',namespace='videoteca')),
+    path('lengua/',include('apps.oplectura.urls',namespace='lectura')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
