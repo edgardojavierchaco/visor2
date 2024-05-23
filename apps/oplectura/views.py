@@ -6,7 +6,7 @@ from django.views.generic import CreateView, ListView, TemplateView, UpdateView,
 from .models import DocenteGradoSeccion
 from .forms import CargarDocenteGradoSeccion
 
-class DocenteCreateView(CreateView):
+class DocenteCreateView(LoginRequiredMixin,CreateView):
     model=DocenteGradoSeccion
     form_class=CargarDocenteGradoSeccion
     template_name='oplectura/cargar_docente.html'
@@ -35,3 +35,24 @@ class DocentesListView(LoginRequiredMixin,ListView):
         context['title']='Listado de Docentes'
         return context
     
+class DocentesUpdateView(LoginRequiredMixin,UpdateView):
+    model = DocenteGradoSeccion
+    form_class = CargarDocenteGradoSeccion
+    template_name = 'oplectura/editar.html'
+    success_url = reverse_lazy('oplectura:listado')
+
+    def get_object(self):
+        user_id = self.request.GET.get('id')
+        return get_object_or_404(DocenteGradoSeccion, id=user_id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Editar Archivo'
+        return context
+
+class DocentesDeleteView(LoginRequiredMixin,DeleteView):
+    def get(self, request):
+        user_id = request.GET.get('id')
+        user = get_object_or_404(DocenteGradoSeccion, id=user_id)
+        user.delete()
+        return redirect('oplectura:listado') 

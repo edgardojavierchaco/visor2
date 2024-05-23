@@ -82,7 +82,7 @@
     <script>
         $(document).on('click', '.btn-edit', function() {
             var userId = $(this).closest('tr').find('td:first-child').text();
-            window.location.href = "{% url 'usuarios:editar' %}?id=" + userId;
+            window.location.href = "{% url 'oplectura:editar' %}?id=" + userId;
         });
     </script>
     <script>
@@ -101,7 +101,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Si se confirma la eliminación, redirigir al servidor para eliminar el registro
-                    window.location.href = "{% url 'usuarios:eliminar' %}?id=" + userId;
+                    window.location.href = "{% url 'oplectura:eliminar' %}?id=" + userId;
                 }
             });
         });
