@@ -13,12 +13,7 @@ main{
     margin-top: 100px;
 }
 
-body {
-            background-image: url("{% static 'img/bg4.jpg' %}");
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
+
         
 .contenedor__todo{
     width: 100%;
