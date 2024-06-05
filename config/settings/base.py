@@ -164,7 +164,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_PERMISSIONS': ["rest_framework.permissions.IsAdminUser"],
     'SERVERS': [
         {'url': 'http://127.0.0.1:8000', 'description': 'Local Development server'},
-        {'url': 'https://visoreducativochaco.com.ar', 'description': 'Production server'},
+        {'url': 'https://relevamientoanual.com.ar', 'description': 'Production server'},
     ],
 }
 
