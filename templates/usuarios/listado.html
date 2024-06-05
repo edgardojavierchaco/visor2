@@ -30,9 +30,8 @@
                         <th scope="col">Nombres</th>
                         <th scope="col">Apellido</th>
                         <th scope="col">Nivel de Acceso</th>
-                        <th scope="col">Activo</th>
-                        <th scope="col">Superusuario</th>
-                        
+                        <th scope="col">Activo</th>                       
+                        <th scope="col">Staff</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,8 +42,8 @@
                             <td>{{ u.nombres }}</td>
                             <td>{{ u.apellido }}</td>
                             <td>{{ u.nivelacceso }}</td>
-                            <td>{{ u.is_staff }}</td>
-                            <td>{{ u.is_superuser }}</td>
+                            <td>{{ u.activo }}</td>
+                            <td>{{ u.is_staff }}</td>                            
                             <td>
                                 <button type="button" class="btn btn-primary btn-xs btn-edit"><i class="fas fa-edit"></i></button>
                                 <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
@@ -78,8 +77,7 @@
                     { "data": "nombres" },
                     { "data": "apellido" },
                     { "data": "nivelacceso" },
-                    { "data": "is_staff" },
-                    { "data": "is_superuser" },
+                    { "data": "is_staff" },                    
                     { "data": null, "defaultContent": "<button type='button' class='btn btn-primary btn-xs btn-edit'><i class='fas fa-edit'></i></button> <button type='button' class='btn btn-danger btn-xs btn-delete'><i class='fas fa-trash-alt'></i></button>" }
                 ]
             });

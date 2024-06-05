@@ -1,0 +1,93 @@
+{% load static %}
+
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{% static 'css/login.css'%}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="{% static 'lib/sweetalert2/sweetalert2.all.min.js' %}"></script>
+    <style>
+        body{
+            background-image: url("{% static 'img/bg4.jpg' %}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+    </style>
+</head>
+<body>
+    <main>
+
+        <div class="contenedor__todo">
+
+            <div class="caja__trasera">
+                <div class="caja__trasera-login">
+                    <h3>¿Ya tienes una cuenta?</h3>
+                    <p>Inicia sesión para entrar</p>
+                                        
+                </div>
+                <div class="caja__trasera-register">
+                    <h3>¿Aún no tienes una cuenta?</h3>
+                    <p>Regístrate</p>
+                    <button id="btn__registrarse"><i class="fas fa-sign-out-alt"; style="color:red"></i>Registrarse</button>
+                </div>
+            </div>
+
+            <!---Formulario de login y Registro-->
+            <div class="contenedor__login-register">
+                <!--Login-->
+                <form action="{% url 'logueo:login' %}" class="formulario__login" method="post">
+                    {%csrf_token%}
+                    <h2>Iniciar Sesión</h2>                    
+                    {{ form.username | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese usuario"}}                    
+                    {{ form.password | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese Contraseña"}}
+                    <button><i class="fas fa-sign-in-alt" style="color:green"></i>Entrar</button>
+                </form>
+
+                <!--Registro-->
+                <form action="" class="formulario__register" method="post">
+                    {%csrf_token%}
+                    <h2>Registrarse</h2> 
+                    {{ form.username | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese usuario"}}
+                    {{ form.password | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese contraseña"}}
+                    {{ form.apellido | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese apellido"}}
+                    {{ form.nombres | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese nombres"}}
+                    {{ form.correo | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese correo"}}
+                    {{ form.telefono | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese teléfono sin 0 ni 15"}}
+                    {{ form.nivelacceso | add_class:"form-control" | attr:"autocomplete:off" | attr:"placeholder:Ingrese cargo"}}
+                    <button type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Registrarse</button>
+                </form>
+            </div>
+        </div>
+        <script type="application/javascript">
+            {% if form.errors %}
+                var errors = '';
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        errors += '{{ error }}\n';
+                    {% endfor %}
+                {% endfor %}
+                Swal.fire({
+                    title: 'Error!',
+                    text: errors,
+                    icon: 'error'
+                });
+            {% endif %}
+        </script>
+        <script>
+            // Obtener el botón por su ID
+            var btnSalir = document.getElementById('btn__salir');
+
+            // Agregar un evento de clic al botón
+            btnSalir.addEventListener('click', function() {
+                // Redirigir a la URL especificada
+                window.location.href = "{% url 'dash:portada' %}";
+            });
+        </script>
+    </main>
+</body>
+</html>

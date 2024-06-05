@@ -1,0 +1,118 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            font-family: Arial, sans-serif;
+            display: flex;
+        }
+        .custom-dashboard h3 {
+            text-align: center;
+            font-weight: bold;
+        }
+        .custom-dashboard .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .custom-dashboard .stats-card,
+        .custom-dashboard .filter-card {
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            margin: 10px;
+            width: 200px;
+        }
+        .custom-dashboard .chart-container {
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            flex-grow: 1;
+        }
+        .custom-dashboard .chart-container img {
+            max-width: 100%;
+            border-radius: 15px;
+        }
+        .filter-card h3, .stats-card h3 {
+            margin-bottom: 15px;
+        }
+        .radio-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        .radio-grid label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+    </style>
+    
+    <div class="custom-dashboard">
+        <!-- Card de filtros -->
+        <div class="filter-card">
+            <form id="filtro-form" method="GET" action="{% url 'oplectura:grafico_reg' %}">
+                <h3>Selecciona una opción</h3>
+                <div class="radio-grid">
+                    <label><input type="radio" name="region" value="0" onchange="enviarFormulario()"> Provincial</label>
+                    <label><input type="radio" name="region" value="1" onchange="enviarFormulario()"> Región 1</label>
+                    <label><input type="radio" name="region" value="2" onchange="enviarFormulario()"> Región 2</label>
+                    <label><input type="radio" name="region" value="3" onchange="enviarFormulario()"> Región 3</label>
+                    <label><input type="radio" name="region" value="4-A" onchange="enviarFormulario()"> Región 4-A</label>
+                    <label><input type="radio" name="region" value="4-B" onchange="enviarFormulario()"> Región 4-B</label>
+                    <label><input type="radio" name="region" value="5" onchange="enviarFormulario()"> Región 5</label>
+                    <label><input type="radio" name="region" value="6" onchange="enviarFormulario()"> Región 6</label>
+                    <label><input type="radio" name="region" value="7" onchange="enviarFormulario()"> Región 7</label>
+                    <label><input type="radio" name="region" value="8-A" onchange="enviarFormulario()"> Región 8-A</label>
+                    <label><input type="radio" name="region" value="8-B" onchange="enviarFormulario()"> Región 8-B</label>
+                    <label><input type="radio" name="region" value="9" onchange="enviarFormulario()"> Región 9</label>
+                    <label><input type="radio" name="region" value="10-A" onchange="enviarFormulario()"> Región 10-A</label>
+                    <label><input type="radio" name="region" value="10-B" onchange="enviarFormulario()"> Región 10-B</label>
+                    <label><input type="radio" name="region" value="10-C" onchange="enviarFormulario()"> Región 10-C</label>
+                    <label><input type="radio" name="region" value="Sub 1-B" onchange="enviarFormulario()"> Subregional 1-B</label>
+                    <label><input type="radio" name="region" value="Sub 2" onchange="enviarFormulario()"> Subregional 2</label>
+                    <label><input type="radio" name="region" value="Sub 3" onchange="enviarFormulario()"> Subregional 3</label>
+                </div>
+            </form>
+        </div>
+
+        <!-- Gráfico y estadísticas -->
+        <div class="content">
+            {% if datos_disponibles %}
+            <div id="contenido">
+                {% if regional == "Chaco" %}
+                    <h3>Gráfico de Desempeño - {{ regional }}</h3>
+                {% else %}
+                    <h3>Gráfico de Desempeño - Regional {{ regional }}</h3>
+                {% endif %}
+                
+                <div class="chart-container">
+                    <img src="data:image/png;base64,{{ grafico }}" alt="Gráfico de Desempeño">
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Card de estadísticas -->
+        {% if datos_disponibles %}
+        <div class="stats-card">
+            <h3>Estadísticas</h3>
+            <p class="stats">Promedio de Puntaje: {{ promedio_puntaje }}</p>
+            <p class="stats">Total de Alumnos Evaluados: {{ total_alumnos }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Función para enviar el formulario cuando se marca o desmarca un radio button
+        function enviarFormulario() {
+            document.getElementById("filtro-form").submit();
+        }
+    </script>
+{% endblock %}

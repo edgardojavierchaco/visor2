@@ -1,0 +1,47 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            font-family: Arial, sans-serif;
+        }
+        .custom-dashboard h3 {
+            text-align: center;
+            font-weight: bold;
+        }
+        .custom-dashboard .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .custom-dashboard .stats {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .custom-dashboard .chart-container {
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .custom-dashboard .chart-container img {
+            max-width: 100%;
+            border-radius: 15px;
+        }
+    </style>
+    <div class="custom-dashboard">
+        <h3>Gráfico de Desempeño - {{escuela}}</h3>
+        <div class="content">
+            <p class="stats">Promedio de Puntaje: {{ promedio_puntaje }}</p>
+            <p class="stats">Total de Alumnos Evaluados y Calificados correctamente: {{ total_alumnos }}</p>
+            <div class="chart-container">
+                <img src="data:image/png;base64,{{ grafico }}" alt="Gráfico de Desempeño">
+            </div>
+        </div>
+    </div>
+{% endblock %}

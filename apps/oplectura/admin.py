@@ -10,4 +10,6 @@ admin.site.register(RegComprension)
 admin.site.register(sit_rev)
 admin.site.register(grado)
 admin.site.register(DocenteGradoSeccion)
+admin.site.register(oplecturaabril)
+
 

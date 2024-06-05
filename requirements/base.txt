@@ -148,4 +148,5 @@ channels>=2.4.0
 channels-redis
 celery
 
-
+ pandas
+ matplotlib
