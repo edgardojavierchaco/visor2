@@ -164,7 +164,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_PERMISSIONS': ["rest_framework.permissions.IsAdminUser"],
     'SERVERS': [
         {'url': 'http://127.0.0.1:8000', 'description': 'Local Development server'},
-        {'url': 'https://relevamientoanual.com.ar', 'description': 'Production server'},
+        {'url': 'https://visoreducativochaco.com.ar', 'description': 'Production server'},
     ],
 }
 
@@ -182,10 +182,3 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
