@@ -15,7 +15,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg2 dependencies
   libpq-dev \
   # Install git for cloning repositories
-  git
+  git \
+  # Install GDAL dependencies
+  gdal-bin \
+  libgdal-dev
+
+# Set environment variables for GDAL
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
 
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements .
@@ -42,13 +49,16 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libpq-dev \
   # Translations dependencies
   gettext \
+  # GDAL runtime dependencies
+  gdal-bin \
+  libgdal-dev \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
 # All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
 # copy python dependency wheels from python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+COPY --from=python-build-stage /usr/src/app/wheels /wheels/
 
 # use wheels to install python dependencies
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
@@ -71,4 +81,5 @@ COPY --chown=django:django .. ${APP_HOME}
 #USER django
 
 ENTRYPOINT ["/entrypoint"]
+
 
