@@ -1,7 +1,7 @@
 from config.urls import path
 from apps.oplectura.views import * 
 
-app_name='oplectura'
+app_name='lectura'
 
 urlpatterns=[    
     path('cargar/',DocenteCreateView.as_view(),name='cargar'),

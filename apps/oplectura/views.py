@@ -1,5 +1,5 @@
-import pandas as pd # type: ignore
-import matplotlib.pyplot as plt # type: ignore
+import pandas as pd 
+import matplotlib.pyplot as plt
 from io import BytesIO
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -33,7 +33,7 @@ class DocentesListView(LoginRequiredMixin,ListView):
         # Obtener el usuario logueado
         user = self.request.user
         # Filtrar los docentes por el usuario logueado
-        queryset = super().get_queryset().filter(cueanexo=user.username) # type: ignore
+        queryset = super().get_queryset().filter(cueanexo=user.username) 
         return queryset
     
     def get_context_data(self, **kwargs):

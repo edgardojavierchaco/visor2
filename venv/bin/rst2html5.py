@@ -1,4 +1,4 @@
-#!/home/edgardochaco/Documentos/visor/venv/bin/python3
+#!/home/edgardochaco/Documentos/visor2/venv/bin/python
 # :Copyright: © 2015 Günter Milde.
 # :License: Released under the terms of the `2-Clause BSD license`_, in short:
 #

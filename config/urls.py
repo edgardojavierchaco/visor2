@@ -14,6 +14,7 @@ from apps.archivar.views import ArchivoCreateView, ArchivosListView, BuscarPDFVi
 from apps.mapoteca.views import ver_mapas
 from apps.normativa.views import ver_normas
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('dash/',dash,name='dash'),   
@@ -39,7 +40,7 @@ urlpatterns = [
     path('repo/', include('apps.reportes.urls', namespace='repo')),       
     path('equipo/',TemplateView.as_view(template_name='equipo.html'),name='equipo'),
     path('videoteca/',include('apps.videoteca.urls',namespace='videoteca')),
-    path('lengua/',include('apps.oplectura.urls',namespace='lectura')),    
+    #path('lengua/',include('apps.oplectura.urls',namespace='lengua')),    
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
