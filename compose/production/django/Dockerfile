@@ -1,4 +1,4 @@
-# define an alias for the specific python version used in this file.
+# define an alias for the specfic python version used in this file.
 FROM python:3.10.10-slim-bullseye as python
 
 LABEL maintainer="Edgardo Javier Gómez"
@@ -13,16 +13,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # dependencies for building Python packages
   build-essential \
   # psycopg2 dependencies
-  libpq-dev \
-  # Install git for cloning repositories
-  git \
-  # Install GDAL dependencies
-  gdal-bin \
-  libgdal-dev
-
-# Set environment variables for GDAL
-ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
-ENV C_INCLUDE_PATH=/usr/include/gdal
+  libpq-dev
 
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements .
@@ -30,6 +21,7 @@ COPY ./requirements .
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN pip wheel --wheel-dir /usr/src/app/wheels  \
   -r ${BUILD_ENVIRONMENT}.txt
+
 
 # Python 'run' stage
 FROM python as python-run-stage
@@ -49,24 +41,23 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libpq-dev \
   # Translations dependencies
   gettext \
-  # GDAL runtime dependencies
-  gdal-bin \
-  libgdal-dev \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
 # All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
 # copy python dependency wheels from python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels /wheels/
+COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
 
 # use wheels to install python dependencies
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
   && rm -rf /wheels/
 
+
 COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint
+
 
 COPY --chown=django:django ./compose/production/django/start /start
 RUN sed -i 's/\r$//g' /start
@@ -81,5 +72,3 @@ COPY --chown=django:django .. ${APP_HOME}
 #USER django
 
 ENTRYPOINT ["/entrypoint"]
-
-
