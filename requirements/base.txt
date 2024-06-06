@@ -133,8 +133,8 @@ pyroutelib3==1.7.2
 pytest==7.4.0
 pytest-django==4.5.2
 pytest-sugar==0.9.7
-python-dateutil==2.9.0.post0
-python-dotenv==8c9381e7ab617a4cde425e3df4684417fade72f5  # git+https://github.com/theskumar/python-dotenv.git
+python-dateutil
+python-dotenv
 pytz==2024.1
 PyYAML==6.0.1
 redis==4.6.0
