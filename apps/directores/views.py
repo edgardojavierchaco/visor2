@@ -6,113 +6,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 
-def filtrado(request):    
-    return render(request, 'mapa/filter.html')
 
-def filtrado_list(request):
-    return render(request,'mapa/filter_listadomap.html')
-
-@csrf_exempt
-def operaciones_comunes(request, template_name='publico/basecriterios.html'):   
-    if request.method == 'POST':
-        cueanexo = request.POST.get('Cueanexo')
-        ambito = request.POST.get('Ambito')
-        sector = request.POST.get('Sector')
-        region = request.POST.get('Region')
-        departamento = request.POST.get('Departamento')
-        localidad = request.POST.get('Localidad')
-        oferta = request.POST.get('Oferta')
-
-        print("Parámetros de la solicitud:", ambito, sector, localidad, oferta)
-
-        # Conectarse a la base de datos
-        connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',            
-            user='visualizador',
-            password='Estadisticas24',
-            database='visualizador'
-        )
-
-        # Realizar la consulta en la base de datos
-        cursor = connection.cursor()
-        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1 "
-        parameters = []
-        if cueanexo:
-            query += "AND cueanexo = %s"
-            parameters.append(cueanexo)
-        if ambito:
-            query += " AND ambito = %s"
-            parameters.append(ambito)
-        if sector:
-            query += " AND sector = %s"
-            parameters.append(sector)
-        if region:
-            query += " AND region_loc = %s"
-            parameters.append(region)
-        if departamento:
-            query += " AND departamento = %s"
-            parameters.append(departamento)
-        if localidad:
-            query += "AND localidad = %s"
-            parameters.append(localidad)
-        if oferta:
-            query += "AND oferta LIKE %s"
-            parameters.append(oferta+'%')
-
-        cursor.execute(query, parameters)
-        rows = cursor.fetchall()
-
-        # Filtrar los marcadores con latitud y longitud distintas de 0 o vacías
-        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad) 
-                         for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad in rows 
-                         if lat != 0 and lng != '' and lng != 0 and lat != '']
-
-        # Obtener los nombres de las columnas
-        column_names = [desc[0] for desc in cursor.description] # type: ignore
-        filtered_rows = [row for row in rows if row[1] != 0 and row[2] != 0]
-
-        # Cerrar la conexión a la base de datos
-        cursor.close()
-        connection.close()
-
-        context = {
-            'title': 'Mapa',
-            'data_json': json.dumps(filtered_rows),
-            'column_names_json': json.dumps(column_names)
-        }
-
-        print("Contexto en operaciones_comunes:", context)
-
-        if template_name == 'publico/basecriterios.html':
-            return context
-        elif template_name == 'publico/listadomap.html':
-            return context
-        else:
-            return context
-        
-def filter_data(request):
-    context = operaciones_comunes(request, template_name='publico/basecriterios.html')
-    print("Contexto en filter_data:", context)
-    return render(request, 'mapa/ofertasmark.html', context)
-
-def filter_listado_map(request):
-    context = operaciones_comunes(request, template_name='publico/listadomap.html')
-    print("Contexto en filter_listado_map:", context)
-    return render(request, 'publico/listadomap.html', context)
-
-
-    
 #####################################################################
-#      PARA MOSTRAR DATOS MARCADOR SELLECIONADO EN EL MAPA          #
+#           PARA MOSTRAR DATOS INSTITUCIONALES DEL USUARIO          #
 #####################################################################
-def filtrar_tablas_view(request):
-    cueanexo = request.GET.get('cueanexo')
-    ofertarec=request.GET.get('oferta')
-
-    # Validar y sanitizar el valor de cueanexo
-    if cueanexo is None:
-        # Manejar el caso si no se proporciona cueanexo
-        return render(request, 'error.html', {'mensaje': 'No se proporcionó el parámetro cueanexo'})
+@login_required
+def filtrar_tablas_view_directores(request):
+    # Obtener el username del usuario logueado
+    cueanexo = request.user.username    
 
     # Establecer la conexión a la base de datos Padrón
     try:
@@ -127,21 +28,18 @@ def filtrar_tablas_view(request):
         # Manejar el error de conexión
         return render(request, 'error.html', {'mensaje': 'Error al conectar a la base de datos'})
 
-    # Construir y ejecutar la consulta SQL para obtener los datos de las dos tablas
-    
+    # Consultas SQL
     institucional = """
-        SELECT categoria, jornada, oferta, id_establecimiento, ref_loc, calle, numero, anexo,apellido_resp, nombre_resp, resploc_telefono,resploc_email,
+        SELECT nom_est, categoria, jornada, oferta, id_establecimiento, ref_loc, calle, numero, anexo, apellido_resp, nombre_resp, resploc_telefono, resploc_email,
             sup_tecnico, email_suptecnico, tel_suptecnico
         FROM padron_ofertas        
         WHERE cueanexo = %s 
     """ 
-    planes="""
+    planes = """
         SELECT titulo, orientacion
         FROM v_planes_estudio
-        WHERE CONCAT(cue,anexo)=%s AND estado_ofertalocal='Activo'
+        WHERE CONCAT(cue, anexo) = %s AND estado_ofertalocal = 'Activo'
     """
-
-    # Construir y ejecutar la consulta SQL para obtener los datos de las dos tablas
     anexos = """
         SELECT DISTINCT po.anexo, po.calle, po.numero, po.estado_loc
         FROM padron_ofertas po
@@ -156,6 +54,7 @@ def filtrar_tablas_view(request):
         FROM padron_ofertas
         WHERE cueanexo = %s AND est_oferta = %s        
     """
+    
     params = (cueanexo,)
     params2 = (cueanexo, 'Activo')
 
@@ -178,18 +77,27 @@ def filtrar_tablas_view(request):
         return render(request, 'error.html', {'mensaje': 'Error al ejecutar la consulta'})
 
     # Cerrar la conexión a la base de datos
-    connection.close()    
-    print('institucional:',resultados) 
-    print('planes:',resultados1)
-    print('anexos:',resultados2)
-    print('ofertas:',resultados3)
+    connection.close()
     
-    # Cerrar la conexión a la base de datos
-    connection.close()  
+    print('institucional:', resultados) 
+    print('planes:', resultados1)
+    print('anexos:', resultados2)
+    print('ofertas:', resultados3)
     
+    context = {
+        'institucional': resultados,
+        'planes': resultados1,
+        'anexos': resultados2,
+        'ofertas': resultados3,
+    }
     
-    cueanexo = request.GET.get('cueanexo')
+    return render(request, 'directores/institucional.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3})
 
+
+@login_required
+def filter_matricula_views_directores(request):
+    cueanexo = request.user.username
+    
     # Validar y sanitizar el valor de cueanexo
     if cueanexo is None:
         # Manejar el caso si no se proporciona cueanexo
@@ -206,7 +114,8 @@ def filtrar_tablas_view(request):
     except psycopg2.Error as e:
         # Manejar el error de conexión
         return render(request, 'error.html', {'mensaje': 'Error al conectar a la base de datos'})
-  
+    
+      
     idest="""select distinct id_establecimiento
             FROM public.padron_ofertas
             WHERE cueanexo=%s AND est_oferta='Activo'
@@ -217,30 +126,12 @@ def filtrar_tablas_view(request):
             WHERE id_establecimiento=%s AND est_oferta='Activo'
     """
     
-    ofertascue="""SELECT cueanexo, oferta
+    ofertascue="""SELECT cueanexo, oferta, nom_est
                     FROM padron_ofertas
-                    WHERE est_oferta='Activo' AND cueanexo=%s AND oferta=%s
-    """
+                    WHERE est_oferta='Activo' AND cueanexo=%s"""
     
-    if ofertarec=='Común - Jardín de Infantes':
-        ofertarec='Común - Jardín de Infantes '
-    elif ofertarec=='Común - Jardín maternal':
-        ofertarec='Común - Jardín maternal '
-    elif ofertarec=='Común - Primaria de 7 años':
-        ofertarec='Común - Primaria de 7 años '
-    elif ofertarec=='Común - Secundaria Completa req. 7 años':
-        ofertarec='Común - Secundaria Completa req. 7 años '
-    elif ofertarec=='Común - SNU':
-        ofertarec='Común - SNU '
-    elif ofertarec=='Adultos - Primaria':
-        ofertarec='Adultos - Primaria '
-    elif ofertarec=='Adultos - Secundaria Completa':
-        ofertarec='Adultos - Secundaria Completa '
-    
-
-    
-    paramcue=(cueanexo,)    
-    paramcueofer=(cueanexo,ofertarec)
+      
+    paramcue=(cueanexo,)        
 
     cursor.execute(idest,paramcue)
     resulidest=cursor.fetchall()
@@ -250,7 +141,7 @@ def filtrar_tablas_view(request):
     resulestab=cursor.fetchall()
     print('est:',resulestab)
     
-    cursor.execute(ofertascue,paramcueofer)
+    cursor.execute(ofertascue,paramcue)
     resuloferta=cursor.fetchall()
     print('resultoferta:',resuloferta)
     
@@ -349,5 +240,7 @@ def filtrar_tablas_view(request):
         return render(request, 'error.html', {'mensaje': 'Error al ejecutar la consulta'})
     
     # Transformar los resultados en una respuesta renderizada
-    return render(request, 'mapa/otro_template.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3, 'resultados_detalle':resultados_detalle})
+    return render(request, 'directores/matricula.html', {'resultados_detalle':resultados_detalle})
 
+
+    

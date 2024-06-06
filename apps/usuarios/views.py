@@ -107,6 +107,7 @@ class editar_usuarios_op(UpdateView):
         # Simplemente llamamos al form_valid de la superclase
         return super().form_valid(form)
 
+#Eliminar usuarios para Administrador
 class EliminarUsuarioView(AdminRequiredMixin,DeleteView):
     def get(self, request):
         user_id = request.GET.get('id')
@@ -114,11 +115,19 @@ class EliminarUsuarioView(AdminRequiredMixin,DeleteView):
         user.delete()
         return redirect('usuarios:listado') 
 
+#Eliminar usuarios para Evaluación
+class EliminarUsuarioView_op(DeleteView):
+    def get(self, request):
+        user_id = request.GET.get('id')
+        user = get_object_or_404(UsuariosVisualizador, id=user_id)
+        user.delete()
+        return redirect('usuarios:listado_op')
+
 class registrar_usuarios(CreateView):
     model=UsuariosVisualizador
     form_class=UsuariosForm_login
     template_name='login/login.html'
-    success_url=reverse_lazy('usuarios:registrar')
+    success_url=reverse_lazy('usuarios:registro')
 
     def get_context_data(self,**kwargs):
         context=super().get_context_data(**kwargs)

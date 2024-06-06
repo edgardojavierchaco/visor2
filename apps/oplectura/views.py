@@ -1,6 +1,7 @@
-import pandas as pd 
+import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+import base64  # Importar base64 para usarlo más adelante
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -12,36 +13,35 @@ from django.views import View
 from .models import DocenteGradoSeccion, oplecturaabril
 from .forms import CargarDocenteGradoSeccion
 
-class DocenteCreateView(LoginRequiredMixin,CreateView):
-    model=DocenteGradoSeccion
-    form_class=CargarDocenteGradoSeccion
-    template_name='oplectura/cargar_docente.html'
+class DocenteCreateView(LoginRequiredMixin, CreateView):
+    model = DocenteGradoSeccion
+    form_class = CargarDocenteGradoSeccion
+    template_name = 'oplectura/cargar_docente.html'
     success_url = reverse_lazy('oplectura:listado')
-    
+
     def get_context_data(self, **kwargs):
-        context=super().get_context_data(**kwargs)
-        context['title']='Cargar Docente'
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Cargar Docente'
         return context
 
-class DocentesListView(LoginRequiredMixin,ListView):
-    model=DocenteGradoSeccion      
-    template_name='oplectura/listado.html' 
-    context_object_name='docentes'   
-    print(context_object_name)
-    
+class DocentesListView(LoginRequiredMixin, ListView):
+    model = DocenteGradoSeccion
+    template_name = 'oplectura/listado.html'
+    context_object_name = 'docentes'
+
     def get_queryset(self):
         # Obtener el usuario logueado
         user = self.request.user
         # Filtrar los docentes por el usuario logueado
-        queryset = super().get_queryset().filter(cueanexo=user.username) 
+        queryset = super().get_queryset().filter(cueanexo=user.username)
         return queryset
-    
+
     def get_context_data(self, **kwargs):
-        context=super().get_context_data(**kwargs)
-        context['title']='Listado de Docentes'
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Listado de Docentes'
         return context
-    
-class DocentesUpdateView(LoginRequiredMixin,UpdateView):
+
+class DocentesUpdateView(LoginRequiredMixin, UpdateView):
     model = DocenteGradoSeccion
     form_class = CargarDocenteGradoSeccion
     template_name = 'oplectura/editar.html'
@@ -56,7 +56,7 @@ class DocentesUpdateView(LoginRequiredMixin,UpdateView):
         context['title'] = 'Editar Archivo'
         return context
 
-class DocentesDeleteView(LoginRequiredMixin,DeleteView):
+class DocentesDeleteView(LoginRequiredMixin, DeleteView):
     def get(self, request):
         user_id = request.GET.get('id')
         user = get_object_or_404(DocenteGradoSeccion, id=user_id)
@@ -102,7 +102,7 @@ def mostrar_grafico(request):
 
     # Crear el gráfico de torta
     fig, ax = plt.subplots(figsize=(6, 6))  # Ajustar tamaño del gráfico
-    wedges, texts, autotexts = ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90, textprops=dict(color="black")) # type: ignore
+    wedges, texts, autotexts = ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90, textprops=dict(color="black"))  # type: ignore
 
     # Mejorar el diseño del texto en el gráfico
     for text in texts:
@@ -118,7 +118,6 @@ def mostrar_grafico(request):
     buffer.seek(0)
 
     # Convertir la imagen a base64 para incrustarla en la plantilla
-    import base64
     image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
 
     # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje
@@ -172,7 +171,7 @@ def mostrar_grafico_reg(request):
     
     # Crear el gráfico de torta
     fig, ax = plt.subplots()
-    ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90) # type: ignore
+    ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90) 
     ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     
     # Guardar el gráfico en un objeto BytesIO
@@ -181,7 +180,6 @@ def mostrar_grafico_reg(request):
     buffer.seek(0)
     
     # Convertir la imagen a base64 para incrustarla en la plantilla
-    import base64
     image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     
     # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje

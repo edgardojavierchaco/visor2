@@ -14,3 +14,7 @@ def portada(request):
     else:
         nivel_acceso = None  # O cualquier valor por defecto que desees
     return render(request, 'dashboard/portada.html', {'nivelAcceso': nivel_acceso})
+
+def directores(request):    
+    return render(request, 'directores/institucional.html')
+    
