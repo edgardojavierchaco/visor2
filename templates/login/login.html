@@ -1,5 +1,5 @@
 {% load static %}
-{% load widget_tweaks %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,8 +8,7 @@
     <title>Login y Register - MagtimusPro</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <script src="{% static 'lib/sweetalert2/sweetalert2.all.min.js' %}"></script>
+    
 
     <style>
         *{
@@ -303,7 +302,7 @@
                     }
             }
 
-            {% if form.errors %}
+            {% comment %} {% if form.errors %}
                 var errors = '';
                 {% for field in form %}
                     {% for error in field.errors %}
@@ -315,7 +314,7 @@
                     text: errors,
                     icon: 'error'
                 });
-            {% endif %}
+            {% endif %} {% endcomment %}
         </script>
 </body>
 </html>
