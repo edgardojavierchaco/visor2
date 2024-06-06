@@ -1,5 +1,5 @@
-import pandas as pd
-import matplotlib.pyplot as plt
+import pandas as pd # type: ignore
+import matplotlib.pyplot as plt # type: ignore
 from io import BytesIO
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -33,7 +33,7 @@ class DocentesListView(LoginRequiredMixin,ListView):
         # Obtener el usuario logueado
         user = self.request.user
         # Filtrar los docentes por el usuario logueado
-        queryset = super().get_queryset().filter(cueanexo=user.username)
+        queryset = super().get_queryset().filter(cueanexo=user.username) # type: ignore
         return queryset
     
     def get_context_data(self, **kwargs):
@@ -102,7 +102,7 @@ def mostrar_grafico(request):
 
     # Crear el gráfico de torta
     fig, ax = plt.subplots(figsize=(6, 6))  # Ajustar tamaño del gráfico
-    wedges, texts, autotexts = ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90, textprops=dict(color="black"))
+    wedges, texts, autotexts = ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90, textprops=dict(color="black")) # type: ignore
 
     # Mejorar el diseño del texto en el gráfico
     for text in texts:
@@ -172,7 +172,7 @@ def mostrar_grafico_reg(request):
     
     # Crear el gráfico de torta
     fig, ax = plt.subplots()
-    ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90)
+    ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90) # type: ignore
     ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     
     # Guardar el gráfico en un objeto BytesIO

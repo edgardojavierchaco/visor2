@@ -56,7 +56,7 @@ class crear_usuarios(AdminRequiredMixin,CreateView):
         
         # Encriptar la contraseña usando SHA256
         password = form.cleaned_data.get('password')
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        hashed_password = hashlib.sha256(password.encode()).hexdigest() # type: ignore
         
         # Guardar la contraseña encriptada en el objeto de usuario
         usuario_form.password = hashed_password
@@ -131,7 +131,7 @@ class registrar_usuarios(CreateView):
         
         # Encriptar la contraseña usando SHA256
         password = form.cleaned_data.get('password')
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        hashed_password = hashlib.sha256(password.encode()).hexdigest() # type: ignore
         
         # Guardar la contraseña encriptada en el objeto de usuario
         usuario_form.password = hashed_password

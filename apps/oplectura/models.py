@@ -72,7 +72,7 @@ class RegOpLectura(models.Model):
     comprension=models.ForeignKey(RegComprension, on_delete=models.CASCADE, name='comprension')  
     puntaje_comprension=models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0.00), MaxValueValidator(100.00)], blank=True, null=True, name='puntaje_comprension')
     nivel_comprension=models.CharField(blank=True, null=True, name='nivel_comprension')  
-    anio=models.IntegerField(max_length=4, default=2024, name='año')
+    anio=models.IntegerField(default=2024, name='año')
     mes=models.CharField(max_length=10, default='mayo', name='mes')
     dni_docente=models.CharField(max_length=8,name='dni_docente')
     
