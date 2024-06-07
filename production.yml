@@ -4,9 +4,7 @@ volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
   production_traefik_visor: {}
-  archivo_normativa:
-  normativa:
-  mapoteca:
+  
 
 services:
   django:
@@ -21,9 +19,9 @@ services:
       - ./.env
     command: /start
     volumes:
-      - archivo_normativa:/app/media/archivo_normativa:z
-      - normativa:/app/media/normativa:z
-      - mapoteca:/app/media/mapoteca:z
+      - /home/estadisticas/visor2/apps/media/archivo_normativa:/app/media/archivo_normativa:z
+      - /home/estadisticas/visor2/apps/media/normativa:/app/media/normativa:z
+      - /home/estadisticas/visor2/apps/media/mapoteca:/app/media/mapoteca:z
     
   postgres:
     build:
