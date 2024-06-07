@@ -30,10 +30,8 @@ urlpatterns = [
     path('usua/', include('apps.usuarios.urls', namespace='usua')),
     path('error_conexion/', TemplateView.as_view(template_name='error_conexion.html'), name='error_conexion'),
     path('consulta_vacia/', TemplateView.as_view(template_name='consulta_vacia.html'), name='consulta_vacia'),
-    path('repo/', include('apps.reportes.urls', namespace='repo')),
-    path('equipo/', TemplateView.as_view(template_name='equipo.html'), name='equipo'),
-    path('videoteca/', include('apps.videoteca.urls', namespace='videoteca')),
-    path('lengua/', include('apps.oplectura.urls', namespace='lengua')),
+    path('repo/', include('apps.reportes.urls', namespace='repo')),    
+    path('videoteca/', include('apps.videoteca.urls', namespace='videoteca')),    
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:

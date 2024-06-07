@@ -37,8 +37,7 @@ LOCAL_APPS = [
     'apps.dashboard', 
     'apps.archivar',
     'apps.mapoteca',
-    'apps.normativa',
-    'apps.oplectura',
+    'apps.normativa',    
     'apps.docentes',
     'apps.alumnos',
     'apps.directores',
@@ -76,6 +75,7 @@ AUTHENTICATION_BACKENDS = [
     
 ]
 ROOT_URLCONF = 'config.urls'
+
 
 # Configuración de plantillas
 TEMPLATES = [

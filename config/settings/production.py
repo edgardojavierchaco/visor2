@@ -9,7 +9,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 DEBUG = False 
 
 # Lista de hosts permitidos en producción
-ALLOWED_HOSTS = ['0.0.0.0', 'visoreducativochaco.com.ar', 'www.visoreducativochaco.com.ar']
+ALLOWED_HOSTS = ['0.0.0.0','visoreducativochaco.com.ar', 'www.visoreducativochaco.com.ar']
 
 # Configuración de la base de datos PostgreSQL
 DATABASES = {
@@ -63,3 +63,5 @@ LOGGING = {
         },
     },
 }
+
+WSGI_APPLICATION = "config.wsgi.application"
