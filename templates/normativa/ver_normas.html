@@ -31,7 +31,9 @@
             {% for lex in norma %}
                 <div class="norma">            
                     <h5 style="color:blue">{{ lex.asunto }}</h5>
-                    <embed src="{{ lex.archivo.url }}" type="application/pdf">
+                    <a href="{{ lex.archivo.url }}" target="_blank">{{ lex.nombre_archivo }}</a>
+                    <!-- Opción de embed -->
+                    <embed src="{{ lex.archivo.url }}" type="application/pdf">                    
                 </div>
             {% endfor %}
         </div>      

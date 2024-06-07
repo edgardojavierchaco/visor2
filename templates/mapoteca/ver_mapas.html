@@ -18,6 +18,10 @@
                 box-sizing: border-box;
                 text-align:center;
             }
+
+            .mapa a {
+                color: black;
+            }
             .mapa embed {
                 width: 100%;
                 height: 200px;
@@ -30,7 +34,8 @@
         <div class="container">
             {% for mapa in mapas %}
                 <div class="mapa">            
-                    <h5 style="color:blue">{{ mapa.titulo }}</h5>
+                    <h5 style="color:blue">{{ mapa.titulo }}</h5>                    
+                    <a href="{{ mapa.archivo.url }}" target="_blank">{{ mapa.nombre_archivo }}</a>
                     <embed src="{{ mapa.archivo.url }}" type="application/pdf">
                 </div>
             {% endfor %}

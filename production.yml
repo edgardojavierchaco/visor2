@@ -4,6 +4,9 @@ volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
   production_traefik_visor: {}
+  archivo_normativa:
+  normativa:
+  mapoteca:
 
 services:
   django:
@@ -16,7 +19,11 @@ services:
       - postgres
     env_file:
       - ./.env
-    command: /start    
+    command: /start
+    volumes:
+      - archivo_normativa:/app/media/archivo_normativa:z
+      - normativa:/app/media/normativa:z
+      - mapoteca:/app/media/mapoteca:z
     
   postgres:
     build:
@@ -40,4 +47,4 @@ services:
       - production_traefik_visor:/etc/traefik/acme:z 
     ports:
       - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443" 
+      - "0.0.0.0:443:443"

@@ -16,7 +16,9 @@ services:
       - postgres
     volumes:
       - .:/app:z
-      
+      - /home/edgardochaco/Documentos/visor2/apps/media/archivo_normativa:/app/media/archivo_normativa:z 
+      - /home/edgardochaco/Documentos/visor2/apps/media/normativa:/app/media/normativa:z 
+      - /home/edgardochaco/Documentos/visor2/apps/media/mapoteca:/app/media/mapoteca:z 
     env_file:
       - ./.env
     ports:

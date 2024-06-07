@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login y Register - MagtimusPro</title>
+    <title>Login y Register</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -50,7 +50,6 @@
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             background-color: rgba(0, 128, 255, 0.5);
-
         }
 
         .caja__trasera div{
@@ -58,7 +57,6 @@
             color: white;
             transition: all 500ms;
         }
-
 
         .caja__trasera div p,
         .caja__trasera button{
@@ -92,8 +90,7 @@
             color: #46A2FD;
         }
 
-        /*Formularios*/
-
+        /* Formularios */
         .contenedor__login-register{
             display: flex;
             align-items: center;
@@ -103,7 +100,7 @@
             top: -185px;
             left: 10px;
 
-            /*La transicion va despues del codigo JS*/
+            /* La transicion va despues del codigo JS */
             transition: left 500ms cubic-bezier(0.175, 0.885, 0.320, 1.275);
         }
 
@@ -144,9 +141,6 @@
             outline: none;
         }
 
-
-
-
         .formulario__login{
             opacity: 1;
             display: block;
@@ -155,10 +149,7 @@
             display: none;
         }
 
-
-
         @media screen and (max-width: 850px){
-
             main{
                 margin-top: 50px;
             }
@@ -175,9 +166,7 @@
                 position: absolute;
             }
 
-
-            /*Formularios*/
-
+            /* Formularios */
             .contenedor__login-register{
                 top: -10px;
                 left: -5px;
@@ -192,130 +181,144 @@
 </head>
 <body>
 
-        <main>
+<main>
 
-            <div class="contenedor__todo">
-                <div class="caja__trasera">
-                    <div class="caja__trasera-login">
-                        <h3>¿Ya tienes una cuenta?</h3>
-                        <p>Inicia sesión para entrar en la página</p>
-                        <button id="btn__iniciar-sesion">Iniciar Sesión</button>
-                    </div>
-                    <div class="caja__trasera-register">
-                        <h3>¿Aún no tienes una cuenta?</h3>
-                        <p>Regístrate para que puedas iniciar sesión</p>
-                        <button id="btn__registrarse">Regístrarse</button>
-                    </div>
-                </div>
-
-                <!--Formulario de Login y registro-->
-                <div class="contenedor__login-register">
-                    <!--Login-->
-                    <form action="{% url 'logueo:login' %}" class="formulario__login" method="post">
-                        {%csrf_token%}
-                        <h2>Iniciar Sesión</h2>                    
-                        {{ form.username}} 
-                        {{ form.password}}
-                        <button><i class="fas fa-sign-in-alt" style="color:green"></i>Entrar</button>
-                    </form>
-
-                    <!--Register-->
-                    <form action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
-                        {%csrf_token%}
-                        <h2>Registrarse</h2> 
-                        {{ form.username}}
-                        {{ form.password}}
-                        {{ form.apellido}}
-                        {{ form.nombres}}
-                        {{ form.correo }}
-                        {{ form.telefono }}
-                        {{ form.nivelacceso }}
-                        <button type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Registrarse</button>
-                    </form>
-                </div>
+    <div class="contenedor__todo">
+        <div class="caja__trasera">
+            <div class="caja__trasera-login">
+                <h3>¿Ya tienes una cuenta?</h3>
+                <p>Inicia sesión para entrar en la página</p>
+                <button id="btn__iniciar-sesion">Iniciar Sesión</button>
             </div>
+            <div class="caja__trasera-register">
+                <h3>¿Aún no tienes una cuenta?</h3>
+                <p>Regístrate para que puedas iniciar sesión</p>
+                <button id="btn__registrarse">Registrarse</button>
+            </div>
+        </div>
 
-        </main>
+        <!-- Formulario de Login y registro -->
+        <div class="contenedor__login-register">
+            <!-- Login -->
+            <form id="login-form" action="{% url 'logueo:login' %}" class="formulario__login" method="post">
+                {% csrf_token %}
+                <h2>Iniciar Sesión</h2> 
 
-        <script>
-            //Ejecutando funciones
-            document.getElementById("btn__iniciar-sesion").addEventListener("click", iniciarSesion);
-            document.getElementById("btn__registrarse").addEventListener("click", register);
-            window.addEventListener("resize", anchoPage);
+                {{ form.username }} 
+                {{ form.password }}
+                <button id="login-button" type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Entrar</button>
+            </form>
 
-            //Declarando variables
-            var formulario_login = document.querySelector(".formulario__login");
-            var formulario_register = document.querySelector(".formulario__register");
-            var contenedor_login_register = document.querySelector(".contenedor__login-register");
-            var caja_trasera_login = document.querySelector(".caja__trasera-login");
-            var caja_trasera_register = document.querySelector(".caja__trasera-register");
+            <!-- Register -->
+            <form action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
+                {% csrf_token %}
+                <h2>Registrarse</h2> 
+                {{ form.username }}
+                {{ form.password }}
+                {{ form.apellido }}
+                {{ form.nombres }}
+                {{ form.correo }}
+                {{ form.telefono }}
+                {{ form.nivelacceso }}
+                <button type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Registrarse</button>
+            </form>
+        </div>
+    </div>
 
-                //FUNCIONES
+</main>
 
-            function anchoPage(){
+<script>
+    document.getElementById('login-form').addEventListener('submit', function(event) {
+        var isStaff = "{{ request.user.is_staff }}";
+        if (isStaff === "False") {
+            event.preventDefault(); // Evita el envío del formulario
+            Swal.fire({
+                title: 'Advertencia',
+                text: 'Tu cuenta está pendiente de validación. Por favor, espera a que se le valide el acceso.',
+                icon: 'warning',
+                confirmButtonText: 'Entendido'
+            });
+        }
+    });
 
-                if (window.innerWidth > 850){
-                    caja_trasera_register.style.display = "block";
-                    caja_trasera_login.style.display = "block";
-                }else{
-                    caja_trasera_register.style.display = "block";
-                    caja_trasera_register.style.opacity = "1";
-                    caja_trasera_login.style.display = "none";
-                    formulario_login.style.display = "block";
-                    contenedor_login_register.style.left = "0px";
-                    formulario_register.style.display = "none";   
-                }
-            }
+    // Agregar SweetAlert si el usuario o la contraseña son incorrectos
+    {% if form.errors %}
+        var errors = '';
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+                errors += '{{ error }}\n';
+            {% endfor %}
+        {% endfor %}
+        Swal.fire({
+            title: 'Error!',
+            text: errors,
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+        });
+    {% endif %}
 
-            anchoPage();
+    // Ejecutando funciones
+    document.getElementById("btn__iniciar-sesion").addEventListener("click", iniciarSesion);
+    document.getElementById("btn__registrarse").addEventListener("click", register);
+    window.addEventListener("resize", anchoPage);
 
+    // Declarando variables
+    var formulario_login = document.querySelector(".formulario__login");
+    var formulario_register = document.querySelector(".formulario__register");
+    var contenedor_login_register = document.querySelector(".contenedor__login-register");
+    var caja_trasera_login = document.querySelector(".caja__trasera-login");
+    var caja_trasera_register = document.querySelector(".caja__trasera-register");
 
-                function iniciarSesion(){
-                    if (window.innerWidth > 850){
-                        formulario_login.style.display = "block";
-                        contenedor_login_register.style.left = "10px";
-                        formulario_register.style.display = "none";
-                        caja_trasera_register.style.opacity = "1";
-                        caja_trasera_login.style.opacity = "0";
-                    }else{
-                        formulario_login.style.display = "block";
-                        contenedor_login_register.style.left = "0px";
-                        formulario_register.style.display = "none";
-                        caja_trasera_register.style.display = "block";
-                        caja_trasera_login.style.display = "none";
-                    }
-                }
+    // FUNCIONES
 
-                function register(){
-                    if (window.innerWidth > 850){
-                        formulario_register.style.display = "block";
-                        contenedor_login_register.style.left = "410px";
-                        formulario_login.style.display = "none";
-                        caja_trasera_register.style.opacity = "0";
-                        caja_trasera_login.style.opacity = "1";
-                    }else{
-                        formulario_register.style.display = "block";
-                        contenedor_login_register.style.left = "0px";
-                        formulario_login.style.display = "none";
-                        caja_trasera_register.style.display = "none";
-                        caja_trasera_login.style.display = "block";
-                        caja_trasera_login.style.opacity = "1";
-                    }
-            }
+    function anchoPage(){
+        if (window.innerWidth > 850){
+            caja_trasera_register.style.display = "block";
+            caja_trasera_login.style.display = "block";
+        } else {
+            caja_trasera_register.style.display = "block";
+            caja_trasera_register.style.opacity = "1";
+            caja_trasera_login.style.display = "none";
+            formulario_login.style.display = "block";
+            contenedor_login_register.style.left = "0px";
+            formulario_register.style.display = "none";   
+        }
+    }
 
-            {% if form.errors %}
-                var errors = '';
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        errors += '{{ error }}\n';
-                    {% endfor %}
-                {% endfor %}
-                Swal.fire({
-                    title: 'Error!',
-                    text: errors,
-                    icon: 'error'
-                });
-            {% endif %}
-        </script>
+    anchoPage();
+
+    function iniciarSesion(){
+        if (window.innerWidth > 850){
+            formulario_login.style.display = "block";
+            contenedor_login_register.style.left = "10px";
+            formulario_register.style.display = "none";
+            caja_trasera_register.style.opacity = "1";
+            caja_trasera_login.style.opacity = "0";
+        } else {
+            formulario_login.style.display = "block";
+            contenedor_login_register.style.left = "0px";
+            formulario_register.style.display = "none";
+            caja_trasera_register.style.display = "block";
+            caja_trasera_login.style.display = "none";
+        }
+    }
+
+    function register(){
+        if (window.innerWidth > 850){
+            formulario_register.style.display = "block";
+            contenedor_login_register.style.left = "410px";
+            formulario_login.style.display = "none";
+            caja_trasera_register.style.opacity = "0";
+            caja_trasera_login.style.opacity = "1";
+        } else {
+            formulario_register.style.display = "block";
+            contenedor_login_register.style.left = "0px";
+            formulario_login.style.display = "none";
+            caja_trasera_register.style.display = "none";
+            caja_trasera_login.style.display = "block";
+            caja_trasera_login.style.opacity = "1";
+        }
+    }
+</script>
 </body>
 </html>

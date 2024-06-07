@@ -41,6 +41,7 @@ LOCAL_APPS = [
     'apps.docentes',
     'apps.alumnos',
     'apps.directores',
+    
 ]
 
 
