@@ -41,7 +41,7 @@ LOCAL_APPS = [
     'apps.docentes',
     'apps.alumnos',
     'apps.directores',
-    
+    'apps.regacceso',
 ]
 
 
@@ -58,7 +58,8 @@ BASE_MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',    
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.common.BrokenLinkEmailsMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',    
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',   
+    'apps.regacceso.middleware.RegistroAccesoMiddleware', 
 ]
 
 THIRD_MIDDLEWARE = [
@@ -170,4 +171,10 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.live.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'edgardojavierchaco@gmail.com'
+EMAIL_HOST_PASSWORD = 'aperire.edgardo'
 

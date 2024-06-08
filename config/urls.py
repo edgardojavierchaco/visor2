@@ -31,7 +31,8 @@ urlpatterns = [
     path('error_conexion/', TemplateView.as_view(template_name='error_conexion.html'), name='error_conexion'),
     path('consulta_vacia/', TemplateView.as_view(template_name='consulta_vacia.html'), name='consulta_vacia'),
     path('repo/', include('apps.reportes.urls', namespace='repo')),    
-    path('videoteca/', include('apps.videoteca.urls', namespace='videoteca')),    
+    path('videoteca/', include('apps.videoteca.urls', namespace='videoteca')),   
+    path('acceso/',include('apps.regacceso.urls', namespace='acceso')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:

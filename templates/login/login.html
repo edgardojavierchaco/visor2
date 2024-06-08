@@ -183,7 +183,7 @@
 
 <main>
 
-    <div class="contenedor__todo">
+   <div class="contenedor__todo">
         <div class="caja__trasera">
             <div class="caja__trasera-login">
                 <h3>¿Ya tienes una cuenta?</h3>
@@ -203,11 +203,14 @@
             <form id="login-form" action="{% url 'logueo:login' %}" class="formulario__login" method="post">
                 {% csrf_token %}
                 <h2>Iniciar Sesión</h2> 
-
-                {{ form.username }} 
-                {{ form.password }}
+                {{ form.username|append_attr:"class:input" }}
+                {{ form.password|append_attr:"class:input" }}
                 <button id="login-button" type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Entrar</button>
-            </form>
+                
+                {% comment %} <p class="text-center mt-2" style="font-size: 13px;">
+                    Si no recuerdas tu contraseña puedes resetearla dando click <a href="{% url 'usuarios:reset_password' %}">aquí</a>
+                </p> {% endcomment %}
+                </form>
 
             <!-- Register -->
             <form action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
@@ -228,18 +231,9 @@
 </main>
 
 <script>
-    document.getElementById('login-form').addEventListener('submit', function(event) {
-        var isStaff = "{{ request.user.is_staff }}";
-        if (isStaff === "False") {
-            event.preventDefault(); // Evita el envío del formulario
-            Swal.fire({
-                title: 'Advertencia',
-                text: 'Tu cuenta está pendiente de validación. Por favor, espera a que se le valide el acceso.',
-                icon: 'warning',
-                confirmButtonText: 'Entendido'
-            });
-        }
-    });
+    document.getElementById("btn__iniciar-sesion").addEventListener("click", iniciarSesion);
+    document.getElementById("btn__registrarse").addEventListener("click", register);
+    window.addEventListener("resize", anchoPage);
 
     // Agregar SweetAlert si el usuario o la contraseña son incorrectos
     {% if form.errors %}
@@ -256,11 +250,6 @@
             confirmButtonText: 'Aceptar'
         });
     {% endif %}
-
-    // Ejecutando funciones
-    document.getElementById("btn__iniciar-sesion").addEventListener("click", iniciarSesion);
-    document.getElementById("btn__registrarse").addEventListener("click", register);
-    window.addEventListener("resize", anchoPage);
 
     // Declarando variables
     var formulario_login = document.querySelector(".formulario__login");
@@ -319,6 +308,34 @@
             caja_trasera_login.style.opacity = "1";
         }
     }
-</script>
+
+    document.getElementById('login-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Evita el envío del formulario
+        var username = document.querySelector('[name="username"]').value;
+        fetch("{% url 'usuarios:check_user_status' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({username: username})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.is_staff) {
+                Swal.fire({
+                    title: 'Advertencia',
+                    text: 'Tu cuenta está pendiente de validación. Por favor, espera a que se le valide el acceso.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido'
+                });
+            } else {
+                document.getElementById('login-form').submit(); // Envía el formulario si el usuario tiene permisos
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+</script> 
 </body>
 </html>

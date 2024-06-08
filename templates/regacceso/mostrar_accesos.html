@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registros de Acceso</title>
+</head>
+<body>
+    <h1>Registros de Acceso</h1>
+    <ul>
+        {% for registro in registros %}
+            <li>{{ registro.usuario }} - {{ registro.fecha_acceso }} - {{ registro.ip_usuario }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

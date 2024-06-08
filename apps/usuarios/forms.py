@@ -102,3 +102,14 @@ class CustomSetPasswordForm(SetPasswordForm):
         if commit:
             user.save()
         return user
+
+class ResetpassWordForm(forms.Form):
+    username=forms.CharField(
+        widget=forms.TextInput(
+            attrs={
+                'placeholder':'Ingrese un usuario',
+                'class': 'form-control',
+                'autocomplete':'off'
+            }
+        )
+    )

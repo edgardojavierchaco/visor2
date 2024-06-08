@@ -61,3 +61,6 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = 'Usuarios_Visualizadores'
         ordering = ['apellido', 'nombres']
         db_table = 'Usuario_Visualizador'
+    
+
+
