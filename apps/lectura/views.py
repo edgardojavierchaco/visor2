@@ -1,15 +1,13 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-from io import BytesIO
-import base64  # Importar base64 para usarlo más adelante
+import plotly.express as px
+import plotly.io as pio
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.http import JsonResponse, HttpResponse
 from django.core.exceptions import PermissionDenied
-from django.views.generic import CreateView, ListView, TemplateView, UpdateView, DeleteView
-from django.views import View
+from django.views.generic import CreateView, ListView, UpdateView, DeleteView
 from .models import DocenteGradoSeccion, oplecturaabril
 from .forms import CargarDocenteGradoSeccion
 
@@ -67,6 +65,7 @@ class DocentesDeleteView(LoginRequiredMixin, DeleteView):
         user.delete()
         return redirect('lectura:listado')
 
+@login_required
 def mostrar_grafico(request):
     if not request.user.is_authenticated:
         # Si el usuario no está autenticado, lanzar excepción 403
@@ -94,7 +93,8 @@ def mostrar_grafico(request):
     
     # Agrupar y contar por categoría de desempeño
     conteo_desempeño = df['desempeño'].value_counts()
-
+    conteo_desempeño_dict = conteo_desempeño.to_dict()
+    print(conteo_desempeño)
     # Calcular los porcentajes
     porcentajes = (conteo_desempeño / conteo_desempeño.sum()) * 100
 
@@ -104,34 +104,22 @@ def mostrar_grafico(request):
     # Obtener el nombre de la escuela 
     escuela = df['escuela'].iloc[0]
 
-    # Crear el gráfico de torta
-    fig, ax = plt.subplots(figsize=(10, 6))  # Ajustar tamaño del gráfico
-    wedges, texts, autotexts = ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90, textprops=dict(color="black"))  # type: ignore
-
-    # Mejorar el diseño del texto en el gráfico
-    for text in texts:
-        text.set_fontsize(8)  # Ajustar tamaño del texto de las etiquetas
-    for autotext in autotexts:
-        autotext.set_fontsize(8)  # Ajustar tamaño del texto de los porcentajes
-
-    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-    # Guardar el gráfico en un objeto BytesIO
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-
-    # Convertir la imagen a base64 para incrustarla en la plantilla
-    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    # Crear el gráfico de torta con Plotly
+    #fig = px.pie(df, names=conteo_desempeño.index, values=porcentajes, title="Desempeño de Alumnos")
+    fig = px.pie(names=conteo_desempeño_dict.keys(), values=conteo_desempeño_dict.values(), title="Desempeño de Alumnos", width=800, height=600)
+    
+    # Convertir la figura a HTML
+    graph_html = fig.to_html(full_html=False)
 
     # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje
     return render(request, 'lectura/grafico.html', {
-        'grafico': image_base64,
+        'grafico': graph_html,
         'promedio_puntaje': promedio_puntaje,
         'total_alumnos': total_alumnos,
         'escuela': escuela,
     })
 
+@login_required
 def mostrar_grafico_reg(request):
     # Obtener los valores seleccionados del checkbox
     regiones_seleccionadas = request.GET.getlist('region')
@@ -163,6 +151,7 @@ def mostrar_grafico_reg(request):
     
     # Agrupar y contar por categoría de desempeño
     conteo_desempeño = df['desempeño'].value_counts()
+    conteo_desempeño_dict = conteo_desempeño.to_dict()
     
     # Calcular los porcentajes
     porcentajes = (conteo_desempeño / conteo_desempeño.sum()) * 100
@@ -173,22 +162,16 @@ def mostrar_grafico_reg(request):
     # Obtener el nombre de la regional o mostrar "Chaco"
     regional = 'Chaco' if mostrar_todo else ', '.join(df['reg'].unique())
     
-    # Crear el gráfico de torta
-    fig, ax = plt.subplots()
-    ax.pie(porcentajes, labels=porcentajes.index, autopct='%1.1f%%', startangle=90) 
-    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    # Crear el gráfico de torta con Plotly
+    #fig = px.pie(df, names=conteo_desempeño.index, values=porcentajes, title="Desempeño de Alumnos por Región", labels=conteo_desempeño.keys(), width=400,height=300)
+    fig = px.pie(names=conteo_desempeño_dict.keys(), values=conteo_desempeño_dict.values(), title="Desempeño de Alumnos", width=800, height=600)
     
-    # Guardar el gráfico en un objeto BytesIO
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    
-    # Convertir la imagen a base64 para incrustarla en la plantilla
-    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    # Convertir la figura a HTML
+    graph_html = fig.to_html(full_html=False)
     
     # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje
     return render(request, 'lectura/graficoreg.html', {
-        'grafico': image_base64,
+        'grafico': graph_html,
         'promedio_puntaje': promedio_puntaje,
         'total_alumnos': total_alumnos,
         'regional': regional,

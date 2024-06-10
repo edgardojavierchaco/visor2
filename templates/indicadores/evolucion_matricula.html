@@ -41,7 +41,7 @@
             color: #555;
         }
     </style>
-
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <div class="custom-dashboard">
         <div class="stats-card">
             <h3>Estadísticas de {{ nom_est }}</h3>                    
@@ -49,6 +49,6 @@
     </div>
 
     <div class="chart-container">        
-        <img src="data:image/png;base64,{{ grafico }}" alt="Evolución de matrícula">
+        <img src="data:image/png;base64,{{ grafico | safe }}" alt="Evolución de matrícula">
     </div>
 {% endblock %}

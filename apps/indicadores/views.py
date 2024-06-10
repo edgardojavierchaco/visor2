@@ -1,7 +1,6 @@
 import psycopg2
-import matplotlib.pyplot as plt
-import io
-import base64
+import plotly.graph_objs as go
+import plotly.io as pio
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 
@@ -48,28 +47,15 @@ def filter_data_evolucion_matricula(request):
     labels = ['2017', '2018', '2019', '2020', '2021', '2022', '2023']
     matricula = data[0][2:]
 
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Definir una paleta de colores para cada año
-    colors = ['blue', 'green', 'orange', 'red', 'purple', 'brown', 'gray']
-    
-    ax.bar(labels, matricula, color=colors)
-    ax.set_title('Evolución de la Matrícula')
-    ax.set_xlabel('Año')
-    ax.set_ylabel('Matrícula')
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=labels, y=matricula, marker_color='blue'))
+    fig.update_layout(title='Evolución de la Matrícula', xaxis_title='Año', yaxis_title='Matrícula')
 
-    # Guardar la figura en un buffer de bytes
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-
-    # Codificar la imagen en base64
-    image_base64 = base64.b64encode(image_png).decode('utf-8')
+    # Convertir la figura a un HTML string
+    graph_html = pio.to_html(fig, full_html=False)
 
     context = {
-        'grafico': image_base64,
+        'grafico': graph_html,
         'cueanexo': cueanexo,
         'nom_est': data[0][1],
     }
@@ -130,29 +116,16 @@ def filter_data_retencion(request):
     tasas1 = data1[0][2:]
     tasas2 = data2[0][2:]
 
-    fig, ax = plt.subplots(figsize=(16, 10))
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=[x - 0.2 for x in range(1, 8)], y=tasas1, name='2022', marker_color='blue'))
+    fig.add_trace(go.Bar(x=[x + 0.2 for x in range(1, 8)], y=tasas2, name='2023', marker_color='orange'))
+    fig.update_layout(title='Tasas de Retención por Año', xaxis_title='Año', yaxis_title='Tasa de Retención')
 
-    ax.bar([x - 0.2 for x in range(1, 8)], tasas1, width=0.4, label='2022')
-    ax.bar([x + 0.2 for x in range(1, 8)], tasas2, width=0.4, label='2023')
-    ax.set_title('Tasas de Retención por Año', fontsize=24)
-    ax.set_xlabel('Año',fontsize=20)
-    ax.set_ylabel('Tasa de Retención',fontsize=20)
-    ax.set_xticks(range(1, 8))
-    ax.set_xticklabels(labels, fontsize=20)
-    ax.legend(fontsize=20)
-
-    # Guardar la figura en un buffer de bytes
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-
-    # Codificar la imagen en base64
-    image_base64 = base64.b64encode(image_png).decode('utf-8')
+    # Convertir la figura a un HTML string
+    graph_html = pio.to_html(fig, full_html=False)
 
     context = {
-        'grafico': image_base64,
+        'grafico': graph_html,
         'cueanexo': cueanexo,
         'nom_est': data1[0][1],
     }

@@ -3,6 +3,7 @@
 {% block title %}Tasas de Retención{% endblock %}
 
 {% block content %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <div class="container">
     <h1>Tasas de Retención por Año</h1>
     <div class="row">
@@ -11,7 +12,7 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ nom_est }}</h5>
                     <p class="card-text">Tasas de retención para los años 2022 y 2023</p>
-                    <img src="data:image/png;base64,{{ grafico }}" class="img-fluid" alt="Tasas de Retención">
+                    <img src="data:image/png;base64,{{ grafico | safe }}" class="img-fluid" alt="Tasas de Retención">
                 </div>
             </div>
         </div>

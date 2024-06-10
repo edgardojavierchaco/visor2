@@ -69,11 +69,13 @@
             vertical-align: middle; /* Alinear verticalmente con el texto */
         }
     </style>
+    <!-- Incluir los recursos de Plotly -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <div class="custom-dashboard">
         <h3>Gráfico de Desempeño de Fluidez Lectora - {{ escuela }}</h3>        
         <div class="content">
             <div class="chart-container">
-                <img src="data:image/png;base64,{{ grafico }}" alt="Gráfico de Desempeño">
+                {{ grafico|safe }}
             </div>
             <div class="stats-container">
                 <div class="card">

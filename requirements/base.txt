@@ -148,3 +148,5 @@ wcwidth==0.2.6
 whitenoise==6.5.0
 wrapt==1.15.0
 matplotlib==3.9.0
+plotly==5.22.0
+tenacity==8.3.0
