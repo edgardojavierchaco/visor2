@@ -22,15 +22,15 @@
                        class="nav-link dropdown-toggle"><i class="fas fa-globe" style="color:blue"></i> Establecimiento</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">                        
                         <li><a href="{% url 'directores:matricula' %}" class="dropdown-item">Matrícula</a></li>
-                        <li><a href="{% url 'mapas:filcueradio' %}" class="dropdown-item">Cargos</a></li>                        
+                                             
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Indicadores</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'reportes:filtrado_cargos' %}" class="dropdown-item">Tasa Retención</a></li>
-                        <li><a href="{% url 'reportes:filtrado_docentes' %}" class="dropdown-item">Tasa Sobreedad</a></li>
+                        <li><a href="{% url 'indicadores:evolucion' %}" class="dropdown-item">Tasa Evolución Matrícula</a></li>
+                        <li><a href="{% url 'indicadores:retencion' %}" class="dropdown-item">Tasa Retención</a></li>
                          
                     </ul>
                 </li>                
@@ -38,9 +38,9 @@
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'mapoteca:mapas' %}" class="dropdown-item">Guía Metodológica</a></li>
-                        <li><a href="{% url 'videoteca:videos' %}" class="dropdown-item">Resultados</a></li>
-                        <li><a href="{% url 'digesto:norma' %}" class="dropdown-item">Sugerencias</a></li>  
+                        <li><a href="#" class="dropdown-item">Guía Metodológica</a></li>
+                        <li><a href="{% url 'lectura:mostrar_grafico' %}" class="dropdown-item">Resultados</a></li>
+                        <li><a href="#" class="dropdown-item">Sugerencias</a></li>  
                     </ul>
                 </li>       
                            

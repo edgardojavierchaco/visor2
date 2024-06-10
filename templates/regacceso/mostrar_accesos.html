@@ -7,7 +7,7 @@
     <h1>Registros de Acceso</h1>
     <ul>
         {% for registro in registros %}
-            <li>{{ registro.usuario }} - {{ registro.fecha_acceso }} - {{ registro.ip_usuario }}</li>
+            <li>{{ registro.usuario }} - {{ registro.fecha_acceso }} - {{ registro.ip_usuario }} - {{ registro.url_acceso }}</li>
         {% endfor %}
     </ul>
 </body>
