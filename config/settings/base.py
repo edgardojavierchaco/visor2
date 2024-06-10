@@ -42,6 +42,7 @@ LOCAL_APPS = [
     'apps.directores',
     'apps.regacceso',
     'apps.lectura',
+    'apps.indicadores',
 ]
 
 
