@@ -9,7 +9,7 @@
             align-items: flex-start;
             padding: 20px;
         }
-        .stats-card, .message-card {
+        .stats-card {
             background-color: #f9f9f9;
             border: 1px solid #ccc;
             border-radius: 10px;
@@ -17,38 +17,29 @@
             margin: 10px;
             width: 300px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .stats-card h3, .message-card h3 {
-            font-size: 1.2em;
-            margin-bottom: 10px;
             text-align: center;
         }
-        .stats-card p, .message-card p {
-            font-size: 1em;
+        .stats-card h3 {
+            font-size: 1.2em;
             margin-bottom: 10px;
         }
         .chart-container {
             max-width: 600px;
             margin: 20px auto;
-        }
-        .chart-container img {
-            max-width: 100%;
             border-radius: 10px;
-        }
-        .icon {
-            float: right;
-            font-size: 1.5em;
-            color: #555;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
     </style>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
     <div class="custom-dashboard">
         <div class="stats-card">
-            <h3>Estadísticas de {{ nom_est }}</h3>                    
-        </div>        
+            <h3>Estadísticas de {{ nom_est }}</h3>
+        </div>
     </div>
 
-    <div class="chart-container">        
-        <img src="data:image/png;base64,{{ grafico | safe }}" alt="Evolución de matrícula">
+    <div class="chart-container">
+        {{ grafico | safe }}
     </div>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 {% endblock %}

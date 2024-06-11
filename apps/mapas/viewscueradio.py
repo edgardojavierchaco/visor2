@@ -1,6 +1,5 @@
 import json
 import psycopg2
-import asyncpg # type: ignore
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 

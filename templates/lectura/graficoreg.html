@@ -35,10 +35,6 @@
             background-color: #f9f9f9;
             flex-grow: 1;
         }
-        .custom-dashboard .chart-container img {
-            max-width: 100%;
-            border-radius: 15px;
-        }
         .filter-card h3, .stats-card h3 {
             margin-bottom: 15px;
         }
@@ -93,7 +89,7 @@
                 {% endif %}
                 
                 <div class="chart-container">
-                    <img src="data:image/png;base64,{{ grafico }}" alt="Gráfico de Desempeño">
+                    {{ grafico|safe }}
                 </div>
             </div>
             {% endif %}

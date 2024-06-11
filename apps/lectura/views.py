@@ -1,12 +1,10 @@
 import pandas as pd
 import plotly.express as px
-import plotly.io as pio
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpResponse
-from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.views.generic import CreateView, ListView, UpdateView, DeleteView
 from .models import DocenteGradoSeccion, oplecturaabril
 from .forms import CargarDocenteGradoSeccion
@@ -28,15 +26,9 @@ class DocentesListView(LoginRequiredMixin, ListView):
     context_object_name = 'docentes'
 
     def get_queryset(self):
-        # Obtener el usuario logueado
         user = self.request.user
-        
-        # Obtener el nombre de usuario del usuario logueado
         username = user.get_username()
-        
-        # Filtrar los docentes por el usuario logueado
-        queryset = super().get_queryset().filter(cueanexo=username)
-        return queryset
+        return super().get_queryset().filter(cueanexo=username)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -67,51 +59,27 @@ class DocentesDeleteView(LoginRequiredMixin, DeleteView):
 
 @login_required
 def mostrar_grafico(request):
-    if not request.user.is_authenticated:
-        # Si el usuario no está autenticado, lanzar excepción 403
-        raise PermissionDenied("No tiene permiso para ver esta página")
-
-    # Obtener el cueanexo del usuario autenticado
     cueanexo_usuario = request.user.username
-
-    # Filtrar los datos para el cueanexo del usuario
     datos_usuario = oplecturaabril.objects.filter(cueanexo=cueanexo_usuario)
 
-    # Convertir los datos a una lista de diccionarios y crear un DataFrame
     datos_usuario_list = list(datos_usuario.values('desempeño', 'puntaje', 'escuela'))
     if not datos_usuario_list:
         return HttpResponse("No hay datos disponibles para esta región")
 
     df = pd.DataFrame(datos_usuario_list)
 
-    # Verificar si las columnas 'desempeño' y 'puntaje' existen
     if 'desempeño' not in df.columns or 'puntaje' not in df.columns:
         return HttpResponse("Error en los datos: columnas 'desempeño' o 'puntaje' no encontradas.")
 
-    # Calcular el total de alumnos evaluados
     total_alumnos = df.shape[0]
-    
-    # Agrupar y contar por categoría de desempeño
     conteo_desempeño = df['desempeño'].value_counts()
-    conteo_desempeño_dict = conteo_desempeño.to_dict()
-    print(conteo_desempeño)
-    # Calcular los porcentajes
     porcentajes = (conteo_desempeño / conteo_desempeño.sum()) * 100
-
-    # Calcular el promedio de puntaje
     promedio_puntaje = round(df['puntaje'].mean(), 2)
-
-    # Obtener el nombre de la escuela 
     escuela = df['escuela'].iloc[0]
 
-    # Crear el gráfico de torta con Plotly
-    #fig = px.pie(df, names=conteo_desempeño.index, values=porcentajes, title="Desempeño de Alumnos")
-    fig = px.pie(names=conteo_desempeño_dict.keys(), values=conteo_desempeño_dict.values(), title="Desempeño de Alumnos", width=800, height=600)
-    
-    # Convertir la figura a HTML
+    fig = px.pie(names=conteo_desempeño.index, values=porcentajes, title="Desempeño de Alumnos", width=800, height=600)
     graph_html = fig.to_html(full_html=False)
 
-    # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje
     return render(request, 'lectura/grafico.html', {
         'grafico': graph_html,
         'promedio_puntaje': promedio_puntaje,
@@ -121,55 +89,32 @@ def mostrar_grafico(request):
 
 @login_required
 def mostrar_grafico_reg(request):
-    # Obtener los valores seleccionados del checkbox
     regiones_seleccionadas = request.GET.getlist('region')
-    
-    mostrar_todo = '0' in regiones_seleccionadas  # Verifica si se selecciona "Mostrar Todo"
+    mostrar_todo = '0' in regiones_seleccionadas
 
     if mostrar_todo:
-        # Si se selecciona "Mostrar Todo", mostrar todos los datos
         datos_usuario = oplecturaabril.objects.all()
     else:
-        # Filtrar los datos para las regiones seleccionadas
-        datos_usuario = oplecturaabril.objects.filter(reg__in=regiones_seleccionadas)     
-    
-    # Convertir los datos a una lista de diccionarios y crear un DataFrame
+        datos_usuario = oplecturaabril.objects.filter(reg__in=regiones_seleccionadas)
+
     datos_usuario_list = list(datos_usuario.values('desempeño', 'puntaje', 'reg'))
     if not datos_usuario_list:
-        return render(request, 'lectura/graficoreg.html', {
-            'datos_disponibles': False
-        })
-    
+        return render(request, 'lectura/graficoreg.html', {'datos_disponibles': False})
+
     df = pd.DataFrame(datos_usuario_list)
-    
-    # Verificar si las columnas 'desempeño' y 'puntaje' existen
+
     if 'desempeño' not in df.columns or 'puntaje' not in df.columns:
         return HttpResponse("Error en los datos: columnas 'desempeño' o 'puntaje' no encontradas.")
-    
-    # Calcular el total de alumnos evaluados
+
     total_alumnos = df.shape[0]
-    
-    # Agrupar y contar por categoría de desempeño
     conteo_desempeño = df['desempeño'].value_counts()
-    conteo_desempeño_dict = conteo_desempeño.to_dict()
-    
-    # Calcular los porcentajes
     porcentajes = (conteo_desempeño / conteo_desempeño.sum()) * 100
-    
-    # Calcular el promedio de puntaje
     promedio_puntaje = round(df['puntaje'].mean(), 2)
-    
-    # Obtener el nombre de la regional o mostrar "Chaco"
     regional = 'Chaco' if mostrar_todo else ', '.join(df['reg'].unique())
-    
-    # Crear el gráfico de torta con Plotly
-    #fig = px.pie(df, names=conteo_desempeño.index, values=porcentajes, title="Desempeño de Alumnos por Región", labels=conteo_desempeño.keys(), width=400,height=300)
-    fig = px.pie(names=conteo_desempeño_dict.keys(), values=conteo_desempeño_dict.values(), title="Desempeño de Alumnos", width=800, height=600)
-    
-    # Convertir la figura a HTML
+
+    fig = px.pie(names=conteo_desempeño.index, values=porcentajes, title="Desempeño de Alumnos por Región", width=800, height=600)
     graph_html = fig.to_html(full_html=False)
-    
-    # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje
+
     return render(request, 'lectura/graficoreg.html', {
         'grafico': graph_html,
         'promedio_puntaje': promedio_puntaje,
@@ -178,7 +123,6 @@ def mostrar_grafico_reg(request):
         'datos_disponibles': True
     })
 
-def cargar_grafico_reg(request):    
-    return render(request, 'lectura/graficoreg.html', {
-        'datos_disponibles': False
-    })
+@login_required
+def cargar_grafico_reg(request):
+    return render(request, 'lectura/graficoreg.html', {'datos_disponibles': False})
