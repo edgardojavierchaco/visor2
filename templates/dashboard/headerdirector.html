@@ -29,9 +29,10 @@
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Indicadores</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'indicadores:evolucion' %}" class="dropdown-item">Tasa Evolución Matrícula</a></li>
+                        <li><a href="{% url 'indicadores:evolucion' %}" class="dropdown-item">Evolución Matrícula</a></li>
                         <li><a href="{% url 'indicadores:retencion' %}" class="dropdown-item">Tasa Retención</a></li>
-                         
+                        <li><a href="{% url 'indicadores:efectiva' %}" class="dropdown-item">Tasa Efectiva-Abandono-Repitencia</a></li>
+                        <li><a href="{% url 'indicadores:sobreedad' %}" class="dropdown-item">Tasa Sobreedad</a></li> 
                     </ul>
                 </li>                
                  <li class="nav-item dropdown">
@@ -39,14 +40,14 @@
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <li><a href="#" class="dropdown-item">Guía Metodológica</a></li>
-                        <li><a href="{% url 'lectura:mostrar_grafico' %}" class="dropdown-item">Resultados</a></li>
+                        <li><a href="#" class="dropdown-item">Resultados</a></li>
                         <li><a href="#" class="dropdown-item">Sugerencias</a></li>  
                     </ul>
                 </li>       
                            
                 {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <span class="nav-link">Usuario: {{ user.nombres }}</span>
+                    <a href="{% url 'directores:institucional' %}" class="nav-link">Usuario: {{ user.nombres }}</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'login:logout' %}" >
@@ -66,33 +67,6 @@
                 
             </ul>
         </div>
-        {% comment %} <ul class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">
-            <li class="nav-item dropdown">
-                <a class="nav-link" data-toggle="dropdown" href="#">
-                    <i class="far fa-bell"></i>
-                    <span class="badge badge-warning navbar-badge">15</span>
-                </a>
-                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                    <span class="dropdown-header">15 Notifications</span>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item">
-                        <i class="fas fa-envelope mr-2"></i> 4 new messages
-                        <span class="float-right text-muted text-sm">3 mins</span>
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item">
-                        <i class="fas fa-users mr-2"></i> 8 friend requests
-                        <span class="float-right text-muted text-sm">12 hours</span>
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item">
-                        <i class="fas fa-file mr-2"></i> 3 new reports
-                        <span class="float-right text-muted text-sm">2 days</span>
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
-                </div>
-            </li>
-        </ul> {% endcomment %}
+        
     </div>
 </nav>

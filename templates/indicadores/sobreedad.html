@@ -1,0 +1,61 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+    <h1 style="text-align:center"><b>Tasa de Sobreedad</b></h1>
+    <table id="sobreedadTable" class="display" style="margin: 0 auto; width: 80%;">
+        <thead>
+            <tr>
+                <th>CUE Anexo</th>
+                <th>Escuela</th>
+                <th>Grado</th>
+                <th>Total</th>
+                <th>Edad</th>
+                <th>Sobre Edad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data_sobre %}
+            <tr>
+                <td>{{ row.0 }}</td>
+                <td>{{ row.1 }}</td>
+                <td>{{ row.2 }}</td>
+                <td>{{ row.3 }}</td>
+                <td>{{ row.4 }}</td>
+                <td>{{ row.5 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        $(document).ready(function() {
+            $('#sobreedadTable').DataTable({
+                responsive: true,
+                autoWidth: false,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
+                },
+                columns: [
+                    { data: "row.0" },
+                    { data: "row.1" },
+                    { data: "row.2" },
+                    { data: "row.3" },
+                    { data: "row.4" },
+                    { data: "row.5" }
+                ]
+            });
+        });
+    </script>
+{% endblock %}
