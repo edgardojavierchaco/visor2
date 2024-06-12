@@ -70,6 +70,12 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+        .custom-dashboard .description {
+            text-align: center;
+            font-size: 1em;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
     </style>
     <!-- Incluir los recursos de Plotly -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -77,14 +83,17 @@
         <h3>Estado de Situación (Calificación y Desempeños en el Censo de Fluidez y Comprensión Lectora de los alumnos de 3er grado - Mayo 2024)</h3>        
         <div class="content">
             <div class="chart-container">
-                {{ grafico|safe }}
+                <div id="grafico_torta_total_dni">{{ grafico_torta_total_dni | safe }}</div>
+                <div class="description">
+                    En el gráfico se presentan porcentajes de alumnos a los que se les aplicó el Test y los porcentajes de alumnos que no fueron calificados o calificados incorrectamente.
+                </div>
             </div>
             <div class="stats-container">
                 <div class="card">
-                    <p>Promedio de Puntaje: {{ promedio_puntaje }} <i class="fa fa-check check-icon"></i></p>
+                    <p>Total Alumnos: {{ total_dni_sin_desempenio }} <i class="fa fa-check check-icon"></i></p>
                 </div>
                 <div class="card">
-                    <p>Total de Alumnos: {{ total_alumnos }} <i class="fa fa-check check-icon"></i></p>
+                    <p>Promedio de Puntaje: {{ promedio_puntaje }} <i class="fa fa-check check-icon"></i></p>
                 </div>
                 <div class="card notification-card">
                     <i class="fa fa-comments notification-icon"></i>

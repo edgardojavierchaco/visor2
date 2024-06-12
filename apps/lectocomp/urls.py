@@ -1,8 +1,8 @@
 from django.urls import path
-from .views import mostrar_grafico
+from .views import tu_vista
 
 app_name='lectocomprension'
 
 urlpatterns = [    
-    path('resultados/', mostrar_grafico, name='resultados'),    
+    path('resultados/', tu_vista, name='resultados'),    
 ]
