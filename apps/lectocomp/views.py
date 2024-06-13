@@ -73,7 +73,7 @@ def mostrar_grafico_reg(request):
         dbname="visualizador",
         user="visualizador",
         password="Estadisticas24",
-        host="relevamientoanual.com.ar"
+        host="sigechaco.com.ar"
     ) as conn:
         with conn.cursor() as cursor:
             if mostrar_todo:

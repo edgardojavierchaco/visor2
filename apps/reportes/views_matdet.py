@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 def conectar_bd(request):
     try:
         connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='visualizador', 

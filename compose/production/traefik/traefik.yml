@@ -28,7 +28,7 @@ certificatesResolvers:
 http:
   routers:
     web-secure-router:
-      rule: "Host(`visoreducativochaco.com.ar`)"
+      rule: "Host(`sigechaco.com.ar`)"
       entryPoints:
         - web-secure
       middlewares:

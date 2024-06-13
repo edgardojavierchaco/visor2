@@ -18,7 +18,7 @@ def filtrar_tablas_view_directores(request):
     # Establecer la conexión a la base de datos Padrón
     try:
         connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='Padron'
@@ -105,7 +105,7 @@ def filter_matricula_views_directores(request):
     # Establecer la conexión a la base de datos Padrón
     try:
         connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='visualizador'

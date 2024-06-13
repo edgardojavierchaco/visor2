@@ -25,7 +25,7 @@ DATABASES = {
         'NAME': 'visualizador',
         'USER': 'visualizador',
         'PASSWORD': 'Estadisticas24',
-        'HOST': 'relevamientoanual.com.ar',
+        'HOST': 'sigechaco.com.ar',
         'PORT': '5432',
     }
 }

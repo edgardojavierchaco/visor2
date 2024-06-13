@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 def conectar_bd():
     try:
         connection = psycopg2.connect(
-            host='relevamientoanual.com.ar',
+            host='sigechaco.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='visualizador',
