@@ -42,10 +42,24 @@ def tu_vista(request):
     username = request.user.username
     resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_puntaje = calcular_estadisticas_por_cueanexo(username)
     
-    # Crear el gráfico de torta para los resultados_total_dni
-    labels = [resultado[1] for resultado in resultados_total_dni]
-    valores = [resultado[2] for resultado in resultados_total_dni]
-    grafico_torta_total_dni = go.Figure(data=[go.Pie(labels=labels, values=valores)])
+    # Definir el orden y colores para los labels
+    orden_labels = ["Debajo del Nivel Básico", "Básico", "Satisfactorio", "Avanzado", "Calificación Incorrecta", "Sin Calificar"]
+    colores = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    # Inicializar diccionario para contar los valores en orden
+    conteo_dict = {label: 0 for label in orden_labels}
+    
+    for resultado in resultados_total_dni:
+        conteo_dict[resultado[1]] = resultado[2]
+    
+    # Crear listas ordenadas
+    labels = list(conteo_dict.keys())
+    valores = list(conteo_dict.values())
+    total_dni = sum(valores)
+    etiquetas = [f"{label}: {conteo} ({(conteo / total_dni * 100):.2f}%)" for label, conteo in zip(labels, valores)]
+    
+    # Crear el gráfico de torta
+    grafico_torta_total_dni = go.Figure(data=[go.Pie(labels=etiquetas, values=valores, marker=dict(colors=colores))])
     grafico_torta_total_dni.update_layout(width=750)  # Fijar el ancho del gráfico
 
     # Verificar si hay un resultado para el promedio de puntaje
@@ -60,7 +74,6 @@ def tu_vista(request):
         'promedio_puntaje': promedio_puntaje,
         'grafico_torta_total_dni': grafico_torta_total_dni.to_html(full_html=False),
     })
-
 
 def mostrar_grafico_reg(request):
     # Obtener los valores seleccionados del checkbox
@@ -120,13 +133,21 @@ def mostrar_grafico_reg(request):
     if 'desempenio3' not in df1.columns or 'puntaje' not in df1.columns:
         return HttpResponse("Error en los datos: columnas 'desempenio3' o 'puntaje' no encontradas.")
     
-    # Agrupar y contar por categoría de desempeño
-    conteo_desempenio = df['desempenio'].value_counts()
-    conteo_desempenio3 = df1['desempenio3'].value_counts()
+    # Definir el orden y colores para los labels
+    orden_labels = ["Debajo del Nivel Básico", "Básico", "Satisfactorio", "Avanzado", "Calificación Incorrecta", "Sin Calificar"]
+    colores = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    # Ajustar los conteos según el orden definido
+    conteo_desempenio = df['desempenio'].value_counts().reindex(orden_labels, fill_value=0)
+    conteo_desempenio3 = df1['desempenio3'].value_counts().reindex(orden_labels, fill_value=0)
     
     # Calcular los porcentajes
     porcentajes = (conteo_desempenio / conteo_desempenio.sum()) * 100
     porcentajes3 = (conteo_desempenio3 / conteo_desempenio3.sum()) * 100
+    
+    # Crear etiquetas con cantidad y porcentaje
+    etiquetas = [f"{label}: {conteo} ({porcentaje:.2f}%)" for label, conteo, porcentaje in zip(orden_labels, conteo_desempenio, porcentajes)]
+    etiquetas3 = [f"{label}: {conteo} ({porcentaje:.2f}%)" for label, conteo, porcentaje in zip(orden_labels, conteo_desempenio3, porcentajes3)]
     
     # Calcular el promedio de puntaje
     promedio_puntaje = round(df['puntaje'].mean(), 2)
@@ -135,10 +156,10 @@ def mostrar_grafico_reg(request):
     regional = 'Chaco' if mostrar_todo else ', '.join(df['reg'].unique())
     
     # Crear los gráficos de torta con Plotly
-    fig = go.Figure(data=[go.Pie(labels=porcentajes.index, values=porcentajes)])
+    fig = go.Figure(data=[go.Pie(labels=etiquetas, values=conteo_desempenio, marker=dict(colors=colores))])
     fig.update_layout(showlegend=True)
     
-    fig3 = go.Figure(data=[go.Pie(labels=porcentajes3.index, values=porcentajes3)])
+    fig3 = go.Figure(data=[go.Pie(labels=etiquetas3, values=conteo_desempenio3, marker=dict(colors=colores))])
     fig3.update_layout(showlegend=True)
     
     # Convertir las figuras a HTML
@@ -155,16 +176,16 @@ def mostrar_grafico_reg(request):
         'datos_disponibles': True
     })
 
-
 def cargar_grafico_reg(request):    
     return render(request, 'lectocomp/graficoreg.html', {
         'datos_disponibles': False
     })
+
 
 def mostrar_pdf_recomendaciones(request):
     pdf_url = "https://drive.google.com/file/d/1IxPdm0B40TVxeuzgiw_PXYvkEEBPpRVs/preview"
     return render(request, 'lectocomp/recomendaciones.html',{'pdf_url': pdf_url})
 
 def mostrar_pdf_informefinal(request):
-    pdf_url = "https://drive.google.com/file/d/1m2yIldJ_zK5Obyybdtm9euia7WmDJli0/preview"
+    pdf_url = "https://drive.google.com/file/d/1KIRcY6BfwwR9oyttD3xYqiixC_2akBfr/preview"
     return render(request, 'lectocomp/informefinal.html',{'pdf_url': pdf_url})
