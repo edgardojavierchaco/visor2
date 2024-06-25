@@ -39,9 +39,9 @@
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="#" class="dropdown-item">Guía Metodológica</a></li>
-                        <li><a href="#" class="dropdown-item">Resultados</a></li>
-                        <li><a href="#" class="dropdown-item">Sugerencias</a></li>  
+                        <li><a href="{% url 'lectocomprension:resultados' %}" class="dropdown-item">Resultados</a></li>
+                        <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
+                        <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
                     </ul>
                 </li>       
                            

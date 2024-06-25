@@ -8,7 +8,7 @@ def mapapuntos(request):
 def obtenerdatos(request):
     # Conectarse a la base de datos
     connection = psycopg2.connect(
-        host='sigechaco.com.ar',            
+        host='visoreducativochaco.com.ar',            
         user='visualizador',
         password='Estadisticas24',
         database='visualizador'

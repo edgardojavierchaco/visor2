@@ -34,6 +34,10 @@
             text-align: center;
             background-color: #f9f9f9;
             flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
         .custom-dashboard .chart-container iframe {
             max-width: 100%;
@@ -93,7 +97,13 @@
                 {% endif %}
                 
                 <div class="chart-container">
+                    <h4>Gráfico de Desempeño - Corte 1</h4>
                     {{ grafico|safe }}
+                </div>
+
+                <div class="chart-container">
+                    <h4>Gráfico de Desempeño - Corte 3</h4>
+                    {{ grafico3|safe }}
                 </div>
             </div>
             {% endif %}
@@ -116,4 +126,3 @@
         }
     </script>
 {% endblock %}
-

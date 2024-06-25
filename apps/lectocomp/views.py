@@ -73,34 +73,42 @@ def mostrar_grafico_reg(request):
         dbname="visualizador",
         user="visualizador",
         password="Estadisticas24",
-        host="sigechaco.com.ar"
+        host="visoreducativochaco.com.ar"
     ) as conn:
         with conn.cursor() as cursor:
             if mostrar_todo:
                 # Si se selecciona "Mostrar Todo", mostrar todos los datos
                 query = "SELECT desempenio, puntaje, reg FROM public.teslecturamayo"
                 cursor.execute(query)
+                datos_usuario = cursor.fetchall()
+                
+                query1 = "SELECT desempenio3, puntaje, reg FROM public.teslecturamayoeval"
+                cursor.execute(query1)
+                datos_usuario1 = cursor.fetchall()
             else:
                 # Filtrar los datos para las regiones seleccionadas
                 if regiones_seleccionadas:
                     placeholders = ','.join(['%s'] * len(regiones_seleccionadas))
                     query = f"SELECT desempenio, puntaje, reg FROM public.teslecturamayo WHERE reg IN ({placeholders})"
                     cursor.execute(query, tuple(regiones_seleccionadas))
+                    datos_usuario = cursor.fetchall()
+                    
+                    query1 = f"SELECT desempenio3, puntaje, reg FROM public.teslecturamayoeval WHERE reg IN ({placeholders})"
+                    cursor.execute(query1, tuple(regiones_seleccionadas))
+                    datos_usuario1 = cursor.fetchall()
                 else:
                     return render(request, 'lectocomp/graficoreg.html', {
                         'datos_disponibles': False
                     })
-            
-            # Obtener los datos de la consulta
-            datos_usuario = cursor.fetchall()
     
-    if not datos_usuario:
+    if not datos_usuario or not datos_usuario1:
         return render(request, 'lectocomp/graficoreg.html', {
             'datos_disponibles': False
         })
     
-    # Convertir los datos a un DataFrame de pandas
+    # Convertir los datos a DataFrames de pandas
     df = pd.DataFrame(datos_usuario, columns=['desempenio', 'puntaje', 'reg'])
+    df1 = pd.DataFrame(datos_usuario1, columns=['desempenio3', 'puntaje', 'reg'])
 
     # Calcular el total de alumnos evaluados
     total_alumnos = df.shape[0]
@@ -109,11 +117,16 @@ def mostrar_grafico_reg(request):
     if 'desempenio' not in df.columns or 'puntaje' not in df.columns:
         return HttpResponse("Error en los datos: columnas 'desempenio' o 'puntaje' no encontradas.")
     
+    if 'desempenio3' not in df1.columns or 'puntaje' not in df1.columns:
+        return HttpResponse("Error en los datos: columnas 'desempenio3' o 'puntaje' no encontradas.")
+    
     # Agrupar y contar por categoría de desempeño
     conteo_desempenio = df['desempenio'].value_counts()
+    conteo_desempenio3 = df1['desempenio3'].value_counts()
     
     # Calcular los porcentajes
     porcentajes = (conteo_desempenio / conteo_desempenio.sum()) * 100
+    porcentajes3 = (conteo_desempenio3 / conteo_desempenio3.sum()) * 100
     
     # Calcular el promedio de puntaje
     promedio_puntaje = round(df['puntaje'].mean(), 2)
@@ -121,24 +134,37 @@ def mostrar_grafico_reg(request):
     # Obtener el nombre de la región o mostrar "Chaco"
     regional = 'Chaco' if mostrar_todo else ', '.join(df['reg'].unique())
     
-    # Crear el gráfico de torta con Plotly
+    # Crear los gráficos de torta con Plotly
     fig = go.Figure(data=[go.Pie(labels=porcentajes.index, values=porcentajes)])
-    fig.update_layout(
-                      showlegend=True)
+    fig.update_layout(showlegend=True)
     
-    # Convertir la figura a HTML
+    fig3 = go.Figure(data=[go.Pie(labels=porcentajes3.index, values=porcentajes3)])
+    fig3.update_layout(showlegend=True)
+    
+    # Convertir las figuras a HTML
     graph_html = fig.to_html(full_html=False, default_height=500, default_width=700)
+    graph_html3 = fig3.to_html(full_html=False, default_height=500, default_width=700)
     
-    # Renderizar la plantilla y pasar el gráfico y el promedio de puntaje
+    # Renderizar la plantilla y pasar ambos gráficos y el promedio de puntaje
     return render(request, 'lectocomp/graficoreg.html', {
         'grafico': graph_html,
+        'grafico3': graph_html3,
         'promedio_puntaje': promedio_puntaje,
         'total_alumnos': total_alumnos,
         'regional': regional,
         'datos_disponibles': True
     })
 
+
 def cargar_grafico_reg(request):    
     return render(request, 'lectocomp/graficoreg.html', {
         'datos_disponibles': False
     })
+
+def mostrar_pdf_recomendaciones(request):
+    pdf_url = "https://drive.google.com/file/d/1IxPdm0B40TVxeuzgiw_PXYvkEEBPpRVs/preview"
+    return render(request, 'lectocomp/recomendaciones.html',{'pdf_url': pdf_url})
+
+def mostrar_pdf_informefinal(request):
+    pdf_url = "https://drive.google.com/file/d/1m2yIldJ_zK5Obyybdtm9euia7WmDJli0/preview"
+    return render(request, 'lectocomp/informefinal.html',{'pdf_url': pdf_url})

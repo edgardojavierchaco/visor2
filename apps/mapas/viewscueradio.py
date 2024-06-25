@@ -14,7 +14,7 @@ def filtrado_cueradio(request):
 # Función para conectarse a la base de datos PostgreSQL
 def connect_to_database():
     return psycopg2.connect(
-        host='sigechaco.com.ar',
+        host='visoreducativochaco.com.ar',
         user='visualizador',
         password='Estadisticas24',
         database='visualizador'

@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 def conectar_bd():
     try:
         connection = psycopg2.connect(
-            host='sigechaco.com.ar',
+            host='visoreducativochaco.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='visualizador',
@@ -240,7 +240,7 @@ def filter_data_sobreedad(request):
     try:
         cursor = connection.cursor()
         query_sobre="""
-            select cueanexo, escuela, grado, total, edad, sobre_edad from indicadores.sobreedadprimaria2023
+            select cueanexo, escuela, grado, matricula, edad, sobre_edad from indicadores.sobreedadprimaria2023
                 where cueanexo=%s;
         """      
                 

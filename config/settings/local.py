@@ -25,7 +25,7 @@ DATABASES = {
         'NAME': 'visualizador',
         'USER': 'visualizador',
         'PASSWORD': 'Estadisticas24',
-        'HOST': 'sigechaco.com.ar',
+        'HOST': 'visoreducativochaco.com.ar',
         'PORT': '5432',
     }
 }
