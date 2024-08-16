@@ -1,0 +1,121 @@
+{% extends "dashboard/body.html" %}
+
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-search"></i>
+                {{ title }}
+            </h3>
+        </div>
+        <!---/. card-header-->
+        <div class="card-body">
+            <table class="table" id="data">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">DNI</th>
+                        <th scope="col">Apellido</th>
+                        <th scope="col">Nombres</th>
+                        <th scope="col">Curso</th>
+                        <th scope="col">División</th>
+                        <th scope="col">Turno</th>                       
+                        <th scope="col">Operativo</th>
+                        <th scope="col">Validación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in docentesporseccion %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td>{{ u.dni_docen }}</td>
+                            <td>{{ u.apellido_docen }}</td>
+                            <td>{{ u.nombres_docen }}</td>
+                            <td>{{ u.curso }}</td>
+                            <td>{{ u.division }}</td>
+                            <td>{{ u.turno }}</td>
+                            <td>{{ u.operativos }}</td>   
+                            <td>{{ u.validacion }}</td>                         
+                            <td>
+                                <button type="button" class="btn btn-primary btn-xs btn-edit"><i class="fas fa-edit"></i></button>
+                                <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+        </div>
+        <!---/. card-body-->
+        {% comment %} <div class="card-footer">
+            <button class="btn btn-primary btn-flat">
+                <i class="fas fa-plus"></i>Agregar Docente
+            </button>
+        </div> {% endcomment %}
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    <script type="application/javascript">        
+        $(document).ready(function() {
+            $('#data').DataTable({
+                responsive: true,
+                autoWidth: False,
+                "language": {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
+                },
+                "columns": [
+                    { "data": "id" },
+                    { "data": "dni_docen" },
+                    { "data": "apellido_docen" },
+                    { "data": "nombres_docen" },
+                    { "data": "curso" },
+                    { "data": "division" },
+                    { "data": "turno" },    
+                    { "data": "operativos" },        
+                    { "data": "validacion" },
+                    { "data": null, "defaultContent": "<button type='button' class='btn btn-primary btn-xs btn-edit'><i class='fas fa-edit'></i></button> <button type='button' class='btn btn-danger btn-xs btn-delete'><i class='fas fa-trash-alt'></i></button>" }
+                ]
+            });
+        });
+    </script>
+    <script>
+        $(document).on('click', '.btn-edit', function() {
+            var userId = $(this).closest('tr').find('td:first-child').text();
+            window.location.href = "{% url 'oplectura:editar' %}?id=" + userId;
+        });
+    </script>
+    <script>
+        $(document).on('click', '.btn-delete', function() {
+            var userId = $(this).closest('tr').find('td:first-child').text();
+
+            // Mostrar SweetAlert para confirmar la eliminación
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡No podrás revertir esto!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminarlo!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Si se confirma la eliminación, redirigir al servidor para eliminar el registro
+                    window.location.href = "{% url 'oplectura:eliminar' %}?id=" + userId;
+                }
+            });
+        });
+    </script>
+
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'dashboard/body.html' %}
+
+{% block content %}
+<head>
+    <title>Asistencia</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.css">
+    <!-- jQuery -->
+    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <!-- DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#asistenciaTable').DataTable();
+        });
+    </script>
+</head>
+<body>
+    <h1>Asistencia</h1>
+    <table id="asistenciaTable" class="display">
+        <thead>
+            <tr>                
+                <th>DNI</th>
+                <th>Apellido y Nombre</th>
+                <th>Cargos</th>
+                <th>Debio Asistir</th>
+                <th>O.Conc</th>
+                <th>Lic./Perm.</th>
+                <th>I.I.</th>
+                <th>Otras causales</th>
+                <th>I.J.</th>
+                <th>Paro</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+            <tr>                
+                <td>{{ result.1 }}</td>  {# dni #}
+                <td>{{ result.2 }}</td>  {# ape_nombre #}
+                <td>{{ result.3 }}</td>  {# total_cargos #}
+                <td>{{ result.4 }}</td>  {# total_debio_asistir #}
+                <td>{{ result.5 }}</td>  {# total_oblig_conc #}
+                <td>{{ result.6 }}</td>  {# total_lic_perm #}
+                <td>{{ result.7 }}</td>  {# total_inasist_inj #}
+                <td>{{ result.8 }}</td>  {# total_inasist_o_causas #}
+                <td>{{ result.9 }}</td>  {# total_inasist_just #}
+                <td>{{ result.10 }}</td> {# total_hs_paro #}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+{% endblock %}

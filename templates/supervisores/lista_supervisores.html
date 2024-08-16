@@ -1,0 +1,127 @@
+{% extends 'dashboard/bodyregional.html' %}
+
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+    <body>
+        <div class="container">
+            <h1 class="mt-5">Listado de Supervisores</h1>
+            
+            <!-- Formulario de filtro -->
+            <form method="get" class="mb-3">
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="region">Regional</label>
+                        {{ form.region }}
+                    </div>                    
+                </div>
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </form>
+
+            <!-- Tabla de evaluaciones -->
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>DNI</th>
+                        <th>Apellido</th>                        
+                        <th>Nombres</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>                        
+                        <th>Región</th>                        
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supervisor in supervisores %}
+                    <tr>
+                        <td>{{ supervisor.id }}</td>                        
+                        <td>{{ supervisor.dni }}</td>                        
+                        <td>{{ supervisor.apellido }}</td>
+                        <td>{{ supervisor.nombres }}</td>
+                        <td>{{ supervisor.email }}</td>
+                        <td>{{ supervisor.telefono }}</td>
+                        <td>{{ supervisor.region }}</td>                        
+                        <td>
+                            <button type="button" class="btn btn-primary btn-xs btn-edit"><i class="fas fa-edit"></i></button>
+                            <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!---/. card-body-->
+        <div class="card-footer">
+            <a href="{% url 'supervis:crear_supervisor' %}" class="btn btn-success btn-flat">
+                <i class="fas fa-plus"></i> Agregar Supervisor
+            </a>
+        </div>
+        
+
+    </body>
+{% endblock %}
+
+{% block javascript %}
+    <script type="application/javascript">        
+        $(document).ready(function() {
+            $('#data').DataTable({
+                responsive: true,
+                autoWidth: False,
+                "language": {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
+                },
+                "columns": [
+                    { "data": "id" },
+                    { "data": "dni" },
+                    { "data": "apellido" },
+                    { "data": "nombres" },
+                    { "data": "email" },
+                    { "data": "telefono" },
+                    { "data": "region" },                        
+                    { "data": null, "defaultContent": "<button type='button' class='btn btn-primary btn-xs btn-edit'><i class='fas fa-edit'></i></button> <button type='button' class='btn btn-danger btn-xs btn-delete'><i class='fas fa-trash-alt'></i></button>" }
+                ]
+            });
+        });
+    </script>
+    <script>
+        $(document).on('click', '.btn-edit', function() {
+            var userId = $(this).closest('tr').find('td:first-child').text();
+            window.location.href = "{% url 'supervis:editar_supervisor' %}?id=" + userId;
+        });
+    </script>
+    <script>
+        $(document).on('click', '.btn-delete', function() {
+            var userId = $(this).closest('tr').find('td:first-child').text();
+
+            // Mostrar SweetAlert para confirmar la eliminación
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡No podrás revertir esto!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminarlo!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Si se confirma la eliminación, redirigir al servidor para eliminar el registro
+                    window.location.href = "{% url 'supervis:eliminar_supervisor' %}?id=" + userId;
+                }
+            });
+        });
+    </script>
+
+{% endblock %}
+
+

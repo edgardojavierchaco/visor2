@@ -11,8 +11,8 @@ User = get_user_model()
 
 # Validador personalizado para el campo username
 def validate_username(value):
-    if not re.match(r'^22\d{7}$', value):
-        raise ValidationError('El nombre de usuario debe tener nueve dígitos y comenzar con 22.')
+    if not re.match(r'^\d{7,9}$', value):
+        raise ValidationError('El nombre de usuario debe contener sólo números, entre 7 y 9 dígitos.')
 
 # Validador personalizado para los campos apellido y nombres
 def validate_alphanumeric_uppercase(value):
@@ -27,8 +27,8 @@ class UsuariosForm(ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data['username']
-        if not username.startswith('22') or not username.isdigit() or len(username) != 9:
-            raise forms.ValidationError('El nombre de usuario debe comenzar con 22 y tener una extensión de 9 dígitos.')
+        if not username.isdigit() or (7 <= len(username) <= 9):
+            raise forms.ValidationError('El nombre de usuario debe contener sólo números y tener entre 7 y 9 dígitos.')
         return username
 
     def save(self, commit=True):

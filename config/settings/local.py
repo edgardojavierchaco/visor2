@@ -27,6 +27,9 @@ DATABASES = {
         'PASSWORD': 'Estadisticas24',
         'HOST': 'visoreducativochaco.com.ar',
         'PORT': '5432',
+        'OPTIONS': {
+            'options': '-c search_path=public,cenpe'
+        }
     }
 }
 

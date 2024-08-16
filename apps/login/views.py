@@ -22,6 +22,11 @@ class LoginFormView(LoginView):
         director_group = Group.objects.get(name='Director')
         if director_group in user.groups.all():
             return reverse_lazy('directores:institucional')
-        
+       
+        # Verificar si el usuario pertenece al grupo 'Aplicador'
+        aplicador_group = Group.objects.get(name='Aplicador')
+        if aplicador_group in user.groups.all():
+            return reverse_lazy('oplectura:evaluacion') + '?cueanexo=0&grado=TERCERO&seccion=A'
+         
         # Si el usuario no pertenece a ninguno de los grupos anteriores            
         return super().get_success_url()

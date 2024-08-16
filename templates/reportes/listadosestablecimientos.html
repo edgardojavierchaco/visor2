@@ -1,0 +1,174 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+
+    <style>
+        .data-box {
+            flex: 1;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            margin-right: 5px;
+        }
+
+        .data-box:last-child {
+            margin-right: 0;
+        }
+
+        .data-box p {
+            margin: 0;
+            font-weight: bold;
+            font-size: 0.9em;  /* Ajusta el tamaño del texto si es necesario */
+        }
+
+        .data-box span {
+            display: block;
+            margin-top: 5px;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .card {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .card-title {
+            font-weight: bold;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <form id="departamentoForm" style="margin-top:20px;">
+        <label for="departamento">Selecciona un departamento:</label>
+        <select id="departamento" name="departamento">
+            <option value="">--Seleccione--</option>
+            {% for departamento in departamentos %}
+                <option value="{{ departamento }}">{{ departamento }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <div id="resultado-container" style="display: none; margin-top: 30px;">
+        <div style="display: flex; align-items: flex-start;">
+            <!-- Imagen que se actualiza según el departamento seleccionado -->
+            <img id="imagen-departamento" src="" alt="Imagen del Departamento" style="width: 500px; height: auto; margin-right: 20px;">
+
+            <!-- Card que muestra los datos de la consulta -->
+            <div class="card" style="width: 350px; display: flex; flex-direction: column; align-items: stretch;">
+                <div class="card-body">
+                    <!-- Título con el nombre del departamento -->
+                    <h2 class="card-title" style="font-weight: bold; font-size: 1.5em; margin-bottom: 20px;">
+                        Datos del Departamento: <span id="nombre-departamento"></span>
+                    </h2>                   
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                    <!-- Recuadros para Sedes y Anexos -->
+                    <div class="section" style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <div class="data-box">
+                                <p>Sedes</p>
+                                <span id="total_sedes"></span>
+                            </div>
+                            <div class="data-box">
+                                <p>Anexos</p>
+                                <span id="total_anexos"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subtítulo Ámbito -->
+                    <h3 style="font-size: 1.2em; margin-top: 20px; font-weight: bold;">Ámbito</h3>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div class="data-box">
+                            <p>Urbano</p>
+                            <span id="total_urbanos"></span>
+                        </div>
+                        <div class="data-box">
+                            <p>Rural Disperso</p>
+                            <span id="total_rurales_dispersos"></span>
+                        </div>
+                        <div class="data-box">
+                            <p>Rural Aglomerado</p>
+                            <span id="total_rurales_aglomerados"></span>
+                        </div>
+                    </div>
+
+                    <!-- Subtítulo Sector -->
+                    <h3 style="font-size: 1.2em; margin-top: 20px; font-weight: bold;">Sector</h3>
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="data-box">
+                            <p>Estatal</p>
+                            <span id="total_estatales"></span>
+                        </div>
+                        <div class="data-box">
+                            <p>Privado</p>
+                            <span id="total_privados"></span>
+                        </div>
+                        <div class="data-box">
+                            <p>Gestión Social/Comunitario</p>
+                            <span id="total_soccom"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $('#departamento').change(function() {
+            var departamento = $(this).val();
+            if (departamento) {
+                // Construye la ruta de la imagen correspondiente
+                var imgSrc = "{% static 'img/' %}" + departamento.replace(/\s+/g, '_') + ".png";
+                console.log(imgSrc)
+                // Actualiza la imagen
+                $('#imagen-departamento').attr('src', imgSrc);
+                $('#resultado-container').show();  // Muestra el contenedor
+
+                // Actualiza el nombre del departamento en el card
+                $('#nombre-departamento').text(departamento);
+
+                // Realiza la solicitud AJAX para obtener los datos
+                $.ajax({
+                    url: "{% url 'reportes:consulta_ofertas' %}",
+                    data: {
+                        'departamento': departamento,
+                    },
+                    success: function(data) {
+                        // Actualiza el card con los datos obtenidos
+                        $('#total_ofertas').text(data.total_ofertas);
+                        $('#total_urbanos').text(data.total_urbanos);
+                        $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
+                        $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
+                        $('#total_estatales').text(data.total_estatales);
+                        $('#total_privados').text(data.total_privados);
+                        $('#total_soccom').text(data.total_soccom);
+                        $('#total_sedes').text(data.total_sedes);
+                        $('#total_anexos').text(data.total_anexos);
+                    }
+                });
+            } else {
+                $('#resultado-container').hide();  // Oculta el contenedor si no se selecciona un departamento
+            }
+        });
+    </script>
+
+{% endblock %}

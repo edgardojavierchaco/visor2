@@ -2,7 +2,7 @@
 from config.urls import path
 from django.views.generic import TemplateView
 from . import views
-from . import views_matric, views_infograf
+from . import views_matric, views_infograf, views_listados
 
 
 app_name='reportes'
@@ -23,7 +23,8 @@ urlpatterns=[
     path('panel/', TemplateView.as_view(template_name='reportes/panel_reportes.html'),name='panel'),
     path('infografia/',TemplateView.as_view(template_name='reportes/panel_infografia.html'),name='infografia'),
     path('info1/',views_infograf.infografiaview,name='info1'),
-    path('info2/',views_infograf.infografiaview2,name='info2')
+    path('info2/',views_infograf.infografiaview2,name='info2'),
+    path('consulta_ofertas/',views_listados.consulta_ofertas,name='consulta_ofertas'),
 ]
 
 

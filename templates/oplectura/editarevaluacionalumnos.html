@@ -1,0 +1,41 @@
+{% extends "dashboard/body.html" %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+    <form method="post">    
+        <div class="card card-default">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-edit" style="color:green;"></i>
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                
+                {% for field in form %}
+                    {% if field.is_hidden %}
+                        {{ field }}
+                    {% else %}
+                        <div class="form-group">
+                            {{ field.label_tag }}
+                            {% if field.errors %}
+                                {{ field|add_class:"form-control is-invalid" }}
+                                <div class="invalid-feedback">{{ field.errors }}</div>
+                            {% else %}
+                                {{ field|add_class:"form-control" }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-edit"></i>Guardar edición
+                </button>
+            </div>
+        </div>
+    </form>    
+{% endblock %}
+

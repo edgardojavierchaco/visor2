@@ -44,7 +44,7 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
     telefono = models.CharField(max_length=20, verbose_name='telefono')
     nivelacceso = models.ForeignKey(NivelAcceso, on_delete=models.CASCADE, to_field='tacceso', verbose_name='nivelacceso')
     activo = models.BooleanField(default=True, verbose_name='activo')
-    is_staff = models.BooleanField(default=False, verbose_name='is_staff')
+    is_staff = models.BooleanField(default=True, verbose_name='is_staff')
     is_superuser = models.BooleanField(default=False, verbose_name='is_superuser')
 
     REQUIRED_FIELDS = ['apellido', 'nombres', 'correo', 'telefono', 'nivelacceso']

@@ -135,14 +135,14 @@ class EliminarUsuarioView_op(DeleteView):
         return redirect('usuarios:listado_op')
 
 class registrar_usuarios(CreateView):
-    model=UsuariosVisualizador
-    form_class=UsuariosForm_login
-    template_name='login/login.html'
-    success_url=reverse_lazy('usuarios:registro')
+    model = UsuariosVisualizador
+    form_class = UsuariosForm_login
+    template_name = 'login/login.html'
+    success_url = reverse_lazy('usuarios:registro')
 
-    def get_context_data(self,**kwargs):
-        context=super().get_context_data(**kwargs)
-        context['title']='Crear Usuario'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Crear Usuario'
         return context
     
     def form_valid(self, form):
@@ -156,13 +156,28 @@ class registrar_usuarios(CreateView):
         # Guardar la contraseña encriptada en el objeto de usuario
         usuario_form.password = hashed_password
         
+        # Asignar los campos activo e is_staff a True
+        usuario_form.activo = True
+        usuario_form.is_staff = True
+        
         # Guardar el usuario en la base de datos
         usuario_form.save()
         
-        # Asignar al usuario al grupo "Director"
-        grupo_director = Group.objects.get(name='Director')
-        usuario_form.groups.add(grupo_director)
+        # Asignar al usuario al grupo correspondiente según el nivel de acceso
+        nivel_acceso = form.cleaned_data.get('nivelacceso')
+        print(f"Nivel de acceso seleccionado: {nivel_acceso.tacceso}") 
+        if nivel_acceso.tacceso == 'Director/a':
+            grupo = Group.objects.get(name='Director')
+        elif nivel_acceso.tacceso == 'Aplicador':
+            grupo = Group.objects.get(name='Aplicador')
+        else:
+            grupo = None
 
+        if grupo:
+            usuario_form.groups.add(grupo)
+            print(f"Usuario {usuario_form.username} asignado al grupo {grupo.name}")
+        else:
+            print("No se encontró el grupo correspondiente")
         return super().form_valid(form)
     
 

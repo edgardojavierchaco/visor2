@@ -23,6 +23,7 @@ BASE_APPS =[
     'django.contrib.staticfiles',
     'django.contrib.admin',  
     'widget_tweaks',
+    'django_select2',
 ]
 
 LOCAL_APPS = [
@@ -43,6 +44,12 @@ LOCAL_APPS = [
     'apps.regacceso',
     'apps.lectocomp',
     'apps.indicadores',
+    'apps.asistendoc',
+    'apps.cenpe',
+    'apps.oplectura',
+    'apps.aplicadores',
+    'apps.supervisores',
+    
 ]
 
 
@@ -109,6 +116,9 @@ TIME_ZONE = 'America/Argentina/Buenos_Aires'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+
+DATE_INPUT_FORMATS = ['%d/%m/%Y']
+
 SITE_ID = 1  # Indicar que es el sitio principal
 LOCALE_PATHS = [str(BASE_DIR / 'locale')]
 
@@ -122,7 +132,7 @@ STATICFILES_FINDERS = [
 
 
 MEDIA_URL = 'media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'static/media/')
 
 # Configuración de migraciones
 MIGRATION_MODULES = {'sites': 'apps.contrib.sites.migrations'}

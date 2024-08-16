@@ -36,6 +36,10 @@ urlpatterns = [
     path('acceso/',include('apps.regacceso.urls', namespace='acceso')),
     path('lect/',include('apps.lectocomp.urls',namespace='lect')),
     path('indicador/',include('apps.indicadores.urls',namespace='indicador')),
+    path('doc/',include('apps.asistendoc.urls',namespace='doc')),   
+    path('censo/',include('apps.cenpe.urls',namespace='censo')) ,
+    path('operativo/',include('apps.oplectura.urls', namespace='operativo')),
+    path('super/',include('apps.supervisores.urls', namespace='super')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

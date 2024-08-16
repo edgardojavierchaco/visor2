@@ -1,0 +1,66 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <body>
+        <div class="container">
+            <h1 class="mt-5">Registrar Evaluación de Fluidez Lectora</h1>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_asistencia">Asistencia</label>
+                    {{ form.asistencia }}
+                </div>
+                <div class="form-group">
+                    <label for="id_grado">Curso</label>
+                    {{ form.grado }}
+                </div>
+                <div class="form-group">
+                    <label for="id_seccion">División</label>
+                    {{ form.seccion }}
+                </div>
+                <div class="form-group">
+                    <label for="id_tramo">Tramo</label>
+                    {{ form.tramo }}
+                </div>
+                <div class="form-group">
+                    <label for="id_dni_alumno">DNI</label>
+                    {{ form.dni_alumno }}
+                </div>
+                <div class="form-group">
+                    <label for="id_apellido_alumno">Apellido</label>
+                    {{ form.apellido_alumno }}
+                </div>
+                <div class="form-group">
+                    <label for="id_nombres_alumno">Nombres</label>
+                    {{ form.nombres_alumno }}
+                </div>
+                <div class="form-group">
+                    <label for="id_velocidad">Velocidad</label>
+                    {{ form.velocidad }}
+                </div>
+                <div class="form-group">
+                    <label for="id_precision">Precisión</label>
+                    {{ form.precision }}
+                </div>
+                <div class="form-group">
+                    <label for="id_prosodia">Prosodia</label>
+                    {{ form.prosodia }}
+                </div>
+                <div class="form-group">
+                    <label for="id_comprension">Comprensión</label>
+                    {{ form.comprension }}
+                </div>
+                <!-- Campos ocultos -->
+                {{ form.cueanexo }}
+                {{ form.region }}
+                {{ form.cal_vel }}
+                {{ form.cal_pres }}
+                {{ form.cal_pros }}
+                {{ form.cal_comp }}
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </form>
+        </div>
+    </body>
+{% endblock %}
