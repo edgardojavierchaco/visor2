@@ -4,7 +4,8 @@ from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, ListView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from .models import RegDocporSeccion, RegEvaluacionFluidezLectora
-from .forms import RegDocporSeccionEdicionForm, RegDocporSeccionForm, RegEvaluacionFluidezLectoraForm, FiltroEvaluacionForm, RegAlumnosFluidezLectoraForm
+from .forms import RegDocporSeccionEdicionForm, RegDocporSeccionForm, RegEvaluacionFluidezLectoraForm, FiltroEvaluacionForm, RegAlumnosFluidezLectoraForm, RegEvaluacionFluidezLectoraDirectoresForm
+from .forms import RegAlumnosFluidezLectoraDirectorForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 
@@ -145,7 +146,7 @@ class EliminarEvaluacionAlumnoView(DeleteView):
         
         return redirect(url)
 
-
+# agregar alumno para el aplicador
 class RegAlumnosFluidezLectoraCreateView(CreateView):
     model = RegEvaluacionFluidezLectora
     form_class = RegAlumnosFluidezLectoraForm
@@ -163,6 +164,70 @@ class RegAlumnosFluidezLectoraCreateView(CreateView):
         query_string = urlencode({'cueanexo': 0, 'grado': 'TERCERO', 'seccion': 'A'})
         return f"{base_url}?{query_string}"
     
+# agregar alumno por director
+class RegAlumnosFluidezLectoraDirectorCreateView(CreateView):
+    model = RegEvaluacionFluidezLectora
+    form_class = RegAlumnosFluidezLectoraDirectorForm
+    template_name = 'oplectura/regalumnosfluidezlectoradirector_form.html'
+    success_url = reverse_lazy('oplectura:listado_alumnos')
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Registro de Alumnos'
+        return context
+    
+    
+
+#listado de alumnos para directores
+class ListadoAlumnosDirectoresView(ListView):
+    model=RegEvaluacionFluidezLectora     
+    template_name='oplectura/listadoalumnosevaluacion.html' 
+    context_object_name='evaluacionlectora'   
+    print(context_object_name)
+    
+    def get_queryset(self):     
+        queryset = super().get_queryset()   
+        usuario = self.request.user
+
+        if usuario:
+            queryset = queryset.filter(cueanexo=usuario)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context=super().get_context_data(**kwargs)
+        context['title']='Listado de Alumnos'        
+        return context
+
+#edición de alumnos para directores
+class EditarAlumnosDirectoresView(UpdateView):
+    model = RegEvaluacionFluidezLectora
+    form_class = RegEvaluacionFluidezLectoraDirectoresForm
+    template_name = 'oplectura/editaralumnosdirectores.html'
+    success_url = reverse_lazy('oplectura:listado_alumnos')  
+
+    def get_object(self):
+        user_id = self.request.GET.get('id')
+        return get_object_or_404(RegEvaluacionFluidezLectora, id=user_id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Editar Alumno'
+        return context
+
+    def form_valid(self, form):
+        # Simplemente llamamos al form_valid de la superclase
+        return super().form_valid(form)
+    
+    
+
+#eliminación alumnos directores
+class EliminarEvaluacionAlumnoDirectoresView(DeleteView):
+    def get(self, request):
+        user_id = request.GET.get('id')
+        user = get_object_or_404(RegEvaluacionFluidezLectora, id=user_id)
+        user.delete()
+        return redirect('oplectura:listado_alumnos')
+        
 
 

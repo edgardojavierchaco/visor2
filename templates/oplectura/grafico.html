@@ -1,0 +1,131 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% load static %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            font-family: Arial, sans-serif;
+        }
+        .custom-dashboard h3 {
+            text-align: center;
+            font-weight: bold;
+        }
+        .custom-dashboard .content {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .custom-dashboard .chart-container {
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px;
+            background-color: #f9f9f9;
+            flex: 2;
+        }
+        .custom-dashboard .stats-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin: 20px;
+            flex: 1;
+        }
+        .custom-dashboard .card {
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .custom-dashboard .card p {
+            font-size: 1.1em;
+            font-weight: bold;
+            text-align: justify;
+        }
+        .custom-dashboard .notification-card {
+            font-size: 0.9em;
+            font-weight: normal;
+            text-align: justify;
+        }
+        .custom-dashboard .notification-icon {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 2.5em;
+            color: red;
+        }
+        .custom-dashboard .check-icon {
+            font-size: 1.5em;
+            color: green;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .chart-container {
+            max-width: 800px;
+            margin: 20px auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .custom-dashboard .description {
+            text-align: center;
+            font-size: 1em;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <!-- Incluir los recursos de Plotly -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <div class="custom-dashboard">
+        <h3>Estado de Situación (Calificación y Desempeños en el Censo de Fluidez y Comprensión Lectora de los alumnos de 3er grado - Mayo 2024)</h3>        
+        <div class="content">
+            <div class="chart-container">
+                <div>
+                    <h2><strong>Velocidad</strong></h2>
+                    {{ grafico_velocidad|safe }}
+                </div>
+                
+                <div>
+                    <h2><strong>Precisión</strong></h2>
+                    {{ grafico_precision|safe }}
+                </div>
+                
+                <div>
+                    <h2><strong>Prosodia</strong></h2>
+                    {{ grafico_prosodia|safe }}
+                </div>
+                
+                <div>
+                    <h2><strong>Comprensión</strong></h2>
+                    {{ grafico_comprension|safe }}
+                </div> 
+                {% comment %} <div class="description">
+                    En el gráfico se presentan porcentajes de alumnos a los que se les aplicó el Test y los porcentajes de alumnos que no fueron calificados o calificados incorrectamente.
+                </div> {% endcomment %}
+            </div>
+            <div class="stats-container">
+                <div class="card">
+                    <p>Total Alumnos: {{ total_dni_sin_desempenio }} <i class="fa fa-check check-icon"></i></p>
+                    <p>Total Alumnos presentes: {{ total_dni_presentes }} <i class="fa fa-check check-icon"></i></p>
+                </div>
+                <div class="card">
+                    <p>Promedio en Velocidad: {{ promedio_velocidad }} <i class="fa fa-check check-icon"></i></p>
+                    <p>Promedio en Precisión: {{ promedio_precision }} <i class="fa fa-check check-icon"></i></p>
+                    <p>Promedio en Prosodia: {{ promedio_prosodia }} <i class="fa fa-check check-icon"></i></p>
+                    <p>Promedio en Comprensión: {{ promedio_comprension }} <i class="fa fa-check check-icon"></i></p>
+                </div>
+                <div class="card notification-card">
+                    <i class="fa fa-comments notification-icon"></i>
+                    <div style="margin-left: 40px;">
+                        <p>Plan Somos Fluidez Lectora Chaco 2024-2027</p>
+                        <p>Las autoridades del MECCyT de la Provincia del Chaco, agradecen y felicitan a su comunidad educativa, por el compromiso y responsabilidad en la aplicación de la muestra y censo del test de fluidez y comprensión lectora.</p>
+                        {% comment %} <p>Sin embargo, se solicita que en futuras ediciones se ajusten con rigurosidad y detalle al procedimiento establecido, para reducir el margen de errores detectados y así garantizar la confiabilidad de los datos.</p> {% endcomment %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

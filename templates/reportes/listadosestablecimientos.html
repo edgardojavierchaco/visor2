@@ -22,20 +22,30 @@
         .data-box p {
             margin: 0;
             font-weight: bold;
-            font-size: 0.9em;  /* Ajusta el tamaño del texto si es necesario */
+            font-size: 0.9em;
         }
 
         .data-box span {
             display: block;
             margin-top: 5px;
             font-size: 1.2em;
-            color: #333;
+            font-weight: bold;
+            color: white;
         }
+
+        .bg-green { background-color: green }
+        .bg-yellow { background-color: yellow; color: black; }
+        .bg-orange { background-color: orange; }
+        .bg-blue { background-color: blue; }
+        .bg-black { background-color: black; }
+        .bg-violet { background-color: violet; color: black; }
+        .bg-brown { background-color: brown; }
 
         .card {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
             padding: 15px;
+            margin: 0 10px;
         }
 
         .card-title {
@@ -50,6 +60,11 @@
             margin-top: 20px;
             margin-bottom: 10px;
         }
+
+        .container {
+            display: flex;
+            align-items: flex-start;
+        }
     </style>
 
     <form id="departamentoForm" style="margin-top:20px;">
@@ -63,17 +78,14 @@
     </form>
 
     <div id="resultado-container" style="display: none; margin-top: 30px;">
-        <div style="display: flex; align-items: flex-start;">
-            <!-- Imagen que se actualiza según el departamento seleccionado -->
-            <img id="imagen-departamento" src="" alt="Imagen del Departamento" style="width: 500px; height: auto; margin-right: 20px;">
+        <div class="container">
+            <!-- Imagen en el lateral izquierdo -->
+            <img id="imagen-departamento" src="" alt="Imagen del Departamento" style="width: 400px; height: auto;">
 
-            <!-- Card que muestra los datos de la consulta -->
-            <div class="card" style="width: 350px; display: flex; flex-direction: column; align-items: stretch;">
+            <!-- Card en el centro -->
+            <div class="card" style="flex: 1;">
                 <div class="card-body">
-                    <!-- Título con el nombre del departamento -->
-                    <h2 class="card-title" style="font-weight: bold; font-size: 1.5em; margin-bottom: 20px;">
-                        Datos del Departamento: <span id="nombre-departamento"></span>
-                    </h2>                   
+                    <h2 class="card-title">Departamento: <span id="nombre-departamento"></span></h2>
                     <br>
                     <br>
                     <br>
@@ -82,11 +94,11 @@
                     <!-- Recuadros para Sedes y Anexos -->
                     <div class="section" style="margin-bottom: 20px;">
                         <div style="display: flex; justify-content: space-between;">
-                            <div class="data-box">
+                            <div class="data-box bg-green">
                                 <p>Sedes</p>
                                 <span id="total_sedes"></span>
                             </div>
-                            <div class="data-box">
+                            <div class="data-box bg-black">
                                 <p>Anexos</p>
                                 <span id="total_anexos"></span>
                             </div>
@@ -94,36 +106,94 @@
                     </div>
 
                     <!-- Subtítulo Ámbito -->
-                    <h3 style="font-size: 1.2em; margin-top: 20px; font-weight: bold;">Ámbito</h3>
+                    <h3>Ámbito</h3>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <div class="data-box">
+                        <div class="data-box bg-blue">
                             <p>Urbano</p>
                             <span id="total_urbanos"></span>
                         </div>
-                        <div class="data-box">
+                        <div class="data-box bg-yellow">
                             <p>Rural Disperso</p>
                             <span id="total_rurales_dispersos"></span>
                         </div>
-                        <div class="data-box">
+                        <div class="data-box bg-yellow">
                             <p>Rural Aglomerado</p>
                             <span id="total_rurales_aglomerados"></span>
                         </div>
                     </div>
 
                     <!-- Subtítulo Sector -->
-                    <h3 style="font-size: 1.2em; margin-top: 20px; font-weight: bold;">Sector</h3>
+                    <h3>Sector</h3>
                     <div style="display: flex; justify-content: space-between;">
-                        <div class="data-box">
+                        <div class="data-box bg-brown">
                             <p>Estatal</p>
                             <span id="total_estatales"></span>
                         </div>
-                        <div class="data-box">
+                        <div class="data-box bg-orange">
                             <p>Privado</p>
                             <span id="total_privados"></span>
                         </div>
-                        <div class="data-box">
+                        <div class="data-box bg-violet">
                             <p>Gestión Social/Comunitario</p>
                             <span id="total_soccom"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card en el lateral derecho con datos de oferta y acronimo -->
+            <div class="card" style="width: 350px;">
+                <div class="card-body">
+                    <h3>Datos de Oferta</h3>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div class="data-box bg-green">
+                            <p>Inicial</p>
+                            <span id="total_inicial"></span>
+                        </div>
+                        <div class="data-box bg-yellow">
+                            <p>Primario</p>
+                            <span id="total_primario"></span>
+                        </div>
+                        <div class="data-box bg-orange">
+                            <p>Secundario</p>
+                            <span id="total_secundaria"></span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div class="data-box bg-blue">
+                            <p>Adulto Primario</p>
+                            <span id="total_adultoprim"></span>
+                        </div>
+                        <div class="data-box bg-blue">
+                            <p>Adulto Secundario</p>
+                            <span id="total_adultosec"></span>
+                        </div>
+                        <div class="data-box bg-blue">
+                            <p>Adulto Form. Prof.</p>
+                            <span id="total_adultofp"></span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div class="data-box bg-black">
+                            <p>Biblioteca</p>
+                            <span id="total_biblio"></span>
+                        </div>
+                        <div class="data-box bg-black">
+                            <p>CEF</p>
+                            <span id="total_cef"></span>
+                        </div>
+                        <div class="data-box bg-black">
+                            <p>Especial</p>
+                            <span id="total_especial"></span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="data-box bg-violet">
+                            <p>SNU</p>
+                            <span id="total_snu"></span>
                         </div>
                     </div>
                 </div>
@@ -133,40 +203,77 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        // Ejecutar la consulta al cargar la página
+        $(document).ready(function() {
+            $.ajax({
+                url: "{% url 'reportes:consulta_ofertas' %}",
+                data: {},  // No enviamos el parámetro 'departamento' para obtener todos los datos
+                success: function(data) {
+                    $('#total_sedes').text(data.total_sedes);
+                    $('#total_anexos').text(data.total_anexos);
+                    $('#total_urbanos').text(data.total_urbanos);
+                    $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
+                    $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
+                    $('#total_estatales').text(data.total_estatales);
+                    $('#total_privados').text(data.total_privados);
+                    $('#total_soccom').text(data.total_soccom);
+                    $('#total_inicial').text(data.total_inicial);
+                    $('#total_primario').text(data.total_primario);
+                    $('#total_adultoprim').text(data.total_adultoprim);
+                    $('#total_secundaria').text(data.total_secundaria);
+                    $('#total_adultosec').text(data.total_adultosec);
+                    $('#total_adultofp').text(data.total_adultofp);
+                    $('#total_biblio').text(data.total_biblio);
+                    $('#total_cef').text(data.total_cef);
+                    $('#total_especial').text(data.total_especial);
+                    $('#total_snu').text(data.total_snu);
+
+                    // Mostrar el contenedor de resultados
+                    $('#resultado-container').show();
+                }
+            });
+        });
+
+        // Ejecutar la consulta cuando se selecciona un departamento
         $('#departamento').change(function() {
             var departamento = $(this).val();
             if (departamento) {
-                // Construye la ruta de la imagen correspondiente
                 var imgSrc = "{% static 'img/' %}" + departamento.replace(/\s+/g, '_') + ".png";
-                console.log(imgSrc)
-                // Actualiza la imagen
                 $('#imagen-departamento').attr('src', imgSrc);
-                $('#resultado-container').show();  // Muestra el contenedor
-
-                // Actualiza el nombre del departamento en el card
                 $('#nombre-departamento').text(departamento);
 
-                // Realiza la solicitud AJAX para obtener los datos
                 $.ajax({
                     url: "{% url 'reportes:consulta_ofertas' %}",
                     data: {
                         'departamento': departamento,
                     },
                     success: function(data) {
-                        // Actualiza el card con los datos obtenidos
-                        $('#total_ofertas').text(data.total_ofertas);
+                        $('#total_sedes').text(data.total_sedes);
+                        $('#total_anexos').text(data.total_anexos);
                         $('#total_urbanos').text(data.total_urbanos);
                         $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
                         $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
                         $('#total_estatales').text(data.total_estatales);
                         $('#total_privados').text(data.total_privados);
                         $('#total_soccom').text(data.total_soccom);
-                        $('#total_sedes').text(data.total_sedes);
-                        $('#total_anexos').text(data.total_anexos);
+                        $('#total_inicial').text(data.total_inicial);
+                        $('#total_primario').text(data.total_primario);
+                        $('#total_adultoprim').text(data.total_adultoprim);
+                        $('#total_secundaria').text(data.total_secundaria);
+                        $('#total_adultosec').text(data.total_adultosec);
+                        $('#total_adultofp').text(data.total_adultofp);
+                        $('#total_biblio').text(data.total_biblio);
+                        $('#total_cef').text(data.total_cef);
+                        $('#total_especial').text(data.total_especial);
+                        $('#total_snu').text(data.total_snu);
+
+                        // Mostrar el contenedor de resultados
+                        $('#resultado-container').show();
                     }
                 });
             } else {
-                $('#resultado-container').hide();  // Oculta el contenedor si no se selecciona un departamento
+                // Ocultar el contenedor de resultados si no se selecciona ningún departamento
+                $('#resultado-container').hide();
             }
         });
     </script>

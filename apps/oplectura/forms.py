@@ -2,7 +2,8 @@ import re
 from django import forms
 from django.forms import ModelForm
 from .models import RegDocporSeccion, RegEvaluacionFluidezLectora
-
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 class RegDocporSeccionForm(forms.ModelForm):
     class Meta:
@@ -29,7 +30,7 @@ class RegDocporSeccionEdicionForm(forms.ModelForm):
             raise forms.ValidationError("Cueanexo debe ser un número de 9 dígitos que comience con '22'.")
         return cueanexo
     
-
+#formulario para cargar evaluacion el aplicador
 class RegEvaluacionFluidezLectoraForm(ModelForm):
     class Meta:
         model = RegEvaluacionFluidezLectora
@@ -100,7 +101,7 @@ class FiltroEvaluacionForm(forms.Form):
             self.fields['grado'].choices = [(grado, grado) for grado in grados]
             self.fields['seccion'].choices = [(seccion, seccion) for seccion in secciones]
 
-
+# formulario cargar alumno para el aplicador
 class RegAlumnosFluidezLectoraForm(ModelForm):
     REGIONES_CHOICES = [
         ('R.E. 1', 'R.E. 1'),
@@ -128,7 +129,7 @@ class RegAlumnosFluidezLectoraForm(ModelForm):
                      ('CUARTO', 'CUARTO'), ('QUINTO', 'QUINTO'), ('SEXTO', 'SEXTO'), ('SEPTIMO', 'SEPTIMO')]
 
     SECCION_CHOICES = [(chr(i), chr(i)) for i in range(ord('A'), ord('Z')+1)]
-    
+    SECCION_CHOICES.append(('MULTIPLE','MULTIPLE'))
     
     region=forms.ChoiceField(choices=REGIONES_CHOICES, required=False)
     grado = forms.ChoiceField(choices=CURSO_CHOICES, required=False)
@@ -155,6 +156,185 @@ class RegAlumnosFluidezLectoraForm(ModelForm):
         self.fields['cal_pres'].required = False
         self.fields['cal_pros'].required = False
         self.fields['cal_comp'].required = False
+    
+    
+    def clean_cueanexo(self):
+            cueanexo = self.cleaned_data.get('cueanexo')
+            if cueanexo:
+                if not re.match(r'^22\d{7}$', cueanexo):
+                    raise forms.ValidationError("El campo Cueanexo debe comenzar con '22' y contener 9 dígitos en total.")
+            return cueanexo
+    
+    def clean_apellido_alumno(self):
+        apellido_alumno = self.cleaned_data.get('apellido_alumno')
+        if apellido_alumno:
+            # Ajusta la expresión regular para permitir espacios en blanco
+            if not re.match(r"^[A-ZÁÉÍÓÚÑ'´ ]+$", apellido_alumno):
+                raise forms.ValidationError("El campo Apellido debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y espacios.")
+            apellido_alumno = apellido_alumno.upper()
+        return apellido_alumno
+
+    def clean_nombres_alumno(self):
+        nombres_alumno = self.cleaned_data.get('nombres_alumno')
+        if nombres_alumno:
+            # La expresión regular ya permite espacios en blanco
+            if not re.match(r"^[A-ZÁÉÍÓÚÑ'´ ]+$", nombres_alumno):
+                raise forms.ValidationError("El campo Nombres debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y espacios.")
+            nombres_alumno = nombres_alumno.upper()
+        return nombres_alumno
+    
+    def clean_dni_alumno(self):
+        dni_alumno = self.cleaned_data.get('dni_alumno')
+        if dni_alumno:
+            if not re.match(r'^\d{7,}$', dni_alumno):
+                raise forms.ValidationError("El campo DNI debe contener sólo números y tener al menos 7 dígitos.")
+        return dni_alumno
+
+# formulario para el director
+class RegEvaluacionFluidezLectoraDirectoresForm(ModelForm):
+    CURSO_CHOICES = [('PRIMERO', 'PRIMERO'), ('SEGUNDO', 'SECUNDO'), ('TERCERO', 'TERCERO'), 
+                     ('CUARTO', 'CUARTO'), ('QUINTO', 'QUINTO'), ('SEXTO', 'SEXTO'), ('SEPTIMO', 'SEPTIMO')]
+
+    SECCION_CHOICES = [(chr(i), chr(i)) for i in range(ord('A'), ord('Z')+1)]
+    SECCION_CHOICES.append(('MULTIPLE','MULTIPLE'))
+    
+    grado = forms.ChoiceField(choices=CURSO_CHOICES, required=True)
+    seccion = forms.ChoiceField(choices=SECCION_CHOICES, required=True)
+    
+    apellido_alumno = forms.CharField(
+        max_length=100,
+        validators=[
+            RegexValidator(
+                regex=r'^[A-ZÁÉÍÓÚÑ\s\']+$',
+                message="El apellido solo puede contener letras mayúsculas, espacios, tildes y apóstrofes."
+            )
+        ]
+    )
+    
+    nombres_alumno = forms.CharField(
+        max_length=100,
+        validators=[
+            RegexValidator(
+                regex=r'^[A-ZÁÉÍÓÚÑ\s\']+$',
+                message="El nombre solo puede contener letras mayúsculas, espacios, tildes y apóstrofes."
+            )
+        ]
+    )
+    
+    dni_alumno = forms.CharField(
+        max_length=8,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener solo números y tener entre 7 y 8 dígitos."
+            )
+        ]
+    )
+
+    class Meta:
+        model = RegEvaluacionFluidezLectora
+        fields = '__all__'
+        widgets = {
+            'cueanexo': forms.HiddenInput(),
+            'region': forms.HiddenInput(), 
+            'velocidad':forms.HiddenInput(),
+            'precision':forms.HiddenInput(),  
+            'prosodia':forms.HiddenInput(),  
+            'comprension':forms.HiddenInput(),                    
+            'cal_vel': forms.HiddenInput(),
+            'cal_pres': forms.HiddenInput(),
+            'cal_pros': forms.HiddenInput(),
+            'cal_comp': forms.HiddenInput(),
+            'asistencia': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['asistencia'].required = False
+        self.fields['cueanexo'].required = False
+        self.fields['region'].required = False
+        self.fields['cal_vel'].required = False
+        self.fields['cal_pres'].required = False
+        self.fields['cal_pros'].required = False
+        self.fields['cal_comp'].required = False
+
+    def clean_apellido_alumno(self):
+        data = self.cleaned_data['apellido_alumno']
+        return data.upper()
+
+    def clean_nombres_alumno(self):
+        data = self.cleaned_data['nombres_alumno']
+        return data.upper()
+
+
+# formulario cargar alumno para el director
+class RegAlumnosFluidezLectoraDirectorForm(ModelForm):
+    REGIONES_CHOICES = [
+        ('R.E. 1', 'R.E. 1'),
+        ('R.E. 2', 'R.E. 2'),
+        ('R.E. 3', 'R.E. 3'),
+        ('R.E. 4-A', 'R.E. 4-A'),
+        ('R.E. 4-B', 'R.E. 4-B'),
+        ('R.E. 5', 'R.E. 5'),
+        ('R.E. 6', 'R.E. 6'),
+        ('R.E. 7', 'R.E. 7'),
+        ('R.E. 8-A', 'R.E. 8-A'),
+        ('R.E. 8-B', 'R.E. 8-B'),
+        ('R.E. 9', 'R.E. 9'),
+        ('R.E. 10-A', 'R.E. 10-A'),
+        ('R.E. 10-B', 'R.E. 10-B'),
+        ('R.E. 10-C', 'R.E. 10-C'),
+        ('SUB. R.E. 1-A', 'SUB. R.E. 1-A'),
+        ('SUB. R.E. 1-B', 'SUB. R.E. 1-B'),
+        ('SUB. R.E. 2', 'SUB. R.E. 2'),
+        ('SUB. R.E. 3', 'SUB. R.E. 3'),
+        ('SUB. R.E. 5', 'SUB. R.E. 5'),
+    ]
+    
+    CURSO_CHOICES = [('PRIMERO', 'PRIMERO'), ('SEGUNDO', 'SECUNDO'), ('TERCERO', 'TERCERO'), 
+                     ('CUARTO', 'CUARTO'), ('QUINTO', 'QUINTO'), ('SEXTO', 'SEXTO'), ('SEPTIMO', 'SEPTIMO')]
+
+    SECCION_CHOICES = [(chr(i), chr(i)) for i in range(ord('A'), ord('Z')+1)]
+    SECCION_CHOICES.append(('MULTIPLE','MULTIPLE'))
+    
+    region=forms.ChoiceField(choices=REGIONES_CHOICES, required=False)
+    grado = forms.ChoiceField(choices=CURSO_CHOICES, required=False)
+    seccion = forms.ChoiceField(choices=SECCION_CHOICES, required=False)
+    
+    class Meta:
+        model = RegEvaluacionFluidezLectora
+        fields = '__all__'
+        widgets = {                     
+            'velocidad':forms.HiddenInput(),
+            'precision':forms.HiddenInput(),     
+            'prosodia':forms.HiddenInput(),
+            'comprension':forms.HiddenInput(),
+            'cal_vel': forms.HiddenInput(),
+            'cal_pres': forms.HiddenInput(),
+            'cal_pros': forms.HiddenInput(),
+            'cal_comp': forms.HiddenInput(),
+            'asistencia': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['asistencia'].required=False
+        self.fields['cueanexo'].required = False
+        self.fields['region'].required = False
+        self.fields['cal_vel'].required = False
+        self.fields['cal_pres'].required = False
+        self.fields['cal_pros'].required = False
+        self.fields['cal_comp'].required = False
+        
+        # Asignar valores predeterminados
+        self.fields['velocidad'].initial = 0
+        self.fields['precision'].initial = 0
+        self.fields['prosodia'].initial = 1
+        self.fields['comprension'].initial = 1
+        self.fields['cal_vel'].initial = "Debajo del Básico"
+        self.fields['cal_pres'].initial = "Debajo del Básico"
+        self.fields['cal_pros'].initial = "Debajo del Básico"
+        self.fields['cal_comp'].initial = "Debajo del Básico"
     
     
     def clean_cueanexo(self):

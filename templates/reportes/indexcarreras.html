@@ -1,0 +1,139 @@
+{% extends 'dashboard/body.html'%}
+{% load static %}
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filtrar Carreras y Títulos</title>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}"/>
+    <style>
+        /* Ajustes para mostrar checkboxes dentro de Select2 */
+        .select2-container--default .select2-results__option {
+            padding-left: 25px;
+            position: relative;
+        }
+        .select2-container--default .select2-results__option::before {
+            content: '';
+            background: url('{% static 'img/checkbox-unchecked.svg' %}') no-repeat center center / contain;
+            width: 15px;
+            height: 15px;
+            position: absolute;
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .select2-container--default .select2-results__option[aria-selected=true]::before {
+            background: url('{% static 'img/checkbox-checked.svg' %}') no-repeat center center / contain;
+        }
+        /* Texto en negrita y color blanco */
+        .select2-container--default .select2-selection__rendered {
+            font-weight: bold;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Filtrar Carreras y Títulos</h1>
+
+    <form id="filter-form">
+        <label for="localidad">Seleccione Localidad(es):</label>
+        <select id="localidad" name="localidad[]" multiple="multiple" style="width: 300px;">
+            {% for localidad in localidades %}
+                <option value="{{ localidad }}">{{ localidad }}</option>
+            {% endfor %}
+        </select>
+        
+        <label for="titulo">Seleccione Título:</label>
+        <select id="titulo" name="titulo" style="width: 300px;">
+            {% for titulo in titulos %}
+                <option value="{{ titulo }}">{{ titulo }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class='btn btn-danger'><strong>Filtrar Búsqueda</strong></button>
+    </form>
+
+    <table id="results-table" class="display responsive nowrap" style="width:100%">
+        <thead>
+            <tr>
+                <th>Cueanexo</th>
+                <th>Establecimiento</th>
+                <th>Sector</th>
+                <th>Localidad</th>
+                <th>Nivel</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Los datos se cargarán dinámicamente aquí -->
+        </tbody>
+    </table>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="{% static 'lib/select2-4.0.13/js/select2.min.js' %}"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        var dataTableOptions = {
+                responsive: true,
+                autoWidth:false,                
+                language: {
+                        url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
+                    }, 
+        }
+        // Inicializar Select2 para los selectores
+        $('#localidad').select2({
+            placeholder: "Seleccione una o varias localidades",
+            allowClear: true,
+            closeOnSelect: false
+        });
+
+        $('#titulo').select2({
+            placeholder: "Seleccione un título",
+            allowClear: true
+        });
+
+        // Inicializar el DataTable
+        var table = $('#results-table').DataTable(dataTableOptions
+            );
+
+        // Manejar el evento submit del formulario
+        $('#filter-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var localidades = $('#localidad').val();
+            var titulo = $('#titulo').val();
+
+            $.ajax({
+                url: "{% url 'reportes:consulta_titulos' %}",
+                type: 'GET',
+                data: {
+                    'localidad[]': localidades,
+                    titulo: titulo
+                },
+                success: function(response) {
+                    // Asegúrate de que la propiedad 'data' existe en la respuesta
+                        table.clear().rows.add(response.data.map(function(item) {
+                            return [
+                                item[0],  // cueanexo
+                                item[1],  // nom_est
+                                item[2],  // sector
+                                item[7],  // localidad
+                                item[8]   // carrera
+                            ];
+                        })).draw();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al obtener datos:', status, error);
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+{% endblock %}

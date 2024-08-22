@@ -1,7 +1,7 @@
 import json
 import psycopg2
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 def filtrado_cueradio(request):
@@ -20,6 +20,17 @@ def connect_to_database():
 def execute_query(cursor, query, parameters=None):
     cursor.execute(query, parameters)
     return cursor.fetchall()
+
+# Función para calcular la distancia entre dos puntos geográficos
+def calculate_distance(cursor, center_lng, center_lat, long, lat):
+    cursor.execute("""
+        SELECT ST_Distance(
+            ST_MakePoint(%s, %s)::geography,
+            ST_MakePoint(%s, %s)::geography
+        );
+    """, (center_lng, center_lat, long, lat))
+    distance = cursor.fetchone()[0]
+    return distance
 
 # Vista para filtrar datos y renderizar el mapa
 @csrf_exempt
@@ -64,6 +75,33 @@ def filter_cueradio(request):
                         for row in nearby_rows:
                             filtered_rows.append(row[:11] + ('green',))
 
+                        # Calcular distancia a comisarías
+                        comisarias_filtered_rows = []
+                        comisarias = execute_query(cursor, "SELECT nom_cria, direccion, telefono, lat, long FROM public.comisarias")
+                        for comisaria in comisarias:
+                            nom_cria, direccion, telefono, lat, long = comisaria
+                            distance = calculate_distance(cursor, center_lng, center_lat, long, lat)
+                            if distance is not None and float(radio) >= distance:
+                                comisarias_filtered_rows.append((nom_cria, lat, long, telefono, direccion, 'purple'))
+
+                        # Calcular distancia a centros de salud
+                        salud_filtered_rows = []
+                        salud = execute_query(cursor, "SELECT tipo, telefono, lat, long, enlace FROM public.salud")
+                        for centro in salud:
+                            tipo, telefono, lat, long, enlace = centro
+                            distance = calculate_distance(cursor, center_lng, center_lat, long, lat)
+                            if distance is not None and float(radio) >= distance:
+                                salud_filtered_rows.append((tipo, lat, long, telefono, enlace, 'purple'))
+
+                        # Calcular distancia a paradas de colectivos
+                        colectivos_filtered_rows=[]
+                        colectivos = execute_query(cursor, "SELECT codigo, direccion, lat, long, lineas FROM public.colectivos_par")
+                        for omnibus in colectivos:
+                            codigo, direccion, lat, long, lineas = omnibus
+                            distance = calculate_distance(cursor, center_lng, center_lat, long, lat)
+                            if distance is not None and float(radio) >= distance:
+                                colectivos_filtered_rows.append((codigo, direccion, lineas, lat, long, 'black'))
+
         except psycopg2.Error as e:
             print(f"Error durante la consulta a la base de datos: {e}")
             return JsonResponse({'error': 'Error durante la consulta a la base de datos'}, status=500)
@@ -74,6 +112,9 @@ def filter_cueradio(request):
         context = {
             'title': 'Mapa',
             'data_json': json.dumps(filtered_rows),
+            'comisarias_data_json': json.dumps(comisarias_filtered_rows),
+            'hospitales_data_json': json.dumps(salud_filtered_rows),
+            'colectivos_data_json': json.dumps(colectivos_filtered_rows),
             'center_lat': center_lat,
             'center_lng': center_lng,
             'radio': radio,

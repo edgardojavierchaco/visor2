@@ -12,14 +12,14 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
         <!-- Font Awesome CSS -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <!-- DataTables Bootstrap 5 CSS -->
-        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-        
-        <!-- Leaflet Control Geocoder CSS -->
-        <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-        
+            <!-- DataTables Bootstrap 5 CSS -->
+            <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+            
+            <!-- Leaflet Control Geocoder CSS -->
+            <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+            
         <style>
             #map-container {
                 position: relative;
@@ -34,20 +34,20 @@
     <body>
         {% block content_header %}
             <div class="content-header">
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-sm-6">
-                            <h1 class="m-0 text-dark">  <small></small></h1>
-                        </div>
-                        <div class="col-sm-6">
-                            <ol class="breadcrumb float-sm-right">
-                                <li class="breadcrumb-item"><a href="{% url 'dash:portada'%}">Regresar</a><li>                                    
-                                
-                            </ol>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <h1 class="m-0 text-dark">  <small></small></h1>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-right">
+                                    <li class="breadcrumb-item"><a href="{% url 'dash:portada'%}">Regresar</a><li>                                    
+                                    
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
         {% endblock %}
         <h2>Ubicación Geográfica de CUE N°: {{cueanexo}} y los cercanos en un radio de: {{radio}} metros</h2>
         <div id="map-container">
@@ -94,18 +94,92 @@
         <!-- Lenguaje para los botones -->
         <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.colVis.min.js"></script>
         <script>
+            
             var cueanexo = '{{ cueanexo }}';
             var markers = JSON.parse('{{ data_json|escapejs }}');
+            var markerscomis =JSON.parse('{{ comisarias_data_json|escapejs }}');
+            var markershosp = JSON.parse('{{ hospitales_data_json|escapejs }}');
+            var markercolectivos=JSON.parse('{{colectivos_data_json|escapejs }}');
             var drawnItems = new L.FeatureGroup();
+            console.log(markerscomis)
             var map = L.map('map');
             var bounds = L.latLngBounds();
             var blueMarkers = L.layerGroup(); // Capa para marcadores "azul"
             var greenMarkers = L.layerGroup(); // Capa para marcadores "verde"
+            var purpleMarkers = L.layerGroup(); // Capa para marcadores "purpura"
+            var redMarkers=L.layerGroup();
+            var blackMarkers=L.layerGroup();
 
             var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
                 maxZoom: 18,
             }).addTo(map);
+
+            // Código para agregar marcadores de comisarías
+            for (var i = 0; i < markerscomis.length; i++) {
+                var comisariaLat = markerscomis[i][1];
+                var comisariaLng = markerscomis[i][2];
+                var comisariaNombre = markerscomis[i][0];
+                var comisariaTelefono = markerscomis[i][3];
+                var comisariaDireccion = markerscomis[i][4];
+                var markerIcon = L.icon({
+                    iconUrl: "{% static 'img/escpolchaco.png' %}",
+                    iconSize: [25, 41],
+                    iconAnchor: [25, 41],
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                });
+
+                var comisariaMarker = L.marker([comisariaLat, comisariaLng], { icon: markerIcon }).bindPopup('<strong>Comisaría:</strong> ' + comisariaNombre + '<br>' + '<strong>Teléfono:</strong> ' + comisariaTelefono + '<br>' + '<strong>Dirección:</strong> ' + comisariaDireccion);
+                purpleMarkers.addLayer(comisariaMarker);
+                bounds.extend(comisariaMarker.getLatLng());
+            }
+
+            map.addLayer(purpleMarkers); // Agregar la capa de marcadores de comisarías al mapa
+
+            // Código para agregar marcadores de hospitales
+            for (var i = 0; i < markershosp.length; i++) {
+                var hospLat = markershosp[i][1];
+                var hospLng = markershosp[i][2];
+                var hospNombre = markershosp[i][0];
+                var hospTelefono = markershosp[i][3];
+                var hospEnlace = markershosp[i][4];
+                var markerIcon = L.icon({
+                    iconUrl: "{% static 'img/hospital.png' %}",
+                    iconSize: [25, 41],
+                    iconAnchor: [25, 41],
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                });
+
+                var hospMarker = L.marker([hospLat, hospLng], { icon: markerIcon }).bindPopup('<strong>Nombre:</strong> <a href="' + hospEnlace + '" target="_blank">' + hospNombre + '</a><br>' + '<strong>Teléfono:</strong> ' + hospTelefono);
+                redMarkers.addLayer(hospMarker);
+                bounds.extend(hospMarker.getLatLng());
+            }
+
+            map.addLayer(redMarkers); // Agregar la capa de marcadores de hospitales/CS al mapa
+
+            // Código para agregar marcadores de colectivos
+            for (var i = 0; i < markercolectivos.length; i++) {
+                var coleLat = markercolectivos[i][3];
+                var coleLng = markercolectivos[i][4];
+                var coleCodigo = markercolectivos[i][0];
+                var coleDireccion = markercolectivos[i][1];
+                var coleLineas = markercolectivos[i][2];
+                var markerIcon = L.icon({
+                    iconUrl: "{% static 'img/autobus.png' %}",
+                    iconSize: [25, 41],
+                    iconAnchor: [25, 41],
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                });
+
+                var omniMarker = L.marker([coleLat, coleLng], { icon: markerIcon }).bindPopup('<strong>Líneas:</strong> ' + coleLineas + '<br>' + '<strong>Dirección:</strong> ' + coleDireccion);
+                blackMarkers.addLayer(omniMarker);
+                bounds.extend(omniMarker.getLatLng());
+            }
+
+            map.addLayer(blackMarkers); // Agregar la capa de marcadores de colectivos al mapa
 
             for (var i = 0; i < markers.length; i++) {
                 var lat = markers[i][1];
@@ -150,7 +224,7 @@
                 }
             }
 
-            map.addLayer(blueMarkers); // Agregar la capa de marcadores "blue" al mapa
+            map.addLayer(blueMarkers); // Agregar la capa de marcadores "red" al mapa
             map.addLayer(greenMarkers); // Agregar la capa de marcadores "green"         
             map.fitBounds(bounds);
 
@@ -169,10 +243,15 @@
                 "Satélite": esriSatellite
             };
 
-            L.control.layers(baseLayers, {
+            var overlayMaps = {
                 "Cue cercanos": greenMarkers,
-                "Cue buscado": blueMarkers
-            }, {
+                "Cue buscado": blueMarkers,
+                "Comisarias": purpleMarkers,
+                "Hospitales/CS": redMarkers,
+                "Colectivos": blackMarkers,
+            };
+
+            L.control.layers(baseLayers, overlayMaps, {
                 collapsed: true,
                 icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
             }).addTo(map);
@@ -191,53 +270,53 @@
             // Agregar marcadores al DataTable
             var markerTable = $('#marker-table').DataTable({
                 responsive: true,
-                autoWidth: false,
-                language: {
-                    url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
-                },      
-                dom: '<"top"lBf>rt<"bottom"ip>',
-                buttons: [
-                    {
-                        extend: 'excel',
-                        text: '<i class="fas fa-file-excel"></i>',
-                        className: 'btn btn-secondary',
-                        exportOptions: {
-                            columns: ':visible'
+                    autoWidth: false,
+                    language: {
+                        url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
+                    },      
+                    dom: '<"top"lBf>rt<"bottom"ip>',
+                    buttons: [
+                        {
+                            extend: 'excel',
+                            text: '<i class="fas fa-file-excel"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Exportar a Excel',
+                            title: 'Nombre_del_archivo'
                         },
-                        titleAttr: 'Exportar a Excel',
-                        title: 'Nombre_del_archivo'
-                    },
-                    {
-                        extend: 'csv',
-                        text: '<i class="fas fa-file-csv"></i>',
-                        className: 'btn btn-secondary',
-                        exportOptions: {
-                            columns: ':visible'
+                        {
+                            extend: 'csv',
+                            text: '<i class="fas fa-file-csv"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Exportar a CSV',
+                            title: 'Nombre_del_archivo'
                         },
-                        titleAttr: 'Exportar a CSV',
-                        title: 'Nombre_del_archivo'
-                    },
-                    {
-                        extend: 'pdf',
-                        text: '<i class="fas fa-file-pdf"></i>',
-                        className: 'btn btn-secondary',
-                        exportOptions: {
-                            columns: ':visible'
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fas fa-file-pdf"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Exportar a PDF',
+                            title: 'Nombre_del_archivo'
                         },
-                        titleAttr: 'Exportar a PDF',
-                        title: 'Nombre_del_archivo'
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="fas fa-print"></i>',
-                        className: 'btn btn-secondary',
-                        exportOptions: {
-                            columns: ':visible'
-                        },
-                        titleAttr: 'Imprimir',
-                        title: 'Nombre_del_archivo'
-                    }
-                ],
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print"></i>',
+                            className: 'btn btn-secondary',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            titleAttr: 'Imprimir',
+                            title: 'Nombre_del_archivo'
+                        }
+                    ],
                 data: markers,
                 columns: [
                     { data: 0 }, // Cueanexo
