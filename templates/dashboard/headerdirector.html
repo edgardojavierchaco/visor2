@@ -1,4 +1,26 @@
 {% load static %}
+
+<style>
+/* CSS para que los submenús funcionen correctamente */
+.dropdown-menu .dropdown-menu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: .1rem;
+    margin-right: .1rem;
+    display: none; /* Oculto por defecto */
+}
+
+.dropdown-menu .dropdown-item.dropdown-toggle:hover + .dropdown-menu,
+.dropdown-menu .dropdown-menu:hover {
+    display: block; /* Mostrar submenú al pasar el ratón */
+}
+
+.dropdown-submenu {
+    position: relative;
+}
+</style>
+
 <!-- Navbar -->
 <nav class="main-header navbar navbar-expand-md navbar-light navbar-white">
     <div class="container">
@@ -39,7 +61,23 @@
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'lectocomprension:resultados' %}" class="dropdown-item">Resultados</a></li>
+                        <li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
+                        <!-- Menú desplegable para "Resultados" -->
+                        <li class="dropdown">
+                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                               class="dropdown-item dropdown-toggle">Resultados</a>
+                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                <li><a href="{% url 'lectocomprension:resultados' %}" class="dropdown-item">Mayo-2024</a></li>
+                                <li class="dropdown-submenu">
+                                    <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                       class="dropdown-item dropdown-toggle">Noviembre-2024</a>
+                                    <ul aria-labelledby="dropdownSubMenu3" class="dropdown-menu border-0 shadow">
+                                        <li><a href="{% url 'oplectura:evaluacion_directores' %}" class="dropdown-item">Listado</a></li>
+                                        <li><a href="{% url 'oplectura:resultados' %}" class="dropdown-item">Gráfico</a></li>                                
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
                         <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
                         <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
                     </ul>
@@ -50,7 +88,7 @@
                     <a href="{% url 'directores:institucional' %}" class="nav-link">Usuario: {{ user.nombres }}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'login:logout' %}" >
+                    <a class="nav-link" href="{% url 'login:logout' %}">
                         <i class="fas fa-power-off" aria-hidden="true" style="color:red"></i> Logout
                     </a>
                 </li> 
@@ -59,14 +97,12 @@
                     <span class="nav-link">Usuario: Público</span>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'login:login' %}" >
+                    <a class="nav-link" href="{% url 'login:login' %}">
                         <i class="fas fa-power-off" aria-hidden="true" style="color:green"></i> Login
                     </a>
                 </li>
                 {% endif %}
-                
             </ul>
         </div>
-        
     </div>
 </nav>

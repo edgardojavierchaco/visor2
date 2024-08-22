@@ -297,3 +297,5 @@ def cargar_grafico_reg(request):
 
 
 
+
+

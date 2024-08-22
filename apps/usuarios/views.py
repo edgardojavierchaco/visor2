@@ -33,7 +33,7 @@ class listado_usuarios(AdminRequiredMixin,ListView):
         context['title']='Listado de Usuarios'
         return context
 
-#listado de usuarios para Evaluación
+#listado de directores para Evaluación
 class listado_usuarios_op(ListView):
     model=UsuariosVisualizador        
     template_name='usuarios/listado_op.html' 
@@ -46,7 +46,7 @@ class listado_usuarios_op(ListView):
     
     def get_context_data(self, **kwargs):
         context=super().get_context_data(**kwargs)
-        context['title']='Listado de Usuarios'
+        context['title']='Listado de Directores'
         return context
 
 

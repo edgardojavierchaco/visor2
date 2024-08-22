@@ -16,7 +16,7 @@ class LoginFormView(LoginView):
         # Verificar si el usuario pertenece al grupo 'Evaluacion'
         evaluacion_group = Group.objects.get(name='Evaluacion')
         if evaluacion_group in user.groups.all():
-            return reverse_lazy('usuarios:listado_op')        
+            return reverse_lazy('oplectura:portada_eval')        
         
         # Verificar si el usuario pertenece al grupo 'Director'
         director_group = Group.objects.get(name='Director')

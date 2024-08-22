@@ -17,4 +17,6 @@ def portada(request):
 
 def directores(request):    
     return render(request, 'directores/institucional.html')
-    
+
+def evaluacion(request):
+    return render(request, 'dashboard/portadaevaluacion.html')

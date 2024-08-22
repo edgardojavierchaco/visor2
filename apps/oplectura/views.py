@@ -9,6 +9,9 @@ from .forms import RegAlumnosFluidezLectoraDirectorForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 
+def DepEvaluacionPortada(request):
+    return render(request, 'oplectura/portadaevaluacion.html')
+
 @method_decorator(login_required, name='dispatch')
 class CreateRegDocporSeccionView(CreateView):
     model = RegDocporSeccion
@@ -24,6 +27,7 @@ class CreateRegDocporSeccionView(CreateView):
         return super().form_valid(form)
     
 
+# listado de aplicadores para dptoEvaluación
 @method_decorator(login_required, name='dispatch')
 class ListadoDocentesView(ListView):
     model=RegDocporSeccion
@@ -31,14 +35,14 @@ class ListadoDocentesView(ListView):
     context_object_name='docentesporseccion'
     
     def get_queryset(self):
-        return RegDocporSeccion.objects.filter(cueanexo=self.request.user.username)
+        return RegDocporSeccion.objects.all
     
     def get_context_data(self, **kwargs):
         context=super().get_context_data(**kwargs)
-        context['title']='Listado de Docentes'
+        context['title']='Listado de Aplicadores'
         return context
 
-#edición
+#edición de aplicadores para dptoEvaluación
 class EditarDocentesView(UpdateView):
     model = RegDocporSeccion
     form_class = RegDocporSeccionEdicionForm
@@ -78,7 +82,7 @@ def RegistrarEvaluacionLectora(request):
     return render(request, 'oplectura/registro_evaluacion_lectura.html', {'form': form})
 
 
-#listado de alumnos
+#listado de alumnos para aplicador
 class ListadoEvaluacionLectora(ListView):
     model=RegEvaluacionFluidezLectora     
     template_name='oplectura/listadoevaluacionlectora.html' 
@@ -230,4 +234,24 @@ class EliminarEvaluacionAlumnoDirectoresView(DeleteView):
         return redirect('oplectura:listado_alumnos')
         
 
+#listado de evaluacion alumnos para director
+class ListadoEvaluacionLectoraDirectoresView(ListView):
+    model=RegEvaluacionFluidezLectora     
+    template_name='oplectura/listadoevaluacionlectoradirector.html' 
+    context_object_name='evaluaciondirector'   
+    print(context_object_name)
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        cueanexo = self.request.user        
+
+        if cueanexo:
+            queryset = queryset.filter(cueanexo=cueanexo)        
+
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context=super().get_context_data(**kwargs)
+        context['title']='Listado Evaluación Alumnos'        
+        return context
 

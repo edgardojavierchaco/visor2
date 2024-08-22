@@ -79,9 +79,9 @@
 
     <div id="resultado-container" style="display: none; margin-top: 30px;">
         <div class="container">
-            <!-- Imagen en el lateral izquierdo -->
-            <img id="imagen-departamento" src="" alt="Imagen del Departamento" style="width: 400px; height: auto;">
-
+            <!-- Imagen en el lateral izquierdo -->           
+                <img id="imagen-departamento" src="" alt="Imagen del Departamento" style="width: 400px; height: auto;">
+                            
             <!-- Card en el centro -->
             <div class="card" style="flex: 1;">
                 <div class="card-body">
@@ -205,6 +205,8 @@
     <script>
         // Ejecutar la consulta al cargar la página
         $(document).ready(function() {
+            var imgSrc = "{% static 'img/chacogral.png' %}";
+            $('#imagen-departamento').attr('src', imgSrc);
             $.ajax({
                 url: "{% url 'reportes:consulta_ofertas' %}",
                 data: {},  // No enviamos el parámetro 'departamento' para obtener todos los datos
