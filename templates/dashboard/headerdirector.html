@@ -19,6 +19,13 @@
 .dropdown-submenu {
     position: relative;
 }
+
+/* Estilo para deshabilitar las opciones */
+.disabled {
+    pointer-events: none;
+    color: gray;
+    cursor: not-allowed;
+}
 </style>
 
 <!-- Navbar -->
@@ -44,7 +51,6 @@
                        class="nav-link dropdown-toggle"><i class="fas fa-globe" style="color:blue"></i> Establecimiento</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">                        
                         <li><a href="{% url 'directores:matricula' %}" class="dropdown-item">Matrícula</a></li>
-                                             
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
@@ -72,8 +78,8 @@
                                     <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                        class="dropdown-item dropdown-toggle">Noviembre-2024</a>
                                     <ul aria-labelledby="dropdownSubMenu3" class="dropdown-menu border-0 shadow">
-                                        <li><a href="{% url 'oplectura:evaluacion_directores' %}" class="dropdown-item">Listado</a></li>
-                                        <li><a href="{% url 'oplectura:resultados' %}" class="dropdown-item">Gráfico</a></li>                                
+                                        <li><a href="{% url 'oplectura:evaluacion_directores' %}" class="dropdown-item disabled" id="listado-option">Listado</a></li>
+                                        <li><a href="{% url 'oplectura:resultados' %}" class="dropdown-item disabled" id="grafico-option">Gráfico</a></li>                                
                                     </ul>
                                 </li>
                             </ul>
@@ -106,3 +112,20 @@
         </div>
     </div>
 </nav>
+
+<script>
+    // Fecha de habilitación (30 de noviembre de 2024)
+    var fechaHabilitacion = new Date(2024, 10, 30); // Mes 10 es noviembre porque en JavaScript los meses empiezan en 0
+    var fechaActual = new Date();
+
+    // Seleccionar las opciones de menú
+    var listadoOption = document.getElementById('listado-option');
+    var graficoOption = document.getElementById('grafico-option');
+
+    // Habilitar opciones si la fecha actual es posterior a la fecha de habilitación
+    if (fechaActual >= fechaHabilitacion) {
+        listadoOption.classList.remove('disabled');
+        graficoOption.classList.remove('disabled');
+    }
+</script>
+

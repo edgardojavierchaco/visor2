@@ -143,9 +143,12 @@ def tu_vista(request):
 @login_required
 def mostrar_grafico_reg(request):
     # Obtener los valores seleccionados del checkbox
-    regiones_seleccionadas = request.GET.getlist('region')
+    regiones_seleccionadas = request.GET.get('region')
+    ambitos_seleccionados = request.GET.get('ambito')
+    sectores_seleccionados = request.GET.get('sector')
+    print("Región seleccionada:", regiones_seleccionadas)
     
-    mostrar_todo = '0' in regiones_seleccionadas  # Verifica si se selecciona "Mostrar Todo"
+    mostrar_todo = regiones_seleccionadas == '0'  # Verifica si se selecciona "Mostrar Todo"
     
     # Establecer conexión con la base de datos PostgreSQL
     with psycopg2.connect(
@@ -158,28 +161,33 @@ def mostrar_grafico_reg(request):
             if mostrar_todo:                
                 # Si se selecciona "Mostrar Todo", mostrar todos los datos
                 query = '''
-                    SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia 
-                    FROM cenpe."Evaluacion_Lectora"
+                    SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia, ambito, sector
+                    FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo
                 '''
                 cursor.execute(query)
                 datos_usuario = cursor.fetchall()              
-                
+                print('general:', datos_usuario)
             else:
                 # Filtrar los datos para las regiones seleccionadas
+                query = '''
+                    SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia, ambito, sector 
+                    FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo WHERE 1=1
+                '''
+                parameters = []
+                
                 if regiones_seleccionadas:
-                    placeholders = ','.join(['%s'] * len(regiones_seleccionadas))
-                    query = f'''
-                        SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia 
-                        FROM cenpe."Evaluacion_Lectora" 
-                        WHERE region IN ({placeholders})
-                    '''
-                    cursor.execute(query, tuple(regiones_seleccionadas))
-                    datos_usuario = cursor.fetchall()                   
+                    query += " AND region = %s"
+                    parameters.append(regiones_seleccionadas)
+                if ambitos_seleccionados:
+                    query += " AND ambito = %s"
+                    parameters.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query += " AND sector = %s"
+                    parameters.append(sectores_seleccionados)
                     
-                else:
-                    return render(request, 'oplectura/graficoreg.html', {
-                        'datos_disponibles': False
-                    })
+                cursor.execute(query, parameters)
+                datos_usuario = cursor.fetchall()
+                print('datos:', datos_usuario)
     
     if not datos_usuario:
         return render(request, 'oplectura/graficoreg.html', {
@@ -187,11 +195,11 @@ def mostrar_grafico_reg(request):
         })
     
     # Convertir los datos a DataFrames de pandas con las columnas correctas
-    columns = ['velocidad', 'precision', 'prosodia', 'comprension', 'cal_vel', 'cal_pres', 'cal_pros', 'cal_comp', 'region', 'asistencia']
+    columns = ['velocidad', 'precision', 'prosodia', 'comprension', 'cal_vel', 'cal_pres', 'cal_pros', 'cal_comp', 'region', 'asistencia', 'ambito', 'sector']
     df = pd.DataFrame(datos_usuario, columns=columns)
     
     # Filtrar los DataFrames para incluir solo a los alumnos presentes (asistencia = True)
-    df_presentes = df[df['asistencia'] == True]
+    df_presentes = df[df['asistencia'] == 't']
     df_total = df
     
     # Separar DataFrames para cada aspecto con solo los presentes
@@ -203,7 +211,6 @@ def mostrar_grafico_reg(request):
     # Calcular el total de alumnos presentes (que ya están filtrados)
     total_dni_presentes = df_presentes.shape[0]
     total_alumnos = df_total.shape[0]
-    
     
     # Verificar las columnas antes de operar
     if 'velocidad' not in df_vel.columns or 'cal_vel' not in df_vel.columns:
@@ -288,14 +295,9 @@ def mostrar_grafico_reg(request):
     })
 
 
-
 @login_required
 def cargar_grafico_reg(request):    
     return render(request, 'oplectura/graficoreg.html', {
         'datos_disponibles': False
     })
-
-
-
-
 
