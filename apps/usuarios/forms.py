@@ -19,7 +19,6 @@ def validate_alphanumeric_uppercase(value):
     if not re.match(r'^[A-Z0-9\' ]+$', value):
         raise ValidationError('Este campo solo debe contener caracteres alfanuméricos, apóstrofes y estar en mayúsculas.')
 
-
 class UsuariosForm(ModelForm):
     class Meta:
         model = UsuariosVisualizador
@@ -27,7 +26,7 @@ class UsuariosForm(ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data['username']
-        if not username.isdigit() or (7 <= len(username) <= 9):
+        if not username.isdigit() or not (7 <= len(username) <= 9):
             raise forms.ValidationError('El nombre de usuario debe contener sólo números y tener entre 7 y 9 dígitos.')
         return username
 
@@ -45,9 +44,13 @@ class UsuariosForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['username'].validators.append(validate_username)
+        self.fields['apellido'].validators.append(validate_alphanumeric_uppercase)
+        self.fields['nombres'].validators.append(validate_alphanumeric_uppercase)
         self.fields['username'].error_messages = {
             'unique': 'Ese usuario ya existe.'
         }
+
     
 class UsuariosForm_login(ModelForm):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese Contraseña', 'autocomplete': 'off'}))
