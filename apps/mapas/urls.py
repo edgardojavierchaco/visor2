@@ -1,4 +1,3 @@
-#from django.urls import path
 from config.urls import path
 from . import views, viewscueradio
 
@@ -10,7 +9,7 @@ urlpatterns=[
     path('filter/',views.filter_data,name='filter'), # type: ignore
     path('listados/',views.filtrar_tablas_view,name='listados'),    
     path('filcueradio/',viewscueradio.filtrado_cueradio,name='filcueradio'),
-    path('filter_cueradio/',viewscueradio.filter_cueradio,name='filter_cueradio'), # type: ignore
+    path('filter_cueradio/',viewscueradio.filter_cueradio,name='filter_cueradio'),    
     path('listadomap/',views.filter_listado_map,name='filter_listado_map'),
     path('puntos/',views.filtrado_list,name='puntos'),
 ]
