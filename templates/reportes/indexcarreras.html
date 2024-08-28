@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}"/>
     <style>
-        /* Ajustes para mostrar checkboxes dentro de Select2 */
         .select2-container--default .select2-results__option {
             padding-left: 25px;
             position: relative;
@@ -27,32 +26,68 @@
         .select2-container--default .select2-results__option[aria-selected=true]::before {
             background: url('{% static 'img/checkbox-checked.svg' %}') no-repeat center center / contain;
         }
-        /* Texto en negrita y color blanco */
         .select2-container--default .select2-selection__rendered {
             font-weight: bold;
             color: white;
         }
+        h1 {
+            text-align: center;
+            font-weight: bold;
+        }
+        .circle-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: green;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>Filtrar Carreras y Títulos</h1>
-
+    <h1>Carreras y Títulos</h1>
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="{% static 'img/queestudiar.jpg' %}" alt="Qué Estudiar" width="300" height="200">
+    </div>
     <form id="filter-form">
-        <label for="localidad">Seleccione Localidad(es):</label>
+        <div>
+            <span class="circle-number">1</span>
+            <label for="localidad">Localidad(es):</label>
+        </div>
         <select id="localidad" name="localidad[]" multiple="multiple" style="width: 300px;">
-            {% for localidad in localidades %}
+            {% for localidad in localidades %}                
                 <option value="{{ localidad }}">{{ localidad }}</option>
             {% endfor %}
         </select>
         
-        <label for="titulo">Seleccione Título:</label>
+        <div>
+            <span class="circle-number">2</span>
+            <label for="nivel">Nivel:</label>
+        </div>
+        <select id="nivel" name="nivel" style="width: 300px;">
+            <option value="Secundaria">Secundaria</option>
+            <option value="Superior">Superior</option>
+        </select>
+
+        <div>
+            <span class="circle-number">3</span>
+            <label for="titulo">Título:</label>
+        </div>
         <select id="titulo" name="titulo" style="width: 300px;">
             {% for titulo in titulos %}
                 <option value="{{ titulo }}">{{ titulo }}</option>
             {% endfor %}
         </select>
 
+        <!-- Botones de Filtrar y Limpiar -->
         <button type="submit" class='btn btn-danger'><strong>Filtrar Búsqueda</strong></button>
+        <button type="button" class='btn btn-secondary' id="clear-button"><strong>Limpiar</strong></button>
     </form>
 
     <table id="results-table" class="display responsive nowrap" style="width:100%">
@@ -77,63 +112,110 @@
     <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
     <script>
-    $(document).ready(function() {
-        var dataTableOptions = {
-                responsive: true,
-                autoWidth:false,                
-                language: {
-                        url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
-                    }, 
-        }
-        // Inicializar Select2 para los selectores
-        $('#localidad').select2({
-            placeholder: "Seleccione una o varias localidades",
-            allowClear: true,
-            closeOnSelect: false
-        });
+        $(document).ready(function() {
+            // Inicializar Select2 para los selectores
+            $('#localidad').select2({
+                placeholder: "Seleccione una o varias localidades",
+                allowClear: true,
+                closeOnSelect: false
+            });
+            
+            $('#nivel').select2({
+                placeholder: "Seleccione un nivel",
+                allowClear: true
+            });
 
-        $('#titulo').select2({
-            placeholder: "Seleccione un título",
-            allowClear: true
-        });
+            $('#titulo').select2({
+                placeholder: "Seleccione un título",
+                allowClear: true
+            });
 
-        // Inicializar el DataTable
-        var table = $('#results-table').DataTable(dataTableOptions
-            );
+            // Función para restablecer los selectores a su estado inicial
+            function resetSelects() {
+                $('#localidad').val(null).trigger('change'); // Limpia el selector de localidad
+                $('#nivel').val(null).trigger('change'); // Limpia el selector de nivel
+                $('#titulo').val(null).trigger('change'); // Limpia el selector de título
+            }
 
-        // Manejar el evento submit del formulario
-        $('#filter-form').on('submit', function(e) {
-            e.preventDefault();
+            // Manejar el evento de clic del botón Limpiar
+            $('#clear-button').on('click', function() {
+                resetSelects();
+            });
 
-            var localidades = $('#localidad').val();
-            var titulo = $('#titulo').val();
+            // Función para actualizar los títulos basados en las localidades y el nivel seleccionados
+            function updateTitles() {
+                var localidades = $('#localidad').val();
+                var nivel = $('#nivel').val();
+                
+                $.ajax({
+                    url: "{% url 'reportes:consulta_titulos' %}",
+                    type: 'GET',
+                    data: {
+                        'localidad[]': localidades,
+                        'nivel': nivel
+                    },
+                    success: function(response) {
+                        var titles = response.titulos;
+                        var $titulo = $('#titulo');
 
-            $.ajax({
-                url: "{% url 'reportes:consulta_titulos' %}",
-                type: 'GET',
-                data: {
-                    'localidad[]': localidades,
-                    titulo: titulo
-                },
-                success: function(response) {
-                    // Asegúrate de que la propiedad 'data' existe en la respuesta
+                        $titulo.empty();
+
+                        $.each(titles, function(index, title) {
+                            $titulo.append(new Option(title, title));
+                        });
+
+                        $titulo.trigger('change');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al actualizar los títulos:', status, error);
+                    }
+                });
+            }
+
+            $('#localidad, #nivel').on('change', updateTitles);
+
+            $('#filter-form').on('submit', function(e) {
+                e.preventDefault();
+
+                var localidades = $('#localidad').val();
+                var nivel = $('#nivel').val();
+                var titulo = $('#titulo').val();
+
+                $.ajax({
+                    url: "{% url 'reportes:consulta_titulos' %}",
+                    type: 'GET',
+                    data: {
+                        'localidad[]': localidades,
+                        'nivel': nivel,
+                        'titulo': titulo
+                    },
+                    success: function(response) {
                         table.clear().rows.add(response.data.map(function(item) {
-                            return [
-                                item[0],  // cueanexo
-                                item[1],  // nom_est
-                                item[2],  // sector
-                                item[7],  // localidad
-                                item[8]   // carrera
+                            // Agregar enlace a la primera columna (item[0] - cueanexo)
+                        return [
+                            `<a href="{% url 'reportes:datoscarreras' %}?cueanexo=${item[0]}" class="link-cueanexo">${item[0]}</a>`,
+                                item[1],
+                                item[2],
+                                item[7],
+                                item[8]
                             ];
                         })).draw();
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error al obtener datos:', status, error);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al obtener datos:', status, error);
+                    }
+                });
+            });
+
+            var table = $('#results-table').DataTable({
+                responsive: true,
+                autoWidth: false,                
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json"
                 }
             });
         });
-    });
-</script>
-
+    </script>
 </body>
 {% endblock %}
+

@@ -140,8 +140,8 @@
                 },
                 draw: {
                     polyline: false,
-                    marker: true,
-                    circlemarker: true,
+                    marker: false,
+                    circlemarker: false,
                     circle: true,
                     rectangle: true,
                     polygon: {
@@ -378,7 +378,7 @@
                 });
                 var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     attribution: 'Tiles &copy; Esri',
-                    maxZoom: 8
+                    maxZoom: 25,
                 });
 
                 // Añade las capas al control de capas

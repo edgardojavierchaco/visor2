@@ -1,9 +1,9 @@
 import json
 import psycopg2
-import asyncpg # type: ignore
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.db import connection
 from django.contrib.auth.decorators import login_required
 
 def filtrado(request):    
@@ -25,14 +25,7 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
 
         print("Parámetros de la solicitud:", ambito, sector, localidad, oferta)
 
-        # Conectarse a la base de datos
-        connection = psycopg2.connect(
-            host='visoreducativochaco.com.ar',            
-            user='visualizador',
-            password='Estadisticas24',
-            database='visualizador'
-        )
-
+        
         # Realizar la consulta en la base de datos
         cursor = connection.cursor()
         query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1 "

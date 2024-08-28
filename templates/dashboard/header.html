@@ -70,8 +70,10 @@
                                 <li><a href="{% url 'reportes:filtrado_comesp' %}" class="dropdown-item">Común y Especial</a></li>
                                 <li><a href="{% url 'reportes:filtrado_snu' %}" class="dropdown-item">SNU</a></li>
                             </ul>
-                        </li>                         
+                        </li>            
+                        <li><a href="{% url 'mapas:datos_ofertas' %}" class="dropdown-item">Listado Ofertas Educativas</a></li>              
                         <li><a href="{% url 'reportes:consulta_ofertas' %}" class="dropdown-item">Ofertas</a></li> 
+                        <li><a href="{% url 'reportes:consulta_titulos' %}" class="dropdown-item">Carreras - Títulos</a></li>
                     </ul>
                 </li>                
                  <li class="nav-item dropdown">
@@ -86,15 +88,16 @@
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                         class="nav-link dropdown-toggle">
-                        {% if user.is_authenticated %}
+                        {% comment %} {% if user.is_authenticated %}
                             <i class="fas fa-lock-open" style="color:green"></i>
                         {% else %}
                             <i class="fas fa-lock" style="color:red"></i>
-                        {% endif %}
-                        Archivos
+                        {% endif %} {% endcomment %}
+                        Equipo
                     </a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <script type="text/javascript">
+                        <li><a href="{% url 'reportes:equipo' %}" class="dropdown-item">Departamento Estadísticas</a></li>
+                        {% comment %} <script type="text/javascript">
                             var nivelAcceso = "{{ nivelAcceso }}";
                             console.log("Nivel de acceso del usuario:", nivelAcceso);
                         </script>
@@ -104,7 +107,7 @@
                         {% else %}
                             <li><a href="#" class="dropdown-item disabled">Agregar</a></li>
                             <li><a href="#" class="dropdown-item disabled">Listado</a></li>                                                 
-                        {% endif %}
+                        {% endif %} {% endcomment %}
                     </ul>
                 </li>                
                 {% if user.is_authenticated %}

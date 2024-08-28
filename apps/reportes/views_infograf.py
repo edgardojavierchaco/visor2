@@ -8,3 +8,6 @@ def infografiaview(request):
 
 def infografiaview2(request):
     return render(request, 'reportes/infografia2.html')
+
+def equipoview(request):
+    return render(request, 'equipo.html')

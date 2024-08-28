@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalles de la Carrera</title>
+    <link rel="stylesheet" href="{% static 'lib/boostrap-5.0.2-dist/css/bootstrap.min.css' %}">
+    <style>
+        .modal-header {
+            background-color: #343a40;
+            color: white;
+        }
+        .modal-footer {
+            justify-content: center;
+        }
+        .detalle-item {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .detalle-valor {
+            font-weight: normal;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modal -->
+    <div class="modal fade" id="detallesModal" tabindex="-1" role="dialog" aria-labelledby="detallesModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detallesModalLabel">Detalles de la Carrera</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    {% if resultados %}
+                        {% for resultado in resultados %}
+                            <div class="detalle-item">CUEANEXO: <span class="detalle-valor">{{ resultado.0 }}</span></div>
+                            <div class="detalle-item">Calle: <span class="detalle-valor">{{ resultado.1 }}</span></div>
+                            <div class="detalle-item">Número: <span class="detalle-valor">{{ resultado.2 }}</span></div>
+                            <div class="detalle-item">Teléfono: <span class="detalle-valor">{{ resultado.3 }}</span></div>
+                            <div class="detalle-item">Email: <span class="detalle-valor">{{ resultado.4 }}</span></div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No se encontraron detalles para esta carrera.</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="{% static 'lib/boostrap-5.0.2-dist/js/bootstrap.bundle.min.js' %}"></script>
+    <script>
+        $(document).ready(function() {
+            // Mostrar el modal automáticamente al cargar la página
+            $('#detallesModal').modal('show');
+        });
+    </script>
+</body>
+</html>

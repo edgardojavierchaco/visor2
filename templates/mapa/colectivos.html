@@ -1,0 +1,159 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        #map-container {
+            position: relative;
+        }
+        #map {
+            height: 550px;
+        }
+    </style>
+</head>
+<body>
+    {% block content_header %}
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-sm-6">
+                    <h1 class="m-0 text-dark"></h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dash:portada' %}">Regresar</a></li>                                    
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+    <h2>Ubicación Geográfica de CUE N°: {{cueanexo}} y los cercanos en un radio de: {{radio}} metros</h2>
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js"
+    integrity="sha512-myckXhaJsP7Q7MZva03Tfme/MSF5a6HC2xryjAM4FxPLHGqlh5VALCbywHnzs2uPoF/4G/QVXyYDDSkp5nPfig=="
+    crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script>
+        var map = L.map('map').setView([{{ center_lat }}, {{ center_lng }}], 13);  // Centrar el mapa inicialmente
+        var bounds = L.latLngBounds();
+        var blueMarkers = L.layerGroup(); // Capa para marcadores "blue"
+        var blackMarkers = L.layerGroup(); // Capa para marcadores "black" (colectivos)
+
+        // Configuración del mapa base
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+
+        // Iterar sobre los datos de Cueanexos y agregar al mapa
+        var cueanexoData = JSON.parse('{{ cueanexo_data|escapejs }}');
+        for (var i = 0; i < cueanexoData.length; i++) {
+            var lat = cueanexoData[i][1];
+            var lng = cueanexoData[i][2];
+            var cueanexoMarker = cueanexoData[i][0];
+            var nom_est = cueanexoData[i][3];
+            var oferta = cueanexoData[i][4];
+            var ambito = cueanexoData[i][5];
+            var sector = cueanexoData[i][6];
+            var region_loc = cueanexoData[i][7];
+            var calle = cueanexoData[i][8];
+            var numero = cueanexoData[i][9];
+            var localidad = cueanexoData[i][10];
+            var markerColor = 'blue';
+            console.log(lat, lng)
+            if (lat !== 0 && lng !== '') {
+                var markerIcon = L.icon({
+                    iconUrl: "{% static 'img/marker-icon-2x-' %}" + markerColor + ".png",
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                });
+
+                var marker = L.marker([lat, lng], { icon: markerIcon });
+                marker.bindPopup(
+                    '<strong>Cueanexo:</strong> ' + cueanexoMarker + '<br>' +
+                    '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
+                    '<strong>Ofertas:</strong> ' + oferta + '<br>' +
+                    '<strong>Ámbito:</strong> ' + ambito + '<br>' +
+                    '<strong>Sector:</strong> ' + sector + '<br>' +
+                    '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
+                    '<strong>Calle:</strong> ' + calle + ' ' +
+                    '<strong>Nro:</strong> ' + numero + ' - ' + localidad + '<br>'
+                );
+                blueMarkers.addLayer(marker);
+                bounds.extend(marker.getLatLng());
+            }
+        }
+
+        // Iterar sobre los datos de Colectivos y agregar al mapa
+        var colectivosData = JSON.parse('{{ colectivos_data|escapejs }}');
+        for (var i = 0; i < colectivosData.length; i++) {
+            var lat = colectivosData[i][2];
+            var lng = colectivosData[i][3];
+            var codigo = colectivosData[i][0];
+            var direccion = colectivosData[i][1];
+            var lineas = colectivosData[i][4];
+            var markerColor = 'black';
+
+            if (lat !== 0 && lng !== '') {
+                var markerIcon = L.icon({
+                    iconUrl: "{% static 'img/marker-icon-2x-' %}" + markerColor + ".png",
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                });
+
+                var marker = L.marker([lat, lng], { icon: markerIcon });
+                marker.bindPopup(
+                    '<strong>Código:</strong> ' + codigo + '<br>' +
+                    '<strong>Dirección:</strong> ' + direccion + '<br>' +
+                    '<strong>Líneas:</strong> ' + lineas + '<br>'
+                );
+                blackMarkers.addLayer(marker);
+                bounds.extend(marker.getLatLng());
+            }
+        }
+
+        map.addLayer(blueMarkers); // Agregar la capa de marcadores "blue" al mapa
+        map.addLayer(blackMarkers); // Agregar la capa de marcadores "black" al mapa (colectivos)
+        map.fitBounds(bounds);
+
+        // Añadir control de capas
+        L.control.layers(null, {
+            "Cue buscado": blueMarkers,
+            "Colectivos": blackMarkers // Nueva capa para colectivos
+        }).addTo(map);
+
+        // Añadir círculo de radio
+        var center_lat = parseFloat('{{ center_lat }}'.replace(',', '.'));
+        var center_lng = parseFloat('{{ center_lng }}'.replace(',', '.'));
+        var radio = parseInt('{{ radio }}');
+
+        L.circle([center_lat, center_lng], {
+            color: 'red',
+            fillColor: 'red',
+            fillOpacity: 0.2,
+            radius: radio
+        }).addTo(map);
+    </script>
+</body>
+{% endblock %}

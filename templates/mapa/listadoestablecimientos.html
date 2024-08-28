@@ -1,0 +1,91 @@
+{% extends "dashboard/body.html" %}
+
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %} 
+
+{% block content %}
+    <div class="container">
+        <h2>Listado de Ofertas Educativas</h2>
+        <table class="table" id="data">
+            <thead>
+                <tr>
+                    <th>
+                        <input type="radio" name="columnFilter" value="0"> Cueanexo
+                    </th>
+                    <th>
+                        <input type="radio" name="columnFilter" value="1"> Nombre Establecimiento
+                    </th>
+                    <th>
+                        <input type="radio" name="columnFilter" value="2"> Oferta
+                    </th>
+                    <th>
+                        <input type="radio" name="columnFilter" value="3"> Ámbito
+                    </th>
+                    <th>
+                        <input type="radio" name="columnFilter" value="4"> Sector
+                    </th>
+                    <th>
+                        <input type="radio" name="columnFilter" value="5"> Localidad
+                    </th>
+                </tr>
+            </thead>
+                
+            <tbody>
+                {% for item in datosofertas %}
+                    <tr>
+                        <td><a href="#" onclick="filterTable('{{ item.cueanexo }}', '{{ item.oferta }}')">{{ item.cueanexo }}</a></td>
+                        <td>{{ item.nom_est }}</td>
+                        <td>{{ item.oferta }}</td> 
+                        <td>{{ item.ambito }}</td> 
+                        <td>{{ item.sector }}</td>   
+                        <td>{{ item.localidad }}</td>                                                      
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+
+{% block javascript %}    
+    <script>
+        function filterTable(cueanexo, oferta) {
+            // Redireccionar a la nueva página y pasar los parámetros 'cueanexo' y 'oferta' en la URL
+            window.location.href = '/map/listados/?cueanexo=' + cueanexo + '&oferta=' + oferta;
+            console.log("Cueanexo:", cueanexo, "Oferta:", oferta);
+        }
+    </script>
+    <script type="application/javascript">
+        $(document).ready(function() {
+            var table = $('#data').DataTable({
+                responsive: true,
+                autoWidth: false,
+                paging: true,  
+                searching: true, 
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-ES.json'
+                }
+            });
+
+            // Filtro basado en la selección del radio button
+            $('input[name="columnFilter"]').on('change', function() {
+                var colIndex = $(this).val();
+                $('#data_filter input').off().on('input', function() {
+                    table.columns().search('');  // Limpia cualquier búsqueda previa
+                    table.column(colIndex).search(this.value).draw();
+                });
+            });
+
+            // Seleccionar la primera columna por defecto
+            $('input[name="columnFilter"][value="0"]').prop('checked', true).trigger('change');
+        });
+    </script>
+{% endblock %}

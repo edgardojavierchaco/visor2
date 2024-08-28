@@ -26,6 +26,8 @@ urlpatterns=[
     path('info2/',views_infograf.infografiaview2,name='info2'),
     path('consulta_ofertas/',views_listados.consulta_ofertas,name='consulta_ofertas'),    
     path('consulta_titulos/', views_carrerastitulos.consulta_carrerastitulos, name='consulta_titulos'),
+    path('equipo/', views_infograf.equipoview,name='equipo'),
+    path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),
 ]
 
 
