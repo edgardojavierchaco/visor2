@@ -49,7 +49,7 @@
                     {% endif %}
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    <button type="button" id="cerrarBtn" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
@@ -61,6 +61,12 @@
         $(document).ready(function() {
             // Mostrar el modal automáticamente al cargar la página
             $('#detallesModal').modal('show');
+        });
+    </script>
+    <script>
+        document.getElementById("cerrarBtn").addEventListener("click", function(event) {
+            event.preventDefault();
+            window.history.go(-1);
         });
     </script>
 </body>

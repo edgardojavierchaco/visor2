@@ -1,5 +1,8 @@
 from django.db import models
 from apps.usuarios.models import UsuariosVisualizador
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
+import re
 
 class CeicPuntos(models.Model):
     nivel = models.CharField(max_length=255, verbose_name='Nivel')
@@ -262,31 +265,32 @@ class Trayectoria_Ocupacional(models.Model):
 
 
 class Datos_Personal_Cenpe(models.Model):
-    usuario = models.CharField(max_length=11, verbose_name='usuario')
+    usuario =models.OneToOneField(UsuariosVisualizador, on_delete=models.CASCADE, verbose_name='Usuario') 
     apellidos = models.CharField(max_length=255, null=False, blank=False, verbose_name='Apellidos')
     nombres = models.CharField(max_length=255, null=False, blank=False, verbose_name='Nombres')
     pais_nac = models.ForeignKey(pais,on_delete=models.CASCADE, verbose_name='País Nacimiento')
     nacionalidad = models.ForeignKey(nacionalidad,on_delete=models.CASCADE, verbose_name='Nacionalidad')
-    cuil = models.CharField(max_length=11, null=False, blank=False, verbose_name='Cuil')
     t_doc=models.ForeignKey(documento_tipo,on_delete=models.CASCADE, verbose_name='Tipo Documento')
-    dni = models.CharField(max_length=9, null=False, blank=False, verbose_name='Documento N°')
+    dni = models.CharField(max_length=8, null=False, blank=False, verbose_name='Documento N°')
+    cuil = models.CharField(max_length=11, null=False, blank=False, verbose_name='Cuil')    
     sexo = models.ForeignKey(sexo_tipo,on_delete=models.CASCADE, verbose_name='Sexo')
     estado_civil = models.ForeignKey(Estado_Civil_Cenpe,on_delete=models.CASCADE, verbose_name='Estado Civil')
-    nivel_form = models.ForeignKey(Nivel_Formacion_Cenpe,on_delete=models.CASCADE, verbose_name='Nivel Formación')
-    telfijo = models.CharField(max_length=20, null=True, blank=True, verbose_name='Teléfono Fijo')
-    celular = models.CharField(max_length=20, null=False, blank=False, verbose_name='Teléfono Móvil')
-    prov_nac = models.ForeignKey(provincia_tipo, related_name='provincia_nacimiento', on_delete=models.CASCADE, verbose_name='Prov Nacimiento')
-    loc_nac = models.ForeignKey(localidad_tipo,related_name='localidad_nacimiento', on_delete=models.CASCADE, verbose_name='Localidad Nacimiento')
+    nivel_form = models.ForeignKey(Nivel_Formacion_Cenpe,on_delete=models.CASCADE, verbose_name='Nivel Formación')    
+    telfijo = models.CharField(max_length=10, null=True, blank=True, verbose_name='Teléfono Fijo')
+    celular = models.CharField(max_length=10, null=False, blank=False, verbose_name='Teléfono Móvil')
+    prov_nac = models.CharField(max_length=150, null=False, blank=False, verbose_name='Provincia Nacimiento')
+    loc_nac = models.CharField(max_length=150, null=False, blank=False, verbose_name='Ciudad Nacimiento')
     f_nac = models.DateField(verbose_name='Fecha de Nacimiento')
-    prov_resid = models.ForeignKey(provincia_tipo,on_delete=models.CASCADE, verbose_name='Prov Residencia')
-    loc_resid = models.ForeignKey(localidad_tipo,on_delete=models.CASCADE, verbose_name='Localidad Residencia')
+    prov_resid = models.CharField(max_length=150, null=False, blank=False, verbose_name='Provincia Residencia')
+    loc_resid = models.CharField(max_length=150, null=False, blank=False, verbose_name='Localidad Residencia')
     calle = models.CharField(max_length=255, null=True, blank=True, verbose_name='Calle')
     nro = models.CharField(max_length=8, null=True, blank=True, verbose_name='Número')
     mz = models.CharField(max_length=8, null=True, blank=True, verbose_name='Manzana')
-    pc = models.CharField(max_length=8, null=True, blank=True, verbose_name='Pc')
+    pc = models.CharField(max_length=8, null=True, blank=True, verbose_name='Parcela')
     casa = models.CharField(max_length=8, null=True, blank=True, verbose_name='Casa')
     piso = models.CharField(max_length=8, null=True, blank=True, verbose_name='Piso')
     uf = models.CharField(max_length=8, null=True, blank=True, verbose_name='UF')
+    barrio = models.CharField(max_length=255, null=True, blank=True, verbose_name='Barrio')
 
     class Meta:
         verbose_name = 'Personal Cenpe'
@@ -296,10 +300,47 @@ class Datos_Personal_Cenpe(models.Model):
 
     def __str__(self):
         return f'{self.cuil}: {self.apellidos} {self.nombres}'
+    
+    def clean(self):
+        # Validar que apellidos y nombres solo contengan letras, tildes, apostrofes y estén en mayúsculas
+        allowed_chars = re.compile(r"^[A-ZÁÉÍÓÚÑ' ]+$")
+
+        for field_name in ['apellidos', 'nombres']:
+            value = getattr(self, field_name)
+            if not allowed_chars.match(value):
+                raise ValidationError({field_name: _('Solo se permiten letras mayúsculas, espacios, tildes y apóstrofes.')})
+
+        # Validar que CUIL comience con 20, 27, 23 o 24
+        if not re.match(r'^(20|27|23|24)\d{9}$', self.cuil):
+            raise ValidationError({'cuil': _('El CUIL debe comenzar con 20, 27, 23 o 24 y contener 11 dígitos.')})
+
+        # Validar que los dígitos de CUIL coincidan con el DNI
+        if self.dni and self.cuil:
+            if self.cuil[2:10] != self.dni.zfill(8):
+                raise ValidationError({'cuil': _('Los dígitos del CUIL deben coincidir con el DNI.')})
+
+        # Convertir calle y barrio a mayúsculas y permitir solo tildes y apóstrofes
+        allowed_address_chars = re.compile(r"^[A-ZÁÉÍÓÚÑ' ]*$")
+
+        for field_name in ['calle', 'barrio']:
+            value = getattr(self, field_name)
+            if value and not allowed_address_chars.match(value.upper()):
+                raise ValidationError({field_name: _('Solo se permiten letras mayúsculas, espacios, tildes y apóstrofes.')})
+
 
     def save(self, *args, **kwargs):
+        # Convertir apellidos, nombres, calle y barrio a mayúsculas
+        self.apellidos = self.apellidos.upper()
+        self.nombres = self.nombres.upper()
+        if self.calle:
+            self.calle = self.calle.upper()
+        if self.barrio:
+            self.barrio = self.barrio.upper()
         if not self.usuario and 'UsuariosVisualizador' in kwargs:
             self.usuario = kwargs.pop('UsuariosVisualizador')
+        
+        # Realizar la limpieza y validaciones
+        self.full_clean()
         super().save(*args, **kwargs)
         
 
@@ -308,9 +349,8 @@ class Academica_Cenpe(models.Model):
     titulo=models.CharField(max_length=255, null=False, blank=False, verbose_name='Nombre Título')
     tipo_form=models.ForeignKey(Tipo_Formacion_Cenpe,on_delete=models.CASCADE, verbose_name='Tipo Formación')
     nivel_form=models.ForeignKey(Nivel_Formacion_Cenpe,on_delete=models.CASCADE, verbose_name='Nivel Formación')
-    tipo_inst=models.ForeignKey(Tipo_Institucion_Cenpe,on_delete=models.CASCADE, verbose_name='Tipo Gestión')
-    gestion_inst=models.ForeignKey(Gestion_Institucion_Cenpe,on_delete=models.CASCADE, verbose_name='Tipo Gestión')
-    estado_tit=models.ForeignKey(Estado_Titulo_Cenpe,on_delete=models.CASCADE, verbose_name='Estado Titulación')
+    tipo_inst=models.ForeignKey(Tipo_Institucion_Cenpe,on_delete=models.CASCADE, verbose_name='Tipo Institución')
+    gestion_inst=models.ForeignKey(Gestion_Institucion_Cenpe,on_delete=models.CASCADE, verbose_name='Tipo Gestión')    
     reg_nro=models.CharField(max_length=100, null=True, blank=True, verbose_name='Registro N°')
     f_egreso=models.DateField(verbose_name='Fecha egreso')
 
@@ -328,4 +368,42 @@ class Academica_Cenpe(models.Model):
             self.usuario = kwargs.pop('user')
         super().save(*args, **kwargs)
 
+
+class SituacionRevista(models.Model):
+    sit_rev=models.CharField(max_length=100, null=False, blank=False, verbose_name='Situación Revista')
+    
+    class Meta:
+        verbose_name = 'Situacion Revista'
+        verbose_name_plural = 'Situaciones Revistas'
+        db_table = 'situacion_revista'
+        managed = True
+        
+    def __str__(self):
+        return self.sit_rev
+
+
+class funciones(models.Model):
+    funcion=models.CharField(max_length=100, verbose_name='funcion')
+    
+    class Meta:
+        verbose_name = 'Funcion'
+        verbose_name_plural = 'Funciones'
+        db_table = 'funciones'
+        managed = True
+        
+    def __str__(self):
+        return self.funcion
+
+class condicionactividad(models.Model):
+    cond_act=models.CharField(max_length=255, verbose_name='Condición Actividad')
+    
+    class Meta:
+        verbose_name = 'Condicion Actividad'
+        verbose_name_plural = 'Condiciones Actividades'
+        db_table = 'condicion_actividad'
+        managed = True
+        
+    def __str__(self):
+        return self.cond_act
+    
 
