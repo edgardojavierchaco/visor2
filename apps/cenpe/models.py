@@ -3,6 +3,7 @@ from apps.usuarios.models import UsuariosVisualizador
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 import re
+from datetime import date
 
 class CeicPuntos(models.Model):
     nivel = models.CharField(max_length=255, verbose_name='Nivel')
@@ -407,3 +408,18 @@ class condicionactividad(models.Model):
         return self.cond_act
     
 
+class CargosHoras_Cenpe(models.Model):
+    usuario =models.OneToOneField(UsuariosVisualizador, on_delete=models.CASCADE, verbose_name='Usuario') 
+    cueanexo=models.CharField(max_length=9, null=False, blank=False, verbose_name='Cueanexo')
+    nivel_cargohora=models.ForeignKey(Nivel_Sistema, on_delete=models.CASCADE, verbose_name='Nivel_Cargo_Hora')
+    cargos_horas=models.ForeignKey(CeicPuntos, on_delete=models.CASCADE, verbose_name='Cargos_Horas')
+    cant_horas=models.SmallIntegerField(default=0, verbose_name='Cantidad_Horas')
+    situacion_revista=models.ForeignKey(SituacionRevista, on_delete=models.CASCADE, verbose_name='Situacion_Revista')
+    funciones=models.ForeignKey(funciones, on_delete=models.CASCADE, verbose_name='Función')
+    condicion_actividad=models.ForeignKey(condicionactividad, on_delete=models.CASCADE, verbose_name='Condición')
+    fecha_desde=models.DateField(verbose_name='Fecha_desde')
+    fecha_hasta=models.DateField(default=date(2060,12,31), verbose_name='Fecha_hasta')
+    
+    
+    def __str__(self):
+        return f"{self.usuario}-{self.cueanexo}: {self.cargos_horas}"

@@ -51,6 +51,15 @@
         button:hover {
             background-color: #45a049;
         }
+
+        .highlighted-paragraph {
+            background-color: #f0f8ff; /* Color de fondo */
+            border: 1px solid #ccc; /* Borde del recuadro */
+            padding: 15px; /* Espacio interno del recuadro */
+            border-radius: 5px; /* Bordes redondeados */
+            margin-bottom: 20px; /* Espacio debajo del párrafo */
+            weight: bold;
+        }
     </style>
     <!-- Asegúrate de cargar jQuery antes que Select2 -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> <!-- jQuery -->
@@ -61,6 +70,9 @@
 </head>
 <body>
     <h1>Datos Personales ReNPEE</h1>
+    <p class="highlighted-paragraph">
+        Declaro bajo juramento que todos los datos consignados son veraces. Asimismo, me notifico que cualquier falsedad u omisión dará motivo a las sanciones disciplinarias previstas.
+    </p>
     <form method="post">
         {% csrf_token %}
         <table>

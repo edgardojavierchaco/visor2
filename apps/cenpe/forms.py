@@ -1,9 +1,29 @@
 from django import forms
-from .models import Datos_Personal_Cenpe, Gestion_Institucion_Cenpe, Nivel_Formacion_Cenpe, Tipo_Formacion_Cenpe, Tipo_Institucion_Cenpe, nacionalidad, provincia_tipo, localidad_tipo, pais, Academica_Cenpe
+from .models import Datos_Personal_Cenpe, Estado_Civil_Cenpe, Gestion_Institucion_Cenpe, Nivel_Formacion_Cenpe, Tipo_Formacion_Cenpe, Tipo_Institucion_Cenpe, documento_tipo, nacionalidad, provincia_tipo, localidad_tipo, pais, Academica_Cenpe, sexo_tipo
 import re
 
 class DatosPersonalCenpeForm(forms.ModelForm):
-    pais_nac = prov_nac = forms.ModelChoiceField(
+    apellidos = forms.CharField(
+        max_length=255,
+        min_length=1,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El apellido no puede tener más de 255 caracteres.',
+        'min_length': 'El apellido debe tener al menos 1 caracter.'
+        }
+    )
+    
+    nombres = forms.CharField(
+        max_length=255,
+        min_length=1,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El apellido no puede tener más de 255 caracteres.',
+        'min_length': 'El apellido debe tener al menos 1 caracter.'
+        }
+    )
+    
+    pais_nac = forms.ModelChoiceField(
         queryset=pais.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control select2'})
     )
@@ -11,6 +31,69 @@ class DatosPersonalCenpeForm(forms.ModelForm):
     nacionalidad = forms.ModelChoiceField(
         queryset=nacionalidad.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    
+    t_doc = forms.ModelChoiceField(
+        queryset=documento_tipo.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    
+    dni = forms.CharField(
+        max_length=8,
+        min_length=7,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El apellido no puede tener más de 8 dígitos.',
+        'min_length': 'El apellido debe tener al menos 7 dígitos.'
+        }
+    )
+    
+    cuil = forms.CharField(
+        max_length=11,
+        min_length=10,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El apellido no puede tener más de 11 dígitos.',
+        'min_length': 'El apellido debe tener al menos 10 dígitos.'
+        }
+    )
+    
+    sexo = forms.ModelChoiceField(
+        queryset=sexo_tipo.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    
+    estado_civil = forms.ModelChoiceField(
+        queryset=Estado_Civil_Cenpe.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    
+    nivel_form = forms.ModelChoiceField(
+        queryset=Nivel_Formacion_Cenpe.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control select2'}),
+        help_text='Seleccionar máximo Nivel de Formación Alcanzado',
+    )
+    
+    telfijo = forms.CharField(
+        max_length=10,
+        min_length=10,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El número de teléfono debe contener 10 dígitos sin anteponer 0 al código de área.',
+        'min_length': 'El número de teléfono debe contener 10 dígitos sin anteponer 0 al código de área.'
+        },
+        help_text='Ej.: 3624123456',
+    )
+    
+    celular = forms.CharField(
+        max_length=10,
+        min_length=10,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El número de teléfono debe contener 10 dígitos sin anteponer 0 al código de área.',
+        'min_length': 'El número de teléfono debe contener 10 dígitos sin anteponer 0 al código de área.'
+        },
+        help_text='Ej.: 3734123456',
     )
     
     prov_nac = forms.ModelChoiceField(
@@ -28,9 +111,45 @@ class DatosPersonalCenpeForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control select2'})  # Select2 para loc_nac
     )
     
+    f_nac = forms.DateField(
+    widget=forms.DateInput(attrs={'class': 'form-control select2', 'type': 'date'})
+    )
+    
     loc_resid = forms.ModelChoiceField(
         queryset=localidad_tipo.objects.none(),  # Inicialmente vacío
         widget=forms.Select(attrs={'class': 'form-control select2'})  # Select2 para loc_resid
+    )
+    
+    calle = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    nro = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    mz = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    pc = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    casa = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    piso = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    uf = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
+    )
+    
+    barrio = forms.CharField(                
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),        
     )
 
     class Meta:
@@ -44,6 +163,7 @@ class DatosPersonalCenpeForm(forms.ModelForm):
             'cuil': 'Ej. 20123456781',
             'telfijo': 'Ej. 3624412345',
             'celular': 'Ej. 3734412345',
+            'nivel_form': 'Seleccionar máximo Nivel de Formación.',
         }
 
     def __init__(self, *args, **kwargs):
@@ -90,6 +210,16 @@ class DatosPersonalCenpeForm(forms.ModelForm):
 
 
 class DatosAcademicosCenpeForm(forms.ModelForm):
+    titulo = forms.CharField (
+        max_length=255,
+        min_length=1,        
+        widget=forms.TextInput (attrs={'class': 'form-control select2'}),
+        error_messages={
+        'max_length': 'El título no puede tener más de 255 caracteres.',
+        'min_length': 'El título debe tener al menos 1 caracter.'
+    }
+    )
+    
     tipo_form = forms.ModelChoiceField(
         queryset=Tipo_Formacion_Cenpe.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control select2'})
@@ -109,6 +239,15 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
         queryset=Gestion_Institucion_Cenpe.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control select2'})
     )
+    
+    reg_nro = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control select2'})
+    )
+    
+    f_egreso = forms.DateField(
+    widget=forms.DateInput(attrs={'class': 'form-control select2', 'type': 'date'})
+    )
+
 
     class Meta:
         model = Academica_Cenpe  # Nombre correcto del modelo
