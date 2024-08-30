@@ -51,7 +51,14 @@
                             <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                class="dropdown-item dropdown-toggle">Resultados</a>
                             <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'lectocomprension:grafico_reg' %}" class="dropdown-item">Mayo-2024</a></li>
+                                <li class="dropdown-submenu">
+                                    <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                       class="dropdown-item dropdown-toggle">Mayo-2024</a>
+                                    <ul aria-labelledby="dropdownSubMenu3" class="dropdown-menu border-0 shadow">                                        
+                                        <li><a href="{% url 'lectocomprension:cargar_graficoreg' %}" class="dropdown-item">Por Regional</a></li> 
+                                        <li><a href="{% url 'lectocomprension:cargar_graficoloc' %}" class="dropdown-item">Por Localidad</a></li>                               
+                                    </ul>
+                                </li>                                
                                 <li class="dropdown-submenu">
                                     <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                        class="dropdown-item dropdown-toggle">Noviembre-2024</a>
