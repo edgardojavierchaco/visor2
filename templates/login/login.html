@@ -7,12 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login y Register</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="{% static 'lib/sweetalert2/sweetalert2.all.min.js' %}"></script>
 
     <style>
-        *{
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -20,7 +20,7 @@
             font-family: 'Roboto', sans-serif;
         }
 
-        body{
+        body {
             background-image: url("{% static 'img/bg4.jpg' %}");
             background-size: cover;
             background-repeat: no-repeat;
@@ -28,21 +28,21 @@
             background-attachment: fixed;
         }
 
-        main{
+        main {
             width: 100%;
             padding: 20px;
             margin: auto;
             margin-top: 100px;
         }
 
-        .contenedor__todo{
+        .contenedor__todo {
             width: 100%;
             max-width: 800px;
             margin: auto;
             position: relative;
         }
 
-        .caja__trasera{
+        .caja__trasera {
             width: 100%;
             padding: 10px 20px;
             display: flex;
@@ -52,28 +52,28 @@
             background-color: rgba(0, 128, 255, 0.5);
         }
 
-        .caja__trasera div{
+        .caja__trasera div {
             margin: 100px 40px;
             color: white;
             transition: all 500ms;
         }
 
         .caja__trasera div p,
-        .caja__trasera button{
+        .caja__trasera button {
             margin-top: 30px;
         }
 
-        .caja__trasera div h3{
+        .caja__trasera div h3 {
             font-weight: 400;
             font-size: 26px;
         }
 
-        .caja__trasera div p{
+        .caja__trasera div p {
             font-size: 16px;
             font-weight: 300;
         }
 
-        .caja__trasera button{
+        .caja__trasera button {
             padding: 10px 40px;
             border: 2px solid #fff;
             font-size: 14px;
@@ -85,13 +85,13 @@
             transition: all 300ms;
         }
 
-        .caja__trasera button:hover{
+        .caja__trasera button:hover {
             background: #fff;
             color: #46A2FD;
         }
 
         /* Formularios */
-        .contenedor__login-register{
+        .contenedor__login-register {
             display: flex;
             align-items: center;
             width: 100%;
@@ -99,12 +99,10 @@
             position: relative;
             top: -185px;
             left: 10px;
-
-            /* La transicion va despues del codigo JS */
             transition: left 500ms cubic-bezier(0.175, 0.885, 0.320, 1.275);
         }
 
-        .contenedor__login-register form{
+        .contenedor__login-register form {
             width: 100%;
             padding: 80px 20px;
             background: white;
@@ -112,14 +110,14 @@
             border-radius: 20px;
         }
 
-        .contenedor__login-register form h2{
+        .contenedor__login-register form h2 {
             font-size: 30px;
             text-align: center;
             margin-bottom: 20px;
             color: #46A2FD;
         }
 
-        .contenedor__login-register form input{
+        .contenedor__login-register form input {
             width: 100%;
             margin-top: 20px;
             padding: 10px;
@@ -129,7 +127,7 @@
             outline: none;
         }
 
-        .contenedor__login-register form button{
+        .contenedor__login-register form button {
             padding: 10px 40px;
             margin-top: 40px;
             border: none;
@@ -141,39 +139,39 @@
             outline: none;
         }
 
-        .formulario__login{
+        .formulario__login {
             opacity: 1;
             display: block;
         }
-        .formulario__register{
+        .formulario__register {
             display: none;
         }
 
-        @media screen and (max-width: 850px){
-            main{
+        @media screen and (max-width: 850px) {
+            main {
                 margin-top: 50px;
             }
 
-            .caja__trasera{
+            .caja__trasera {
                 max-width: 350px;
                 height: 300px;
                 flex-direction: column;
                 margin: auto;
             }
 
-            .caja__trasera div{
+            .caja__trasera div {
                 margin: 0px;
                 position: absolute;
             }
 
             /* Formularios */
-            .contenedor__login-register{
+            .contenedor__login-register {
                 top: -10px;
                 left: -5px;
                 margin: auto;
             }
 
-            .contenedor__login-register form{
+            .contenedor__login-register form {
                 position: relative;
             }
         }
@@ -206,11 +204,7 @@
                 {{ form.username|append_attr:"class:input" }}
                 {{ form.password|append_attr:"class:input" }}
                 <button id="login-button" type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Entrar</button>
-                
-                {% comment %} <p class="text-center mt-2" style="font-size: 13px;">
-                    Si no recuerdas tu contraseña puedes resetearla dando click <a href="{% url 'usuarios:reset_password' %}">aquí</a>
-                </p> {% endcomment %}
-                </form>
+            </form>
 
             <!-- Register -->
             <form action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
@@ -235,33 +229,16 @@
     document.getElementById("btn__registrarse").addEventListener("click", register);
     window.addEventListener("resize", anchoPage);
 
-    // Agregar SweetAlert si el usuario o la contraseña son incorrectos
-    {% if form.errors %}
-        var errors = '';
-        {% for field, errors in form.errors.items %}
-            {% for error in errors %}
-                errors += '{{ error }}\n';
-            {% endfor %}
-        {% endfor %}
-        Swal.fire({
-            title: 'Error!',
-            text: errors,
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-        });
-    {% endif %}
-
-    // Declarando variables
+    // Declarar las variables de los formularios y otros elementos
     var formulario_login = document.querySelector(".formulario__login");
     var formulario_register = document.querySelector(".formulario__register");
     var contenedor_login_register = document.querySelector(".contenedor__login-register");
     var caja_trasera_login = document.querySelector(".caja__trasera-login");
     var caja_trasera_register = document.querySelector(".caja__trasera-register");
 
-    // FUNCIONES
-
-    function anchoPage(){
-        if (window.innerWidth > 850){
+    // Función para manejar el ancho de la página
+    function anchoPage() {
+        if (window.innerWidth > 850) {
             caja_trasera_register.style.display = "block";
             caja_trasera_login.style.display = "block";
         } else {
@@ -276,8 +253,8 @@
 
     anchoPage();
 
-    function iniciarSesion(){
-        if (window.innerWidth > 850){
+    function iniciarSesion() {
+        if (window.innerWidth > 850) {
             formulario_login.style.display = "block";
             contenedor_login_register.style.left = "10px";
             formulario_register.style.display = "none";
@@ -292,8 +269,8 @@
         }
     }
 
-    function register(){
-        if (window.innerWidth > 850){
+    function register() {
+        if (window.innerWidth > 850) {
             formulario_register.style.display = "block";
             contenedor_login_register.style.left = "410px";
             formulario_login.style.display = "none";
@@ -305,37 +282,24 @@
             formulario_login.style.display = "none";
             caja_trasera_register.style.display = "none";
             caja_trasera_login.style.display = "block";
-            caja_trasera_login.style.opacity = "1";
         }
     }
 
-    document.getElementById('login-form').addEventListener('submit', function(event) {
-        event.preventDefault(); // Evita el envío del formulario
+    // Validación de 'username' cuando 'nivelacceso' es 'Director/a'
+    document.querySelector('[name="nivelacceso"]').addEventListener('change', function() {
+        var nivelAcceso = this.value;
         var username = document.querySelector('[name="username"]').value;
-        fetch("{% url 'usuarios:check_user_status' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({username: username})
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.is_staff) {
-                Swal.fire({
-                    title: 'Advertencia',
-                    text: 'Tu cuenta está pendiente de validación. Por favor, espera a que se le valide el acceso.',
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido'
-                });
-            } else {
-                document.getElementById('login-form').submit(); // Envía el formulario si el usuario tiene permisos
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    });
 
+        // Verificar si el nivel de acceso es 'Director/a' y si el username no cumple con los requisitos
+        if (nivelAcceso === 'Director/a' && (!/^(22\d{7})$/.test(username))) {
+            Swal.fire({
+                title: 'Error',
+                text: 'El username debe tener nueve dígitos y comenzar con "22. Es el CUEANEXO de su Escuela".',
+                icon: 'error',
+                confirmButtonText: 'Aceptar'
+            });
+        }
+    });
 </script> 
 </body>
 </html>

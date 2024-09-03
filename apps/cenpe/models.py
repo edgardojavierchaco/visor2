@@ -266,7 +266,7 @@ class Trayectoria_Ocupacional(models.Model):
 
 
 class Datos_Personal_Cenpe(models.Model):
-    usuario =models.OneToOneField(UsuariosVisualizador, on_delete=models.CASCADE, verbose_name='Usuario') 
+    usuario =models.CharField(max_length=9,verbose_name='Usuario') 
     apellidos = models.CharField(max_length=255, null=False, blank=False, verbose_name='Apellidos')
     nombres = models.CharField(max_length=255, null=False, blank=False, verbose_name='Nombres')
     pais_nac = models.ForeignKey(pais,on_delete=models.CASCADE, verbose_name='País Nacimiento')
@@ -292,6 +292,7 @@ class Datos_Personal_Cenpe(models.Model):
     piso = models.CharField(max_length=8, null=True, blank=True, verbose_name='Piso')
     uf = models.CharField(max_length=8, null=True, blank=True, verbose_name='UF')
     barrio = models.CharField(max_length=255, null=True, blank=True, verbose_name='Barrio')
+    id_jurisdiccional=models.BigIntegerField(null=True, blank=True, verbose_name='Id_jurisdiccional')
 
     class Meta:
         verbose_name = 'Personal Cenpe'
@@ -331,14 +332,19 @@ class Datos_Personal_Cenpe(models.Model):
 
     def save(self, *args, **kwargs):
         # Convertir apellidos, nombres, calle y barrio a mayúsculas
-        self.apellidos = self.apellidos.upper()
-        self.nombres = self.nombres.upper()
+        if not self.pk:  # Solo cargar los datos automáticamente cuando se crea el objeto
+            user = kwargs.pop('user', None)
+            if user:
+                self.usuario = user.username                
         if self.calle:
             self.calle = self.calle.upper()
         if self.barrio:
             self.barrio = self.barrio.upper()
         if not self.usuario and 'UsuariosVisualizador' in kwargs:
             self.usuario = kwargs.pop('UsuariosVisualizador')
+        self.id_jurisdiccional = int(
+            f"22{self.cuil}"
+        )
         
         # Realizar la limpieza y validaciones
         self.full_clean()
@@ -346,7 +352,7 @@ class Datos_Personal_Cenpe(models.Model):
         
 
 class Academica_Cenpe(models.Model):
-    usuario = models.OneToOneField(UsuariosVisualizador, on_delete=models.CASCADE, verbose_name='Usuario')
+    usuario = models.CharField(max_length=9, verbose_name='Usuario')
     titulo=models.CharField(max_length=255, null=False, blank=False, verbose_name='Nombre Título')
     tipo_form=models.ForeignKey(Tipo_Formacion_Cenpe,on_delete=models.CASCADE, verbose_name='Tipo Formación')
     nivel_form=models.ForeignKey(Nivel_Formacion_Cenpe,on_delete=models.CASCADE, verbose_name='Nivel Formación')
@@ -365,8 +371,13 @@ class Academica_Cenpe(models.Model):
         return self.titulo
 
     def save(self, *args, **kwargs):
-        if not self.usuario and 'user' in kwargs:
-            self.usuario = kwargs.pop('user')
+        if not self.pk:  # Solo cargar los datos automáticamente cuando se crea el objeto
+            user = kwargs.pop('user', None)
+            if user:
+                self.usuario = user.username                
+        
+        if not self.usuario and 'UsuariosVisualizador' in kwargs:
+            self.usuario = kwargs.pop('UsuariosVisualizador')
         super().save(*args, **kwargs)
 
 
@@ -402,24 +413,100 @@ class condicionactividad(models.Model):
         verbose_name = 'Condicion Actividad'
         verbose_name_plural = 'Condiciones Actividades'
         db_table = 'condicion_actividad'
+        ordering=['cond_act']
         managed = True
         
     def __str__(self):
         return self.cond_act
-    
 
-class CargosHoras_Cenpe(models.Model):
-    usuario =models.OneToOneField(UsuariosVisualizador, on_delete=models.CASCADE, verbose_name='Usuario') 
-    cueanexo=models.CharField(max_length=9, null=False, blank=False, verbose_name='Cueanexo')
-    nivel_cargohora=models.ForeignKey(Nivel_Sistema, on_delete=models.CASCADE, verbose_name='Nivel_Cargo_Hora')
-    cargos_horas=models.ForeignKey(CeicPuntos, on_delete=models.CASCADE, verbose_name='Cargos_Horas')
-    cant_horas=models.SmallIntegerField(default=0, verbose_name='Cantidad_Horas')
-    situacion_revista=models.ForeignKey(SituacionRevista, on_delete=models.CASCADE, verbose_name='Situacion_Revista')
-    funciones=models.ForeignKey(funciones, on_delete=models.CASCADE, verbose_name='Función')
-    condicion_actividad=models.ForeignKey(condicionactividad, on_delete=models.CASCADE, verbose_name='Condición')
-    fecha_desde=models.DateField(verbose_name='Fecha_desde')
-    fecha_hasta=models.DateField(default=date(2060,12,31), verbose_name='Fecha_hasta')
-    
+class Categoria_Cueanexo(models.Model):
+    nom_categoria=models.CharField(max_length=50, verbose_name='Categoría')
     
     def __str__(self):
+        return self.nom_categoria
+
+class TipoJornada_Cueanexo(models.Model):
+    tipo_jornada=models.CharField(max_length=100, verbose_name='Jornada')
+    
+    def __str__(self):
+        return self.tipo_jornada
+
+class Zona_Cueanexo(models.Model):
+    tipo_zona=models.CharField(max_length=255, verbose_name='Zona')
+    
+    class Meta:
+        ordering=['tipo_zona']
+    
+    def __str__(self):
+        return self.tipo_zona
+
+   
+class CargosHoras_Cenpe(models.Model):
+    usuario =models.CharField(max_length=9, verbose_name='Usuario')
+    cueanexo=models.CharField(max_length=9, null=False, blank=False, verbose_name='Cueanexo')
+    categoria=models.CharField(max_length=50, verbose_name='Categoría')
+    jornada=models.CharField(max_length=50, verbose_name='Jornada')
+    zona=models.CharField(max_length=150, verbose_name='Zona')
+    nivel_cargohora=models.CharField(max_length=255, verbose_name='Nivel_Cargo_Hora')
+    cargos_horas=models.CharField(max_length=255, verbose_name='Cargo_Horas')
+    cant_horas=models.SmallIntegerField(default=0, verbose_name='Cantidad_Horas')
+    lunes=models.BooleanField(default=False, verbose_name='Lunes')
+    martes=models.BooleanField(default=False, verbose_name='Martes')
+    miercoles=models.BooleanField(default=False, verbose_name='Miercoles')
+    jueves=models.BooleanField(default=False, verbose_name='Jueves')
+    viernes=models.BooleanField(default=False, verbose_name='Viernes')
+    situacion_revista=models.CharField(max_length=150, verbose_name='Situacion_Revista')
+    funciones=models.CharField(max_length=255, verbose_name='Funciones')
+    condicion_actividad=models.CharField(max_length=255, verbose_name='Condicion_Actividad')
+    fecha_desde=models.DateField(verbose_name='Fecha_desde')
+    fecha_hasta=models.DateField(default=date(2060,12,31), verbose_name='Fecha_hasta')
+    cuof=models.SmallIntegerField(null=False, blank=False, verbose_name='CUOF')
+    cuof_anexo=models.SmallIntegerField(null=False, blank=False, verbose_name='CUOF_Anexo')
+           
+    def __str__(self):
         return f"{self.usuario}-{self.cueanexo}: {self.cargos_horas}"
+    
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Solo cargar los datos automáticamente cuando se crea el objeto
+            user = kwargs.pop('user', None)
+            if user:
+                self.usuario = user.username                
+        
+        if not self.usuario and 'UsuariosVisualizador' in kwargs:
+            self.usuario = kwargs.pop('UsuariosVisualizador')
+        super().save(*args, **kwargs)
+
+class PadronCenpe(models.Model):
+    cueanexo=models.IntegerField(verbose_name='cueanexo')
+    id_establecimiento=models.CharField(verbose_name='id_establecimiento')
+    id_localizacion=models.CharField(verbose_name='id_localizacion')
+    id_oferta_local=models.CharField(verbose_name='id_oferta_local')
+    nom_est=models.CharField(verbose_name='nom_est')
+    acronimo_oferta=models.CharField(verbose_name='acronimo_oferta')
+    oferta=models.CharField(verbose_name='oferta')
+    nro_est=models.CharField(verbose_name='nro_est')
+    ambito=models.CharField(verbose_name='ambito')
+    sector=models.CharField(verbose_name='sector')
+    region_loc=models.CharField(verbose_name='region_loc')
+    ref_loc=models.CharField(verbose_name='ref_loc')
+    calle=models.CharField(verbose_name='calle')
+    numero=models.CharField(verbose_name='numero')
+    localidad=models.CharField(verbose_name='localidad')
+    departamento=models.CharField(verbose_name='departamento')
+    estado_loc=models.CharField(verbose_name='estado_loc')
+    est_oferta=models.CharField(verbose_name='est_oferta')
+    estado_est=models.CharField(verbose_name='estado_est')
+    jornada=models.CharField(verbose_name='jornada')
+    
+    class Meta:
+        verbose_name = 'Padron_Cenpe'
+        verbose_name_plural = 'Padrones_Cenpe'
+        db_table = 'padron_actualizar'
+        managed = False
+    
+    def __str__(self):
+        return f"{self.cueanexo}" 
+    
+    
+        
+    

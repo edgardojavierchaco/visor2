@@ -40,6 +40,7 @@ urlpatterns = [
     path('censo/',include('apps.cenpe.urls',namespace='censo')) ,
     path('operativo/',include('apps.oplectura.urls', namespace='operativo')),
     path('super/',include('apps.supervisores.urls', namespace='super')),
+    path('contador/',include('apps.cuenta_regresiva.urls',namespace='contador')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuenta Regresiva</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <!-- Estilos personalizados -->
+    <style>
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            font-family: 'Arial', sans-serif;
+        }
+        .contador {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .contador h1 {
+            font-size: 2rem;
+            margin-bottom: 25px;
+            color: #343a40;
+        }
+        .tiempo {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .tiempo div {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tiempo div h2 {
+            font-size: 2rem;
+            margin: 0;
+            color: #007bff;
+        }
+        .tiempo div p {
+            margin: 5px 0 0;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="contador">
+        <h1>¡Para ver los resultados de su escuela, faltan...!</h1>
+        <div class="tiempo">
+            <div>
+                <h2 id="dias">{{ dias }}</h2>
+                <p>Días</p>
+            </div>
+            <div>
+                <h2 id="horas">{{ horas }}</h2>
+                <p>Horas</p>
+            </div>
+            <div>
+                <h2 id="minutos">{{ minutos }}</h2>
+                <p>Minutos</p>
+            </div>
+            <div>
+                <h2 id="segundos">{{ segundos }}</h2>
+                <p>Segundos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript para actualizar la cuenta regresiva sin recargar la página -->
+    <script>
+        function actualizarContador() {
+            var dias = parseInt(document.getElementById("dias").textContent);
+            var horas = parseInt(document.getElementById("horas").textContent);
+            var minutos = parseInt(document.getElementById("minutos").textContent);
+            var segundos = parseInt(document.getElementById("segundos").textContent);
+
+            if (segundos > 0) {
+                segundos--;
+            } else {
+                segundos = 59;
+                if (minutos > 0) {
+                    minutos--;
+                } else {
+                    minutos = 59;
+                    if (horas > 0) {
+                        horas--;
+                    } else {
+                        horas = 23;
+                        if (dias > 0) {
+                            dias--;
+                        } else {
+                            clearInterval(intervalo);
+                            document.querySelector(".contador").innerHTML = "<h1>¡El evento ha comenzado!</h1>";
+                        }
+                    }
+                }
+            }
+
+            document.getElementById("dias").textContent = dias < 10 ? "0" + dias : dias;
+            document.getElementById("horas").textContent = horas < 10 ? "0" + horas : horas;
+            document.getElementById("minutos").textContent = minutos < 10 ? "0" + minutos : minutos;
+            document.getElementById("segundos").textContent = segundos < 10 ? "0" + segundos : segundos;
+        }
+
+        var intervalo = setInterval(actualizarContador, 1000);
+    </script>
+
+</body>
+</html>

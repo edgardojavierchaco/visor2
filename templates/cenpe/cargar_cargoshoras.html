@@ -1,0 +1,367 @@
+{% extends 'dashboard/bodycenpe.html' %}
+{% load static %}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargar Datos Laborales</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .highlighted-paragraph {
+            background-color: #f0f8ff;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .dias-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .dias-container legend {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 0 10px;
+        }
+
+        .dias-checks {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Estilos del modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Permite desplazamiento si el contenido es largo */
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-dialog {
+            background: white;
+            border-radius: 8px;
+            max-width: 90%;
+            width: 600px;
+            margin: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header,
+        .modal-footer {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #ddd;
+            border-bottom: none;
+        }
+
+        .modal-body {
+            padding: 15px;
+            max-height: 60vh; /* Limita la altura del contenido */
+            overflow-y: auto; /* Agrega scroll si el contenido es demasiado largo */
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .modal-dialog {
+                width: 95%; /* Ajusta el ancho del modal en pantallas pequeñas */
+                margin: 10px;
+            }
+
+            .modal-body {
+                max-height: 50vh; /* Ajusta la altura máxima del contenido en pantallas pequeñas */
+            }
+        }
+    </style>
+
+    <!-- Asegúrate de cargar jQuery antes que Select2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+<body>
+    <h1>Datos Laborales ReNPEE</h1>
+    <p class="highlighted-paragraph">
+        Declaro bajo juramento que todos los datos consignados son veraces. Asimismo, me notifico que cualquier falsedad u omisión dará motivo a las sanciones disciplinarias previstas.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <table>
+            <tr>                
+                <td>{{ form.usuario }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cueanexo.label_tag }}</td>
+                <td>{{ form.cueanexo }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.categoria.label_tag }}</td>
+                <td>{{ form.categoria }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.jornada.label_tag }}</td>
+                <td>{{ form.jornada }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.zona.label_tag }}</td>
+                <td>{{ form.zona }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.nivel_cargohora.label_tag }}</td>
+                <td>{{ form.nivel_cargohora }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cargos_horas.label_tag }}</td>
+                <td>{{ form.cargos_horas }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cant_horas.label_tag }}</td>
+                <td>{{ form.cant_horas }}</td>
+            </tr>
+        </table>
+
+        <!-- Contenedor para los días de la semana -->
+        <fieldset class="dias-container">
+            <legend>Días</legend>
+            <div class="dias-checks">
+                <div class="form-check">
+                    {{ form.lunes.label_tag }}
+                    {{ form.lunes }}                    
+                </div>
+                <div class="form-check">
+                    {{ form.martes.label_tag }}
+                    {{ form.martes }}                    
+                </div>
+                <div class="form-check">
+                    {{ form.miercoles.label_tag }}
+                    {{ form.miercoles }}                    
+                </div>
+                <div class="form-check">
+                    {{ form.jueves.label_tag }}
+                    {{ form.jueves }}                    
+                </div>
+                <div class="form-check">
+                    {{ form.viernes.label_tag }}
+                    {{ form.viernes }}                    
+                </div>
+            </div>
+        </fieldset>
+
+        <table>
+            <tr>
+                <td>{{ form.situacion_revista.label_tag }}</td>
+                <td>{{ form.situacion_revista }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.funciones.label_tag }}</td>
+                <td>{{ form.funciones }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.condicion_actividad.label_tag }}</td>
+                <td>{{ form.condicion_actividad }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.fecha_desde.label_tag }}</td>
+                <td>{{ form.fecha_desde }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.fecha_hasta.label_tag }}</td>
+                <td>{{ form.fecha_hasta }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cuof.label_tag }}</td>
+                <td>{{ form.cuof }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cuof_anexo.label_tag }}</td>
+                <td>{{ form.cuof_anexo }}</td>
+            </tr>
+        </table>
+
+        {% if form.errors %}
+            <div class="errors">
+                {{ form.errors }}
+            </div>
+        {% endif %}
+        <button type="submit">Guardar</button>
+    </form>
+
+    <!-- Modal de confirmación -->
+    <div id="confirmModal" class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Datos</h5>
+                    <button type="button" class="close corregir-button" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Por favor, verifica los datos ingresados:</p>
+                    <ul id="modalDataList"></ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary corregir-button">Corregir</button>
+                    <button type="button" id="confirmButton" class="btn btn-primary">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Inicializa Select2
+            $('.select2').select2();
+
+            // Maneja el cambio en el select de nivel_cargohora
+            $('#id_nivel_cargohora').change(function() {
+                var nivel = $(this).val(); // Obtener el nivel seleccionado
+
+                // Hacer una petición AJAX para obtener los cargos
+                $.ajax({
+                    url: "{% url 'cenpe:obtener_cargos_por_nivel' %}", // Asegúrate de tener la URL configurada correctamente
+                    data: {
+                        'nivel': nivel
+                    },
+                    success: function(data) {
+                        var cargosSelect = $('#id_cargos_horas'); // Selecciona el select de cargos_horas
+                        cargosSelect.empty(); // Limpia las opciones actuales
+
+                        // Añadir un placeholder u opción por defecto si es necesario
+                        cargosSelect.append($('<option>', {
+                            value: '',
+                            text: 'Seleccione un cargo'
+                        }));
+
+                        // Añadir los nuevos cargos al select
+                        $.each(data, function(index, cargo) {
+                            cargosSelect.append($('<option>', {
+                                value: cargo.id,
+                                text: cargo.descripcion
+                            }));
+                        });
+                    }
+                });
+            });
+
+            // Captura el evento submit del formulario para evitar el envío inmediato
+            $('form').on('submit', function(event) {
+                event.preventDefault(); // Previene el envío del formulario
+
+                // Llenar el modal con los datos del formulario
+                let dataList = $('#modalDataList');
+                dataList.empty();
+
+                // Recorre cada campo del formulario y muestra sus valores
+                $(this).find('input, select, textarea').each(function() {
+                    let label = $(this).closest('tr').find('td:first-child').text(); // Obtiene la etiqueta asociada
+                    let value;
+
+                    if ($(this).is('select')) {
+                        value = $(this).find('option:selected').text(); // Captura el texto seleccionado en los selects
+                    } else if ($(this).is(':checkbox')) {
+                        value = $(this).is(':checked') ? 'Sí' : 'No'; // Indica si el checkbox está marcado o no
+                    } else {
+                        value = $(this).val(); // Captura el valor de los inputs y textareas
+                    }
+
+                    if (label && value) {
+                        dataList.append(`<li><strong>${label}:</strong> ${value}</li>`); // Muestra la etiqueta y el valor
+                    }
+                });
+
+                // Mostrar el modal
+                $('#confirmModal').addClass('show');
+            });
+
+            // Botón Confirmar: envía el formulario
+            $('#confirmButton').click(function() {
+                $('form')[0].submit(); // Envía el formulario original
+            });
+
+            // Botón Corregir: cierra el modal
+            $('.corregir-button').click(function() {
+                $('#confirmModal').removeClass('show'); // Cierra el modal al quitar la clase 'show'
+            });
+        });
+    </script>
+
+</body>
+{% endblock %}

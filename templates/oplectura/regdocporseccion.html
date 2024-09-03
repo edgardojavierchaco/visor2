@@ -3,11 +3,23 @@
 
 {% block content%}   
     <div class="container">
-        <h1>Cargar Curso - División y Turno</h1>
+        <h1>Cargar Aplicador</h1>
         <form method="post" id="form">
             {% csrf_token %}
+            <div class="form-group">
+                <label for="dni">DNI</label>
+                {{ form.dni_docen }}
+            </div>
 
-            
+            <div class="form-group">
+                <label for="apellido">Apellido</label>
+                {{ form.apellido_docen }}
+            </div>
+
+            <div class="form-group">
+                <label for="nombres">Nombres</label>
+                {{ form.nombres_docen }}
+            </div>
 
             <div class="form-group">
                 <label for="cueanexo">Cueanexo</label>
@@ -29,6 +41,10 @@
                 <label for="operativo">Operativo</label>
                 {{ form.operativos }}
             </div>       
+            <div class="form-group">
+                <label for="validacion">Validación</label>
+                {{ form.validacion }}
+            </div>
             <button type="submit" class="btn btn-primary">Guardar</button>
         </form>
     </div>

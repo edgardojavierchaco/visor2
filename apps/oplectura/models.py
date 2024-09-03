@@ -70,18 +70,17 @@ class RegDocporSeccion(models.Model):
         db_table='Docente_Aplicador'
     
     def __str__(self):
-        return f"{self.apellido_docen} - {self.nombres_docen}"     
-    
+        return f"{self.apellido_docen} - {self.nombres_docen}"        
 
         
-    def save(self, *args, **kwargs):
+    """ def save(self, *args, **kwargs):
         if not self.pk:  # Solo cargar los datos automáticamente cuando se crea el objeto
             user = kwargs.pop('user', None)
             if user:
                 self.dni_docen = user.username
                 self.apellido_docen = user.apellido
                 self.nombres_docen = user.nombres
-        super(RegDocporSeccion, self).save(*args, **kwargs)
+        super(RegDocporSeccion, self).save(*args, **kwargs) """
 
 class Periodos(models.Model):
     periodo=models.CharField(max_length=255, verbose_name='Periodos')

@@ -49,7 +49,7 @@ LOCAL_APPS = [
     'apps.oplectura',
     'apps.aplicadores',
     'apps.supervisores',
-    
+    'apps.cuenta_regresiva', 
 ]
 
 

@@ -8,7 +8,7 @@ from django.core.validators import RegexValidator
 class RegDocporSeccionForm(forms.ModelForm):
     class Meta:
         model = RegDocporSeccion
-        fields = ['id','cueanexo', 'curso', 'division', 'turno', 'operativos']
+        fields = ['id','dni_docen','apellido_docen','nombres_docen','cueanexo', 'curso', 'division', 'turno', 'operativos','validacion']
 
 
     def clean_cueanexo(self):
@@ -21,7 +21,7 @@ class RegDocporSeccionForm(forms.ModelForm):
 class RegDocporSeccionEdicionForm(forms.ModelForm):
     class Meta:
         model = RegDocporSeccion
-        fields = ['cueanexo', 'curso', 'division', 'turno', 'operativos', 'validacion']
+        fields = ['dni_docen','apellido_docen','nombres_docen','cueanexo', 'curso', 'division', 'turno', 'operativos', 'validacion']
 
 
     def clean_cueanexo(self):

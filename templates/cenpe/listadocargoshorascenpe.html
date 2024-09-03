@@ -1,0 +1,135 @@
+{% extends 'dashboard/bodycenpe.html' %}
+{% load static %}
+{% load custom_filters %}  <!-- Cargar el filtro personalizado -->
+
+{% block head %}
+    <style>
+        .highlighted-paragraph {
+            background-color: #f0f8ff; /* Color de fondo */
+            border: 1px solid #ccc; /* Borde del recuadro */
+            padding: 15px; /* Espacio interno del recuadro */
+            border-radius: 5px; /* Bordes redondeados */
+            margin-bottom: 20px; /* Espacio debajo del párrafo */
+            font-weight: bold;
+        }
+    </style>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
+    <script src="{% static 'lib/datatables-1.10.20/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+    {% comment %} <style>
+        .disabled-link {
+            pointer-events: none; /* Desactiva los clics */
+            opacity: 0.6; /* Reduce la opacidad para que parezca deshabilitado */
+            cursor: not-allowed; /* Cambia el cursor al estilo de no permitido */
+        }
+    </style> {% endcomment %}
+    <body>
+        <div class="container">
+            <h1 class="mt-5">Detalle Cargos - Horas Cátedras ReNPEE</h1>        
+                         
+                <p class="highlighted-paragraph">
+                    Declaro bajo juramento que todos los datos consignados son veraces. Asimismo, me notifico que cualquier falsedad u omisión dará motivo a las sanciones disciplinarias previstas.
+                </p>
+            
+            <!-- Tabla de evaluaciones -->
+            <table id="data" class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cueanexo</th>                        
+                        <th>Cargo-Horas</th>                        
+                        <th>Sit. Rev.</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>                        
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cargoshoras in Cargos_Horas %}
+                    <tr>
+                        <td>{{ cargoshoras.id }}</td>                        
+                        <td>{{ cargoshoras.cueanexo }}</td>
+                        <td>{{ cargoshoras.cargos_horas }}</td>
+                        <td>{{ cargoshoras.situacion_revista }}</td>
+                        <td>{{ cargoshoras.fecha_desde }}</td>
+                        <td>{{ cargoshoras.fecha_hasta }}</td>                        
+                        <td>                            
+                            <button type="button" class="btn btn-danger btn-xs btn-delete"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+        </div>
+
+        <!-- Card Footer -->
+        <div class="card-footer">
+            <a href="{% url 'cenpe:cargo_horas' %}" class="btn btn-success btn-flat disabled-link">
+                <i class="fas fa-plus"></i> Agregar Cargo-Hora
+            </a>
+        </div>
+        
+    </body>
+{% endblock %}
+
+{% block javascript %}
+    <script type="application/javascript">        
+        $(document).ready(function() {
+            $('#data').DataTable({
+                responsive: true,
+                autoWidth: false,
+                paging: true,  // Habilitar la paginación
+                searching: true,  // Habilitar la búsqueda
+                "language": {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
+                },
+                "columns": [
+                    { "data": "id" },
+                    { "data": "cueanexo" },                    
+                    { "data": "cargos_horas" },
+                    { "data": "situacion_revista" },    
+                    { "data": "fecha_desde" },        
+                    { "data": "fecha_hasta" },                    
+                    { "data": null, "defaultContent": "<button type='button' class='btn btn-danger btn-xs btn-delete'><i class='fas fa-trash-alt'></i></button>" }
+                ]
+            });
+        });
+    </script>
+    <script>
+        $(document).ready(function() {
+            // Asegúrate de usar 'body' o un contenedor que esté presente en el DOM al cargar la página
+            $('body').on('click', '.btn-delete', function() {
+                var userId = $(this).closest('tr').find('td:first-child').text().trim();
+
+                // Mostrar en la consola del navegador el ID capturado
+                console.log('User ID capturado:', userId);
+
+                // Mostrar SweetAlert para confirmar la eliminación
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: "¡No podrás revertir esto!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminarlo!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        var url = "{% url 'cenpe:eliminar' %}?id=" + userId;
+                        console.log('URL de eliminación:', url); // Verifica la URL generada
+                        // Si se confirma la eliminación, redirigir al servidor para eliminar el registro
+                        window.location.href = url;
+                    }
+                });
+            });
+        });
+    </script>
+    
+{% endblock %}
