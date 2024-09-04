@@ -1,0 +1,22 @@
+{% extends 'dashboard/bodycenpe.html'%}
+
+{% load static %}
+
+{% block content %}
+
+    <style>
+        .logo-container {
+            text-align: center; 
+            margin: 20px 0;
+        }
+
+        .logo-image {
+            max-width: 600px; 
+            height: auto; 
+        }
+    </style>
+    <div class="logo-container">    
+        <img src="{% static 'img/relevamientodocente2024.jpeg' %}" alt="Logo" class="logo-image">
+    </div>
+
+{% endblock %}

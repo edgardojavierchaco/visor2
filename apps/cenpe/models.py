@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from apps.usuarios.models import UsuariosVisualizador
 from django.core.exceptions import ValidationError
@@ -223,6 +224,7 @@ class Nivel_Sistema(models.Model):
         verbose_name = 'Nivel'
         verbose_name_plural = 'Niveles'
         db_table = 'niv_sis_cenpe'
+        ordering=['niv_sis']
         managed = True
 
     def __str__(self):
@@ -401,6 +403,7 @@ class funciones(models.Model):
         verbose_name = 'Funcion'
         verbose_name_plural = 'Funciones'
         db_table = 'funciones'
+        ordering = ['funcion']
         managed = True
         
     def __str__(self):
@@ -449,7 +452,7 @@ class CargosHoras_Cenpe(models.Model):
     zona=models.CharField(max_length=150, verbose_name='Zona')
     nivel_cargohora=models.CharField(max_length=255, verbose_name='Nivel_Cargo_Hora')
     cargos_horas=models.CharField(max_length=255, verbose_name='Cargo_Horas')
-    cant_horas=models.SmallIntegerField(default=0, verbose_name='Cantidad_Horas')
+    cant_horas=models.DecimalField(max_digits=4,decimal_places=2, verbose_name='Cantidad_Horas')
     lunes=models.BooleanField(default=False, verbose_name='Lunes')
     martes=models.BooleanField(default=False, verbose_name='Martes')
     miercoles=models.BooleanField(default=False, verbose_name='Miercoles')

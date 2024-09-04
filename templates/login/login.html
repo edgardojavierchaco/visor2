@@ -290,15 +290,28 @@
         var nivelAcceso = this.value;
         var username = document.querySelector('[name="username"]').value;
 
-        // Verificar si el nivel de acceso es 'Director/a' y si el username no cumple con los requisitos
-        if (nivelAcceso === 'Director/a' && (!/^(22\d{7})$/.test(username))) {
-            Swal.fire({
-                title: 'Error',
-                text: 'El username debe tener nueve dígitos y comenzar con "22. Es el CUEANEXO de su Escuela".',
-                icon: 'error',
-                confirmButtonText: 'Aceptar'
-            });
-        }
+       // Validar si el nivel de acceso es 'Director/a'
+        if (nivelAcceso === 'Director/a' || nivelAcceso==='Evaluacion') {
+            // Verificar que el username tenga 9 dígitos y comience con '22'
+            if (!/^(22\d{7})$/.test(username)) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'El username debe tener nueve dígitos y comenzar con "22". Es el CUEANEXO de su Escuela.',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            }
+        } else {
+            // Para cualquier otro nivel de acceso, el username debe contener entre 7 y 8 dígitos
+            if (!/^\d{7,8}$/.test(username)) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'El username es su número de DNI y debe contener entre 7 u 8 dígitos. Ej. 22123456',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            }
+        } 
     });
 </script> 
 </body>

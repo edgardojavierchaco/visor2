@@ -36,7 +36,8 @@ def GenerarCertificado(request):
     
     # texto del encabezado
     c.setFont("Helvetica-Bold", 14)
-    c.setFillColorRGB(0, 0, 0)  
+    c.setFillColorRGB(0, 0, 0)
+    c.drawCentredString(width / 2, height - 1.5 * cm, "Departamento Estadística Educativa - MECCyT Chaco")  
     c.drawCentredString(width / 2, height - 2.5 * cm, "Relevamiento de Docentes y no Docentes - RePEE Chaco 2024")
 
     # Ajustar la posición del encabezado

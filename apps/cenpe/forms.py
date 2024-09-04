@@ -13,41 +13,41 @@ class DatosPersonalCenpeForm(forms.ModelForm):
     ) 
     
     nombres=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'})
+        widget=forms.TextInput(attrs={'class':'form-control textinput', 'placeholder':'Sin abreviaturas, todo en mayúsculas'})
     )
     
     dni=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'}),
-        help_text='Ej. 12345678',
+        widget=forms.TextInput(attrs={'class':'form-control textinput','placeholder':'Sin puntos. Ej: 22345678'}),
+        
         label='DNI N°'
     )
     
     cuil=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'}),
-        help_text='Ej. 20123456782',
+        widget=forms.TextInput(attrs={'class':'form-control textinput','placeholder':'Sin puntos ni guiones medios. Ej: 27223456782'}),
+        
         label='CUIL N°'
     )
     
     telfijo=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'}),
-        help_text='Sin 0 del código de área. Ej: 3624123456',
+        widget=forms.TextInput(attrs={'class':'form-control textinput', 'placeholder':'Sin el 0 del código de área. Ej: 3624123456'}),
+        
         label='Teléfono Fijo'
     )    
     
     
     celular=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'}),
-        help_text='Sin 0 del código de área, ni 15. Ej: 3734123456'
+        widget=forms.TextInput(attrs={'class':'form-control textinput', 'placeholder':'Sin el 0 del código de área ni el 15. Ej: 3734123456'}),
+        
     )
     
     f_nac=forms.DateField(
         widget=forms.DateInput(attrs={'class':'form-control date', 'type':'date'}),
-        help_text='Ej. 01/01/2000',
+        
         label='Fecha Nacimiento'
     )
     
     calle=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'})
+        widget=forms.TextInput(attrs={'class':'form-control textinput', 'placeholder':'Sin abreviaturas, todo en mayúsculas'})
     )   
     
     nro=forms.CharField(
@@ -75,8 +75,8 @@ class DatosPersonalCenpeForm(forms.ModelForm):
     )   
     
     barrio=forms.CharField(
-        widget=forms.TextInput(attrs={'class':'form-control textinput'}),
-        help_text='Si no tiene nombre de Barrio, consignar SIN DATOS'
+        widget=forms.TextInput(attrs={'class':'form-control textinput', 'placeholder':'Si desconoce/ no tiene, consignar "SIN DATOS"'}),
+        
     )   
     
     pais_nac = forms.ModelChoiceField(
@@ -127,15 +127,15 @@ class DatosPersonalCenpeForm(forms.ModelForm):
     )
 
     loc_nac = forms.ModelChoiceField(
-        queryset=localidad_tipo.objects.none(),  # Inicialmente vacío
-        widget=forms.Select(attrs={'class': 'form-control select2'}),  # Select2 para loc_nac
+        queryset=localidad_tipo.objects.none(),  
+        widget=forms.Select(attrs={'class': 'form-control select2'}), 
         label='Localidad Nacimiento'
     )    
     
     
     loc_resid = forms.ModelChoiceField(
-        queryset=localidad_tipo.objects.none(),  # Inicialmente vacío
-        widget=forms.Select(attrs={'class': 'form-control select2'}),  # Select2 para loc_resid
+        queryset=localidad_tipo.objects.none(),  
+        widget=forms.Select(attrs={'class': 'form-control select2'}), 
         label='Localidad Resisdencia'
     )   
     
@@ -144,21 +144,24 @@ class DatosPersonalCenpeForm(forms.ModelForm):
         model = Datos_Personal_Cenpe
         fields = '__all__'
         widgets = {
-            'usuario': forms.HiddenInput(),  # Oculta el campo usuario en el formulario
+            'usuario': forms.HiddenInput(),  
         }
         
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['apellidos'].widget.attrs['autofocus']=True
+        
         # Si hay una provincia de nacimiento seleccionada, carga las localidades correspondientes
         if 'prov_nac' in self.data:
             try:
                 provincia_id = int(self.data.get('prov_nac'))
-                print('provincia_id', provincia_id)  # Depuración
+                print('provincia_id', provincia_id)  
                 self.fields['loc_nac'].queryset = localidad_tipo.objects.filter(c_provincia_id=provincia_id).order_by('descripcion_loc')
             except (ValueError, TypeError):
-                pass  # Maneja los errores de valor y tipo
+                pass  
         elif self.instance.pk:
+            
             # Si hay una instancia existente, muestra las localidades correspondientes a la provincia guardada
             self.fields['loc_nac'].queryset = localidad_tipo.objects.filter(c_provincia=self.instance.prov_nac).order_by('descripcion_loc')
         
@@ -166,10 +169,10 @@ class DatosPersonalCenpeForm(forms.ModelForm):
         if 'prov_resid' in self.data:
             try:
                 provincia2_id = int(self.data.get('prov_resid'))
-                print('provincia2_id', provincia2_id)  # Depuración
+                print('provincia2_id', provincia2_id)  
                 self.fields['loc_resid'].queryset = localidad_tipo.objects.filter(c_provincia_id=provincia2_id).order_by('descripcion_loc')
             except (ValueError, TypeError):
-                pass  # Maneja los errores de valor y tipo
+                pass  
         elif self.instance.pk:
             # Si hay una instancia existente, muestra las localidades correspondientes a la provincia guardada
             self.fields['loc_resid'].queryset = localidad_tipo.objects.filter(c_provincia=self.instance.prov_resid).order_by('descripcion_loc')
@@ -195,7 +198,7 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
     titulo = forms.CharField (
         max_length=255,
         min_length=1,        
-        widget=forms.TextInput (attrs={'class': 'form-control textinput'}),
+        widget=forms.TextInput (attrs={'class': 'form-control textinput','placeholder':'Sin abreviaturas, todo mayúsculas'}),
         error_messages={
         'max_length': 'El título no puede tener más de 255 caracteres.',
         'min_length': 'El título debe tener al menos 1 caracter.'
@@ -227,7 +230,7 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
     )
     
     reg_nro = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control textinput'}),
+        widget=forms.TextInput(attrs={'class': 'form-control textinput','placeholder':'Otorgado por la Dirección de Títulos y Equivalencias de la provincia del Chaco'}),
         help_text='Otorgado por la Dirección de Títulos y Equivalencias de la provincia del Chaco',
         label='Registro N°'
     )
@@ -239,10 +242,10 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
 
 
     class Meta:
-        model = Academica_Cenpe  # Nombre correcto del modelo
+        model = Academica_Cenpe 
         fields = '__all__'
         widgets = {
-            'usuario': forms.HiddenInput(),  # Oculta el campo usuario en el formulario
+            'usuario': forms.HiddenInput(),  
         }
         
     def clean_titulo(self):
@@ -253,6 +256,10 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
             raise forms.ValidationError(('Solo se permiten letras mayúsculas, espacios, tildes y apóstrofes.'))
         return titulo
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['titulo'].widget.attrs['autofocus']=True
+        
 
 class CargosHorasCenpeForm(forms.ModelForm):
     cueanexo= forms.ModelChoiceField(
@@ -292,9 +299,11 @@ class CargosHorasCenpeForm(forms.ModelForm):
         label='Cargos/ Hora Cátedra'        
     )
     
-    cant_horas=forms.IntegerField(
-        widget=forms.NumberInput(attrs={'class':'form-control integer', 'placeholder':'En caso de cargos, consignar valor 0'}),
-        label='Cantidad Horas'
+    cant_horas=forms.DecimalField(
+        widget=forms.NumberInput(attrs={'class':'form-control decimal', 'placeholder':'Cargos = Hs. reloj (ej. 36.30), Otros = Hs. Cát. (ej. 12.00)'}),
+        label='Cantidad Horas',
+        max_digits=4,
+        decimal_places=2    
     )
     
     lunes=forms.BooleanField(
@@ -357,12 +366,12 @@ class CargosHorasCenpeForm(forms.ModelForm):
     )
     
     cuof=forms.IntegerField(
-        widget=forms.NumberInput(attrs={'class':'form-control integer'}),
+        widget=forms.NumberInput(attrs={'class':'form-control integer','placeholder':'Lo puede encontrar en su Recibo de Haberes.'}),
         label='CUOF'
     )
     
     cuof_anexo=forms.IntegerField(
-        widget=forms.NumberInput(attrs={'class':'form-control integer'}),
+        widget=forms.NumberInput(attrs={'class':'form-control integer','placeholder':'Lo puede encontrar en su Recibo de Haberes.'}),
         label='CUOF_Anexo'
     )
     
@@ -370,14 +379,15 @@ class CargosHorasCenpeForm(forms.ModelForm):
         model = CargosHoras_Cenpe
         fields = '__all__'
         widgets = {
-            'usuario': forms.HiddenInput(),  # Oculta el campo usuario en el formulario
+            'usuario': forms.HiddenInput(),  
         }         
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['cueanexo'].widget.attrs['autofocus']=True
         self.fields['cueanexo'].label_from_instance = self.label_from_instance_cueanexo
         
-    # Método personalizado para mostrar en el select
+    # Método personalizado del select
     def label_from_instance_cueanexo(self, obj):
         return f"{obj.cueanexo} - {obj.nom_est}"
     

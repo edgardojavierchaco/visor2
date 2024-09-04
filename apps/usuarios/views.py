@@ -170,6 +170,8 @@ class registrar_usuarios(CreateView):
             grupo = Group.objects.get(name='Director')
         elif nivel_acceso.tacceso == 'Aplicador':
             grupo = Group.objects.get(name='Aplicador')
+        elif nivel_acceso.tacceso == 'Docente':
+            grupo = Group.objects.get(name='Docente')
         else:
             grupo = None
 
