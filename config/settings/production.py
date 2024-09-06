@@ -23,11 +23,6 @@ DATABASES = {
     }
 }
 
-# Ruta para archivos estáticos en producción
-STATIC_ROOT = Path.joinpath(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Configuración de seguridad
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SECURE_SSL_REDIRECT', default=True)
 SESSION_COOKIE_SECURE = True

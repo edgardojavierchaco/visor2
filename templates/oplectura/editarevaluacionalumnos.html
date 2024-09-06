@@ -2,40 +2,102 @@
 {% load static %}
 {% load custom_filters %}
 {% block content %}
-    <form method="post">    
-        <div class="card card-default">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-edit" style="color:green;"></i>
-                    {{ title }}
-                </h3>
-            </div>
-            <div class="card-body">
-                {% csrf_token %}
-                
-                {% for field in form %}
-                    {% if field.is_hidden %}
-                        {{ field }}
-                    {% else %}
-                        <div class="form-group">
-                            {{ field.label_tag }}
-                            {% if field.errors %}
-                                {{ field|add_class:"form-control is-invalid" }}
-                                <div class="invalid-feedback">{{ field.errors }}</div>
-                            {% else %}
-                                {{ field|add_class:"form-control" }}
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                
-            </div>
-            <div class="card-footer">
-                <button type="submit" class="btn btn-primary btn-flat">
-                    <i class="fas fa-edit"></i>Guardar edición
-                </button>
-            </div>
-        </div>
-    </form>    
-{% endblock %}
 
+<head>
+    <!-- Bootstrap CSS desde tu proyecto -->
+    <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- Font Awesome CSS desde CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Bootstrap JS desde tu proyecto -->
+    <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+</head>
+<style>
+    .info-icon {
+        background-color: red; 
+        color: white; 
+        border-radius: 50%; 
+        padding: 2px; 
+        margin-left: 5px; 
+        font-size: 14px; 
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<form method="post">    
+    <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-edit" style="color:green;"></i>
+                {{ title }}
+            </h3>
+        </div>
+        <div class="card-body">
+            {% csrf_token %}
+            
+            {% for field in form %}
+                {% if field.is_hidden %}
+                    {{ field }}
+                {% else %}
+                    <div class="form-group">
+                        {% if field.name == 'prosodia' %}
+                            {{ field.label_tag }}
+                            <i class="fa-solid fa-circle-info info-icon" 
+                               title="Escala Prosodia:
+                               - 1 = Ningún signo de puntuación.
+                               - 2 = Utiliza punto y reconoce los párrafos.
+                               - 3 = Utiliza puntos.
+                               - 4 = Utiliza puntos y comas.
+                               - 5 = Lee de forma continua. Respeta los signos de puntuación: 
+                                     punto, coma. Entonación adecuada.
+                               - 6 = Lee de forma continua. Respeta los signos de puntuación: 
+                                     punto, coma, signos de interrogación y exclamación. 
+                                     Expresividad.">
+                            </i>
+                        {% elif field.name == 'comprension' %}
+                            {{ field.label_tag }}
+                            <i class="fa-solid fa-circle-info info-icon" 
+                               title="Escala Comprensión:
+                               - 0 = Ninguna respuesta correcta.
+                               - 1 = Respondío la pregunta 1 ó 2.
+                               - 2 = Respondió la pregunta 1 y 2.
+                               - 4 = Respondió la pregunta 1 y 3 ó 2 y 3.
+                               - 5 = Respondió sólo la pregunta 3.
+                               - 6 = Respondió las 3 preguntas.">
+                            </i>
+                        {% else %}                        
+                            {{ field.label_tag }}
+                        {% endif %}
+                        {% if field.errors %}
+                            {{ field|add_class:"form-control is-invalid" }}
+                            <div class="invalid-feedback">{{ field.errors }}</div>
+                        {% else %}
+                            {{ field|add_class:"form-control" }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary btn-flat">
+                <i class="fas fa-edit"></i>Guardar edición
+            </button>
+        </div>
+    </div>
+</form>    
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Inicializa los tooltips en todos los elementos con data-bs-toggle="tooltip"
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+
+{% endblock %}

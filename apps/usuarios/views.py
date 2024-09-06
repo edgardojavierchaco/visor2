@@ -18,6 +18,7 @@ from django.contrib import messages
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.contrib import messages
 import hashlib
 import json
 
@@ -146,6 +147,12 @@ class registrar_usuarios(CreateView):
         return context
     
     def form_valid(self, form):
+        # Verificar si el username ya está registrado
+        username = form.cleaned_data.get('username')
+        if UsuariosVisualizador.objects.filter(username=username).exists():
+            messages.error(self.request, 'El usuario ya está registrado.')
+            return redirect('usuarios:registro')
+        
         # Obtener el formulario de usuario
         usuario_form = form.save(commit=False)
         

@@ -104,13 +104,13 @@ class RegEvaluacionFluidezLectora(models.Model):
     dni_alumno=models.CharField(max_length=8, blank=False, null=False, verbose_name='DNI')
     apellido_alumno=models.CharField(max_length=255, blank=False, null=False, verbose_name='Apellido')
     nombres_alumno=models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombres')
-    velocidad=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(150)], verbose_name='Velocidad')
+    velocidad=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(70)], verbose_name='Velocidad')
     cal_vel=models.CharField(max_length=255, verbose_name='Calificación Velocidad')
-    precision=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(150)], verbose_name='Precisión')
+    precision=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(70)], verbose_name='Precisión')
     cal_pres=models.CharField(max_length=255, verbose_name='Calificación Precisión')
     prosodia=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(6)], verbose_name='Prosodia')
     cal_pros=models.CharField(max_length=255, verbose_name='Calificación Prosodia')
-    comprension=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)], verbose_name='Comprensión')
+    comprension=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(6)], verbose_name='Comprensión')
     cal_comp=models.CharField(max_length=255, verbose_name='Calificación Comprensión')
     
     
@@ -133,9 +133,9 @@ class RegEvaluacionFluidezLectora(models.Model):
     def get_calificacion_vel(self, valor):
         if valor < 31:
             return 'Debajo del Básico'
-        elif 31 <= valor <=40:
+        elif 31 <= valor <=50:
             return 'Básico'
-        elif 41 <= valor <=60:
+        elif 51 <= valor <=60:
             return 'Satisfactorio'
         elif valor > 60:
             return 'Avanzado'
@@ -143,17 +143,17 @@ class RegEvaluacionFluidezLectora(models.Model):
     def get_calificacion_pres(self, valor):
         if valor < 41:
             return 'Debajo del Básico'
-        elif 41 <= valor <=47:
+        elif 41 <= valor <=50:
             return 'Básico'
-        elif 48 <= valor <=60:
+        elif 51 <= valor <=60:
             return 'Satisfactorio'
         elif valor > 60:
             return 'Avanzado'
     
     def get_calificacion_pros(self,valor):
-        if valor == 1:
+        if valor == 1 or valor == 2:
             return 'Debajo del Básico'
-        elif 2 <= valor <= 4:
+        elif valor == 3 or valor == 4:
             return 'Básico'        
         elif valor == 5:
             return 'Satisfactorio'
@@ -161,13 +161,13 @@ class RegEvaluacionFluidezLectora(models.Model):
             return 'Avanzado'
     
     def get_calificacion_comp(self,valor):
-        if 0 <= valor <= 2:
+        if valor == 0 or valor == 1:
             return 'Debajo del Básico'        
-        elif valor == 3:
+        elif valor == 2:
             return 'Básico'
-        elif valor == 4:
+        elif 2 >= valor <= 5:
             return 'Satisfactorio'
-        elif valor == 5:
+        elif valor == 6:
             return 'Avanzado'
             
 

@@ -70,7 +70,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Aquí se llenará la tabla dinámicamente con JavaScript -->
+                    <!-- tabla dinámica con JavaScript -->
                 </tbody>
             </table>
         </div>
@@ -81,9 +81,9 @@
         crossorigin=""></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
         <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
-        <!-- Incluir Leaflet.Draw -->
+        <!-- Leaflet.Draw -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-        <!-- Agrega el enlace al archivo JavaScript de DataTables -->
+        <!-- JavaScript de DataTables -->
         <script src='https://code.jquery.com/jquery-3.7.0.js'></script>
         <script src='https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js'></script>
         <script src='https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js'></script>
@@ -99,8 +99,8 @@
             var drawnItems = new L.FeatureGroup();
             var map = L.map('map');
             var bounds = L.latLngBounds();
-            var blueMarkers = L.layerGroup(); // Capa para marcadores "azul"
-            var greenMarkers = L.layerGroup(); // Capa para marcadores "verde"
+            var blueMarkers = L.layerGroup(); 
+            var greenMarkers = L.layerGroup(); 
 
             var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',

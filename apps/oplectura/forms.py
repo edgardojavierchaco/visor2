@@ -47,7 +47,7 @@ class RegEvaluacionFluidezLectoraForm(ModelForm):
             'cal_pres': forms.HiddenInput(),
             'cal_pros': forms.HiddenInput(),
             'cal_comp': forms.HiddenInput(),
-            'asistencia': forms.CheckboxInput(),
+            'asistencia': forms.CheckboxInput(),            
         }
 
     def __init__(self, *args, **kwargs):
@@ -80,7 +80,7 @@ class RegEvaluacionFluidezLectoraForm(ModelForm):
                 self.add_error('precision', 'La precisión debe ser mayor a 0 cuando asistencia está marcada.')
             if not (prosodia and prosodia > 0):
                 self.add_error('prosodia', 'La prosodia debe ser mayor a 0 cuando asistencia está marcada.')
-            if not (comprension and comprension > 0):
+            if not (comprension and comprension >= 0):
                 self.add_error('comprension', 'La comprensión debe ser mayor a 0 cuando asistencia está marcada.')
 
                  

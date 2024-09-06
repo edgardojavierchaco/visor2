@@ -12,6 +12,7 @@
     <script src="{% static 'lib/sweetalert2/sweetalert2.all.min.js' %}"></script>
 
     <style>
+        /* Estilos generales */
         * {
             margin: 0;
             padding: 0;
@@ -143,6 +144,7 @@
             opacity: 1;
             display: block;
         }
+
         .formulario__register {
             display: none;
         }
@@ -207,7 +209,7 @@
             </form>
 
             <!-- Register -->
-            <form action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
+            <form id="register-form" action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
                 {% csrf_token %}
                 <h2>Registrarse</h2> 
                 {{ form.username }}
@@ -285,34 +287,61 @@
         }
     }
 
-    // Validación de 'username' cuando 'nivelacceso' es 'Director/a'
-    document.querySelector('[name="nivelacceso"]').addEventListener('change', function() {
-        var nivelAcceso = this.value;
+    // Función de validación de username
+    function validarUsername() {
+        var nivelAcceso = document.querySelector('[name="nivelacceso"]').value;
         var username = document.querySelector('[name="username"]').value;
 
-       // Validar si el nivel de acceso es 'Director/a'
-        if (nivelAcceso === 'Director/a' || nivelAcceso==='Evaluacion') {
+        // Validar si el nivel de acceso es 'Director/a' o 'Evaluacion'
+        if (nivelAcceso === 'Director/a' || nivelAcceso === 'Evaluacion') {
             // Verificar que el username tenga 9 dígitos y comience con '22'
             if (!/^(22\d{7})$/.test(username)) {
-                Swal.fire({
-                    title: 'Error',
-                    text: 'El username debe tener nueve dígitos y comenzar con "22". Es el CUEANEXO de su Escuela.',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar'
-                });
+                mostrarError('El username debe tener nueve dígitos y comenzar con "22". Es el CUEANEXO de su Escuela.');
+                return false;
             }
         } else {
             // Para cualquier otro nivel de acceso, el username debe contener entre 7 y 8 dígitos
             if (!/^\d{7,8}$/.test(username)) {
-                Swal.fire({
-                    title: 'Error',
-                    text: 'El username es su número de DNI y debe contener entre 7 u 8 dígitos. Ej. 22123456',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar'
-                });
+                mostrarError('El username es su número de DNI y debe contener entre 7 u 8 dígitos. Ej. 22123456');
+                return false;
             }
-        } 
+        }
+        return true;
+    }
+
+    function mostrarError(mensaje) {
+        Swal.fire({
+            title: 'Advertencia',
+            text: mensaje,
+            icon: 'warning',
+            confirmButtonText: 'Aceptar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                location.reload(); // Recarga la página cuando se cierra el mensaje de error
+            }
+        });
+    }
+
+    // Evento de cambio en nivelacceso
+    document.querySelector('[name="nivelacceso"]').addEventListener('change', validarUsername);
+
+    // Evento de cambio en username
+    document.querySelector('[name="username"]').addEventListener('input', validarUsername);
+
+    // Validación antes de enviar el formulario de login
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+        if (!validarUsername()) {
+            e.preventDefault(); // Previene el envío del formulario si la validación falla
+        }
+    });
+
+    // Validación antes de enviar el formulario de registro
+    document.getElementById('register-form').addEventListener('submit', function(e) {
+        if (!validarUsername()) {
+            e.preventDefault(); // Previene el envío del formulario si la validación falla
+        }
     });
 </script> 
+
 </body>
 </html>

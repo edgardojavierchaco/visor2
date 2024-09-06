@@ -4,9 +4,11 @@ volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
   production_traefik_visor: {}
+  production_django_media_volume:
+    external: true
 
 services:
-  django:
+  django: &django
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
@@ -16,7 +18,9 @@ services:
       - postgres
     env_file:
       - ./.env
-    command: /start    
+    command: /start  
+    volumes:
+      - production_django_media_volume:/app/media/
     
   postgres:
     build:
@@ -41,3 +45,13 @@ services:
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443" 
+
+nginx_media:
+    build:
+      context: ./compose/production/nginx
+      dockerfile: Dockerfile
+    image: visor_local_nginx_media
+    volumes:
+      - production_django_media_volume:/usr/share/nginx/media/:ro
+    ports:
+      - "8000:80"

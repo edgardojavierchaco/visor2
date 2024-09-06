@@ -67,7 +67,7 @@ BASE_MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',   
-    'apps.regacceso.middleware.RegistroAccesoMiddleware', 
+    'apps.regacceso.middleware.RegistroAccesoMiddleware',     
 ]
 
 THIRD_MIDDLEWARE = [
@@ -120,19 +120,22 @@ USE_TZ = True
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
 
 SITE_ID = 1  # Indicar que es el sitio principal
-LOCALE_PATHS = [str(BASE_DIR / 'locale')]
+LOCALE_PATHS = [str(ROOT_DIR / 'locale')]
 
 # Configuración de archivos estáticos y multimedia
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [str(BASE_DIR / 'static')]
+# Ruta para archivos estáticos en producción
+STATIC_ROOT = str(ROOT_DIR/'staticfiles')
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
 
-MEDIA_URL = 'media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'static/media/')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = str(ROOT_DIR/'media')
 
 # Configuración de migraciones
 MIGRATION_MODULES = {'sites': 'apps.contrib.sites.migrations'}
