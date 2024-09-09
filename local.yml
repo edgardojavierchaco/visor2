@@ -6,7 +6,7 @@ volumes:
   
 
 services:
-  django:
+  django: &django
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
@@ -29,8 +29,8 @@ services:
     image: visor_production_postgres
     container_name: visor_local_postgres
     volumes:
-      - visor_local_postgres_data:/var/lib/postgresql/data
-      - visor_local_postgres_data_backups:/backups
+      - visor_local_postgres_data:/var/lib/postgresql/data:z
+      - visor_local_postgres_data_backups:/backups:z
     env_file:
       - ./.env
 

@@ -4,40 +4,39 @@ from pathlib import Path
 
 # Directorios base y raíz del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+ROOT_DIR = BASE_DIR
 
 # Cargar variables de entorno desde el archivo .env
-load_dotenv(Path.joinpath(BASE_DIR, '.env'))
+load_dotenv(BASE_DIR / '.env')
 
 # Directorio de aplicaciones
 APPS_DIR = ROOT_DIR / 'apps'
 
 # Configuración de aplicaciones
-BASE_APPS =[ 
-    #'channels',      
-    #'daphne',
+BASE_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.admin',  
+    'django.contrib.admin',
     'widget_tweaks',
     'django_select2',
+    'django.forms',
 ]
 
 LOCAL_APPS = [
-    'apps.mapas',    
+    'apps.mapas',
     'apps.reportes',
     'apps.core',
     'apps.videoteca',
     'apps.usuarios',
     'apps.login',
     'apps.establecimientos',
-    'apps.dashboard', 
+    'apps.dashboard',
     'apps.archivar',
     'apps.mapoteca',
-    'apps.normativa',    
+    'apps.normativa',
     'apps.docentes',
     'apps.alumnos',
     'apps.directores',
@@ -49,12 +48,12 @@ LOCAL_APPS = [
     'apps.oplectura',
     'apps.aplicadores',
     'apps.supervisores',
-    'apps.cuenta_regresiva', 
+    'apps.cuenta_regresiva',
 ]
 
+THIRD_PARTY_APPS = []
 
-INSTALLED_APPS = BASE_APPS + LOCAL_APPS
-
+INSTALLED_APPS = BASE_APPS + LOCAL_APPS + THIRD_PARTY_APPS
 
 # Configuración de middleware
 BASE_MIDDLEWARE = [
@@ -63,11 +62,11 @@ BASE_MIDDLEWARE = [
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',    
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.common.BrokenLinkEmailsMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',   
-    'apps.regacceso.middleware.RegistroAccesoMiddleware',     
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.regacceso.middleware.RegistroAccesoMiddleware',
 ]
 
 THIRD_MIDDLEWARE = [
@@ -77,21 +76,21 @@ THIRD_MIDDLEWARE = [
 
 MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
 
+# Configuración de autenticación
 AUTH_USER_MODEL = 'usuarios.UsuariosVisualizador'
-
 AUTHENTICATION_BACKENDS = [
     'apps.usuarios.backends.CustomAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
-    
 ]
-ROOT_URLCONF = 'config.urls'
 
+# URL raíz de la configuración del proyecto
+ROOT_URLCONF = 'config.urls'
 
 # Configuración de plantillas
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR, 'templates'],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -102,13 +101,14 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.template.context_processors.static',
                 'django.template.context_processors.tz',
-                'django.contrib.messages.context_processors.messages',               
-            ],            
+                'django.contrib.messages.context_processors.messages',
+            ],
         },
     },
 ]
 
-LOGIN_REDIRECT_URL = '/portada/'  # Ajusta esto según la estructura de tu proyecto
+# URL de redirección al iniciar sesión
+LOGIN_REDIRECT_URL = '/portada/'
 
 # Configuración de internacionalización y zona horaria
 LANGUAGE_CODE = 'es-ar'
@@ -116,38 +116,31 @@ TIME_ZONE = 'America/Argentina/Buenos_Aires'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
-
-SITE_ID = 1  # Indicar que es el sitio principal
-LOCALE_PATHS = [str(ROOT_DIR / 'locale')]
 
 # Configuración de archivos estáticos y multimedia
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [str(BASE_DIR / 'static')]
-# Ruta para archivos estáticos en producción
-STATIC_ROOT = str(ROOT_DIR/'staticfiles')
+STATICFILES_DIRS = [ROOT_DIR / 'static']
+STATIC_ROOT = ROOT_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
-
 MEDIA_URL = '/media/'
-MEDIA_ROOT = str(ROOT_DIR/'media')
+MEDIA_ROOT = ROOT_DIR / 'media'
 
 # Configuración de migraciones
 MIGRATION_MODULES = {'sites': 'apps.contrib.sites.migrations'}
 
-# Configuración de log
+# Configuración de logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s '
-            '%(process)d %(thread)d %(message)s'
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
         }
     },
     'handlers': {
@@ -164,6 +157,7 @@ LOGGING = {
 CORS_URLS_REGEX = r'^/api/.*'
 CORS_ORIGIN_ALLOW_ALL = True
 
+# Configuración de Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
@@ -172,12 +166,13 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-    )
+    ),
 }
 
+# Configuración de drf-spectacular
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'visualizadorChaco API',
-    'DESCRIPTION': 'Documentation of API endpoints of visualizador',
+    'TITLE': 'Visualizador Chaco API',
+    'DESCRIPTION': 'Documentation of API endpoints of Visualizador Chaco',
     'VERSION': '1.0.0',
     'SERVE_PERMISSIONS': ["rest_framework.permissions.IsAdminUser"],
     'SERVERS': [
@@ -186,10 +181,29 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.live.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'edgardojavierchaco@gmail.com'
-EMAIL_HOST_PASSWORD = 'aperire.edgardo'
+# Configuración de Leaflet
+LEAFLET_CONFIG = {
+    "DEFAULT_CENTER": (-26.270826, -60.604297),
+    "DEFAULT_ZOOM": 6,
+}
 
+# Configuración de correo electrónico
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 465
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
+# Configuración de seguridad
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = "DENY"
+
+# Django Admin URL
+ADMIN_URL = "admin/"
+
+# Configuración de administradores y gerentes
+ADMINS = [("Edgardo Javier Gómez", "edgardojavierchaco@gmail.com")]
+MANAGERS = ADMINS
