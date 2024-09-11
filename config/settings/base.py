@@ -49,6 +49,7 @@ LOCAL_APPS = [
     'apps.aplicadores',
     'apps.supervisores',
     'apps.cuenta_regresiva',
+    'apps.Dm',
 ]
 
 THIRD_PARTY_APPS = []
@@ -191,7 +192,7 @@ LEAFLET_CONFIG = {
 # Configuración de correo electrónico
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
+EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')

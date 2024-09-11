@@ -122,13 +122,24 @@
                 var markerColor = markers[i][11];            
 
                 if (lat !== 0 && lng !== '') {
+                    // Definir la URL del icono en función del color del marcador
+                    var iconUrl = '';
+                    if (markerColor === 'blue') {
+                        iconUrl = "{% static 'img/marker-icon-2x-blue.png' %}";
+                    } else if (markerColor === 'green') {
+                        iconUrl = "{% static 'img/marker-icon-2x-green.png' %}";
+                    } else {
+                        // Puedes agregar más colores o un icono por defecto
+                        iconUrl = "{% static 'img/marker-icon-2x-default.png' %}";
+                    }
+
                     var markerIcon = L.icon({
-                        iconUrl: "{% static 'img/marker-icon-2x-' %}" + markerColor + ".png",
+                        iconUrl: iconUrl,
                         iconSize: [25, 41],
                         iconAnchor: [12, 41],
                         popupAnchor: [1, -34],
                         tooltipAnchor: [16, -28]
-                    });
+                    }); 
                     console.log("URL del icono:", "{% static 'img/marker-icon-2x-' %}" + markerColor + ".png");
                     var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexoMarker + '\')">' + cueanexoMarker + '</a>';
                     var marker = L.marker([lat, lng], { icon: markerIcon });
