@@ -1,4 +1,4 @@
-import os
+import os 
 from .base import *
 
 # Obtener la clave secreta de Django desde las variables de entorno
@@ -71,6 +71,26 @@ LOGGING = {
         },
     },
 }
+
+
+# EMAIL
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DJANGO_DEFAULT_FROM_EMAIL",
+    default="visualizador <noreply@visoreducativochaco.com.ar>",
+)
+# https://docs.djangoproject.com/en/dev/ref/settings/#server-email
+SERVER_EMAIL = os.environ.get("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
+# https://docs.djangoproject.com/en/dev/ref/settings/#email-subject-prefix
+EMAIL_SUBJECT_PREFIX = os.environ.get(
+    "DJANGO_EMAIL_SUBJECT_PREFIX",
+    default="[visualizador]",
+)
+
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+EMAIL_PORT = os.environ.get("EMAIL_PORT")
+EMAIL_HOST_USER=os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD=os.environ.get("EMAIL_HOST_PASSWORD")
+EMAIL_USE_SSL=True
 
 # Configuración de la aplicación WSGI
 WSGI_APPLICATION = "config.wsgi.application"

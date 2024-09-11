@@ -88,6 +88,7 @@ def filter_data_cargos(request):
             'ra_carga2021':'Relevamiento 2021',
             'ra_carga2022':'Relevamiento 2022',
             'ra_carga2023':'Relevamiento 2023',
+            'ra_carga2024':'Relevamiento 2024',
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
@@ -227,6 +228,7 @@ def filter_data_docentes(request):
             'ra_carga2021':'Relevamiento 2021',
             'ra_carga2022':'Relevamiento 2022',
             'ra_carga2023':'Relevamiento 2023',
+            'ra_carga2024':'Relevamiento 2024',
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
@@ -366,6 +368,7 @@ def filter_data_horas(request):
             'ra_carga2021':'Relevamiento 2021',
             'ra_carga2022':'Relevamiento 2022',
             'ra_carga2023':'Relevamiento 2023',
+            'ra_carga2024':'Relevamiento 2024',
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 

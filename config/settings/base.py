@@ -119,17 +119,18 @@ USE_TZ = True
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
 
 # Configuración de archivos estáticos y multimedia
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [ROOT_DIR / 'static']
-STATIC_ROOT = ROOT_DIR / 'staticfiles'
+STATIC_ROOT='staticfiles/'
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [str(BASE_DIR / 'static')]
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
+MEDIA_ROOT = str(BASE_DIR / 'media')
 MEDIA_URL = '/media/'
-MEDIA_ROOT = ROOT_DIR / 'media'
+
 
 # Configuración de migraciones
 MIGRATION_MODULES = {'sites': 'apps.contrib.sites.migrations'}
@@ -207,3 +208,9 @@ ADMIN_URL = "admin/"
 # Configuración de administradores y gerentes
 ADMINS = [("Edgardo Javier Gómez", "edgardojavierchaco@gmail.com")]
 MANAGERS = ADMINS
+
+# Constante general de inicio centro mapa, lo usa django-leaflet
+LEAFLET_CONFIG = {
+    "DEFAULT_CENTER": (-26.270826, -60.604297),
+    "DEFAULT_ZOOM": 6,
+}

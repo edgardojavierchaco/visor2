@@ -19,7 +19,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - '8000:8000'
+      - "8000:8000"
     command: /start
 
   postgres:
@@ -33,10 +33,14 @@ services:
       - visor_local_postgres_data_backups:/backups:z
     env_file:
       - ./.env
+    ports:
+      - "5433:5432"
 
   redis:
     image: redis
     container_name: visor_local_redis
     ports:
-      - '6379:6379'
+      - "6379:6379"
+
+  
     

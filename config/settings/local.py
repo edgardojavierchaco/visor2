@@ -57,3 +57,4 @@ if environ.get('USE_DOCKER') == 'yes':
 
 # WhiteNoise para manejo de archivos estáticos en desarrollo
 INSTALLED_APPS = ["whitenoise.runserver_nostatic"] + INSTALLED_APPS
+

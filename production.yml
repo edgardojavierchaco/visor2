@@ -34,7 +34,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "5433:5432"
+      - '5433:5432'
           
   traefik:
     build:
@@ -46,8 +46,9 @@ services:
     volumes:
       - production_traefik_visor:/etc/traefik/acme:z 
     ports:
-      - "80:80"
-      - "443:443"
+      - '0.0.0.0:80:80'
+      - '0.0.0.0:443:443'
+      - '0.0.0.0:5555:5555'
 
 nginx_media:
     build:
@@ -57,4 +58,4 @@ nginx_media:
     volumes:
       - production_django_media_volume:/usr/share/nginx/media/:ro
     ports:
-      - "8000:80"
+      - '8000:80'
