@@ -5,11 +5,12 @@ LOGGING = {
     "disable_existing_loggers": False,
     "handlers": {
         "console": {
+            "level":"ERROR",
             "class": "logging.StreamHandler",
         },
     },
     "root": {
         "handlers": ["console"],
-        "level": "WARNING",
+        "level": "ERROR",
     },
 }
