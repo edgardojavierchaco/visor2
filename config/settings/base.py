@@ -52,9 +52,8 @@ LOCAL_APPS = [
     'apps.Dm',
 ]
 
-THIRD_PARTY_APPS = []
 
-INSTALLED_APPS = BASE_APPS + LOCAL_APPS + THIRD_PARTY_APPS
+INSTALLED_APPS = BASE_APPS + LOCAL_APPS
 
 # Configuración de middleware
 BASE_MIDDLEWARE = [
@@ -120,8 +119,8 @@ USE_TZ = True
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
 
 # Configuración de archivos estáticos y multimedia
-STATIC_ROOT='staticfiles/'
-STATIC_URL = 'static/'
+STATIC_ROOT=str(BASE_DIR / 'staticfiles')
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [str(BASE_DIR / 'static')]
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 STATICFILES_FINDERS = [
@@ -129,8 +128,8 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
-MEDIA_ROOT = str(BASE_DIR / 'media')
-MEDIA_URL = '/media/'
+MEDIA_ROOT = str(BASE_DIR / 'apps/media')
+MEDIA_URL = '/apps/media/'
 
 
 # Configuración de migraciones

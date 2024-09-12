@@ -3,8 +3,8 @@ version: '3'
 volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
-  production_traefik_visor: {} 
-  
+  production_traefik_visor: {}
+  media_volume: {}  
 
 services:
   django: &django
@@ -18,6 +18,8 @@ services:
     env_file:
       - ./.env
     command: /start    
+    volumes:
+      - media_volume:/app/apps/media
     
   postgres:
     build:
@@ -42,4 +44,3 @@ services:
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
-      

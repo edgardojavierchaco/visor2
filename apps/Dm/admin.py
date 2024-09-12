@@ -1,3 +1,7 @@
 from django.contrib import admin
+from .models import CanalMensaje,  CanalUsuario, Canal
 
-# Register your models here.
+admin.site.register(CanalMensaje)
+admin.site.register(CanalUsuario)
+admin.site.register(Canal)
+
