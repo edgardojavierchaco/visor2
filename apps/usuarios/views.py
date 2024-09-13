@@ -163,9 +163,9 @@ class registrar_usuarios(CreateView):
         # Guardar la contraseña encriptada en el objeto de usuario
         usuario_form.password = hashed_password
         
-        # Asignar los campos activo e is_staff a True
-        usuario_form.activo = True
-        usuario_form.is_staff = True
+        # Asignar los campos activo a True e is_staff a False
+        usuario_form.activo = False
+        usuario_form.is_staff = False
         
         # Guardar el usuario en la base de datos
         usuario_form.save()
@@ -203,58 +203,3 @@ def check_user_status(request):
     return JsonResponse({'is_staff': False})
 
 
-class ResetPassWordView(FormView):
-    form_class = ResetpassWordForm
-    template_name = 'login/resetpwd.html'
-    success_url = reverse_lazy('usuarios:login')  
-
-    def form_valid(self, form):
-        username = form.cleaned_data.get('username')
-        try:
-            user = UsuariosVisualizador.objects.get(username=username)
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            reset_url = self.request.build_absolute_uri(reverse_lazy('usuarios:password_reset_confirm', args=[uid, token]))
-            send_mail(
-                'Resetear su contraseña',
-                f'use el siguiente enlace para resetear su contraseña:\n{reset_url}',
-                'estadisticaseducativaschaco@gmail.com',
-                [user.correo],
-                fail_silently=False,
-            )
-            messages.success(self.request, 'Se ha enviado un correo electrónico para restablecer tu contraseña.')
-        except UsuariosVisualizador.DoesNotExist:
-            messages.error(self.request, 'El nombre de usuario no existe.')
-
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = 'Reseteo de Contraseña'
-        return context
-
-class PasswordResetConfirmView(TemplateView):
-    template_name = 'login/password_reset_confirm.html'
-
-    def post(self, request, *args, **kwargs):
-        uidb64 = kwargs.get('uidb64')
-        token = kwargs.get('token')
-        try:
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = UsuariosVisualizador.objects.get(pk=uid)
-            if default_token_generator.check_token(user, token):
-                new_password1 = request.POST.get('new_password1')
-                new_password2 = request.POST.get('new_password2')
-                if new_password1 and new_password1 == new_password2:
-                    user.set_password(new_password1)
-                    user.save()
-                    messages.success(request, 'Tu contraseña ha sido restablecida con éxito.')
-                    return HttpResponseRedirect(reverse_lazy('usuarios:login'))
-                else:
-                    messages.error(request, 'Las contraseñas no coinciden.')
-            else:
-                messages.error(request, 'El enlace de restablecimiento de contraseña no es válido.')
-        except (TypeError, ValueError, OverflowError, UsuariosVisualizador.DoesNotExist):
-            messages.error(request, 'El enlace de restablecimiento de contraseña no es válido.')
-        
-        return self.render_to_response(self.get_context_data())

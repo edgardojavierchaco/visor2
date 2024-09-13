@@ -183,7 +183,7 @@
 
 <main>
 
-   <div class="contenedor__todo">
+    <div class="contenedor__todo">
         <div class="caja__trasera">
             <div class="caja__trasera-login">
                 <h3>¿Ya tienes una cuenta?</h3>
@@ -203,8 +203,8 @@
             <form id="login-form" action="{% url 'logueo:login' %}" class="formulario__login" method="post">
                 {% csrf_token %}
                 <h2>Iniciar Sesión</h2> 
-                {{ form.username|append_attr:"class:input" }}
-                {{ form.password|append_attr:"class:input" }}
+                {{ form.username|add_class:"input"|attr:"id:login-username" }}
+                {{ form.password|add_class:"input"|attr:"id:login-password" }}
                 <button id="login-button" type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Entrar</button>
             </form>
 
@@ -212,13 +212,13 @@
             <form id="register-form" action="{% url 'usuarios:registro' %}" class="formulario__register" method="post">
                 {% csrf_token %}
                 <h2>Registrarse</h2> 
-                {{ form.username }}
-                {{ form.password }}
-                {{ form.apellido }}
-                {{ form.nombres }}
-                {{ form.correo }}
-                {{ form.telefono }}
-                {{ form.nivelacceso }}
+                {{ form.username|add_class:"input"|attr:"id:register-username" }}
+                {{ form.password|add_class:"input"|attr:"id:register-password" }}
+                {{ form.apellido|add_class:"input"|attr:"id:register-apellido" }}
+                {{ form.nombres|add_class:"input"|attr:"id:register-nombres" }}
+                {{ form.correo|add_class:"input"|attr:"id:register-correo" }}
+                {{ form.telefono|add_class:"input"|attr:"id:register-telefono" }}
+                {{ form.nivelacceso|add_class:"input"|attr:"id:register-nivelacceso" }}
                 <button type="submit"><i class="fas fa-sign-in-alt" style="color:green"></i>Registrarse</button>
             </form>
         </div>
@@ -231,12 +231,14 @@
     document.getElementById("btn__registrarse").addEventListener("click", register);
     window.addEventListener("resize", anchoPage);
 
-    var formulario_login = document.querySelector(".formulario__login");
-    var formulario_register = document.querySelector(".formulario__register");
-    var contenedor_login_register = document.querySelector(".contenedor__login-register");
-    var caja_trasera_login = document.querySelector(".caja__trasera-login");
-    var caja_trasera_register = document.querySelector(".caja__trasera-register");
+    // Declarar las variables de los formularios y otros elementos
+    const formulario_login = document.querySelector(".formulario__login");
+    const formulario_register = document.querySelector(".formulario__register");
+    const contenedor_login_register = document.querySelector(".contenedor__login-register");
+    const caja_trasera_login = document.querySelector(".caja__trasera-login");
+    const caja_trasera_register = document.querySelector(".caja__trasera-register");
 
+    // Función para manejar el ancho de la página
     function anchoPage() {
         if (window.innerWidth > 850) {
             caja_trasera_register.style.display = "block";
@@ -268,7 +270,7 @@
             caja_trasera_login.style.display = "none";
         }
     }
-
+    
     function register() {
         if (window.innerWidth > 850) {
             formulario_register.style.display = "block";
@@ -282,13 +284,14 @@
             formulario_login.style.display = "none";
             caja_trasera_register.style.display = "none";
             caja_trasera_login.style.display = "block";
+            caja_trasera_login.style.opacity = "1";
         }
     }
 
     // Función de validación de username para registro
     function validarUsernameRegistro() {
-        var nivelAcceso = document.querySelector('[name="nivelacceso"]').value;
-        var username = document.querySelector('[name="username"]').value;
+        const nivelAcceso = document.querySelector('#register-nivelacceso').value;
+        const username = document.querySelector('#register-username').value;
 
         // Validar si el nivel de acceso es 'Director/a' o 'Evaluacion'
         if (nivelAcceso === 'Director/a' || nivelAcceso === 'Evaluacion') {
@@ -307,6 +310,7 @@
         return true;
     }
 
+    // Función para mostrar mensajes de error con SweetAlert2
     function mostrarError(mensaje) {
         Swal.fire({
             title: 'Advertencia',
@@ -316,14 +320,47 @@
         });
     }
 
+    // Manejar el envío del formulario de login
+    document.getElementById('login-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        fetch("{% url 'logueo:login' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value // Agregar el token CSRF
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect_url;
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Advertencia',
+                    text: data.message,
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    // Evento de cambio en nivelacceso para registro
+    document.querySelector('#register-nivelacceso').addEventListener('change', validarUsernameRegistro);
+
     // Validación antes de enviar el formulario de registro
     document.getElementById('register-form').addEventListener('submit', function(e) {
         if (!validarUsernameRegistro()) {
             e.preventDefault(); // Previene el envío del formulario si la validación falla
         }
     });
+    
 </script>
-
 
 </body>
 </html>

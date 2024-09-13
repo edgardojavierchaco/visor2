@@ -129,7 +129,7 @@ STATICFILES_FINDERS = [
 ]
 
 MEDIA_ROOT = str(BASE_DIR / 'apps/media')
-MEDIA_URL = '/apps/media/'
+MEDIA_URL = 'apps/media/'
 
 
 # Configuración de migraciones

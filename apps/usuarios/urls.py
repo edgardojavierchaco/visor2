@@ -1,7 +1,7 @@
 from config.urls import path
 from apps.usuarios.views import *
 from django.contrib.auth import views as auth_views
-from .views import check_user_status, ResetPassWordView, PasswordResetConfirmView
+from .views import check_user_status
 
 
 app_name='usuarios'
@@ -15,7 +15,5 @@ urlpatterns=[
     path('eliminar/', EliminarUsuarioView.as_view(), name='eliminar'),
     path('eliminar_op/', EliminarUsuarioView_op.as_view(), name='eliminar_op'),
     path('registro/',registrar_usuarios.as_view(), name='registro'),
-    path('api/check_user_status/', check_user_status, name='check_user_status'), 
-    path('reset_password',ResetPassWordView.as_view(),name='reset_password'),
-    path('reset/<str:uidb64>/<str:token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('api/check_user_status/', check_user_status, name='check_user_status'),     
 ]
