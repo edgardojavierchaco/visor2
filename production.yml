@@ -3,9 +3,7 @@ version: '3'
 volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
-  production_traefik_visor: {}
-  production_media_volume:
-    external: true
+  production_traefik_visor: {}  
 
 services:
   django: &django
@@ -20,7 +18,8 @@ services:
       - ./.env
     command: /start    
     volumes:
-      - production_media_volume:/apps/media/
+      - ./staticfiles:/app/staticfiles 
+      - ./apps/media:/app/media
     
   postgres:
     build:
@@ -54,6 +53,7 @@ services:
       dockerfile: Dockerfile 
     image: visor_local_nginx_media
     volumes:
-      - production_media_volume:/usr/share/nginx/media/:ro
+      - ./staticfiles:/usr/share/nginx/static
+      - ./apps/media:/usr/share/nginx/media
     ports:
       - "8000:80"

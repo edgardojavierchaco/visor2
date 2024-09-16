@@ -2,7 +2,7 @@
 from config.urls import path
 from django.views.generic import TemplateView
 from . import views
-from . import views_matric, views_infograf, views_listados, views_carrerastitulos
+from . import views_matric, views_infograf, views_listados, views_carrerastitulos, views_infodocatividad
 
 
 app_name='reportes'
@@ -28,6 +28,7 @@ urlpatterns=[
     path('consulta_titulos/', views_carrerastitulos.consulta_carrerastitulos, name='consulta_titulos'),
     path('equipo/', views_infograf.equipoview,name='equipo'),
     path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),
+    path('docactividad/',views_infodocatividad.consulta_docentes_actividad, name='docactividad'),
 ]
 
 
