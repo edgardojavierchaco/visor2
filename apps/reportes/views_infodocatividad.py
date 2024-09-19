@@ -5,71 +5,61 @@ from django.http import JsonResponse
 def consulta_docentes_actividad(request):
     departamentos = []
     resultados = {}
+    total_general = 0
     selected_departamento = request.GET.get('departamento')
 
     # Obtener los departamentos únicos
     with connection.cursor() as cursor:
         cursor.execute("SELECT DISTINCT departamento FROM v_capa_unica_ofertas")
         departamentos = [row[0] for row in cursor.fetchall()]
-        
-    funciones = [
-        "funcion.visor_docente_actividad_adulto_fp('ra_carga2024')",
-        "funcion.visor_docente_actividad_adulto_primaria('ra_carga2024')",
-        "funcion.visor_docente_actividad_adulto_secundaria('ra_carga2024')",
-        "funcion.visor_docente_actividad_comun_artistica('ra_carga2024')",
-        "funcion.visor_docente_actividad_comun_inicial('ra_carga2024')",
-        "funcion.visor_docente_actividad_comun_primaria('ra_carga2024')",
-        "funcion.visor_docente_actividad_comun_secundaria('ra_carga2024')",
-        "funcion.visor_docente_actividad_comun_servicios_complementarios('ra_carga2024')",
-        "funcion.visor_docente_actividad_comun_snu('ra_carga2024')",
-        
-    ]
-    
-    ambitos = ['Rural Disperso','Rural Aglomerado', 'Urbano']
-    sectores = ['Estatal', 'Privado', 'Gestión social/cooperativa']
 
-    # Construir la consulta SQL iterando sobre las funciones, ámbitos y sectores
-    for funcion in funciones:
-        funcion_limpia = funcion.replace("funcion.visor_docente_actividad_", "").split('(')[0].upper()
-        resultados[funcion_limpia] = []  # Crear un diccionario para cada función
-        
-        for ambito in ambitos:
-            for sector in sectores:
-                with connection.cursor() as cursor:
-                    # Construimos la consulta SQL dinámicamente
-                    query = f"""
-                        SELECT SUM(total) 
-                        FROM {funcion} AS fn
-                        LEFT JOIN public.v_capa_unica_ofertas AS vcuo
-                        ON fn.cueanexo = vcuo.cueanexo::text
-                        WHERE fn.docentes = 'Total docentes en actividad'
-                          AND vcuo.sector = '{sector}'
-                          AND vcuo.ambito ILIKE '{ambito}'
-                    """
+    # Consulta SQL dependiendo del departamento seleccionado
+    with connection.cursor() as cursor:        
+        query = """
+                SELECT funcion, ambito, sector, departamento, total
+                FROM public.resultados_docentes
+                WHERE departamento = %s
+            """
+        cursor.execute(query, [selected_departamento])
 
-                    # Si se ha seleccionado un departamento, agregamos el filtro
-                    if selected_departamento:
-                        query += f" AND vcuo.departamento = '{selected_departamento}'"
+        filas = cursor.fetchall()
+        print("Filas obtenidas:", filas)
 
-                    cursor.execute(query)
-                    total = cursor.fetchone()[0]  # Obtener el resultado de la suma
-                    if total is None:
-                        total = 0  # Manejar valores nulos
+        # Recorrer las filas y guardar los resultados
+        for fila in filas:
+            if len(fila) == 4:  # Para el caso de todos los departamentos
+                funcion, ambito, sector, total = fila
+                departamento = '-- Todos los departamentos --'  # Asigna un valor genérico para el departamento
+            elif len(fila) == 5:  # Para el caso de un departamento específico
+                funcion, ambito, sector, departamento, total = fila
+            else:
+                raise ValueError("Unexpected number of columns in the result")
 
-                    # Procesar el nombre de la función para que solo quede la parte después de "funcion.visor_docente_actividad_" y en mayúsculas
-                    funcion_limpia = funcion.replace("funcion.visor_docente_actividad_", "").split('(')[0].upper()
+            if funcion not in resultados:
+                resultados[funcion] = []
+            resultados[funcion].append({
+                'ambito': ambito,
+                'sector': sector,
+                'departamento': departamento,
+                'total': total
+            })
 
-                    # Almacena los resultados en la lista
-                    resultados[funcion_limpia].append({                        
-                        'ambito': ambito,
-                        'sector': sector,
-                        'total': total
-                    })
+            # Calcular la suma total general
+            total_general += total
+
+    # Definir la lista de colores en la vista
+    colores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6']
     
     # Responder con JSON si es una solicitud AJAX
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'resultados': resultados})
     
-    print(resultados)
+    print(resultados, departamentos, total_general)
+    
     # Renderiza los resultados en la plantilla HTML
-    return render(request, 'reportes/listadoactividad.html', {'resultados': resultados, 'departamentos': departamentos})
+    return render(request, 'reportes/listadoactividad.html', {
+        'resultados': resultados, 
+        'departamentos': departamentos,
+        'colores': colores,
+        'total_general': total_general
+    })
