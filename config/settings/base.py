@@ -119,16 +119,16 @@ USE_TZ = True
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
 
 # Configuración de archivos estáticos y multimedia
-STATIC_ROOT=str(BASE_DIR / 'staticfiles')
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [str(BASE_DIR / 'static')]
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+#STATIC_ROOT=str(BASE_DIR / 'staticfiles')
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+#STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
-MEDIA_ROOT = str(BASE_DIR / 'apps/media')
+MEDIA_ROOT = os.path.join(APPS_DIR, 'media')
 MEDIA_URL = 'apps/media/'
 
 

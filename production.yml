@@ -16,10 +16,7 @@ services:
       - postgres
     env_file:
       - ./.env
-    command: /start    
-    volumes:
-      - ./staticfiles:/app/staticfiles 
-      - ./apps/media:/app/media
+    command: /start        
     
   postgres:
     build:
@@ -47,13 +44,4 @@ services:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
   
-  nginx_media:
-    build:
-      context: ./compose/production/nginx
-      dockerfile: Dockerfile 
-    image: visor_local_nginx_media
-    volumes:
-      - ./staticfiles:/usr/share/nginx/static
-      - ./apps/media:/usr/share/nginx/media
-    ports:
-      - "8000:80"
+  
