@@ -4,7 +4,6 @@ from django.views.generic import TemplateView
 from . import views
 from . import views_matric, views_infograf, views_listados, views_carrerastitulos, views_infodocatividad
 
-
 app_name='reportes'
 
 urlpatterns=[
@@ -24,7 +23,8 @@ urlpatterns=[
     path('infografia/',TemplateView.as_view(template_name='reportes/panel_infografia.html'),name='infografia'),
     path('info1/',views_infograf.infografiaview,name='info1'),
     path('info2/',views_infograf.infografiaview2,name='info2'),
-    path('consulta_ofertas/',views_listados.consulta_ofertas,name='consulta_ofertas'),    
+    path('consulta_ofertas/',views_listados.consulta_ofertas,name='consulta_ofertas'),   
+    path('consulta_ofertas_reg/',views_listados.consulta_ofertas_reg,name='consulta_ofertas_reg'), 
     path('consulta_titulos/', views_carrerastitulos.consulta_carrerastitulos, name='consulta_titulos'),
     path('equipo/', views_infograf.equipoview,name='equipo'),
     path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),

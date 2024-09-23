@@ -1,7 +1,7 @@
 {% load static %}
 
 <style>
-/* Asegúrate de agregar este CSS para que los submenús funcionen correctamente */
+/* CSS para que los submenús funcionen correctamente */
 .dropdown-menu .dropdown-menu {
     position: absolute;
     left: 100%;
@@ -45,14 +45,15 @@
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <li><a href="{% url 'mapas:filtrado' %}" class="dropdown-item"><img src="{% static 'img/mapadatos.png' %}"> Filtrado por Criterios Seleccionados</a></li>
                         <li><a href="{% url 'dibujararea' %}" class="dropdown-item"><img src="{% static 'img/forma.png' %}"> Filtrado por Área Dibujada</a></li>
-                        <li><a href="{% url 'mapas:filcueradio' %}" class="dropdown-item"><img src="{% static 'img/radar.png' %}"> Filtrado por Radio</a></li>                        
+                        <li><a href="{% url 'mapas:filcueradio' %}" class="dropdown-item"><img src="{% static 'img/radar.png' %}"> Filtrado por Radio</a></li>     
+                        <li><a href="{% url 'mapas:obtener_geometria' %}" class="dropdown-item"><img src="{% static 'img/mapa.png' %}"> Regiones Educativas</a></li>                      
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Reportes</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <!-- Menú desplegable para "Resultados" -->
+                        <!-- Menú desplegable para "Reportes" -->
                         <li class="dropdown">
                             <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                class="dropdown-item dropdown-toggle">Docentes</a>
@@ -72,7 +73,15 @@
                             </ul>
                         </li>            
                         <li><a href="{% url 'mapas:datos_ofertas' %}" class="dropdown-item">Listado Ofertas Educativas</a></li>              
-                        <li><a href="{% url 'reportes:consulta_ofertas' %}" class="dropdown-item">Ofertas</a></li> 
+                         
+                        <li class="dropdown">
+                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                               class="dropdown-item dropdown-toggle">Ofertas Educativas por ...</a>
+                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                <li><a href="{% url 'reportes:consulta_ofertas_reg' %}" class="dropdown-item">Región</a></li>
+                                <li><a href="{% url 'reportes:consulta_ofertas' %}" class="dropdown-item">Departamento</a></li>                                
+                            </ul>
+                        </li>        
                         <li><a href="{% url 'reportes:consulta_titulos' %}" class="dropdown-item">Carreras - Títulos</a></li>
                     </ul>
                 </li>                

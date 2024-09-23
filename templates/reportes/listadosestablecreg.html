@@ -1,0 +1,265 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+
+<style>
+    .data-box {
+        flex: 1;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        text-align: center;
+        margin-right: 5px;
+    }
+
+    .data-box:last-child {
+        margin-right: 0;
+    }
+
+    .data-box p {
+        margin: 0;
+        font-weight: bold;
+        font-size: 0.9em;
+    }
+
+    .data-box span {
+        display: block;
+        margin-top: 5px;
+        font-size: 1.2em;
+        font-weight: bold;
+        color: white;
+    }
+
+    .bg-green { background-color: green; }
+    .bg-yellow { background-color: yellow; color: black; }
+    .bg-orange { background-color: orange; }
+    .bg-blue { background-color: blue; }
+    .bg-black { background-color: black; }
+    .bg-violet { background-color: violet; color: black; }
+    .bg-brown { background-color: brown; }
+
+    .card {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 0 10px;
+    }
+
+    .card-title {
+        font-weight: bold;
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    }
+
+    h3 {
+        font-weight: bold;
+        font-size: 1.2em;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+
+    .container {
+        display: flex;
+        align-items: flex-start;
+    }
+</style>
+
+<form id="regionForm" style="margin-top:20px;">
+    <label for="region">Selecciona una Regional Educativa:</label>
+    <select id="region" name="region">
+        <option value="">--Seleccione--</option>
+        {% for region in regionales %}
+            <option value="{{ region }}">{{ region }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div id="resultado-container" style="display: none; margin-top: 30px;">
+    <div class="container">
+        <img id="imagen-departamento" src="{% static 'img/chacogral.png' %}" alt="Imagen de la Regional Educativa" style="width: 400px; height: auto;">
+        <div class="card" style="flex: 1;">
+            <div class="card-body">
+                <h2 class="card-title">Regional: <span id="nombre-departamento"></span></h2>
+                <br>
+                <br>
+                <br>
+                <div class="section" style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="data-box bg-green">
+                            <p>Sedes</p>
+                            <span id="total_sedes"></span>
+                        </div>
+                        <div class="data-box bg-black">
+                            <p>Anexos</p>
+                            <span id="total_anexos"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Ámbito</h3>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div class="data-box bg-blue">
+                        <p>Urbano</p>
+                        <span id="total_urbanos"></span>
+                    </div>
+                    <div class="data-box bg-yellow">
+                        <p>Rural Disperso</p>
+                        <span id="total_rurales_dispersos"></span>
+                    </div>
+                    <div class="data-box bg-yellow">
+                        <p>Rural Aglomerado</p>
+                        <span id="total_rurales_aglomerados"></span>
+                    </div>
+                </div>
+
+                <h3>Sector</h3>
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="data-box bg-brown">
+                        <p>Estatal</p>
+                        <span id="total_estatales"></span>
+                    </div>
+                    <div class="data-box bg-orange">
+                        <p>Privado</p>
+                        <span id="total_privados"></span>
+                    </div>
+                    <div class="data-box bg-violet">
+                        <p>Gestión Social/Comunitario</p>
+                        <span id="total_soccom"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="width: 350px;">
+            <div class="card-body">
+                <h3>Datos de Oferta</h3>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div class="data-box bg-green">
+                        <p>Inicial</p>
+                        <span id="total_inicial"></span>
+                    </div>
+                    <div class="data-box bg-yellow">
+                        <p>Primario</p>
+                        <span id="total_primario"></span>
+                    </div>
+                    <div class="data-box bg-orange">
+                        <p>Secundario</p>
+                        <span id="total_secundaria"></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div class="data-box bg-blue">
+                        <p>Adulto Primario</p>
+                        <span id="total_adultoprim"></span>
+                    </div>
+                    <div class="data-box bg-blue">
+                        <p>Adulto Secundario</p>
+                        <span id="total_adultosec"></span>
+                    </div>
+                    <div class="data-box bg-blue">
+                        <p>Adulto Form. Prof.</p>
+                        <span id="total_adultofp"></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div class="data-box bg-black">
+                        <p>Biblioteca</p>
+                        <span id="total_biblio"></span>
+                    </div>
+                    <div class="data-box bg-black">
+                        <p>CEF</p>
+                        <span id="total_cef"></span>
+                    </div>
+                    <div class="data-box bg-black">
+                        <p>Especial</p>
+                        <span id="total_especial"></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="data-box bg-violet">
+                        <p>SNU</p>
+                        <span id="total_snu"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Ejecutar la consulta al cargar la página
+        $.ajax({
+            url: "{% url 'reportes:consulta_ofertas_reg' %}",
+            data: {},  // No enviamos el parámetro 'region' para obtener todos los datos
+            success: function(data) {
+                $('#total_sedes').text(data.total_sedes);
+                $('#total_anexos').text(data.total_anexos);
+                $('#total_urbanos').text(data.total_urbanos);
+                $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
+                $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
+                $('#total_estatales').text(data.total_estatales);
+                $('#total_privados').text(data.total_privados);
+                $('#total_soccom').text(data.total_soccom);
+                $('#total_inicial').text(data.total_inicial);
+                $('#total_primario').text(data.total_primario);
+                $('#total_adultoprim').text(data.total_adultoprim);
+                $('#total_secundaria').text(data.total_secundaria);
+                $('#total_adultosec').text(data.total_adultosec);
+                $('#total_adultofp').text(data.total_adultofp);
+                $('#total_biblio').text(data.total_biblio);
+                $('#total_cef').text(data.total_cef);
+                $('#total_especial').text(data.total_especial);
+                $('#total_snu').text(data.total_snu);
+
+                // Mostrar el contenedor de resultados
+                $('#resultado-container').show();
+            }
+        });
+
+        // Evento para cambiar la región
+        $('#region').change(function() {
+            const regionSeleccionada = $(this).val();
+            $.ajax({
+                url: "{% url 'reportes:consulta_ofertas_reg' %}",
+                data: { region: regionSeleccionada },
+                success: function(data) {
+                    $('#nombre-departamento').text(regionSeleccionada);  
+                    $('#total_sedes').text(data.total_sedes);
+                    $('#total_anexos').text(data.total_anexos);
+                    $('#total_urbanos').text(data.total_urbanos);
+                    $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
+                    $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
+                    $('#total_estatales').text(data.total_estatales);
+                    $('#total_privados').text(data.total_privados);
+                    $('#total_soccom').text(data.total_soccom);
+                    $('#total_inicial').text(data.total_inicial);
+                    $('#total_primario').text(data.total_primario);
+                    $('#total_adultoprim').text(data.total_adultoprim);
+                    $('#total_secundaria').text(data.total_secundaria);
+                    $('#total_adultosec').text(data.total_adultosec);
+                    $('#total_adultofp').text(data.total_adultofp);
+                    $('#total_biblio').text(data.total_biblio);
+                    $('#total_cef').text(data.total_cef);
+                    $('#total_especial').text(data.total_especial);
+                    $('#total_snu').text(data.total_snu);
+
+                    // Actualizar la imagen según la región seleccionada
+                    $('#imagen-departamento').attr('src', '/static/img/' + regionSeleccionada.toLowerCase() + '.png');  // Cambia la ruta de la imagen según sea necesario
+
+                    // Mostrar el contenedor de resultados
+                    $('#resultado-container').show();
+                }
+            });
+        });
+    });
+</script>
+
+{% endblock %}

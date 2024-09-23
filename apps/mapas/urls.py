@@ -13,4 +13,6 @@ urlpatterns=[
     path('listadomap/',views.filter_listado_map,name='filter_listado_map'),
     path('puntos/',views.filtrado_list,name='puntos'),
     path('datos_ofertas/', views2.obtener_datos_ofertas, name='datos_ofertas'),
+    path('geometria/', viewscueradio.obtener_geometria, name='obtener_geometria'),
+    path('get-region-data/', viewscueradio.get_region_data, name='get_region_data'),
 ]

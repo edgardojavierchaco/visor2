@@ -1,12 +1,12 @@
 import os
-from dotenv import load_dotenv
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Directorios base y raíz del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ROOT_DIR = BASE_DIR
 
-# Cargar variables de entorno desde el archivo .env
+# Cargar variables de entorno
 load_dotenv(BASE_DIR / '.env')
 
 # Directorio de aplicaciones
@@ -23,6 +23,7 @@ BASE_APPS = [
     'widget_tweaks',
     'django_select2',
     'django.forms',
+    'django.contrib.gis',
 ]
 
 LOCAL_APPS = [
@@ -55,7 +56,7 @@ LOCAL_APPS = [
 
 INSTALLED_APPS = BASE_APPS + LOCAL_APPS
 
-# Configuración de middleware
+# Middleware
 BASE_MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -64,7 +65,6 @@ BASE_MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.regacceso.middleware.RegistroAccesoMiddleware',
 ]
@@ -76,15 +76,12 @@ THIRD_MIDDLEWARE = [
 
 MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
 
-# Configuración de autenticación
+# Autenticación
 AUTH_USER_MODEL = 'usuarios.UsuariosVisualizador'
 AUTHENTICATION_BACKENDS = [
     'apps.usuarios.backends.CustomAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-
-# URL raíz de la configuración del proyecto
-ROOT_URLCONF = 'config.urls'
 
 # Configuración de plantillas
 TEMPLATES = [
@@ -97,7 +94,6 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.template.context_processors.i18n',
                 'django.template.context_processors.media',
                 'django.template.context_processors.static',
                 'django.template.context_processors.tz',
@@ -107,10 +103,15 @@ TEMPLATES = [
     },
 ]
 
-# URL de redirección al iniciar sesión
-LOGIN_REDIRECT_URL = '/portada/'
+# Configuración estática y media
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = 'app/staticfiles/'
 
-# Configuración de internacionalización y zona horaria
+MEDIA_URL = '/media/'
+MEDIA_ROOT = ROOT_DIR / 'apps/media/'
+
+# Configuración de tiempo y formato
 LANGUAGE_CODE = 'es-ar'
 TIME_ZONE = 'America/Argentina/Buenos_Aires'
 USE_I18N = True
@@ -118,75 +119,34 @@ USE_L10N = True
 USE_TZ = True
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
 
-# Configuración de archivos estáticos y multimedia
-#STATIC_ROOT=str(BASE_DIR / 'staticfiles')
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-#STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-]
-
-MEDIA_ROOT = os.path.join(APPS_DIR, 'media')
-MEDIA_URL = 'apps/media/'
-
-
-# Configuración de migraciones
-MIGRATION_MODULES = {'sites': 'apps.contrib.sites.migrations'}
-
-# Configuración de logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        }
-    },
-    'root': {'level': 'INFO', 'handlers': ['console']},
-}
-
-# Configuración de CORS
+# Configuración de CORS y REST Framework
 CORS_URLS_REGEX = r'^/api/.*'
 CORS_ORIGIN_ALLOW_ALL = True
 
-# Configuración de Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-    ),
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
 }
 
-# Configuración de drf-spectacular
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Visualizador Chaco API',
-    'DESCRIPTION': 'Documentation of API endpoints of Visualizador Chaco',
-    'VERSION': '1.0.0',
-    'SERVE_PERMISSIONS': ["rest_framework.permissions.IsAdminUser"],
-    'SERVERS': [
-        {'url': 'http://127.0.0.1:8000', 'description': 'Local Development server'},
-        {'url': 'https://visoreducativochaco.com.ar', 'description': 'Production server'},
-    ],
-}
+ROOT_URLCONF='config.urls'
 
 # Configuración de Leaflet
 LEAFLET_CONFIG = {
     "DEFAULT_CENTER": (-26.270826, -60.604297),
     "DEFAULT_ZOOM": 6,
 }
+
+# Configuración de seguridad
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+
+# URL de Django Admin
+ADMIN_URL = 'admin/'
 
 # Configuración de correo electrónico
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -195,22 +155,3 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-
-# Configuración de seguridad
-SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
-SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = "DENY"
-
-# Django Admin URL
-ADMIN_URL = "admin/"
-
-# Configuración de administradores y gerentes
-ADMINS = [("Edgardo Javier Gómez", "edgardojavierchaco@gmail.com")]
-MANAGERS = ADMINS
-
-# Constante general de inicio centro mapa, lo usa django-leaflet
-LEAFLET_CONFIG = {
-    "DEFAULT_CENTER": (-26.270826, -60.604297),
-    "DEFAULT_ZOOM": 6,
-}

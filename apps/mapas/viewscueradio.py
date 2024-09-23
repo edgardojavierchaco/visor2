@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.db import connection
 from django.views.decorators.http import require_GET
+from .models import RegionalesGeometria, LocalidadesRegion
+from django.core.serializers import serialize
 
 def filtrado_cueradio(request):
     return render(request,'mapa/filter_cuearadio.html')
@@ -99,3 +101,47 @@ def filter_cueradio(request):
     except Exception as general_error:
         logging.error(f"Error inesperado: {str(general_error)}")
         return render(request, 'error.html', {'error': f"Error inesperado: {str(general_error)}"})
+
+
+def obtener_geometria(request):
+    # Serializar los datos a formato GeoJSON
+    geometries = RegionalesGeometria.objects.all()    
+     
+    geojson_data = serialize('geojson', geometries, geometry_field='geom', fields=('region_pad', 'TITULO'))
+    print(geojson_data)
+    return render(request, 'mapa/regionales.html', {'geometries': geojson_data})
+
+
+def get_region_data(request):
+    region_pad = request.GET.get('region_pad', None)
+    if region_pad:
+        with connection.cursor() as cursor:
+            # Primera consulta para obtener el director
+            query1 = "SELECT DISTINCT nom_dir,tel_dir,email_dir FROM public.localidadesregion WHERE reg = %s"
+            cursor.execute(query1, [region_pad])
+            row1 = cursor.fetchone()
+            
+            # Segunda consulta para obtener todas las localidades
+            query2 = "SELECT loc_reg FROM public.localidadesregion WHERE reg = %s"
+            cursor.execute(query2, [region_pad])
+            rows2 = cursor.fetchall()  # Utilizamos fetchall() para obtener todas las filas
+
+        # Datos del director
+        data = {
+            'region_pad': region_pad,
+            'director': row1[0] if row1 else 'No disponible',
+            'telefono': row1[1] if row1 else 'No disponible',
+            'email': row1[2] if row1 else 'No disponible',
+        }
+
+        # Datos de localidades: convertimos las filas en una lista
+        localidades = [row[0] for row in rows2] if rows2 else ['No disponible']
+        data1 = {
+            'localidades': localidades
+        }
+
+        # Combinar ambas respuestas en una sola
+        response_data = {**data, **data1}
+        return JsonResponse(response_data)
+
+    return JsonResponse({'error': 'No region_pad provided'}, status=400)
