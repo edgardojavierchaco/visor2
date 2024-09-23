@@ -105,11 +105,11 @@ TEMPLATES = [
 
 # Configuración estática y media
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = 'app/staticfiles/'
+STATICFILES_DIRS = [BASE_DIR /'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = ROOT_DIR / 'apps/media/'
+MEDIA_ROOT = ROOT_DIR / 'apps/media'
 
 # Configuración de tiempo y formato
 LANGUAGE_CODE = 'es-ar'
@@ -155,3 +155,23 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
+# Configuración de log
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s '
+            '%(process)d %(thread)d %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        }
+    },
+    'root': {'level': 'INFO', 'handlers': ['console']},
+}
