@@ -22,7 +22,7 @@ DATABASES = {
 }
 
 # Seguridad HTTPS y cookies
-SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True') == 'True'
+SECURE_SSL_REDIRECT =  False #os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True').lower() == 'True'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', 3600))
