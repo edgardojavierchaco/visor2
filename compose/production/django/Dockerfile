@@ -10,11 +10,8 @@ ARG BUILD_ENVIRONMENT=production
 
 # Install apt packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
   build-essential \
-  # psycopg2 dependencies
   libpq-dev \
-  # GDAL dependencies
   gdal-bin \
   libgdal-dev
 
@@ -40,18 +37,17 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV BUILD_ENV ${BUILD_ENVIRONMENT}
 
+# Crea el usuario 'django'
+RUN useradd -m django
+
 WORKDIR ${APP_HOME}
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # psycopg2 dependencies
   libpq-dev \
-  # GDAL dependencies
   gdal-bin \
   libgdal-dev \
-  # Translations dependencies
   gettext \
-  # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
@@ -59,30 +55,29 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-# All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
-# copy python dependency wheels from python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+# Copiar los archivos de ruedas de la etapa de construcción
+COPY --from=python-build-stage /usr/src/app/wheels /wheels/
 
-# use wheels to install python dependencies
+# Instalar las dependencias de Python
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
   && rm -rf /wheels/
 
-
+# Copiar archivos de entrada y dar permisos
 COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint
-
 
 COPY --chown=django:django ./compose/production/django/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
 
-# copy application code to WORKDIR
+# Copiar el código de la aplicación y cambiar la propiedad
 COPY --chown=django:django .. ${APP_HOME}
 
-# make django owner of the WORKDIR directory as well.
-RUN chown django:django ${APP_HOME}
+# Cambiar la propiedad del directorio de trabajo
+RUN chown -R django:django ${APP_HOME}
 
 USER django
 
 ENTRYPOINT ["/entrypoint"]
+
