@@ -44,10 +44,4 @@ services:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"    
 
-  nginx:
-    image: nginx:latest
-    depends_on:
-      - django
-    user: "root"      
-    ports:
-      - "8080:80"
+  
