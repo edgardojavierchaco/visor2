@@ -74,8 +74,10 @@ RUN chmod +x /start
 # Copiar el código de la aplicación y cambiar la propiedad
 COPY --chown=django:django .. ${APP_HOME}
 
+RUN mkdir -p ${APP_HOME}/productionfiles && chown -R django:django ${APP_HOME}/productionfiles
+
 # Asigna permisos de escritura a la carpeta productionfiles después de collectstatic
-#RUN chmod -R 666 ${APP_HOME}/productionfiles
+RUN chmod -R 666 ${APP_HOME}/productionfiles
 
 # Cambiar la propiedad del directorio de trabajo
 RUN chown -R django:django ${APP_HOME}
