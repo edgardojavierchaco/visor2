@@ -9,20 +9,6 @@ DEBUG = True
 # Hosts permitidos
 ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
 
-# Base de datos
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.getenv('POSTGRES_DB', 'visualizador'),
-        'USER': os.getenv('POSTGRES_USER', 'visualizador'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Estadisticas24'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-        'PORT': '5432',
-        'OPTIONS': {
-            'options': '-c search_path=cenpe,public'
-        }
-    }
-}
 
 # Caches
 CACHES = {

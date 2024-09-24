@@ -9,21 +9,6 @@ DEBUG = False
 # Hosts permitidos
 ALLOWED_HOSTS = ['0.0.0.0', 'visoreducativochaco.com.ar','www.visoreducativochaco.com.ar']
 
-# Base de datos
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'default_db'),
-        'USER': os.getenv('POSTGRES_USER', 'default_user'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'default_password'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-        'PORT': '5432',
-        'OPTIONS':{
-            'options':'-c search_path=cenpe, public'
-        }
-    }
-}
-
 # Seguridad HTTPS y cookies
 SECURE_SSL_REDIRECT =  False #os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True').lower() == 'True'
 SESSION_COOKIE_SECURE = False #True

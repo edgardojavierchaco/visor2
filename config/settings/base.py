@@ -103,6 +103,21 @@ TEMPLATES = [
     },
 ]
 
+# Base de datos
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ.get('POSTGRES_DB', 'visualizador'),
+        'USER': os.environ.get('POSTGRES_USER', 'visualizador'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'Estadisticas24'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT','5432'),
+        'OPTIONS': {
+            'options': '-c search_path=cenpe,public'
+        }
+    }
+}
+
 # Configuración estática y media
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR /'static']
