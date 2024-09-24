@@ -1,13 +1,15 @@
 FROM nginx:alpine
 
-# Elimina la configuración por defecto
-RUN rm /etc/nginx/conf.d/default.conf
+# Crea los directorios necesarios y establece los permisos
+RUN mkdir -p /var/cache/nginx/client_temp && \
+    chown -R nginx:nginx /var/cache/nginx
 
 # Copia la configuración personalizada de nginx
-COPY ./nginx.conf /etc/nginx/conf.d/
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copia los archivos estáticos desde la carpeta build del proyecto
-COPY ./staticfiles /usr/share/nginx/static
+# Copia los archivos estáticos y media desde el host
+COPY ./staticfiles /usr/share/nginx/html/static
+COPY ./apps/media /usr/share/nginx/html/media
 
-# Copia los archivos de media desde la carpeta de medios
-COPY ./apps/media /usr/share/nginx/media
+# Establece permisos en los directorios de archivos estáticos y media
+RUN chown -R nginx:nginx /usr/share/nginx/html/static /usr/share/nginx/html/media

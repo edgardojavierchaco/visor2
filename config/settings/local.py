@@ -18,6 +18,9 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Estadisticas24'),
         'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
         'PORT': '5432',
+        'OPTIONS': {
+            'options': '-c search_path=cenpe,public'
+        }
     }
 }
 

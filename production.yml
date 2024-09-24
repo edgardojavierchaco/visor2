@@ -4,6 +4,8 @@ volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
   production_traefik_visor: {} 
+  production_static_visor: {}
+  production_media_visor: {}
   
 
 services:
@@ -17,6 +19,9 @@ services:
       - postgres
     env_file:
       - ./.env
+    volumes:
+      - production_static_visor:/app/staticfiles
+      - production_media_visor:/apps/media
     command: /start        
     
   postgres:
@@ -44,6 +49,27 @@ services:
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.django.entrypoints=http"
+      - "traefik.http.routers.django-secure.entrypoints=https"
+      - "traefik.http.routers.django-secure.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.django-secure.tls=true"
+      - "traefik.http.services.django.loadbalancer.server.port=8000"
+  
+  nginx:
+  image: nginx:latest
+  depends_on:
+    - django
+  user: "root"  
+  volumes:
+    - production_static_visor:/usr/share/nginx/html/static
+    - production_media_visor:/usr/share/nginx/html/media
+    - ./compose/production/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+  ports:
+    - "8080:80"
+
     
 
   
