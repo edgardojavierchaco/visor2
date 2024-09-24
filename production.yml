@@ -4,7 +4,7 @@ volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
   production_traefik_visor: {}
-  production_nginx_data: {}
+  
 
 services:
   django: &django
@@ -32,21 +32,8 @@ services:
     env_file:
       - ./.env   
     ports:
-      - "5433:5432" 
-  
-  nginx:
-    build:
-      context: .
-      dockerfile: ./compose/production/nginx/Dockerfile 
-    image: visor_production_nginx
-    depends_on:
-      - django
-    volumes:
-      - production_nginx_data:/usr/share/nginx/html  
-    ports:
-      - "8080:80"
-      - "8443:443"
-
+      - "5433:5432"  
+ 
   traefik:
     build:
       context: .
