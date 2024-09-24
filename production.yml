@@ -3,7 +3,8 @@ version: '3'
 volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
-  production_traefik_visor: {} 
+  production_traefik_visor: {}
+  production_nginx_data: {}
 
 services:
   django: &django
@@ -15,7 +16,9 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ./.env    
+      - ./.env  
+    volumes:
+      - ./productionfiles:/app/productionfiles 
     command: /start        
 
   postgres:
@@ -30,6 +33,19 @@ services:
       - ./.env   
     ports:
       - "5433:5432" 
+  
+  nginx:
+    build:
+      context: .
+      dockerfile: ./compose/production/nginx/Dockerfile 
+    image: visor_production_nginx
+    depends_on:
+      - django
+    volumes:
+      - production_nginx_data:/usr/share/nginx/html  
+    ports:
+      - "8080:80"
+      - "8443:443"
 
   traefik:
     build:
@@ -42,6 +58,12 @@ services:
       - production_traefik_visor:/etc/traefik/acme:z 
     ports:
       - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443"    
+      - "0.0.0.0:443:443"   
+    labels:
+      - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls.certresolver=le"
+      - "traefik.http.services.django.loadbalancer.server.port=5000"
+ 
 
   

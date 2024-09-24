@@ -1,99 +1,221 @@
-{% extends 'dashboard/body.html' %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa con Filtro de Área</title>
+    
+    <!-- Incluir la librería Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-{% load static %}
+    <!-- Incluir la librería Leaflet.draw -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-{% block content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <!-- Incluir la librería Leaflet Control Geocoder -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-<div id="map" style="height: 600px;"></div>
-
-<script>
-    // Inicializa el mapa
-    var map = L.map('map').setView([-25.388415775410138, -60.99025493373542], 8);
-
-    // Capa de OpenStreetMap
-    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    // Capa satelital de Esri
-    var esriSatelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
-        attribution: '© Esri'
-    });
-
-    // Crear un pane para los círculos
-    map.createPane('markerPane');
-    map.getPane('markerPane').style.zIndex = 650;
-
-    // Datos de geometrías en formato GeoJSON desde Django
-    var geometries = {{ geometries|safe }};
-
-    // Función para asignar un color basado en la región
-    function getColor(region) {
-        switch (region) {
-            case 'R.E. 1': return 'red'; 
-            case 'SUB. R.E. 1-A': return 'orange';
-            case 'SUB. R.E. 1-B': return 'brown';
-            case 'R.E. 2': return 'green'; 
-            case 'SUB. R.E. 2': return 'olive';
-            case 'R.E. 3': return 'blue'; 
-            case 'SUB. R.E. 3': return 'white';
-            case 'R.E. 4-A': return 'fuchsia'; 
-            case 'R.E. 4-B': return 'yellow'; 
-            case 'R.E. 5': return 'aqua';
-            case 'SUB. R.E. 5': return 'purple';
-            case 'R.E. 6': return 'teal';
-            case 'R.E. 7': return 'navy';
-            case 'R.E. 8-A': return 'maroon';
-            case 'R.E. 8-B': return '#9BE40B';
-            case 'R.E. 9': return 'chocolate';
-            case 'R.E. 10-A': return 'bittersweet';
-            case 'R.E. 10-B': return 'ruby';
-            case 'R.E. 10-C': return 'red';
-            default: return 'grey';
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            position: relative; /* Hacer que el contenedor del mapa sea relativo para el posicionamiento absoluto */
         }
-    }
-
-    // Añadir las geometrías al mapa utilizando el GeoJSON
-    L.geoJSON(geometries, {
-        style: function(feature) {
-            return { color: getColor(feature.properties.region_pad) };
-        },
-        onEachFeature: function(feature, layer) {
-            var regionPad = feature.properties.region_pad || 'No disponible';
-            var titulo = feature.properties.TITULO || 'No disponible';
-            layer.bindPopup("Región: " + regionPad + "<br>Título: " + titulo);
-
-            // Obtener el centro de la geometría
-            var center = layer.getBounds().getCenter();
-
-            // Crear un círculo negro con el nombre de la región
-            L.circleMarker(center, {
-                radius: 15,
-                fillColor: 'black',
-                color: 'black',
-                weight: 1,
-                fillOpacity: 1,
-                opacity: 1,
-                pane: 'markerPane' // Asegúrate de que se use el pane correcto
-            }).addTo(map).bindTooltip(regionPad, {
-                permanent: true,
-                direction: 'center'
-            }).openTooltip(); // Abrir tooltip inmediatamente
+        #reset-button {
+            position: absolute;
+            top: 120px; /* Ajusta la distancia desde el top según sea necesario */
+            left: 1150px;
+            z-index: 1000;
+            padding: 10px;
+            background-color: black;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            font-weigth: bold;
+            color: white;
         }
-    }).addTo(map);
+    </style>
+</head>
+<body>
+    <h1>Mapa con Filtro de Área</h1>
 
-    // Control de capas
-    var baseLayers = {
-        "Mapa": osmLayer,
-        "Satélite": esriSatelliteLayer
-    };
+    <!-- Contenedor del mapa -->
+    <div id="map">
+        <!-- Botón de reset -->
+        <div id="reset-button">Resetear Mapa</div>
+    </div>
 
-    L.control.layers(baseLayers).addTo(map);
-    esriSatelliteLayer.addTo(map); // Asegúrate de que se añada la capa satelital
-</script>
+    <script>
+        // Inicializar el mapa centrado
+        var map = L.map('map').setView([-25.388415775410138, -60.99025493373542], 8);
 
-{% endblock %}
+        // Capas de mosaico (mapa) y satelital
+        var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        });
+
+        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 18
+        });
+
+        var baseLayers = {
+            "Mosaico": openStreetMap,
+            "Satélite": esriSatellite
+        };
+
+        L.control.layers(baseLayers, null, {
+            collapsed: true,
+            icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
+        }).addTo(map);   
+
+        // Añadir la capa de mapa por defecto
+        openStreetMap.addTo(map);
+
+        // Crear un grupo donde añadir los marcadores (inicialmente vacío)
+        var markerGroup = L.layerGroup().addTo(map);
+
+        // Función para añadir marcadores desde los datos geojson
+        var geojsonData = {{ geojson_data|safe }};
+
+        // Crear un array para guardar las referencias de los marcadores
+        var markers = [];
+
+        geojsonData.features.forEach(function (feature) {
+            var marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]]).bindPopup(
+                "Cueanexo: " + 
+                '<a href="#" onclick="filterTable(\'' + feature.properties.cueanexo + '\', \'' + feature.properties.oferta + '\')">' + 
+                feature.properties.cueanexo + 
+                '</a><br>' + 
+                "<b>" + feature.properties.nom_est + "</b><br>" +
+                "Oferta: " + feature.properties.oferta + "<br>" +
+                "Ámbito: " + feature.properties.ambito + "<br>" +
+                "Sector: " + feature.properties.sector + "<br>" +
+                "Región: " + feature.properties.region_loc + "<br>" +
+                "Dirección: " + feature.properties.calle + " " + feature.properties.numero + "<br>" +
+                "Localidad: " + feature.properties.localidad
+            );
+            markers.push(marker); // Guardar referencia al marcador
+        });
+
+        function filterTable(cueanexo, oferta) {
+                // Redireccionar a la nueva página y pasar el parámetro 'cueanexo' en la URL
+                window.location.href = '/map/listados/?cueanexo=' + cueanexo + '&oferta='+oferta;
+                console.log("Cueanexo:", cueanexo);
+                console.log("Oferta:", oferta);
+            }
+
+        // Añadir control de búsqueda al mapa
+        var geocoder = L.Control.geocoder({
+            defaultMarkGeocode: true
+        }).on('markgeocode', function(e) {
+            // Limpiar marcadores existentes
+            markerGroup.clearLayers();
+
+            // Obtener la ubicación del geocódigo
+            var latlng = e.geocode.center;
+            map.setView(latlng, 13);
+
+            // Crear un círculo de 1000 metros alrededor de la ubicación buscada
+            var searchCircle = L.circle(latlng, {
+                radius: 1000,
+                color: 'red',
+                fillColor: 'red',
+                fillOpacity: 0.2
+            }).addTo(map);
+
+            // Filtrar y añadir marcadores dentro del círculo
+            filterMarkersByRadius(latlng, 1000);
+        }).addTo(map);
+
+        // Añadir control de dibujo al mapa
+        var drawControl = new L.Control.Draw({
+            draw: {
+                polygon: true,  // Permitir dibujar polígonos
+                rectangle: true, // Permitir dibujar rectángulos
+                circle: true,
+                polyline: false,
+                marker: false,
+                circlemarker: false
+            },
+            edit: {
+                featureGroup: new L.FeatureGroup() // Grupo de edición vacío
+            }
+        });
+        map.addControl(drawControl);
+
+        // Función para filtrar marcadores dentro de un radio dado
+        function filterMarkersByRadius(center, radius) {
+            markers.forEach(function(marker) {
+                if (marker.getLatLng().distanceTo(center) <= radius) {
+                    markerGroup.addLayer(marker); // Añadir el marcador si está dentro del radio
+                }
+            });
+        }
+
+        // Función para verificar si un marcador está dentro de un polígono
+        function isMarkerInsidePolygon(marker, polygon) {
+            var point = marker.getLatLng();
+            var inside = false;
+            var x = point.lat, y = point.lng;
+
+            var polyPoints = polygon.getLatLngs()[0]; // Obtener los puntos del polígono
+            for (var i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+                var xi = polyPoints[i].lat, yi = polyPoints[i].lng;
+                var xj = polyPoints[j].lat, yj = polyPoints[j].lng;
+
+                var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+
+            return inside;
+        }
+
+        // Función para verificar si un marcador está dentro de un círculo
+        function isMarkerInsideCircle(marker, circle) {
+            return marker.getLatLng().distanceTo(circle.getLatLng()) <= circle.getRadius();
+        }
+
+        // Evento que se dispara cuando el usuario dibuja un polígono, rectángulo o círculo
+        map.on(L.Draw.Event.CREATED, function (event) {
+            var layer = event.layer;
+
+            // Limpiar todos los marcadores del mapa
+            markerGroup.clearLayers();
+
+            // Comprobar si la forma dibujada es un polígono, rectángulo o círculo
+            if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+                markers.forEach(function (marker) {
+                    if (isMarkerInsidePolygon(marker, layer)) {
+                        markerGroup.addLayer(marker); // Añadir el marcador si está dentro del área
+                    }
+                });
+            } else if (layer instanceof L.Circle) {
+                markers.forEach(function (marker) {
+                    if (isMarkerInsideCircle(marker, layer)) {
+                        markerGroup.addLayer(marker); // Añadir el marcador si está dentro del círculo
+                    }
+                });
+            }
+
+            // Añadir la forma dibujada al mapa (opcional si quieres que se vea el área dibujada)
+            map.addLayer(layer);
+        });
+
+        // Evento para el botón de reset
+        document.getElementById('reset-button').onclick = function() {
+            markerGroup.clearLayers(); // Limpiar marcadores
+            map.eachLayer(function(layer) {
+                if (layer instanceof L.Circle || layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+                    map.removeLayer(layer); // Limpiar formas dibujadas
+                }
+            });
+            map.setView([-25.388415775410138, -60.99025493373542], 8); // Resetear vista del mapa
+        };
+    </script>
+</body>
+</html>
