@@ -5,7 +5,7 @@ RUN mkdir -p /var/cache/nginx/client_temp && \
     chown -R nginx:nginx /var/cache/nginx
 
 # Copia la configuración personalizada de nginx
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+COPY ./compose/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copia los archivos estáticos y media desde el host
 COPY ./apps/media /usr/share/nginx/html/media
