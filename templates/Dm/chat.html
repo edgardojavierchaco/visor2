@@ -1,0 +1,64 @@
+{% extends "Dm/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Chat del Canal: {{ canal.nombre }}</h2>
+    
+    <div id="messages" style="border: 1px solid #ccc; height: 400px; overflow-y: scroll; padding: 10px;">
+        <!-- Aquí se mostrarán los mensajes -->
+        {% for mensaje in canal.canalmensaje_set.all %}
+            <div class="message">
+                <strong>{{ mensaje.usuario.username }}:</strong> {{ mensaje.texto }}
+            </div>
+        {% empty %}
+            <div>No hay mensajes en este canal.</div>
+        {% endfor %}
+    </div>
+
+    <form id="message-form" method="POST" action="{% url 'nombre_de_la_vista_del_chat' canal.id %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <textarea name="mensaje" id="mensaje" class="form-control" rows="3" placeholder="Escribe tu mensaje aquí..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Enviar</button>
+    </form>
+</div>
+
+<script>
+    // Aquí puedes agregar JavaScript para manejar el envío de mensajes sin recargar la página
+    const form = document.getElementById('message-form');
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();  // Evitar el envío del formulario de manera tradicional
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.mensaje) {
+                // Agregar el nuevo mensaje al chat
+                const messagesDiv = document.getElementById('messages');
+                const newMessage = document.createElement('div');
+                newMessage.classList.add('message');
+                newMessage.innerHTML = `<strong>${data.username}:</strong> ${data.mensaje}`;
+                messagesDiv.appendChild(newMessage);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;  // Desplazar hacia abajo
+                form.reset();  // Limpiar el formulario
+            } else if (data.error) {
+                // Manejar errores en el envío del mensaje
+                console.error(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error al enviar el mensaje:', error);
+        });
+    });
+</script>
+
+{% endblock %}

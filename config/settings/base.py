@@ -50,7 +50,7 @@ LOCAL_APPS = [
     'apps.aplicadores',
     'apps.supervisores',
     'apps.cuenta_regresiva',
-    'apps.Dm',
+    
 ]
 
 
@@ -59,6 +59,7 @@ INSTALLED_APPS = BASE_APPS + LOCAL_APPS
 # Middleware
 BASE_MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -69,8 +70,7 @@ BASE_MIDDLEWARE = [
     'apps.regacceso.middleware.RegistroAccesoMiddleware',
 ]
 
-THIRD_MIDDLEWARE = [
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+THIRD_MIDDLEWARE = [    
     'corsheaders.middleware.CorsMiddleware',
 ]
 

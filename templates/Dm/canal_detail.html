@@ -1,45 +1,201 @@
+{% extends 'Dm/base.html' %}
 
-{% load static %}
+{% block contenedor %}
+<style>
+    #contenedor_ms {
+        width: 100%;
+        height: calc(70vh);
+        margin: 5px 0;
+        overflow-y: auto; /* Permitir desplazamiento */
+        border-bottom: 1px solid #e6e6e6;
+        background: white;
+    }
+    .div_ms {
+        margin: 1.2rem auto;
+        width: 35%;
+        padding: 0.2rem 0.6rem;
+    }
+    .mis_mensajes {
+        margin-right: 5px;
+        background-color: rgb(29, 161, 242);
+        color: white;
+        border-bottom-left-radius: 16px;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;            
+    }
+    .tus_mensajes {
+        margin-left: 5px;
+        background-color: rgb(230, 236, 240);
+        color: black;
+        border-bottom-right-radius: 16px;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px; 
+    }
+    .div_form_ms {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        position: fixed;  /* Fijar formulario al fondo de la pantalla */
+        bottom: 0;
+        left: 0;
+        background-color: white;
+        border-top: 1px solid #e6e6e6;
+    }
+    #id_mensaje {
+        display: block;
+        padding: 6px 12px;
+        margin: 10px 0;
+        width: 98%;
+        box-sizing: border-box;
+        height: 70px;
+        font-size: 14px;
+        color: #333;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .btn_enviar {
+        background: #98ca3f;
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        border: none;
+        outline: none;
+        border-bottom: 5px solid #6d932b;
+        width: 150px;
+        cursor: pointer;
+        display: block;
+        margin: 10px auto;
+        font-size: 13px;
+        transition: 0.3s ease;
+    }
+    .lista-usuarios {
+        max-height: 70vh; /* Altura máxima para el contenedor de usuarios */
+        overflow-y: auto; /* Permitir desplazamiento */
+        border: 1px solid #e6e6e6;
+        padding: 10px;
+        background-color: white;
+        margin-right: 20px; /* Espaciado entre la lista de usuarios y los mensajes */
+    }
+    .usuario {
+        padding: 5px;
+        border-radius: 4px;
+        margin: 5px 0;
+    }
+    .gestor {
+        background-color: #ffcc00; /* Color para gestores */
+    }
+</style>
 
-{% block contents %}
+<div style="display: flex;">
+    <div class="lista-usuarios">
+        <h4>Usuarios Conectados</h4>
+        {% for usuario in usuarios_conectados %}
+            <div class="usuario {% if usuario.es_gestor %}gestor{% endif %}">
+                {{ usuario.usuario.username }}
+            </div>
+        {% empty %}
+            <div>No hay usuarios conectados.</div>
+        {% endfor %}
+    </div>
 
-    <h3> Identificador del Canal: {{object.id}} </h3>
+    <div style="flex-grow: 1;">
+        <h3> Identificador del Canal: {{ object.id }} </h3>
+        <h1> Mensajes del Canal </h1>
+        <div id='contenedor_ms'>
+            {% for mensaje in object.canalmensaje_set.all %}
+                <div class='div_ms {% if request.user == mensaje.usuario %}mis_mensajes{% else %}tus_mensajes{% endif %}'>
+                    <small>{{ mensaje.usuario }}</small>
+                    <p>{{ mensaje.texto }}</p>
+                    <small>{{ mensaje.tiempo }}</small>
+                </div>
+            {% empty %}
+                <div>No hay mensajes en este canal.</div>
+            {% endfor %}
+        </div>
+        
+        <div class='div_form_ms'>
+            <form id='form_submit' action='{{ request.path }}' method='POST'>
+                {% csrf_token %}
+                <textarea id="id_mensaje" name="mensaje" placeholder="Escribe tu mensaje aquí..."></textarea>
+                <button type='submit' class='btn_enviar'>Enviar</button>
+            </form>
+        </div>
+    </div>
+</div>
 
-    <h1> Mensajes del Canal </h1>
+<script>
+    const MsgForm = document.getElementById('form_submit');
+    const msgContenedor = document.getElementById('contenedor_ms');
 
-    {% for mensaje in object.canalmensaje_set.all %}
+    MsgForm.addEventListener('submit', (event) => {
+        event.preventDefault();
 
-        {% if request.user == mensaje.usuario %}
-            <p>
-                <strong>
-                    {{ mensaje.texto }}
-                </strong>
-                <span>
-                    Lo enviaste tu
-                </span>
-            </p>
-        {% else %}
-            <p>
-                <span>
-                    {{ mensaje.usuario }}
-                </span>
-            </p>
-                <strong>
-                    {{ mensaje.texto }}   
-                </strong>        
-        {% endif %}
+        const formData = new FormData(MsgForm);
 
-            
-    {% endfor %}
+        const xhr = new XMLHttpRequest();
+        const endpoint = MsgForm.getAttribute('action');
+        const method = MsgForm.getAttribute('method') || 'POST';
+        xhr.open(method, endpoint);
 
-    <h1> Usuarios del Canal </h1>
+        xhr.responseType = 'json';
 
-    {% for usuarios in object.canalusuario_set.all %}
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
-        <p>
-            {{usuarios.usuario}}
-        </p>
+        xhr.onload = () => {
+            if (xhr.status === 201) {
+                const respuestaData = xhr.response;
 
-    {% endfor %}
+                let actualMensajeHtml = msgContenedor.innerHTML;
+                actualMensajeHtml += `<div class='div_ms mis_mensajes'><small>${respuestaData.username}</small><p>${respuestaData.mensaje}</p><small>${respuestaData.tiempo}</small></div>`;
+                msgContenedor.innerHTML = actualMensajeHtml;
 
+                MsgForm.reset();
+                msgContenedor.scrollTop = msgContenedor.scrollHeight; // Desplazar hacia abajo al nuevo mensaje
+            } else if (xhr.status === 400) {
+                console.log(xhr.response);
+            } else {
+                alert('Un error ha ocurrido, intenta nuevamente.');
+            }
+        };
+
+        xhr.onerror = () => {
+            console.error('Error en la solicitud AJAX.');
+        };
+
+        xhr.send(formData);
+    });
+
+    // Función para actualizar los mensajes automáticamente
+    function actualizarMensajes() {
+    const canalId = "{{ object.id }}";
+    console.log('Canal ID:', canalId);  // Verifica que el ID sea correcto
+    if (!canalId) {
+        console.error('Canal ID no está definido.');
+        return;  // Detiene la función si no hay un ID válido
+    }
+    fetch(`/api/mensajes/${canalId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            msgContenedor.innerHTML = '';
+            data.forEach(mensaje => {
+                const mensajeHtml = `<div class='div_ms ${mensaje.usuario === '{{ request.user.username }}' ? 'mis_mensajes' : 'tus_mensajes'}'><small>${mensaje.usuario}</small><p>${mensaje.texto}</p><small>${mensaje.tiempo}</small></div>`;
+                msgContenedor.innerHTML += mensajeHtml;
+            });
+        })
+        .catch(error => console.error('Error al obtener mensajes:', error));
+}
+
+    // Actualizar los mensajes cada 5 segundos
+    setInterval(actualizarMensajes, 5000);
+</script>
+<script>
+    console.log('Canal ID:', "{{ object.id|escapejs }}");  // Verifica el valor en la consola
+</script>
 {% endblock %}
+
+

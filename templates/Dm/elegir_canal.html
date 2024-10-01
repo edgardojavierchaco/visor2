@@ -1,0 +1,11 @@
+{% extends 'Dm/base.html' %}
+
+{% block contenedor %}
+    <h2>Selecciona un canal para unirte</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn_enviar">Unirse al canal</button>
+    </form>
+{% endblock %}

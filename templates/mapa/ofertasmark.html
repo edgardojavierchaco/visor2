@@ -39,7 +39,7 @@
             }
 
             #map {
-                height: 550px;
+                height: 500px;
             }
             
             
@@ -215,7 +215,11 @@
                 icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
             }).addTo(map);           
             
-                
+           L.control.scale({
+                position: 'bottomleft',
+                imperial: false,
+                metric: true
+           }).addTo(map);
 
             function filterTable(cueanexo, oferta) {
                 // Redireccionar a la nueva página y pasar el parámetro 'cueanexo' en la URL

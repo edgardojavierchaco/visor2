@@ -9,7 +9,7 @@ def convertir_csv_a_txt(csv_file, txt_file):
                 writer.writerow(row)
 
 # Ejemplo de uso
-csv_file = 'bnhalumnoscomun2024.csv'  # Reemplaza con el nombre de tu archivo CSV
-txt_file = 'bnhalumnoscomun2024.txt'  # Nombre del archivo de salida
+csv_file = 'bnhalumnoscomun2024_rect.csv'  # Reemplaza con el nombre de tu archivo CSV
+txt_file = 'bnhalumnoscomun2024_rect.txt'  # Nombre del archivo de salida
 
 convertir_csv_a_txt(csv_file, txt_file)

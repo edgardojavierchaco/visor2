@@ -1,5 +1,7 @@
 from config.urls import path
-from . import views, viewscueradio, views2
+from . import views
+from . import viewscueradio
+from . import views2
 
 app_name='mapas'
 
@@ -15,4 +17,5 @@ urlpatterns=[
     path('datos_ofertas/', views2.obtener_datos_ofertas, name='datos_ofertas'),
     path('geometria/', viewscueradio.obtener_geometria, name='obtener_geometria'),
     path('get-region-data/', viewscueradio.get_region_data, name='get_region_data'),
+     
 ]

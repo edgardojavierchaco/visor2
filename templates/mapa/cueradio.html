@@ -26,7 +26,7 @@
             }
 
             #map {
-                height: 550px;
+                height: 450px;
             }
 
         </style>
@@ -126,9 +126,9 @@
                     // Definir la URL del icono en función del color del marcador
                     var iconUrl = '';
                     if (markerColor === 'blue') {
-                        iconUrl = "{% static 'img/marker-icon-2x-blue.png' %}";
+                        iconUrl = "{% static 'img/iconblue.png' %}";
                     } else if (markerColor === 'green') {
-                        iconUrl = "{% static 'img/marker-icon-2x-green.png' %}";
+                        iconUrl = "{% static 'img/icongreen.png' %}";
                     } else {
                         // Puedes agregar más colores o un icono por defecto
                         iconUrl = "{% static 'img/marker-icon-2x-default.png' %}";
@@ -141,7 +141,7 @@
                         popupAnchor: [1, -34],
                         tooltipAnchor: [16, -28]
                     }); 
-                    console.log("URL del icono:", "{% static 'img/marker-icon-2x-' %}" + markerColor + ".png");
+                    console.log("URL del icono:", "{% static 'img/' %}" + markerColor + ".png");
                     var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexoMarker + '\')">' + cueanexoMarker + '</a>';
                     var marker = L.marker([lat, lng], { icon: markerIcon });
                     marker.bindPopup('<strong>Cueanexo:</strong> ' + filterLink + '<br>' +
@@ -188,6 +188,12 @@
                 collapsed: true,
                 icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
             }).addTo(map);
+
+            L.control.scale({
+                position: 'bottomleft',
+                imperial: false,
+                metric: true
+           }).addTo(map);
 
             var center_lat = '{{ center_lat }}'.replace(',', '.');
             var center_lng = '{{ center_lng }}'.replace(',', '.');

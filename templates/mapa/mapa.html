@@ -19,7 +19,7 @@
 
     <style>
         #map {
-            height: 600px;
+            height: 450px;
             width: 100%;
             position: relative; /* Hacer que el contenedor del mapa sea relativo para el posicionamiento absoluto */
         }
@@ -71,7 +71,13 @@
         L.control.layers(baseLayers, null, {
             collapsed: true,
             icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
-        }).addTo(map);   
+        }).addTo(map);  
+        
+        L.control.scale({
+                position: 'bottomleft',
+                imperial: false,
+                metric: true
+           }).addTo(map);
 
         // Añadir la capa de mapa por defecto
         openStreetMap.addTo(map);

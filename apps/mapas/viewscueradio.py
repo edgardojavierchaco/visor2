@@ -1,6 +1,6 @@
 import json, psycopg2, logging
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.db import connection
 from django.views.decorators.http import require_GET
@@ -23,11 +23,11 @@ logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %
 
 @csrf_exempt
 def filter_cueradio(request):
-    try:
-        if request.method == 'POST':
+    if request.method == 'POST':
+        try:
             cueanexos = request.POST.get('Cueanexo')
-            radio = request.POST.get('Radio')  # Captura el valor del campo de radio       
-           
+            radio = request.POST.get('Radio')  # Captura el valor del campo de radio
+
             # Realizar la consulta en la base de datos
             cursor = connection.cursor()
             query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1"
@@ -98,9 +98,12 @@ def filter_cueradio(request):
             }
             return render(request, 'mapa/cueradio.html', context)
 
-    except Exception as general_error:
-        logging.error(f"Error inesperado: {str(general_error)}")
-        return render(request, 'error.html', {'error': f"Error inesperado: {str(general_error)}"})
+        except Exception as general_error:
+            logging.error(f"Error inesperado: {str(general_error)}")
+            return render(request, 'error.html', {'error': f"Error inesperado: {str(general_error)}"})
+
+    else:
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
 def obtener_geometria(request):
