@@ -1,0 +1,140 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<div id="map" style="height: 600px;"></div>
+
+<script>
+    // Inicializa el mapa
+    var map = L.map('map').setView([-25.388415775410138, -60.99025493373542], 8);
+
+    // Capa de OpenStreetMap
+    var osmLayer = L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+        attribution: '<a href="http://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> | <a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>',
+        minZoom: 3,
+        maxZoom: 19
+    }).addTo(map);
+
+    // Capa satelital (puedes necesitar una API Key para otros proveedores)
+    var satelliteLayer = L.tileLayer('https://{s}.satellite.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    });
+
+    // Agregar la capa OSM por defecto
+    osmLayer.addTo(map);
+
+    // Datos de geometrías en formato GeoJSON desde Django
+    var geometries = {{ geometries|safe }};
+
+    // Función para asignar un color basado en la región
+    function getColor(region) {
+        switch (region) {
+            case 'R.E. 1': return 'red'; 
+            case 'SUB. R.E. 1-A': return 'orange';
+            case 'SUB. R.E. 1-B': return 'brown';
+            case 'R.E. 2': return 'green'; 
+            case 'SUB. R.E. 2': return 'olive';
+            case 'R.E. 3': return 'blue'; 
+            case 'SUB. R.E. 3': return 'black';
+            case 'R.E. 4-A': return 'fuchsia'; 
+            case 'R.E. 4-B': return 'yellow'; 
+            case 'R.E. 5': return 'aqua';
+            case 'SUB. R.E. 5': return 'purple';
+            case 'R.E. 6': return 'teal';
+            case 'R.E. 7': return 'navy';
+            case 'R.E. 8-A': return 'maroon';
+            case 'R.E. 8-B': return '#9BE40B';
+            case 'R.E. 9': return 'chocolate';
+            case 'R.E. 10-A': return 'blue';
+            case 'R.E. 10-B': return 'orange';
+            case 'R.E. 10-C': return 'red';
+            // Añade más regiones y colores según sea necesario
+            default: return 'grey'; // Gris para regiones no especificadas
+        }
+    }
+
+    // Añadir las geometrías al mapa utilizando el GeoJSON
+    L.geoJSON(geometries, {
+        style: function(feature) {
+            return { color: getColor(feature.properties.region_pad) };
+        },
+        onEachFeature: function(feature, layer) {
+            var regionPad = feature.properties.region_pad || 'No disponible';
+            var titulo = feature.properties.TITULO || 'No disponible';
+
+            // Enlace con evento onclick que llama a una función
+            var link = `<a href="#" onclick="showRegionData('${regionPad}')">${regionPad}</a>`;
+            layer.bindPopup("Región: " + link);
+        }
+    }).addTo(map);
+
+
+
+    // Control de capas
+    var baseLayers = {
+        "Mapa": osmLayer,
+        "Satélite": satelliteLayer
+    };
+
+    L.control.layers(baseLayers).addTo(map);
+
+    function showRegionData(regionPad) {
+    // Realiza una solicitud AJAX al servidor
+    fetch(`/map/get-region-data/?region_pad=R.E. 3`)
+        .then(response => response.json())
+        .then(data => {
+            // Muestra los datos en el modal
+            showModal(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+// Función para mostrar el modal con los datos
+function showModal(data) {
+    // Convertir la lista de localidades en una cadena con saltos de línea
+    var localidades = data.localidades.join('<br>');
+
+    // Rellena el modal con los datos recibidos
+    document.getElementById('modal-title').innerText = `Datos de la Región: ${data.region_pad}`;
+    document.getElementById('modal-body').innerHTML = `
+        <p>Director(a) Regional: <strong>${data.director}</strong></p>
+        <p>Teléfono: <strong>${data.telefono}</strong></p>
+        <p>Email: <strong>${data.email}</strong></p>
+        <p>Localidades:</p>
+        <p><strong>${localidades}</strong></p>
+    `;
+    
+    // Abre el modal
+    $('#myModal').modal('show');
+}
+</script>
+
+<!-- Modal (colócalo al final del body en tu HTML) -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">Datos de la Región</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Aquí se mostrarán los datos que recibas desde el backend -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

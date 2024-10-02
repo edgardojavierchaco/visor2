@@ -79,7 +79,7 @@
 
 <div id="resultado-container" style="display: none; margin-top: 30px;">
     <div class="container">
-        <img id="imagen-departamento" src="{% static 'img/chacogral.png' %}" alt="Imagen de la Regional Educativa" style="width: 400px; height: auto;">
+        <img id="imagen-departamento" src="{% static 'img/regioneschaco.png' %}" alt="Imagen de la Regional Educativa" style="width: 400px; height: auto;">
         <div class="card" style="flex: 1;">
             <div class="card-body">
                 <h2 class="card-title">Regional: <span id="nombre-departamento"></span></h2>
@@ -200,66 +200,64 @@
             url: "{% url 'reportes:consulta_ofertas_reg' %}",
             data: {},  // No enviamos el parámetro 'region' para obtener todos los datos
             success: function(data) {
-                $('#total_sedes').text(data.total_sedes);
-                $('#total_anexos').text(data.total_anexos);
-                $('#total_urbanos').text(data.total_urbanos);
-                $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
-                $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
-                $('#total_estatales').text(data.total_estatales);
-                $('#total_privados').text(data.total_privados);
-                $('#total_soccom').text(data.total_soccom);
-                $('#total_inicial').text(data.total_inicial);
-                $('#total_primario').text(data.total_primario);
-                $('#total_adultoprim').text(data.total_adultoprim);
-                $('#total_secundaria').text(data.total_secundaria);
-                $('#total_adultosec').text(data.total_adultosec);
-                $('#total_adultofp').text(data.total_adultofp);
-                $('#total_biblio').text(data.total_biblio);
-                $('#total_cef').text(data.total_cef);
-                $('#total_especial').text(data.total_especial);
-                $('#total_snu').text(data.total_snu);
-
-                // Mostrar el contenedor de resultados
-                $('#resultado-container').show();
+                // Actualizamos los datos en la vista inicial
+                actualizarDatos(data);
             }
         });
 
         // Evento para cambiar la región
         $('#region').change(function() {
             const regionSeleccionada = $(this).val();
-            $.ajax({
-                url: "{% url 'reportes:consulta_ofertas_reg' %}",
-                data: { region: regionSeleccionada },
-                success: function(data) {
-                    $('#nombre-departamento').text(regionSeleccionada);  
-                    $('#total_sedes').text(data.total_sedes);
-                    $('#total_anexos').text(data.total_anexos);
-                    $('#total_urbanos').text(data.total_urbanos);
-                    $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
-                    $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
-                    $('#total_estatales').text(data.total_estatales);
-                    $('#total_privados').text(data.total_privados);
-                    $('#total_soccom').text(data.total_soccom);
-                    $('#total_inicial').text(data.total_inicial);
-                    $('#total_primario').text(data.total_primario);
-                    $('#total_adultoprim').text(data.total_adultoprim);
-                    $('#total_secundaria').text(data.total_secundaria);
-                    $('#total_adultosec').text(data.total_adultosec);
-                    $('#total_adultofp').text(data.total_adultofp);
-                    $('#total_biblio').text(data.total_biblio);
-                    $('#total_cef').text(data.total_cef);
-                    $('#total_especial').text(data.total_especial);
-                    $('#total_snu').text(data.total_snu);
+            if (regionSeleccionada) {
+                $.ajax({
+                    url: "{% url 'reportes:consulta_ofertas_reg' %}",
+                    data: { region: regionSeleccionada },
+                    success: function(data) {
+                        // Actualizamos los datos en base a la región seleccionada
+                        actualizarDatos(data);
+                        $('#nombre-departamento').text(regionSeleccionada);  
+                        
+                        // Actualizar la imagen según la región seleccionada
+                        let imagenPath = '/static/img/' + regionSeleccionada.toLowerCase().replace(/\s+/g, '') + '.png';  // Cambiamos la ruta de la imagen según la región
+                        
+                        // Si la imagen no existe, mostramos una imagen por defecto
+                        $('#imagen-departamento').attr('src', imagenPath).on('error', function() {
+                            $(this).attr('src', '/static/img/regioneschaco.png');  
+                        });
 
-                    // Actualizar la imagen según la región seleccionada
-                    $('#imagen-departamento').attr('src', '/static/img/' + regionSeleccionada.toLowerCase() + '.png');  // Cambia la ruta de la imagen según sea necesario
-
-                    // Mostrar el contenedor de resultados
-                    $('#resultado-container').show();
-                }
-            });
+                        // Mostrar el contenedor de resultados
+                        $('#resultado-container').show();
+                    }
+                });
+            } else {
+                // Si no se selecciona ninguna región, escondemos los datos
+                $('#resultado-container').hide();
+            }
         });
+
+        // Función para actualizar los datos en la vista
+        function actualizarDatos(data) {
+            $('#total_sedes').text(data.total_sedes);
+            $('#total_anexos').text(data.total_anexos);
+            $('#total_urbanos').text(data.total_urbanos);
+            $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
+            $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
+            $('#total_estatales').text(data.total_estatales);
+            $('#total_privados').text(data.total_privados);
+            $('#total_soccom').text(data.total_soccom);
+            $('#total_inicial').text(data.total_inicial);
+            $('#total_primario').text(data.total_primario);
+            $('#total_adultoprim').text(data.total_adultoprim);
+            $('#total_secundaria').text(data.total_secundaria);
+            $('#total_adultosec').text(data.total_adultosec);
+            $('#total_adultofp').text(data.total_adultofp);
+            $('#total_biblio').text(data.total_biblio);
+            $('#total_cef').text(data.total_cef);
+            $('#total_especial').text(data.total_especial);
+            $('#total_snu').text(data.total_snu);
+        }
     });
 </script>
 
 {% endblock %}
+

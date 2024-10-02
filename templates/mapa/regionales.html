@@ -11,21 +11,21 @@
 <script>
     // Inicializa el mapa
     var map = L.map('map').setView([-25.388415775410138, -60.99025493373542], 8);
+    
 
     // Capa de OpenStreetMap
-    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    });
+    var osmLayer = L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+        attribution: '<a href="http://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> | <a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>',
+        minZoom: 3,
+        maxZoom: 19
+    }).addTo(map);
 
-    // Capa satelital (puedes necesitar una API Key para otros proveedores)
-    var satelliteLayer = L.tileLayer('https://{s}.satellite.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    });
+   
+    //var satelliteLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    //    maxZoom: 19,
+    //    attribution: '© OpenStreetMap contributors'
+    //});
 
-    // Agregar la capa OSM por defecto
-    osmLayer.addTo(map);
 
     // Datos de geometrías en formato GeoJSON desde Django
     var geometries = {{ geometries|safe }};
@@ -39,7 +39,7 @@
             case 'R.E. 2': return 'green'; 
             case 'SUB. R.E. 2': return 'olive';
             case 'R.E. 3': return 'blue'; 
-            case 'SUB. R.E. 3': return 'white';
+            case 'SUB. R.E. 3': return 'black';
             case 'R.E. 4-A': return 'fuchsia'; 
             case 'R.E. 4-B': return 'yellow'; 
             case 'R.E. 5': return 'aqua';
@@ -49,18 +49,19 @@
             case 'R.E. 8-A': return 'maroon';
             case 'R.E. 8-B': return '#9BE40B';
             case 'R.E. 9': return 'chocolate';
-            case 'R.E. 10-A': return 'bittersweet';
-            case 'R.E. 10-B': return 'ruby';
+            case 'R.E. 10-A': return '#5B0045';
+            case 'R.E. 10-B': return '#1E5128';
             case 'R.E. 10-C': return 'red';
             // Añade más regiones y colores según sea necesario
             default: return 'grey'; // Gris para regiones no especificadas
         }
     }
+     
 
     // Añadir las geometrías al mapa utilizando el GeoJSON
     L.geoJSON(geometries, {
         style: function(feature) {
-            return { color: getColor(feature.properties.region_pad) };
+            return { color: getColor(feature.properties.region_pad),weight:2, fillOpacity:0.5 };
         },
         onEachFeature: function(feature, layer) {
             var regionPad = feature.properties.region_pad || 'No disponible';
@@ -72,15 +73,13 @@
         }
     }).addTo(map);
 
-
-
     // Control de capas
-    var baseLayers = {
-        "Mapa": osmLayer,
-        "Satélite": satelliteLayer
-    };
-
-    L.control.layers(baseLayers).addTo(map);
+    //var baseLayers = {
+    //    "Mapa": osmLayer,
+    //    "Satélite": satelliteLayer
+    //};
+    
+    L.control.layers(baseLayers,{}).addTo(map);
 
     function showRegionData(regionPad) {
     // Realiza una solicitud AJAX al servidor

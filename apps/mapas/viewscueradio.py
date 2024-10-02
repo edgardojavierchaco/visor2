@@ -161,3 +161,26 @@ def get_region_data(request):
             return JsonResponse({'error':str(e)}, status=500)
 
     return JsonResponse({'error': 'No region_pad provided'}, status=400)
+
+
+def obtener_geometria2(request):
+    # Obtener el valor del filtro desde la solicitud (por ejemplo, a través de parámetros GET)
+    #region_pad = request.GET.get('region_pad')
+    
+    region_pad='R.E. 10-C'
+
+    try:
+        # Filtrar por el campo region_pad
+        geometries = RegionalesGeometria.objects.filter(region_pad=region_pad)
+        print('geometria:',geometries)
+        
+        if not geometries.exists():
+            return JsonResponse({'error': 'Ninguna geometría encontrada'}, status=404) 
+        
+        # Serializar los datos a formato GeoJSON
+        geojson_data = serialize('geojson', geometries, geometry_field='geom', fields=('region_pad', 'TITULO'))
+        print('geojson:',geojson_data)
+        
+        return render(request, 'mapa/regionaleselec.html', {'geometries': geojson_data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
