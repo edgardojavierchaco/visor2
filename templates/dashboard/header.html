@@ -45,7 +45,16 @@
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <li><a href="{% url 'mapas:filtrado' %}" class="dropdown-item"><img src="{% static 'img/mapadatos.png' %}"> Filtrado por Criterios Seleccionados</a></li>
                         <li><a href="{% url 'dibujararea' %}" class="dropdown-item"><img src="{% static 'img/forma.png' %}"> Filtrado por Área Dibujada</a></li>
-                        <li><a href="{% url 'mapas:filcueradio' %}" class="dropdown-item"><img src="{% static 'img/radar.png' %}"> Filtrado por Radio</a></li>     
+                        <li>
+                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                               class="dropdown-item dropdown-toggle"><img src="{% static 'img/radar.png' %}">Filtrado por Radio</a>
+                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                <li><a href="{% url 'mapas:filcueradio' %}" class="dropdown-item">Cueanexos cercanos</a></li>
+                                <li><a href="{% url 'mapas:filter_colectivos' %}" class="dropdown-item">Líneas de Colectivos</a></li>
+                                <li><a href="{% url 'mapas:filter_comisarias' %}" class="dropdown-item">Comisarias</a></li>
+                                <li><a href="{% url 'mapas:filter_salud' %}" class="dropdown-item">Centros Asistenciales</a></li>
+                            </ul>
+                        </li>     
                         <li><a href="{% url 'mapas:obtener_geometria' %}" class="dropdown-item"><img src="{% static 'img/reg.png' %}">Regiones Educativas</a></li>                      
                     </ul>
                 </li>

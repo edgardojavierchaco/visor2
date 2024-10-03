@@ -2,6 +2,7 @@ from config.urls import path
 from . import views
 from . import viewscueradio
 from . import views2
+from . import viewscolectivos, viewscomiarias,viewscentrossalud
 
 app_name='mapas'
 
@@ -18,5 +19,10 @@ urlpatterns=[
     path('geometria/', viewscueradio.obtener_geometria, name='obtener_geometria'),
     path('get-region-data/', viewscueradio.get_region_data, name='get_region_data'),
     path('geometria2/', viewscueradio.obtener_geometria2, name='obtener_geometrias'),
-     
+    path('filter_colectivos/',viewscolectivos.filtrado_cueradiocolectivo, name='filter_colectivos'),
+    path('colectivos/',viewscolectivos.filter_cueradiocolectivo, name='colectivos'),
+    path('filter_comisarias/',viewscomiarias.filtrado_cueradiocomisarias, name='filter_comisarias'),
+    path('comisarias/',viewscomiarias.filter_cueradiocomisarias, name='comisarias'),   
+    path('filter_salud/',viewscentrossalud.filtrado_cueradiosalud, name='filter_salud'),
+    path('salud/',viewscentrossalud.filter_cueradiosalud, name='salud'), 
 ]

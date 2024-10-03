@@ -1,0 +1,193 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" /> 
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+        <style>
+            #map-container {
+                position: relative;
+            }
+            #map {
+                height: 450px;
+            }
+        </style>
+    </head>
+    <body>
+        {% block content_header %}
+            <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">  <small></small></h1>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+                                <li class="breadcrumb-item"><a href="{% url 'dash:portada'%}">Regresar</a></li>                                    
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endblock %}
+        <h2>Ubicación Geográfica de CUE N°: {{cueanexo}} y Comisarias en un radio de: {{radio}} metros</h2>
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div id="marker-table-container">
+            
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+        <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js" crossorigin=""></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+        <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+        <script src='https://code.jquery.com/jquery-3.7.0.js'></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js'></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js'></script>
+        <script src='https://cdn.datatables.net/buttons/2.0.0/js/dataTables.buttons.min.js'></script>
+        <script src='https://cdn.datatables.net/buttons/2.0.0/js/buttons.print.min.js'></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.colVis.min.js"></script>
+
+        <script>
+            var cueanexo = '{{ cueanexo }}';
+            var markers = JSON.parse('{{ data_json|escapejs }}');
+            var drawnItems = new L.FeatureGroup();
+            var map = L.map('map');
+            var bounds = L.latLngBounds();
+            var blueMarkers = L.layerGroup(); 
+            var greenMarkers = L.layerGroup(); 
+
+            var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            }).addTo(map);
+            
+            // Iterar sobre los marcadores
+            for (var i = 0; i < markers.length; i++) {
+                var lat = markers[i][1];
+                var lng = markers[i][2];
+                var cueanexoMarker = markers[i][0];
+                var nom_est = markers[i][3];
+                var oferta = markers[i][4];
+                var ambito = markers[i][5];
+                var sector = markers[i][6];
+                var region_loc = markers[i][7];
+                var calle = markers[i][8];
+                var numero = markers[i][9];
+                var localidad = markers[i][10];
+                var markerColor = markers[i][11];            
+                console.log(markerColor);
+
+                if (lat !== 0 && lng !== '') {
+                    // Definir la URL del icono en función del color del marcador
+                    var iconUrl = '';
+                    if (markerColor === 'red') {
+                        iconUrl = "{% static 'img/iconblue.png' %}";
+                    } else if (markerColor === 'green') {
+                        iconUrl = "{% static 'img/icongreen.png' %}";
+                    } else {
+                        // Para los colectivos (color por defecto)
+                        iconUrl = "{% static 'img/escpolchaco.png' %}";
+                    }
+
+                    var markerIcon = L.icon({
+                        iconUrl: iconUrl,
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        tooltipAnchor: [16, -28]
+                    }); 
+
+                    // Agregar el contenido del popup en función del tipo de marcador
+                    var popupContent = '';
+                    if (markerColor === 'red') {
+                        popupContent = '<strong>Cueanexo:</strong> ' + cueanexoMarker + '<br>' +
+                            '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
+                            '<strong>Ofertas:</strong> ' + oferta + '<br>' +
+                            '<strong>Ámbito:</strong> ' + ambito + '<br>' +
+                            '<strong>Sector:</strong> ' + sector + '<br>' +
+                            '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
+                            '<strong>Calle:</strong> ' + calle + ' ' +
+                            '<strong>Nro:</strong> ' + numero + ' - ' + localidad + '<br>';
+                    } else {
+                        popupContent = '<strong>Comisaria:</strong> ' + cueanexoMarker + '<br>' +
+                            '<strong>Dirección:</strong> ' + nom_est + '<br>'+
+                            '<strong>Teléfono:</strong> ' + oferta + '<br>'
+                            
+                    }
+
+                    var marker = L.marker([lat, lng], { icon: markerIcon });
+                    marker.bindPopup(popupContent);
+
+                    if (markerColor === 'red') {
+                        blueMarkers.addLayer(marker);
+                    } else {
+                        greenMarkers.addLayer(marker);
+                    }
+
+                    bounds.extend(marker.getLatLng());
+                }
+            }
+
+            map.addLayer(blueMarkers); 
+            map.addLayer(greenMarkers);         
+            map.fitBounds(bounds);
+
+            var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            });
+
+            var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 18
+            });
+
+            var baseLayers = {
+                "Mosaico": openStreetMap,
+                "Satélite": esriSatellite,
+            };
+
+            var overlays = {
+                "CUE Establecimientos": blueMarkers,
+                "Comisarias": greenMarkers,
+                
+            };
+
+            L.control.layers(baseLayers, overlays, {collapsed:false}).addTo(map);
+
+            // Crea un círculo alrededor del primer marcador filtrado con el radio especificado
+            if (markers.length > 0 && '{{ radio }}') {
+                var centerLatLng = L.latLng(markers[0][1], markers[0][2]); // Coordenadas del primer marcador
+                var radius = parseFloat('{{ radio }}'); // Radio en metros
+
+                var circle = L.circle(centerLatLng, {
+                    color: 'blue',
+                    fillColor: 'orange',
+                    fillOpacity: 0.2,
+                    radius: radius // El radio se define en metros
+                }).addTo(map);
+
+                map.fitBounds(circle.getBounds()); // Ajustar los límites del mapa para incluir el círculo
+            }
+
+        </script>
+    </body>
+{% endblock %}
+
+
