@@ -1,0 +1,135 @@
+{% extends 'dashboard/body.html' %}
+
+{% block title %}Tasas de Retención{% endblock %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        .filter-card {
+            width: 200px;
+            margin-right: 2px; 
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .chart-container {
+            flex-grow: 1;
+            max-width: 800px;
+            margin-left: 2px; 
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .chart-container img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        .radio-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        /* Estilos para el glosario */
+        .glosario {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            cursor: pointer;
+        }
+        .glosario-contenido {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 10px;
+            z-index: 1;
+            right: 0;
+            top: 40px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+
+    <div class="custom-dashboard">
+        <!-- Card de filtros -->
+        <div class="filter-card">
+            <h3>Selecciona:</h3>
+            <form id="filtro-form" method="GET" action="{% url 'indicadores:efectivaprim' %}">
+                <div class="radio-grid">
+                    <h2><strong>Región Educativa</strong></h2>
+                    <label><input type="radio" name="region" value="0" onchange="enviarFormulario(this)"> Provincial</label>
+                    <label><input type="radio" name="region" value="R.E. 1" onchange="enviarFormulario(this)"> Región 1</label>
+                    <label><input type="radio" name="region" value="R.E. 2" onchange="enviarFormulario(this)"> Región 2</label>
+                    <label><input type="radio" name="region" value="R.E. 3" onchange="enviarFormulario(this)"> Región 3</label>
+                    <label><input type="radio" name="region" value="R.E. 4-A" onchange="enviarFormulario(this)"> Región 4-A</label>
+                    <label><input type="radio" name="region" value="R.E. 4-B" onchange="enviarFormulario(this)"> Región 4-B</label>
+                    <label><input type="radio" name="region" value="R.E. 5" onchange="enviarFormulario(this)"> Región 5</label>
+                    <label><input type="radio" name="region" value="R.E. 6" onchange="enviarFormulario(this)"> Región 6</label>
+                    <label><input type="radio" name="region" value="R.E. 7" onchange="enviarFormulario(this)"> Región 7</label>
+                    <label><input type="radio" name="region" value="R.E. 8-A" onchange="enviarFormulario(this)"> Región 8-A</label>
+                    <label><input type="radio" name="region" value="R.E. 8-B" onchange="enviarFormulario(this)"> Región 8-B</label>
+                    <label><input type="radio" name="region" value="R.E. 9" onchange="enviarFormulario(this)"> Región 9</label>
+                    <label><input type="radio" name="region" value="R.E. 10-A" onchange="enviarFormulario(this)"> Región 10-A</label>
+                    <label><input type="radio" name="region" value="R.E. 10-B" onchange="enviarFormulario(this)"> Región 10-B</label>
+                    <label><input type="radio" name="region" value="R.E. 10-C" onchange="enviarFormulario(this)"> Región 10-C</label>
+                    <label><input type="radio" name="region" value="SUB. R.E. 1-A" onchange="enviarFormulario(this)"> Subregional 1-A</label>
+                    <label><input type="radio" name="region" value="SUB. R.E. 1-B" onchange="enviarFormulario(this)"> Subregional 1-B</label>
+                    <label><input type="radio" name="region" value="SUB. R.E. 2" onchange="enviarFormulario(this)"> Subregional 2</label>
+                    <label><input type="radio" name="region" value="SUB. R.E. 3" onchange="enviarFormulario(this)"> Subregional 3</label> 
+                    <label><input type="radio" name="region" value="SUB. R.E. 5" onchange="enviarFormulario(this)"> Subregional 5</label> 
+                </div>
+            </form>
+        </div>
+        
+        <!-- Contenedor del gráfico -->
+        <div class="chart-container">
+            {{ grafico | safe }}
+        </div>
+    </div>
+    
+    <!-- Botón del glosario -->
+    <div class="glosario">
+        <button class="btn btn-primary" onclick="mostrarGlosario()">Glosario</button>
+        <!-- Contenido del glosario -->
+        <div class="glosario-contenido">
+            <p><strong>Tasa de Retención Anual:</strong> Esta métrica representa el porcentaje de alumnos matriculados que permanecen en el sistema educativo hasta finalizar el año escolar...</p>
+            <p><strong>Tasa de Promoción Efectiva:</strong> Esta medida evalúa el porcentaje de alumnos que se matriculan en el año lectivo siguiente...</p>
+            <p><strong>Tasa de Repitencia:</strong> Este indicador mide el porcentaje de alumnos que se matriculan como repitientes en el año lectivo siguiente...</p>
+            <p><strong>Tasa de Abandono Interanual:</strong> Este indicador muestra el porcentaje de alumnos que no se matriculan en el año lectivo siguiente...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            window.enviarFormulario = function(radio) {
+                // según el valor del radio seleccionado
+                if (radio.value === "0") {
+                    document.getElementById('filtro-form').action = "{% url 'indicadores:efectivaprimtotal' %}";
+                } else {
+                    document.getElementById('filtro-form').action = "{% url 'indicadores:efectivaprim' %}";
+                }
+                // Enviar el formulario
+                document.getElementById('filtro-form').submit(); 
+            };
+        });
+
+        function mostrarGlosario() {
+            var contenido = document.querySelector('.glosario-contenido');
+            contenido.style.display = contenido.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
+{% endblock %}

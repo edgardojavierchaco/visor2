@@ -92,6 +92,14 @@
                             </ul>
                         </li>        
                         <li><a href="{% url 'reportes:consulta_titulos' %}" class="dropdown-item">Carreras - Títulos</a></li>
+                        <li class="dropdown">
+                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                               class="dropdown-item dropdown-toggle">Indicadores</a>
+                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                <li><a href="{% url 'indicadores:efectivaprimtotal' %}" class="dropdown-item">Primaria</a></li>
+                                <li><a href="{% url 'indicadores:efectivasectotal' %}" class="dropdown-item">Secundaria</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>                
                  <li class="nav-item dropdown">

@@ -26,9 +26,9 @@ def filter_cueradio(request):
     if request.method == 'POST':
         try:
             cueanexos = request.POST.get('Cueanexo')
-            radio = request.POST.get('Radio')  # Captura el valor del campo de radio
+            radio = request.POST.get('Radio')  
 
-            # Realizar la consulta en la base de datos
+            
             cursor = connection.cursor()
             query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1"
             parameters = []
@@ -56,7 +56,7 @@ def filter_cueradio(request):
                         else:
                             filtered_rows.append((cue, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, loc, 'blue'))
 
-            # Verificar que haya al menos una fila filtrada para obtener las coordenadas del centro
+            # Verifica que haya al menos una fila filtrada para obtener las coordenadas del centro
             if not filtered_rows:
                 logging.error("No se encontraron filas filtradas con las coordenadas especificadas.")
                 return render(request, 'error.html', {'error': "No se encontraron filas filtradas con las coordenadas especificadas."})
@@ -83,7 +83,7 @@ def filter_cueradio(request):
                     logging.error(f"Error ejecutando la consulta de puntos cercanos: {str(e)}")
                     return render(request, 'error.html', {'error': f"Error ejecutando la consulta de puntos cercanos: {str(e)}"})
 
-            # Cerrar la conexión a la base de datos
+            
             cursor.close()
             connection.close()
 
@@ -130,12 +130,12 @@ def get_region_data(request):
     if region_pad:
         try:
             with connection.cursor() as cursor:
-                # Primera consulta para obtener el director
+                # consulta para obtener el director
                 query1 = "SELECT DISTINCT nom_dir,tel_dir,email_dir FROM public.localidadesregion WHERE reg = %s"
                 cursor.execute(query1, [region_pad])
                 row1 = cursor.fetchone()
                 
-                # Segunda consulta para obtener todas las localidades
+                # consulta para obtener todas las localidades
                 query2 = "SELECT loc_reg FROM public.localidadesregion WHERE reg = %s"
                 cursor.execute(query2, [region_pad])
                 rows2 = cursor.fetchall()  
@@ -148,13 +148,13 @@ def get_region_data(request):
                 'email': row1[2] if row1 else 'No disponible',
             }
 
-            # Datos de localidades: convertimos las filas en una lista
+            # Datos de localidades: convierte las filas en una lista
             localidades = [row[0] for row in rows2] if rows2 else ['No disponible']
             data1 = {
                 'localidades': localidades
             }
 
-            # Combinar ambas respuestas en una sola
+            # Combinar ambas respuestas 
             response_data = {**data, **data1}
             return JsonResponse(response_data)
         except Exception as e:

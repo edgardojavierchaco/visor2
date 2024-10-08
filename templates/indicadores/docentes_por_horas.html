@@ -1,0 +1,137 @@
+{% extends 'dashboard/body.html' %}
+
+{% block title %}Docentes por Horas Cátedra{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2><strong>Docentes por Horas Cátedra de Nivel Secundario - CEIC 111<strong></h2>
+        <h5>* Fuente: Dirección de Recursos Humanos - MECCyT</h5>
+
+        <!-- Formulario de selección de región -->
+        <form id="regionForm" method="GET" style="margin-top:20px;">
+            <label for="region">Selecciona una Regional Educativa:</label>
+            <select id="region" name="region" onchange="this.form.submit()">
+                <option value="Provincial" {% if region == 'Provincial' %}selected{% endif %}>Provincial</option>
+                <option value="R.E. 1" {% if region == 'R.E. 1' %}selected{% endif %}>R.E. 1</option>
+                <option value="R.E. 2" {% if region == 'R.E. 2' %}selected{% endif %}>R.E. 2</option>
+                <option value="R.E. 3" {% if region == 'R.E. 3' %}selected{% endif %}>R.E. 3</option>
+                <option value="R.E. 4-A" {% if region == 'R.E. 4-A' %}selected{% endif %}>R.E. 4-A</option>
+                <option value="R.E. 4-B" {% if region == 'R.E. 4-B' %}selected{% endif %}>R.E. 4-B</option>
+                <option value="R.E. 5" {% if region == 'R.E. 5' %}selected{% endif %}>R.E. 5</option>
+                <option value="R.E. 6" {% if region == 'R.E. 6' %}selected{% endif %}>R.E. 6</option>
+                <option value="R.E. 7" {% if region == 'R.E. 7' %}selected{% endif %}>R.E. 7</option>
+                <option value="R.E. 8-A" {% if region == 'R.E. 8-A' %}selected{% endif %}>R.E. 8-A</option>
+                <option value="R.E. 8-B" {% if region == 'R.E. 8-B' %}selected{% endif %}>R.E. 8-B</option>
+                <option value="R.E. 9" {% if region == 'R.E. 9' %}selected{% endif %}>R.E. 9</option>
+                <option value="R.E. 10-A" {% if region == 'R.E. 10-A' %}selected{% endif %}>R.E. 10-A</option>
+                <option value="R.E. 10-B" {% if region == 'R.E. 10-B' %}selected{% endif %}>R.E. 10-B</option>
+                <option value="R.E. 10-C" {% if region == 'R.E. 10-C' %}selected{% endif %}>R.E. 10-C</option>
+                <option value="SUB. R.E. 1-A" {% if region == 'SUB. R.E. 1-A' %}selected{% endif %}>SUB. R.E. 1-A</option>
+                <option value="SUB. R.E. 1-B" {% if region == 'SUB. R.E. 1-B' %}selected{% endif %}>SUB. R.E. 1-B</option>
+                <option value="SUB. R.E. 3" {% if region == 'SUB. R.E. 3' %}selected{% endif %}>SUB. R.E. 3</option>
+                <option value="SUB. R.E. 5" {% if region == 'SUB. R.E. 5' %}selected{% endif %}>SUB. R.E. 5</option>
+            </select>
+        </form>
+
+        <!-- Cards con los datos -->
+        <div class="row" style="margin-top: 20px;">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Hasta 6 hs</h5>
+                        <p class="card-text">{{ data.hasta_6 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Hasta 15 hs</h5>
+                        <p class="card-text">{{ data.hasta_15 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Hasta 30 hs</h5>
+                        <p class="card-text">{{ data.hasta_30 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Hasta 33 hs</h5>
+                        <p class="card-text">{{ data.hasta_33 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Más de 33 hs</h5>
+                        <p class="card-text">{{ data.mas_de_33 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de torta -->
+        <div id="pie-chart" style="width: 100%; height: 400px; margin-top: 20px;"></div>
+
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script>
+            var data = [{
+                values: [{{ data.hasta_6 }}, {{ data.hasta_15 }}, {{ data.hasta_30 }}, {{ data.hasta_33 }}, {{ data.mas_de_33 }}],
+                labels: ['Hasta 6 hs', 'Hasta 15 hs', 'Hasta 30 hs', 'Hasta 33 hs', 'Más de 33 hs'],
+                type: 'pie'
+            }];
+
+            var layout = {
+                title: 'Distribución de Docentes por Horas Cátedra de Nivel Secundario - CEIC 111',
+                height: 400,
+                width: 800,
+            };
+
+            Plotly.newPlot('pie-chart', data, layout);
+        </script>
+
+        <!-- Tabla de resultados por sit_rev -->
+        <h3 style="margin-top: 40px;">Distribución por Situación de Revista</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    {% if region != 'Provincial' %}
+                        <th>Región</th>
+                    {% endif %}
+                    <th>Nivel</th>
+                    <th>Cargo</th>
+                    <th>Situación de Revista</th>
+                    <th>Hasta 6 hs</th>
+                    <th>Hasta 15 hs</th>
+                    <th>Hasta 30 hs</th>
+                    <th>Hasta 33 hs</th>
+                    <th>Más de 33 hs</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in results %}
+                    <tr>
+                        {% if region != 'Provincial' %}
+                            <td>{{ row.0 }}</td>
+                        {% endif %}
+                        <td>{{ row.1 }}</td>
+                        <td>{{ row.2 }}</td>
+                        <td>{{ row.3 }}</td>
+                        <td>{{ row.4 }}</td>
+                        <td>{{ row.5 }}</td>
+                        <td>{{ row.6 }}</td>
+                        <td>{{ row.7 }}</td>
+                        <td>{{ row.8 }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

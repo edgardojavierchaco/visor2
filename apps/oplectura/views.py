@@ -59,7 +59,7 @@ class EditarDocentesView(UpdateView):
         return context
 
     def form_valid(self, form):
-        # Simplemente llamamos al form_valid de la superclase
+        
         return super().form_valid(form)
 
 #eliminación
@@ -128,11 +128,11 @@ class EditarEvaluacionAlumnosView(UpdateView):
         return context
 
     def form_valid(self, form):
-        # Simplemente llamamos al form_valid de la superclase
+        
         return super().form_valid(form)
 
     def get_success_url(self):
-        # Usamos reverse_lazy para construir la URL de éxito
+        # reverse_lazy para construir la URL de éxito
         base_url = reverse_lazy('oplectura:evaluacion')
         query_string = urlencode({'cueanexo': 0, 'grado': 'TERCERO', 'seccion': 'A'})
         return f"{base_url}?{query_string}"
@@ -145,7 +145,7 @@ class EliminarEvaluacionAlumnoView(DeleteView):
         user = get_object_or_404(RegEvaluacionFluidezLectora, id=user_id)
         user.delete()
         
-        # Construir la URL completa con los parámetros de consulta
+        # Construir la URL completa 
         url = reverse('oplectura:evaluacion') + '?cueanexo=0&grado=TERCERO&seccion=A'
         
         return redirect(url)
@@ -163,7 +163,7 @@ class RegAlumnosFluidezLectoraCreateView(CreateView):
         return context
     
     def get_success_url(self):
-        # Usamos reverse_lazy para construir la URL de éxito
+        # reverse_lazy para construir la URL de éxito
         base_url = reverse_lazy('oplectura:evaluacion')
         query_string = urlencode({'cueanexo': 0, 'grado': 'TERCERO', 'seccion': 'A'})
         return f"{base_url}?{query_string}"
@@ -220,7 +220,7 @@ class EditarAlumnosDirectoresView(UpdateView):
         return context
 
     def form_valid(self, form):
-        # Simplemente llamamos al form_valid de la superclase
+        
         return super().form_valid(form)
     
     

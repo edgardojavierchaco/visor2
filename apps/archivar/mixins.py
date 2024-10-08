@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 
 class GroupRequiredMixin(UserPassesTestMixin):
     def test_func(self):
-        # Define los grupos que tienen acceso a esta vista
+        # Los grupos que tienen acceso a esta vista
         allowed_groups = ['Administrador', 'Gestor']  
         user = self.request.user
         if user.is_authenticated:
