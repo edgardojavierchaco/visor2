@@ -22,8 +22,9 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         departamento = request.POST.get('Departamento')
         localidad = request.POST.get('Localidad')
         oferta = request.POST.get('Oferta')
+        nom_est=request.POST.get('nomest')
 
-        print("Parámetros de la solicitud:", ambito, sector, localidad, oferta)
+        print("Parámetros de la solicitud:", ambito, sector, localidad, oferta, nom_est)
 
         
         # Realizar la consulta en la base de datos
@@ -51,6 +52,9 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         if oferta:
             query += "AND oferta LIKE %s"
             parameters.append(oferta+'%')
+        if nom_est:
+            query += " AND nom_est ILIKE %s"
+            parameters.append('%' + nom_est + '%')
 
         cursor.execute(query, parameters)
         rows = cursor.fetchall()

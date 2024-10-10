@@ -54,8 +54,13 @@
                                 <input class="form-control form-text-input hidden" type="text" id="CueanexoDropdown" name="Cueanexo" onblur="validateCueanexo(this)" onkeypress="return event.charCode >= 48 && event.charCode <= 57" style="width: 100px;" disabled>
                             </div>
                         </div>
-                          
-                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="SwitchChecknomest" onchange="toggleDropdown('nomest')">
+                            <label class="form-check-label" for="SwitchChecknomest">Nombre Establecimiento</label>
+                            <div>                                
+                                <input class="form-control form-text-input hidden" type="text" id="nomestDropdown" name="nomest" style="width: 400px;" disabled>
+                            </div>
+                        </div>                        
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="SwitchCheckAmbito" onchange="toggleDropdown('Ambito')">
                             <label class="form-check-label" for="SwitchCheckAmbito">Ámbito</label>
@@ -279,9 +284,7 @@
     <script>
         function toggleDropdown(elementId) {
             const dropdown = document.getElementById(elementId + 'Dropdown');
-            const checkbox = document.getElementById('SwitchCheck' + elementId);              
-            
-            
+            const checkbox = document.getElementById('SwitchCheck' + elementId);                                 
 
             if (checkbox.checked) {
                 dropdown.classList.remove('hidden');
