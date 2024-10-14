@@ -1,9 +1,10 @@
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.models import Group
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login
+from django.conf import settings
 
 class LoginFormView(LoginView):
     template_name = 'login/login.html'
@@ -29,9 +30,12 @@ class LoginFormView(LoginView):
             if aplicador_group in user.groups.all():
                 return reverse('oplectura:evaluacion') + '?cueanexo=0&grado=TERCERO&seccion=A'
          
+            if not user.groups.exists():
+                return settings.LOGIN_REDIRECT_URL            
+            
             return super().get_success_url()
 
-        return reverse('login')  # Redirigir a la página de login si el usuario no es staff
+        return reverse('login')  
 
     def form_valid(self, form):
         user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password'])
@@ -58,3 +62,7 @@ class LoginFormView(LoginView):
                 return self.form_invalid(form)
         else:
             return super().post(request, *args, **kwargs)
+
+
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy('dash:portada')

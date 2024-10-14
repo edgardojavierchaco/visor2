@@ -135,6 +135,8 @@ USE_L10N = True
 USE_TZ = True
 DATE_INPUT_FORMATS = ['%d/%m/%Y']
 
+LOGIN_REDIRECT_URL='dash:portada'
+
 # Configuración de CORS y REST Framework
 CORS_URLS_REGEX = r'^/api/.*'
 CORS_ORIGIN_ALLOW_ALL = True

@@ -1,5 +1,6 @@
+import os
 from django.db import models
-
+from django.conf import settings
 
 class AsuntoRegister(models.Model):
     asunto = models.CharField(max_length=150, blank=False, name='asunto')
@@ -38,3 +39,10 @@ class ArchRegister(models.Model):
     def nombre_asunto(self):
         return self.asunto.asunto if self.asunto else ""
 
+
+    def save(self, *args, **kwargs):        
+        super().save(*args, **kwargs)        
+        
+        if self.archivo:
+            self.ruta = os.path.join(settings.MEDIA_URL, self.archivo.name)
+            super().save(update_fields=['ruta']) 
