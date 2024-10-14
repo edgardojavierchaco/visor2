@@ -7,6 +7,18 @@ import pandas as pd
 from django.http import HttpResponse
 
 def calcular_estadisticas_por_cueanexo(username):
+    """
+    Calcula estadísticas relacionadas con los estudiantes de una escuela específica (identificada por cueanexo).
+    
+    Args:
+        username (str): El cueanexo del usuario actual.
+
+    Returns:
+        tuple: Incluye tres resultados:
+            - Lista de tuplas con el total de DNI por cueanexo y desempeño.
+            - Total de DNI sin discriminación de desempeño.
+            - Promedio de puntaje por cueanexo.
+    """
     with connection.cursor() as cursor:
         # Calcular total de DNI por cueanexo y desempeño
         cursor.execute("""
@@ -39,6 +51,16 @@ def calcular_estadisticas_por_cueanexo(username):
 
 @login_required
 def tu_vista(request):
+    """
+    Vista protegida que calcula y muestra las estadísticas por cueanexo del usuario actual.
+    Presenta un gráfico de torta con las estadísticas calculadas y otros resultados relevantes.
+    
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+    
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/grafico.html'.
+    """
     username = request.user.username
     resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_puntaje = calcular_estadisticas_por_cueanexo(username)
     
@@ -76,6 +98,17 @@ def tu_vista(request):
     })
 
 def mostrar_grafico_reg(request):
+    """
+    Filtra y muestra gráficos basados en las regiones seleccionadas por el usuario. 
+    Si no se selecciona ninguna región, muestra un mensaje indicando que no hay datos disponibles.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+    
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/graficoreg.html', 
+                      que incluye los gráficos y estadísticas calculadas.
+    """
     # Obtener los valores seleccionados del checkbox
     regiones_seleccionadas = request.GET.getlist('region')
     
@@ -177,16 +210,43 @@ def mostrar_grafico_reg(request):
     })
 
 def cargar_grafico_reg(request):    
+    """
+    Renderiza la plantilla 'lectocomp/graficoreg.html' sin datos de gráficos inicialmente.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/graficoreg.html'.
+    """
     return render(request, 'lectocomp/graficoreg.html', {
         'datos_disponibles': False
     })
 
 
 def mostrar_pdf_recomendaciones(request):
+    """
+    Renderiza una vista que muestra un PDF incrustado de recomendaciones.
+    
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+    
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/recomendaciones.html'.
+    """
     pdf_url = "https://drive.google.com/file/d/1IxPdm0B40TVxeuzgiw_PXYvkEEBPpRVs/preview"
     return render(request, 'lectocomp/recomendaciones.html',{'pdf_url': pdf_url})
 
 def mostrar_pdf_informefinal(request):
+    """
+    Renderiza una vista que muestra un PDF incrustado del informe final.
+    
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+    
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/informefinal.html'.
+    """
     pdf_url = "https://drive.google.com/file/d/1KIRcY6BfwwR9oyttD3xYqiixC_2akBfr/preview"
     return render(request, 'lectocomp/informefinal.html',{'pdf_url': pdf_url})
 
@@ -196,6 +256,17 @@ def mostrar_pdf_informefinal(request):
 #####################################################################
 
 def mostrar_grafico_localidad(request):
+    """
+    Obtiene y muestra un listado de localidades con datos disponibles para la evaluación.
+    Renderiza una vista que permite seleccionar localidades para filtrar datos de evaluación.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/graficolocalidades.html', 
+                      que incluye la lista de localidades.
+    """
     localidades=[]       
     
     # Obtine las localidades únicas
@@ -213,6 +284,17 @@ def mostrar_grafico_localidad(request):
 
 
 def mostrar_grafico_loc(request):
+    """
+    Muestra gráficos de desempeño académico basado en la localidad seleccionada.
+    Filtra los datos por localidad y genera gráficos con los resultados.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/graficolocalidades.html',
+                      que incluye gráficos y estadísticas filtradas por localidad.
+    """
     # Obtiene las localidades únicas para cargar en el select
     with connection.cursor() as cursor:
         cursor.execute("SELECT DISTINCT localidad FROM public.v_teslecturamayoeval WHERE localidad !='None'")
@@ -309,6 +391,15 @@ def mostrar_grafico_loc(request):
     })
 
 def cargar_grafico_loc(request):    
+    """
+    Renderiza la plantilla 'lectocomp/graficolocalidades.html' sin datos de gráficos inicialmente.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/graficolocalidades.html'.
+    """
     return render(request, 'lectocomp/graficolocalidades.html', {
         'datos_disponibles': False
     })

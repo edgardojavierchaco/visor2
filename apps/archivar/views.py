@@ -8,6 +8,21 @@ from .models import ArchRegister
 from .mixins import GroupRequiredMixin, ReadOnlyAccessMixin
 
 class ArchivoCreateView(GroupRequiredMixin,CreateView):
+    """
+    Vista para crear un nuevo archivo normativo.
+
+    Hereda de GroupRequiredMixin para asegurar que solo los usuarios
+    con el grupo adecuado pueden acceder a esta vista.
+
+    Attributes:
+        model (ArchRegister): Modelo de datos para el registro de archivos.
+        form_class (ArchRegisterForm): Formulario utilizado para crear un archivo.
+        template_name (str): Nombre del template a renderizar.
+        success_url (str): URL a la que se redirige al usuario después de una creación exitosa.
+
+    Methods:
+        get_context_data: Añade contexto adicional al template, como el título de la página.
+    """
     model = ArchRegister
     form_class = ArchRegisterForm
     template_name = 'archivos/cargar_archivo.html'
@@ -19,6 +34,20 @@ class ArchivoCreateView(GroupRequiredMixin,CreateView):
         return context
 
 class ArchivosListView(ReadOnlyAccessMixin,ListView):
+    """
+    Vista para listar todos los archivos normativos.
+
+    Hereda de ReadOnlyAccessMixin para permitir el acceso solo de lectura
+    a los usuarios autorizados.
+
+    Attributes:
+        model (ArchRegister): Modelo de datos para el registro de archivos.
+        template_name (str): Nombre del template a renderizar.
+        context_object_name (str): Nombre del contexto que contiene la lista de archivos.
+
+    Methods:
+        get_context_data: Añade contexto adicional al template, como el título de la página.
+    """
     model=ArchRegister
     template_name='archivos/archivos_lista.html'
     context_object_name='archivos' 
@@ -30,7 +59,12 @@ class ArchivosListView(ReadOnlyAccessMixin,ListView):
     
 
 class BuscarPDFView(TemplateView):   
+    """
+    Vista para buscar un archivo PDF basado en cueanexo y asunto.
 
+    Methods:
+        post: Maneja las solicitudes POST para buscar el archivo y devolver su URL.
+    """
     def post(self, request, *args, **kwargs):
         cueanexo = request.POST.get('cueanexo')
         asunto = request.POST.get('asunto')
@@ -41,6 +75,22 @@ class BuscarPDFView(TemplateView):
             return JsonResponse({'error': 'No se encontró ningún PDF con el cueanexo y asunto especificados.'})
 
 class editar_archivos(GroupRequiredMixin,UpdateView):
+    """
+    Vista para editar un archivo normativo existente.
+
+    Hereda de GroupRequiredMixin para asegurar que solo los usuarios
+    con el grupo adecuado pueden acceder a esta vista.
+
+    Attributes:
+        model (ArchRegister): Modelo de datos para el registro de archivos.
+        form_class (ArchRegisterForm): Formulario utilizado para editar el archivo.
+        template_name (str): Nombre del template a renderizar.
+        success_url (str): URL a la que se redirige al usuario después de una edición exitosa.
+
+    Methods:
+        get_object: Obtiene el objeto ArchRegister que se va a editar.
+        get_context_data: Añade contexto adicional al template, como el título de la página.
+    """
     model = ArchRegister
     form_class = ArchRegisterForm
     template_name = 'archivos/editar.html'
@@ -56,6 +106,15 @@ class editar_archivos(GroupRequiredMixin,UpdateView):
         return context
 
 class EliminarArchivosView(GroupRequiredMixin,DeleteView):
+    """
+    Vista para eliminar un archivo normativo.
+
+    Hereda de GroupRequiredMixin para asegurar que solo los usuarios
+    con el grupo adecuado pueden acceder a esta vista.
+
+    Methods:
+        get: Maneja las solicitudes GET para eliminar el archivo y redirigir al usuario.
+    """
     def get(self, request):
         user_id = request.GET.get('id')
         user = get_object_or_404(ArchRegister, id=user_id)

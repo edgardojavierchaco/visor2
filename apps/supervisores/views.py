@@ -8,6 +8,15 @@ from .forms import FiltroRegionalForm, SupervisorForm, EscuelaForm
 #    Vistas para Supervisor     #
 #################################
 class SupervisorListView(ListView):
+    """
+    Vista para listar todos los Supervisores.
+
+    Contexto:
+        - supervisores: Lista de Supervisores filtrados por región.
+        - form: Formulario de filtro por región.
+        - title: Título de la vista.
+    """
+    
     model = Supervisor
     template_name = 'supervisores/lista_supervisores.html'
     context_object_name = 'supervisores'   
@@ -29,6 +38,13 @@ class SupervisorListView(ListView):
 
 
 class SupervisorCreateView(CreateView):
+    """
+    Vista para crear un nuevo Supervisor.
+
+    Contexto:
+        - form: Formulario para crear un Supervisor.
+    """
+    
     model = Supervisor
     form_class = SupervisorForm
     template_name = 'supervisores/crear_supervisor.html'
@@ -36,6 +52,14 @@ class SupervisorCreateView(CreateView):
     
 
 class SupervisorUpdateView(UpdateView):
+    """
+    Vista para editar un Supervisor existente.
+
+    Contexto:
+        - form: Formulario para editar un Supervisor.
+        - title: Título de la vista.
+    """
+    
     model = Supervisor
     form_class = SupervisorForm
     template_name = 'supervisores/crear_supervisor.html'
@@ -56,7 +80,14 @@ class SupervisorUpdateView(UpdateView):
 
 
 class SupervisorDeleteView(DeleteView):
+    """
+    Vista para eliminar un Supervisor.
+
+    Redirige a la lista de Supervisores tras la eliminación.
+    """
+    
     def get(self, request):
+        """Elimina el Supervisor basado en el ID proporcionado y redirige a la lista."""
         user_id = request.GET.get('id')
         user = get_object_or_404(Supervisor, id=user_id)
         user.delete()
@@ -67,11 +98,22 @@ class SupervisorDeleteView(DeleteView):
 #    Vistas para Escuelas por Supervisor     #
 ##############################################
 class EscuelaListView(ListView):
+    """
+    Vista para listar todas las Escuelas Supervisadas.
+
+    Contexto:
+        - escuelas: Lista de Escuelas filtradas por región.
+        - form: Formulario de filtro por región.
+        - title: Título de la vista.
+    """
+    
     model = EscuelaSupervisor
     template_name = 'supervisores/lista_escuelas.html'
     context_object_name = 'escuelas'
     
     def get_queryset(self):
+        """Retorna un queryset filtrado por región si se proporciona."""
+        
         queryset = super().get_queryset()
         regional = self.request.GET.get('region')     
 
@@ -80,6 +122,8 @@ class EscuelaListView(ListView):
         return queryset
     
     def get_context_data(self, **kwargs):
+        """Añade el formulario de filtro y el título al contexto."""
+        
         context=super().get_context_data(**kwargs)        
         form = FiltroRegionalForm(self.request.GET or None, user=self.request.user)
         context['form']= form
@@ -88,6 +132,12 @@ class EscuelaListView(ListView):
     
 
 class EscuelaCreateView(CreateView):
+    """
+    Vista para crear una nueva Escuela Supervisada.
+
+    Contexto:
+        - form: Formulario para crear una Escuela.
+    """
     model = EscuelaSupervisor
     form_class = EscuelaForm
     template_name = 'supervisores/crear_escuela.html'
@@ -95,7 +145,14 @@ class EscuelaCreateView(CreateView):
     
    
 
-class EscuelaUpdateView(UpdateView):
+class EscuelaUpdateView(UpdateView):    
+    """
+    Vista para editar una Escuela Supervisada existente.
+
+    Contexto:
+        - form: Formulario para editar una Escuela.
+        - title: Título de la vista.
+    """
     model = EscuelaSupervisor
     form_class = EscuelaForm
     template_name = 'supervisores/crear_escuela.html'
@@ -117,6 +174,12 @@ class EscuelaUpdateView(UpdateView):
     
 
 class EscuelasDeleteView(DeleteView):
+    """
+    Vista para eliminar una Escuela Supervisada.
+
+    Redirige a la lista de Escuelas tras la eliminación.
+    """
+    
     def get(self, request):
         user_id = request.GET.get('id')
         user = get_object_or_404(EscuelaSupervisor, id=user_id)
@@ -128,6 +191,14 @@ class EscuelasDeleteView(DeleteView):
 #    Vistas para Regionales     #
 #################################
 class DirectorRegionalListView(ListView):
+    """
+    Vista para listar todos los Directores Regionales.
+
+    Contexto:
+        - directores: Lista de Directores Regionales.
+        - title: Título de la vista.
+    """
+    
     model = DirectoresRegionales
     template_name = 'supervisores/lista_directores_regionales.html'
     context_object_name = 'directores'
@@ -141,6 +212,13 @@ class DirectorRegionalListView(ListView):
         return context
 
 class DirectorRegionalCreateView(CreateView):
+    """
+    Vista para crear un nuevo Director Regional.
+
+    Contexto:
+        - form: Formulario para crear un Director Regional.
+    """
+    
     model = DirectoresRegionales
     fields = '__all__'
     template_name = 'supervisores/crear_director_regional.html'
@@ -148,6 +226,13 @@ class DirectorRegionalCreateView(CreateView):
     
 
 class DirectorRegionalUpdateView(UpdateView):
+    """
+    Vista para editar un Director Regional existente.
+
+    Contexto:
+        - form: Formulario para editar un Director Regional.
+    """
+    
     model = DirectoresRegionales
     fields = '__all__'
     template_name = 'supervisores/crear_director_regional.html'
@@ -155,6 +240,12 @@ class DirectorRegionalUpdateView(UpdateView):
     
 
 class DirectorRegionalDeleteView(DeleteView):
+    """
+    Vista para eliminar un Director Regional.
+
+    Redirige a la lista de Directores Regionales tras la eliminación.
+    """
+    
     def get(self, request):
         user_id = request.GET.get('id')
         user = get_object_or_404(DirectoresRegionales, id=user_id)

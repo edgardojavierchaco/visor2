@@ -8,9 +8,29 @@ from .models import RegionalesGeometria, LocalidadesRegion
 from django.core.serializers import serialize
 
 def filtrado_cueradio(request):
+    """
+    Renderiza la plantilla para el filtrado de datos en el mapa de cueras.
+    
+    Args:
+        request (HttpRequest): La solicitud HTTP que se está manejando.
+
+    Returns:
+        HttpResponse: La respuesta renderizada con la plantilla 'mapa/filter_cuearadio.html'.
+    """
+    
     return render(request,'mapa/filter_cuearadio.html')
 
 def filtrado_establecimiento(request):
+    """
+    Renderiza la plantilla para el filtrado de establecimientos en el mapa.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que se está manejando.
+
+    Returns:
+        HttpResponse: La respuesta renderizada con la plantilla 'mapa/filter_cueradioxestablecimiento.html'.
+    """
+    
     return render(request,'mapa/filter_cueradioxestablecimiento.html')
 
 
@@ -23,6 +43,16 @@ logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %
 
 @csrf_exempt
 def filter_cueradio(request):
+    """
+    Filtra los datos de cueras y los devuelve en un formato adecuado para ser renderizados en un mapa.
+    
+    Args:
+        request (HttpRequest): La solicitud HTTP que se está manejando, esperándose que sea un POST con datos.
+
+    Returns:
+        HttpResponse: La respuesta renderizada con los datos filtrados en 'mapa/cueradio.html', o un JsonResponse en caso de error.
+    """
+    
     if request.method == 'POST':
         try:
             cueanexos = request.POST.get('Cueanexo')
@@ -107,6 +137,16 @@ def filter_cueradio(request):
 
 
 def obtener_geometria(request):
+    """
+    Obtiene y serializa las geometrías de las regiones en formato GeoJSON.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que se está manejando.
+
+    Returns:
+        HttpResponse: La respuesta renderizada con los datos en 'mapa/regionales.html', o un JsonResponse en caso de error.
+    """
+    
     # Serializar los datos a formato GeoJSON
     try:
         geometries = RegionalesGeometria.objects.all()   
@@ -126,6 +166,16 @@ def obtener_geometria(request):
 
 
 def get_region_data(request):
+    """
+    Obtiene información sobre la región y sus localidades en base a un 'region_pad'.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que se está manejando, debe contener el parámetro 'region_pad'.
+
+    Returns:
+        JsonResponse: Un JsonResponse con los datos de la región y localidades, o un error en caso de fallo.
+    """
+    
     region_pad = request.GET.get('region_pad', None)
     if region_pad:
         try:
@@ -164,6 +214,16 @@ def get_region_data(request):
 
 
 def obtener_geometria2(request):
+    """
+    Obtiene y serializa las geometrías filtradas por 'region_pad' en formato GeoJSON.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que se está manejando.
+
+    Returns:
+        HttpResponse: La respuesta renderizada con los datos en 'mapa/regionaleselec.html', o un JsonResponse en caso de error.
+    """
+    
     # Obtener el valor del filtro desde la solicitud (por ejemplo, a través de parámetros GET)
     #region_pad = request.GET.get('region_pad')
     

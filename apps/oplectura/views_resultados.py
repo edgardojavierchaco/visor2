@@ -8,6 +8,23 @@ from django.http import HttpResponse, JsonResponse
 
 
 def calcular_estadisticas_por_cueanexo(username):
+    """
+    Calcula estadísticas sobre los alumnos por cueanexo.
+
+    Args:
+        username (str): El nombre de usuario para filtrar los datos.
+
+    Returns:
+        tuple: Una tupla que contiene:
+            - resultados_total_dni: Lista de estadísticas por cueanexo y desempeño.
+            - total_dni_sin_desempenio: Total de DNI sin discriminar por desempeño.
+            - resultado_promedio_velocidad: Promedio de velocidad.
+            - resultado_promedio_precision: Promedio de precisión.
+            - resultado_promedio_prosodia: Promedio de prosodia.
+            - resultado_promedio_comprension: Promedio de comprensión.
+            - total_dni_presentes: Total de DNI de alumnos presentes.
+    """
+    
     with connection.cursor() as cursor:
         # Calcular total de DNI por cueanexo y desempeño
         cursor.execute("""
@@ -77,6 +94,16 @@ def calcular_estadisticas_por_cueanexo(username):
 
 @login_required
 def tu_vista(request):
+    """
+    Vista que muestra las estadísticas de evaluación lectora.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla con gráficos y estadísticas.
+    """
+    
     username = request.user.username
     resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_velocidad, resultado_promedio_precision, resultado_promedio_prosodia, resultado_promedio_comprension, total_dni_presentes = calcular_estadisticas_por_cueanexo(username)
     print(total_dni_presentes)
@@ -142,6 +169,16 @@ def tu_vista(request):
 
 @login_required
 def mostrar_grafico_reg(request):
+    """
+    Muestra el gráfico de evaluación según las regiones, ámbitos y sectores seleccionados.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla con los gráficos filtrados.
+    """
+    
     # Obtener los valores seleccionados del checkbox
     regiones_seleccionadas = request.GET.get('region')
     ambitos_seleccionados = request.GET.get('ambito')

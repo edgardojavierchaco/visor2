@@ -11,26 +11,76 @@ User = get_user_model()
 
 # Validador personalizado para el campo username
 def validate_username(value):
+    """
+    Valida que el nombre de usuario contenga solo números, entre 7 y 9 dígitos.
+
+    Parámetros:
+        value: El valor del nombre de usuario a validar.
+
+    Lanza:
+        ValidationError: Si el valor no cumple con las condiciones.
+    """
+    
     if not re.match(r'^\d{7,9}$', value):
         raise ValidationError('El nombre de usuario debe contener sólo números, entre 7 y 9 dígitos.')
 
 # Validador personalizado para los campos apellido y nombres
 def validate_alphanumeric_uppercase(value):
+    """
+    Valida que el valor contenga solo caracteres alfanuméricos y esté en mayúsculas.
+
+    Parámetros:
+        value: El valor a validar.
+
+    Lanza:
+        ValidationError: Si el valor no cumple con las condiciones.
+    """
+    
     if not re.match(r'^[A-Z0-9\' ]+$', value):
         raise ValidationError('Este campo solo debe contener caracteres alfanuméricos, apóstrofes y estar en mayúsculas.')
 
 class UsuariosForm(ModelForm):
+    """
+    Formulario para crear o actualizar instancias del modelo UsuariosVisualizador.
+
+    Este formulario incluye validaciones para los campos y encripta la contraseña antes de guardarla.
+
+    Métodos:
+        clean_username: Valida que el nombre de usuario cumpla con los requisitos.
+        save: Guarda la instancia con la contraseña encriptada.
+    """
+    
     class Meta:
         model = UsuariosVisualizador
         fields = ['id', 'username', 'password', 'apellido', 'nombres', 'correo', 'telefono', 'nivelacceso', 'activo', 'is_staff']
 
     def clean_username(self):
+        """
+        Valida el nombre de usuario para asegurarse de que contenga solo números.
+
+        Retorna:
+            El nombre de usuario limpio.
+
+        Lanza:
+            forms.ValidationError: Si el nombre de usuario no es válido.
+        """
+        
         username = self.cleaned_data['username']
         if not username.isdigit() or not (7 <= len(username) <= 9):
             raise forms.ValidationError('El nombre de usuario debe contener sólo números y tener entre 7 y 9 dígitos.')
         return username
 
     def save(self, commit=True):
+        """
+        Guarda la instancia del formulario con la contraseña encriptada.
+
+        Parámetros:
+            commit: Si se debe guardar la instancia en la base de datos.
+
+        Retorna:
+            La instancia guardada del modelo UsuariosVisualizador.
+        """
+        
         instance = super().save(commit=False)
         # Encriptar la contraseña usando SHA-256
         if 'password' in self.cleaned_data:
@@ -43,6 +93,14 @@ class UsuariosForm(ModelForm):
         return instance
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario y añade validadores personalizados a los campos.
+
+        Parámetros:
+            args: Argumentos adicionales.
+            kwargs: Palabras clave adicionales.
+        """
+        
         super().__init__(*args, **kwargs)
         self.fields['username'].validators.append(validate_username)
         self.fields['apellido'].validators.append(validate_alphanumeric_uppercase)
@@ -53,6 +111,15 @@ class UsuariosForm(ModelForm):
 
     
 class UsuariosForm_login(ModelForm):
+    """
+    Formulario para el inicio de sesión de UsuariosVisualizador.
+
+    Este formulario incluye validaciones y widgets personalizados para facilitar la entrada de datos.
+
+    Métodos:
+        None.
+    """
+    
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese Contraseña', 'autocomplete': 'off'}))
     username = forms.CharField(validators=[validate_username], widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese usuario', 'autocomplete': 'off'}))
     apellido = forms.CharField(validators=[validate_alphanumeric_uppercase], widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido en mayúsculas', 'autocomplete': 'off'}))
@@ -71,14 +138,44 @@ class UsuariosForm_login(ModelForm):
         }
 
 class CustomPasswordResetForm(PasswordResetForm):
+    """
+    Formulario personalizado para restablecer la contraseña de UsuariosVisualizador.
+
+    Este formulario extiende el formulario de restablecimiento de contraseña predeterminado
+    y personaliza el método para obtener usuarios.
+
+    Métodos:
+        get_users: Obtiene usuarios activos que pueden ser autenticados.
+    """
     
     username = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'autocomplete': 'username', 'class': 'form-control'}))
 
     def get_users(self, username):
+        """
+        Obtiene una lista de usuarios activos que coinciden con el nombre de usuario proporcionado.
+
+        Parámetros:
+            username: El nombre de usuario a buscar.
+
+        Retorna:
+            Un generador de usuarios activos que tienen una contraseña utilizable.
+        """
+        
         active_users = UsuariosVisualizador._default_manager.filter(username__iexact=username, activo=True)
         return (u for u in active_users if u.has_usable_password())
 
 class CustomSetPasswordForm(SetPasswordForm):
+    """
+    Formulario personalizado para establecer una nueva contraseña.
+
+    Este formulario extiende el formulario de establecimiento de contraseña
+    y personaliza la validación de las contraseñas.
+
+    Métodos:
+        clean_new_password2: Valida que las dos contraseñas coincidan.
+        save: Guarda la nueva contraseña establecida.
+    """
+    
     new_password1 = forms.CharField(
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'class': 'form-control'}),
         strip=False,
@@ -89,6 +186,16 @@ class CustomSetPasswordForm(SetPasswordForm):
     )
 
     def clean_new_password2(self):
+        """
+        Valida que las dos contraseñas proporcionadas coincidan.
+
+        Retorna:
+            La segunda contraseña limpia.
+
+        Lanza:
+            ValidationError: Si las contraseñas no coinciden.
+        """
+        
         password1 = self.cleaned_data.get('new_password1')
         password2 = self.cleaned_data.get('new_password2')
         if password1 and password2:
@@ -99,7 +206,14 @@ class CustomSetPasswordForm(SetPasswordForm):
     def save(self, commit=True):
         """
         Guarda la nueva contraseña establecida.
+
+        Parámetros:
+            commit: Si se debe guardar la instancia de usuario en la base de datos.
+
+        Retorna:
+            El objeto de usuario guardado con la nueva contraseña.
         """
+        
         user = super().save(commit=False)
         user.set_password(self.cleaned_data["new_password1"])
         if commit:
@@ -107,6 +221,15 @@ class CustomSetPasswordForm(SetPasswordForm):
         return user
 
 class ResetpassWordForm(forms.Form):
+    """
+    Formulario para restablecer la contraseña a través del nombre de usuario.
+
+    Este formulario permite ingresar un nombre de usuario para iniciar el proceso de restablecimiento.
+
+    Métodos:
+        None.
+    """
+    
     username=forms.CharField(
         widget=forms.TextInput(
             attrs={

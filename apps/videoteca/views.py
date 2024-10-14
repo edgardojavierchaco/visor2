@@ -1,6 +1,20 @@
 from django.shortcuts import render
 
 def videoteca(request):
+    """
+    Renderiza la página de la videoteca con una lista de videos educativos.
+
+    Esta vista proporciona un contexto que incluye un conjunto de videos, cada uno
+    con un título y una URL, que se mostrarán en la plantilla correspondiente.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP enviada por el navegador.
+
+    Returns:
+        HttpResponse: La respuesta renderizada que contiene la plantilla
+        'videoteca/videoteca.html' con el contexto de los videos.
+    """
+    
     videos=[
         {
             'titulo': 'Estadísticas Educativas',

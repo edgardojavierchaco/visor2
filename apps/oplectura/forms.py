@@ -6,12 +6,35 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
 class RegDocporSeccionForm(forms.ModelForm):
+    """
+    Formulario para registrar documentos por sección.
+
+    Fields:
+        - id: Identificador del registro.
+        - dni_docen: DNI del docente.
+        - apellido_docen: Apellido del docente.
+        - nombres_docen: Nombres del docente.
+        - cueanexo: Código único de anexos (debe comenzar con '22').
+        - curso: Curso al que pertenece el documento.
+        - division: División del curso.
+        - turno: Turno del curso.
+        - operativos: Información adicional sobre operativos.
+        - validacion: Estado de validación del registro.
+    """
+    
     class Meta:
         model = RegDocporSeccion
         fields = ['id','dni_docen','apellido_docen','nombres_docen','cueanexo', 'curso', 'division', 'turno', 'operativos','validacion']
 
 
     def clean_cueanexo(self):
+        """
+        Valida que el campo 'cueanexo' sea un número de 9 dígitos que comience con '22'.
+        
+        Raises:
+            ValidationError: Si el 'cueanexo' no cumple con el formato requerido.
+        """
+        
         cueanexo = self.cleaned_data.get('cueanexo')
         if not re.match(r'^22\d{7}$', cueanexo):
             raise forms.ValidationError("Cueanexo debe ser un número de 9 dígitos que comience con '22'.")
@@ -19,12 +42,25 @@ class RegDocporSeccionForm(forms.ModelForm):
     
 
 class RegDocporSeccionEdicionForm(forms.ModelForm):
+    """
+    Formulario para editar documentos por sección.
+
+    Fields son los mismos que RegDocporSeccionForm, excluyendo 'id'.
+    """
+    
     class Meta:
         model = RegDocporSeccion
         fields = ['dni_docen','apellido_docen','nombres_docen','cueanexo', 'curso', 'division', 'turno', 'operativos', 'validacion']
 
 
     def clean_cueanexo(self):
+        """
+        Valida que el campo 'cueanexo' sea un número de 9 dígitos que comience con '22'.
+
+        Raises:
+            ValidationError: Si el 'cueanexo' no cumple con el formato requerido.
+        """
+        
         cueanexo = self.cleaned_data.get('cueanexo')
         if not re.match(r'^22\d{7}$', cueanexo):
             raise forms.ValidationError("Cueanexo debe ser un número de 9 dígitos que comience con '22'.")
@@ -32,6 +68,24 @@ class RegDocporSeccionEdicionForm(forms.ModelForm):
     
 #formulario para cargar evaluacion el aplicador
 class RegEvaluacionFluidezLectoraForm(ModelForm):
+    """
+    Formulario para cargar evaluaciones de fluidez lectora.
+
+    Fields:
+        - cueanexo: Código único de anexos (oculto).
+        - region: Región del estudiante (oculta).
+        - grado: Grado del estudiante (oculto).
+        - seccion: Sección del estudiante (oculta).
+        - apellido_alumno: Apellido del alumno (oculto).
+        - nombres_alumno: Nombres del alumno (oculto).
+        - dni_alumno: DNI del alumno (oculto).
+        - cal_vel: Calificación de velocidad (oculta).
+        - cal_pres: Calificación de precisión (oculta).
+        - cal_pros: Calificación de prosodia (oculta).
+        - cal_comp: Calificación de comprensión (oculta).
+        - asistencia: Indicador de asistencia (checkbox).
+    """
+    
     class Meta:
         model = RegEvaluacionFluidezLectora
         fields = '__all__'
@@ -51,6 +105,14 @@ class RegEvaluacionFluidezLectoraForm(ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario, configurando campos opcionales.
+
+        Args:
+            *args: Argumentos posicionales.
+            **kwargs: Argumentos de palabra clave, incluyendo 'user' para obtener datos específicos.
+        """
+        
         super().__init__(*args, **kwargs)
         self.fields['asistencia'].required=False
         self.fields['cueanexo'].required = False
@@ -66,6 +128,15 @@ class RegEvaluacionFluidezLectoraForm(ModelForm):
                 self.fields[field].widget.attrs['disabled'] = 'disabled' """
     
     def clean(self):
+        """
+        Valida los campos del formulario al enviar.
+
+        Se asegura de que las calificaciones sean mayores a 0 si la asistencia está marcada.
+
+        Raises:
+            ValidationError: Si las calificaciones no cumplen con las condiciones.
+        """
+        
         cleaned_data = super().clean()
         asistencia = cleaned_data.get("asistencia")
         velocidad = cleaned_data.get("velocidad")
@@ -85,11 +156,28 @@ class RegEvaluacionFluidezLectoraForm(ModelForm):
 
                  
 class FiltroEvaluacionForm(forms.Form):
+    """
+    Formulario de filtro para evaluaciones de fluidez lectora.
+
+    Fields:
+        - cueanexo: Selección del cueanexo.
+        - grado: Selección del grado.
+        - seccion: Selección de la sección.
+    """
+    
     cueanexo = forms.ChoiceField(required=False, label='Cueanexo')
     grado = forms.ChoiceField(required=False, label='Grado')
     seccion = forms.ChoiceField(required=False, label='Sección')
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario, filtrando opciones según el usuario.
+
+        Args:
+            *args: Argumentos posicionales.
+            **kwargs: Argumentos de palabra clave, incluyendo 'user' para obtener datos específicos.
+        """
+        
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
@@ -103,6 +191,20 @@ class FiltroEvaluacionForm(forms.Form):
 
 # formulario cargar alumno para el aplicador
 class RegAlumnosFluidezLectoraForm(ModelForm):
+    """
+    Formulario para cargar alumnos en evaluaciones de fluidez lectora.
+
+    Fields:
+        - region: Selección de la región (opcional).
+        - grado: Selección del grado (opcional).
+        - seccion: Selección de la sección (opcional).
+        - cal_vel: Calificación de velocidad (oculta).
+        - cal_pres: Calificación de precisión (oculta).
+        - cal_pros: Calificación de prosodia (oculta).
+        - cal_comp: Calificación de comprensión (oculta).
+        - asistencia: Indicador de asistencia (checkbox).
+    """
+    
     REGIONES_CHOICES = [
         ('R.E. 1', 'R.E. 1'),
         ('R.E. 2', 'R.E. 2'),
@@ -148,6 +250,15 @@ class RegAlumnosFluidezLectoraForm(ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Valida los campos del formulario al enviar.
+
+        Se asegura de que las calificaciones sean mayores a 0 si la asistencia está marcada.
+
+        Raises:
+            ValidationError: Si las calificaciones no cumplen con las condiciones.
+        """
+        
         super().__init__(*args, **kwargs)
         self.fields['asistencia'].required=False
         self.fields['cueanexo'].required = False

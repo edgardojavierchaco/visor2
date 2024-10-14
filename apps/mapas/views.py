@@ -6,6 +6,35 @@ from django.http import JsonResponse
 from django.db import connection
 from django.contrib.auth.decorators import login_required
 
+"""
+Este módulo maneja la lógica de filtrado y consultas de datos en un mapa interactivo utilizando Django y PostgreSQL.
+
+Funciones:
+    filtrado(request):
+        Renderiza la página inicial para filtrar los datos de las ofertas educativas.
+
+    filtrado_list(request):
+        Renderiza la página que muestra el listado de resultados filtrados.
+
+    operaciones_comunes(request, template_name='publico/basecriterios.html'):
+        Realiza consultas SQL para obtener datos filtrados según los parámetros enviados en la solicitud POST.
+        Filtra las ofertas educativas según criterios como cueanexo, ambito, sector, localidad, entre otros.
+        Devuelve un contexto con los datos filtrados para ser utilizado en diferentes plantillas HTML.
+
+    filter_data(request):
+        Llama a 'operaciones_comunes' y renderiza los resultados en la plantilla 'mapa/ofertasmark.html'.
+
+    filter_listado_map(request):
+        Llama a 'operaciones_comunes' y renderiza los resultados en la plantilla 'publico/listadomap.html'.
+
+    filtrar_tablas_view(request):
+        Filtra y consulta los datos detallados de un establecimiento educativo seleccionado.
+        Realiza múltiples consultas SQL a las tablas institucionales, de planes de estudio, anexos y ofertas.
+        Maneja casos específicos de ofertas educativas y ajusta la consulta SQL según la oferta seleccionada.
+        Devuelve los resultados detallados de la oferta seleccionada en función del cueanexo.
+"""
+
+
 def filtrado(request):    
     return render(request, 'mapa/filter.html')
 

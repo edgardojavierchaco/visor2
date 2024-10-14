@@ -3,6 +3,21 @@ from django.db import connection
 from django.http import JsonResponse
 
 def consulta_docentes_actividad(request):
+    """
+    Consulta los resultados de docentes por actividad y departamento.
+
+    Obtiene una lista de departamentos únicos y realiza una consulta SQL para obtener
+    resultados relacionados con la actividad de los docentes en un departamento específico.
+
+    Args:
+        request: La solicitud HTTP que puede contener el departamento seleccionado.
+
+    Returns:
+        HttpResponse: Si la solicitud es AJAX, devuelve un JsonResponse con los resultados.
+                      Si es una solicitud estándar, renderiza la plantilla con los resultados,
+                      los departamentos, los colores y el total general.
+    """
+    
     departamentos = []
     resultados = {}
     total_general = 0

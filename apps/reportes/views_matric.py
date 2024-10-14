@@ -4,6 +4,16 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Función para conectar a la base de datos
 def conectar_bd(request):
+    """
+    Establece una conexión a la base de datos PostgreSQL.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        connection: Un objeto de conexión a la base de datos si la conexión es exitosa, de lo contrario None.
+    """
+    
     try:
         connection = psycopg2.connect(
             host='visoreducativochaco.com.ar',
@@ -18,14 +28,44 @@ def conectar_bd(request):
 
 # Vista para mostrar el formulario de filtrado de matricula aborigen
 def filtrado_aborigen(request):
+    """
+    Renderiza el formulario de filtrado de matrícula aborigen.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        Renderizado de la plantilla 'reportes/filter_aborigen.html'.
+    """
+    
     return render(request, 'reportes/filter_aborigen.html')
 
 # Vista para mostrar el formulario de filtrado de matricula común y especial
 def filtrado_comesp(request):
+    """
+    Renderiza el formulario de filtrado de matrícula común y especial.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        Renderizado de la plantilla 'reportes/filter_comesp.html'.
+    """
+    
     return render(request, 'reportes/filter_comesp.html')
 
 # Vista para mostrar el formulario de filtrado de matricula SNU
 def filtrado_snu(request):
+    """
+    Renderiza el formulario de filtrado de matrícula SNU.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        Renderizado de la plantilla 'reportes/filter_snu.html'.
+    """
+    
     return render(request, 'reportes/filter_snu.html')
 
 #####################################################################
@@ -35,6 +75,16 @@ def filtrado_snu(request):
 # Vista para procesar los datos del formulario de filtrado de matricula aborigen
 @csrf_exempt
 def filter_data_aborigen(request):
+    """
+    Procesa los datos del formulario de filtrado de matrícula aborigen y devuelve los resultados.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.
+    """
+    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -165,6 +215,16 @@ def filter_data_aborigen(request):
 # Vista para procesar los datos del formulario de filtrado de matricula común y especial
 @csrf_exempt
 def filter_data_comesp(request):
+    """
+    Procesa los datos del formulario de filtrado de matrícula común y especial y devuelve los resultados.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.
+    """
+    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -304,6 +364,16 @@ def filter_data_comesp(request):
 # Vista para procesar los datos del formulario de filtrado de matricula común y especial
 @csrf_exempt
 def filter_data_snu(request):
+    """
+    Procesa los datos del formulario de filtrado de matrícula SNU y devuelve los resultados.
+
+    Args:
+        request: El objeto de solicitud HTTP.
+
+    Returns:
+        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.
+    """
+    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')

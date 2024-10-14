@@ -47,7 +47,6 @@ LOCAL_APPS = [
     'apps.asistendoc',
     'apps.cenpe',
     'apps.oplectura',
-    'apps.aplicadores',
     'apps.supervisores',
     'apps.cuenta_regresiva',
     

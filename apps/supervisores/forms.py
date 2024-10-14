@@ -3,6 +3,17 @@ from .models import DirectoresRegionales, Supervisor, EscuelaSupervisor
 import re
 
 class SupervisorForm(forms.ModelForm):
+    """
+    Formulario para crear o editar un objeto Supervisor.
+
+    Attributes:
+        region (ChoiceField): Campo para seleccionar la región del supervisor.
+
+    Meta:
+        model (Supervisor): El modelo asociado a este formulario.
+        fields (list): Todos los campos del modelo Supervisor.
+    """
+    
     REGIONES_CHOICES = [
         ('R.E. 1', 'R.E. 1'),
         ('R.E. 2', 'R.E. 2'),
@@ -33,6 +44,19 @@ class SupervisorForm(forms.ModelForm):
         
     
     def clean_apellido(self):
+        """
+        Valida el campo 'apellido'.
+
+        Asegura que el apellido contenga solo letras en mayúsculas, con
+        tildes, apóstrofes y espacios.
+
+        Returns:
+            str: El apellido validado en mayúsculas.
+
+        Raises:
+            ValidationError: Si el apellido no cumple con los criterios.
+        """
+        
         apellido = self.cleaned_data.get('apellido')
         if apellido:
             # Ajusta la expresión regular para permitir espacios en blanco
@@ -42,6 +66,19 @@ class SupervisorForm(forms.ModelForm):
         return apellido
 
     def clean_nombres(self):
+        """
+        Valida el campo 'nombres'.
+
+        Asegura que los nombres contengan solo letras en mayúsculas, con
+        tildes, apóstrofes y espacios.
+
+        Returns:
+            str: Los nombres validados en mayúsculas.
+
+        Raises:
+            ValidationError: Si los nombres no cumplen con los criterios.
+        """
+        
         nombres = self.cleaned_data.get('nombres')
         if nombres:
             # La expresión regular ya permite espacios en blanco
@@ -51,6 +88,18 @@ class SupervisorForm(forms.ModelForm):
         return nombres
         
     def clean_dni(self):
+        """
+        Valida el campo 'dni'.
+
+        Asegura que el DNI contenga solo números y tenga al menos 7 dígitos.
+
+        Returns:
+            str: El DNI validado.
+
+        Raises:
+            ValidationError: Si el DNI no cumple con los criterios.
+        """
+        
         dni = self.cleaned_data.get('dni')
         if dni:
             if not re.match(r'^\d{7,}$', dni):
@@ -58,6 +107,18 @@ class SupervisorForm(forms.ModelForm):
         return dni
 
 class EscuelaForm(forms.ModelForm):
+    """
+    Formulario para crear o editar un objeto EscuelaSupervisor.
+
+    Attributes:
+        region_esc (ChoiceField): Campo para seleccionar la región de la escuela.
+        oferta (ChoiceField): Campo para seleccionar la oferta educativa.
+        modalidad (ChoiceField): Campo para seleccionar la modalidad educativa.
+
+    Meta:
+        model (EscuelaSupervisor): El modelo asociado a este formulario.
+        fields (list): Todos los campos del modelo EscuelaSupervisor.
+    """
     
     OFERTAS_CHOICES=[
         ('INICIAL', 'INICIAL'),
@@ -111,17 +172,44 @@ class EscuelaForm(forms.ModelForm):
         fields = '__all__'
         
     def clean_cueanexo(self):
-            cueanexo = self.cleaned_data.get('cueanexo')
-            if cueanexo:
-                if not re.match(r'^22\d{7}$', cueanexo):
-                    raise forms.ValidationError("El campo Cueanexo debe comenzar con '22' y contener 9 dígitos en total.")
-            return cueanexo  
+        """
+        Valida el campo 'cueanexo'.
+
+        Asegura que el Cueanexo comience con '22' y contenga 9 dígitos en total.
+
+        Returns:
+            str: El cueanexo validado.
+
+        Raises:
+            ValidationError: Si el cueanexo no cumple con los criterios.
+        """
+        
+        cueanexo = self.cleaned_data.get('cueanexo')
+        if cueanexo:
+            if not re.match(r'^22\d{7}$', cueanexo):
+                raise forms.ValidationError("El campo Cueanexo debe comenzar con '22' y contener 9 dígitos en total.")
+        return cueanexo  
 
 
 class FiltroRegionalForm(forms.Form):
+    """
+    Formulario para filtrar resultados por región.
+
+    Attributes:
+        region (ChoiceField): Campo opcional para seleccionar la región.
+    """
+    
     region = forms.ChoiceField(required=False, label='Regional')    
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario y asigna las opciones de regiones basadas en el usuario.
+
+        Args:
+            *args: Argumentos posicionales.
+            **kwargs: Argumentos keyword, incluyendo el usuario.
+        """
+        
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         

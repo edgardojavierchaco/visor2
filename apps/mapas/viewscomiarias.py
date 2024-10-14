@@ -7,12 +7,42 @@ from django.views.decorators.http import require_GET
 from .models import RegionalesGeometria, LocalidadesRegion
 from django.core.serializers import serialize
 
-def filtrado_cueradiocomisarias(request):    
+def filtrado_cueradiocomisarias(request): 
+    """
+    Renderiza la plantilla del filtro para la búsqueda de comisarías.
+
+    Esta vista carga la plantilla HTML 'mapa/filter_comisarias.html', donde el usuario
+    puede ingresar criterios de búsqueda para filtrar comisarías.
+
+    Args:
+        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla 'mapa/filter_comisarias.html'.
+    """
+       
     return render(request, 'mapa/filter_comisarias.html')
     
 
 @csrf_exempt
 def filter_cueradiocomisarias(request):
+    """
+    Filtra comisarías y establecimientos cercanos según criterios del usuario.
+
+    Esta vista maneja solicitudes POST que contienen criterios para filtrar las
+    comisarías y otros establecimientos cercanos. Realiza una consulta a la base de datos,
+    filtra los resultados basándose en los criterios proporcionados y, si se especifica
+    un radio, busca comisarías cercanas. Los resultados se devuelven a la plantilla
+    'mapa/cueradiocomisarias.html'.
+
+    Args:
+        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla 'mapa/cueradiocomisarias.html' con los resultados filtrados.
+        Si ocurre un error, renderiza 'error.html' con un mensaje correspondiente.
+    """
+    
     if request.method == 'POST':
         try:
             cueanexos = request.POST.get('Cueanexo')

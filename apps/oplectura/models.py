@@ -5,6 +5,13 @@ from apps.usuarios.models import UsuariosVisualizador
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class curso(models.Model):
+    """
+    Modelo que representa un curso en el sistema.
+
+    Attributes:
+        nom_curso (str): Nombre del curso.
+    """
+    
     nom_curso=models.CharField(max_length=15, verbose_name='Curso')
     
     def __str__(self):
@@ -16,6 +23,13 @@ class curso(models.Model):
         db_table='Curso'
 
 class division(models.Model):
+    """
+    Modelo que representa una división en el sistema.
+
+    Attributes:
+        nom_division (str): Nombre de la división.
+    """
+    
     nom_division=models.CharField(max_length=15, verbose_name='División')
     
     def __str__(self):
@@ -29,6 +43,13 @@ class division(models.Model):
         
 
 class turno(models.Model):
+    """
+    Modelo que representa un turno en el sistema.
+
+    Attributes:
+        nom_turno (str): Nombre del turno.
+    """
+    
     nom_turno=models.CharField(max_length=15, verbose_name='Turnos')
     
     def __str__(self):
@@ -42,6 +63,13 @@ class turno(models.Model):
 
 
 class TipoOperativo(models.Model):
+    """
+    Modelo que representa un tipo operativo en el sistema.
+
+    Attributes:
+        toperativo (str): Nombre del tipo operativo.
+    """
+    
     toperativo=models.CharField(max_length=255,verbose_name='Tipo Operativo')
     
     def __str__(self):
@@ -53,6 +81,21 @@ class TipoOperativo(models.Model):
         db_table='Tipo_Operativo'
     
 class RegDocporSeccion(models.Model):
+    """
+    Modelo que representa la relación entre docentes y secciones.
+
+    Attributes:
+        dni_docen (str): DNI del docente.
+        apellido_docen (str): Apellido del docente.
+        nombres_docen (str): Nombres del docente.
+        cueanexo (str): Cueanexo relacionado.
+        curso (Curso): Curso al que pertenece el docente.
+        division (Division): División al que pertenece el docente.
+        turno (Turno): Turno del docente.
+        operativos (TipoOperativo): Tipo operativo del docente.
+        validacion (bool): Estado de validación del docente.
+    """
+    
     dni_docen=models.CharField(max_length=9, verbose_name='DNI')
     apellido_docen=models.CharField(max_length=255, verbose_name='Apellido')
     nombres_docen=models.CharField(max_length=255, verbose_name='Nombres')
@@ -83,6 +126,13 @@ class RegDocporSeccion(models.Model):
         super(RegDocporSeccion, self).save(*args, **kwargs) """
 
 class Periodos(models.Model):
+    """
+    Modelo que representa un periodo en el sistema.
+
+    Attributes:
+        periodo (str): Nombre del periodo.
+    """
+    
     periodo=models.CharField(max_length=255, verbose_name='Periodos')
     
     def __str__(self):
@@ -95,6 +145,29 @@ class Periodos(models.Model):
 
 
 class RegEvaluacionFluidezLectora(models.Model):
+    """
+    Modelo que representa la evaluación de fluidez lectora de un alumno.
+
+    Attributes:
+        asistencia (bool): Estado de asistencia del alumno.
+        cueanexo (str): Cueanexo relacionado.
+        region (str): Región del alumno.
+        grado (str): Grado del alumno.
+        seccion (str): Sección del alumno.
+        tramo (Periodos): Tramo al que pertenece la evaluación.
+        dni_alumno (str): DNI del alumno.
+        apellido_alumno (str): Apellido del alumno.
+        nombres_alumno (str): Nombres del alumno.
+        velocidad (int): Velocidad de lectura del alumno.
+        cal_vel (str): Calificación de la velocidad.
+        precision (int): Precisión de lectura del alumno.
+        cal_pres (str): Calificación de la precisión.
+        prosodia (int): Prosodia del alumno.
+        cal_pros (str): Calificación de la prosodia.
+        comprension (int): Comprensión del alumno.
+        cal_comp (str): Calificación de la comprensión.
+    """
+    
     asistencia=models.BooleanField(default=False, verbose_name='Asistencia')
     cueanexo=models.CharField(max_length=9, blank=False, null=False, verbose_name='Cueanexo')
     region=models.CharField(max_length=255, blank=False, null=False, verbose_name='Regional')
@@ -124,6 +197,14 @@ class RegEvaluacionFluidezLectora(models.Model):
         db_table='Evaluacion_Lectora'    
     
     def save(self, *args, **kwargs):
+        """
+        Guarda la instancia del modelo después de calcular las calificaciones.
+
+        Args:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+        """
+        
         self.cal_vel = self.get_calificacion_vel(self.velocidad)
         self.cal_pres = self.get_calificacion_pres(self.precision)
         self.cal_pros = self.get_calificacion_pros(self.prosodia)
@@ -131,6 +212,16 @@ class RegEvaluacionFluidezLectora(models.Model):
         super().save(*args, **kwargs)
     
     def get_calificacion_vel(self, valor):
+        """
+        Obtiene la calificación para la velocidad de lectura.
+
+        Args:
+            valor (int): Valor de velocidad.
+
+        Returns:
+            str: Calificación correspondiente a la velocidad.
+        """
+        
         if valor < 31:
             return 'Debajo del Básico'
         elif 31 <= valor <=50:
@@ -141,6 +232,16 @@ class RegEvaluacionFluidezLectora(models.Model):
             return 'Avanzado'
     
     def get_calificacion_pres(self, valor):
+        """
+        Obtiene la calificación para la precisión de lectura.
+
+        Args:
+            valor (int): Valor de precisión.
+
+        Returns:
+            str: Calificación correspondiente a la precisión.
+        """
+        
         if valor < 41:
             return 'Debajo del Básico'
         elif 41 <= valor <=50:
@@ -151,6 +252,16 @@ class RegEvaluacionFluidezLectora(models.Model):
             return 'Avanzado'
     
     def get_calificacion_pros(self,valor):
+        """
+        Obtiene la calificación para la prosodia.
+
+        Args:
+            valor (int): Valor de prosodia.
+
+        Returns:
+            str: Calificación correspondiente a la prosodia.
+        """
+        
         if valor == 1 or valor == 2:
             return 'Debajo del Básico'
         elif valor == 3 or valor == 4:
@@ -161,6 +272,16 @@ class RegEvaluacionFluidezLectora(models.Model):
             return 'Avanzado'
     
     def get_calificacion_comp(self,valor):
+        """
+        Obtiene la calificación para la comprensión.
+
+        Args:
+            valor (int): Valor de comprensión.
+
+        Returns:
+            str: Calificación correspondiente a la comprensión.
+        """
+        
         if valor == 0 or valor == 1:
             return 'Debajo del Básico'        
         elif valor == 2:

@@ -18,14 +18,44 @@ def conectar_bd(request):
 
 # Vista para mostrar el formulario de filtrado de cargos
 def filtrado_cargos(request):
+    """
+    Vista para mostrar el formulario de filtrado de cargos.
+
+    Args:
+        request: El objeto de solicitud de Django.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla de filtrado de cargos.
+    """
+    
     return render(request, 'reportes/filter_cargos.html')
 
 # Vista para mostrar el formulario de filtrado de docentes
 def filtrado_docentes(request):
+    """
+    Vista para mostrar el formulario de filtrado de docentes.
+
+    Args:
+        request: El objeto de solicitud de Django.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla de filtrado de docentes.
+    """
+    
     return render(request, 'reportes/filter_docentes.html')
 
 # Vista para mostrar el formulario de filtrado de horas
 def filtrado_horas(request):
+    """
+    Vista para mostrar el formulario de filtrado de horas.
+
+    Args:
+        request: El objeto de solicitud de Django.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla de filtrado de horas.
+    """
+    
     return render(request, 'reportes/filter_horas.html')
 
 #####################################################################
@@ -35,6 +65,17 @@ def filtrado_horas(request):
 # Vista para procesar los datos del formulario de filtrado de cargos
 @csrf_exempt
 def filter_data_cargos(request):
+    """
+    Vista para procesar los datos del formulario de filtrado de cargos.
+
+    Args:
+        request: El objeto de solicitud de Django.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla con los resultados del filtrado 
+                      o una plantilla de error si no se encuentra información.
+    """
+    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -178,6 +219,17 @@ def filter_data_cargos(request):
 # Vista asíncrona para procesar los datos del formulario de filtrado de docentes
 @csrf_exempt
 def filter_data_docentes(request):
+    """
+    Vista asíncrona para procesar los datos del formulario de filtrado de docentes.
+
+    Args:
+        request: El objeto de solicitud de Django.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla con los resultados del filtrado 
+                      o una plantilla de error si no se encuentra información.
+    """
+    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -317,6 +369,17 @@ def filter_data_docentes(request):
 # Vista asíncrona para procesar los datos del formulario de filtrado de horas
 @csrf_exempt
 def filter_data_horas(request):
+    """
+    Procesa los datos del formulario de filtrado de horas.
+
+    Args:
+        request: Objeto HttpRequest.
+
+    Returns:
+        Renderiza la plantilla 'reportes/horas.html' con los datos filtrados
+        o una plantilla de error si hay problemas con la conexión o la consulta.
+    """
+    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')

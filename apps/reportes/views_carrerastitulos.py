@@ -4,6 +4,17 @@ from django.http import JsonResponse
 from django.db import connection
 
 def consulta_carrerastitulos(request):
+    """
+    Consulta los títulos de carreras y localidades en función de los filtros seleccionados.
+
+    Args:
+        request: La solicitud HTTP que contiene los filtros seleccionados.
+
+    Returns:
+        HttpResponse: Si la solicitud es AJAX, devuelve un JsonResponse con los títulos y datos filtrados.
+                      Si es una solicitud estándar, renderiza la plantilla con las localidades, niveles, títulos y datos.
+    """
+    
     localidades = []
     titulos = []
     nivel = []
@@ -84,6 +95,17 @@ def consulta_carrerastitulos(request):
 
 # datos para el modal carreras-titulos
 def datoscarreras(request):
+    """
+    Obtiene los datos de una carrera específica basándose en el cueanexo proporcionado.
+
+    Args:
+        request: La solicitud HTTP que contiene el cueanexo.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla del modal con los resultados obtenidos de la base de datos.
+                       Si no se proporciona cueanexo o hay un error de conexión, renderiza una página de error.
+    """
+    
     cueanexo = request.GET.get('cueanexo')
     
     # Validar y sanitizar el valor de cueanexo

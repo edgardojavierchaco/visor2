@@ -10,12 +10,42 @@ from django.core.serializers import serialize
 # Configuración básica del logging
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def filtrado_cueradiosalud(request):    
+def filtrado_cueradiosalud(request):   
+    """
+    Renderiza la plantilla del filtro para la búsqueda de establecimientos de salud.
+
+    Esta vista carga la plantilla HTML 'mapa/filter_salud.html', donde el usuario
+    puede ingresar criterios de búsqueda para filtrar establecimientos de salud.
+
+    Args:
+        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla 'mapa/filter_salud.html'.
+    """
+     
     return render(request, 'mapa/filter_salud.html')
     
 
 @csrf_exempt
 def filter_cueradiosalud(request):
+    """
+    Filtra establecimientos de salud y líneas de colectivos cercanas según criterios del usuario.
+
+    Esta vista maneja solicitudes POST que contienen criterios para filtrar los
+    establecimientos de salud. Realiza una consulta a la base de datos, filtra
+    los resultados basándose en los criterios proporcionados y, si se especifica
+    un radio, busca líneas de colectivos cercanas. Los resultados se devuelven
+    a la plantilla 'mapa/cueradiosalud.html'.
+
+    Args:
+        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla 'mapa/cueradiosalud.html' con los resultados filtrados.
+        Si ocurre un error, renderiza 'error.html' con un mensaje correspondiente.
+    """
+    
     if request.method == 'POST':
         try:
             cueanexos = request.POST.get('Cueanexo')

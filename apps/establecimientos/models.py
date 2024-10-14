@@ -1,6 +1,51 @@
 from django.db import models
 
 class PadronActualizar(models.Model):
+    """
+    Modelo que representa la información actualizada del padrón de establecimientos educativos.
+
+    Atributos:
+        id_establecimiento (IntegerField): Identificador único del establecimiento.
+        id_localizacion (IntegerField): Identificador de la localización del establecimiento.
+        cueanexo (TextField): Código único de establecimiento anexo.
+        nom_est (CharField): Nombre del establecimiento.
+        nro_est (CharField): Número del establecimiento.
+        anio_creac_establec (CharField): Año de creación del establecimiento.
+        fecha_creac_establec (CharField): Fecha de creación del establecimiento.
+        region (CharField): Región geográfica del establecimiento.
+        udt (CharField): Código UDT (Unidad de Decisión Territorial).
+        cui (CharField): Código único de identificación.
+        cua (CharField): Código CUA (Clave Única de Autorización).
+        cuof (CharField): Código CUOF (Clave Única de Oferta Formativa).
+        sector (CharField): Sector educativo (público o privado).
+        ambito (CharField): Ámbito educativo.
+        ref_loc (CharField): Referencia local del establecimiento.
+        calle (CharField): Dirección del establecimiento.
+        numero (CharField): Número de la dirección.
+        localidad (CharField): Localidad donde se encuentra el establecimiento.
+        departamento (CharField): Departamento geográfico del establecimiento.
+        cod_postal (CharField): Código postal del establecimiento.
+        categoria (CharField): Categoría del establecimiento.
+        estado_est (CharField): Estado del establecimiento.
+        estado_loc (CharField): Estado de la localización.
+        telefono_cod_area (CharField): Código de área del teléfono.
+        telefono_nro (CharField): Número de teléfono del establecimiento.
+        per_funcionamiento (CharField): Período de funcionamiento del establecimiento.
+        email_loc (CharField): Correo electrónico de la localización.
+        sitio_web (CharField): Sitio web del establecimiento.
+        cooperadora (CharField): Indicación de si tiene cooperadora.
+        sede (BooleanField): Indicación de si es sede.
+        permanencia (CharField): Tipo de permanencia del establecimiento.
+        sede_adm (BooleanField): Indicación de si es sede administrativa.
+        resploc_apellido (CharField): Apellido del responsable local.
+        resploc_nombre (CharField): Nombre del responsable local.
+        resploc_telefono (CharField): Teléfono del responsable local.
+        resploc_doc (IntegerField): Documento del responsable local.
+        resploc_email (CharField): Correo electrónico del responsable local.
+        resploc_nacimiento (DateField): Fecha de nacimiento del responsable local.
+        resploc_cuitcuil (CharField): CUIT/CUIL del responsable local.
+        arancel (SmallIntegerField): Arancel del establecimiento (si aplica).
+    """
     id_establecimiento = models.IntegerField(blank=True, null=True)
     id_localizacion = models.IntegerField(blank=True, null=True)
     cueanexo = models.TextField(max_length=9,blank=True, null=True)
@@ -43,6 +88,13 @@ class PadronActualizar(models.Model):
     arancel = models.SmallIntegerField(blank=True, null=True, name="arancel")
 
     def __str__(self):
+        """
+        Retorna una representación en cadena del objeto PadronActualizar.
+
+        Returns:
+            str: El CUE anexo seguido del nombre del establecimiento.
+        """
+        
         return f"{self.cueanexo} - {self.nom_est}"
     
     class Meta:
@@ -54,6 +106,31 @@ class PadronActualizar(models.Model):
 
 
 class PadronOfertas(models.Model):
+    """
+    Modelo que representa las ofertas educativas asociadas a un establecimiento.
+
+    Atributos:
+        cueanexo (IntegerField): Código único del establecimiento anexo.
+        id_establecimiento (CharField): Identificador del establecimiento.
+        id_localizacion (CharField): Identificador de la localización del establecimiento.
+        id_oferta_local (CharField): Identificador único de la oferta educativa.
+        nom_est (CharField): Nombre del establecimiento.
+        acronimo_oferta (CharField): Acrónimo de la oferta educativa.
+        oferta (CharField): Descripción de la oferta educativa.
+        nro_est (CharField): Número del establecimiento.
+        ambito (CharField): Ámbito educativo.
+        sector (CharField): Sector educativo (público o privado).
+        region_loc (CharField): Región geográfica de la localización.
+        ref_loc (CharField): Referencia local del establecimiento.
+        calle (CharField): Dirección del establecimiento.
+        numero (CharField): Número de la dirección.
+        localidad (CharField): Localidad donde se encuentra el establecimiento.
+        departamento (CharField): Departamento geográfico del establecimiento.
+        estado_loc (CharField): Estado de la localización.
+        est_oferta (CharField): Estado de la oferta educativa.
+        estado_est (CharField): Estado del establecimiento.
+        jornada (CharField): Tipo de jornada educativa.
+    """
     cueanexo = models.IntegerField(blank=True, null=True, name='cueanexo')
     id_establecimiento = models.CharField(blank=True, null=True, name='id_establecimiento')
     id_localizacion = models.CharField(blank=True, null=True, name='id_localizacion')

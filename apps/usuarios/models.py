@@ -2,7 +2,30 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 class CustomUserManager(BaseUserManager):
+    """
+    Administrador de usuarios personalizado para gestionar la creación de usuarios.
+
+    Métodos:
+        create_user: Crea y devuelve un usuario normal.
+        create_superuser: Crea y devuelve un superusuario.
+    """
+    
     def create_user(self, username, password=None, **extra_fields):
+        """
+        Crea y devuelve un usuario con un nombre de usuario y una contraseña.
+
+        Args:
+            username (str): El nombre de usuario para el nuevo usuario.
+            password (str, optional): La contraseña del nuevo usuario.
+            **extra_fields: Campos adicionales a añadir al usuario.
+
+        Raises:
+            ValueError: Si el campo de nombre de usuario no está definido.
+
+        Returns:
+            UsuariosVisualizador: El usuario creado.
+        """
+        
         if not username:
             raise ValueError('The Username field must be set')
         user = self.model(username=username, **extra_fields)
@@ -11,6 +34,21 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, password=None, **extra_fields):
+        """
+        Crea y devuelve un superusuario con un nombre de usuario y una contraseña.
+
+        Args:
+            username (str): El nombre de usuario para el superusuario.
+            password (str, optional): La contraseña del superusuario.
+            **extra_fields: Campos adicionales a añadir al superusuario.
+
+        Raises:
+            ValueError: Si el campo is_staff o is_superuser no está establecido a True.
+
+        Returns:
+            UsuariosVisualizador: El superusuario creado.
+        """
+        
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         
@@ -23,6 +61,13 @@ class CustomUserManager(BaseUserManager):
 
 
 class NivelAcceso(models.Model):
+    """
+    Modelo que representa los niveles de acceso para los usuarios.
+
+    Atributos:
+        tacceso (str): El tipo de acceso, debe ser único.
+    """
+
     tacceso = models.CharField(unique=True, max_length=100, verbose_name='tipoacceso')
     
     def __str__(self):
@@ -37,6 +82,24 @@ class NivelAcceso(models.Model):
        
        
 class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
+    """
+    Modelo que representa a los usuarios visualizadores en el sistema.
+
+    Atributos:
+        username (str): Nombre de usuario único.
+        apellido (str): Apellido del usuario.
+        nombres (str): Nombres del usuario.
+        correo (str): Correo electrónico del usuario.
+        telefono (str): Teléfono del usuario.
+        nivelacceso (NivelAcceso): Nivel de acceso del usuario, con relación a NivelAcceso.
+        activo (bool): Indica si el usuario está activo.
+        is_staff (bool): Indica si el usuario es parte del personal.
+        is_superuser (bool): Indica si el usuario tiene privilegios de superusuario.
+
+    Métodos:
+        __str__: Retorna el nombre de usuario.
+    """
+    
     username = models.CharField(unique=True, max_length=9, verbose_name='usuario')
     apellido = models.CharField(max_length=150, verbose_name='apellido')
     nombres = models.CharField(max_length=150, verbose_name='nombres')

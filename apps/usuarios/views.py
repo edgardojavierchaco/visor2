@@ -24,45 +24,131 @@ import json
 
 #listado de usuarios para el Admin
 class listado_usuarios(AdminRequiredMixin,ListView):
+    """
+    Vista que muestra el listado de usuarios para el administrador.
+
+    Atributos:
+        model: El modelo a utilizar (UsuariosVisualizador).
+        template_name: La plantilla a renderizar.
+        context_object_name: Nombre del contexto a pasar a la plantilla.
+
+    Métodos:
+        get_context_data: Agrega información adicional al contexto.
+    """
+    
     model=UsuariosVisualizador        
     template_name='usuarios/listado.html' 
     context_object_name='usuarios'   
     print(context_object_name)
     
     def get_context_data(self, **kwargs):
+        """
+        Agrega el título al contexto.
+
+        Args:
+            **kwargs: Argumentos adicionales.
+
+        Returns:
+            dict: El contexto actualizado.
+        """
+        
         context=super().get_context_data(**kwargs)
         context['title']='Listado de Usuarios'
         return context
 
 #listado de directores para Evaluación
 class listado_usuarios_op(ListView):
+    """
+    Vista que muestra el listado de usuarios con nivel de acceso "Director/a".
+
+    Atributos:
+        model: El modelo a utilizar (UsuariosVisualizador).
+        template_name: La plantilla a renderizar.
+        context_object_name: Nombre del contexto a pasar a la plantilla.
+
+    Métodos:
+        get_queryset: Filtra los usuarios por nivel de acceso.
+        get_context_data: Agrega información adicional al contexto.
+    """
+
     model=UsuariosVisualizador        
     template_name='usuarios/listado_op.html' 
     context_object_name='usuarios'   
     print(context_object_name)
     
     def get_queryset(self):
+        """
+        Filtra los usuarios cuyo nivel de acceso es "Director/a".
+
+        Returns:
+            QuerySet: Los usuarios filtrados.
+        """
+        
         # Filtrar los usuarios cuyo nivel de acceso es "Director/a"
         return UsuariosVisualizador.objects.filter(nivelacceso='Director/a')
     
     def get_context_data(self, **kwargs):
+        """
+        Agrega el título al contexto.
+
+        Args:
+            **kwargs: Argumentos adicionales.
+
+        Returns:
+            dict: El contexto actualizado.
+        """
+        
         context=super().get_context_data(**kwargs)
         context['title']='Listado de Directores'
         return context
 
 
 class crear_usuarios(AdminRequiredMixin,CreateView):
+    """
+    Vista para crear un nuevo usuario.
+
+    Atributos:
+        model: El modelo a utilizar (UsuariosVisualizador).
+        form_class: El formulario para crear usuarios.
+        template_name: La plantilla a renderizar.
+        success_url: URL a la que redirigir después de una creación exitosa.
+
+    Métodos:
+        get_context_data: Agrega información adicional al contexto.
+        form_valid: Guarda el usuario en la base de datos.
+    """
+    
     model=UsuariosVisualizador
     form_class=UsuariosForm
     template_name='usuarios/crear.html'
     success_url=reverse_lazy('usuarios:listado')
 
     def get_context_data(self,**kwargs):
+        """
+        Agrega el título al contexto.
+
+        Args:
+            **kwargs: Argumentos adicionales.
+
+        Returns:
+            dict: El contexto actualizado.
+        """
+        
         context=super().get_context_data(**kwargs)
         context['title']='Crear Usuario'
         return context
     
     def form_valid(self, form):
+        """
+        Procesa el formulario válido y guarda el usuario.
+
+        Args:
+            form: El formulario enviado.
+
+        Returns:
+            HttpResponse: Respuesta de redirección después de guardar el usuario.
+        """
+        
         # Obtener el formulario de usuario
         usuario_form = form.save(commit=False)
         
@@ -80,48 +166,149 @@ class crear_usuarios(AdminRequiredMixin,CreateView):
 
 #edición para Administrador
 class editar_usuarios(AdminRequiredMixin, UpdateView):
+    """
+    Vista para editar un usuario existente.
+
+    Atributos:
+        model: El modelo a utilizar (UsuariosVisualizador).
+        form_class: El formulario para editar usuarios.
+        template_name: La plantilla a renderizar.
+        success_url: URL a la que redirigir después de una edición exitosa.
+
+    Métodos:
+        get_object: Obtiene el objeto de usuario a editar.
+        get_context_data: Agrega información adicional al contexto.
+        form_valid: Procesa el formulario válido.
+    """
+    
     model = UsuariosVisualizador
     form_class = UsuariosForm
     template_name = 'usuarios/editar.html'
     success_url = reverse_lazy('usuarios:listado')
 
     def get_object(self):
+        """
+        Obtiene el objeto de usuario a editar basado en el ID proporcionado.
+
+        Returns:
+            UsuariosVisualizador: El usuario a editar.
+        """
+        
         user_id = self.request.GET.get('id')
         return get_object_or_404(UsuariosVisualizador, id=user_id)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega el título al contexto.
+
+        Args:
+            **kwargs: Argumentos adicionales.
+
+        Returns:
+            dict: El contexto actualizado.
+        """
+        
         context = super().get_context_data(**kwargs)
         context['title'] = 'Editar Usuario'
         return context
 
     def form_valid(self, form):
+        """
+        Procesa el formulario válido y actualiza el usuario.
+
+        Args:
+            form: El formulario enviado.
+
+        Returns:
+            HttpResponse: Respuesta de redirección después de actualizar el usuario.
+        """
+        
         # Simplemente llamamos al form_valid de la superclase
         return super().form_valid(form)
 
 
 #edición para Evaluación
 class editar_usuarios_op(UpdateView):
+    """
+    Vista para editar un usuario existente para evaluación.
+
+    Atributos:
+        model: El modelo a utilizar (UsuariosVisualizador).
+        form_class: El formulario para editar usuarios.
+        template_name: La plantilla a renderizar.
+        success_url: URL a la que redirigir después de una edición exitosa.
+
+    Métodos:
+        get_object: Obtiene el objeto de usuario a editar.
+        get_context_data: Agrega información adicional al contexto.
+        form_valid: Procesa el formulario válido.
+    """
+    
     model = UsuariosVisualizador
     form_class = UsuariosForm
     template_name = 'usuarios/editar_op.html'
     success_url = reverse_lazy('usuarios:listado_op')
 
     def get_object(self):
+        """
+        Obtiene el objeto de usuario a editar basado en el ID proporcionado.
+
+        Returns:
+            UsuariosVisualizador: El usuario a editar.
+        """
+        
         user_id = self.request.GET.get('id')
         return get_object_or_404(UsuariosVisualizador, id=user_id)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega el título al contexto.
+
+        Args:
+            **kwargs: Argumentos adicionales.
+
+        Returns:
+            dict: El contexto actualizado.
+        """
+        
         context = super().get_context_data(**kwargs)
         context['title'] = 'Editar Usuario'
         return context
 
     def form_valid(self, form):
+        """
+        Procesa el formulario válido y actualiza el usuario.
+
+        Args:
+            form: El formulario enviado.
+
+        Returns:
+            HttpResponse: Respuesta de redirección después de actualizar el usuario.
+        """
+        
         # Simplemente llamamos al form_valid de la superclase
         return super().form_valid(form)
 
 #Eliminar usuarios para Administrador
 class EliminarUsuarioView(AdminRequiredMixin,DeleteView):
+    """
+    Vista para eliminar un usuario.
+
+    Métodos:
+        get: Elimina el usuario basado en el ID proporcionado.
+    """
+    
     def get(self, request):
+        """
+        Elimina el usuario y redirige a la lista de usuarios.
+
+        Args:
+            request: La solicitud HTTP.
+
+        Returns:
+            HttpResponseRedirect: Redirección a la lista de usuarios.
+        """
+        
         user_id = request.GET.get('id')
         user = get_object_or_404(UsuariosVisualizador, id=user_id)
         user.delete()
@@ -129,7 +316,24 @@ class EliminarUsuarioView(AdminRequiredMixin,DeleteView):
 
 #Eliminar usuarios para Evaluación
 class EliminarUsuarioView_op(DeleteView):
+    """
+    Vista para eliminar un usuario en evaluación.
+
+    Métodos:
+        get: Elimina el usuario basado en el ID proporcionado.
+    """
+    
     def get(self, request):
+        """
+        Elimina el usuario y redirige a la lista de directores.
+
+        Args:
+            request: La solicitud HTTP.
+
+        Returns:
+            HttpResponseRedirect: Redirección a la lista de directores.
+        """
+        
         user_id = request.GET.get('id')
         user = get_object_or_404(UsuariosVisualizador, id=user_id)
         user.delete()

@@ -12,6 +12,22 @@ from django.contrib.auth.decorators import login_required
 #####################################################################
 @login_required
 def filtrar_tablas_view_directores(request):
+    """
+    Muestra los datos institucionales del usuario autenticado.
+
+    Esta vista se encarga de obtener y mostrar información relacionada
+    con el usuario logueado, incluyendo datos institucionales, planes de
+    estudio, anexos y ofertas. Se conecta a la base de datos 'Padron' para
+    realizar las consultas necesarias.
+
+    Args:
+        request: El objeto HttpRequest que contiene información sobre la
+                 solicitud del usuario.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla 'directores/institucional.html'
+                      con los resultados obtenidos de la base de datos.
+    """
     # Obtener el username del usuario logueado
     cueanexo = request.user.username    
 
@@ -96,6 +112,22 @@ def filtrar_tablas_view_directores(request):
 
 @login_required
 def filter_matricula_views_directores(request):
+    """
+    Filtra y muestra la matrícula de acuerdo a la oferta educativa.
+
+    Esta vista se encarga de obtener la matrícula de los estudiantes
+    en función de la oferta educativa activa asociada al usuario logueado.
+    Se conecta a la base de datos 'visualizador' para realizar las consultas
+    necesarias y luego renderiza la plantilla correspondiente con los resultados.
+
+    Args:
+        request: El objeto HttpRequest que contiene información sobre la
+                 solicitud del usuario.
+
+    Returns:
+        HttpResponse: Renderiza la plantilla 'directores/matricula.html'
+                      con los detalles de matrícula obtenidos de la base de datos.
+    """
     cueanexo = request.user.username
     
     # Validar y sanitizar el valor de cueanexo

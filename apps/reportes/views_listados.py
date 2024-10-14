@@ -3,6 +3,22 @@ from django.db import connection
 from django.http import JsonResponse
 
 def consulta_ofertas(request):
+    """
+    Consulta las ofertas educativas por departamento.
+
+    Esta vista obtiene los departamentos únicos y realiza una consulta
+    SQL para contar las ofertas educativas según diferentes criterios.
+    Si se selecciona un departamento, se aplicará un filtro en la consulta.
+
+    Args:
+        request: La solicitud HTTP que contiene los parámetros de consulta.
+
+    Returns:
+        JsonResponse: Si la solicitud es AJAX, devuelve los datos en formato JSON.
+        HttpResponse: Renderiza la plantilla 'reportes/listadosestablecimientos.html' 
+        con los departamentos y datos obtenidos.
+    """
+    
     departamentos = []
     datos = {}
     selected_departamento = request.GET.get('departamento')
@@ -107,6 +123,23 @@ def consulta_ofertas(request):
 
 
 def consulta_ofertas_reg(request):
+    """
+    Consulta las ofertas educativas por región.
+
+    Esta vista obtiene las regiones únicas y las localidades asociadas,
+    y realiza una consulta SQL para contar las ofertas educativas según
+    diferentes criterios. Si se selecciona una región, se aplicará un filtro
+    en la consulta.
+
+    Args:
+        request: La solicitud HTTP que contiene los parámetros de consulta.
+
+    Returns:
+        JsonResponse: Si la solicitud es AJAX, devuelve los datos en formato JSON.
+        HttpResponse: Renderiza la plantilla 'reportes/listadosestablecreg.html' 
+        con las regiones y datos obtenidos.
+    """
+    
     regionales = []
     localidades=[]
     datos = {}

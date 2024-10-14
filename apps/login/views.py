@@ -5,16 +5,56 @@ from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login
 from django.conf import settings
+"""
+Este módulo define dos vistas basadas en clases para gestionar el inicio y cierre de sesión en una aplicación Django. 
+Se utilizan las vistas genéricas de Django `LoginView` y `LogoutView` para personalizar la funcionalidad.
+
+Clases:
+    LoginFormView: Vista personalizada para el inicio de sesión. Gestiona la autenticación del usuario y redirección 
+                   según los permisos y grupos del usuario autenticado.
+    CustomLogoutView: Vista personalizada para el cierre de sesión, redirigiendo a una página específica tras cerrar sesión.
+"""
 
 class LoginFormView(LoginView):
+    """
+    Vista personalizada para gestionar el inicio de sesión.
+
+    Atributos:
+        template_name (str): El nombre del template utilizado para el formulario de inicio de sesión.
+
+    Métodos:
+        get_context_data: Agrega el título 'Iniciar Sesión' al contexto.
+        get_success_url: Redirige al usuario autenticado según sus permisos y grupos, 
+                         o a una URL predeterminada si no está en ningún grupo.
+        form_valid: Valida el formulario de inicio de sesión y autentica al usuario. 
+                    Retorna una respuesta JSON dependiendo del resultado.
+        form_invalid: Retorna una respuesta JSON con un mensaje de error si las credenciales son incorrectas.
+        post: Maneja la solicitud POST, incluyendo solicitudes AJAX, para validar el formulario y retornar
+              las respuestas correspondientes.
+    """
     template_name = 'login/login.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Agrega el título 'Iniciar Sesión' al contexto del template.
+
+        Args:
+            kwargs: Diccionario de argumentos adicionales.
+
+        Returns:
+            dict: Contexto actualizado con el título de la página.
+        """
         context = super().get_context_data(**kwargs)
         context['title'] = 'Iniciar Sesión'
         return context
 
     def get_success_url(self):
+        """
+        Redirige al usuario autenticado basado en su grupo.
+
+        Returns:
+            str: URL a la que será redirigido el usuario según su grupo.
+        """
         user = self.request.user
         
         if user.is_authenticated and user.is_staff:
@@ -38,6 +78,15 @@ class LoginFormView(LoginView):
         return reverse('login')  
 
     def form_valid(self, form):
+        """
+        Maneja el caso en que el formulario es válido, autenticando al usuario y redirigiéndolo según sus permisos.
+
+        Args:
+            form: Formulario de inicio de sesión.
+
+        Returns:
+            JsonResponse: Respuesta JSON con el estado de la autenticación.
+        """
         user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password'])
         if user is not None:
             login(self.request, user)
@@ -49,10 +98,30 @@ class LoginFormView(LoginView):
         return JsonResponse({'success': False, 'message': 'Credenciales incorrectas.'})
 
     def form_invalid(self, form):
+        """
+        Maneja el caso en que el formulario no es válido, retornando un mensaje de error.
+
+        Args:
+            form: Formulario de inicio de sesión inválido.
+
+        Returns:
+            JsonResponse: Respuesta JSON con el mensaje de error y el template asociado.
+        """
         html = 'login/login.html'
         return JsonResponse({'success': False, 'message': 'Credenciales incorrectas.', 'template': html})
 
     def post(self, request, *args, **kwargs):
+        """
+        Procesa la solicitud POST, manejando solicitudes AJAX y no AJAX.
+
+        Args:
+            request: Objeto de solicitud HTTP.
+            *args: Argumentos adicionales.
+            **kwargs: Argumentos adicionales.
+
+        Returns:
+            JsonResponse o HttpResponse: Respuesta dependiendo de si la solicitud es AJAX o no.
+        """
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             # Manejar la solicitud AJAX
             form = self.get_form()
@@ -65,4 +134,10 @@ class LoginFormView(LoginView):
 
 
 class CustomLogoutView(LogoutView):
+    """
+    Vista personalizada para gestionar el cierre de sesión.
+
+    Atributos:
+        next_page (str): URL a la que se redirige al usuario tras cerrar sesión.
+    """
     next_page = reverse_lazy('dash:portada')
