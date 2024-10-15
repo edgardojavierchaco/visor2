@@ -14,8 +14,7 @@ class ArchNoramtiva(models.Model):
         ruta (str): La ruta del archivo en el sistema de archivos, si es aplicable.
 
     Métodos:
-        save(*args, **kwargs): Sobrescribe el método de guardado para manejar la apertura
-                               y el almacenamiento del archivo de manera adecuada.
+        save(args, kwargs): Sobrescribe el método de guardado para manejar la apertura y el almacenamiento del archivo de manera adecuada.
     """
     
     asunto=models.CharField(max_length=100, blank=False, name='asunto')

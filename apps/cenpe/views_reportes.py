@@ -9,6 +9,39 @@ from io import BytesIO
 from django.db import connection
 
 def GenerarCertificado(request):
+    """
+    Genera un certificado en formato PDF para un usuario autenticado, mostrando sus datos personales y cargos docentes.
+
+    Este certificado incluye:
+    - Encabezado con información institucional.
+    - Detalles de los datos personales del usuario, obtenidos de la base de datos.
+    - Una tabla con los cargos y horas trabajadas.
+    - Un código QR que contiene los datos completos del certificado.
+
+    Args:
+        request (HttpRequest): Objeto de la solicitud HTTP que contiene información del usuario autenticado.
+
+    Returns:
+        HttpResponse: Un archivo PDF con el certificado generado.
+
+    Funcionalidad:
+    1. Obtiene los datos personales y los cargos del usuario autenticado a partir de una consulta SQL a la base de datos.
+    2. Genera un PDF con el módulo `reportlab`, incluyendo los datos personales y una tabla de cargos.
+    3. Genera un código QR que contiene la información del certificado.
+    4. Envía el archivo PDF generado como respuesta HTTP.
+    
+    Ejemplo:
+        - El usuario autenticado accede a la vista, y se genera un PDF con su certificado.
+        - El código QR incrustado contiene información clave del certificado, como nombre, DNI, título, cargos y fechas.
+
+    Uso:
+        Esta vista se puede integrar como parte de un sistema que genere certificados para docentes o personal administrativo.
+
+    Notas:
+        - La consulta SQL es específica a la base de datos `cenpe.certificado_cenpe`, asegurando que los datos se obtengan según el `dni` del usuario.
+        - Se utiliza el módulo `qrcode` para generar un código QR y `reportlab` para generar el PDF.
+    """
+    
     username = request.user.username
     print(username)
     

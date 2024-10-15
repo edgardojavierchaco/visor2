@@ -1,0 +1,202 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.archivar.models &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.archivar.models</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.archivar.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">models</span>
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+
+<div class="viewcode-block" id="AsuntoRegister"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.models.AsuntoRegister">[documentos]</a><span class="k">class</span> <span class="nc">AsuntoRegister</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo para almacenar asuntos relacionados con registros de archivos.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        asunto (str): Descripción del asunto, con un máximo de 150 caracteres.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">asunto</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;asunto&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">asunto</span></div>
+    
+<div class="viewcode-block" id="nivel"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.models.nivel">[documentos]</a><span class="k">class</span> <span class="nc">nivel</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo para almacenar niveles de clasificación.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        niveles (str): Nombre del nivel, con un máximo de 150 caracteres.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">niveles</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;niveles&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">niveles</span></div>
+
+<div class="viewcode-block" id="TNormativa"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.models.TNormativa">[documentos]</a><span class="k">class</span> <span class="nc">TNormativa</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo para almacenar tipos de normativa.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        t_norma (str): Descripción del tipo de normativa, con un máximo de 150 caracteres.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">t_norma</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;t_norma&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_norma</span></div>
+    
+    
+<div class="viewcode-block" id="ArchRegister"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.models.ArchRegister">[documentos]</a><span class="k">class</span> <span class="nc">ArchRegister</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo para registrar archivos normativos asociados a un anexo.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        cueanexo (str): Código único del anexo, con un máximo de 10 caracteres.</span>
+<span class="sd">        asunto (ForeignKey): Relación con el modelo AsuntoRegister, que describe el asunto del registro.</span>
+<span class="sd">        nivel (ForeignKey): Relación con el modelo Nivel, que indica el nivel de clasificación del registro.</span>
+<span class="sd">        t_norma (ForeignKey): Relación con el modelo TNormativa, que describe el tipo de normativa.</span>
+<span class="sd">        nro_normativa (str): Número de la normativa correspondiente, con un máximo de 100 caracteres.</span>
+<span class="sd">        anio (int): Año asociado con la normativa, debe ser un entero.</span>
+<span class="sd">        descripcion (str): Descripción del archivo o su contenido.</span>
+<span class="sd">        archivo (FileField): Archivo a ser subido y asociado al registro, con un directorio de carga especificado.</span>
+<span class="sd">        ruta (str): Ruta donde se almacena el archivo subido, puede ser nula o vacía.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        nombre_asunto (str): Devuelve el asunto del registro.</span>
+<span class="sd">        save: Sobrescribe el método save para actualizar la ruta del archivo una vez guardado.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+    <span class="n">asunto</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">AsuntoRegister</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;asunto&#39;</span><span class="p">)</span>
+    <span class="n">nivel</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">nivel</span><span class="p">,</span><span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nivel&#39;</span><span class="p">)</span>
+    <span class="n">t_norma</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">TNormativa</span><span class="p">,</span><span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;t_norma&#39;</span><span class="p">)</span>
+    <span class="n">nro_normativa</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nro_normativa&#39;</span><span class="p">)</span>
+    <span class="n">anio</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;año&#39;</span><span class="p">)</span>
+    <span class="n">descripcion</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;descripcion&#39;</span><span class="p">)</span>
+    <span class="n">archivo</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span><span class="n">upload_to</span><span class="o">=</span><span class="s1">&#39;archivo_normativa/&#39;</span><span class="p">)</span>
+    <span class="n">ruta</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cueanexo</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">asunto</span><span class="si">}</span><span class="s2">&quot;</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nombre_asunto</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene el nombre del asunto relacionado con el registro.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Nombre del asunto, o una cadena vacía si no hay asunto.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">asunto</span><span class="o">.</span><span class="n">asunto</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">asunto</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="ArchRegister.save"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.models.ArchRegister.save">[documentos]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>     
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guarda el registro y actualiza la ruta del archivo subido.</span>
+
+<span class="sd">        Llama al método save de la superclase y luego actualiza el campo &#39;ruta&#39;</span>
+<span class="sd">        con la ubicación del archivo una vez que ha sido guardado en el sistema.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Argumentos adicionales para el método save.</span>
+<span class="sd">            **kwargs: Argumentos adicionales para el método save.</span>
+<span class="sd">        &quot;&quot;&quot;</span>   
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>        
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">archivo</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ruta</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">MEDIA_URL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">archivo</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">update_fields</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ruta&#39;</span><span class="p">])</span> </div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

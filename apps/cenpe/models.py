@@ -7,6 +7,17 @@ import re
 from datetime import date
 
 class CeicPuntos(models.Model):
+    """
+    Modelo que representa los puntos CEIC asignados a un nivel educativo.
+
+    Atributos:
+        nivel (str): Nivel educativo al que pertenece.
+        ceic_id (int): ID único para CEIC.
+        descripcion_ceic (str): Descripción detallada del CEIC.
+        estado (bool): Estado activo o inactivo del registro.
+        puntos (int): Puntos asignados para el nivel y CEIC específicos.
+    """
+    
     nivel = models.CharField(max_length=255, verbose_name='Nivel')
     ceic_id = models.IntegerField(primary_key=True, verbose_name='ciec_id')
     descripcion_ceic = models.CharField(max_length=255, verbose_name='Descripción Ceic')
@@ -22,6 +33,14 @@ class CeicPuntos(models.Model):
     
 
 class documento_tipo(models.Model):
+    """
+    Modelo para representar los diferentes tipos de documentos de identidad.
+
+    Atributos:
+        c_tipo (int): Código único para el tipo de documento.
+        descripcion_doc (str): Descripción del tipo de documento.
+    """
+    
     c_tipo = models.IntegerField(primary_key=True, verbose_name='c_tipo')
     descripcion_doc = models.CharField(max_length=255, verbose_name='Descripción Doc')
     
@@ -34,6 +53,14 @@ class documento_tipo(models.Model):
     
 
 class grado_tipo(models.Model):
+    """
+    Modelo para representar los tipos de grados académicos.
+
+    Atributos:
+        c_grado (int): Código único del grado académico.
+        descripcion_grado (str): Descripción del grado académico.
+    """
+    
     c_grado = models.IntegerField(primary_key=True, verbose_name='c_grado')
     descripcion_grado = models.CharField(max_length=255, verbose_name='Descripción Grado')
     
@@ -46,6 +73,14 @@ class grado_tipo(models.Model):
     
 
 class provincia_tipo(models.Model):
+    """
+    Modelo que representa las diferentes provincias.
+
+    Atributos:
+        c_provincia (int): Código único para la provincia.
+        descripcion_prov (str): Descripción de la provincia.
+    """
+    
     c_provincia = models.IntegerField(primary_key=True, verbose_name='c_provincia')
     descripcion_prov = models.CharField(max_length=255, verbose_name='Descripción Prov')
     
@@ -59,6 +94,17 @@ class provincia_tipo(models.Model):
     
     
 class localidad_tipo(models.Model):
+    """
+    Modelo que representa las diferentes localidades.
+
+    Atributos:
+        c_localidad (int): Código único de la localidad.
+        descripcion_loc (str): Descripción de la localidad.
+        c_departamento (int): Código del departamento asociado.
+        descripcion_dpto (str): Descripción del departamento.
+        c_provincia (ForeignKey): Relación con el modelo `provincia_tipo`.
+    """
+    
     c_localidad=models.IntegerField(primary_key=True,verbose_name='c_localidad')
     descripcion_loc=models.CharField(max_length=255, verbose_name='Descripción Loc')
     c_departamento=models.IntegerField(verbose_name='c_departamento')
@@ -74,6 +120,14 @@ class localidad_tipo(models.Model):
 
 
 class pais(models.Model):
+    """
+    Modelo para representar los diferentes países.
+
+    Atributos:
+        c_pais (int): Código único del país.
+        descripcion_pais (str): Nombre del país.
+    """
+    
     c_pais=models.IntegerField(primary_key=True, verbose_name='c_pais')
     descripcion_pais=models.CharField(max_length=255, verbose_name='Descripción País')
     
@@ -86,6 +140,15 @@ class pais(models.Model):
     
     
 class nacionalidad(models.Model):
+    """
+    Modelo para representar las diferentes nacionalidades.
+
+    Atributos:
+        c_nacionalidad (int): Código único de la nacionalidad.
+        descripcion_nacional (str): Descripción de la nacionalidad.
+        c_pais (ForeignKey): Relación con el modelo `pais`.
+    """
+    
     c_nacionalidad = models.IntegerField(primary_key=True, verbose_name='c_nacionalidad')
     descripcion_nacional=models.CharField(max_length=255, verbose_name='Descripción Nacionalidad')
     c_pais=models.ForeignKey(pais,db_column='c_pais',on_delete=models.CASCADE,verbose_name='c_país')

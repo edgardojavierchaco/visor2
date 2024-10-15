@@ -1,0 +1,195 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.reportes.views_infodocatividad &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.reportes.views_infodocatividad</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.reportes.views_infodocatividad</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">JsonResponse</span>
+
+<div class="viewcode-block" id="consulta_docentes_actividad"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_infodocatividad.consulta_docentes_actividad">[documentos]</a><span class="k">def</span> <span class="nf">consulta_docentes_actividad</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Consulta los resultados de docentes por actividad y departamento.</span>
+
+<span class="sd">    Obtiene una lista de departamentos únicos y realiza una consulta SQL para obtener</span>
+<span class="sd">    resultados relacionados con la actividad de los docentes en un departamento específico.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: La solicitud HTTP que puede contener el departamento seleccionado.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Si la solicitud es AJAX, devuelve un JsonResponse con los resultados.</span>
+<span class="sd">                      Si es una solicitud estándar, renderiza la plantilla con los resultados,</span>
+<span class="sd">                      los departamentos, los colores y el total general.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">departamentos</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">resultados</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">total_general</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">selected_departamento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;departamento&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Obtener los departamentos únicos</span>
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT departamento FROM v_capa_unica_ofertas&quot;</span><span class="p">)</span>
+        <span class="n">departamentos</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+
+    <span class="c1"># Consulta SQL dependiendo del departamento seleccionado</span>
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>        
+        <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT funcion, ambito, sector, departamento, total</span>
+<span class="s2">                FROM public.resultados_docentes</span>
+<span class="s2">                WHERE departamento = </span><span class="si">%s</span>
+<span class="s2">            &quot;&quot;&quot;</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="p">[</span><span class="n">selected_departamento</span><span class="p">])</span>
+
+        <span class="n">filas</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Filas obtenidas:&quot;</span><span class="p">,</span> <span class="n">filas</span><span class="p">)</span>
+
+        <span class="c1"># Recorrer las filas y guardar los resultados</span>
+        <span class="k">for</span> <span class="n">fila</span> <span class="ow">in</span> <span class="n">filas</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fila</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># Para el caso de todos los departamentos</span>
+                <span class="n">funcion</span><span class="p">,</span> <span class="n">ambito</span><span class="p">,</span> <span class="n">sector</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">fila</span>
+                <span class="n">departamento</span> <span class="o">=</span> <span class="s1">&#39;-- Todos los departamentos --&#39;</span>  <span class="c1"># Asigna un valor genérico para el departamento</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">fila</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>  <span class="c1"># Para el caso de un departamento específico</span>
+                <span class="n">funcion</span><span class="p">,</span> <span class="n">ambito</span><span class="p">,</span> <span class="n">sector</span><span class="p">,</span> <span class="n">departamento</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">fila</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected number of columns in the result&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">funcion</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">resultados</span><span class="p">:</span>
+                <span class="n">resultados</span><span class="p">[</span><span class="n">funcion</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">resultados</span><span class="p">[</span><span class="n">funcion</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s1">&#39;ambito&#39;</span><span class="p">:</span> <span class="n">ambito</span><span class="p">,</span>
+                <span class="s1">&#39;sector&#39;</span><span class="p">:</span> <span class="n">sector</span><span class="p">,</span>
+                <span class="s1">&#39;departamento&#39;</span><span class="p">:</span> <span class="n">departamento</span><span class="p">,</span>
+                <span class="s1">&#39;total&#39;</span><span class="p">:</span> <span class="n">total</span>
+            <span class="p">})</span>
+
+            <span class="c1"># Calcular la suma total general</span>
+            <span class="n">total_general</span> <span class="o">+=</span> <span class="n">total</span>
+
+    <span class="c1"># Definir la lista de colores en la vista</span>
+    <span class="n">colores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#3498db&#39;</span><span class="p">,</span> <span class="s1">&#39;#e74c3c&#39;</span><span class="p">,</span> <span class="s1">&#39;#2ecc71&#39;</span><span class="p">,</span> <span class="s1">&#39;#f39c12&#39;</span><span class="p">,</span> <span class="s1">&#39;#9b59b6&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Responder con JSON si es una solicitud AJAX</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;X-Requested-With&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;XMLHttpRequest&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;resultados&#39;</span><span class="p">:</span> <span class="n">resultados</span><span class="p">})</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="n">resultados</span><span class="p">,</span> <span class="n">departamentos</span><span class="p">,</span> <span class="n">total_general</span><span class="p">)</span>
+    
+    <span class="c1"># Renderiza los resultados en la plantilla HTML</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/listadoactividad.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;resultados&#39;</span><span class="p">:</span> <span class="n">resultados</span><span class="p">,</span> 
+        <span class="s1">&#39;departamentos&#39;</span><span class="p">:</span> <span class="n">departamentos</span><span class="p">,</span>
+        <span class="s1">&#39;colores&#39;</span><span class="p">:</span> <span class="n">colores</span><span class="p">,</span>
+        <span class="s1">&#39;total_general&#39;</span><span class="p">:</span> <span class="n">total_general</span>
+    <span class="p">})</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

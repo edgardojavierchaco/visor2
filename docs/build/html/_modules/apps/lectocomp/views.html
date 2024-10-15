@@ -1,0 +1,512 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.lectocomp.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Archivar</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.lectocomp.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.lectocomp.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objs</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span>
+
+<div class="viewcode-block" id="calcular_estadisticas_por_cueanexo"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.calcular_estadisticas_por_cueanexo">[documentos]</a><span class="k">def</span> <span class="nf">calcular_estadisticas_por_cueanexo</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calcula estadísticas relacionadas con los estudiantes de una escuela específica (identificada por cueanexo).</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        username (str): El cueanexo del usuario actual.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Incluye tres resultados:</span>
+<span class="sd">            - Lista de tuplas con el total de DNI por cueanexo y desempeño.</span>
+<span class="sd">            - Total de DNI sin discriminación de desempeño.</span>
+<span class="sd">            - Promedio de puntaje por cueanexo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="c1"># Calcular total de DNI por cueanexo y desempeño</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT cueanexo,</span>
+<span class="s2">                   desempenio,</span>
+<span class="s2">                   COUNT(dni) as total_dni</span>
+<span class="s2">            FROM public.teslecturamayo</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span>
+<span class="s2">            GROUP BY cueanexo, desempenio</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultados_total_dni</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="c1"># Calcular total de DNI sin discriminación de desempeño</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT COUNT(dni) as total_dni</span>
+<span class="s2">            FROM public.teslecturamayo</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">total_dni_sin_desempenio</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Calcular promedio de puntaje por cueanexo</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT AVG(puntaje) as promedio_puntaje</span>
+<span class="s2">            FROM public.teslecturamayo</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultado_promedio_puntaje</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">resultados_total_dni</span><span class="p">,</span> <span class="n">total_dni_sin_desempenio</span><span class="p">,</span> <span class="n">resultado_promedio_puntaje</span></div>
+
+<div class="viewcode-block" id="tu_vista"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.tu_vista">[documentos]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">tu_vista</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista protegida que calcula y muestra las estadísticas por cueanexo del usuario actual.</span>
+<span class="sd">    Presenta un gráfico de torta con las estadísticas calculadas y otros resultados relevantes.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/grafico.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+    <span class="n">resultados_total_dni</span><span class="p">,</span> <span class="n">total_dni_sin_desempenio</span><span class="p">,</span> <span class="n">resultado_promedio_puntaje</span> <span class="o">=</span> <span class="n">calcular_estadisticas_por_cueanexo</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+    
+    <span class="c1"># Definir el orden y colores para los labels</span>
+    <span class="n">orden_labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Debajo del Nivel Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Satisfactorio&quot;</span><span class="p">,</span> <span class="s2">&quot;Avanzado&quot;</span><span class="p">,</span> <span class="s2">&quot;Calificación Incorrecta&quot;</span><span class="p">,</span> <span class="s2">&quot;Sin Calificar&quot;</span><span class="p">]</span>
+    <span class="n">colores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#1f77b4&#39;</span><span class="p">,</span> <span class="s1">&#39;#ff7f0e&#39;</span><span class="p">,</span> <span class="s1">&#39;#2ca02c&#39;</span><span class="p">,</span> <span class="s1">&#39;#d62728&#39;</span><span class="p">,</span> <span class="s1">&#39;#9467bd&#39;</span><span class="p">,</span> <span class="s1">&#39;#8c564b&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Inicializar diccionario para contar los valores en orden</span>
+    <span class="n">conteo_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">orden_labels</span><span class="p">}</span>
+    
+    <span class="k">for</span> <span class="n">resultado</span> <span class="ow">in</span> <span class="n">resultados_total_dni</span><span class="p">:</span>
+        <span class="n">conteo_dict</span><span class="p">[</span><span class="n">resultado</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">resultado</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    
+    <span class="c1"># Crear listas ordenadas</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">conteo_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">valores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">conteo_dict</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">total_dni</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">valores</span><span class="p">)</span>
+    <span class="n">etiquetas</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="p">(</span><span class="n">conteo</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">total_dni</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">valores</span><span class="p">)]</span>
+    
+    <span class="c1"># Crear el gráfico de torta</span>
+    <span class="n">grafico_torta_total_dni</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">valores</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">grafico_torta_total_dni</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">750</span><span class="p">)</span>  <span class="c1"># Fijar el ancho del gráfico</span>
+
+    <span class="c1"># Verificar si hay un resultado para el promedio de puntaje</span>
+    <span class="k">if</span> <span class="n">resultado_promedio_puntaje</span> <span class="ow">and</span> <span class="n">resultado_promedio_puntaje</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">promedio_puntaje</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">resultado_promedio_puntaje</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">promedio_puntaje</span> <span class="o">=</span> <span class="mf">0.00</span>
+
+    <span class="c1"># Renderizar la plantilla con los resultados y el gráfico</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/grafico.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;total_dni_sin_desempenio&#39;</span><span class="p">:</span> <span class="n">total_dni_sin_desempenio</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_puntaje&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje</span><span class="p">,</span>
+        <span class="s1">&#39;grafico_torta_total_dni&#39;</span><span class="p">:</span> <span class="n">grafico_torta_total_dni</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">})</span></div>
+
+<div class="viewcode-block" id="mostrar_grafico_reg"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.mostrar_grafico_reg">[documentos]</a><span class="k">def</span> <span class="nf">mostrar_grafico_reg</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filtra y muestra gráficos basados en las regiones seleccionadas por el usuario. </span>
+<span class="sd">    Si no se selecciona ninguna región, muestra un mensaje indicando que no hay datos disponibles.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/graficoreg.html&#39;, </span>
+<span class="sd">                      que incluye los gráficos y estadísticas calculadas.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Obtener los valores seleccionados del checkbox</span>
+    <span class="n">regiones_seleccionadas</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">getlist</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">)</span>
+    
+    <span class="n">mostrar_todo</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span> <span class="ow">in</span> <span class="n">regiones_seleccionadas</span>  <span class="c1"># Verifica si se selecciona &quot;Mostrar Todo&quot;</span>
+    
+    <span class="c1"># Establecer conexión con la base de datos PostgreSQL</span>
+    <span class="k">with</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+        <span class="n">dbname</span><span class="o">=</span><span class="s2">&quot;visualizador&quot;</span><span class="p">,</span>
+        <span class="n">user</span><span class="o">=</span><span class="s2">&quot;visualizador&quot;</span><span class="p">,</span>
+        <span class="n">password</span><span class="o">=</span><span class="s2">&quot;Estadisticas24&quot;</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;visoreducativochaco.com.ar&quot;</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mostrar_todo</span><span class="p">:</span>
+                <span class="c1"># Si se selecciona &quot;Mostrar Todo&quot;, mostrar todos los datos</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;SELECT desempenio, puntaje, reg FROM public.teslecturamayo&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="n">datos_usuario</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                
+                <span class="n">query1</span> <span class="o">=</span> <span class="s2">&quot;SELECT desempenio3, puntaje, reg FROM public.teslecturamayoeval&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query1</span><span class="p">)</span>
+                <span class="n">datos_usuario1</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Filtrar los datos para las regiones seleccionadas</span>
+                <span class="k">if</span> <span class="n">regiones_seleccionadas</span><span class="p">:</span>
+                    <span class="n">placeholders</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">regiones_seleccionadas</span><span class="p">))</span>
+                    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT desempenio, puntaje, reg FROM public.teslecturamayo WHERE reg IN (</span><span class="si">{</span><span class="n">placeholders</span><span class="si">}</span><span class="s2">)&quot;</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">regiones_seleccionadas</span><span class="p">))</span>
+                    <span class="n">datos_usuario</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                    
+                    <span class="n">query1</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT desempenio3, puntaje, reg FROM public.teslecturamayoeval WHERE reg IN (</span><span class="si">{</span><span class="n">placeholders</span><span class="si">}</span><span class="s2">)&quot;</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query1</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">regiones_seleccionadas</span><span class="p">))</span>
+                    <span class="n">datos_usuario1</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+                        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+                    <span class="p">})</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_usuario</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">datos_usuario1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+        <span class="p">})</span>
+    
+    <span class="c1"># Convertir los datos a DataFrames de pandas</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">datos_usuario</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;desempenio&#39;</span><span class="p">,</span> <span class="s1">&#39;puntaje&#39;</span><span class="p">,</span> <span class="s1">&#39;reg&#39;</span><span class="p">])</span>
+    <span class="n">df1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">datos_usuario1</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;desempenio3&#39;</span><span class="p">,</span> <span class="s1">&#39;puntaje&#39;</span><span class="p">,</span> <span class="s1">&#39;reg&#39;</span><span class="p">])</span>
+
+    <span class="c1"># Calcular el total de alumnos evaluados</span>
+    <span class="n">total_alumnos</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># Verificar si las columnas &#39;desempenio&#39; y &#39;puntaje&#39; existen</span>
+    <span class="k">if</span> <span class="s1">&#39;desempenio&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;puntaje&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;desempenio&#39; o &#39;puntaje&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;desempenio3&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df1</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;puntaje&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df1</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;desempenio3&#39; o &#39;puntaje&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Definir el orden y colores para los labels</span>
+    <span class="n">orden_labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Debajo del Nivel Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Satisfactorio&quot;</span><span class="p">,</span> <span class="s2">&quot;Avanzado&quot;</span><span class="p">,</span> <span class="s2">&quot;Calificación Incorrecta&quot;</span><span class="p">,</span> <span class="s2">&quot;Sin Calificar&quot;</span><span class="p">]</span>
+    <span class="n">colores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#1f77b4&#39;</span><span class="p">,</span> <span class="s1">&#39;#ff7f0e&#39;</span><span class="p">,</span> <span class="s1">&#39;#2ca02c&#39;</span><span class="p">,</span> <span class="s1">&#39;#d62728&#39;</span><span class="p">,</span> <span class="s1">&#39;#9467bd&#39;</span><span class="p">,</span> <span class="s1">&#39;#8c564b&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Ajustar los conteos según el orden definido</span>
+    <span class="n">conteo_desempenio</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;desempenio&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">conteo_desempenio3</span> <span class="o">=</span> <span class="n">df1</span><span class="p">[</span><span class="s1">&#39;desempenio3&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c1"># Calcular los porcentajes</span>
+    <span class="n">porcentajes</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_desempenio</span> <span class="o">/</span> <span class="n">conteo_desempenio</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">porcentajes3</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_desempenio3</span> <span class="o">/</span> <span class="n">conteo_desempenio3</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">*</span> <span class="mi">100</span>
+    
+    <span class="c1"># Crear etiquetas con cantidad y porcentaje</span>
+    <span class="n">etiquetas</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_desempenio</span><span class="p">,</span> <span class="n">porcentajes</span><span class="p">)]</span>
+    <span class="n">etiquetas3</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_desempenio3</span><span class="p">,</span> <span class="n">porcentajes3</span><span class="p">)]</span>
+    
+    <span class="c1"># Calcular el promedio de puntaje</span>
+    <span class="n">promedio_puntaje</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;puntaje&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    
+    <span class="c1"># Obtener el nombre de la región o mostrar &quot;Chaco&quot;</span>
+    <span class="n">regional</span> <span class="o">=</span> <span class="s1">&#39;Chaco&#39;</span> <span class="k">if</span> <span class="n">mostrar_todo</span> <span class="k">else</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;reg&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    
+    <span class="c1"># Crear los gráficos de torta con Plotly</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_desempenio</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="n">fig3</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas3</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_desempenio3</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig3</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># Convertir las figuras a HTML</span>
+    <span class="n">graph_html</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    <span class="n">graph_html3</span> <span class="o">=</span> <span class="n">fig3</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    
+    <span class="c1"># Renderizar la plantilla y pasar ambos gráficos y el promedio de puntaje</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;grafico&#39;</span><span class="p">:</span> <span class="n">graph_html</span><span class="p">,</span>
+        <span class="s1">&#39;grafico3&#39;</span><span class="p">:</span> <span class="n">graph_html3</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_puntaje&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje</span><span class="p">,</span>
+        <span class="s1">&#39;total_alumnos&#39;</span><span class="p">:</span> <span class="n">total_alumnos</span><span class="p">,</span>
+        <span class="s1">&#39;regional&#39;</span><span class="p">:</span> <span class="n">regional</span><span class="p">,</span>
+        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">})</span></div>
+
+<div class="viewcode-block" id="cargar_grafico_reg"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.cargar_grafico_reg">[documentos]</a><span class="k">def</span> <span class="nf">cargar_grafico_reg</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>    
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza la plantilla &#39;lectocomp/graficoreg.html&#39; sin datos de gráficos inicialmente.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/graficoreg.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+    <span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="mostrar_pdf_recomendaciones"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.mostrar_pdf_recomendaciones">[documentos]</a><span class="k">def</span> <span class="nf">mostrar_pdf_recomendaciones</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza una vista que muestra un PDF incrustado de recomendaciones.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/recomendaciones.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pdf_url</span> <span class="o">=</span> <span class="s2">&quot;https://drive.google.com/file/d/1IxPdm0B40TVxeuzgiw_PXYvkEEBPpRVs/preview&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/recomendaciones.html&#39;</span><span class="p">,{</span><span class="s1">&#39;pdf_url&#39;</span><span class="p">:</span> <span class="n">pdf_url</span><span class="p">})</span></div>
+
+<div class="viewcode-block" id="mostrar_pdf_informefinal"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.mostrar_pdf_informefinal">[documentos]</a><span class="k">def</span> <span class="nf">mostrar_pdf_informefinal</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza una vista que muestra un PDF incrustado del informe final.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/informefinal.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pdf_url</span> <span class="o">=</span> <span class="s2">&quot;https://drive.google.com/file/d/1KIRcY6BfwwR9oyttD3xYqiixC_2akBfr/preview&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/informefinal.html&#39;</span><span class="p">,{</span><span class="s1">&#39;pdf_url&#39;</span><span class="p">:</span> <span class="n">pdf_url</span><span class="p">})</span></div>
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#                 MUESTRA GRAFICO FILTRADO POR LOCALIDAD            #</span>
+<span class="c1">#####################################################################</span>
+
+<div class="viewcode-block" id="mostrar_grafico_localidad"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.mostrar_grafico_localidad">[documentos]</a><span class="k">def</span> <span class="nf">mostrar_grafico_localidad</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Obtiene y muestra un listado de localidades con datos disponibles para la evaluación.</span>
+<span class="sd">    Renderiza una vista que permite seleccionar localidades para filtrar datos de evaluación.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/graficolocalidades.html&#39;, </span>
+<span class="sd">                      que incluye la lista de localidades.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">localidades</span><span class="o">=</span><span class="p">[]</span>       
+    
+    <span class="c1"># Obtine las localidades únicas</span>
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT localidad FROM public.v_teslecturamayoeval WHERE localidad !=&#39;None&#39;&quot;</span><span class="p">)</span>
+        <span class="n">localidades</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Localidades cargadas:&#39;</span><span class="p">,</span> <span class="n">localidades</span><span class="p">)</span>
+    
+     <span class="c1"># Si es una solicitud estándar, renderiza la plantilla</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;localidades&#39;</span><span class="p">:</span> <span class="n">localidades</span><span class="p">,</span>        
+    <span class="p">}</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Contexto:&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficolocalidades.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mostrar_grafico_loc"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.mostrar_grafico_loc">[documentos]</a><span class="k">def</span> <span class="nf">mostrar_grafico_loc</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Muestra gráficos de desempeño académico basado en la localidad seleccionada.</span>
+<span class="sd">    Filtra los datos por localidad y genera gráficos con los resultados.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/graficolocalidades.html&#39;,</span>
+<span class="sd">                      que incluye gráficos y estadísticas filtradas por localidad.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Obtiene las localidades únicas para cargar en el select</span>
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT localidad FROM public.v_teslecturamayoeval WHERE localidad !=&#39;None&#39;&quot;</span><span class="p">)</span>
+        <span class="n">localidades</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+    
+    <span class="c1"># Obtiene los valores seleccionados en el select    </span>
+    <span class="n">localidades_seleccionadas</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;localidad&#39;</span><span class="p">)</span>   
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;localidad_seleccionada:&#39;</span><span class="p">,</span><span class="n">localidades_seleccionadas</span><span class="p">)</span>    
+    
+    <span class="c1"># Establece conexión con la base de datos PostgreSQL</span>
+    <span class="k">with</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+        <span class="n">dbname</span><span class="o">=</span><span class="s2">&quot;visualizador&quot;</span><span class="p">,</span>
+        <span class="n">user</span><span class="o">=</span><span class="s2">&quot;visualizador&quot;</span><span class="p">,</span>
+        <span class="n">password</span><span class="o">=</span><span class="s2">&quot;Estadisticas24&quot;</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;visoreducativochaco.com.ar&quot;</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>            
+                <span class="c1"># Filtrar los datos para las regiones seleccionadas</span>
+                <span class="k">if</span> <span class="n">localidades_seleccionadas</span><span class="p">:</span>                    
+                    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT desempenio, puntaje, localidad FROM public.v_teslecturamayoeval WHERE localidad = &#39;</span><span class="si">{</span><span class="n">localidades_seleccionadas</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">localidades_seleccionadas</span><span class="p">)</span>
+                    <span class="n">datos_usuario</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;datos de usuario:&#39;</span><span class="p">,</span> <span class="n">datos_usuario</span><span class="p">)</span>
+                    <span class="n">query1</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT desempenio3, puntaje, localidad FROM public.v_teslecturamayoeval WHERE localidad = &#39;</span><span class="si">{</span><span class="n">localidades_seleccionadas</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query1</span><span class="p">,</span> <span class="n">localidades_seleccionadas</span><span class="p">)</span>
+                    <span class="n">datos_usuario1</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficolocalidades.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+                        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+                    <span class="p">})</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_usuario</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">datos_usuario1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficolocalidades.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+        <span class="p">})</span>
+    
+    <span class="c1"># Convertir los datos a DataFrames de pandas</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">datos_usuario</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;desempenio&#39;</span><span class="p">,</span> <span class="s1">&#39;puntaje&#39;</span><span class="p">,</span> <span class="s1">&#39;localidad&#39;</span><span class="p">])</span>
+    <span class="n">df1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">datos_usuario1</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;desempenio3&#39;</span><span class="p">,</span> <span class="s1">&#39;puntaje&#39;</span><span class="p">,</span> <span class="s1">&#39;localidad&#39;</span><span class="p">])</span>
+
+    <span class="c1"># Calcular el total de alumnos evaluados</span>
+    <span class="n">total_alumnos</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># Verificar si las columnas &#39;desempenio&#39; y &#39;puntaje&#39; existen</span>
+    <span class="k">if</span> <span class="s1">&#39;desempenio&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;puntaje&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;desempenio&#39; o &#39;puntaje&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;desempenio3&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df1</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;puntaje&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df1</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;desempenio3&#39; o &#39;puntaje&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Definir el orden y colores para los labels</span>
+    <span class="n">orden_labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Debajo del Nivel Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Satisfactorio&quot;</span><span class="p">,</span> <span class="s2">&quot;Avanzado&quot;</span><span class="p">,</span> <span class="s2">&quot;Calificación Incorrecta&quot;</span><span class="p">,</span> <span class="s2">&quot;Sin Calificar&quot;</span><span class="p">]</span>
+    <span class="n">colores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#1f77b4&#39;</span><span class="p">,</span> <span class="s1">&#39;#ff7f0e&#39;</span><span class="p">,</span> <span class="s1">&#39;#2ca02c&#39;</span><span class="p">,</span> <span class="s1">&#39;#d62728&#39;</span><span class="p">,</span> <span class="s1">&#39;#9467bd&#39;</span><span class="p">,</span> <span class="s1">&#39;#8c564b&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Ajustar los conteos según el orden definido</span>
+    <span class="n">conteo_desempenio</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;desempenio&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">conteo_desempenio3</span> <span class="o">=</span> <span class="n">df1</span><span class="p">[</span><span class="s1">&#39;desempenio3&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c1"># Calcular los porcentajes</span>
+    <span class="n">porcentajes</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_desempenio</span> <span class="o">/</span> <span class="n">conteo_desempenio</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">porcentajes3</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_desempenio3</span> <span class="o">/</span> <span class="n">conteo_desempenio3</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">*</span> <span class="mi">100</span>
+    
+    <span class="c1"># Crear etiquetas con cantidad y porcentaje</span>
+    <span class="n">etiquetas</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_desempenio</span><span class="p">,</span> <span class="n">porcentajes</span><span class="p">)]</span>
+    <span class="n">etiquetas3</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_desempenio3</span><span class="p">,</span> <span class="n">porcentajes3</span><span class="p">)]</span>
+    
+    <span class="c1"># Calcular el promedio de puntaje</span>
+    <span class="n">promedio_puntaje</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;puntaje&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    
+    <span class="c1"># Obtener el nombre de la región o mostrar &quot;Chaco&quot;</span>
+    <span class="n">localidad</span> <span class="o">=</span> <span class="n">localidades_seleccionadas</span>
+    
+    <span class="c1"># Crear los gráficos de torta con Plotly</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_desempenio</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="n">fig3</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas3</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_desempenio3</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig3</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># Convertir las figuras a HTML</span>
+    <span class="n">graph_html</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    <span class="n">graph_html3</span> <span class="o">=</span> <span class="n">fig3</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    
+    <span class="c1"># Renderizar la plantilla y pasar ambos gráficos y el promedio de puntaje</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficolocalidades.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;grafico&#39;</span><span class="p">:</span> <span class="n">graph_html</span><span class="p">,</span>
+        <span class="s1">&#39;grafico3&#39;</span><span class="p">:</span> <span class="n">graph_html3</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_puntaje&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje</span><span class="p">,</span>
+        <span class="s1">&#39;total_alumnos&#39;</span><span class="p">:</span> <span class="n">total_alumnos</span><span class="p">,</span>
+        <span class="s1">&#39;localidades&#39;</span><span class="p">:</span> <span class="n">localidades</span><span class="p">,</span>
+        <span class="s1">&#39;localidad&#39;</span><span class="p">:</span> <span class="n">localidades_seleccionadas</span><span class="p">,</span>
+        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">})</span></div>
+
+<div class="viewcode-block" id="cargar_grafico_loc"><a class="viewcode-back" href="../../../lectocomp.html#apps.lectocomp.views.cargar_grafico_loc">[documentos]</a><span class="k">def</span> <span class="nf">cargar_grafico_loc</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>    
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza la plantilla &#39;lectocomp/graficolocalidades.html&#39; sin datos de gráficos inicialmente.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP recibida.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Respuesta renderizada con la plantilla &#39;lectocomp/graficolocalidades.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;lectocomp/graficolocalidades.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+    <span class="p">})</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

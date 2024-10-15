@@ -1,0 +1,572 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.oplectura.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.oplectura.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.oplectura.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">JsonResponse</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+<span class="kn">from</span> <span class="nn">django.utils.decorators</span> <span class="kn">import</span> <span class="n">method_decorator</span>
+<span class="kn">from</span> <span class="nn">django.views.generic</span> <span class="kn">import</span> <span class="n">CreateView</span><span class="p">,</span> <span class="n">ListView</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">,</span> <span class="n">DeleteView</span>
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span><span class="p">,</span> <span class="n">reverse</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">RegDocporSeccion</span><span class="p">,</span> <span class="n">RegEvaluacionFluidezLectora</span>
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="n">RegDocporSeccionEdicionForm</span><span class="p">,</span> <span class="n">RegDocporSeccionForm</span><span class="p">,</span> <span class="n">RegEvaluacionFluidezLectoraForm</span><span class="p">,</span> <span class="n">FiltroEvaluacionForm</span><span class="p">,</span> <span class="n">RegAlumnosFluidezLectoraForm</span><span class="p">,</span> <span class="n">RegEvaluacionFluidezLectoraDirectoresForm</span>
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="n">RegAlumnosFluidezLectoraDirectorForm</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">get_object_or_404</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.utils.http</span> <span class="kn">import</span> <span class="n">urlencode</span>
+
+<div class="viewcode-block" id="DepEvaluacionPortada"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.DepEvaluacionPortada">[documentos]</a><span class="k">def</span> <span class="nf">DepEvaluacionPortada</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza la plantilla de la portada de evaluación.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: La respuesta renderizada con la plantilla de portada.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;oplectura/portadaevaluacion.html&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CreateRegDocporSeccionView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.CreateRegDocporSeccionView">[documentos]</a><span class="nd">@method_decorator</span><span class="p">(</span><span class="n">login_required</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;dispatch&#39;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">CreateRegDocporSeccionView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para crear un nuevo registro de documento por sección.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo RegDocporSeccion.</span>
+<span class="sd">        form_class: El formulario RegDocporSeccionForm.</span>
+<span class="sd">        template_name: La plantilla utilizada para el formulario.</span>
+<span class="sd">        success_url: La URL a la que se redirige tras el éxito.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">RegDocporSeccionForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;oplectura/regdocporseccion.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;oplectura:cargar&#39;</span><span class="p">)</span>  
+    
+    
+<div class="viewcode-block" id="CreateRegDocporSeccionView.form_valid"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.CreateRegDocporSeccionView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Procesa el formulario cuando es válido.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            form: El formulario válido.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Redirige a la URL de éxito tras guardar el registro.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">regdocporseccion</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">regdocporseccion</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">regdocporseccion</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+    
+
+<span class="c1"># listado de aplicadores para dptoEvaluación</span>
+<div class="viewcode-block" id="ListadoDocentesView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoDocentesView">[documentos]</a><span class="nd">@method_decorator</span><span class="p">(</span><span class="n">login_required</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;dispatch&#39;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">ListadoDocentesView</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para listar los docentes registrados.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo RegDocporSeccion.</span>
+<span class="sd">        template_name: La plantilla utilizada para mostrar el listado.</span>
+<span class="sd">        context_object_name: El nombre del contexto para los docentes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span><span class="o">=</span><span class="n">RegDocporSeccion</span>
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;oplectura/listadodocentes.html&#39;</span>
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;docentesporseccion&#39;</span>
+    
+<div class="viewcode-block" id="ListadoDocentesView.get_queryset"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoDocentesView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene la consulta de los docentes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: Todos los registros de RegDocporSeccion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">return</span> <span class="n">RegDocporSeccion</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span></div>
+    
+<div class="viewcode-block" id="ListadoDocentesView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoDocentesView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega contexto adicional a la plantilla.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Contexto adicional.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Contexto actualizado con el título.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Aplicadores&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<span class="c1">#edición de aplicadores para dptoEvaluación</span>
+<div class="viewcode-block" id="EditarDocentesView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarDocentesView">[documentos]</a><span class="k">class</span> <span class="nc">EditarDocentesView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar un registro de docente.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo RegDocporSeccion.</span>
+<span class="sd">        form_class: El formulario RegDocporSeccionEdicionForm.</span>
+<span class="sd">        template_name: La plantilla utilizada para editar.</span>
+<span class="sd">        success_url: La URL a la que se redirige tras el éxito.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">RegDocporSeccionEdicionForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;oplectura/editardocentes.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;oplectura:listados&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="EditarDocentesView.get_object"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarDocentesView.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene el objeto a editar.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            RegDocporSeccion: El objeto correspondiente al ID proporcionado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">RegDocporSeccion</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EditarDocentesView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarDocentesView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega contexto adicional a la plantilla.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Contexto adicional.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Contexto actualizado con el título.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Validación&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="EditarDocentesView.form_valid"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarDocentesView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Procesa el formulario cuando es válido.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            form: El formulario válido.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Redirige a la URL de éxito tras la actualización.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+
+<span class="c1">#eliminación</span>
+<div class="viewcode-block" id="EliminarDocentesView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EliminarDocentesView">[documentos]</a><span class="k">class</span> <span class="nc">EliminarDocentesView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar un registro de docente.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get: Elimina el registro de docente y redirige al listado.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EliminarDocentesView.get"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EliminarDocentesView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Elimina el docente especificado.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Redirige al listado de docentes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">RegDocporSeccion</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;oplectura:listados&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RegistrarEvaluacionLectora"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegistrarEvaluacionLectora">[documentos]</a><span class="k">def</span> <span class="nf">RegistrarEvaluacionLectora</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para registrar una evaluación de fluidez lectora.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: La respuesta renderizada con el formulario o redirige tras el registro.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectoraForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;oplectura:evaluacion&#39;</span><span class="p">)</span>  
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectoraForm</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;oplectura/registro_evaluacion_lectura.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span></div>
+
+
+<span class="c1">#listado de alumnos para aplicador</span>
+<div class="viewcode-block" id="ListadoEvaluacionLectora"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoEvaluacionLectora">[documentos]</a><span class="k">class</span> <span class="nc">ListadoEvaluacionLectora</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para listar las evaluaciones de fluidez lectora.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo RegEvaluacionFluidezLectora.</span>
+<span class="sd">        template_name: La plantilla utilizada para mostrar el listado.</span>
+<span class="sd">        context_object_name: El nombre del contexto para las evaluaciones.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span><span class="o">=</span><span class="n">RegEvaluacionFluidezLectora</span>     
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;oplectura/listadoevaluacionlectora.html&#39;</span> 
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;evaluacionlectora&#39;</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">context_object_name</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="ListadoEvaluacionLectora.get_queryset"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoEvaluacionLectora.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filtra las evaluaciones según los parámetros de búsqueda.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: Las evaluaciones filtradas.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">queryset</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+        <span class="n">grado</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grado&#39;</span><span class="p">)</span>
+        <span class="n">seccion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seccion&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">cueanexo</span><span class="o">=</span><span class="n">cueanexo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">grado</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">grado</span><span class="o">=</span><span class="n">grado</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">seccion</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">seccion</span><span class="o">=</span><span class="n">seccion</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">queryset</span></div>
+    
+<div class="viewcode-block" id="ListadoEvaluacionLectora.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoEvaluacionLectora.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega contexto adicional a la plantilla.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Contexto adicional.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Contexto actualizado con el título y el formulario de filtro.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Alumnos&#39;</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;form&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">FiltroEvaluacionForm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+
+<span class="c1">#edición evaluación alumnos</span>
+<div class="viewcode-block" id="EditarEvaluacionAlumnosView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarEvaluacionAlumnosView">[documentos]</a><span class="k">class</span> <span class="nc">EditarEvaluacionAlumnosView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar una evaluación de alumnos.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo RegEvaluacionFluidezLectora.</span>
+<span class="sd">        form_class: El formulario RegEvaluacionFluidezLectoraForm.</span>
+<span class="sd">        template_name: La plantilla utilizada para editar.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectoraForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;oplectura/editarevaluacionalumnos.html&#39;</span>
+    
+
+<div class="viewcode-block" id="EditarEvaluacionAlumnosView.get_object"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarEvaluacionAlumnosView.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene el objeto a editar.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            RegEvaluacionFluidezLectora: El objeto correspondiente al ID proporcionado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">RegEvaluacionFluidezLectora</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EditarEvaluacionAlumnosView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarEvaluacionAlumnosView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega contexto adicional a la plantilla.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Contexto adicional.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Contexto actualizado con el título.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Evaluación&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="EditarEvaluacionAlumnosView.form_valid"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarEvaluacionAlumnosView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Procesa el formulario cuando es válido.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            form: El formulario válido.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Redirige a la URL de éxito tras la actualización.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EditarEvaluacionAlumnosView.get_success_url"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarEvaluacionAlumnosView.get_success_url">[documentos]</a>    <span class="k">def</span> <span class="nf">get_success_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construye la URL de éxito tras la actualización.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: La URL con los parámetros de búsqueda.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># reverse_lazy para construir la URL de éxito</span>
+        <span class="n">base_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;oplectura:evaluacion&#39;</span><span class="p">)</span>
+        <span class="n">query_string</span> <span class="o">=</span> <span class="n">urlencode</span><span class="p">({</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;grado&#39;</span><span class="p">:</span> <span class="s1">&#39;TERCERO&#39;</span><span class="p">,</span> <span class="s1">&#39;seccion&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">})</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?</span><span class="si">{</span><span class="n">query_string</span><span class="si">}</span><span class="s2">&quot;</span></div></div>
+    
+
+<span class="c1">#eliminación evaluación alumnos</span>
+<div class="viewcode-block" id="EliminarEvaluacionAlumnoView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EliminarEvaluacionAlumnoView">[documentos]</a><span class="k">class</span> <span class="nc">EliminarEvaluacionAlumnoView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar evaluaciones de alumnos.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model: Modelo de RegEvaluacionFluidezLectora.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EliminarEvaluacionAlumnoView.get"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EliminarEvaluacionAlumnoView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Elimina un registro de evaluación de alumno basado en el ID proporcionado.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request: La solicitud HTTP recibida.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Redirige a la lista de evaluaciones tras la eliminación.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">RegEvaluacionFluidezLectora</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        
+        <span class="c1"># Construir la URL completa </span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;oplectura:evaluacion&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;?cueanexo=0&amp;grado=TERCERO&amp;seccion=A&#39;</span>
+        
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url</span><span class="p">)</span></div></div>
+
+<span class="c1"># agregar alumno para el aplicador</span>
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraCreateView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraCreateView">[documentos]</a><span class="k">class</span> <span class="nc">RegAlumnosFluidezLectoraCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">RegAlumnosFluidezLectoraForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;oplectura/regalumnosfluidezlectora_form.html&#39;</span>
+    
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraCreateView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraCreateView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Registro de Alumnos&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraCreateView.get_success_url"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraCreateView.get_success_url">[documentos]</a>    <span class="k">def</span> <span class="nf">get_success_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># reverse_lazy para construir la URL de éxito</span>
+        <span class="n">base_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;oplectura:evaluacion&#39;</span><span class="p">)</span>
+        <span class="n">query_string</span> <span class="o">=</span> <span class="n">urlencode</span><span class="p">({</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;grado&#39;</span><span class="p">:</span> <span class="s1">&#39;TERCERO&#39;</span><span class="p">,</span> <span class="s1">&#39;seccion&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">})</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?</span><span class="si">{</span><span class="n">query_string</span><span class="si">}</span><span class="s2">&quot;</span></div></div>
+    
+<span class="c1"># agregar alumno por director</span>
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorCreateView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorCreateView">[documentos]</a><span class="k">class</span> <span class="nc">RegAlumnosFluidezLectoraDirectorCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">RegAlumnosFluidezLectoraDirectorForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;oplectura/regalumnosfluidezlectoradirector_form.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;oplectura:listado_alumnos&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorCreateView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorCreateView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Registro de Alumnos&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+    
+    
+
+<span class="c1">#listado de alumnos para directores</span>
+<div class="viewcode-block" id="ListadoAlumnosDirectoresView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoAlumnosDirectoresView">[documentos]</a><span class="k">class</span> <span class="nc">ListadoAlumnosDirectoresView</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">RegEvaluacionFluidezLectora</span>     
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;oplectura/listadoalumnosevaluacion.html&#39;</span> 
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;evaluacionlectora&#39;</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">context_object_name</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="ListadoAlumnosDirectoresView.get_queryset"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoAlumnosDirectoresView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>     
+        <span class="n">queryset</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>   
+        <span class="n">usuario</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span>
+
+        <span class="k">if</span> <span class="n">usuario</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">cueanexo</span><span class="o">=</span><span class="n">usuario</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">queryset</span></div>
+    
+<div class="viewcode-block" id="ListadoAlumnosDirectoresView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoAlumnosDirectoresView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Alumnos&#39;</span>        
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<span class="c1">#edición de alumnos para directores</span>
+<div class="viewcode-block" id="EditarAlumnosDirectoresView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarAlumnosDirectoresView">[documentos]</a><span class="k">class</span> <span class="nc">EditarAlumnosDirectoresView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectoraDirectoresForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;oplectura/editaralumnosdirectores.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;oplectura:listado_alumnos&#39;</span><span class="p">)</span>  
+
+<div class="viewcode-block" id="EditarAlumnosDirectoresView.get_object"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarAlumnosDirectoresView.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">RegEvaluacionFluidezLectora</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EditarAlumnosDirectoresView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarAlumnosDirectoresView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Alumno&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="EditarAlumnosDirectoresView.form_valid"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EditarAlumnosDirectoresView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+    
+    
+
+<span class="c1">#eliminación alumnos directores</span>
+<div class="viewcode-block" id="EliminarEvaluacionAlumnoDirectoresView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EliminarEvaluacionAlumnoDirectoresView">[documentos]</a><span class="k">class</span> <span class="nc">EliminarEvaluacionAlumnoDirectoresView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<div class="viewcode-block" id="EliminarEvaluacionAlumnoDirectoresView.get"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.EliminarEvaluacionAlumnoDirectoresView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">RegEvaluacionFluidezLectora</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;oplectura:listado_alumnos&#39;</span><span class="p">)</span></div></div>
+        
+
+<span class="c1">#listado de evaluacion alumnos para director</span>
+<div class="viewcode-block" id="ListadoEvaluacionLectoraDirectoresView"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoEvaluacionLectoraDirectoresView">[documentos]</a><span class="k">class</span> <span class="nc">ListadoEvaluacionLectoraDirectoresView</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">RegEvaluacionFluidezLectora</span>     
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;oplectura/listadoevaluacionlectoradirector.html&#39;</span> 
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;evaluaciondirector&#39;</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">context_object_name</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="ListadoEvaluacionLectoraDirectoresView.get_queryset"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoEvaluacionLectoraDirectoresView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">queryset</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span>        
+
+        <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">cueanexo</span><span class="o">=</span><span class="n">cueanexo</span><span class="p">)</span>        
+
+        <span class="k">return</span> <span class="n">queryset</span></div>
+    
+<div class="viewcode-block" id="ListadoEvaluacionLectoraDirectoresView.get_context_data"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.ListadoEvaluacionLectoraDirectoresView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado Evaluación Alumnos&#39;</span>        
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

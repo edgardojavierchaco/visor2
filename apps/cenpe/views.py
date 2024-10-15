@@ -9,12 +9,36 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .models import localidad_tipo, provincia_tipo
 
 def IndexCenpe(request):
+    """
+    Renderiza la página principal del módulo RENPEE para el usuario.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que contiene la información del usuario.
+
+    Returns:
+        HttpResponse: Renderiza el template 'cenpe/indexcenpe.html'.
+    """
+    
     return render(request, 'cenpe/indexcenpe.html')
 
 ######################################################
 # Cargar Datos Personales del Docente para el RENPEE #
 ######################################################
 class DatosPersonalCenpeCreateView(LoginRequiredMixin, CreateView):
+    """
+    Vista basada en clases para gestionar la creación de datos personales de los docentes para el RENPEE.
+
+    Atributos:
+        model (Model): El modelo relacionado con los datos personales (Datos_Personal_Cenpe).
+        form_class (Form): El formulario que se utiliza para gestionar la creación de los datos personales.
+        template_name (str): El template que se renderiza para la creación de datos personales.
+        success_url (str): La URL de redirección después de la creación exitosa de los datos.
+
+    Métodos:
+        get_initial: Inicializa el campo 'usuario' con el nombre de usuario del usuario autenticado.
+        form_valid: Asigna el nombre de usuario al campo 'usuario' antes de guardar los datos.
+    """
+    
     model = Datos_Personal_Cenpe
     form_class = DatosPersonalCenpeForm
     template_name = 'cenpe/crear_datos_personales.html'
@@ -33,6 +57,15 @@ class DatosPersonalCenpeCreateView(LoginRequiredMixin, CreateView):
 # Carga el Ajax para localidades #
 ##################################
 def cargar_localidades(request):
+    """
+    Carga las localidades en función de la provincia seleccionada a través de una solicitud AJAX.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que contiene el parámetro 'provincia_id'.
+
+    Returns:
+        JsonResponse: Retorna un JSON con las localidades filtradas por la provincia seleccionada.
+    """
     
     # Obtener el id de la provincia seleccionada desde la solicitud AJAX
     provincia_id = request.GET.get('provincia_id')
@@ -52,6 +85,20 @@ def cargar_localidades(request):
 # Cargar los Datos Académicos del Docente para el RENPEE #
 ##########################################################
 class DatosAcademicosCenpeCreateView(LoginRequiredMixin, CreateView):
+    """
+    Vista basada en clases para gestionar la creación de datos académicos del docente para el RENPEE.
+
+    Atributos:
+        model (Model): El modelo relacionado con los datos académicos (Academica_Cenpe).
+        form_class (Form): El formulario que se utiliza para gestionar la creación de los datos académicos.
+        template_name (str): El template que se renderiza para la creación de datos académicos.
+        success_url (str): La URL de redirección después de la creación exitosa de los datos académicos.
+
+    Métodos:
+        get_initial: Inicializa el campo 'usuario' con el nombre de usuario del usuario autenticado.
+        form_valid: Asigna el nombre de usuario al campo 'usuario' antes de guardar los datos.
+    """
+    
     model = Academica_Cenpe
     form_class = DatosAcademicosCenpeForm
     template_name = 'cenpe/crear_datos_academicos.html'
@@ -71,6 +118,20 @@ class DatosAcademicosCenpeCreateView(LoginRequiredMixin, CreateView):
 # Cargar los Datos Laborales del docente para el RENPEE #
 #########################################################
 class CargosHorasCenpeCreateView(LoginRequiredMixin, CreateView):
+    """
+    Vista basada en clases para gestionar la creación de los datos laborales del docente para el RENPEE.
+
+    Atributos:
+        model (Model): El modelo relacionado con los datos laborales (CargosHoras_Cenpe).
+        form_class (Form): El formulario que se utiliza para gestionar la creación de los datos laborales.
+        template_name (str): El template que se renderiza para la creación de datos laborales.
+        success_url (str): La URL de redirección después de la creación exitosa de los datos laborales.
+
+    Métodos:
+        get_initial: Inicializa el campo 'usuario' con el nombre de usuario del usuario autenticado.
+        form_valid: Asigna el nombre de usuario al campo 'usuario' antes de guardar los datos.
+    """
+    
     model = CargosHoras_Cenpe
     form_class = CargosHorasCenpeForm
     template_name = 'cenpe/cargar_cargoshoras.html'
@@ -91,6 +152,16 @@ class CargosHorasCenpeCreateView(LoginRequiredMixin, CreateView):
 # Filtrar los cargos de CEIC según el nivel seleccionado #
 ########################################################## 
 def obtener_cargos_por_nivel(request):
+    """
+    Filtra los cargos disponibles según el nivel educativo seleccionado.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP que contiene el parámetro 'nivel'.
+
+    Returns:
+        JsonResponse: Un JSON con los cargos disponibles filtrados por el nivel seleccionado.
+    """
+    
     n_nivel = request.GET.get('nivel')
     if n_nivel=='1':
         nivel='INICIAL'
@@ -126,6 +197,19 @@ def obtener_cargos_por_nivel(request):
 # Listado Cargos - Horas Docentes para el RENPEE #
 ##################################################
 class CargosHorasCenpeListView(LoginRequiredMixin, ListView):
+    """
+    Vista basada en clases para mostrar una lista de los cargos y horas del docente en el RENPEE.
+
+    Atributos:
+        model (Model): El modelo relacionado con los cargos y horas (CargosHoras_Cenpe).
+        template_name (str): El template que se renderiza para mostrar la lista de cargos y horas.
+        context_object_name (str): El nombre de la variable de contexto para acceder a los datos en la plantilla.
+
+    Métodos:
+        get_queryset: Filtra la lista de cargos y horas para mostrar solo los relacionados con el usuario autenticado.
+        get_context_data: Añade el título al contexto de la plantilla.
+    """
+    
     model=CargosHoras_Cenpe
     template_name='cenpe/listadocargoshorascenpe.html' 
     context_object_name='Cargos_Horas'   
@@ -146,6 +230,13 @@ class CargosHorasCenpeListView(LoginRequiredMixin, ListView):
         return context
 
 class EliminarDocentesView(View):
+    """
+    Vista basada en funciones para eliminar los cargos y horas del docente en el RENPEE.
+
+    Métodos:
+        get: Captura el ID del docente y lo elimina de la base de datos si existe.
+    """
+    
     def get(self, request):
         
         # Captura el parámetro 'id' de la URL

@@ -1,0 +1,649 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentación de la app Mapas &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="_static/translations.js?v=efdbd0b9"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="genindex.html" />
+    <link rel="search" title="Búsqueda" href="search.html" />
+    <link rel="next" title="Documentación de la app Mapoteca" href="mapoteca.html" />
+    <link rel="prev" title="Documentación de la app Login" href="login.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cenpe.html">Documentación de la app Renpe</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Documentación de la app Mapas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#modelos">Modelos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vista-mapa">Vista Mapa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vista-colectivos">Vista Colectivos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vista-comisarias">Vista Comisarias</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vista-centros-salud">Vista Centros Salud</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vista-cueradio">Vista Cueradio</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#formularios">Formularios</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Documentación de la app Mapas</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/mapas.rst.txt" rel="nofollow"> Ver código fuente de la página</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="documentacion-de-la-app-mapas">
+<h1>Documentación de la app Mapas<a class="headerlink" href="#documentacion-de-la-app-mapas" title="Enlace permanente a este encabezado"></a></h1>
+<section id="modelos">
+<h2>Modelos<a class="headerlink" href="#modelos" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">apps.mapas.models.</span></span><span class="sig-name descname"><span class="pre">LocalidadesRegion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/models.html#LocalidadesRegion"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<p>Modelo que representa los detalles de contacto y localización de las localidades dentro de una región.</p>
+<dl class="simple">
+<dt>Atributos:</dt><dd><p>reg (CharField): Código o nombre de la región.
+nom_dir (CharField): Nombre del director regional.
+tel_dir (CharField): Teléfono de contacto del director regional.
+email_dir (CharField): Correo electrónico del director regional.
+loc_reg (CharField): Nombre de la localidad correspondiente a la región.
+dep_reg (CharField): Nombre del departamento correspondiente a la región.</p>
+</dd>
+</dl>
+<dl class="py exception">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DoesNotExist</span></span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectDoesNotExist</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">dep_reg</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">email_dir</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">id</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">loc_reg</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">nom_dir</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">objects</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">reg</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">tel_dir</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">apps.mapas.models.</span></span><span class="sig-name descname"><span class="pre">RegionalesGeometria</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/models.html#RegionalesGeometria"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<p>Modelo que representa las geometrías de las regiones educativas.</p>
+<dl class="simple">
+<dt>Atributos:</dt><dd><p>id (AutoField): Identificador único del registro.
+geom (GeometryField): Campo espacial que almacena la geometría de la región.
+objectid (IntegerField): Identificador del objeto en la base de datos externa.
+region_pad (CharField): Nombre o código de la región.
+TITULO (TextField): Descripción o título de la región.</p>
+</dd>
+</dl>
+<dl class="py exception">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DoesNotExist</span></span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectDoesNotExist</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">TITULO</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">geom</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">id</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">objectid</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">objects</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">region_pad</span></span></dt>
+<dd><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="vista-mapa">
+<h2>Vista Mapa<a class="headerlink" href="#vista-mapa" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views.</span></span><span class="sig-name descname"><span class="pre">filter_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views.html#filter_data"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views.</span></span><span class="sig-name descname"><span class="pre">filter_listado_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views.html#filter_listado_map"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views.</span></span><span class="sig-name descname"><span class="pre">filtrado</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views.html#filtrado"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views.</span></span><span class="sig-name descname"><span class="pre">filtrado_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views.html#filtrado_list"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views.</span></span><span class="sig-name descname"><span class="pre">filtrar_tablas_view</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views.html#filtrar_tablas_view"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views.</span></span><span class="sig-name descname"><span class="pre">operaciones_comunes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'publico/basecriterios.html'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views.html#operaciones_comunes"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views2.</span></span><span class="sig-name descname"><span class="pre">mapapuntos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views2.html#mapapuntos"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Renderiza la plantilla del mapa.</p>
+<p>Esta vista simplemente carga la plantilla HTML “mapa/mapa.html”, donde se
+mostrará el mapa interactivo que puede luego cargar puntos a través de
+peticiones AJAX o a través de un contexto pasado desde otras vistas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/mapa.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views2.</span></span><span class="sig-name descname"><span class="pre">obtener_datos_ofertas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views2.html#obtener_datos_ofertas"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Consulta y obtiene datos de ofertas educativas desde la base de datos.</p>
+<p>Esta función realiza una consulta a la base de datos para obtener información
+sobre los establecimientos educativos y las ofertas asociadas, incluyendo
+nombre del establecimiento, tipo de oferta, ámbito, sector, y localidad.
+Los datos se envían al template “listadoestablecimientos.html”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/listadoestablecimientos.html” con los datos de las ofertas.
+Si no se encuentran resultados, renderiza “consulta_vacia.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.views2.</span></span><span class="sig-name descname"><span class="pre">obtenerdatos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/views2.html#obtenerdatos"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Obtiene puntos geográficos de la base de datos y los convierte a formato GeoJSON.</p>
+<p>Realiza una consulta a la base de datos para obtener los datos de
+las ofertas educativas, filtra las filas con coordenadas válidas,
+convierte los datos a formato GeoJSON y los envía a la plantilla “mapa/mapa.html”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/mapa.html” con los datos GeoJSON.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="vista-colectivos">
+<h2>Vista Colectivos<a class="headerlink" href="#vista-colectivos" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscolectivos.</span></span><span class="sig-name descname"><span class="pre">filter_cueradiocolectivo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscolectivos.html#filter_cueradiocolectivo"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Filtra colectivos y establecimientos de salud cercanos según criterios del usuario.</p>
+<p>Esta vista maneja solicitudes POST que contienen criterios para filtrar los
+colectivos y establecimientos de salud. Realiza una consulta a la base de datos,
+filtra los resultados basándose en los criterios proporcionados y, si se especifica
+un radio, busca líneas de colectivos cercanas. Los resultados se devuelven
+a la plantilla “mapa/cueradiocolectivos.html”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/cueradiocolectivos.html” con los resultados filtrados.
+Si ocurre un error, renderiza “error.html” con un mensaje correspondiente.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscolectivos.</span></span><span class="sig-name descname"><span class="pre">filtrado_cueradiocolectivo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscolectivos.html#filtrado_cueradiocolectivo"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Renderiza la plantilla del filtro para la búsqueda de colectivos.</p>
+<p>Esta vista carga la plantilla HTML “mapa/filter_colectivos.html”, donde el usuario
+puede ingresar criterios de búsqueda para filtrar colectivos.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/filter_colectivos.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="vista-comisarias">
+<h2>Vista Comisarias<a class="headerlink" href="#vista-comisarias" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscomiarias.</span></span><span class="sig-name descname"><span class="pre">filter_cueradiocomisarias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscomiarias.html#filter_cueradiocomisarias"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Filtra comisarías y establecimientos cercanos según criterios del usuario.</p>
+<p>Esta vista maneja solicitudes POST que contienen criterios para filtrar las
+comisarías y otros establecimientos cercanos. Realiza una consulta a la base de datos,
+filtra los resultados basándose en los criterios proporcionados y, si se especifica
+un radio, busca comisarías cercanas. Los resultados se devuelven a la plantilla
+“mapa/cueradiocomisarias.html”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/cueradiocomisarias.html” con los resultados filtrados.
+Si ocurre un error, renderiza “error.html” con un mensaje correspondiente.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscomiarias.</span></span><span class="sig-name descname"><span class="pre">filtrado_cueradiocomisarias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscomiarias.html#filtrado_cueradiocomisarias"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Renderiza la plantilla del filtro para la búsqueda de comisarías.</p>
+<p>Esta vista carga la plantilla HTML “mapa/filter_comisarias.html”, donde el usuario
+puede ingresar criterios de búsqueda para filtrar comisarías.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/filter_comisarias.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="vista-centros-salud">
+<h2>Vista Centros Salud<a class="headerlink" href="#vista-centros-salud" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscentrossalud.</span></span><span class="sig-name descname"><span class="pre">filter_cueradiosalud</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscentrossalud.html#filter_cueradiosalud"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Filtra establecimientos de salud y líneas de colectivos cercanas según criterios del usuario.</p>
+<p>Esta vista maneja solicitudes POST que contienen criterios para filtrar los
+establecimientos de salud. Realiza una consulta a la base de datos, filtra
+los resultados basándose en los criterios proporcionados y, si se especifica
+un radio, busca líneas de colectivos cercanas. Los resultados se devuelven
+a la plantilla “mapa/cueradiosalud.html”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/cueradiosalud.html” con los resultados filtrados.
+Si ocurre un error, renderiza “error.html” con un mensaje correspondiente.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscentrossalud.</span></span><span class="sig-name descname"><span class="pre">filtrado_cueradiosalud</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscentrossalud.html#filtrado_cueradiosalud"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Renderiza la plantilla del filtro para la búsqueda de establecimientos de salud.</p>
+<p>Esta vista carga la plantilla HTML “mapa/filter_salud.html”, donde el usuario
+puede ingresar criterios de búsqueda para filtrar establecimientos de salud.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> – El objeto HttpRequest que contiene metadatos sobre la solicitud.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Renderiza la plantilla “mapa/filter_salud.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="vista-cueradio">
+<h2>Vista Cueradio<a class="headerlink" href="#vista-cueradio" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscueradio.</span></span><span class="sig-name descname"><span class="pre">filter_cueradio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscueradio.html#filter_cueradio"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Filtra los datos de cueras y los devuelve en un formato adecuado para ser renderizados en un mapa.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – La solicitud HTTP que se está manejando, esperándose que sea un POST con datos.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>La respuesta renderizada con los datos filtrados en “mapa/cueradio.html”, o un JsonResponse en caso de error.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscueradio.</span></span><span class="sig-name descname"><span class="pre">filtrado_cueradio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscueradio.html#filtrado_cueradio"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Renderiza la plantilla para el filtrado de datos en el mapa de cueras.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – La solicitud HTTP que se está manejando.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>La respuesta renderizada con la plantilla “mapa/filter_cuearadio.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscueradio.</span></span><span class="sig-name descname"><span class="pre">filtrado_establecimiento</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscueradio.html#filtrado_establecimiento"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Renderiza la plantilla para el filtrado de establecimientos en el mapa.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – La solicitud HTTP que se está manejando.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>La respuesta renderizada con la plantilla “mapa/filter_cueradioxestablecimiento.html”.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscueradio.</span></span><span class="sig-name descname"><span class="pre">get_region_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscueradio.html#get_region_data"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Obtiene información sobre la región y sus localidades en base a un “region_pad”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – La solicitud HTTP que se está manejando, debe contener el parámetro “region_pad”.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>Un JsonResponse con los datos de la región y localidades, o un error en caso de fallo.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JsonResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscueradio.</span></span><span class="sig-name descname"><span class="pre">obtener_geometria</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscueradio.html#obtener_geometria"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Obtiene y serializa las geometrías de las regiones en formato GeoJSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – La solicitud HTTP que se está manejando.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>La respuesta renderizada con los datos en “mapa/regionales.html”, o un JsonResponse en caso de error.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">apps.mapas.viewscueradio.</span></span><span class="sig-name descname"><span class="pre">obtener_geometria2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/viewscueradio.html#obtener_geometria2"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Obtiene y serializa las geometrías filtradas por “region_pad” en formato GeoJSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parámetros<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>HttpRequest</em>) – La solicitud HTTP que se está manejando.</p>
+</dd>
+<dt class="field-even">Devuelve<span class="colon">:</span></dt>
+<dd class="field-even"><p>La respuesta renderizada con los datos en “mapa/regionaleselec.html”, o un JsonResponse en caso de error.</p>
+</dd>
+<dt class="field-odd">Tipo del valor devuelto<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HttpResponse</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="formularios">
+<h2>Formularios<a class="headerlink" href="#formularios" title="Enlace permanente a este encabezado"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">apps.mapas.forms.</span></span><span class="sig-name descname"><span class="pre">FiltroFormularioRadio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_id='id_%s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_class=&lt;class</span> <span class="pre">'django.forms.utils.ErrorList'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_suffix=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">empty_permitted=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_order=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_required_attribute=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renderer=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/apps/mapas/forms.html#FiltroFormularioRadio"><span class="viewcode-link"><span class="pre">[fuente]</span></span></a></dt>
+<dd><p>Formulario para filtrar por nivel, localidad y establecimiento.</p>
+<dl class="simple">
+<dt>Atributos:</dt><dd><p>nivel (ChoiceField): Campo de selección para los niveles, que se rellena dinámicamente.
+localidad (ChoiceField): Campo de selección para las localidades, que se rellena dinámicamente.
+establecimiento (ChoiceField): Campo de selección para los establecimientos, que se rellena dinámicamente.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">base_fields</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'establecimiento':</span> <span class="pre">&lt;django.forms.fields.ChoiceField</span> <span class="pre">object&gt;,</span> <span class="pre">'localidad':</span> <span class="pre">&lt;django.forms.fields.ChoiceField</span> <span class="pre">object&gt;,</span> <span class="pre">'nivel':</span> <span class="pre">&lt;django.forms.fields.ChoiceField</span> <span class="pre">object&gt;}</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">declared_fields</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'establecimiento':</span> <span class="pre">&lt;django.forms.fields.ChoiceField</span> <span class="pre">object&gt;,</span> <span class="pre">'localidad':</span> <span class="pre">&lt;django.forms.fields.ChoiceField</span> <span class="pre">object&gt;,</span> <span class="pre">'nivel':</span> <span class="pre">&lt;django.forms.fields.ChoiceField</span> <span class="pre">object&gt;}</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">media</span></span></dt>
+<dd><p>Return all media required to render the widgets on this form.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Pie de página">
+        <a href="login.html" class="btn btn-neutral float-left" title="Documentación de la app Login" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Anterior</a>
+        <a href="mapoteca.html" class="btn btn-neutral float-right" title="Documentación de la app Mapoteca" accesskey="n" rel="next">Siguiente <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -5,15 +5,7 @@ from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login
 from django.conf import settings
-"""
-Este módulo define dos vistas basadas en clases para gestionar el inicio y cierre de sesión en una aplicación Django. 
-Se utilizan las vistas genéricas de Django `LoginView` y `LogoutView` para personalizar la funcionalidad.
 
-Clases:
-    LoginFormView: Vista personalizada para el inicio de sesión. Gestiona la autenticación del usuario y redirección 
-                   según los permisos y grupos del usuario autenticado.
-    CustomLogoutView: Vista personalizada para el cierre de sesión, redirigiendo a una página específica tras cerrar sesión.
-"""
 
 class LoginFormView(LoginView):
     """
@@ -24,13 +16,11 @@ class LoginFormView(LoginView):
 
     Métodos:
         get_context_data: Agrega el título 'Iniciar Sesión' al contexto.
-        get_success_url: Redirige al usuario autenticado según sus permisos y grupos, 
-                         o a una URL predeterminada si no está en ningún grupo.
-        form_valid: Valida el formulario de inicio de sesión y autentica al usuario. 
-                    Retorna una respuesta JSON dependiendo del resultado.
+        get_success_url: Redirige al usuario autenticado según sus permisos y grupos, o a una URL predeterminada si no está en ningún grupo.
+        form_valid: Valida el formulario de inicio de sesión y autentica al usuario. Retorna una respuesta JSON dependiendo del resultado.
         form_invalid: Retorna una respuesta JSON con un mensaje de error si las credenciales son incorrectas.
-        post: Maneja la solicitud POST, incluyendo solicitudes AJAX, para validar el formulario y retornar
-              las respuestas correspondientes.
+        post: Maneja la solicitud POST, incluyendo solicitudes AJAX, para validar el formulario y retornarlas respuestas correspondientes.
+
     """
     template_name = 'login/login.html'
     

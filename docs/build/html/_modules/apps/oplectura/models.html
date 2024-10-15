@@ -1,0 +1,406 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.oplectura.models &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.oplectura.models</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.oplectura.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span> 
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">models</span>
+<span class="kn">from</span> <span class="nn">apps.usuarios.models</span> <span class="kn">import</span> <span class="n">UsuariosVisualizador</span>
+<span class="kn">from</span> <span class="nn">django.core.validators</span> <span class="kn">import</span> <span class="n">MinValueValidator</span><span class="p">,</span> <span class="n">MaxValueValidator</span>
+
+<div class="viewcode-block" id="curso"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.curso">[documentos]</a><span class="k">class</span> <span class="nc">curso</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa un curso en el sistema.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        nom_curso (str): Nombre del curso.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">nom_curso</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Curso&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nom_curso</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Curso&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Cursos&#39;</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Curso&#39;</span></div>
+
+<div class="viewcode-block" id="division"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.division">[documentos]</a><span class="k">class</span> <span class="nc">division</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa una división en el sistema.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        nom_division (str): Nombre de la división.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">nom_division</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;División&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nom_division</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Division&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Divisiones&#39;</span>
+        <span class="n">ordering</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nom_division&#39;</span><span class="p">]</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Divisiones&#39;</span></div>
+        
+
+<div class="viewcode-block" id="turno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.turno">[documentos]</a><span class="k">class</span> <span class="nc">turno</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa un turno en el sistema.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        nom_turno (str): Nombre del turno.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">nom_turno</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Turnos&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nom_turno</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Turno&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Turnos&#39;</span>
+        <span class="n">ordering</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nom_turno&#39;</span><span class="p">]</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Turnos&#39;</span></div>
+
+
+<div class="viewcode-block" id="TipoOperativo"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.TipoOperativo">[documentos]</a><span class="k">class</span> <span class="nc">TipoOperativo</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa un tipo operativo en el sistema.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        toperativo (str): Nombre del tipo operativo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">toperativo</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span><span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Tipo Operativo&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">toperativo</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Operativo&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Operativos&#39;</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Tipo_Operativo&#39;</span></div>
+    
+<div class="viewcode-block" id="RegDocporSeccion"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegDocporSeccion">[documentos]</a><span class="k">class</span> <span class="nc">RegDocporSeccion</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa la relación entre docentes y secciones.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        dni_docen (str): DNI del docente.</span>
+<span class="sd">        apellido_docen (str): Apellido del docente.</span>
+<span class="sd">        nombres_docen (str): Nombres del docente.</span>
+<span class="sd">        cueanexo (str): Cueanexo relacionado.</span>
+<span class="sd">        curso (Curso): Curso al que pertenece el docente.</span>
+<span class="sd">        division (Division): División al que pertenece el docente.</span>
+<span class="sd">        turno (Turno): Turno del docente.</span>
+<span class="sd">        operativos (TipoOperativo): Tipo operativo del docente.</span>
+<span class="sd">        validacion (bool): Estado de validación del docente.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">dni_docen</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;DNI&#39;</span><span class="p">)</span>
+    <span class="n">apellido_docen</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Apellido&#39;</span><span class="p">)</span>
+    <span class="n">nombres_docen</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Nombres&#39;</span><span class="p">)</span>
+    <span class="n">cueanexo</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Cueanexo&#39;</span><span class="p">)</span>
+    <span class="n">curso</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">curso</span><span class="p">,</span><span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Curso&#39;</span><span class="p">)</span>
+    <span class="n">division</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">division</span><span class="p">,</span><span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;División&#39;</span><span class="p">)</span>
+    <span class="n">turno</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">turno</span><span class="p">,</span><span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span><span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Turno&#39;</span><span class="p">)</span>    
+    <span class="n">operativos</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">TipoOperativo</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Operativo&#39;</span><span class="p">)</span>
+    <span class="n">validacion</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Validación&#39;</span><span class="p">)</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Docente_Aplicador&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Docentes_Aplicadores&#39;</span>
+        <span class="n">ordering</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;apellido_docen&#39;</span><span class="p">,</span><span class="s1">&#39;nombres_docen&#39;</span><span class="p">]</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Docente_Aplicador&#39;</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">apellido_docen</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nombres_docen</span><span class="si">}</span><span class="s2">&quot;</span>        
+
+<span class="w">        </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; def save(self, *args, **kwargs):</span>
+<span class="sd">        if not self.pk:  # Solo cargar los datos automáticamente cuando se crea el objeto</span>
+<span class="sd">            user = kwargs.pop(&#39;user&#39;, None)</span>
+<span class="sd">            if user:</span>
+<span class="sd">                self.dni_docen = user.username</span>
+<span class="sd">                self.apellido_docen = user.apellido</span>
+<span class="sd">                self.nombres_docen = user.nombres</span>
+<span class="sd">        super(RegDocporSeccion, self).save(*args, **kwargs) &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="Periodos"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.Periodos">[documentos]</a><span class="k">class</span> <span class="nc">Periodos</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa un periodo en el sistema.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        periodo (str): Nombre del periodo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">periodo</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Periodos&#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodo</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Periodo&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Periodos&#39;</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Periodos&#39;</span></div>
+
+
+<div class="viewcode-block" id="RegEvaluacionFluidezLectora"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegEvaluacionFluidezLectora">[documentos]</a><span class="k">class</span> <span class="nc">RegEvaluacionFluidezLectora</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modelo que representa la evaluación de fluidez lectora de un alumno.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        asistencia (bool): Estado de asistencia del alumno.</span>
+<span class="sd">        cueanexo (str): Cueanexo relacionado.</span>
+<span class="sd">        region (str): Región del alumno.</span>
+<span class="sd">        grado (str): Grado del alumno.</span>
+<span class="sd">        seccion (str): Sección del alumno.</span>
+<span class="sd">        tramo (Periodos): Tramo al que pertenece la evaluación.</span>
+<span class="sd">        dni_alumno (str): DNI del alumno.</span>
+<span class="sd">        apellido_alumno (str): Apellido del alumno.</span>
+<span class="sd">        nombres_alumno (str): Nombres del alumno.</span>
+<span class="sd">        velocidad (int): Velocidad de lectura del alumno.</span>
+<span class="sd">        cal_vel (str): Calificación de la velocidad.</span>
+<span class="sd">        precision (int): Precisión de lectura del alumno.</span>
+<span class="sd">        cal_pres (str): Calificación de la precisión.</span>
+<span class="sd">        prosodia (int): Prosodia del alumno.</span>
+<span class="sd">        cal_pros (str): Calificación de la prosodia.</span>
+<span class="sd">        comprension (int): Comprensión del alumno.</span>
+<span class="sd">        cal_comp (str): Calificación de la comprensión.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">asistencia</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Asistencia&#39;</span><span class="p">)</span>
+    <span class="n">cueanexo</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Cueanexo&#39;</span><span class="p">)</span>
+    <span class="n">region</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Regional&#39;</span><span class="p">)</span>
+    <span class="n">grado</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Curso&#39;</span><span class="p">)</span>
+    <span class="n">seccion</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;División&#39;</span><span class="p">)</span>
+    <span class="n">tramo</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Periodos</span><span class="p">,</span><span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Tramo&#39;</span><span class="p">)</span>
+    <span class="n">dni_alumno</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;DNI&#39;</span><span class="p">)</span>
+    <span class="n">apellido_alumno</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Apellido&#39;</span><span class="p">)</span>
+    <span class="n">nombres_alumno</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Nombres&#39;</span><span class="p">)</span>
+    <span class="n">velocidad</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">PositiveSmallIntegerField</span><span class="p">(</span><span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">MinValueValidator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MaxValueValidator</span><span class="p">(</span><span class="mi">70</span><span class="p">)],</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Velocidad&#39;</span><span class="p">)</span>
+    <span class="n">cal_vel</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Calificación Velocidad&#39;</span><span class="p">)</span>
+    <span class="n">precision</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">PositiveSmallIntegerField</span><span class="p">(</span><span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">MinValueValidator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MaxValueValidator</span><span class="p">(</span><span class="mi">70</span><span class="p">)],</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Precisión&#39;</span><span class="p">)</span>
+    <span class="n">cal_pres</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Calificación Precisión&#39;</span><span class="p">)</span>
+    <span class="n">prosodia</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">PositiveSmallIntegerField</span><span class="p">(</span><span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">MinValueValidator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MaxValueValidator</span><span class="p">(</span><span class="mi">6</span><span class="p">)],</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Prosodia&#39;</span><span class="p">)</span>
+    <span class="n">cal_pros</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Calificación Prosodia&#39;</span><span class="p">)</span>
+    <span class="n">comprension</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">PositiveSmallIntegerField</span><span class="p">(</span><span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">MinValueValidator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MaxValueValidator</span><span class="p">(</span><span class="mi">6</span><span class="p">)],</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Comprensión&#39;</span><span class="p">)</span>
+    <span class="n">cal_comp</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Calificación Comprensión&#39;</span><span class="p">)</span>
+    
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cueanexo</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dni_alumno</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">apellido_alumno</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nombres_alumno</span><span class="si">}</span><span class="s2">&quot;</span>
+    
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">verbose_name</span><span class="o">=</span><span class="s1">&#39;Evaluacion_Lectora&#39;</span>
+        <span class="n">verbose_name_plural</span><span class="o">=</span><span class="s1">&#39;Evaluaciones_Lectoras&#39;</span>
+        <span class="n">ordering</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span>
+        <span class="n">db_table</span><span class="o">=</span><span class="s1">&#39;Evaluacion_Lectora&#39;</span>    
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectora.save"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegEvaluacionFluidezLectora.save">[documentos]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guarda la instancia del modelo después de calcular las calificaciones.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Positional arguments.</span>
+<span class="sd">            **kwargs: Keyword arguments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cal_vel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_calificacion_vel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">velocidad</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cal_pres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_calificacion_pres</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">precision</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cal_pros</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_calificacion_pros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prosodia</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cal_comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_calificacion_comp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comprension</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectora.get_calificacion_vel"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegEvaluacionFluidezLectora.get_calificacion_vel">[documentos]</a>    <span class="k">def</span> <span class="nf">get_calificacion_vel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">valor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene la calificación para la velocidad de lectura.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            valor (int): Valor de velocidad.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Calificación correspondiente a la velocidad.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">valor</span> <span class="o">&lt;</span> <span class="mi">31</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Debajo del Básico&#39;</span>
+        <span class="k">elif</span> <span class="mi">31</span> <span class="o">&lt;=</span> <span class="n">valor</span> <span class="o">&lt;=</span><span class="mi">50</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Básico&#39;</span>
+        <span class="k">elif</span> <span class="mi">51</span> <span class="o">&lt;=</span> <span class="n">valor</span> <span class="o">&lt;=</span><span class="mi">60</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Satisfactorio&#39;</span>
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">&gt;</span> <span class="mi">60</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Avanzado&#39;</span></div>
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectora.get_calificacion_pres"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegEvaluacionFluidezLectora.get_calificacion_pres">[documentos]</a>    <span class="k">def</span> <span class="nf">get_calificacion_pres</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">valor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene la calificación para la precisión de lectura.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            valor (int): Valor de precisión.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Calificación correspondiente a la precisión.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">valor</span> <span class="o">&lt;</span> <span class="mi">41</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Debajo del Básico&#39;</span>
+        <span class="k">elif</span> <span class="mi">41</span> <span class="o">&lt;=</span> <span class="n">valor</span> <span class="o">&lt;=</span><span class="mi">50</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Básico&#39;</span>
+        <span class="k">elif</span> <span class="mi">51</span> <span class="o">&lt;=</span> <span class="n">valor</span> <span class="o">&lt;=</span><span class="mi">60</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Satisfactorio&#39;</span>
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">&gt;</span> <span class="mi">60</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Avanzado&#39;</span></div>
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectora.get_calificacion_pros"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegEvaluacionFluidezLectora.get_calificacion_pros">[documentos]</a>    <span class="k">def</span> <span class="nf">get_calificacion_pros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">valor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene la calificación para la prosodia.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            valor (int): Valor de prosodia.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Calificación correspondiente a la prosodia.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Debajo del Básico&#39;</span>
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Básico&#39;</span>        
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Satisfactorio&#39;</span>
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Avanzado&#39;</span></div>
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectora.get_calificacion_comp"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.models.RegEvaluacionFluidezLectora.get_calificacion_comp">[documentos]</a>    <span class="k">def</span> <span class="nf">get_calificacion_comp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">valor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene la calificación para la comprensión.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            valor (int): Valor de comprensión.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Calificación correspondiente a la comprensión.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Debajo del Básico&#39;</span>        
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Básico&#39;</span>
+        <span class="k">elif</span> <span class="mi">2</span> <span class="o">&gt;=</span> <span class="n">valor</span> <span class="o">&lt;=</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Satisfactorio&#39;</span>
+        <span class="k">elif</span> <span class="n">valor</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;Avanzado&#39;</span></div></div>
+            
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

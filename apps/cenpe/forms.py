@@ -6,7 +6,42 @@ from .models import CargosHoras_Cenpe, TipoJornada_Cueanexo, Zona_Cueanexo, Cate
 from .models import condicionactividad, PadronCenpe
 import re
 
-class DatosPersonalCenpeForm(forms.ModelForm):    
+class DatosPersonalCenpeForm(forms.ModelForm):   
+    """
+    Formulario para capturar los datos personales del usuario del sistema CENPE.
+
+    Campos:
+        apellidos (CharField): Campo de texto para el apellido.
+        nombres (CharField): Campo de texto para el nombre en mayúsculas.
+        dni (CharField): Campo de texto para ingresar el DNI.
+        cuil (CharField): Campo de texto para ingresar el CUIL.
+        telfijo (CharField): Campo de texto para ingresar el teléfono fijo.
+        celular (CharField): Campo de texto para ingresar el número de celular.
+        f_nac (DateField): Campo para ingresar la fecha de nacimiento.
+        calle (CharField): Campo de texto para la calle de la dirección.
+        nro (CharField): Campo de texto para el número de la dirección.
+        mz (CharField): Campo de texto para el bloque o manzana.
+        pc (CharField): Campo de texto para el código postal.
+        casa (CharField): Campo de texto para el número de casa.
+        piso (CharField): Campo de texto para el piso de la dirección.
+        uf (CharField): Campo de texto para la unidad funcional.
+        barrio (CharField): Campo de texto para el barrio.
+        pais_nac (ModelChoiceField): Campo de selección para el país de nacimiento.
+        nacionalidad (ModelChoiceField): Campo de selección para la nacionalidad.
+        t_doc (ModelChoiceField): Campo de selección para el tipo de documento.
+        sexo (ModelChoiceField): Campo de selección para el sexo.
+        estado_civil (ModelChoiceField): Campo de selección para el estado civil.
+        nivel_form (ModelChoiceField): Campo de selección para el nivel de formación alcanzado.
+        prov_nac (ModelChoiceField): Campo de selección para la provincia de nacimiento.
+        prov_resid (ModelChoiceField): Campo de selección para la provincia de residencia.
+        loc_nac (ModelChoiceField): Campo de selección para la localidad de nacimiento.
+        loc_resid (ModelChoiceField): Campo de selección para la localidad de residencia.
+
+    Métodos:
+        clean_apellidos(): Limpia y valida el campo de apellidos.
+        clean_nombres(): Limpia y valida el campo de nombres.
+        __init__(): Inicializa el formulario y carga dinámicamente las localidades según la provincia seleccionada.
+    """ 
     
     apellidos=forms.CharField(
         widget=forms.TextInput(attrs={'class':'form-control textinput'})
@@ -178,6 +213,13 @@ class DatosPersonalCenpeForm(forms.ModelForm):
             self.fields['loc_resid'].queryset = localidad_tipo.objects.filter(c_provincia=self.instance.prov_resid).order_by('descripcion_loc')
 
     def clean_apellidos(self):
+        """
+        Asegura que el campo de apellidos esté en mayúsculas y solo contenga caracteres válidos.
+        
+        Returns:
+            str: Apellido validado y convertido a mayúsculas.
+        """
+        
         # Asegura que apellidos esté en mayúsculas y solo contenga caracteres válidos
         apellidos = self.cleaned_data['apellidos'].upper()
         allowed_chars = re.compile(r"^[A-ZÁÉÍÓÚÑ' ]+$")
@@ -186,6 +228,13 @@ class DatosPersonalCenpeForm(forms.ModelForm):
         return apellidos
 
     def clean_nombres(self):
+        """
+        Asegura que el campo de nombres esté en mayúsculas y solo contenga caracteres válidos.
+        
+        Returns:
+            str: Nombre validado y convertido a mayúsculas.
+        """
+        
         # Asegura que nombres esté en mayúsculas y solo contenga caracteres válidos
         nombres = self.cleaned_data['nombres'].upper()
         allowed_chars = re.compile(r"^[A-ZÁÉÍÓÚÑ' ]+$")
@@ -195,6 +244,23 @@ class DatosPersonalCenpeForm(forms.ModelForm):
 
 
 class DatosAcademicosCenpeForm(forms.ModelForm):
+    """
+    Formulario para capturar los datos académicos del usuario en el sistema CENPE.
+
+    Campos:
+        titulo (CharField): Campo de texto para el título académico.
+        tipo_form (ModelChoiceField): Campo de selección para el tipo de formación.
+        nivel_form (ModelChoiceField): Campo de selección para el nivel de formación alcanzado.
+        tipo_inst (ModelChoiceField): Campo de selección para el tipo de institución.
+        gestion_inst (ModelChoiceField): Campo de selección para la gestión de la institución.
+        reg_nro (CharField): Campo de texto para el número de registro del título.
+        f_egreso (DateField): Campo de fecha para la fecha de egreso.
+
+    Métodos:
+        clean_titulo(): Limpia y valida el campo de título.
+        __init__(): Inicializa el formulario y establece el foco en el campo título.
+    """
+    
     titulo = forms.CharField (
         max_length=255,
         min_length=1,        
@@ -249,6 +315,13 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
         }
         
     def clean_titulo(self):
+        """
+        Asegura que el campo de título esté en mayúsculas y solo contenga caracteres válidos.
+        
+        Returns:
+            str: Título validado y convertido a mayúsculas.
+        """
+        
         # Asegura que el titulo esté en mayúsculas y solo contenga caracteres válidos
         titulo = self.cleaned_data['titulo'].upper()
         allowed_chars = re.compile(r"^[A-ZÁÉÍÓÚÑ' ]+$")
@@ -262,6 +335,29 @@ class DatosAcademicosCenpeForm(forms.ModelForm):
         
 
 class CargosHorasCenpeForm(forms.ModelForm):
+    """
+    Formulario para capturar los datos de cargos y horas en el sistema CENPE.
+
+    Campos:
+        cueanexo (ModelChoiceField): Campo de selección para el Cueanexo.
+        categoria (ModelChoiceField): Campo de selección para la categoría de la escuela.
+        jornada (ModelChoiceField): Campo de selección para el tipo de jornada.
+        zona (ModelChoiceField): Campo de selección para la zona.
+        nivel_cargohora (ModelChoiceField): Campo de selección para el nivel del cargo o la hora cátedra.
+        cargos_horas (ModelChoiceField): Campo de selección para los cargos u horas cátedra.
+        cant_horas (DecimalField): Campo numérico para ingresar la cantidad de horas.
+        lunes, martes, miercoles, jueves, viernes (BooleanField): Checkboxes para indicar los días de trabajo.
+        situacion_revista (ModelChoiceField): Campo de selección para la situación de revista.
+        funciones (ModelChoiceField): Campo de selección para las funciones.
+        condicion_actividad (ModelChoiceField): Campo de selección para la condición de actividad.
+        fecha_desde, fecha_hasta (DateField): Campos de fecha para indicar el período.
+        cuof, cuof_anexo (IntegerField): Campos numéricos para ingresar el CUOF y CUOF anexo.
+
+    Métodos:
+        __init__(): Inicializa el formulario, estableciendo el foco y personalizando las etiquetas.
+        label_from_instance_cueanexo(): Método personalizado para mostrar el Cueanexo y el nombre de la institución.
+    """
+    
     cueanexo= forms.ModelChoiceField(
         queryset=PadronCenpe.objects.all(),
         widget=forms.Select(attrs={'class':'form-control select2'}),
@@ -389,6 +485,15 @@ class CargosHorasCenpeForm(forms.ModelForm):
         
     # Método personalizado del select
     def label_from_instance_cueanexo(self, obj):
+        """
+        Devuelve la etiqueta personalizada para el campo `cueanexo` mostrando el Cueanexo y el nombre de la institución.
+        
+        Args:
+            obj: Instancia de PadronCenpe.
+
+        Returns:
+            str: Texto formateado que muestra el Cueanexo y el nombre de la institución.
+        """
         return f"{obj.cueanexo} - {obj.nom_est}"
     
 

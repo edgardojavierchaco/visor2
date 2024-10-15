@@ -1,0 +1,383 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.directores.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.directores.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.directores.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">import</span> <span class="nn">asyncpg</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.views.decorators.csrf</span> <span class="kn">import</span> <span class="n">csrf_exempt</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">JsonResponse</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#           PARA MOSTRAR DATOS INSTITUCIONALES DEL USUARIO          #</span>
+<span class="c1">#####################################################################</span>
+<div class="viewcode-block" id="filtrar_tablas_view_directores"><a class="viewcode-back" href="../../../directores.html#apps.directores.views.filtrar_tablas_view_directores">[documentos]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">filtrar_tablas_view_directores</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Muestra los datos institucionales del usuario autenticado.</span>
+
+<span class="sd">    Esta vista se encarga de obtener y mostrar información relacionada</span>
+<span class="sd">    con el usuario logueado, incluyendo datos institucionales, planes de</span>
+<span class="sd">    estudio, anexos y ofertas. Se conecta a la base de datos &#39;Padron&#39; para</span>
+<span class="sd">    realizar las consultas necesarias.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto HttpRequest que contiene información sobre la</span>
+<span class="sd">                 solicitud del usuario.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla &#39;directores/institucional.html&#39;</span>
+<span class="sd">                      con los resultados obtenidos de la base de datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Obtener el username del usuario logueado</span>
+    <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>    
+
+    <span class="c1"># Establecer la conexión a la base de datos Padrón</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="s1">&#39;visoreducativochaco.com.ar&#39;</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="s1">&#39;visualizador&#39;</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="s1">&#39;Estadisticas24&#39;</span><span class="p">,</span>
+            <span class="n">database</span><span class="o">=</span><span class="s1">&#39;Padron&#39;</span>
+        <span class="p">)</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Manejar el error de conexión</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Error al conectar a la base de datos&#39;</span><span class="p">})</span>
+
+    <span class="c1"># Consultas SQL</span>
+    <span class="n">institucional</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT nom_est, categoria, jornada, oferta, id_establecimiento, ref_loc, calle, numero, anexo, apellido_resp, nombre_resp, resploc_telefono, resploc_email,</span>
+<span class="s2">            sup_tecnico, email_suptecnico, tel_suptecnico</span>
+<span class="s2">        FROM padron_ofertas        </span>
+<span class="s2">        WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> </span>
+<span class="s2">    &quot;&quot;&quot;</span> 
+    <span class="n">planes</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT titulo, orientacion</span>
+<span class="s2">        FROM v_planes_estudio</span>
+<span class="s2">        WHERE CONCAT(cue, anexo) = </span><span class="si">%s</span><span class="s2"> AND estado_ofertalocal = &#39;Activo&#39;</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    <span class="n">anexos</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT DISTINCT po.anexo, po.calle, po.numero, po.estado_loc</span>
+<span class="s2">        FROM padron_ofertas po</span>
+<span class="s2">        WHERE po.id_establecimiento IN (</span>
+<span class="s2">            SELECT id_establecimiento</span>
+<span class="s2">            FROM padron_ofertas</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> </span>
+<span class="s2">        ) AND po.estado_loc = </span><span class="si">%s</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    <span class="n">ofertas</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT anexo, calle, numero, cueanexo, oferta, est_oferta</span>
+<span class="s2">        FROM padron_ofertas</span>
+<span class="s2">        WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> AND est_oferta = </span><span class="si">%s</span><span class="s2">        </span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    
+    <span class="n">params</span> <span class="o">=</span> <span class="p">(</span><span class="n">cueanexo</span><span class="p">,)</span>
+    <span class="n">params2</span> <span class="o">=</span> <span class="p">(</span><span class="n">cueanexo</span><span class="p">,</span> <span class="s1">&#39;Activo&#39;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">institucional</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">resultados</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">([</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">],</span> <span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">planes</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">resultados1</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">([</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">],</span> <span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+       
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">anexos</span><span class="p">,</span> <span class="n">params2</span><span class="p">)</span>
+        <span class="n">resultados2</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">([</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">],</span> <span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">ofertas</span><span class="p">,</span> <span class="n">params2</span><span class="p">)</span>
+        <span class="n">resultados3</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">([</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">],</span> <span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+        
+    <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Manejar el error de consulta</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Error al ejecutar la consulta&#39;</span><span class="p">})</span>
+
+    <span class="c1"># Cerrar la conexión a la base de datos</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;institucional:&#39;</span><span class="p">,</span> <span class="n">resultados</span><span class="p">)</span> 
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;planes:&#39;</span><span class="p">,</span> <span class="n">resultados1</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;anexos:&#39;</span><span class="p">,</span> <span class="n">resultados2</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;ofertas:&#39;</span><span class="p">,</span> <span class="n">resultados3</span><span class="p">)</span>
+    
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;institucional&#39;</span><span class="p">:</span> <span class="n">resultados</span><span class="p">,</span>
+        <span class="s1">&#39;planes&#39;</span><span class="p">:</span> <span class="n">resultados1</span><span class="p">,</span>
+        <span class="s1">&#39;anexos&#39;</span><span class="p">:</span> <span class="n">resultados2</span><span class="p">,</span>
+        <span class="s1">&#39;ofertas&#39;</span><span class="p">:</span> <span class="n">resultados3</span><span class="p">,</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;directores/institucional.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;resultados&#39;</span><span class="p">:</span> <span class="n">resultados</span><span class="p">,</span> <span class="s1">&#39;resultados1&#39;</span><span class="p">:</span> <span class="n">resultados1</span><span class="p">,</span> <span class="s1">&#39;resultados2&#39;</span><span class="p">:</span> <span class="n">resultados2</span><span class="p">,</span> <span class="s1">&#39;resultados3&#39;</span><span class="p">:</span> <span class="n">resultados3</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="filter_matricula_views_directores"><a class="viewcode-back" href="../../../directores.html#apps.directores.views.filter_matricula_views_directores">[documentos]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">filter_matricula_views_directores</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filtra y muestra la matrícula de acuerdo a la oferta educativa.</span>
+
+<span class="sd">    Esta vista se encarga de obtener la matrícula de los estudiantes</span>
+<span class="sd">    en función de la oferta educativa activa asociada al usuario logueado.</span>
+<span class="sd">    Se conecta a la base de datos &#39;visualizador&#39; para realizar las consultas</span>
+<span class="sd">    necesarias y luego renderiza la plantilla correspondiente con los resultados.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto HttpRequest que contiene información sobre la</span>
+<span class="sd">                 solicitud del usuario.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla &#39;directores/matricula.html&#39;</span>
+<span class="sd">                      con los detalles de matrícula obtenidos de la base de datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+    
+    <span class="c1"># Validar y sanitizar el valor de cueanexo</span>
+    <span class="k">if</span> <span class="n">cueanexo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Manejar el caso si no se proporciona cueanexo</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;No se proporcionó el parámetro cueanexo&#39;</span><span class="p">})</span>
+    <span class="c1"># Establecer la conexión a la base de datos Padrón</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="s1">&#39;visoreducativochaco.com.ar&#39;</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="s1">&#39;visualizador&#39;</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="s1">&#39;Estadisticas24&#39;</span><span class="p">,</span>
+            <span class="n">database</span><span class="o">=</span><span class="s1">&#39;visualizador&#39;</span>
+        <span class="p">)</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Manejar el error de conexión</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Error al conectar a la base de datos&#39;</span><span class="p">})</span>
+    
+      
+    <span class="n">idest</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;select distinct id_establecimiento</span>
+<span class="s2">            FROM public.padron_ofertas</span>
+<span class="s2">            WHERE cueanexo=</span><span class="si">%s</span><span class="s2"> AND est_oferta=&#39;Activo&#39;</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    
+    <span class="n">establecimiento</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;select distinct cueanexo</span>
+<span class="s2">            FROM public.padron_ofertas</span>
+<span class="s2">            WHERE id_establecimiento=</span><span class="si">%s</span><span class="s2"> AND est_oferta=&#39;Activo&#39;</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    
+    <span class="n">ofertascue</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT cueanexo, oferta, nom_est</span>
+<span class="s2">                    FROM padron_ofertas</span>
+<span class="s2">                    WHERE est_oferta=&#39;Activo&#39; AND cueanexo=</span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span>
+    
+      
+    <span class="n">paramcue</span><span class="o">=</span><span class="p">(</span><span class="n">cueanexo</span><span class="p">,)</span>        
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">idest</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+    <span class="n">resulidest</span><span class="o">=</span><span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;id_est:&#39;</span><span class="p">,</span><span class="n">resulidest</span><span class="p">)</span>
+    
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">establecimiento</span><span class="p">,</span><span class="n">resulidest</span><span class="p">)</span>
+    <span class="n">resulestab</span><span class="o">=</span><span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;est:&#39;</span><span class="p">,</span><span class="n">resulestab</span><span class="p">)</span>
+    
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">ofertascue</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+    <span class="n">resuloferta</span><span class="o">=</span><span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;resultoferta:&#39;</span><span class="p">,</span><span class="n">resuloferta</span><span class="p">)</span>
+    
+    <span class="n">parametros_str</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2">&#39;&quot;</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">resulestab</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;parametros_str:&#39;</span><span class="p">,</span><span class="n">parametros_str</span><span class="p">)</span>
+    <span class="c1">#parametros_tupla = tuple(parametros_str)</span>
+    
+    <span class="n">resultados_detalle</span><span class="o">=</span><span class="p">[]</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">resuloferta</span><span class="p">:</span>
+            <span class="n">ofertascue</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">resultados_por_oferta</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;encabezados&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;valores&#39;</span><span class="p">:</span> <span class="p">[]}</span>
+            
+            <span class="k">if</span> <span class="n">ofertascue</span><span class="o">==</span><span class="s1">&#39;Adultos - Primaria &#39;</span><span class="p">:</span>        
+                <span class="n">adultoprim</span><span class="o">=</span> <span class="s2">&quot;&quot;&quot;SELECT cueanexo, turno, tipo_secc AS tipo, nom_secc as seccion, grado AS Ciclo, total, edad_menos_13 AS &quot;Edad menor 13&quot;, </span>
+<span class="s2">                                SUM(edad_13 + edad_14 + edad_15 + edad_16 + edad_17 + edad_18) AS &quot;Edad 13-18&quot;,</span>
+<span class="s2">                                sum(edad_19+edad_20_a_24+edad_25_a_29) as &quot;Edad 19-29&quot;,</span>
+<span class="s2">                                sum(edad_30_a_34+edad_35_a_39) as &quot;Edad 30-39&quot;,</span>
+<span class="s2">                                sum(edad_40_a_44+edad_45_a_49) as &quot;Edad 40-49&quot;,</span>
+<span class="s2">                                sum(edad_50_a_54+edad_55_mas) as &quot;Edad 50 o más&quot;</span>
+<span class="s2">                            FROM funcion.visor_matric_adulto_primaria(&#39;ra_carga2023&#39;)</span>
+<span class="s2">                            WHERE cueanexo = </span><span class="si">%s</span>
+<span class="s2">                            GROUP BY cueanexo, turno, tipo_secc, nom_secc, grado, total, edad_menos_13</span>
+<span class="s2">                            ORDER BY cueanexo, grado;&quot;&quot;&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">adultoprim</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;encabezados&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">]</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;valores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>      
+                
+            <span class="k">elif</span> <span class="n">ofertascue</span><span class="o">==</span><span class="s1">&#39;Adultos - Secundaria Completa&#39;</span><span class="p">:</span>            
+                <span class="n">adultosec</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT cueanexo, turno, grado as Año, tipo_div AS tipo, nom_secc as seccion, total, </span>
+<span class="s2">                            sum(edad_14+edad_15+edad_16+edad_17) AS &quot;Edad 14-17&quot;, 	</span>
+<span class="s2">                            sum(edad_18+edad_19+edad_20+edad_21+edad_22+edad_23+edad_24+edad_25_a_29) as &quot;Edad 18-29&quot;,</span>
+<span class="s2">                            sum(edad_30_a_34+edad_35_a_39) as &quot;Edad 30-39&quot;,</span>
+<span class="s2">                            sum(edad_40_a_44+edad_45_a_49) as &quot;Edad 40-49&quot;,</span>
+<span class="s2">                            sum(edad_50_a_54+edad_50_y_mas) as &quot;Edad 50 o más&quot;</span>
+<span class="s2">                        FROM funcion.visor_matric_adulto_secundaria(&#39;ra_carga2023&#39;)</span>
+<span class="s2">                        WHERE cueanexo =</span><span class="si">%s</span>
+<span class="s2">                        GROUP BY cueanexo, turno, tipo_div, nom_secc, grado, total</span>
+<span class="s2">                        ORDER BY cueanexo, grado;</span>
+<span class="s2">                &quot;&quot;&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">adultosec</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;encabezados&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">]</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;valores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                
+            <span class="k">elif</span> <span class="n">ofertascue</span><span class="o">==</span><span class="s1">&#39;Común - Jardín de infantes &#39;</span> <span class="ow">or</span> <span class="n">ofertascue</span><span class="o">==</span><span class="s1">&#39;Común - Jardín maternal &#39;</span><span class="p">:</span>
+                <span class="n">comuninicial</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT cueanexo, turno, grado as sala, tipo_secc AS tipo, nom_secc as seccion, total,</span>
+<span class="s2">                            menos_1_año as &quot;Menos 1 año&quot;, un_año as &quot;1 año&quot;, dos_años as &quot;2 años&quot;, tres_años as &quot;3 años&quot;,</span>
+<span class="s2">                            cuatro_años as &quot;4 Años&quot;, cinco_años as &quot;5 años&quot;, seis_años as &quot;6 años&quot;, total_disc as &quot;Discapacitados&quot;</span>
+<span class="s2">                        FROM funcion.visor_matric_comun_inicial(&#39;ra_carga2023&#39;)</span>
+<span class="s2">                        WHERE cueanexo =</span><span class="si">%s</span>
+<span class="s2">                        GROUP BY cueanexo, turno, grado, tipo_secc, nom_secc, total, menos_1_año, un_año, dos_años, tres_años, cuatro_años, cinco_años, seis_años, total_disc</span>
+<span class="s2">                        ORDER BY cueanexo, grado;    </span>
+<span class="s2">                &quot;&quot;&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">comuninicial</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;encabezados&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">]</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;valores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                
+            <span class="k">elif</span> <span class="n">ofertascue</span><span class="o">==</span><span class="s1">&#39;Común - Primaria de 7 años &#39;</span><span class="p">:</span>
+                <span class="n">comunprim</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT cueanexo, turno, grado, tipo_secc AS tipo, nom_secc as seccion, total,</span>
+<span class="s2">                            edad_5 as &quot;5 años&quot;, edad_6 as &quot;6 años&quot;, edad_7 as &quot;7 años&quot;, edad_8 as &quot;8 años&quot;,</span>
+<span class="s2">                            edad_9 as &quot;9 Años&quot;, edad_10 as &quot;10 años&quot;, edad_11 as &quot;11 años&quot;, edad_12 as &quot;12 años&quot;,</span>
+<span class="s2">                            sum(edad_13+edad_14+edad_15+edad_16+edad_17+edad_18_y_mas) as &quot;13 o más años&quot;,</span>
+<span class="s2">                            tot_discapacidad as &quot;Discapacitados&quot;</span>
+<span class="s2">                        FROM funcion.visor_matric_comun_primaria(&#39;ra_carga2023&#39;)</span>
+<span class="s2">                        WHERE cueanexo =</span><span class="si">%s</span>
+<span class="s2">                        GROUP BY cueanexo, turno, grado, tipo_secc, nom_secc, total, edad_5, edad_6, edad_7, edad_8, edad_9, edad_10, edad_11, edad_12, tot_discapacidad</span>
+<span class="s2">                        ORDER BY cueanexo, grado;   </span>
+<span class="s2">                &quot;&quot;&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">comunprim</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;encabezados&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">]</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;valores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                
+            <span class="k">elif</span> <span class="n">ofertascue</span><span class="o">==</span><span class="s1">&#39;Común - Secundaria Completa req. 7 años &#39;</span><span class="p">:</span>
+                <span class="n">comunsec</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT cueanexo, turno, grado as año, tipo_div AS tipo, nom_secc as seccion, total,</span>
+<span class="s2">                            edad_12 as &quot;12 años&quot;, edad_13 as &quot;13 años&quot;, edad_14 as &quot;14 años&quot;, edad_15 as &quot;15 años&quot;,</span>
+<span class="s2">                            edad_16 as &quot;16 Años&quot;, edad_17 as &quot;17 años&quot;, edad_18 as &quot;18 años&quot;, edad_19 as &quot;19 años&quot;,</span>
+<span class="s2">                            sum(edad_20_24+edad_25_y_mas) as &quot;20 a más&quot;,</span>
+<span class="s2">                            total_disc as &quot;Discapacitados&quot;</span>
+<span class="s2">                        FROM funcion.visor_matric_comun_secundaria(&#39;ra_carga2023&#39;)</span>
+<span class="s2">                        WHERE cueanexo =</span><span class="si">%s</span>
+<span class="s2">                        GROUP BY cueanexo, turno, grado, tipo_div, nom_secc, total, edad_12, edad_13, edad_14, edad_15, edad_16, edad_17, edad_18, edad_19, total_disc</span>
+<span class="s2">                        ORDER BY cueanexo, grado;   </span>
+<span class="s2">                &quot;&quot;&quot;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">comunsec</span><span class="p">,</span><span class="n">paramcue</span><span class="p">)</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;encabezados&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">]</span>
+                <span class="n">resultados_por_oferta</span><span class="p">[</span><span class="s1">&#39;valores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>      
+
+            <span class="c1"># Añadir los resultados de esta oferta a la lista de resultados</span>
+            <span class="n">resultados_detalle</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">resultados_por_oferta</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;resultados:&#39;</span><span class="p">,</span> <span class="n">resultados_detalle</span><span class="p">)</span>
+            
+    <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Manejar el error de consulta</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Error al ejecutar la consulta&#39;</span><span class="p">})</span>
+    
+    <span class="c1"># Transformar los resultados en una respuesta renderizada</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;directores/matricula.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;resultados_detalle&#39;</span><span class="p">:</span><span class="n">resultados_detalle</span><span class="p">})</span></div>
+
+
+    
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

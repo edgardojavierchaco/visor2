@@ -1,0 +1,224 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.archivar.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.archivar.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.archivar.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">LoginRequiredMixin</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">get_object_or_404</span>
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">JsonResponse</span>
+<span class="kn">from</span> <span class="nn">django.views.generic</span> <span class="kn">import</span> <span class="n">CreateView</span><span class="p">,</span> <span class="n">ListView</span><span class="p">,</span> <span class="n">TemplateView</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">,</span> <span class="n">DeleteView</span>
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="n">ArchRegisterForm</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">ArchRegister</span>
+<span class="kn">from</span> <span class="nn">.mixins</span> <span class="kn">import</span> <span class="n">GroupRequiredMixin</span><span class="p">,</span> <span class="n">ReadOnlyAccessMixin</span>
+
+<div class="viewcode-block" id="ArchivoCreateView"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.ArchivoCreateView">[documentos]</a><span class="k">class</span> <span class="nc">ArchivoCreateView</span><span class="p">(</span><span class="n">GroupRequiredMixin</span><span class="p">,</span><span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para crear un nuevo archivo normativo.</span>
+
+<span class="sd">    Hereda de GroupRequiredMixin para asegurar que solo los usuarios</span>
+<span class="sd">    con el grupo adecuado pueden acceder a esta vista.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (ArchRegister): Modelo de datos para el registro de archivos.</span>
+<span class="sd">        form_class (ArchRegisterForm): Formulario utilizado para crear un archivo.</span>
+<span class="sd">        template_name (str): Nombre del template a renderizar.</span>
+<span class="sd">        success_url (str): URL a la que se redirige al usuario después de una creación exitosa.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        get_context_data: Añade contexto adicional al template, como el título de la página.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">ArchRegister</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ArchRegisterForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;archivos/cargar_archivo.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;archivos:listar&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ArchivoCreateView.get_context_data"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.ArchivoCreateView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Cargar Archivo&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<div class="viewcode-block" id="ArchivosListView"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.ArchivosListView">[documentos]</a><span class="k">class</span> <span class="nc">ArchivosListView</span><span class="p">(</span><span class="n">ReadOnlyAccessMixin</span><span class="p">,</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para listar todos los archivos normativos.</span>
+
+<span class="sd">    Hereda de ReadOnlyAccessMixin para permitir el acceso solo de lectura</span>
+<span class="sd">    a los usuarios autorizados.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (ArchRegister): Modelo de datos para el registro de archivos.</span>
+<span class="sd">        template_name (str): Nombre del template a renderizar.</span>
+<span class="sd">        context_object_name (str): Nombre del contexto que contiene la lista de archivos.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        get_context_data: Añade contexto adicional al template, como el título de la página.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">ArchRegister</span>
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;archivos/archivos_lista.html&#39;</span>
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;archivos&#39;</span> 
+    
+<div class="viewcode-block" id="ArchivosListView.get_context_data"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.ArchivosListView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Archivos&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+    
+
+<div class="viewcode-block" id="BuscarPDFView"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.BuscarPDFView">[documentos]</a><span class="k">class</span> <span class="nc">BuscarPDFView</span><span class="p">(</span><span class="n">TemplateView</span><span class="p">):</span>   
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para buscar un archivo PDF basado en cueanexo y asunto.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        post: Maneja las solicitudes POST para buscar el archivo y devolver su URL.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="BuscarPDFView.post"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.BuscarPDFView.post">[documentos]</a>    <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+        <span class="n">asunto</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;asunto&#39;</span><span class="p">)</span>
+        <span class="n">archivo</span> <span class="o">=</span> <span class="n">ArchRegister</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">cueanexo</span><span class="o">=</span><span class="n">cueanexo</span><span class="p">,</span> <span class="n">asunto__asunto</span><span class="o">=</span><span class="n">asunto</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">archivo</span> <span class="ow">and</span> <span class="n">archivo</span><span class="o">.</span><span class="n">archivo</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;ruta_pdf&#39;</span><span class="p">:</span> <span class="n">archivo</span><span class="o">.</span><span class="n">archivo</span><span class="o">.</span><span class="n">url</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;No se encontró ningún PDF con el cueanexo y asunto especificados.&#39;</span><span class="p">})</span></div></div>
+
+<div class="viewcode-block" id="editar_archivos"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.editar_archivos">[documentos]</a><span class="k">class</span> <span class="nc">editar_archivos</span><span class="p">(</span><span class="n">GroupRequiredMixin</span><span class="p">,</span><span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar un archivo normativo existente.</span>
+
+<span class="sd">    Hereda de GroupRequiredMixin para asegurar que solo los usuarios</span>
+<span class="sd">    con el grupo adecuado pueden acceder a esta vista.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (ArchRegister): Modelo de datos para el registro de archivos.</span>
+<span class="sd">        form_class (ArchRegisterForm): Formulario utilizado para editar el archivo.</span>
+<span class="sd">        template_name (str): Nombre del template a renderizar.</span>
+<span class="sd">        success_url (str): URL a la que se redirige al usuario después de una edición exitosa.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        get_object: Obtiene el objeto ArchRegister que se va a editar.</span>
+<span class="sd">        get_context_data: Añade contexto adicional al template, como el título de la página.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">ArchRegister</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ArchRegisterForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;archivos/editar.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;archivos:listar&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="editar_archivos.get_object"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.editar_archivos.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">ArchRegister</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="editar_archivos.get_context_data"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.editar_archivos.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Archivo&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<div class="viewcode-block" id="EliminarArchivosView"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.EliminarArchivosView">[documentos]</a><span class="k">class</span> <span class="nc">EliminarArchivosView</span><span class="p">(</span><span class="n">GroupRequiredMixin</span><span class="p">,</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar un archivo normativo.</span>
+
+<span class="sd">    Hereda de GroupRequiredMixin para asegurar que solo los usuarios</span>
+<span class="sd">    con el grupo adecuado pueden acceder a esta vista.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        get: Maneja las solicitudes GET para eliminar el archivo y redirigir al usuario.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EliminarArchivosView.get"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.EliminarArchivosView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">ArchRegister</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;archivos:listar&#39;</span><span class="p">)</span> </div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

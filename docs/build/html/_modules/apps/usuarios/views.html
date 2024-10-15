@@ -1,0 +1,524 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.usuarios.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.usuarios.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.usuarios.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">LoginRequiredMixin</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span><span class="p">,</span> <span class="n">get_object_or_404</span><span class="p">,</span> <span class="n">redirect</span>
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponseRedirect</span><span class="p">,</span> <span class="n">JsonResponse</span>
+<span class="kn">from</span> <span class="nn">django.views.decorators.csrf</span> <span class="kn">import</span> <span class="n">csrf_exempt</span>
+<span class="kn">from</span> <span class="nn">django.utils.decorators</span> <span class="kn">import</span> <span class="n">method_decorator</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth</span> <span class="kn">import</span> <span class="n">login</span>
+<span class="kn">from</span> <span class="nn">django.views.generic</span> <span class="kn">import</span> <span class="n">ListView</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">,</span> <span class="n">DeleteView</span><span class="p">,</span> <span class="n">FormView</span><span class="p">,</span> <span class="n">TemplateView</span>
+<span class="kn">from</span> <span class="nn">apps.usuarios.forms</span> <span class="kn">import</span> <span class="n">UsuariosForm</span><span class="p">,</span> <span class="n">UsuariosForm_login</span><span class="p">,</span> <span class="n">ResetpassWordForm</span>
+<span class="kn">from</span> <span class="nn">apps.usuarios.models</span> <span class="kn">import</span> <span class="n">UsuariosVisualizador</span><span class="p">,</span> <span class="n">NivelAcceso</span>
+<span class="kn">from</span> <span class="nn">config</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">.mixins</span> <span class="kn">import</span> <span class="n">AdminRequiredMixin</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">Group</span>
+<span class="kn">from</span> <span class="nn">django.core.mail</span> <span class="kn">import</span> <span class="n">send_mail</span>
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">messages</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.tokens</span> <span class="kn">import</span> <span class="n">default_token_generator</span>
+<span class="kn">from</span> <span class="nn">django.utils.http</span> <span class="kn">import</span> <span class="n">urlsafe_base64_encode</span><span class="p">,</span> <span class="n">urlsafe_base64_decode</span>
+<span class="kn">from</span> <span class="nn">django.utils.encoding</span> <span class="kn">import</span> <span class="n">force_bytes</span><span class="p">,</span> <span class="n">force_str</span>
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">messages</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c1">#listado de usuarios para el Admin</span>
+<div class="viewcode-block" id="listado_usuarios"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.listado_usuarios">[documentos]</a><span class="k">class</span> <span class="nc">listado_usuarios</span><span class="p">(</span><span class="n">AdminRequiredMixin</span><span class="p">,</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista que muestra el listado de usuarios para el administrador.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo a utilizar (UsuariosVisualizador).</span>
+<span class="sd">        template_name: La plantilla a renderizar.</span>
+<span class="sd">        context_object_name: Nombre del contexto a pasar a la plantilla.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_context_data: Agrega información adicional al contexto.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span><span class="o">=</span><span class="n">UsuariosVisualizador</span>        
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;usuarios/listado.html&#39;</span> 
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;usuarios&#39;</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">context_object_name</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="listado_usuarios.get_context_data"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.listado_usuarios.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega el título al contexto.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Argumentos adicionales.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: El contexto actualizado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Usuarios&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<span class="c1">#listado de directores para Evaluación</span>
+<div class="viewcode-block" id="listado_usuarios_op"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.listado_usuarios_op">[documentos]</a><span class="k">class</span> <span class="nc">listado_usuarios_op</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista que muestra el listado de usuarios con nivel de acceso &quot;Director/a&quot;.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo a utilizar (UsuariosVisualizador).</span>
+<span class="sd">        template_name: La plantilla a renderizar.</span>
+<span class="sd">        context_object_name: Nombre del contexto a pasar a la plantilla.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_queryset: Filtra los usuarios por nivel de acceso.</span>
+<span class="sd">        get_context_data: Agrega información adicional al contexto.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">model</span><span class="o">=</span><span class="n">UsuariosVisualizador</span>        
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;usuarios/listado_op.html&#39;</span> 
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;usuarios&#39;</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">context_object_name</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="listado_usuarios_op.get_queryset"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.listado_usuarios_op.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filtra los usuarios cuyo nivel de acceso es &quot;Director/a&quot;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: Los usuarios filtrados.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Filtrar los usuarios cuyo nivel de acceso es &quot;Director/a&quot;</span>
+        <span class="k">return</span> <span class="n">UsuariosVisualizador</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nivelacceso</span><span class="o">=</span><span class="s1">&#39;Director/a&#39;</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="listado_usuarios_op.get_context_data"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.listado_usuarios_op.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega el título al contexto.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Argumentos adicionales.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: El contexto actualizado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Directores&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+
+<div class="viewcode-block" id="crear_usuarios"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.crear_usuarios">[documentos]</a><span class="k">class</span> <span class="nc">crear_usuarios</span><span class="p">(</span><span class="n">AdminRequiredMixin</span><span class="p">,</span><span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para crear un nuevo usuario.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo a utilizar (UsuariosVisualizador).</span>
+<span class="sd">        form_class: El formulario para crear usuarios.</span>
+<span class="sd">        template_name: La plantilla a renderizar.</span>
+<span class="sd">        success_url: URL a la que redirigir después de una creación exitosa.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_context_data: Agrega información adicional al contexto.</span>
+<span class="sd">        form_valid: Guarda el usuario en la base de datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span><span class="o">=</span><span class="n">UsuariosVisualizador</span>
+    <span class="n">form_class</span><span class="o">=</span><span class="n">UsuariosForm</span>
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;usuarios/crear.html&#39;</span>
+    <span class="n">success_url</span><span class="o">=</span><span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;usuarios:listado&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="crear_usuarios.get_context_data"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.crear_usuarios.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega el título al contexto.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Argumentos adicionales.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: El contexto actualizado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Crear Usuario&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+    
+<div class="viewcode-block" id="crear_usuarios.form_valid"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.crear_usuarios.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Procesa el formulario válido y guarda el usuario.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            form: El formulario enviado.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Respuesta de redirección después de guardar el usuario.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Obtener el formulario de usuario</span>
+        <span class="n">usuario_form</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="c1"># Encriptar la contraseña usando SHA256</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;password&#39;</span><span class="p">)</span>
+        <span class="n">hashed_password</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span> <span class="c1"># type: ignore</span>
+        
+        <span class="c1"># Guardar la contraseña encriptada en el objeto de usuario</span>
+        <span class="n">usuario_form</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">hashed_password</span>
+        
+        <span class="c1"># Guardar el usuario en la base de datos</span>
+        <span class="n">usuario_form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+
+<span class="c1">#edición para Administrador</span>
+<div class="viewcode-block" id="editar_usuarios"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios">[documentos]</a><span class="k">class</span> <span class="nc">editar_usuarios</span><span class="p">(</span><span class="n">AdminRequiredMixin</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar un usuario existente.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo a utilizar (UsuariosVisualizador).</span>
+<span class="sd">        form_class: El formulario para editar usuarios.</span>
+<span class="sd">        template_name: La plantilla a renderizar.</span>
+<span class="sd">        success_url: URL a la que redirigir después de una edición exitosa.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_object: Obtiene el objeto de usuario a editar.</span>
+<span class="sd">        get_context_data: Agrega información adicional al contexto.</span>
+<span class="sd">        form_valid: Procesa el formulario válido.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">UsuariosVisualizador</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">UsuariosForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;usuarios/editar.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;usuarios:listado&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="editar_usuarios.get_object"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene el objeto de usuario a editar basado en el ID proporcionado.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            UsuariosVisualizador: El usuario a editar.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">UsuariosVisualizador</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="editar_usuarios.get_context_data"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega el título al contexto.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Argumentos adicionales.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: El contexto actualizado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Usuario&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="editar_usuarios.form_valid"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Procesa el formulario válido y actualiza el usuario.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            form: El formulario enviado.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Respuesta de redirección después de actualizar el usuario.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Simplemente llamamos al form_valid de la superclase</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+
+
+<span class="c1">#edición para Evaluación</span>
+<div class="viewcode-block" id="editar_usuarios_op"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios_op">[documentos]</a><span class="k">class</span> <span class="nc">editar_usuarios_op</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar un usuario existente para evaluación.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model: El modelo a utilizar (UsuariosVisualizador).</span>
+<span class="sd">        form_class: El formulario para editar usuarios.</span>
+<span class="sd">        template_name: La plantilla a renderizar.</span>
+<span class="sd">        success_url: URL a la que redirigir después de una edición exitosa.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_object: Obtiene el objeto de usuario a editar.</span>
+<span class="sd">        get_context_data: Agrega información adicional al contexto.</span>
+<span class="sd">        form_valid: Procesa el formulario válido.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">UsuariosVisualizador</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">UsuariosForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;usuarios/editar_op.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;usuarios:listado_op&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="editar_usuarios_op.get_object"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios_op.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene el objeto de usuario a editar basado en el ID proporcionado.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            UsuariosVisualizador: El usuario a editar.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">UsuariosVisualizador</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="editar_usuarios_op.get_context_data"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios_op.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Agrega el título al contexto.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Argumentos adicionales.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: El contexto actualizado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Usuario&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="editar_usuarios_op.form_valid"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.editar_usuarios_op.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Procesa el formulario válido y actualiza el usuario.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            form: El formulario enviado.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponse: Respuesta de redirección después de actualizar el usuario.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Simplemente llamamos al form_valid de la superclase</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+
+<span class="c1">#Eliminar usuarios para Administrador</span>
+<div class="viewcode-block" id="EliminarUsuarioView"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.EliminarUsuarioView">[documentos]</a><span class="k">class</span> <span class="nc">EliminarUsuarioView</span><span class="p">(</span><span class="n">AdminRequiredMixin</span><span class="p">,</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar un usuario.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get: Elimina el usuario basado en el ID proporcionado.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EliminarUsuarioView.get"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.EliminarUsuarioView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Elimina el usuario y redirige a la lista de usuarios.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request: La solicitud HTTP.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponseRedirect: Redirección a la lista de usuarios.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">UsuariosVisualizador</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;usuarios:listado&#39;</span><span class="p">)</span> </div></div>
+
+<span class="c1">#Eliminar usuarios para Evaluación</span>
+<div class="viewcode-block" id="EliminarUsuarioView_op"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.EliminarUsuarioView_op">[documentos]</a><span class="k">class</span> <span class="nc">EliminarUsuarioView_op</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar un usuario en evaluación.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get: Elimina el usuario basado en el ID proporcionado.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EliminarUsuarioView_op.get"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.EliminarUsuarioView_op.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Elimina el usuario y redirige a la lista de directores.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request: La solicitud HTTP.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HttpResponseRedirect: Redirección a la lista de directores.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">UsuariosVisualizador</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;usuarios:listado_op&#39;</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="registrar_usuarios"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.registrar_usuarios">[documentos]</a><span class="k">class</span> <span class="nc">registrar_usuarios</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">UsuariosVisualizador</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">UsuariosForm_login</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;login/login.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;usuarios:registro&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="registrar_usuarios.get_context_data"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.registrar_usuarios.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Crear Usuario&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+    
+<div class="viewcode-block" id="registrar_usuarios.form_valid"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.registrar_usuarios.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="c1"># Verificar si el username ya está registrado</span>
+        <span class="n">username</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">UsuariosVisualizador</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;El usuario ya está registrado.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;usuarios:registro&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Obtener el formulario de usuario</span>
+        <span class="n">usuario_form</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="c1"># Encriptar la contraseña usando SHA256</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;password&#39;</span><span class="p">)</span>
+        <span class="n">hashed_password</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span> <span class="c1"># type: ignore</span>
+        
+        <span class="c1"># Guardar la contraseña encriptada en el objeto de usuario</span>
+        <span class="n">usuario_form</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">hashed_password</span>
+        
+        <span class="c1"># Asignar los campos activo a True e is_staff a False</span>
+        <span class="n">usuario_form</span><span class="o">.</span><span class="n">activo</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">usuario_form</span><span class="o">.</span><span class="n">is_staff</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="c1"># Guardar el usuario en la base de datos</span>
+        <span class="n">usuario_form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        
+        <span class="c1"># Asignar al usuario al grupo correspondiente según el nivel de acceso</span>
+        <span class="n">nivel_acceso</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nivelacceso&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Nivel de acceso seleccionado: </span><span class="si">{</span><span class="n">nivel_acceso</span><span class="o">.</span><span class="n">tacceso</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> 
+        <span class="k">if</span> <span class="n">nivel_acceso</span><span class="o">.</span><span class="n">tacceso</span> <span class="o">==</span> <span class="s1">&#39;Director/a&#39;</span><span class="p">:</span>
+            <span class="n">grupo</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Director&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nivel_acceso</span><span class="o">.</span><span class="n">tacceso</span> <span class="o">==</span> <span class="s1">&#39;Aplicador&#39;</span><span class="p">:</span>
+            <span class="n">grupo</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Aplicador&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nivel_acceso</span><span class="o">.</span><span class="n">tacceso</span> <span class="o">==</span> <span class="s1">&#39;Docente&#39;</span><span class="p">:</span>
+            <span class="n">grupo</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Docente&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">grupo</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">grupo</span><span class="p">:</span>
+            <span class="n">usuario_form</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">grupo</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Usuario </span><span class="si">{</span><span class="n">usuario_form</span><span class="o">.</span><span class="n">username</span><span class="si">}</span><span class="s2"> asignado al grupo </span><span class="si">{</span><span class="n">grupo</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No se encontró el grupo correspondiente&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+    
+
+<div class="viewcode-block" id="check_user_status"><a class="viewcode-back" href="../../../usuarios.html#apps.usuarios.views.check_user_status">[documentos]</a><span class="nd">@csrf_exempt</span>
+<span class="k">def</span> <span class="nf">check_user_status</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+        <span class="n">username</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">UsuariosVisualizador</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;is_staff&#39;</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">is_staff</span><span class="p">})</span>
+        <span class="k">except</span> <span class="n">UsuariosVisualizador</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;is_staff&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;is_staff&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

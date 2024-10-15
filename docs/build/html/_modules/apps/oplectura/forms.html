@@ -1,0 +1,592 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.oplectura.forms &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.oplectura.forms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.oplectura.forms</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">django</span> <span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span> <span class="nn">django.forms</span> <span class="kn">import</span> <span class="n">ModelForm</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">RegDocporSeccion</span><span class="p">,</span> <span class="n">RegEvaluacionFluidezLectora</span>
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span> <span class="nn">django.core.validators</span> <span class="kn">import</span> <span class="n">RegexValidator</span>
+
+<div class="viewcode-block" id="RegDocporSeccionForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegDocporSeccionForm">[documentos]</a><span class="k">class</span> <span class="nc">RegDocporSeccionForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para registrar documentos por sección.</span>
+
+<span class="sd">    Fields:</span>
+<span class="sd">        - id: Identificador del registro.</span>
+<span class="sd">        - dni_docen: DNI del docente.</span>
+<span class="sd">        - apellido_docen: Apellido del docente.</span>
+<span class="sd">        - nombres_docen: Nombres del docente.</span>
+<span class="sd">        - cueanexo: Código único de anexos (debe comenzar con &#39;22&#39;).</span>
+<span class="sd">        - curso: Curso al que pertenece el documento.</span>
+<span class="sd">        - division: División del curso.</span>
+<span class="sd">        - turno: Turno del curso.</span>
+<span class="sd">        - operativos: Información adicional sobre operativos.</span>
+<span class="sd">        - validacion: Estado de validación del registro.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="RegDocporSeccionForm.Meta"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegDocporSeccionForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="s1">&#39;dni_docen&#39;</span><span class="p">,</span><span class="s1">&#39;apellido_docen&#39;</span><span class="p">,</span><span class="s1">&#39;nombres_docen&#39;</span><span class="p">,</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">,</span> <span class="s1">&#39;curso&#39;</span><span class="p">,</span> <span class="s1">&#39;division&#39;</span><span class="p">,</span> <span class="s1">&#39;turno&#39;</span><span class="p">,</span> <span class="s1">&#39;operativos&#39;</span><span class="p">,</span><span class="s1">&#39;validacion&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="RegDocporSeccionForm.clean_cueanexo"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegDocporSeccionForm.clean_cueanexo">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_cueanexo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida que el campo &#39;cueanexo&#39; sea un número de 9 dígitos que comience con &#39;22&#39;.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si el &#39;cueanexo&#39; no cumple con el formato requerido.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^22\d</span><span class="si">{7}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">cueanexo</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Cueanexo debe ser un número de 9 dígitos que comience con &#39;22&#39;.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cueanexo</span></div></div>
+    
+
+<div class="viewcode-block" id="RegDocporSeccionEdicionForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegDocporSeccionEdicionForm">[documentos]</a><span class="k">class</span> <span class="nc">RegDocporSeccionEdicionForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para editar documentos por sección.</span>
+
+<span class="sd">    Fields son los mismos que RegDocporSeccionForm, excluyendo &#39;id&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="RegDocporSeccionEdicionForm.Meta"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegDocporSeccionEdicionForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;dni_docen&#39;</span><span class="p">,</span><span class="s1">&#39;apellido_docen&#39;</span><span class="p">,</span><span class="s1">&#39;nombres_docen&#39;</span><span class="p">,</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">,</span> <span class="s1">&#39;curso&#39;</span><span class="p">,</span> <span class="s1">&#39;division&#39;</span><span class="p">,</span> <span class="s1">&#39;turno&#39;</span><span class="p">,</span> <span class="s1">&#39;operativos&#39;</span><span class="p">,</span> <span class="s1">&#39;validacion&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="RegDocporSeccionEdicionForm.clean_cueanexo"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegDocporSeccionEdicionForm.clean_cueanexo">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_cueanexo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida que el campo &#39;cueanexo&#39; sea un número de 9 dígitos que comience con &#39;22&#39;.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si el &#39;cueanexo&#39; no cumple con el formato requerido.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^22\d</span><span class="si">{7}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">cueanexo</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Cueanexo debe ser un número de 9 dígitos que comience con &#39;22&#39;.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cueanexo</span></div></div>
+    
+<span class="c1">#formulario para cargar evaluacion el aplicador</span>
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraForm">[documentos]</a><span class="k">class</span> <span class="nc">RegEvaluacionFluidezLectoraForm</span><span class="p">(</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para cargar evaluaciones de fluidez lectora.</span>
+
+<span class="sd">    Fields:</span>
+<span class="sd">        - cueanexo: Código único de anexos (oculto).</span>
+<span class="sd">        - region: Región del estudiante (oculta).</span>
+<span class="sd">        - grado: Grado del estudiante (oculto).</span>
+<span class="sd">        - seccion: Sección del estudiante (oculta).</span>
+<span class="sd">        - apellido_alumno: Apellido del alumno (oculto).</span>
+<span class="sd">        - nombres_alumno: Nombres del alumno (oculto).</span>
+<span class="sd">        - dni_alumno: DNI del alumno (oculto).</span>
+<span class="sd">        - cal_vel: Calificación de velocidad (oculta).</span>
+<span class="sd">        - cal_pres: Calificación de precisión (oculta).</span>
+<span class="sd">        - cal_pros: Calificación de prosodia (oculta).</span>
+<span class="sd">        - cal_comp: Calificación de comprensión (oculta).</span>
+<span class="sd">        - asistencia: Indicador de asistencia (checkbox).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraForm.Meta"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;cueanexo&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;region&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;grado&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;seccion&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;apellido_alumno&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;nombres_alumno&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;dni_alumno&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>            
+            <span class="s1">&#39;cal_vel&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pres&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pros&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_comp&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;asistencia&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(),</span>            
+        <span class="p">}</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inicializa el formulario, configurando campos opcionales.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Argumentos posicionales.</span>
+<span class="sd">            **kwargs: Argumentos de palabra clave, incluyendo &#39;user&#39; para obtener datos específicos.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;asistencia&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pros&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Deshabilitar todos los campos excepto los especificados</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; for field in self.fields:</span>
+<span class="sd">            if field not in [&#39;asistencia&#39;, &#39;tramo&#39;, &#39;velocidad&#39;, &#39;precision&#39;, &#39;prosodia&#39;, &#39;comprension&#39;]:</span>
+<span class="sd">                self.fields[field].widget.attrs[&#39;disabled&#39;] = &#39;disabled&#39; &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraForm.clean"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraForm.clean">[documentos]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida los campos del formulario al enviar.</span>
+
+<span class="sd">        Se asegura de que las calificaciones sean mayores a 0 si la asistencia está marcada.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si las calificaciones no cumplen con las condiciones.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">cleaned_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+        <span class="n">asistencia</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;asistencia&quot;</span><span class="p">)</span>
+        <span class="n">velocidad</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;velocidad&quot;</span><span class="p">)</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;precision&quot;</span><span class="p">)</span>
+        <span class="n">prosodia</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;prosodia&quot;</span><span class="p">)</span>
+        <span class="n">comprension</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;comprension&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">asistencia</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">velocidad</span> <span class="ow">and</span> <span class="n">velocidad</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;velocidad&#39;</span><span class="p">,</span> <span class="s1">&#39;La velocidad debe ser mayor a 0 cuando asistencia está marcada.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">precision</span> <span class="ow">and</span> <span class="n">precision</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;precision&#39;</span><span class="p">,</span> <span class="s1">&#39;La precisión debe ser mayor a 0 cuando asistencia está marcada.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">prosodia</span> <span class="ow">and</span> <span class="n">prosodia</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;prosodia&#39;</span><span class="p">,</span> <span class="s1">&#39;La prosodia debe ser mayor a 0 cuando asistencia está marcada.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">comprension</span> <span class="ow">and</span> <span class="n">comprension</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;comprension&#39;</span><span class="p">,</span> <span class="s1">&#39;La comprensión debe ser mayor a 0 cuando asistencia está marcada.&#39;</span><span class="p">)</span></div></div>
+
+                 
+<div class="viewcode-block" id="FiltroEvaluacionForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.FiltroEvaluacionForm">[documentos]</a><span class="k">class</span> <span class="nc">FiltroEvaluacionForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario de filtro para evaluaciones de fluidez lectora.</span>
+
+<span class="sd">    Fields:</span>
+<span class="sd">        - cueanexo: Selección del cueanexo.</span>
+<span class="sd">        - grado: Selección del grado.</span>
+<span class="sd">        - seccion: Selección de la sección.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Cueanexo&#39;</span><span class="p">)</span>
+    <span class="n">grado</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Grado&#39;</span><span class="p">)</span>
+    <span class="n">seccion</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Sección&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inicializa el formulario, filtrando opciones según el usuario.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Argumentos posicionales.</span>
+<span class="sd">            **kwargs: Argumentos de palabra clave, incluyendo &#39;user&#39; para obtener datos específicos.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+            <span class="n">cueanexos</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">dni_docen</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+            <span class="n">grados</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">dni_docen</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s1">&#39;curso__nom_curso&#39;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+            <span class="n">secciones</span> <span class="o">=</span> <span class="n">RegDocporSeccion</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">dni_docen</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s1">&#39;division__nom_division&#39;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">choices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">cueanexo</span><span class="p">,</span> <span class="n">cueanexo</span><span class="p">)</span> <span class="k">for</span> <span class="n">cueanexo</span> <span class="ow">in</span> <span class="n">cueanexos</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;grado&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">choices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">grado</span><span class="p">,</span> <span class="n">grado</span><span class="p">)</span> <span class="k">for</span> <span class="n">grado</span> <span class="ow">in</span> <span class="n">grados</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;seccion&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">choices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">seccion</span><span class="p">,</span> <span class="n">seccion</span><span class="p">)</span> <span class="k">for</span> <span class="n">seccion</span> <span class="ow">in</span> <span class="n">secciones</span><span class="p">]</span></div>
+
+<span class="c1"># formulario cargar alumno para el aplicador</span>
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraForm">[documentos]</a><span class="k">class</span> <span class="nc">RegAlumnosFluidezLectoraForm</span><span class="p">(</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para cargar alumnos en evaluaciones de fluidez lectora.</span>
+
+<span class="sd">    Fields:</span>
+<span class="sd">        - region: Selección de la región (opcional).</span>
+<span class="sd">        - grado: Selección del grado (opcional).</span>
+<span class="sd">        - seccion: Selección de la sección (opcional).</span>
+<span class="sd">        - cal_vel: Calificación de velocidad (oculta).</span>
+<span class="sd">        - cal_pres: Calificación de precisión (oculta).</span>
+<span class="sd">        - cal_pros: Calificación de prosodia (oculta).</span>
+<span class="sd">        - cal_comp: Calificación de comprensión (oculta).</span>
+<span class="sd">        - asistencia: Indicador de asistencia (checkbox).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">REGIONES_CHOICES</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 1&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 1&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 5&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 6&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 6&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 7&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 7&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 9&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 9&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    
+    <span class="n">CURSO_CHOICES</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;PRIMERO&#39;</span><span class="p">,</span> <span class="s1">&#39;PRIMERO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEGUNDO&#39;</span><span class="p">,</span> <span class="s1">&#39;SECUNDO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;TERCERO&#39;</span><span class="p">,</span> <span class="s1">&#39;TERCERO&#39;</span><span class="p">),</span> 
+                     <span class="p">(</span><span class="s1">&#39;CUARTO&#39;</span><span class="p">,</span> <span class="s1">&#39;CUARTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;QUINTO&#39;</span><span class="p">,</span> <span class="s1">&#39;QUINTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEXTO&#39;</span><span class="p">,</span> <span class="s1">&#39;SEXTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEPTIMO&#39;</span><span class="p">,</span> <span class="s1">&#39;SEPTIMO&#39;</span><span class="p">)]</span>
+
+    <span class="n">SECCION_CHOICES</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">SECCION_CHOICES</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;MULTIPLE&#39;</span><span class="p">,</span><span class="s1">&#39;MULTIPLE&#39;</span><span class="p">))</span>
+    
+    <span class="n">region</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">REGIONES_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">grado</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CURSO_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">seccion</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">SECCION_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraForm.Meta"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>                     
+                 
+            <span class="s1">&#39;cal_vel&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pres&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pros&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_comp&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;asistencia&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(),</span>
+        <span class="p">}</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida los campos del formulario al enviar.</span>
+
+<span class="sd">        Se asegura de que las calificaciones sean mayores a 0 si la asistencia está marcada.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si las calificaciones no cumplen con las condiciones.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;asistencia&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pros&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+    
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraForm.clean_cueanexo"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraForm.clean_cueanexo">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_cueanexo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^22\d</span><span class="si">{7}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">cueanexo</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Cueanexo debe comenzar con &#39;22&#39; y contener 9 dígitos en total.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">cueanexo</span></div>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraForm.clean_apellido_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraForm.clean_apellido_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_apellido_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">apellido_alumno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;apellido_alumno&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">apellido_alumno</span><span class="p">:</span>
+            <span class="c1"># Ajusta la expresión regular para permitir espacios en blanco</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39;´ ]+$&quot;</span><span class="p">,</span> <span class="n">apellido_alumno</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Apellido debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y espacios.&quot;</span><span class="p">)</span>
+            <span class="n">apellido_alumno</span> <span class="o">=</span> <span class="n">apellido_alumno</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">apellido_alumno</span></div>
+
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraForm.clean_nombres_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraForm.clean_nombres_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_nombres_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nombres_alumno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nombres_alumno&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nombres_alumno</span><span class="p">:</span>
+            <span class="c1"># La expresión regular ya permite espacios en blanco</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39;´ ]+$&quot;</span><span class="p">,</span> <span class="n">nombres_alumno</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Nombres debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y espacios.&quot;</span><span class="p">)</span>
+            <span class="n">nombres_alumno</span> <span class="o">=</span> <span class="n">nombres_alumno</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">nombres_alumno</span></div>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraForm.clean_dni_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraForm.clean_dni_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_dni_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">dni_alumno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dni_alumno&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dni_alumno</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^\d{7,}$&#39;</span><span class="p">,</span> <span class="n">dni_alumno</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo DNI debe contener sólo números y tener al menos 7 dígitos.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dni_alumno</span></div></div>
+
+<span class="c1"># formulario para el director</span>
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraDirectoresForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraDirectoresForm">[documentos]</a><span class="k">class</span> <span class="nc">RegEvaluacionFluidezLectoraDirectoresForm</span><span class="p">(</span><span class="n">ModelForm</span><span class="p">):</span>
+    <span class="n">CURSO_CHOICES</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;PRIMERO&#39;</span><span class="p">,</span> <span class="s1">&#39;PRIMERO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEGUNDO&#39;</span><span class="p">,</span> <span class="s1">&#39;SECUNDO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;TERCERO&#39;</span><span class="p">,</span> <span class="s1">&#39;TERCERO&#39;</span><span class="p">),</span> 
+                     <span class="p">(</span><span class="s1">&#39;CUARTO&#39;</span><span class="p">,</span> <span class="s1">&#39;CUARTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;QUINTO&#39;</span><span class="p">,</span> <span class="s1">&#39;QUINTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEXTO&#39;</span><span class="p">,</span> <span class="s1">&#39;SEXTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEPTIMO&#39;</span><span class="p">,</span> <span class="s1">&#39;SEPTIMO&#39;</span><span class="p">)]</span>
+
+    <span class="n">SECCION_CHOICES</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">SECCION_CHOICES</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;MULTIPLE&#39;</span><span class="p">,</span><span class="s1">&#39;MULTIPLE&#39;</span><span class="p">))</span>
+    
+    <span class="n">grado</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CURSO_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">seccion</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">SECCION_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="n">apellido_alumno</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">validators</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">RegexValidator</span><span class="p">(</span>
+                <span class="n">regex</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;^[A-ZÁÉÍÓÚÑ\s</span><span class="se">\&#39;</span><span class="s1">]+$&#39;</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="s2">&quot;El apellido solo puede contener letras mayúsculas, espacios, tildes y apóstrofes.&quot;</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    
+    <span class="n">nombres_alumno</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">validators</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">RegexValidator</span><span class="p">(</span>
+                <span class="n">regex</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;^[A-ZÁÉÍÓÚÑ\s</span><span class="se">\&#39;</span><span class="s1">]+$&#39;</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="s2">&quot;El nombre solo puede contener letras mayúsculas, espacios, tildes y apóstrofes.&quot;</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    
+    <span class="n">dni_alumno</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+        <span class="n">validators</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">RegexValidator</span><span class="p">(</span>
+                <span class="n">regex</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;^\d{7,8}$&#39;</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="s2">&quot;El DNI debe contener solo números y tener entre 7 y 8 dígitos.&quot;</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraDirectoresForm.Meta"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraDirectoresForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;cueanexo&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;region&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span> 
+            <span class="s1">&#39;velocidad&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;precision&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>  
+            <span class="s1">&#39;prosodia&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>  
+            <span class="s1">&#39;comprension&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>                    
+            <span class="s1">&#39;cal_vel&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pres&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pros&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_comp&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;asistencia&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+        <span class="p">}</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;asistencia&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pros&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraDirectoresForm.clean_apellido_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraDirectoresForm.clean_apellido_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_apellido_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;apellido_alumno&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="RegEvaluacionFluidezLectoraDirectoresForm.clean_nombres_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegEvaluacionFluidezLectoraDirectoresForm.clean_nombres_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_nombres_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;nombres_alumno&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span></div></div>
+
+
+<span class="c1"># formulario cargar alumno para el director</span>
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorForm"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorForm">[documentos]</a><span class="k">class</span> <span class="nc">RegAlumnosFluidezLectoraDirectorForm</span><span class="p">(</span><span class="n">ModelForm</span><span class="p">):</span>
+    <span class="n">REGIONES_CHOICES</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 1&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 1&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 5&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 6&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 6&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 7&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 7&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 9&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 9&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    
+    <span class="n">CURSO_CHOICES</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;PRIMERO&#39;</span><span class="p">,</span> <span class="s1">&#39;PRIMERO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEGUNDO&#39;</span><span class="p">,</span> <span class="s1">&#39;SECUNDO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;TERCERO&#39;</span><span class="p">,</span> <span class="s1">&#39;TERCERO&#39;</span><span class="p">),</span> 
+                     <span class="p">(</span><span class="s1">&#39;CUARTO&#39;</span><span class="p">,</span> <span class="s1">&#39;CUARTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;QUINTO&#39;</span><span class="p">,</span> <span class="s1">&#39;QUINTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEXTO&#39;</span><span class="p">,</span> <span class="s1">&#39;SEXTO&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;SEPTIMO&#39;</span><span class="p">,</span> <span class="s1">&#39;SEPTIMO&#39;</span><span class="p">)]</span>
+
+    <span class="n">SECCION_CHOICES</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">SECCION_CHOICES</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;MULTIPLE&#39;</span><span class="p">,</span><span class="s1">&#39;MULTIPLE&#39;</span><span class="p">))</span>
+    
+    <span class="n">region</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">REGIONES_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">grado</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CURSO_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">seccion</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">SECCION_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorForm.Meta"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RegEvaluacionFluidezLectora</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>                     
+            <span class="s1">&#39;velocidad&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;precision&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>     
+            <span class="s1">&#39;prosodia&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;comprension&#39;</span><span class="p">:</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_vel&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pres&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_pros&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;cal_comp&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+            <span class="s1">&#39;asistencia&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>
+        <span class="p">}</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;asistencia&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pros&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="c1"># Asignar valores predeterminados</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;velocidad&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;precision&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;prosodia&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;comprension&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="s2">&quot;Debajo del Básico&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="s2">&quot;Debajo del Básico&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_pros&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="s2">&quot;Debajo del Básico&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="s2">&quot;Debajo del Básico&quot;</span>
+    
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorForm.clean_cueanexo"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorForm.clean_cueanexo">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_cueanexo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^22\d</span><span class="si">{7}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">cueanexo</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Cueanexo debe comenzar con &#39;22&#39; y contener 9 dígitos en total.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">cueanexo</span></div>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorForm.clean_apellido_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorForm.clean_apellido_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_apellido_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">apellido_alumno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;apellido_alumno&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">apellido_alumno</span><span class="p">:</span>
+            <span class="c1"># Ajusta la expresión regular para permitir espacios en blanco</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39;´ ]+$&quot;</span><span class="p">,</span> <span class="n">apellido_alumno</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Apellido debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y espacios.&quot;</span><span class="p">)</span>
+            <span class="n">apellido_alumno</span> <span class="o">=</span> <span class="n">apellido_alumno</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">apellido_alumno</span></div>
+
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorForm.clean_nombres_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorForm.clean_nombres_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_nombres_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nombres_alumno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nombres_alumno&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nombres_alumno</span><span class="p">:</span>
+            <span class="c1"># La expresión regular ya permite espacios en blanco</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39;´ ]+$&quot;</span><span class="p">,</span> <span class="n">nombres_alumno</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Nombres debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y espacios.&quot;</span><span class="p">)</span>
+            <span class="n">nombres_alumno</span> <span class="o">=</span> <span class="n">nombres_alumno</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">nombres_alumno</span></div>
+    
+<div class="viewcode-block" id="RegAlumnosFluidezLectoraDirectorForm.clean_dni_alumno"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views.RegAlumnosFluidezLectoraDirectorForm.clean_dni_alumno">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_dni_alumno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">dni_alumno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dni_alumno&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dni_alumno</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^\d{7,}$&#39;</span><span class="p">,</span> <span class="n">dni_alumno</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo DNI debe contener sólo números y tener al menos 7 dígitos.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dni_alumno</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

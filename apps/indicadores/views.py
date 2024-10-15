@@ -21,6 +21,16 @@ def conectar_bd():
 
 @login_required
 def filter_data_evolucion_matricula(request):
+    """
+    Filtra y muestra la evolución de la matrícula escolar para un usuario específico.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP del usuario autenticado.
+
+    Returns:
+        HttpResponse: Renderiza un gráfico de barras con la evolución de la matrícula o muestra un error si no hay datos.
+    """
+    
     cueanexo = request.user.username
     connection = conectar_bd()
 
@@ -66,6 +76,16 @@ def filter_data_evolucion_matricula(request):
 
 @login_required
 def filter_data_retencion(request):
+    """
+    Filtra y muestra las tasas de retención escolar por grado para un usuario específico en los años 2022 y 2023.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP del usuario autenticado.
+
+    Returns:
+        HttpResponse: Renderiza un gráfico comparativo de las tasas de retención o muestra un error si no hay datos.
+    """
+    
     cueanexo = request.user.username
     connection = conectar_bd()
 
@@ -136,6 +156,16 @@ def filter_data_retencion(request):
 
 @login_required
 def filter_data_efec_aban_rep(request):
+    """
+    Filtra y muestra las tasas de efectividad, abandono y repitencia por grado para un usuario específico en 2023.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP del usuario autenticado.
+
+    Returns:
+        HttpResponse: Renderiza un gráfico comparativo de las tasas de efectividad, abandono y repitencia.
+    """
+    
     cueanexo = request.user.username
     connection = conectar_bd()
 

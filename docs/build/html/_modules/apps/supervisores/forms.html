@@ -1,0 +1,339 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.supervisores.forms &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.supervisores.forms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.supervisores.forms</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django</span> <span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">DirectoresRegionales</span><span class="p">,</span> <span class="n">Supervisor</span><span class="p">,</span> <span class="n">EscuelaSupervisor</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<div class="viewcode-block" id="SupervisorForm"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorForm">[documentos]</a><span class="k">class</span> <span class="nc">SupervisorForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para crear o editar un objeto Supervisor.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        region (ChoiceField): Campo para seleccionar la región del supervisor.</span>
+
+<span class="sd">    Meta:</span>
+<span class="sd">        model (Supervisor): El modelo asociado a este formulario.</span>
+<span class="sd">        fields (list): Todos los campos del modelo Supervisor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">REGIONES_CHOICES</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 1&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 1&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 5&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 6&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 6&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 7&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 7&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 9&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 9&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    
+    <span class="n">region</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">REGIONES_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="SupervisorForm.Meta"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Supervisor</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span></div>
+        
+    
+<div class="viewcode-block" id="SupervisorForm.clean_apellido"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorForm.clean_apellido">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_apellido</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida el campo &#39;apellido&#39;.</span>
+
+<span class="sd">        Asegura que el apellido contenga solo letras en mayúsculas, con</span>
+<span class="sd">        tildes, apóstrofes y espacios.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: El apellido validado en mayúsculas.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si el apellido no cumple con los criterios.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">apellido</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;apellido&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">apellido</span><span class="p">:</span>
+            <span class="c1"># Ajusta la expresión regular para permitir espacios en blanco</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39;´ ]+$&quot;</span><span class="p">,</span> <span class="n">apellido</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Apellido debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y/o espacios.&quot;</span><span class="p">)</span>
+            <span class="n">apellido</span> <span class="o">=</span> <span class="n">apellido</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">apellido</span></div>
+
+<div class="viewcode-block" id="SupervisorForm.clean_nombres"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorForm.clean_nombres">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_nombres</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida el campo &#39;nombres&#39;.</span>
+
+<span class="sd">        Asegura que los nombres contengan solo letras en mayúsculas, con</span>
+<span class="sd">        tildes, apóstrofes y espacios.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Los nombres validados en mayúsculas.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si los nombres no cumplen con los criterios.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">nombres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nombres&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nombres</span><span class="p">:</span>
+            <span class="c1"># La expresión regular ya permite espacios en blanco</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39;´ ]+$&quot;</span><span class="p">,</span> <span class="n">nombres</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Nombres debe estar en mayúsculas y sólo puede contener letras con tildes, apóstrofes y/o espacios.&quot;</span><span class="p">)</span>
+            <span class="n">nombres</span> <span class="o">=</span> <span class="n">nombres</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">nombres</span></div>
+        
+<div class="viewcode-block" id="SupervisorForm.clean_dni"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorForm.clean_dni">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_dni</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida el campo &#39;dni&#39;.</span>
+
+<span class="sd">        Asegura que el DNI contenga solo números y tenga al menos 7 dígitos.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: El DNI validado.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si el DNI no cumple con los criterios.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">dni</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dni&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dni</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^\d{7,}$&#39;</span><span class="p">,</span> <span class="n">dni</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo DNI debe contener sólo números y tener al menos 7 dígitos.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dni</span></div></div>
+
+<div class="viewcode-block" id="EscuelaForm"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaForm">[documentos]</a><span class="k">class</span> <span class="nc">EscuelaForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para crear o editar un objeto EscuelaSupervisor.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        region_esc (ChoiceField): Campo para seleccionar la región de la escuela.</span>
+<span class="sd">        oferta (ChoiceField): Campo para seleccionar la oferta educativa.</span>
+<span class="sd">        modalidad (ChoiceField): Campo para seleccionar la modalidad educativa.</span>
+
+<span class="sd">    Meta:</span>
+<span class="sd">        model (EscuelaSupervisor): El modelo asociado a este formulario.</span>
+<span class="sd">        fields (list): Todos los campos del modelo EscuelaSupervisor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">OFERTAS_CHOICES</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;INICIAL&#39;</span><span class="p">,</span> <span class="s1">&#39;INICIAL&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;PRIMARIO&#39;</span><span class="p">,</span> <span class="s1">&#39;PRIMARIO&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SECUNDARIO&#39;</span><span class="p">,</span> <span class="s1">&#39;SECUNDARIO&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUPERIOR&#39;</span><span class="p">,</span> <span class="s1">&#39;SUPERIOR&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SERVICIOS EDUCATIVOS&#39;</span><span class="p">,</span> <span class="s1">&#39;SERVICIOS EDUCATIVOS&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    
+    <span class="n">MODALIDADES_CHOICES</span> <span class="o">=</span><span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;COMÚN&#39;</span><span class="p">,</span> <span class="s1">&#39;COMÚN&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;TÉCNICO PROFESIONAL&#39;</span><span class="p">,</span> <span class="s1">&#39;TÉCNICO PROFESIONAL&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ESPECIAL&#39;</span><span class="p">,</span> <span class="s1">&#39;ESPECIAL&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;JÓVENES Y ADULTOS&#39;</span><span class="p">,</span> <span class="s1">&#39;JÓVENES Y ADULTOS&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ARTÍSTICA&#39;</span><span class="p">,</span> <span class="s1">&#39;ARTÍSTICA&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;RURAL&#39;</span><span class="p">,</span> <span class="s1">&#39;RURAL&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;BILINGÜE INTERCULTURAL&#39;</span><span class="p">,</span> <span class="s1">&#39;BILINGÜE INTERCULTURAL&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;CONTEXTO DE ENCIERRO&#39;</span><span class="p">,</span> <span class="s1">&#39;CONTEXTO DE ENCIERRO&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;HOSPITALARIA - DOMICILIARIA&#39;</span><span class="p">,</span> <span class="s1">&#39;HOSPITALARIA - DOMICILIARIA&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;EDUCACIÓN FÍSICA&#39;</span><span class="p">,</span> <span class="s1">&#39;EDUCACIÓN FÍSICA&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    
+    <span class="n">REGIONES_CHOICES</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 1&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 1&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 4-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 5&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 6&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 6&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 7&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 7&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 8-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 9&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 9&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">,</span> <span class="s1">&#39;R.E. 10-C&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-A&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 1-B&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 2&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 3&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">,</span> <span class="s1">&#39;SUB. R.E. 5&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    
+    <span class="n">region_esc</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">REGIONES_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+    <span class="n">oferta</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">OFERTAS_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">modalidad</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">MODALIDADES_CHOICES</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="EscuelaForm.Meta"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">EscuelaSupervisor</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span></div>
+        
+<div class="viewcode-block" id="EscuelaForm.clean_cueanexo"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaForm.clean_cueanexo">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_cueanexo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Valida el campo &#39;cueanexo&#39;.</span>
+
+<span class="sd">        Asegura que el Cueanexo comience con &#39;22&#39; y contenga 9 dígitos en total.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: El cueanexo validado.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: Si el cueanexo no cumple con los criterios.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^22\d</span><span class="si">{7}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">cueanexo</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;El campo Cueanexo debe comenzar con &#39;22&#39; y contener 9 dígitos en total.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cueanexo</span>  </div></div>
+
+
+<div class="viewcode-block" id="FiltroRegionalForm"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.FiltroRegionalForm">[documentos]</a><span class="k">class</span> <span class="nc">FiltroRegionalForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para filtrar resultados por región.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        region (ChoiceField): Campo opcional para seleccionar la región.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">region</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Regional&#39;</span><span class="p">)</span>    
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inicializa el formulario y asigna las opciones de regiones basadas en el usuario.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Argumentos posicionales.</span>
+<span class="sd">            **kwargs: Argumentos keyword, incluyendo el usuario.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+            <span class="n">Regional</span> <span class="o">=</span> <span class="n">DirectoresRegionales</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">dni_reg</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s1">&#39;region_reg&#39;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+            
+            <span class="c1"># Asigna las opciones solo si hay valores de &#39;Regional&#39;</span>
+            <span class="k">if</span> <span class="n">Regional</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">choices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">regional</span><span class="p">,</span> <span class="n">regional</span><span class="p">)</span> <span class="k">for</span> <span class="n">regional</span> <span class="ow">in</span> <span class="n">Regional</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">choices</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;----&#39;</span><span class="p">)]</span>  <span class="c1"># Opción predeterminada si no hay regiones disponibles.</span></div>
+        
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
