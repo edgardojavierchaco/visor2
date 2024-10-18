@@ -13,3 +13,6 @@ app/*/*/*/__pycache__/
 
 #Local Postgresql data
 data/
+
+#Seguridad.key
+secret.key
