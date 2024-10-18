@@ -4,6 +4,18 @@
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+  .red-icon {
+    color: red;
+  }
+</style>
+<div>
+  <h5>
+    Haz click <i class="fa fa-hand-o-up red-icon" aria-hidden="true"></i> sobre una Regional para ver sus datos    
+  </h5>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <div id="map" style="height: 600px;"></div>
@@ -51,9 +63,8 @@
             case 'R.E. 9': return 'chocolate';
             case 'R.E. 10-A': return '#5B0045';
             case 'R.E. 10-B': return '#1E5128';
-            case 'R.E. 10-C': return 'red';
-            // Añade más regiones y colores según sea necesario
-            default: return 'grey'; // Gris para regiones no especificadas
+            case 'R.E. 10-C': return 'red';            
+            default: return 'grey'; 
         }
     }
      
@@ -78,7 +89,7 @@
     //    "Mapa": osmLayer,
     //    "Satélite": satelliteLayer
     //};
-    
+     
     L.control.layers(baseLayers,{}).addTo(map);
 
     function showRegionData(regionPad) {
@@ -114,7 +125,7 @@ function showModal(data) {
 }
 </script>
 
-<!-- Modal (colócalo al final del body en tu HTML) -->
+<!-- Modal -->
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -125,7 +136,7 @@ function showModal(data) {
         </button>
       </div>
       <div class="modal-body" id="modal-body">
-        <!-- Aquí se mostrarán los datos que recibas desde el backend -->
+        <!-- Aquí se muestran los datos que se reciben desde el backend -->
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
