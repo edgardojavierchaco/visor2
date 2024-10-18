@@ -60,6 +60,10 @@ class LoginFormView(LoginView):
             if aplicador_group in user.groups.all():
                 return reverse('oplectura:evaluacion') + '?cueanexo=0&grado=TERCERO&seccion=A'
          
+            regionales_group = Group.objects.get(name='Regional')
+            if regionales_group in user.groups.all():
+                return reverse('supervis:lista_escuelas')
+                
             if not user.groups.exists():
                 return settings.LOGIN_REDIRECT_URL            
             

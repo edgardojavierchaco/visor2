@@ -1,4 +1,6 @@
 import psycopg2
+import os
+import dotenv
 import plotly.graph_objs as go
 from django.db import connection
 from django.shortcuts import render
@@ -189,10 +191,10 @@ def mostrar_grafico_reg(request):
     
     # Establecer conexión con la base de datos PostgreSQL
     with psycopg2.connect(
-        dbname="visualizador",
-        user="visualizador",
-        password="Estadisticas24",
-        host="visoreducativochaco.com.ar"
+        host=os.getenv('POSTGRES_HOST'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        database=os.getenv('POSTGRES_DB')
     ) as conn:
         with conn.cursor() as cursor:
             if mostrar_todo:                

@@ -251,3 +251,33 @@ class DirectorRegionalDeleteView(DeleteView):
         user = get_object_or_404(DirectoresRegionales, id=user_id)
         user.delete()
         return redirect('supervis:eliminar_director_regional')
+
+###########################
+# Vista para Supervisores #
+###########################
+class EscuelaListViewSuperv(ListView):
+    """
+    Vista para listar todas las Escuelas Supervisadas.
+
+    Contexto:
+        - escuelas: Lista de Escuelas filtradas por región.
+        - form: Formulario de filtro por región.
+        - title: Título de la vista.
+    """
+    
+    model = EscuelaSupervisor
+    template_name = 'supervisores/lista_escuelas.html'
+    context_object_name = 'escuelas'    
+    
+    
+    def get_context_data(self, **kwargs):
+        """Añade el formulario de filtro y el título al contexto."""
+        
+        context=super().get_context_data(**kwargs)        
+        form = FiltroRegionalForm(self.request.GET or None, user=self.request.user)
+        context['form']= form
+        context['title'] = 'Listado de Escuelas'
+        return context
+    
+    
+    

@@ -5,6 +5,7 @@ from .views import (
     SupervisorUpdateView,
     SupervisorDeleteView,
     EscuelaListView,
+    EscuelaListViewSuperv,
     EscuelaCreateView,
     EscuelaUpdateView,
     EscuelasDeleteView,
@@ -25,6 +26,7 @@ urlpatterns = [
 
     # URLs para Escuelas
     path('escuelas/', EscuelaListView.as_view(), name='lista_escuelas'),
+    path('escuelassuper/',EscuelaListViewSuperv.as_view(),name='lista_escuelas_supervisor'),
     path('escuelas/nueva/', EscuelaCreateView.as_view(), name='crear_escuela'),
     path('escuelas/editar/', EscuelaUpdateView.as_view(), name='editar_escuela'),
     path('escuelas/eliminar/', EscuelasDeleteView.as_view(), name='eliminar_escuela'),

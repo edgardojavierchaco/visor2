@@ -1,4 +1,6 @@
 import psycopg2
+import os
+import dotenv
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
@@ -116,10 +118,10 @@ def datoscarreras(request):
     # Establecer la conexión a la base de datos Padrón
     try:
         connection = psycopg2.connect(
-            host='visoreducativochaco.com.ar',
-            user='visualizador',
-            password='Estadisticas24',
-            database='Padron'
+            host=os.getenv('POSTGRES_HOST'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            database=os.getenv('DB_NAME1')
         )
         cursor = connection.cursor()
     except psycopg2.Error as e:

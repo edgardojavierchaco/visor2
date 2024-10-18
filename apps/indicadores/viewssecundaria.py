@@ -1,4 +1,6 @@
 import psycopg2
+import os 
+import dotenv
 import plotly.graph_objs as go
 import plotly.io as pio
 from django.shortcuts import render
@@ -8,10 +10,10 @@ from django.contrib.auth.decorators import login_required
 def conectar_bd():
     try:
         connection = psycopg2.connect(
-            host='visoreducativochaco.com.ar',
-            user='visualizador',
-            password='Estadisticas24',
-            database='visualizador',
+            host=os.getenv('POSTGRES_HOST'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            database=os.getenv('POSTGRES_DB')
         )
         return connection
     except psycopg2.Error as e:

@@ -1,4 +1,6 @@
 import json
+import os
+import dotenv
 import psycopg2
 import asyncpg # type: ignore
 from django.shortcuts import render
@@ -34,10 +36,10 @@ def filtrar_tablas_view_directores(request):
     # Establecer la conexión a la base de datos Padrón
     try:
         connection = psycopg2.connect(
-            host='visoreducativochaco.com.ar',
-            user='visualizador',
-            password='Estadisticas24',
-            database='Padron'
+            host=os.getenv('POSTGRES_HOST'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            database=os.getenv('DB_NAME1')
         )
         cursor = connection.cursor()
     except psycopg2.Error as e:
@@ -137,10 +139,10 @@ def filter_matricula_views_directores(request):
     # Establecer la conexión a la base de datos Padrón
     try:
         connection = psycopg2.connect(
-            host='visoreducativochaco.com.ar',
-            user='visualizador',
-            password='Estadisticas24',
-            database='visualizador'
+            host=os.getenv('POSTGRES_HOST'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            database=os.getenv('POSTGRES_DB')
         )
         cursor = connection.cursor()
     except psycopg2.Error as e:
