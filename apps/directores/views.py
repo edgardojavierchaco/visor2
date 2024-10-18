@@ -4,7 +4,6 @@ import dotenv
 import psycopg2
 import asyncpg # type: ignore
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 

@@ -55,6 +55,7 @@ def portada(request):
     else:
         return render(request, 'dashboard/portada.html')
 
+@login_required
 def directores(request):    
     """
     Renderiza la vista institucional para directores.
@@ -71,6 +72,7 @@ def directores(request):
     """
     return render(request, 'directores/institucional.html')
 
+@login_required
 def evaluacion(request):
     """
     Renderiza la vista de evaluación.

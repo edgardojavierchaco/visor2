@@ -5,8 +5,8 @@ from .models import FechaEvento
 import pytz
 
 def cuenta_regresiva(request):
-    # Define la zona horaria, ajusta según sea necesario
-    zona_horaria = pytz.timezone('UTC')  # Cambia 'UTC' por tu zona horaria local si es necesario
+    # Define la zona horaria
+    zona_horaria = pytz.timezone('UTC')  
 
     # Ejemplo usando un modelo, ajusta según lo necesites
     fecha_evento = FechaEvento.objects.first()
@@ -19,7 +19,7 @@ def cuenta_regresiva(request):
     # Obtiene la fecha actual con la misma zona horaria
     fecha_actual = datetime.now(zona_horaria)
 
-    # Compara solo las fechas sin la hora para mayor precisión
+    # Compara sólo las fechas sin la hora para mayor precisión
     if fecha_futura.date() <= fecha_actual.date():
         # Renderiza a otro template si las fechas son iguales
         return redirect('../operativo/evaluacion_directores')
@@ -42,10 +42,10 @@ def cuenta_regresiva(request):
         return render(request, 'oplectura/cuenta_regresiva.html', contexto)
 
 def cuenta_regresiva_graficos(request):
-    # Define la zona horaria, ajusta según sea necesario
-    zona_horaria = pytz.timezone('UTC')  # Cambia 'UTC' por tu zona horaria local si es necesario
+    # Define la zona horaria
+    zona_horaria = pytz.timezone('UTC') 
 
-    # Ejemplo usando un modelo, ajusta según lo necesites
+    # Ejemplo usando un modelo
     fecha_evento = FechaEvento.objects.first()
     fecha_futura = fecha_evento.fecha_evento
     print(fecha_futura)

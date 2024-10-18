@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.db import connection
 
 def asistencia_view(request):
-    cueanexo = request.user.username  # Suponiendo que el cueanexo es el username del usuario registrado
+    cueanexo = request.user.username  
 
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -37,7 +37,7 @@ def asistencia_view(request):
 
 
 def asistencia_cargos_view(request):
-    cueanexo = request.user.username  # Suponiendo que el cueanexo es el username del usuario registrado
+    cueanexo = request.user.username  
 
     with connection.cursor() as cursor:
         cursor.execute("""
