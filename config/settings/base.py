@@ -106,11 +106,11 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.environ.get('POSTGRES_DB', 'visualizador'),
-        'USER': os.environ.get('POSTGRES_USER', 'visualizador'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'Estadisticas24'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'PORT': os.environ.get('POSTGRES_PORT','5432'),
+        'NAME': os.environ.get('POSTGRES_DB'),
+        'USER': os.environ.get('POSTGRES_USER'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+        'HOST': os.environ.get('POSTGRES_HOST'),
+        'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
             'options': '-c search_path=cenpe,public'
         }
