@@ -286,10 +286,28 @@ class RegEvaluacionFluidezLectora(models.Model):
             return 'Debajo del Básico'        
         elif valor == 2:
             return 'Básico'
-        elif 2 >= valor <= 5:
+        elif 2 < valor <= 5:
             return 'Satisfactorio'
         elif valor == 6:
             return 'Avanzado'
             
 
 
+class RegAplicador(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    region=models.CharField(max_length=50, verbose_name='Regional')
+    curso=models.ForeignKey(curso,on_delete=models.CASCADE, verbose_name='Curso')
+    division=models.ForeignKey(division,on_delete=models.CASCADE, verbose_name='División') 
+    operativos=models.ForeignKey(TipoOperativo, on_delete=models.CASCADE, verbose_name='Operativo')
+    apellido=models.CharField(max_length=255, verbose_name='Apellido')
+    nombres=models.CharField(max_length=255, verbose_name='Nombres')
+    dni=models.CharField(max_length=8, verbose_name='DNI')
+    validacion=models.BooleanField(default=False, verbose_name='Validación')
+    
+    def __str__(self):
+        return self.dni
+    
+    class Meta:
+        verbose_name='Reg_Aplicador'
+        verbose_name_plural='Reg_Aplicadores'
+        db_table='AplicadoresEsc'

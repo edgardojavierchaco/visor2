@@ -62,7 +62,7 @@ class LoginFormView(LoginView):
          
             regionales_group = Group.objects.get(name='Regional')
             if regionales_group in user.groups.all():
-                return reverse('supervis:lista_escuelas')
+                return reverse('oplectura:portada_regional')
                 
             if not user.groups.exists():
                 return settings.LOGIN_REDIRECT_URL            

@@ -3,14 +3,18 @@ from .views import CreateRegDocporSeccionView, ListadoDocentesView, EditarDocent
 from .views import EliminarEvaluacionAlumnoView, RegAlumnosFluidezLectoraCreateView, ListadoAlumnosDirectoresView, EditarAlumnosDirectoresView, EliminarEvaluacionAlumnoDirectoresView
 from .views import RegAlumnosFluidezLectoraDirectorCreateView, ListadoEvaluacionLectoraDirectoresView, DepEvaluacionPortada
 from .views_resultados import tu_vista, cargar_grafico_reg, mostrar_grafico_reg
+from .views import ListadoAplicadoresView, EditarAplicadorView, RegionalPortada, directoresregistrados, mostrar_directores
 
 app_name='oplectura'
 
 urlpatterns = [
     path('cargar/',CreateRegDocporSeccionView.as_view(), name='cargar'),
     path('listados/',ListadoDocentesView.as_view(), name='listados'),  
+    path('listaplic/',ListadoAplicadoresView.as_view(), name='listaplic'), 
     path('list_alumnos/',ListadoAlumnosDirectoresView.as_view(), name='listado_alumnos'),
+    path('list_directores/',mostrar_directores, name='listado_directores'),
     path('editar/',EditarDocentesView.as_view(), name='editar'), 
+    path('editaraplic/',EditarAplicadorView.as_view(), name='editaraplic'),
     path('eliminar/',EliminarDocentesView.as_view(), name='eliminar'),
     path('registrar/',RegistrarEvaluacionLectora, name='registrar'),
     path('evaluacion/',ListadoEvaluacionLectora.as_view(),name='evaluacion'),
@@ -25,4 +29,5 @@ urlpatterns = [
     path('cargar_graficoreg/', cargar_grafico_reg, name='cargar_graficoreg'),    
     path('grafico_reg/', mostrar_grafico_reg, name='grafico_reg'),    
     path('portada_eval/', DepEvaluacionPortada, name='portada_eval'),
+    path('portada_regional/', RegionalPortada, name='portada_regional'),
 ]

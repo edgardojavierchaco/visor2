@@ -1,7 +1,7 @@
 import re
 from django import forms
 from django.forms import ModelForm
-from .models import RegDocporSeccion, RegEvaluacionFluidezLectora
+from .models import RegDocporSeccion, RegEvaluacionFluidezLectora, RegAplicador
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
@@ -479,3 +479,17 @@ class RegAlumnosFluidezLectoraDirectorForm(ModelForm):
             if not re.match(r'^\d{7,}$', dni_alumno):
                 raise forms.ValidationError("El campo DNI debe contener sólo números y tener al menos 7 dígitos.")
         return dni_alumno
+
+class RegAplicadorporSeccionEdicionForm(forms.ModelForm):
+    """
+    Formulario para editar documentos por sección.
+
+    Fields son los mismos que RegAplicador, excluyendo 'id'.
+    """
+    
+    class Meta:
+        model = RegAplicador
+        fields = ['dni','apellido','nombres','operativos', 'validacion']
+
+
+    

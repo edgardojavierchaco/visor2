@@ -3,11 +3,15 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, ListView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
-from .models import RegDocporSeccion, RegEvaluacionFluidezLectora
+from .models import RegAplicador, RegDocporSeccion, RegEvaluacionFluidezLectora
 from .forms import RegDocporSeccionEdicionForm, RegDocporSeccionForm, RegEvaluacionFluidezLectoraForm, FiltroEvaluacionForm, RegAlumnosFluidezLectoraForm, RegEvaluacionFluidezLectoraDirectoresForm
 from .forms import RegAlumnosFluidezLectoraDirectorForm
+from .forms import RegAplicadorporSeccionEdicionForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import connection
+from django.db.models import Q
 
 def DepEvaluacionPortada(request):
     """
@@ -21,6 +25,9 @@ def DepEvaluacionPortada(request):
     """
     
     return render(request, 'oplectura/portadaevaluacion.html')
+
+def RegionalPortada(request):
+    return render(request, 'oplectura/portadaregional.html')
 
 @method_decorator(login_required, name='dispatch')
 class CreateRegDocporSeccionView(CreateView):
@@ -459,3 +466,172 @@ class ListadoEvaluacionLectoraDirectoresView(ListView):
         context['title']='Listado Evaluación Alumnos'        
         return context
 
+# listado de aplicadores para regionales
+@method_decorator(login_required, name='dispatch')
+class ListadoAplicadoresView(LoginRequiredMixin,ListView):
+    """
+    Vista para listar los aplicadores registrados.
+
+    Atributos:
+        model: El modelo Reg.
+        template_name: La plantilla utilizada para mostrar el listado.
+        context_object_name: El nombre del contexto para los docentes.
+    """
+    
+    model=RegAplicador
+    template_name='oplectura/listadoaplicadores.html'
+    context_object_name='aplicadoresporseccion'
+    
+    def get_regional_usuario(self):
+        """
+        Obtiene el regional del usuario logueado consultando directamente la tabla cenpe.cueregional.
+        
+        Returns:
+            str: El regional del usuario logueado o None si no se encuentra.
+        """
+        user = self.request.user
+        query = """
+            SELECT regional 
+            FROM cenpe.cueregional 
+            WHERE cueanexo = %s
+            LIMIT 1
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(query, [user.username])
+            row = cursor.fetchone()
+        
+        return row[0] if row else None
+
+    def get_queryset(self):
+        """
+        Obtiene la consulta de los aplicadores filtrada por el regional del usuario logueado.
+        
+        Returns:
+            QuerySet: Lista de RegAplicador filtrados por la región correspondiente.
+        """
+        regional_usuario = self.get_regional_usuario()
+        
+        if regional_usuario:
+            # Filtramos los aplicadores por el campo 'region' que coincida con el 'regional'
+            return RegAplicador.objects.filter(region=regional_usuario)
+        
+        # Si no se encontró el regional, devolvemos un queryset vacío
+        return RegAplicador.objects.none()
+    
+    def get_context_data(self, **kwargs):
+        """
+        Agrega contexto adicional a la plantilla.
+
+        Args:
+            **kwargs: Contexto adicional.
+
+        Returns:
+            dict: Contexto actualizado con el título.
+        """
+        
+        context=super().get_context_data(**kwargs)
+        context['title']='Listado de Aplicadores'
+        return context
+
+#edición de aplicadores para regionales
+@method_decorator(login_required, name='dispatch')
+class EditarAplicadorView(UpdateView):
+    """
+    Vista para editar un registro de aplicadores
+
+    Atributos:
+        model: El modelo RegAplicador.
+        form_class: El formulario RegAplicadorporSeccionEdicionForm.
+        template_name: La plantilla utilizada para editar.
+        success_url: La URL a la que se redirige tras el éxito.
+    """
+    
+    model = RegAplicador
+    form_class = RegAplicadorporSeccionEdicionForm
+    template_name = 'oplectura/editaraplicador.html'
+    success_url = reverse_lazy('oplectura:listaplic')
+
+    def get_object(self):
+        """
+        Obtiene el objeto a editar.
+
+        Returns:
+            RegDocporSeccion: El objeto correspondiente al ID proporcionado.
+        """
+        
+        user_id = self.request.GET.get('id')
+        return get_object_or_404(RegAplicador, id=user_id)
+
+    def get_context_data(self, **kwargs):
+        """
+        Agrega contexto adicional a la plantilla.
+
+        Args:
+            **kwargs: Contexto adicional.
+
+        Returns:
+            dict: Contexto actualizado con el título.
+        """
+        
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Editar Validación'
+        return context
+
+    def form_valid(self, form):
+        """
+        Procesa el formulario cuando es válido.
+
+        Args:
+            form: El formulario válido.
+
+        Returns:
+            HttpResponse: Redirige a la URL de éxito tras la actualización.
+        """
+        
+        return super().form_valid(form)
+
+
+
+def directoresregistrados(username):    
+    # consulta para obtener la región
+    query = """
+        SELECT regional 
+        FROM cenpe.cueregional 
+        WHERE cueanexo = %s
+        LIMIT 1
+    """
+    
+    # consulta para obtener los datos de directores
+    query2 = """
+        SELECT username, apellido, nombres, nom_est
+        FROM public.vista_usuarios_activos_directores
+        WHERE region_loc = %s
+    """
+    
+    with connection.cursor() as cursor:
+        # Ejecutar la primera consulta para obtener la región
+        cursor.execute(query, (username,))
+        region = cursor.fetchone()
+        
+        # Si no se encuentra la región, devolver None
+        if not region:
+            return None
+        
+        # Ejecutar la segunda consulta con la región obtenida
+        cursor.execute(query2, (region[0],))
+        row = cursor.fetchall()
+    
+    # Devolver todos los registros encontrados
+    return row if row else None
+
+
+# Vista para mostrar los datos en el template
+def mostrar_directores(request):
+    # Obtener el username del usuario logueado
+    username = request.user.username
+    
+    # Obtener datos de los directores a partir del username
+    directores = directoresregistrados(username)
+    
+    # Renderizar el template y pasar los datos de los directores
+    return render(request, 'oplectura/directoresregistrados.html', {'directores': directores})

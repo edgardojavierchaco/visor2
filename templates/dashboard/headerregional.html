@@ -15,21 +15,20 @@
         <div class="collapse navbar-collapse order-3" id="navbarCollapse">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a href="{% url 'oplectura:evaluacion'%}" class="nav-link"><i class="fas fa-home" style="color:orange"></i> Home</a>
+                    <a href="{% url 'oplectura:portada_regional'%}" class="nav-link"><i class="fas fa-home" style="color:orange"></i> Home</a>
                 </li>                               
-                {% comment %} <li class="nav-item dropdown">
+                <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
-                        <li><a href="{% url 'lectocomprension:grafico_reg' %}" class="dropdown-item">Resultados</a></li>
-                        <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
+                        <li><a href="{% url 'oplectura:listaplic' %}" class="dropdown-item">Editar Aplicadores</a></li>
+                        <li><a href="{% url 'oplectura:listado_directores' %}" class="dropdown-item">Directores registrados</a></li>                        
                     </ul>
-                </li>        {% endcomment %}
+                </li>        
                            
                 {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <a href="{% url 'oplectura:evaluacion' %}" class="nav-link">Usuario: {{ user.nombres }}</a>
+                    <a href="{% url 'oplectura:portada_regional' %}" class="nav-link">Usuario: {{ user.nombres }}</a>
                 </li>
                 
                 {% else %}
@@ -37,7 +36,7 @@
                     <span class="nav-link">Usuario: Público</span>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'login:login' %}" >
+                    <a class="nav-link" href="{% url 'usuarios:registro' %}" >
                         <i class="fas fa-power-off" aria-hidden="true" style="color:green"></i> Login
                     </a>
                 </li>
