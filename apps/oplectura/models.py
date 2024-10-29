@@ -177,13 +177,13 @@ class RegEvaluacionFluidezLectora(models.Model):
     dni_alumno=models.CharField(max_length=8, blank=False, null=False, verbose_name='DNI')
     apellido_alumno=models.CharField(max_length=255, blank=False, null=False, verbose_name='Apellido')
     nombres_alumno=models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombres')
-    velocidad=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(70)], verbose_name='Velocidad')
+    velocidad=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(80)], verbose_name='Velocidad')
     cal_vel=models.CharField(max_length=255, verbose_name='Calificación Velocidad')
-    precision=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(70)], verbose_name='Precisión')
+    precision=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(80)], verbose_name='Precisión')
     cal_pres=models.CharField(max_length=255, verbose_name='Calificación Precisión')
     prosodia=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(6)], verbose_name='Prosodia')
     cal_pros=models.CharField(max_length=255, verbose_name='Calificación Prosodia')
-    comprension=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(6)], verbose_name='Comprensión')
+    comprension=models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(4)], verbose_name='Comprensión')
     cal_comp=models.CharField(max_length=255, verbose_name='Calificación Comprensión')
     
     
@@ -286,9 +286,9 @@ class RegEvaluacionFluidezLectora(models.Model):
             return 'Debajo del Básico'        
         elif valor == 2:
             return 'Básico'
-        elif 2 < valor <= 5:
+        elif valor == 3:
             return 'Satisfactorio'
-        elif valor == 6:
+        elif valor == 4:
             return 'Avanzado'
             
 

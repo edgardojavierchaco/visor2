@@ -301,7 +301,7 @@ def filtrar_tablas_view(request):
                                 sum(edad_30_a_34+edad_35_a_39) as "Edad 30-39",
                                 sum(edad_40_a_44+edad_45_a_49) as "Edad 40-49",
                                 sum(edad_50_a_54+edad_55_mas) as "Edad 50 o más"
-                            FROM funcion.visor_matric_adulto_primaria('ra_carga2023')
+                            FROM funcion.visor_matric_adulto_primaria('ra_carga2024')
                             WHERE cueanexo = %s
                             GROUP BY cueanexo, turno, tipo_secc, nom_secc, grado, total, edad_menos_13
                             ORDER BY cueanexo, grado;"""
@@ -316,7 +316,7 @@ def filtrar_tablas_view(request):
                             sum(edad_30_a_34+edad_35_a_39) as "Edad 30-39",
                             sum(edad_40_a_44+edad_45_a_49) as "Edad 40-49",
                             sum(edad_50_a_54+edad_50_y_mas) as "Edad 50 o más"
-                        FROM funcion.visor_matric_adulto_secundaria('ra_carga2023')
+                        FROM funcion.visor_matric_adulto_secundaria('ra_carga2024')
                         WHERE cueanexo =%s
                         GROUP BY cueanexo, turno, tipo_div, nom_secc, grado, total
                         ORDER BY cueanexo, grado;
@@ -329,7 +329,7 @@ def filtrar_tablas_view(request):
                 comuninicial="""SELECT cueanexo, turno, grado as sala, tipo_secc AS tipo, nom_secc as seccion, total,
                             menos_1_año as "Menos 1 año", un_año as "1 año", dos_años as "2 años", tres_años as "3 años",
                             cuatro_años as "4 Años", cinco_años as "5 años", seis_años as "6 años", total_disc as "Discapacitados"
-                        FROM funcion.visor_matric_comun_inicial('ra_carga2023')
+                        FROM funcion.visor_matric_comun_inicial('ra_carga2024')
                         WHERE cueanexo =%s
                         GROUP BY cueanexo, turno, grado, tipo_secc, nom_secc, total, menos_1_año, un_año, dos_años, tres_años, cuatro_años, cinco_años, seis_años, total_disc
                         ORDER BY cueanexo, grado;    
@@ -344,7 +344,7 @@ def filtrar_tablas_view(request):
                             edad_9 as "9 Años", edad_10 as "10 años", edad_11 as "11 años", edad_12 as "12 años",
                             sum(edad_13+edad_14+edad_15+edad_16+edad_17+edad_18_y_mas) as "13 o más años",
                             tot_discapacidad as "Discapacitados"
-                        FROM funcion.visor_matric_comun_primaria('ra_carga2023')
+                        FROM funcion.visor_matric_comun_primaria('ra_carga2024')
                         WHERE cueanexo =%s
                         GROUP BY cueanexo, turno, grado, tipo_secc, nom_secc, total, edad_5, edad_6, edad_7, edad_8, edad_9, edad_10, edad_11, edad_12, tot_discapacidad
                         ORDER BY cueanexo, grado;   
@@ -359,7 +359,7 @@ def filtrar_tablas_view(request):
                             edad_16 as "16 Años", edad_17 as "17 años", edad_18 as "18 años", edad_19 as "19 años",
                             sum(edad_20_24+edad_25_y_mas) as "20 a más",
                             total_disc as "Discapacitados"
-                        FROM funcion.visor_matric_comun_secundaria('ra_carga2023')
+                        FROM funcion.visor_matric_comun_secundaria('ra_carga2024')
                         WHERE cueanexo =%s
                         GROUP BY cueanexo, turno, grado, tipo_div, nom_secc, total, edad_12, edad_13, edad_14, edad_15, edad_16, edad_17, edad_18, edad_19, total_disc
                         ORDER BY cueanexo, grado;   

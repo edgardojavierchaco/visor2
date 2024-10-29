@@ -42,31 +42,35 @@
                 {% if field.is_hidden %}
                     {{ field }}
                 {% else %}
-                    <div class="form-group">
-                        {% if field.name == 'prosodia' %}
+                    <div class="form-group">  
+                        {% if field.name == 'velocidad' %}
+                            {{ field.label_tag }}     
+                            <i class="fa-solid fa-circle-info info-icon"
+                                title="Escala velocidad: Entre 0 y 80"></i>
+                        {% elif field.name == 'precision' %}
+                            {{ field.label_tag }}     
+                            <i class="fa-solid fa-circle-info info-icon"
+                                title="Escala precisión: Entre 0 y 80"></i>                 
+                        {% elif field.name == 'prosodia' %}
                             {{ field.label_tag }}
                             <i class="fa-solid fa-circle-info info-icon" 
                                title="Escala Prosodia:
-                               - 1 = Ningún signo de puntuación.
-                               - 2 = Utiliza punto y reconoce los párrafos.
-                               - 3 = Utiliza puntos.
-                               - 4 = Utiliza puntos y comas.
-                               - 5 = Lee de forma continua. Respeta los signos de puntuación: 
-                                     punto, coma. Entonación adecuada.
-                               - 6 = Lee de forma continua. Respeta los signos de puntuación: 
-                                     punto, coma, signos de interrogación y exclamación. 
-                                     Expresividad.">
+                               - 1 = No lee o lee en forma monótona sin utilizar signos de puntuación.
+                               - 2 = Lee pausado utilizando puntos, con poca expresividad. Reconoce párrafos.
+                               - 3 = Lee de forma discontínua. Reconoce comas y puntos. Realiza pocos cambios en la entonación al final de las frases.
+                               - 4 = Utiliza los signos de puntuación(comas, puntos seguidos y puntos aportes). La entonación es variada, intenta marcar oraciones exclamativas o interrogativas. Ritmo fluido con algunas irregularidades.
+                               - 5 = Lee de forma continua y con buena entonación, respetando todos los signos de puntuación. Mantiene un ritmo adecuado. Realiza pausas que ayudan a la comprensión.
+                               - 6 = Lee de forma continua. Usa entonación expresiva adecuada. Respeta los singos de puntuación. Ritmo fluido y natural adecuado a la lectura. Realiza pausa precisas y efectivas que enriquecen la comprensión e interpretación de texto.">
                             </i>
                         {% elif field.name == 'comprension' %}
                             {{ field.label_tag }}
                             <i class="fa-solid fa-circle-info info-icon" 
-                               title="Escala Comprensión:
-                               - 0 = Ninguna respuesta correcta.
-                               - 1 = Respondío la pregunta 1 ó 2.
-                               - 2 = Respondió la pregunta 1 y 2.
-                               - 4 = Respondió la pregunta 1 y 3 ó 2 y 3.
-                               - 5 = Respondió sólo la pregunta 3.
-                               - 6 = Respondió las 3 preguntas.">
+                               title="Escala Comprensión:                               
+                               - 1 = Ninguna respuesta correcta.
+                               - 2 = Responde correctamente una de las tres preguntas.
+                               - 3 = Responde correctamente dos de las tres preguntas.
+                               - 4 = Responde correctamente las tres preguntas.
+                               ">
                             </i>
                         {% else %}                        
                             {{ field.label_tag }}
