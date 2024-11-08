@@ -45,7 +45,7 @@ def calcular_estadisticas_por_cueanexo(username):
         cursor.execute("""
             SELECT AVG(puntaje) as promedio_puntaje
             FROM public.teslecturamayo
-            WHERE cueanexo = %s
+            WHERE cueanexo = %s AND desempenio !='Calificación Incorrecta' AND desempenio !='Sin Calificar'
         """, [username])
         resultado_promedio_puntaje = cursor.fetchone()
 

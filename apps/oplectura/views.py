@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import cache_control
 from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, ListView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
@@ -13,6 +14,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import connection
 from django.db.models import Q
 
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
 def DepEvaluacionPortada(request):
     """
     Renderiza la plantilla de la portada de evaluación.
@@ -26,10 +29,12 @@ def DepEvaluacionPortada(request):
     
     return render(request, 'oplectura/portadaevaluacion.html')
 
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
 def RegionalPortada(request):
     return render(request, 'oplectura/portadaregional.html')
 
-@method_decorator(login_required, name='dispatch')
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class CreateRegDocporSeccionView(CreateView):
     """
     Vista para crear un nuevo registro de documento por sección.
@@ -65,7 +70,7 @@ class CreateRegDocporSeccionView(CreateView):
     
 
 # listado de aplicadores para dptoEvaluación
-@method_decorator(login_required, name='dispatch')
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class ListadoDocentesView(ListView):
     """
     Vista para listar los docentes registrados.
@@ -106,6 +111,7 @@ class ListadoDocentesView(ListView):
         return context
 
 #edición de aplicadores para dptoEvaluación
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EditarDocentesView(UpdateView):
     """
     Vista para editar un registro de docente.
@@ -162,6 +168,7 @@ class EditarDocentesView(UpdateView):
         return super().form_valid(form)
 
 #eliminación
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EliminarDocentesView(DeleteView):
     """
     Vista para eliminar un registro de docente.
@@ -186,7 +193,8 @@ class EliminarDocentesView(DeleteView):
         user.delete()
         return redirect('oplectura:listados')
 
-
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
 def RegistrarEvaluacionLectora(request):
     """
     Vista para registrar una evaluación de fluidez lectora.
@@ -209,6 +217,7 @@ def RegistrarEvaluacionLectora(request):
 
 
 #listado de alumnos para aplicador
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class ListadoEvaluacionLectora(ListView):
     """
     Vista para listar las evaluaciones de fluidez lectora.
@@ -264,6 +273,7 @@ class ListadoEvaluacionLectora(ListView):
 
 
 #edición evaluación alumnos
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EditarEvaluacionAlumnosView(UpdateView):
     """
     Vista para editar una evaluación de alumnos.
@@ -333,6 +343,7 @@ class EditarEvaluacionAlumnosView(UpdateView):
     
 
 #eliminación evaluación alumnos
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EliminarEvaluacionAlumnoView(DeleteView):
     """
     Vista para eliminar evaluaciones de alumnos.
@@ -362,6 +373,7 @@ class EliminarEvaluacionAlumnoView(DeleteView):
         return redirect(url)
 
 # agregar alumno para el aplicador
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class RegAlumnosFluidezLectoraCreateView(CreateView):
     model = RegEvaluacionFluidezLectora
     form_class = RegAlumnosFluidezLectoraForm
@@ -380,6 +392,7 @@ class RegAlumnosFluidezLectoraCreateView(CreateView):
         return f"{base_url}?{query_string}"
     
 # agregar alumno por director
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class RegAlumnosFluidezLectoraDirectorCreateView(CreateView):
     model = RegEvaluacionFluidezLectora
     form_class = RegAlumnosFluidezLectoraDirectorForm
@@ -394,6 +407,7 @@ class RegAlumnosFluidezLectoraDirectorCreateView(CreateView):
     
 
 #listado de alumnos para directores
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class ListadoAlumnosDirectoresView(ListView):
     model=RegEvaluacionFluidezLectora     
     template_name='oplectura/listadoalumnosevaluacion.html' 
@@ -415,6 +429,7 @@ class ListadoAlumnosDirectoresView(ListView):
         return context
 
 #edición de alumnos para directores
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EditarAlumnosDirectoresView(UpdateView):
     model = RegEvaluacionFluidezLectora
     form_class = RegEvaluacionFluidezLectoraDirectoresForm
@@ -437,6 +452,7 @@ class EditarAlumnosDirectoresView(UpdateView):
     
 
 #eliminación alumnos directores
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EliminarEvaluacionAlumnoDirectoresView(DeleteView):
     def get(self, request):
         user_id = request.GET.get('id')
@@ -446,6 +462,7 @@ class EliminarEvaluacionAlumnoDirectoresView(DeleteView):
         
 
 #listado de evaluacion alumnos para director
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class ListadoEvaluacionLectoraDirectoresView(ListView):
     model=RegEvaluacionFluidezLectora     
     template_name='oplectura/listadoevaluacionlectoradirector.html' 
@@ -467,7 +484,7 @@ class ListadoEvaluacionLectoraDirectoresView(ListView):
         return context
 
 # listado de aplicadores para regionales
-@method_decorator(login_required, name='dispatch')
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class ListadoAplicadoresView(LoginRequiredMixin,ListView):
     """
     Vista para listar los aplicadores registrados.
@@ -534,7 +551,7 @@ class ListadoAplicadoresView(LoginRequiredMixin,ListView):
         return context
 
 #edición de aplicadores para regionales
-@method_decorator(login_required, name='dispatch')
+@method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class EditarAplicadorView(UpdateView):
     """
     Vista para editar un registro de aplicadores
@@ -591,7 +608,8 @@ class EditarAplicadorView(UpdateView):
         return super().form_valid(form)
 
 
-
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
 def directoresregistrados(username):    
     # consulta para obtener la región
     query = """
@@ -626,6 +644,8 @@ def directoresregistrados(username):
 
 
 # Vista para mostrar los datos en el template
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
 def mostrar_directores(request):
     # Obtener el username del usuario logueado
     username = request.user.username

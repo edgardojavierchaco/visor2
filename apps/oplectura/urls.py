@@ -4,6 +4,7 @@ from .views import EliminarEvaluacionAlumnoView, RegAlumnosFluidezLectoraCreateV
 from .views import RegAlumnosFluidezLectoraDirectorCreateView, ListadoEvaluacionLectoraDirectoresView, DepEvaluacionPortada
 from .views_resultados import tu_vista, cargar_grafico_reg, mostrar_grafico_reg
 from .views import ListadoAplicadoresView, EditarAplicadorView, RegionalPortada, directoresregistrados, mostrar_directores
+from .views_aplicdir import ListadoAplicadoresDirView, EditarAplicadorDirView
 
 app_name='oplectura'
 
@@ -11,10 +12,12 @@ urlpatterns = [
     path('cargar/',CreateRegDocporSeccionView.as_view(), name='cargar'),
     path('listados/',ListadoDocentesView.as_view(), name='listados'),  
     path('listaplic/',ListadoAplicadoresView.as_view(), name='listaplic'), 
+    path('listaplicdir/',ListadoAplicadoresDirView.as_view(), name='listaplicdir'),
     path('list_alumnos/',ListadoAlumnosDirectoresView.as_view(), name='listado_alumnos'),
     path('list_directores/',mostrar_directores, name='listado_directores'),
     path('editar/',EditarDocentesView.as_view(), name='editar'), 
     path('editaraplic/',EditarAplicadorView.as_view(), name='editaraplic'),
+    path('editaraplicdir/',EditarAplicadorDirView.as_view(), name='editaraplicdir'),
     path('eliminar/',EliminarDocentesView.as_view(), name='eliminar'),
     path('registrar/',RegistrarEvaluacionLectora, name='registrar'),
     path('evaluacion/',ListadoEvaluacionLectora.as_view(),name='evaluacion'),

@@ -1,4 +1,4 @@
-{% extends "dashboard/bodyregional.html" %}
+{% extends "dashboard/bodydirector.html" %}
 {% block content %}
     <!-- Modal -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
@@ -38,7 +38,7 @@
 
         // Función para redirigir al listado cuando se presiona "Cancelar"
         function redirectToListado() {
-            window.location.href = "{% url 'operativo:listaplic' %}"; 
+            window.location.href = "{% url 'operativo:listaplicdir' %}"; 
         }
     </script>
 {% endblock %}
