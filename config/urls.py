@@ -35,9 +35,10 @@ urlpatterns = [
     path('doc/',include('apps.asistendoc.urls',namespace='doc')),   
     path('censo/',include('apps.cenpe.urls',namespace='censo')) ,
     path('operativo/',include('apps.oplectura.urls', namespace='operativo')),
-    path('super/',include('apps.supervisores.urls', namespace='super')),
-    #path('dm/',include('apps.Dm.urls',namespace='dm')),
+    path('super/',include('apps.supervisores.urls', namespace='super')), 
+    path('sup/',include('apps.superescuela.urls', namespace='sup')),    
     path('contador/',include('apps.cuenta_regresiva.urls',namespace='contador')),
+    path('select2/', include('django_select2.urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -23,7 +23,7 @@ BASE_APPS = [
     'widget_tweaks',
     'django_select2',
     'django.forms',
-    'django.contrib.gis',
+    'django.contrib.gis',    
 ]
 
 LOCAL_APPS = [
@@ -49,7 +49,7 @@ LOCAL_APPS = [
     'apps.oplectura',
     'apps.supervisores',
     'apps.cuenta_regresiva',
-    
+    'apps.superescuela',
 ]
 
 
