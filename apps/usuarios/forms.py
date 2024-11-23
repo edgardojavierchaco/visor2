@@ -6,6 +6,7 @@ from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth import get_user_model
 import re
 import hashlib
+from django.contrib.auth.hashers import make_password
 
 User = get_user_model()
 
@@ -239,3 +240,76 @@ class ResetpassWordForm(forms.Form):
             }
         )
     )
+
+
+class UserForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].widget.attrs['autofocus'] = True
+
+    class Meta:
+        model = UsuariosVisualizador
+        fields = 'username', 'password', 'apellido', 'nombres', 'correo', 'telefono', 'nivelacceso'
+        widgets = {
+            'username': forms.TextInput(
+                attrs={
+                    'placeholder': 'Ingrese un usuario',
+                    'class': 'form-control',
+                }
+            ),
+            'password': forms.PasswordInput(
+                attrs={
+                    'placeholder': 'Ingrese una constraseña',
+                    'class': 'form-control',
+                }
+            ),
+            'apellido': forms.TextInput(
+                attrs={
+                    'placeholder': 'Ingrese apellido (todo en mayúsculas)',
+                    'class': 'form-control',
+                }
+            ),
+            'nombres': forms.TextInput(
+                attrs={
+                    'placeholder': 'Ingrese nombre (todo en mayúsculas)',
+                    'class': 'form-control',
+                }
+            ),
+            'correo': forms.EmailInput(
+                attrs={
+                    'placeholder': 'Ingrese correo electrónico',
+                    'class': 'form-control',
+                }
+            ),
+            'telefono': forms.TextInput(
+                attrs={
+                    'placeholder': 'Ingrese número teléfono, sin el 0 ni el 15',
+                    'class': 'form-control',
+                }
+            ),
+            'nivelacceso': forms.Select(
+                attrs={
+                    'placeholder': 'Seleccione nivel de acceso',
+                    'class': 'form-control',
+                }
+            ),
+            
+            
+        }
+        exclude = ['groups','user_permissions', 'last_login', 'date_joined', 'activo', 'is_superuser', 'is_active', 'is_staff']
+
+    def save(self, commit=True):
+        data = {}
+        form = super()
+        try:
+            if form.is_valid():
+                usuario = form.save()
+                usuario.set_password(self.cleaned_data['password'])
+                if commit:
+                    usuario.save()  # Guardar la instancia con la contraseña encriptada
+                return usuario
+            else:
+                data['error'] = form.errors
+        except Exception as e:
+            data['error'] = str(e)
+        return data 

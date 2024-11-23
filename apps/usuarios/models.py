@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.forms import model_to_dict
 
 class CustomUserManager(BaseUserManager):
     """
@@ -118,7 +119,17 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
-
+    
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['user_permissions','last_login', 'date_joined', 'activo', 'is_superuser', 'is_active', 'is_staff'])
+        item['nivelacceso']=self.nivelacceso.tacceso
+        item['groups'] = self.groups.name
+        item['activo']=self.activo
+        item['is_staff']=self.is_staff
+        item['is_superuser']=self.is_superuser
+        print(item)
+        return item
+            
     class Meta:
         verbose_name = 'Usuario_Visualizador'
         verbose_name_plural = 'Usuarios_Visualizadores'

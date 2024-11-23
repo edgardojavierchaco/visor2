@@ -38,6 +38,7 @@ urlpatterns = [
     path('super/',include('apps.supervisores.urls', namespace='super')), 
     path('sup/',include('apps.superescuela.urls', namespace='sup')),    
     path('contador/',include('apps.cuenta_regresiva.urls',namespace='contador')),
+    path('organica/',include('apps.pof.urls',namespace='organica')),
     path('select2/', include('django_select2.urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -31,7 +31,7 @@
                         <th scope="col">Nombres</th>
                         <th scope="col">Curso</th>
                         <th scope="col">División</th>
-                        <th scope="col">Turno</th>                       
+                        <th scope="col">Cueanexo</th>                       
                         <th scope="col">Operativo</th>
                         <th scope="col">Validación</th>
                     </tr>
@@ -45,7 +45,7 @@
                             <td>{{ u.nombres_docen }}</td>
                             <td>{{ u.curso }}</td>
                             <td>{{ u.division }}</td>
-                            <td>{{ u.turno }}</td>
+                            <td>{{ u.cueanexo }}</td>
                             <td>{{ u.operativos }}</td>   
                             <td>{{ u.validacion }}</td>                         
                             <td>
@@ -71,7 +71,9 @@
         $(document).ready(function() {
             $('#data').DataTable({
                 responsive: true,
-                autoWidth: False,
+                autoWidth: false,
+                paging: true,  // Habilitar la paginación
+                searching: true, 
                 "language": {
                     url: 'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'
                 },
@@ -82,7 +84,7 @@
                     { "data": "nombres_docen" },
                     { "data": "curso" },
                     { "data": "division" },
-                    { "data": "turno" },    
+                    { "data": "cueanexo" },    
                     { "data": "operativos" },        
                     { "data": "validacion" },
                     { "data": null, "defaultContent": "<button type='button' class='btn btn-primary btn-xs btn-edit'><i class='fas fa-edit'></i></button> <button type='button' class='btn btn-danger btn-xs btn-delete'><i class='fas fa-trash-alt'></i></button>" }

@@ -1,5 +1,6 @@
 from config.urls import path
 from apps.usuarios.views import *
+from apps.usuarios.views_users import UserListView, DashboardView, UserCreateView
 from django.contrib.auth import views as auth_views
 from .views import check_user_status
 
@@ -15,5 +16,8 @@ urlpatterns=[
     path('eliminar/', EliminarUsuarioView.as_view(), name='eliminar'),
     path('eliminar_op/', EliminarUsuarioView_op.as_view(), name='eliminar_op'),
     path('registro/',registrar_usuarios.as_view(), name='registro'),
-    path('api/check_user_status/', check_user_status, name='check_user_status'),     
+    path('api/check_user_status/', check_user_status, name='check_user_status'),  
+    path('user_list/', UserListView.as_view(), name='user_list'),
+    path('dashboard/',DashboardView.as_view(),name='dashboard'),
+    path('user_create/',UserCreateView.as_view(),name='user_create'),
 ]

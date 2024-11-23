@@ -50,6 +50,7 @@ LOCAL_APPS = [
     'apps.supervisores',
     'apps.cuenta_regresiva',
     'apps.superescuela',
+    'apps.pof',
 ]
 
 
@@ -112,7 +113,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=cenpe,public'
+            'options': '-c search_path=pof,cenpe,public'
         }
     }
 }
