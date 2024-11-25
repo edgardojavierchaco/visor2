@@ -287,10 +287,10 @@ def mostrar_grafico_reg(request):
     etiquetas_comp = [f"{label}: {conteo} ({porcentaje:.2f}%)" for label, conteo, porcentaje in zip(orden_labels, conteo_comp, porcentajes_comp)]
     
     # Calcular el promedio de puntaje
-    promedio_puntaje_vel = round(df_vel['velocidad'].mean(), 2)
-    promedio_puntaje_pres = round(df_pres['precision'].mean(), 2)
-    promedio_puntaje_pros = round(df_pros['prosodia'].mean(), 2)
-    promedio_puntaje_comp = round(df_comp['comprension'].mean(), 2)
+    promedio_puntaje_vel = int(round(df_vel['velocidad'].mean()))
+    promedio_puntaje_pres = int(round(df_pres['precision'].mean()))
+    promedio_puntaje_pros = int(round(df_pros['prosodia'].mean()))
+    promedio_puntaje_comp = int(round(df_comp['comprension'].mean()))
     
     # Obtener el nombre de la región o mostrar "Chaco"
     regional = 'Chaco' if mostrar_todo else ', '.join(df_vel['region'].unique())
