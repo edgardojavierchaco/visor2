@@ -67,9 +67,15 @@
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
-                        <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li>
+                        <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
+                        <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
                         <!-- Menú desplegable para "Resultados" -->
+                        <li>
+                            <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Editar Alumnos</a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Cargar Aplicador</a>
+                        </li>
                         <li class="dropdown">
                             <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                class="dropdown-item dropdown-toggle">Resultados</a>
@@ -153,4 +159,22 @@
         graficoOption.classList.remove('disabled');
     }
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const enlaces = document.querySelectorAll('.fuera-de-termino');
+
+        enlaces.forEach(enlace => {
+            enlace.addEventListener('click', function(event) {
+                event.preventDefault(); // Evitar el comportamiento predeterminado del enlace
+                Swal.fire({
+                    title: 'Fuera de Término',
+                    text: 'Esta acción no está disponible en este momento.',
+                    icon: 'info',
+                    confirmButtonText: 'Entendido'
+                });
+            });
+        });
+    });
+</script>
+
 
