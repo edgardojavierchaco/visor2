@@ -1,0 +1,46 @@
+{% extends 'dashboard/bodyevaluacion.html' %}
+{% load static %}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolución Aplicadores por Región</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Evolución Carga Aplicadores</h1>
+    <canvas id="barChart" width="400" height="200"></canvas>
+
+    <script>
+        // Datos enviados desde la vista
+        const regions = {{ regions|safe }};
+        const counts = {{ counts|safe }};
+
+        // Configuración del gráfico
+        const ctx = document.getElementById('barChart').getContext('2d');
+        const barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: regions,  // Ejes X (nombres de las regiones)
+                datasets: [
+                    {
+                        label: 'Aplicadores faltantes',
+                        data: counts,
+                        backgroundColor: 'rgba(54, 162, 235, 1)', // Azul
+                        borderColor: 'rgba(54, 162, 235, 1)', // Azul sólido
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+{% endblock %}
