@@ -6,6 +6,7 @@ from .views_resultados import tu_vista, cargar_grafico_reg, mostrar_grafico_reg
 from .views import ListadoAplicadoresView, EditarAplicadorView, RegionalPortada, directoresregistrados, mostrar_directores
 from .views_aplicdir import ListadoAplicadoresDirView, EditarAplicadorDirView
 from .views_evolcarga import grafico_evaluacion_lectora, grafico_aplicador_region
+from .views_resultadosxloc import *
 
 app_name='oplectura'
 
@@ -36,4 +37,7 @@ urlpatterns = [
     path('portada_regional/', RegionalPortada, name='portada_regional'),
     path('evol_carga/', grafico_evaluacion_lectora, name='evol_carga'),
     path('evol_aplicador/', grafico_aplicador_region, name='evol_aplicador'),
+    path('resultados_loc/', tu_vistaloc, name='resultados_loc'),   
+    path('cargar_graficoloc/', mostrar_grafico_localidad, name='cargar_graficoloc'),
+    path('grafico_loc/', mostrar_grafico_loc, name='grafico_loc'),
 ]

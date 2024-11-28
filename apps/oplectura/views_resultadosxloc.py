@@ -95,7 +95,7 @@ def calcular_estadisticas_por_cueanexo(username):
 
 
 @login_required
-def tu_vista(request):
+def tu_vistaloc(request):
     """
     Vista que muestra las estadísticas de evaluación lectora.
 
@@ -105,6 +105,7 @@ def tu_vista(request):
     Returns:
         HttpResponse: Renderiza la plantilla con gráficos y estadísticas.
     """
+    
     
     username = request.user.username
     resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_velocidad, resultado_promedio_precision, resultado_promedio_prosodia, resultado_promedio_comprension, total_dni_presentes = calcular_estadisticas_por_cueanexo(username)
@@ -170,7 +171,7 @@ def tu_vista(request):
     })
 
 @login_required
-def mostrar_grafico_reg(request):
+def mostrar_grafico_loc(request):
     """
     Muestra el gráfico de evaluación según las regiones, ámbitos y sectores seleccionados.
 
@@ -182,12 +183,12 @@ def mostrar_grafico_reg(request):
     """
     
     # Obtener los valores seleccionados del checkbox
-    regiones_seleccionadas = request.GET.get('region')
+    localidad_seleccionadas = request.GET.get('localidad')
     ambitos_seleccionados = request.GET.get('ambito')
     sectores_seleccionados = request.GET.get('sector')
-    print("Región seleccionada:", regiones_seleccionadas)
+    print("localidad seleccionada:", localidad_seleccionadas)
     
-    mostrar_todo = regiones_seleccionadas == '0'  # Verifica si se selecciona "Mostrar Todo"
+    mostrar_todo = localidad_seleccionadas == '0'  # Verifica si se selecciona "Mostrar Todo"
     
     # Establecer conexión con la base de datos PostgreSQL
     with psycopg2.connect(
@@ -214,9 +215,9 @@ def mostrar_grafico_reg(request):
                 '''
                 parameters = []
                 
-                if regiones_seleccionadas:
-                    query += " AND region = %s"
-                    parameters.append(regiones_seleccionadas)
+                if localidad_seleccionadas:
+                    query += " AND localidad = %s"
+                    parameters.append(localidad_seleccionadas)
                 if ambitos_seleccionados:
                     query += " AND ambito = %s"
                     parameters.append(ambitos_seleccionados)
@@ -229,12 +230,12 @@ def mostrar_grafico_reg(request):
                 print('datos:', datos_usuario)
     
     if not datos_usuario:
-        return render(request, 'oplectura/graficoreg.html', {
+        return render(request, 'oplectura/graficoxloc.html', {
             'datos_disponibles': False
         })
     
     # Convertir los datos a DataFrames de pandas con las columnas correctas
-    columns = ['velocidad', 'precision', 'prosodia', 'comprension', 'cal_vel', 'cal_pres', 'cal_pros', 'cal_comp', 'region', 'asistencia', 'ambito', 'sector']
+    columns = ['velocidad', 'precision', 'prosodia', 'comprension', 'cal_vel', 'cal_pres', 'cal_pros', 'cal_comp', 'localidad', 'asistencia', 'ambito', 'sector']
     df = pd.DataFrame(datos_usuario, columns=columns)
     
     # Filtrar los DataFrames para incluir solo a los alumnos presentes (asistencia = True)
@@ -242,10 +243,10 @@ def mostrar_grafico_reg(request):
     df_total = df
     
     # Separar DataFrames para cada aspecto con solo los presentes
-    df_vel = df_presentes[['velocidad', 'cal_vel', 'region']]
-    df_pres = df_presentes[['precision', 'cal_pres', 'region']]
-    df_pros = df_presentes[['prosodia', 'cal_pros', 'region']]
-    df_comp = df_presentes[['comprension', 'cal_comp', 'region']]
+    df_vel = df_presentes[['velocidad', 'cal_vel', 'localidad']]
+    df_pres = df_presentes[['precision', 'cal_pres', 'localidad']]
+    df_pros = df_presentes[['prosodia', 'cal_pros', 'localidad']]
+    df_comp = df_presentes[['comprension', 'cal_comp', 'localidad']]
     
     # Calcular el total de alumnos presentes (que ya están filtrados)
     total_dni_presentes = df_presentes.shape[0]
@@ -293,7 +294,7 @@ def mostrar_grafico_reg(request):
     promedio_puntaje_comp = int(round(df_comp['comprension'].mean()))
     
     # Obtener el nombre de la región o mostrar "Chaco"
-    regional = 'Chaco' if mostrar_todo else ', '.join(df_vel['region'].unique())
+    localidad = 'Chaco' if mostrar_todo else ', '.join(df_vel['localidad'].unique())
     
     # Crear los gráficos de torta con Plotly de Velocidad
     fig = go.Figure(data=[go.Pie(labels=etiquetas_vel, values=conteo_vel, marker=dict(colors=colores))])
@@ -318,7 +319,7 @@ def mostrar_grafico_reg(request):
     graph_html4 = fig4.to_html(full_html=False, default_height=500, default_width=700)
     
     # Renderizar la plantilla y pasar los gráficos, promedios y total de presentes
-    return render(request, 'oplectura/graficoreg.html', {
+    return render(request, 'oplectura/graficoxloc.html', {
         'grafico': graph_html,
         'grafico2': graph_html2,
         'grafico3': graph_html3,
@@ -329,14 +330,41 @@ def mostrar_grafico_reg(request):
         'promedio_puntaje_comprension': promedio_puntaje_comp,
         'total_alumnos': total_alumnos,
         'total_dni_presentes': total_dni_presentes,  # Incluye el total de presentes
-        'regional': regional,
+        'localidad': localidad_seleccionadas,
         'datos_disponibles': True
     })
 
 
 @login_required
-def cargar_grafico_reg(request):    
-    return render(request, 'oplectura/graficoreg.html', {
+def cargar_grafico_loc(request):    
+    return render(request, 'oplectura/graficoxloc.html', {
         'datos_disponibles': False
     })
 
+
+def mostrar_grafico_localidad(request):
+    """
+    Obtiene y muestra un listado de localidades con datos disponibles para la evaluación.
+    Renderiza una vista que permite seleccionar localidades para filtrar datos de evaluación.
+
+    Args:
+        request (HttpRequest): La solicitud HTTP recibida.
+
+    Returns:
+        HttpResponse: Respuesta renderizada con la plantilla 'lectocomp/graficolocalidades.html', 
+                      que incluye la lista de localidades.
+    """
+    localidades=[]       
+    
+    # Obtine las localidades únicas
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT localidad FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo WHERE localidad !='None'")
+        localidades = [row[0] for row in cursor.fetchall()]
+        print('Localidades cargadas:', localidades)
+    
+     # Si es una solicitud estándar, renderiza la plantilla
+    context = {
+        'localidades': localidades,        
+    }
+    print('Contexto:', context)
+    return render(request, 'oplectura/graficoxloc.html', context)
