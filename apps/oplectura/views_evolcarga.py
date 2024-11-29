@@ -1,6 +1,8 @@
 from django.db import connection
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def grafico_evaluacion_lectora(request):
     # Ejecutar la consulta
     query = """
@@ -16,20 +18,36 @@ def grafico_evaluacion_lectora(request):
         cursor.execute(query)
         rows = cursor.fetchall()
 
-    # Procesar los datos para el gráfico
+    # Procesar los datos para el gráfico y la tabla
     regions = [row[0] for row in rows]  # Extrae las regiones
     no_cargados = [row[1] for row in rows]  # Conteo no cargados
     cargados = [row[2] for row in rows]  # Conteo cargados
+    
+    
+    # Calcular porcentajes y preparar los datos para la tabla
+    table_data = []
+    for region, nc, c in rows:
+        total = nc + c
+        porcentaje_cargados = (c / total * 100) if total > 0 else 0
+        table_data.append({
+            'region': region,
+            'no_cargados': nc,
+            'cargados': c,
+            'porcentaje_cargados': round(porcentaje_cargados, 2)
+        })
+
 
     # Pasar los datos al template
     context = {
         'regions': regions,
         'no_cargados': no_cargados,
         'cargados': cargados,
+        'table_data': table_data,
     }
+    
     return render(request, 'oplectura/grafico_evolucion_carga_OL.html', context)
 
-
+@login_required
 def grafico_aplicador_region(request):
     # Ejecutar la consulta
     query = """

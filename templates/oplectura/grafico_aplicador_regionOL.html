@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evolución Aplicadores por Región</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script> <!-- Plugin -->
 </head>
 <body>
     <h1>Evolución Carga Aplicadores</h1>
@@ -34,12 +35,27 @@
                 ]
             },
             options: {
+                plugins: {
+                    datalabels: {
+                        anchor: 'end',        // Posición de la etiqueta
+                        align: 'top',         // Alinear en la parte superior
+                        color: 'black',       // Color del texto
+                        font: {
+                            weight: 'bold',   // Negrita
+                            size: 12          // Tamaño de fuente
+                        },
+                        formatter: function (value) {
+                            return value;    // Mostrar el valor directamente
+                        }
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels] // Registrar el plugin
         });
     </script>
 </body>
