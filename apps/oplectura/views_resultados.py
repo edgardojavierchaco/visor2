@@ -59,6 +59,22 @@ def calcular_estadisticas_por_cueanexo(username):
         """, [username])
         total_dni_presentes = cursor.fetchone()[0]
 
+        # Calcular total de alumnos ausentes
+        cursor.execute(
+            """
+                SELECT SUM(no_cargados) AS total_no_cargados
+                FROM (
+                    SELECT 
+                        COUNT(CASE WHEN velocidad = 0 THEN 1 END) AS no_cargados
+                    FROM cenpe."Evaluacion_Lectora"
+                    GROUP BY cueanexo
+                    HAVING COUNT(CASE WHEN velocidad != 0 THEN 1 END) > 0
+                ) subquery;
+            """, [username]
+        )
+        total_dni_ausentes = cursor.fetchone()[0]        
+               
+        
         # Calcular promedio de velocidad por cueanexo
         cursor.execute("""
             SELECT AVG(velocidad) as promedio_velocidad
@@ -91,7 +107,7 @@ def calcular_estadisticas_por_cueanexo(username):
         """, [username])
         resultado_promedio_comprension = cursor.fetchone()
 
-    return resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_velocidad, resultado_promedio_precision, resultado_promedio_prosodia, resultado_promedio_comprension, total_dni_presentes
+    return resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_velocidad, resultado_promedio_precision, resultado_promedio_prosodia, resultado_promedio_comprension, total_dni_presentes, total_dni_ausentes
 
 
 @login_required
@@ -107,8 +123,9 @@ def tu_vista(request):
     """
     
     username = request.user.username
-    resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_velocidad, resultado_promedio_precision, resultado_promedio_prosodia, resultado_promedio_comprension, total_dni_presentes = calcular_estadisticas_por_cueanexo(username)
-    print(total_dni_presentes)
+    resultados_total_dni, total_dni_sin_desempenio, resultado_promedio_velocidad, resultado_promedio_precision, resultado_promedio_prosodia, resultado_promedio_comprension, total_dni_presentes, total_dni_ausentes = calcular_estadisticas_por_cueanexo(username)
+    print("total presentes:",total_dni_presentes)
+    print("total ausetnes:",total_dni_ausentes)
     # Definir el orden y colores para los labels
     orden_labels = ["Debajo del Básico", "Básico", "Satisfactorio", "Avanzado"]
     colores = ['#d62728','#ffcc00', '#90ee90','#2ca02c']
@@ -159,6 +176,7 @@ def tu_vista(request):
     return render(request, 'oplectura/grafico.html', {
         'total_dni_sin_desempenio': total_dni_sin_desempenio,
         'total_dni_presentes': total_dni_presentes,
+        'total_dni_ausentes': total_dni_ausentes,
         'promedio_velocidad': promedio_velocidad,
         'promedio_precision': promedio_precision,
         'promedio_prosodia': promedio_prosodia,
@@ -185,7 +203,7 @@ def mostrar_grafico_reg(request):
     regiones_seleccionadas = request.GET.get('region')
     ambitos_seleccionados = request.GET.get('ambito')
     sectores_seleccionados = request.GET.get('sector')
-    print("Región seleccionada:", regiones_seleccionadas)
+    #print("Región seleccionada:", regiones_seleccionadas)
     
     mostrar_todo = regiones_seleccionadas == '0'  # Verifica si se selecciona "Mostrar Todo"
     
@@ -205,7 +223,7 @@ def mostrar_grafico_reg(request):
                 '''
                 cursor.execute(query)
                 datos_usuario = cursor.fetchall()              
-                print('general:', datos_usuario)
+                #print('general:', datos_usuario)
             else:
                 # Filtrar los datos para las regiones seleccionadas
                 query = '''
@@ -226,7 +244,180 @@ def mostrar_grafico_reg(request):
                     
                 cursor.execute(query, parameters)
                 datos_usuario = cursor.fetchall()
-                print('datos:', datos_usuario)
+                #print('datos:', datos_usuario)
+            
+            
+            # Calcular total de alumnos presentes
+            if mostrar_todo:
+                query1 = """
+                    select                      
+                        sum(cargado) as cargado                        
+                    from (
+                        select
+                            region,
+                            case 
+                                when count(case when asistencia = 'true' then 1 end) >= 1 
+                                then count(case when asistencia = 'true' then 1 end)
+                                else 0
+                            end as cargado
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                """
+                cursor.execute(query1)
+                total_dni_presentes_velocidad = cursor.fetchone()[0]
+            else:
+                query1="""
+                    select                                         
+                        sum(cargado) as cargado                        
+                    from (
+                        select
+                            region,
+                            case 
+                            when count(case when asistencia = 'true' then 1 end) >= 1 
+                            then count(case when asistencia = 'true' then 1 end)
+                            else 0
+                        end as cargado
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                    WHERE region=%s;
+                """
+                parameters1 = []
+                
+                if regiones_seleccionadas:
+                    query += " AND region = %s"
+                    parameters1.append(regiones_seleccionadas)
+                
+                cursor.execute(query1, parameters1)
+                total_dni_presentes_velocidad = cursor.fetchone()[0]
+                
+            # Calcular total de alumnos ausentes 
+            if mostrar_todo:
+                query1 = """
+                    select                      
+                        sum(ausente) as ausente                        
+                    from (
+                        select
+                            region,
+                            case 
+                                when count(case when asistencia = 'true' then 1 end) >= 1 
+                                then count(case when asistencia = 'false' then 1 end)
+                                else 0
+                            end as ausente
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                """
+                cursor.execute(query1)
+                total_dni_ausentes_velocidad = cursor.fetchone()[0]
+            else:
+                query1="""
+                    select                                         
+                        sum(ausente) as ausente                        
+                    from (
+                        select
+                            region,
+                            case 
+                                when count(case when asistencia = 'true' then 1 end) >= 1 
+                                then count(case when asistencia = 'false' then 1 end)
+                                else 0
+                            end as ausente
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                    WHERE region=%s;
+                """
+                parameters1 = []
+                
+                if regiones_seleccionadas:
+                    query += " AND region = %s"
+                    parameters1.append(regiones_seleccionadas)
+                
+                cursor.execute(query1, parameters1)
+                total_dni_ausentes_velocidad = cursor.fetchone()[0]
+            
+            # Calcular total de alumnos presentes
+            if mostrar_todo:
+                query1 = """
+                    select                      
+                        sum(cargado) as cargado                        
+                    from (
+                        select
+                            region,
+                            case 
+                                when count(case when asistencia = 'true' then 1 end) >= 1 
+                                then count(case when asistencia = 'true' then 1 end)
+                                else 0
+                            end as cargado
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                """
+                cursor.execute(query1)
+                total_dni_presentes_velocidad = cursor.fetchone()[0]
+            else:
+                query1="""
+                    select                                         
+                        sum(cargado) as cargado                        
+                    from (
+                        select
+                            region,
+                            case 
+                            when count(case when asistencia = 'true' then 1 end) >= 1 
+                            then count(case when asistencia = 'true' then 1 end)
+                            else 0
+                        end as cargado
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                    WHERE region=%s;
+                """
+                parameters1 = []
+                
+                if regiones_seleccionadas:
+                    query += " AND region = %s"
+                    parameters1.append(regiones_seleccionadas)
+                
+                cursor.execute(query1, parameters1)
+                total_dni_presentes_velocidad = cursor.fetchone()[0]
+                
+            # Calcular total de alumnos
+            if mostrar_todo:
+                query1 = """
+                    select                      
+                        sum(total) as total                        
+                    from (
+                        select
+                            region,
+                            count(asistencia) as total
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                """
+                cursor.execute(query1)
+                total_alumnos_velocidad = cursor.fetchone()[0]
+            else:
+                query1="""
+                    select                                         
+                        sum(total) as total                        
+                    from (
+                        select
+                            region,
+                            count(asistencia) as total
+                        from cenpe."Evaluacion_Lectora"
+                            group by region, cueanexo, seccion
+                        ) as subquery
+                    WHERE region=%s;
+                """
+                parameters1 = []
+                
+                if regiones_seleccionadas:
+                    query += " AND region = %s"
+                    parameters1.append(regiones_seleccionadas)
+                
+                cursor.execute(query1, parameters1)
+                total_alumnos_velocidad = cursor.fetchone()[0]
     
     if not datos_usuario:
         return render(request, 'oplectura/graficoreg.html', {
@@ -239,16 +430,18 @@ def mostrar_grafico_reg(request):
     
     # Filtrar los DataFrames para incluir solo a los alumnos presentes (asistencia = True)
     df_presentes = df[df['asistencia'] == 't']
+    df_ausentes = df[df['asistencia']=='f']
     df_total = df
     
     # Separar DataFrames para cada aspecto con solo los presentes
     df_vel = df_presentes[['velocidad', 'cal_vel', 'region']]
     df_pres = df_presentes[['precision', 'cal_pres', 'region']]
+    df_aus = df_ausentes[['precision', 'cal_pres', 'region']]
     df_pros = df_presentes[['prosodia', 'cal_pros', 'region']]
     df_comp = df_presentes[['comprension', 'cal_comp', 'region']]
     
     # Calcular el total de alumnos presentes (que ya están filtrados)
-    total_dni_presentes = df_presentes.shape[0]
+    total_dni_presentes = df_presentes.shape[0]    
     total_alumnos = df_total.shape[0]
     
     # Verificar las columnas antes de operar
@@ -327,8 +520,9 @@ def mostrar_grafico_reg(request):
         'promedio_puntaje_precision': promedio_puntaje_pres,
         'promedio_puntaje_prosodia': promedio_puntaje_pros,
         'promedio_puntaje_comprension': promedio_puntaje_comp,
-        'total_alumnos': total_alumnos,
-        'total_dni_presentes': total_dni_presentes,  # Incluye el total de presentes
+        'total_alumnos': total_alumnos_velocidad,
+        'total_dni_presentes': total_dni_presentes_velocidad, 
+        'total_dni_ausentes': total_dni_ausentes_velocidad,
         'regional': regional,
         'datos_disponibles': True
     })

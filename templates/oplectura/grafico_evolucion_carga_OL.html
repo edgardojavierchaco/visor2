@@ -6,7 +6,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evolución de Carga</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/decimal.js/10.3.1/decimal.min.js"></script>
+
     
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -45,73 +47,78 @@
 </head>
 <body>
     <h1 class="text-center">Evolución de Carga de Resultados</h1>
+
+    <!-- Gráfico -->
     <canvas id="barChart" width="400" height="200"></canvas>
-
     <script>
-        // Datos enviados desde la vista
         const regions = {{ regions|safe }};
-        const noCargados = {{ no_cargados|safe }};
         const cargados = {{ cargados|safe }};
-
-        // Configuración del gráfico
+        const ausentes = {{ ausentes|safe }};
+        const noCargados = {{ no_cargados|safe }};
+        const totales = {{ totales|safe }};        
+        console.log(regions);
+        console.log(cargados);
         const ctx = document.getElementById('barChart').getContext('2d');
         const barChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: regions,  // Ejes X (nombres de las regiones)
+                labels: regions,
                 datasets: [
-                    {
-                        label: 'No Cargados',
-                        data: noCargados,
-                        backgroundColor: 'rgba(255, 0, 0, 1)',
-                        borderColor: 'rgba(255, 0, 0, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Cargados',
-                        data: cargados,
-                        backgroundColor: 'rgba(0, 128, 0, 1)',
-                        borderColor: 'rgba(0, 128, 0, 1)',
-                        borderWidth: 1
-                    }
+                    { label: 'Cargados', data: cargados, backgroundColor: 'rgba(0, 128, 0, 0.7)' },
+                    { label: 'Ausentes', data: ausentes, backgroundColor: 'rgba(255, 165, 0, 0.7)' },
+                    { label: 'No Cargados', data: noCargados, backgroundColor: 'rgba(255, 0, 0, 0.7)' }
                 ]
             },
             options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw || 0;
+                                return `${context.dataset.label}: ${value}`;
+                            }
+                        }
                     }
+                },
+                scales: {
+                    y: { beginAtZero: true }
                 }
             }
         });
     </script>
-    
-    <!-- Tabla con DataTables -->
+
+    <!-- Tabla -->
     <h2 class="text-center">Datos de Evolución de Carga</h2>
     <table id="datatable" class="table table-striped table-bordered display">
         <thead>
             <tr>
                 <th>Región</th>
-                <th>No Cargados</th>
                 <th>Cargados</th>
-                <th>%</th>
+                <th>Ausentes</th>
+                <th>No Cargados</th>
+                <th>Total</th>
+                <th>% Carga</th>
             </tr>
         </thead>
         <tbody>
             {% for data in table_data %}
             <tr>
                 <td>{{ data.region }}</td>
-                <td>{{ data.no_cargados }}</td>
                 <td>{{ data.cargados }}</td>
+                <td>{{ data.ausentes }}</td>
+                <td>{{ data.no_cargados }}</td>
+                <td>{{ data.total }}</td>
                 <td>{{ data.porcentaje_cargados }}%</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <!-- Configuración de DataTables -->
     <script>
-        $(document).ready(function () {
+        // Inicializar DataTable
+        $(document).ready(function() {
             $('#datatable').DataTable({
                 dom: 'Bfrtip', // Habilita el DOM para los botones
                 buttons: [                    
@@ -144,13 +151,13 @@
                 responsive: true,
                 autoWidth: false,
                 paging: false,  
-                searching: true,  
+                searching: true, 
                 language: {
-                    url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                    url: "https://cdn.datatables.net/plug-ins/1.13.1/i18n/es-ES.json"
                 }
             });
         });
     </script>
-
 </body>
+    
 {% endblock %}

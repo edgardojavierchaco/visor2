@@ -4,13 +4,36 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def grafico_evaluacion_lectora(request):
-    # Ejecutar la consulta
+    # Consulta SQL actualizada
     query = """
         SELECT 
             region,
-            COUNT(CASE WHEN velocidad = 0 THEN 1 END) AS no_cargados,
-            COUNT(CASE WHEN velocidad != 0 THEN 1 END) AS cargados
-        FROM cenpe."Evaluacion_Lectora"
+            SUM(cargado) AS cargado,
+            SUM(ausente) AS ausente,
+            SUM(no_cargado) AS no_cargado,
+            SUM(total) AS total
+        FROM (
+            SELECT
+                region,
+                CASE 
+                    WHEN COUNT(CASE WHEN asistencia = 'true' THEN 1 END) >= 1 
+                    THEN COUNT(CASE WHEN asistencia = 'true' THEN 1 END)
+                    ELSE 0
+                END AS cargado,
+                CASE 
+                    WHEN COUNT(CASE WHEN asistencia = 'true' THEN 1 END) >= 1 
+                    THEN COUNT(CASE WHEN asistencia = 'false' THEN 1 END)
+                    ELSE 0
+                END AS ausente,
+                CASE 
+                    WHEN COUNT(CASE WHEN asistencia = 'true' THEN 1 END) = 0 
+                    THEN COUNT(asistencia) 
+                    ELSE 0
+                END AS no_cargado,
+                COUNT(asistencia) AS total
+            FROM cenpe."Evaluacion_Lectora"
+            GROUP BY region, cueanexo, seccion
+        ) AS subquery
         GROUP BY region
         ORDER BY region;
     """
@@ -19,33 +42,43 @@ def grafico_evaluacion_lectora(request):
         rows = cursor.fetchall()
 
     # Procesar los datos para el gráfico y la tabla
-    regions = [row[0] for row in rows]  # Extrae las regiones
-    no_cargados = [row[1] for row in rows]  # Conteo no cargados
-    cargados = [row[2] for row in rows]  # Conteo cargados
+    regions = [row[0] for row in rows]  # Nombres de las regiones
+    cargados = [row[1] for row in rows]  # Cargados
+    ausentes = [row[2] for row in rows]  # Ausentes
+    no_cargados = [row[3] for row in rows]  # No cargados
+    totales = [row[4] for row in rows]  # Total de registros (cargados + ausentes)
     
-    
-    # Calcular porcentajes y preparar los datos para la tabla
+    # Asegurarse de que los valores sean números
+    cargados = [float(c) for c in cargados]
+    ausentes = [float(a) for a in ausentes]
+    no_cargados = [float(n) for n in no_cargados]
+    totales = [float(t) for t in totales]
+
+    # Preparar datos para la tabla
     table_data = []
-    for region, nc, c in rows:
-        total = nc + c
-        porcentaje_cargados = (c / total * 100) if total > 0 else 0
+    for region, cargado, ausente, no_cargado, total in rows:
+        porcentaje_cargados = ((cargado+ausente) / total * 100) if total > 0 else 0
         table_data.append({
             'region': region,
-            'no_cargados': nc,
-            'cargados': c,
+            'cargados': cargado,
+            'ausentes': ausente,
+            'no_cargados': no_cargado,
+            'total': total,
             'porcentaje_cargados': round(porcentaje_cargados, 2)
         })
 
-
-    # Pasar los datos al template
+    # Contexto para el template
     context = {
         'regions': regions,
-        'no_cargados': no_cargados,
         'cargados': cargados,
+        'ausentes': ausentes,
+        'no_cargados': no_cargados,
+        'totales': totales,
         'table_data': table_data,
     }
-    
+
     return render(request, 'oplectura/grafico_evolucion_carga_OL.html', context)
+
 
 @login_required
 def grafico_aplicador_region(request):
