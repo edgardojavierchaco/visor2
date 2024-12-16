@@ -219,9 +219,18 @@ def mostrar_grafico_reg(request):
                 # Si se selecciona "Mostrar Todo", mostrar todos los datos
                 query = '''
                     SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia, ambito, sector
-                    FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo
+                    FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo WHERE 1=1
                 '''
-                cursor.execute(query)
+                parameters = []
+                
+                if ambitos_seleccionados:
+                    query += " AND ambito = %s"
+                    parameters.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query += " AND sector = %s"
+                    parameters.append(sectores_seleccionados)
+                    
+                cursor.execute(query, parameters)
                 datos_usuario = cursor.fetchall()              
                 #print('general:', datos_usuario)
             else:
@@ -254,17 +263,26 @@ def mostrar_grafico_reg(request):
                         sum(cargado) as cargado                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             case 
                                 when count(case when asistencia = 'true' then 1 end) >= 1 
                                 then count(case when asistencia = 'true' then 1 end)
                                 else 0
                             end as cargado
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
+                    WHERE 1=1
                 """
-                cursor.execute(query1)
+                parameters1 = []
+                
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
+                cursor.execute(query1, parameters1)
                 total_dni_presentes_velocidad = cursor.fetchone()[0]
             else:
                 query1="""
@@ -272,22 +290,28 @@ def mostrar_grafico_reg(request):
                         sum(cargado) as cargado                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             case 
                             when count(case when asistencia = 'true' then 1 end) >= 1 
                             then count(case when asistencia = 'true' then 1 end)
                             else 0
                         end as cargado
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
-                    WHERE region=%s;
+                    WHERE 1=1;
                 """
                 parameters1 = []
                 
                 if regiones_seleccionadas:
-                    query += " AND region = %s"
+                    query1 += " AND region = %s"
                     parameters1.append(regiones_seleccionadas)
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
                 
                 cursor.execute(query1, parameters1)
                 total_dni_presentes_velocidad = cursor.fetchone()[0]
@@ -299,17 +323,26 @@ def mostrar_grafico_reg(request):
                         sum(ausente) as ausente                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             case 
                                 when count(case when asistencia = 'true' then 1 end) >= 1 
                                 then count(case when asistencia = 'false' then 1 end)
                                 else 0
                             end as ausente
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
+                    WHERE 1=1
                 """
-                cursor.execute(query1)
+                parameters1=[]                
+                
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
+                cursor.execute(query1, parameters1)
                 total_dni_ausentes_velocidad = cursor.fetchone()[0]
             else:
                 query1="""
@@ -317,24 +350,30 @@ def mostrar_grafico_reg(request):
                         sum(ausente) as ausente                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             case 
                                 when count(case when asistencia = 'true' then 1 end) >= 1 
                                 then count(case when asistencia = 'false' then 1 end)
                                 else 0
                             end as ausente
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
-                    WHERE region=%s;
+                    WHERE 1=1;
                 """
-                parameters1 = []
+                parameters1=[]                
                 
                 if regiones_seleccionadas:
-                    query += " AND region = %s"
+                    query1 += " AND region = %s"
                     parameters1.append(regiones_seleccionadas)
-                
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
                 cursor.execute(query1, parameters1)
+                
                 total_dni_ausentes_velocidad = cursor.fetchone()[0]
             
             # Calcular total de alumnos presentes
@@ -344,17 +383,25 @@ def mostrar_grafico_reg(request):
                         sum(cargado) as cargado                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             case 
                                 when count(case when asistencia = 'true' then 1 end) >= 1 
                                 then count(case when asistencia = 'true' then 1 end)
                                 else 0
                             end as cargado
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
+                    WHERE 1=1
                 """
-                cursor.execute(query1)
+                parameters1=[]
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
+                cursor.execute(query1, parameters1)
                 total_dni_presentes_velocidad = cursor.fetchone()[0]
             else:
                 query1="""
@@ -362,23 +409,28 @@ def mostrar_grafico_reg(request):
                         sum(cargado) as cargado                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             case 
                             when count(case when asistencia = 'true' then 1 end) >= 1 
                             then count(case when asistencia = 'true' then 1 end)
                             else 0
                         end as cargado
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
-                    WHERE region=%s;
+                    WHERE 1=1;
                 """
                 parameters1 = []
                 
                 if regiones_seleccionadas:
-                    query += " AND region = %s"
+                    query1 += " AND region = %s"
                     parameters1.append(regiones_seleccionadas)
-                
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
                 cursor.execute(query1, parameters1)
                 total_dni_presentes_velocidad = cursor.fetchone()[0]
                 
@@ -389,13 +441,22 @@ def mostrar_grafico_reg(request):
                         sum(total) as total                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             count(asistencia) as total
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
+                    WHERE 1=1
                 """
-                cursor.execute(query1)
+                parameters1=[]
+                
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
+                cursor.execute(query1, parameters1)
                 total_alumnos_velocidad = cursor.fetchone()[0]
             else:
                 query1="""
@@ -403,19 +464,24 @@ def mostrar_grafico_reg(request):
                         sum(total) as total                        
                     from (
                         select
-                            region,
+                            region, ambito, sector,
                             count(asistencia) as total
-                        from cenpe."Evaluacion_Lectora"
-                            group by region, cueanexo, seccion
+                        from cenpe.v_evaluacion_lectora
+                            group by region, cueanexo, seccion, ambito, sector
                         ) as subquery
-                    WHERE region=%s;
+                    WHERE 1=1;
                 """
                 parameters1 = []
                 
                 if regiones_seleccionadas:
-                    query += " AND region = %s"
+                    query1 += " AND region = %s"
                     parameters1.append(regiones_seleccionadas)
-                
+                if ambitos_seleccionados:
+                    query1 += " AND ambito = %s"
+                    parameters1.append(ambitos_seleccionados)
+                if sectores_seleccionados:
+                    query1 += " AND sector = %s"
+                    parameters1.append(sectores_seleccionados)
                 cursor.execute(query1, parameters1)
                 total_alumnos_velocidad = cursor.fetchone()[0]
     
@@ -510,6 +576,9 @@ def mostrar_grafico_reg(request):
     graph_html3 = fig3.to_html(full_html=False, default_height=500, default_width=700)
     graph_html4 = fig4.to_html(full_html=False, default_height=500, default_width=700)
     
+    print('total',total_alumnos_velocidad)
+    print('presentes',total_dni_presentes_velocidad)
+    print('ausentes',total_dni_ausentes_velocidad)
     # Renderizar la plantilla y pasar los gráficos, promedios y total de presentes
     return render(request, 'oplectura/graficoreg.html', {
         'grafico': graph_html,
@@ -520,9 +589,9 @@ def mostrar_grafico_reg(request):
         'promedio_puntaje_precision': promedio_puntaje_pres,
         'promedio_puntaje_prosodia': promedio_puntaje_pros,
         'promedio_puntaje_comprension': promedio_puntaje_comp,
-        'total_alumnos': total_alumnos_velocidad,
-        'total_dni_presentes': total_dni_presentes_velocidad, 
-        'total_dni_ausentes': total_dni_ausentes_velocidad,
+        'total_alumnos_velocidad': total_alumnos_velocidad,
+        'total_dni_presentes_velocidad': total_dni_presentes_velocidad, 
+        'total_dni_ausentes_velocidad': total_dni_ausentes_velocidad,
         'regional': regional,
         'datos_disponibles': True
     })
