@@ -215,7 +215,7 @@ class Regional(models.Model):
 class UnidadServicio(models.Model):
     cue=models.CharField(max_length=7, blank=False, null=False, validators=[only_digits],verbose_name='Cue')
     anexo=models.CharField(max_length=2, blank=False, null=False, validators=[only_digits],verbose_name='Anexo')
-    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo', editable=False)
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
     cuof=models.IntegerField(default=0,verbose_name='Cuof')
     cuof_anexo=models.IntegerField(default=0, verbose_name='Cuof_Anexo')
     cui = models.CharField(max_length=9, blank=False, null=False, validators=[only_digits], verbose_name='Cui')

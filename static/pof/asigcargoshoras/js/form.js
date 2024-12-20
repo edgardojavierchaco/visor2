@@ -35,6 +35,7 @@ var vents = {
             data: this.items.detcargoshoras,
             columns: [
                 {"data": "id"},
+                {"data":"ceic"},
                 {"data": "denom_cargoshoras"},
                 {"data": "cargos"},
                 {"data": "horas"},

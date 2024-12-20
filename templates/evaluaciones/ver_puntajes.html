@@ -1,0 +1,27 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+    <h2>Puntajes de {{ alumno.nombre }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Materia</th>
+                <th>Puntaje</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for evaluacion in evaluaciones %}
+                <tr>
+                    <td>{{ evaluacion.evaluacion.materia }}</td>
+                    <td>{{ evaluacion.puntaje_total }}</td>
+                </tr>
+            {% endfor %}
+            <tr>
+                <td><strong>Puntaje Total</strong></td>
+                <td><strong>{{ puntaje_total_combinado }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+{% endblock %}

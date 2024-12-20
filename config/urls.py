@@ -8,6 +8,7 @@ from django.views import defaults as default_views
 from apps.dashboard.views import directores
 from apps.mapas.views2 import mapapuntos, obtenerdatos
 from apps.establecimientos.views import establecimientos
+from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -39,7 +40,10 @@ urlpatterns = [
     path('sup/',include('apps.superescuela.urls', namespace='sup')),    
     path('contador/',include('apps.cuenta_regresiva.urls',namespace='contador')),
     path('organica/',include('apps.pof.urls',namespace='organica')),
-    path('select2/', include('django_select2.urls')),
+    path('select2/', include('django_select2.urls')),       
+    path('evaluacion/<int:alumno_id>/<int:evaluacion_id>/', cargar_respuestas, name='cargar_respuestas'),
+    path('puntajes/<int:alumno_id>/', ver_puntajes, name='ver_puntajes'),
+    path('evaluaciones/',include('apps.evaluaciones.urls',namespace='evaluaciones')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

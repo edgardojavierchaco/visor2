@@ -36,27 +36,27 @@
                         </p>
                     </a>
                 </li>
-                <li class="nav-item">
+                {% comment %} <li class="nav-item">
                     <a href="{% url 'superescuela:super_list' %}" class="nav-link">
                         <i class="nav-icon fas fa-users"></i>
                         <p>
                             Supervisores
                         </p>
                     </a>
-                </li>
+                </li> {% endcomment %}
                 <li class="nav-item">
-                    <a href="{% url 'superescuela:asign_create' %}" class="nav-link">
+                    <a href="{% url 'pof:cargoshoras_create' %}" class="nav-link">
                         <i class="nav-icon fas fa-chalkboard"></i>
                         <p>
-                            Asignaciones
+                            Asignación Cargos/Horas
                         </p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'superescuela:asign_list' %}" class="nav-link">
+                    <a href="#" class="nav-link">
                         <i class="nav-icon fas fa-list"></i>
                         <p>
-                            Listado Supervisores
+                            Listado POF
                         </p>
                     </a>
                 </li>

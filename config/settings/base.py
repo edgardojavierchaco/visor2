@@ -51,6 +51,7 @@ LOCAL_APPS = [
     'apps.cuenta_regresiva',
     'apps.superescuela',
     'apps.pof',
+    'apps.evaluaciones',
 ]
 
 
