@@ -23,7 +23,7 @@ BASE_APPS = [
     'widget_tweaks',
     'django_select2',
     'django.forms',
-    'django.contrib.gis',    
+    'django.contrib.gis',   
 ]
 
 LOCAL_APPS = [
@@ -52,6 +52,7 @@ LOCAL_APPS = [
     'apps.superescuela',
     'apps.pof',
     'apps.evaluaciones',
+    'apps.unidadgestion',
 ]
 
 
@@ -114,7 +115,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=pof,cenpe,public'
+            'options': '-c search_path=cenpe,public,pof'
         }
     }
 }

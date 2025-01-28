@@ -3,9 +3,13 @@ from django.core.exceptions import ValidationError
 
 # Modelo Alumno
 class Alumno(models.Model):
+    cueanexo=models.CharField(max_length=9)
     apellido = models.CharField(max_length=255)
     nombre = models.CharField(max_length=255)
     dni = models.CharField(max_length=9)
+    dni_tutor=models.CharField(max_length=9)
+    ap_tutor=models.CharField(max_length=255)
+    
     
     def __str__(self):
         return f"{self.nombre} {self.apellido} - {self.dni}"

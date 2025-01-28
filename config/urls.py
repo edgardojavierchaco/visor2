@@ -9,6 +9,7 @@ from apps.dashboard.views import directores
 from apps.mapas.views2 import mapapuntos, obtenerdatos
 from apps.establecimientos.views import establecimientos
 from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
+from apps.unidadgestion import views_pers_doc_central
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -44,6 +45,7 @@ urlpatterns = [
     path('evaluacion/<int:alumno_id>/<int:evaluacion_id>/', cargar_respuestas, name='cargar_respuestas'),
     path('puntajes/<int:alumno_id>/', ver_puntajes, name='ver_puntajes'),
     path('evaluaciones/',include('apps.evaluaciones.urls',namespace='evaluaciones')),
+    path('central/',include('apps.unidadgestion.urls',namespace='central')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -51,8 +51,14 @@ class SupervisorForm(ModelForm):
         widgets = {
             'dni': TextInput(
                 attrs={
-                    'placeholder': 'Ingrese un DNI',
+                    'placeholder': 'Ingrese un DNI sin puntos',
                     'maxlength': '8'
+                }
+            ),
+            'cuil': TextInput(
+                attrs={
+                    'placeholder': 'Ingrese un CUIL',
+                    'maxlength': '11'
                 }
             ),
             'apellido': TextInput(
@@ -67,6 +73,60 @@ class SupervisorForm(ModelForm):
                     'style': 'text-transform: uppercase;'
                 }
             ),
+            'f_nac': DateInput(
+                attrs={
+                    'type': 'date',
+                    'placeholder': 'Ingrese Fecha de Nacimiento',
+                }
+            ),
+            'sexo': Select(
+                attrs={
+                    'class': 'form-control select2',
+                    'placeholder': 'Seleccione sexo',
+                }
+            ),
+            'sit_revista': Select(
+                attrs={
+                    'class': 'form-control select2',
+                    'placeholder': 'Seleccione Situación de Revista',
+                }
+            ),
+            'f_designacion': DateInput(
+                attrs={
+                    'type': 'date',
+                    'placeholder': 'Ingrese Fecha de Designación',
+                }
+            ),
+            'cuof': TextInput(
+                attrs={
+                    'placeholder': 'Ingrese CUOF',
+                    'maxlength': '5',
+                }
+            ),
+            'cuof_anexo': TextInput(
+                attrs={
+                    'placeholder': 'Ingrese Cuof Anexo',
+                    'maxlength': '2',
+                }
+            ),
+            'nivel': Select(
+                attrs={
+                    'class': 'form-control select2',
+                    'placeholder': 'Seleccione Nivel',
+                }
+            ),
+            'modalidad': Select(
+                attrs={
+                    'class': 'form-contorl select2',
+                    'placeholder': 'Seleccione Modalidad',
+                }
+            ),
+            'sector': Select(
+                attrs={
+                    'class': 'form-control select2',
+                    'placeholder': 'Seleccione Sector',
+                }
+            ),
             'email': EmailInput(
                 attrs={
                     'placeholder': 'Ingrese email',
@@ -79,7 +139,7 @@ class SupervisorForm(ModelForm):
             'region': Select(
                 attrs={
                     'class': 'form-control select2',
-                    'placeholder': 'Ingrese teléfono',
+                    'placeholder': 'Seleccione Región',
                 }
             ),
         }

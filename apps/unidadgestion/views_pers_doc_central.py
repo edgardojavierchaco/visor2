@@ -1,0 +1,158 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.urls import reverse_lazy
+from django.http import HttpResponseRedirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from .forms import PersonalDocCentralForm
+#from .mixins import ValidatePermissionRequiredMixin
+from .models import PersonalDocCentral, PersonalNoDocCentral
+from django.shortcuts import get_object_or_404
+from .models import CargosCeic
+
+
+def cargar_cargos(request):
+    """
+    Vista para cargar los cargos asociados a un nivel-modalidad de forma dinámica.
+    """
+    
+    nivelmod = request.GET.get('nivelmod')
+    if nivelmod:
+        cargos = CargosCeic.objects.filter(nivel=nivelmod, estado=True)
+        data = [{'id': cargo.id, 'nombre': cargo.descripcion_ceic} for cargo in cargos]
+        return JsonResponse(data, safe=False)
+    return JsonResponse({'error': 'Nivel no proporcionado o inválido'}, status=400)
+
+class UGListView(LoginRequiredMixin, ListView):
+    model = PersonalDocCentral
+    template_name = 'unidadgestion/pers_doc_central/list.html'
+    #permission_required = 'apps.view_supervisor'
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        data = {}
+        try:
+            action = request.POST['action']
+            if action == 'searchdata':
+                data = []
+                for i in PersonalDocCentral.objects.all():
+                    print(f"Procesando PersonalDocCentral: {i}")
+                    data.append(i.toJSON())               
+                    
+            else:
+                data['error'] = 'Ha ocurrido un error'
+        except Exception as e:
+            data['error'] = str(e)
+        return JsonResponse(data, safe=False)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Listado de Personal Docente'
+        context['create_url'] = reverse_lazy('unidadgestion:ug_create')
+        context['list_url'] = reverse_lazy('unidadgestion:ug_list')         
+        context['entity'] = 'Personal Docente'
+        return context
+
+
+class UGCreateView(LoginRequiredMixin, CreateView):
+    model = PersonalDocCentral
+    form_class = PersonalDocCentralForm
+    template_name = 'unidadgestion/pers_doc_central/create.html'
+    success_url = reverse_lazy('unidadgestion:ug_list')
+    #permission_required = 'apps.add_client'
+    url_redirect = success_url
+
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            action = request.POST.get('action')
+            if action == 'add':
+                form = self.get_form()
+                if form.is_valid():
+                    form.save() 
+                    return HttpResponseRedirect(self.success_url)
+                else:
+                    return self.form_invalid(form)
+            else:
+                return JsonResponse({'error': 'No ha ingresado a ninguna opción'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Agregar Personal Docente Central'
+        context['entity'] = 'Personal Docente'
+        context['list_url'] = self.success_url
+        context['action'] = 'add'
+        return context
+
+
+class UGUpdateView(LoginRequiredMixin, UpdateView):
+    model = PersonalDocCentral
+    form_class = PersonalDocCentralForm
+    template_name = 'unidadgestion/pers_doc_central/create.html'
+    success_url = reverse_lazy('unidadgestion:ug_list')
+    #permission_required = 'apps.change_client'
+    url_redirect = success_url
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            action = request.POST.get('action')
+            if action == 'add':
+                form = self.get_form()
+                if form.is_valid():
+                    form.save()
+                    return HttpResponseRedirect(self.success_url)
+                else:
+                    return self.form_invalid(form)
+            else:
+                return JsonResponse({'error': 'No ha ingresado a ninguna opción'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)})
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Edición de Personal Docente'
+        context['entity'] = 'Personal Docente'
+        context['list_url'] = self.success_url
+        context['action'] = 'edit'
+        return context
+
+
+class UGDeleteView(LoginRequiredMixin, DeleteView):
+    model = PersonalDocCentral
+    template_name = 'unidadgestion/pers_doc_central/delete.html'
+    success_url = reverse_lazy('unidadgestion:ug_list')
+    #permission_required = 'apps.delete_client'
+    url_redirect = success_url
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        data = {}
+        try:
+            self.object.delete()
+        except Exception as e:
+            data['error'] = str(e)
+        return JsonResponse(data)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Eliminación de Personal Docente'
+        context['entity'] = 'Personal Docente'
+        context['list_url'] = self.success_url
+        return context
+
