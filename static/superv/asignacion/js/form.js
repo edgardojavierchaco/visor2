@@ -28,6 +28,7 @@ var asigna = {
                 {"data": "id"},
                 {"data": "cueanexo"},
                 {"data": "nom_est"},
+                {"data": "oferta"},
                 {"data": "region"}
             ],
             columnDefs: [
@@ -116,7 +117,15 @@ $(function () {
         select: function (event, ui) {
             event.preventDefault();
             ui.item.total = 0;
-            asigna.add(ui.item);
+            // Agrega la escuela seleccionada al detalle con la oferta
+            ui.item.total = 0;
+            asigna.add({
+                id: ui.item.id,
+                cueanexo: ui.item.cueanexo,
+                nom_est: ui.item.nom_est,
+                oferta: ui.item.oferta, 
+                region: ui.item.region
+            });
             $(this).val('');
         }
     });

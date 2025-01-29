@@ -61,7 +61,14 @@ class EscalafonAdmin(models.Model):
             db_table= 'Escalafon_Admin'    
     
     def __str__(self):
-        return f"{self.categoria}-{self.descripcion}"
+        return f"{self.nom_categ}-{self.descripcion}"
+    
+    def toJSON(self):    
+        item=model_to_dict(self)    
+        item['id']=self.categoria
+        item['nom_categ']=self.nom_categ
+        item['descripcion']=self.descripcion    
+        return item
     
 
 class PersonalDocCentral(models.Model):
@@ -322,6 +329,29 @@ class PersonalNoDocCentral(models.Model):
         
     def __str__(self):
         return f"{self.apellido} {self.nombres} - {self.dni}"
+    
+    def toJSON(self):
+        item=model_to_dict(self)
+        item['t_dni']=self.t_dni
+        item['dni']=self.dni
+        item['cuil']=self.cuil
+        item['apellido']=self.apellido
+        item['nombres']=self.nombres
+        item['f_nac']=self.f_nac
+        item['sexo']=self.sexo        
+        item['categoria']=self.categoria.descripcion
+        item['sit_nom']=self.sit_nom
+        item['f_designacion']=self.f_designacion
+        item['nom_funcion']=self.nom_funcion.funcion
+        item['f_desde']=self.f_desde
+        item['f_hasta']=self.f_hasta
+        item['carga_horaria_sem']=self.carga_horaria_sem
+        item['cuof']=self.cuof
+        item['cuof_anexo']=self.cuof_anexo
+        item['email']=self.email
+        item['telefono']=self.telefono
+        item['region']=self.region
+        return item
     
     def clean(self):
         # Validación para que `dni` tenga entre 7 y 8 dígitos

@@ -16,6 +16,7 @@ $(function () {
             {"data": "id"},
             {"data": "cueanexo"},
             {"data": "nom_est"},
+            {"data": "oferta"},
             {"data": "region"},   
             {"data": "id"},       
         ],

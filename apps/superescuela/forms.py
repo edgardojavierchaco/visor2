@@ -21,6 +21,11 @@ class EscuelasSupervisadasForm(ModelForm):
                     'placeholder': 'Ingrese un nombre de escuela',                    
                 }
             ),
+            'oferta': TextInput(
+                attrs={
+                    'placeholder': 'Ingrese oferta',                    
+                }
+            ),
             'region': TextInput(
                 attrs={
                     'placeholder': 'Ingrese una regional',                    

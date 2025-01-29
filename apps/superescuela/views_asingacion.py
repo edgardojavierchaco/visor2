@@ -8,8 +8,8 @@ from .forms import AsignacionForm
 #from .mixins import ValidatePermissionRequiredMixin
 from django.views.generic import CreateView, ListView, DeleteView, UpdateView
 from django.db import transaction
-
-from .models import Asignacion, DetalleAsignacion, EscuelasSupervisadas
+from django.db import connection
+from .models import Asignacion, DetalleAsignacion, EscuelasSupervisadas, Supervisor
 
 
 class AsignacionCreateView(LoginRequiredMixin, CreateView):
@@ -23,7 +23,52 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_regional_usuario(self):
+        """
+        Obtiene el regional del usuario logueado consultando directamente la tabla cenpe.cueregional.
 
+        Returns:
+            str: El regional del usuario logueado o None si no se encuentra.
+        """
+        user = self.request.user
+        query = """
+            SELECT regional 
+            FROM cenpe.cueregional 
+            WHERE cueanexo = %s
+            LIMIT 1
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(query, [user.username])
+            row = cursor.fetchone()
+        
+        return row[0] if row else None
+
+    def get_queryset(self):
+        """
+        Obtiene el queryset de PersonalDocCentral filtrado por la regional del usuario logueado.
+
+        Returns:
+            QuerySet: Lista de PersonalDocCentral filtrados por la región correspondiente.
+        """
+        regional_usuario = self.get_regional_usuario()
+        if regional_usuario:
+            # Filtramos PersonalDocCentral por la región correspondiente
+            return Supervisor.objects.filter(region=regional_usuario)
+        return Supervisor.objects.none()
+
+    def get_form(self, *args, **kwargs):
+        """
+        Personaliza el formulario para filtrar supervisores según la región del usuario logueado.
+        """
+        form = super().get_form(*args, **kwargs)
+        regional_usuario = self.get_regional_usuario()
+        if regional_usuario:
+            form.fields['supervisor'].queryset = Supervisor.objects.filter(region=regional_usuario)
+        else:
+            form.fields['supervisor'].queryset = Supervisor.objects.none()
+        return form
+    
     def post(self, request, *args, **kwargs):
         data = {}
         try:
@@ -33,7 +78,7 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
                 prods=EscuelasSupervisadas.objects.filter(cueanexo__icontains=request.POST['term'])[0:10]
                 for i in prods:
                     item = i.toJSON()
-                    item['value'] = i.nom_est
+                    item['value'] = f"{i.cueanexo} {i.nom_est} - {i.oferta}"
                     data.append(item)
             elif action == 'add':
                 with transaction.atomic():
@@ -70,6 +115,33 @@ class AsignacionListView(LoginRequiredMixin, ListView):
     model = Asignacion
     template_name = 'superv/asignacion/list.html'
 
+    def get_regional_usuario(self):
+        """
+        Obtiene el regional del usuario logueado consultando directamente la tabla cenpe.cueregional.
+        """
+        user = self.request.user
+        query = """
+            SELECT regional 
+            FROM cenpe.cueregional 
+            WHERE cueanexo = %s
+            LIMIT 1
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(query, [user.username])
+            row = cursor.fetchone()
+        
+        return row[0] if row else None
+
+    def get_queryset(self):
+        """
+        Filtra las asignaciones según la región del supervisor y del usuario logueado.
+        """
+        regional_usuario = self.get_regional_usuario()
+        if regional_usuario:
+            # Filtrar asignaciones por la región del supervisor
+            return Asignacion.objects.filter(supervisor__region=regional_usuario)
+        return Asignacion.objects.none()
+    
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -77,12 +149,14 @@ class AsignacionListView(LoginRequiredMixin, ListView):
     def post(self, request, *args, **kwargs):
         data = {}
         try:
-            action = request.POST['action']
+            action = request.POST['action']  
+            regional_usuario = self.get_regional_usuario()          
             if action == 'searchdata':
-                data = [i.toJSON() for i in Asignacion.objects.all()]
+                data = [i.toJSON() for i in Asignacion.objects.filter(supervisor__region=regional_usuario)]
             elif action == 'search_details_asign':
                 data = []
-                for i in DetalleAsignacion.objects.filter(asignacion_id=request.POST['id']):
+                for i in DetalleAsignacion.objects.filter(asignacion_id=request.POST['id'],
+                    asignacion__supervisor__region=regional_usuario):
                     data.append(i.toJSON())
             else:
                 data['error'] = 'Ha ocurrido un error'
@@ -145,7 +219,7 @@ class AsignacionUpdateView(LoginRequiredMixin, UpdateView):
                 prods = EscuelasSupervisadas.objects.filter(cueanexo__icontains=request.POST['term'])[0:10]
                 for i in prods:
                     item = i.toJSON()
-                    item['value'] = i.nom_est
+                    item['value'] = f"{i.cueanexo} {i.nom_est} - {i.oferta}"
                     data.append(item)
             elif action == 'edit':
                 with transaction.atomic():

@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-
+from django.db import connection
 from .forms import SupervisorForm
 #from .mixins import ValidatePermissionRequiredMixin
 from .models import Supervisor
@@ -14,6 +14,39 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
     model = Supervisor
     template_name = 'superv/supervisor/list.html'
     #permission_required = 'apps.view_supervisor'
+    
+    def get_regional_usuario(self):
+        """
+        Obtiene el regional del usuario logueado consultando directamente la tabla cenpe.cueregional.
+
+        Returns:
+            str: El regional del usuario logueado o None si no se encuentra.
+        """
+        user = self.request.user
+        query = """
+            SELECT regional 
+            FROM cenpe.cueregional 
+            WHERE cueanexo = %s
+            LIMIT 1
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(query, [user.username])
+            row = cursor.fetchone()
+        
+        return row[0] if row else None
+
+    def get_queryset(self):
+        """
+        Obtiene el queryset de PersonalDocCentral filtrado por la regional del usuario logueado.
+
+        Returns:
+            QuerySet: Lista de PersonalDocCentral filtrados por la región correspondiente.
+        """
+        regional_usuario = self.get_regional_usuario()
+        if regional_usuario:
+            # Filtramos PersonalDocCentral por la región correspondiente
+            return Supervisor.objects.filter(region=regional_usuario)
+        return Supervisor.objects.none()
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -25,7 +58,7 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
             action = request.POST['action']
             if action == 'searchdata':
                 data = []
-                for i in Supervisor.objects.all():
+                for i in self.get_queryset():
                     data.append(i.toJSON())
             else:
                 data['error'] = 'Ha ocurrido un error'

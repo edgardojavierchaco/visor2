@@ -63,6 +63,10 @@ class LoginFormView(LoginView):
             regionales_group = Group.objects.get(name='Regional')
             if regionales_group in user.groups.all():
                 return reverse('oplectura:portada_regional')
+            
+            privada_group=Group.objects.get(name='Director_Privada')
+            if privada_group in user.groups.all():
+                return reverse('directores:institucional_uegp')
                 
             if not user.groups.exists():
                 return settings.LOGIN_REDIRECT_URL            

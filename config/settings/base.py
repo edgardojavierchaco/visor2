@@ -53,6 +53,7 @@ LOCAL_APPS = [
     'apps.pof',
     'apps.evaluaciones',
     'apps.unidadgestion',
+    'apps.uegp',
 ]
 
 

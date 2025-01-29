@@ -1,0 +1,32 @@
+{% extends 'uegp/list.html' %}
+{% load static %}
+{% block head_list %}
+    <script src="{% static 'uegp/pers_doc_uegp/js/list.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+    <tr>
+        <th scope="col" style="width: 10%;">ID</th>
+        <th scope="col" style="width: 15%;">T_DNI</th>
+        <th scope="col" style="width: 15%;">DNI</th>
+        <th scope="col" style="width: 10%;">CUIL</th>
+        <th scope="col" style="width: 15%;">APELLIDO</th>
+        <th scope="col" style="width: 15%;">NOMBRES</th>
+        <th scope="col" style="width: 20%;">F_NAC</th>
+        <th scope="col" style="width: 20%;">SEX0</th>
+        <th scope="col" style="width: 10%;">NIVEL_MOD</th>
+        <th scope="col" style="width: 15%;">SECTOR</th>
+        <th scope="col" style="width: 15%;">CARGO</th>
+        <th scope="col" style="width: 10%;">SIT_REV</th>
+        <th scope="col" style="width: 15%;">F_DESINGACION</th>
+        <th scope="col" style="width: 15%;">FUNCION</th>
+        <th scope="col" style="width: 20%;">DESDE</th>
+        <th scope="col" style="width: 20%;">HASTA</th>
+        <th scope="col" style="width: 15%;">CARGA HORARIA</th>        
+        <th scope="col" style="width: 20%;">REGION</th>
+    </tr>
+{% endblock %}
+
+{% block javascript %}
+
+{% endblock %}

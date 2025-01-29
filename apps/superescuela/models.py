@@ -91,7 +91,7 @@ class Supervisor(models.Model):
         db_table= 'supervisores_escuelas'    
     
     def __str__(self):
-        return f"{self.apellido} {self.nombres}"
+        return f"{self.apellido} {self.nombres} {self.region}"
 
     def toJSON(self):
         item = model_to_dict(self)
@@ -157,6 +157,7 @@ class Supervisor(models.Model):
 class EscuelasSupervisadas(models.Model):
     cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
     nom_est=models.CharField(max_length=255, verbose_name='Nombre')
+    oferta=models.CharField(max_length=255, verbose_name='Oferta')
     region=models.CharField(max_length=100, verbose_name='Regional')
     
     class Meta:
@@ -165,12 +166,13 @@ class EscuelasSupervisadas(models.Model):
         db_table= 'escuelas_supervisadas'    
     
     def __str__(self):
-        return f"{self.cueanexo} {self.nom_est}"
+        return f"{self.cueanexo} {self.nom_est} {self.oferta}"
 
     def toJSON(self):
         item = model_to_dict(self)
         item['cueanexo'] = self.cueanexo
         item['nom_est'] = self.nom_est
+        item['oferta']=self.oferta
         item['region'] = self.region 
         return item       
         
@@ -180,7 +182,7 @@ class Asignacion(models.Model):
     total=models.IntegerField(default=0, verbose_name='Total')
 
     def __str__(self):
-        return f"{self.supervisor.apellido} {self.supervisor.nombres}"
+        return f"{self.supervisor.apellido} {self.supervisor.nombres} {self.supervisor.region}"
     
     def toJSON(self):
         item = model_to_dict(self)
