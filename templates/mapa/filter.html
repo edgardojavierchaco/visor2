@@ -55,6 +55,13 @@
                             </div>
                         </div>
                         <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="SwitchCheckCui" onchange="toggleDropdown('Cui')">
+                            <label class="form-check-label" for="SwitchCheckCui">Cui</label>
+                            <div>
+                                <input class="form-control form-text-input hidden" type="text" id="CuiDropdown" name="Cui" onblur="validateCui(this)" onkeypress="return event.charCode >= 48 && event.charCode <= 57" style="width: 100px;" disabled>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="SwitchChecknomest" onchange="toggleDropdown('nomest')">
                             <label class="form-check-label" for="SwitchChecknomest">Nombre Establecimiento</label>
                             <div>                                

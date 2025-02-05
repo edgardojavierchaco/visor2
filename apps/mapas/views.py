@@ -55,13 +55,14 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         localidad = request.POST.get('Localidad')
         oferta = request.POST.get('Oferta')
         nom_est=request.POST.get('nomest')
+        cui=request.POST.get('Cui')
 
-        print("Parámetros de la solicitud:", ambito, sector, localidad, oferta, nom_est)
+        print("Parámetros de la solicitud:", ambito, sector, localidad, oferta, nom_est, cui)
 
         
         # Realizar la consulta en la base de datos
         cursor = connection.cursor()
-        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1 "
+        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc FROM v_capa_unica_ofertas_cui_cuof WHERE 1=1 "
         parameters = []
         if cueanexo:
             query += "AND cueanexo = %s"
@@ -81,6 +82,9 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         if localidad:
             query += "AND localidad = %s"
             parameters.append(localidad)
+        if cui:
+            query += " AND cui_loc = %s"
+            parameters.append(cui)
         if oferta:
             query += "AND oferta LIKE %s"
             parameters.append(oferta+'%')
@@ -92,8 +96,8 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         rows = cursor.fetchall()
 
         # Filtrar los marcadores con latitud y longitud distintas de 0 o vacías
-        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad) 
-                         for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad in rows 
+        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc) 
+                         for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad,cui_loc, cuof_loc in rows 
                          if lat != 0 and lng != '' and lng != 0 and lat != '']
 
         # Obtener los nombres de las columnas
