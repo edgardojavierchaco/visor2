@@ -2,7 +2,7 @@ from django.views.generic import TemplateView
 
 
 class DashboardView(TemplateView):
-    template_name = 'uegp/pers_doc_uegp/dashboard.html'
+    template_name = 'uegp/portadadirgraluegp.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

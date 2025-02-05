@@ -37,41 +37,47 @@
         <div class="collapse navbar-collapse order-3" id="navbarCollapse">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a href="{% url 'oplectura:portada_regional'%}" class="nav-link"><i class="fas fa-home" style="color:orange"></i> Home</a>
-                </li>                               
+                    <a href="{% url 'privada:dashboard'%}" class="nav-link"><i class="fas fa-home" style="color:orange"></i> Home</a>
+                </li>
+                       
                  <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">                        
+                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                        <li><a href="{% url 'privada:directores' %}" class="dropdown-item">Directores UEGP registrados</a></li>
+                        
                         <!-- Menú desplegable para "Resultados" -->
                         <li class="dropdown">
                             <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                class="dropdown-item dropdown-toggle">Resultados</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">                                                          
+                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                                        
                                 <li class="dropdown-submenu">
                                     <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                        class="dropdown-item dropdown-toggle">Noviembre-2024</a>
                                     <ul aria-labelledby="dropdownSubMenu3" class="dropdown-menu border-0 shadow">                                        
                                         <li><a href="{% url 'oplectura:cargar_graficoreg' %}" class="dropdown-item">Gráfico por Regional</a></li>  
-                                         <li><a href="{% url 'oplectura:cargar_graficoloc' %}" class="dropdown-item">Gráfico por Localidad</a></li>
-                                        
+                                        <li><a href="{% url 'oplectura:cargar_graficoloc' %}" class="dropdown-item">Gráfico por Localidad</a></li>
+                                                                 
                                     </ul>
                                 </li>
                             </ul>
-                        </li>                        
+                        </li>
+                         
                     </ul>
-                </li>         
+                </li>       
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-users" style="color:black"></i> Regional </a>
+                       class="nav-link dropdown-toggle"><i class="fas fa-users" style="color:black"></i> Dirección General </a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'superescuela:dashboard' %}" class="dropdown-item">ABM Supervisores</a></li>
-                        <li><a href="{% url 'unidadgestion:dashboard' %}" class="dropdown-item">ABM Relevamiento</a></li> 
+                        <li><a href="{% url 'privada:uegp_list_docdirgral' %}" class="dropdown-item">Nómina Docentes</a></li>
+                        <li><a href="{% url 'privada:uegp_list_ndocdirgral' %}" class="dropdown-item">Nómina No Docentes</a></li> 
                     </ul>
-                </li>                   
+                </li>               
+
                 {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <a href="{% url 'oplectura:portada_regional' %}" class="nav-link">Usuario: {{ user.nombres }}</a>
+                    <a href="{% url 'usuarios:listado_op' %}" class="nav-link">Usuario: {{ user.nombres }}</a>
                 </li>
                 
                 {% else %}
@@ -79,12 +85,11 @@
                     <span class="nav-link">Usuario: Público</span>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'usuarios:registro' %}" >
+                    <a class="nav-link" href="{% url 'login:login' %}">
                         <i class="fas fa-power-off" aria-hidden="true" style="color:green"></i> Login
                     </a>
                 </li>
                 {% endif %}
-                
             </ul>
         </div>
         <div class="order-1 order-md-3 navbar-tools text-md-right">
@@ -115,6 +120,7 @@
                     </div>
                 </li>
             </ul>
-        </div> 
+        </div>
     </div>
 </nav>
+
