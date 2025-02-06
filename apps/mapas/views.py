@@ -164,8 +164,8 @@ def filtrar_tablas_view(request):
     
     institucional = """
         SELECT categoria, jornada, oferta, id_establecimiento, ref_loc, calle, numero, anexo,apellido_resp, nombre_resp, resploc_telefono,resploc_email,
-            sup_tecnico, email_suptecnico, tel_suptecnico
-        FROM padron_ofertas        
+            sup_tecnico, email_suptecnico, tel_suptecnico, cui_loc, cuof_loc
+        FROM public.padron_ofertas        
         WHERE cueanexo = %s 
     """ 
     planes="""
