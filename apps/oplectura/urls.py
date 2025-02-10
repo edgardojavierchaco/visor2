@@ -8,6 +8,8 @@ from .views_aplicdir import ListadoAplicadoresDirView, EditarAplicadorDirView
 from .views_evolcarga import grafico_evaluacion_lectora, grafico_aplicador_region
 from .views_resultadosxloc import *
 from .views_resultadosescxreg import tu_vistacueanexoreg, mostrar_grafico_cueanexoreg, cargar_grafico_cueanexoreg
+from .views_resultadosescxreg_func import *
+from .views_resultadosxloc_func import * 
 
 app_name='oplectura'
 
@@ -44,4 +46,9 @@ urlpatterns = [
     path('resultados_cueanexo/', tu_vistacueanexoreg, name='resultados_cueanexo'),   
     path('cargar_graficocueanexo/', mostrar_grafico_cueanexoreg, name='cargar_graficocueanexo'),
     path('grafico_cueanexo/', mostrar_grafico_cueanexoreg, name='grafico_cueanexo'),
+    path('cargar_graficoloc_func/', mostrar_grafico_localidad_func, name='cargar_graficoloc_func'),
+    path('grafico_loc_func/', mostrar_grafico_loc_func, name='grafico_loc_func'),
+    path('resultados_cueanexo_func/', tu_vistacueanexoreg_func, name='resultados_cueanexo_func'),   
+    path('cargar_graficocueanexo_func/', mostrar_grafico_cueanexoreg_func, name='cargar_graficocueanexo_func'),
+    path('grafico_cueanexo_func/', mostrar_grafico_cueanexoreg_func, name='grafico_cueanexo_func'),
 ]
