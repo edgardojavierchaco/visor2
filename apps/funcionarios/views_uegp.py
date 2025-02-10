@@ -7,14 +7,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_control
 from django.db import connection
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from .forms import PersonalDocUegpForm, PersonalNoDocUegpForm
+from apps.uegp.forms import PersonalDocUegpForm, PersonalNoDocUegpForm
 #from .mixins import ValidatePermissionRequiredMixin
-from .models import PersonalDocUegp, PersonalNoDocUegp
+from apps.uegp.models import PersonalDocUegp, PersonalNoDocUegp
 from django.shortcuts import get_object_or_404
-from .models import CargosCeicUegp
+from apps.uegp.models import CargosCeicUegp
 from apps.usuarios.models import UsuariosVisualizador
 
-class UEGPListViewPersDocDirGral(LoginRequiredMixin, ListView):
+class UEGPListViewPersDocFuncionario(LoginRequiredMixin, ListView):
     """
     Vista para listar PersonalDocUEGP filtrados por la regional del usuario logueado.
 
@@ -98,7 +98,7 @@ class UEGPListViewPersDocDirGral(LoginRequiredMixin, ListView):
         return context
 
 
-class UEGPListViewPersNoDocDirGral(LoginRequiredMixin, ListView):
+class UEGPListViewPersNoDocFuncionario(LoginRequiredMixin, ListView):
     """
     Vista para listar PersonalDocUEGP filtrados por la regional del usuario logueado.
 

@@ -71,6 +71,10 @@ class LoginFormView(LoginView):
             privada_group=Group.objects.get(name='DirGral_Privada')
             if privada_group in user.groups.all():
                 return reverse('privada:dashboard')
+            
+            funcionarios_group=Group.objects.get(name='Funcionarios')
+            if funcionarios_group in user.groups.all():
+                return reverse('funcionario:portada_func')
                 
             if not user.groups.exists():
                 return settings.LOGIN_REDIRECT_URL            

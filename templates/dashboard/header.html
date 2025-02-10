@@ -105,10 +105,22 @@
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                         class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Repositorio</a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                    <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
                         <li><a href="{% url 'mapoteca:mapas' %}" class="dropdown-item">Mapoteca</a></li>
                         <li><a href="{% url 'videoteca:videos' %}" class="dropdown-item">Videoteca</a></li>
-                        <li><a href="{% url 'digesto:norma' %}" class="dropdown-item">Normativa</a></li>
+                        <!-- Menú desplegable de Normativa -->
+                        <li class="dropdown">
+                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                class="dropdown-item dropdown-toggle">Normativa</a>
+                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                <li><a href="{% url 'digesto:norma' %}" class="dropdown-item">Normativa</a></li>
+                                <li><a href="https://dirdocumentacion.chaco.gob.ar/documentos/buscar" class="dropdown-item">Búsqueda Resoluciones</a></li>
+                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/calendario-2025/" class="dropdown-item">Calendario Escolar</a></li>
+                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/directorio_2024/" class="dropdown-item">Directorio MECCyT</a></li>
+                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/dossier_educativos/" class="dropdown-item">Dossier Digital</a></li>
+                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/formularios-planillas/" class="dropdown-item">Formularios Docentes</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>       
                 <li class="nav-item dropdown">
