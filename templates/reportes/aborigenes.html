@@ -44,7 +44,7 @@
                         <table id="datatable-cargos" class="table">                        
                             <thead>
                                 <tr class="header-row">
-                                    
+                                    <th class="centered">DETALLE</th> 
                                     <th class="centered">TOTALES</th>
                                     <th class="centered">VARONES</th>                                
                                 </tr>
@@ -53,7 +53,7 @@
                             <tbody>
                                 {% for item in dataaborigen %}
                                     <tr>
-                                        
+                                        <td> - </td>
                                         <td>{{ item.total }}</td>
                                         <td>{{ item.tot_var }}</td>                                    
                                     </tr>
@@ -155,13 +155,13 @@
                         };
                         // Total over all pages
                         totalTotales = api
-                            .column( 0 )
+                            .column( 1 )
                             .data()
                             .reduce( function (a, b) {
                                 return intVal(a) + intVal(b);
                             }, 0 );
                         totalVarones = api
-                            .column( 1 )
+                            .column( 2 )
                             .data()
                             .reduce( function (a, b) {
                                 return intVal(a) + intVal(b);
