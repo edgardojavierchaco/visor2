@@ -31,6 +31,7 @@ class EscuelasSupervisadasForm(ModelForm):
                     'placeholder': 'Ingrese una regional',                    
                 }
             ),
+            
         }
 
     def save(self, commit=True):

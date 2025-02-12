@@ -13,12 +13,12 @@ $(function () {
             dataSrc: ""
         },
         columns: [
-            {"data": "id"},
+            
             {"data": "cueanexo"},
             {"data": "nom_est"},
             {"data": "oferta"},
-            {"data": "region"},   
-            {"data": "id"},       
+            {"data": "region"},              
+            {"data": "region"},       
         ],
         columnDefs: [
             

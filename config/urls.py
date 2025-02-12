@@ -48,6 +48,7 @@ urlpatterns = [
     path('central/',include('apps.unidadgestion.urls',namespace='central')),
     path('uegp/',include('apps.uegp.urls',namespace='uegp')),
     path('chaco/',include('apps.funcionarios.urls',namespace='chaco')),
+    path('rl/',include('apps.represlegales.urls',namespace='rl')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -33,16 +33,18 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         """
         user = self.request.user
         query = """
-            SELECT regional 
-            FROM cenpe.cueregional 
-            WHERE cueanexo = %s
-            LIMIT 1
+            SELECT region_reg 
+            FROM public."public.director_regional" 
+            WHERE dni_reg = %s
+            
         """
         with connection.cursor() as cursor:
             cursor.execute(query, [user.username])
-            row = cursor.fetchone()
+            rows = cursor.fetchall()
         
-        return row[0] if row else None
+        regiones = [row[0] for row in rows] if rows else []
+        print(regiones)
+        return regiones
 
     def get_queryset(self):
         """
@@ -54,7 +56,7 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         regional_usuario = self.get_regional_usuario()
         if regional_usuario:
             # Filtramos PersonalDocCentral por la región correspondiente
-            return Supervisor.objects.filter(region=regional_usuario)
+            return Supervisor.objects.filter(region__in=regional_usuario)
         return Supervisor.objects.none()
 
     def get_form(self, *args, **kwargs):
@@ -64,7 +66,7 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         form = super().get_form(*args, **kwargs)
         regional_usuario = self.get_regional_usuario()
         if regional_usuario:
-            form.fields['supervisor'].queryset = Supervisor.objects.filter(region=regional_usuario)
+            form.fields['supervisor'].queryset = Supervisor.objects.filter(region__in=regional_usuario)
         else:
             form.fields['supervisor'].queryset = Supervisor.objects.none()
         return form
@@ -121,16 +123,18 @@ class AsignacionListView(LoginRequiredMixin, ListView):
         """
         user = self.request.user
         query = """
-            SELECT regional 
-            FROM cenpe.cueregional 
-            WHERE cueanexo = %s
-            LIMIT 1
+            SELECT region_reg
+            FROM public."public.director_regional"
+            WHERE dni_reg = %s
+            
         """
         with connection.cursor() as cursor:
             cursor.execute(query, [user.username])
-            row = cursor.fetchone()
+            rows = cursor.fetchall()
         
-        return row[0] if row else None
+        regiones = [row[0] for row in rows] if rows else []
+        print(regiones)
+        return regiones
 
     def get_queryset(self):
         """
@@ -152,11 +156,11 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             action = request.POST['action']  
             regional_usuario = self.get_regional_usuario()          
             if action == 'searchdata':
-                data = [i.toJSON() for i in Asignacion.objects.filter(supervisor__region=regional_usuario)]
+                data = [i.toJSON() for i in Asignacion.objects.filter(supervisor__region__in=regional_usuario)]
             elif action == 'search_details_asign':
                 data = []
                 for i in DetalleAsignacion.objects.filter(asignacion_id=request.POST['id'],
-                    asignacion__supervisor__region=regional_usuario):
+                    asignacion__supervisor__region__in=regional_usuario):
                     data.append(i.toJSON())
             else:
                 data['error'] = 'Ha ocurrido un error'

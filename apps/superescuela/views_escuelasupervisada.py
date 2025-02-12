@@ -29,17 +29,20 @@ class EscuelasSupervisadasListView(LoginRequiredMixin, ListView):
         """
         user = self.request.user
         query = """
-            SELECT regional 
-            FROM cenpe.cueregional 
-            WHERE cueanexo = %s
-            LIMIT 1
+            SELECT region_reg 
+            FROM public."public.director_regional" 
+            WHERE dni_reg = %s
+            
         """
         with connection.cursor() as cursor:
             cursor.execute(query, [user.username])
-            row = cursor.fetchone()
+            rows = cursor.fetchall()
+            
+        regiones = [row[0] for row in rows] if rows else []
+        print(regiones)
+        return regiones
         
-        return row[0] if row else None
-
+        
     def get_queryset(self):
         """
         Obtiene el queryset de PersonalDocCentral filtrado por la regional del usuario logueado.
@@ -48,9 +51,10 @@ class EscuelasSupervisadasListView(LoginRequiredMixin, ListView):
             QuerySet: Lista de PersonalDocCentral filtrados por la región correspondiente.
         """
         regional_usuario = self.get_regional_usuario()
+        print('regionales:', self.get_regional_usuario())
         if regional_usuario:
             # Filtramos PersonalDocCentral por la región correspondiente
-            return EscuelasSupervisadas.objects.filter(region=regional_usuario)
+            return EscuelasSupervisadas.objects.filter(region__in=regional_usuario)
         return EscuelasSupervisadas.objects.none()
 
 

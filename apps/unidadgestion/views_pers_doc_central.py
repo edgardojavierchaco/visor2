@@ -48,16 +48,18 @@ class UGListView(LoginRequiredMixin, ListView):
         """
         user = self.request.user
         query = """
-            SELECT regional 
-            FROM cenpe.cueregional 
-            WHERE cueanexo = %s
-            LIMIT 1
+            SELECT region_reg 
+            FROM public."public.director_regional"
+            WHERE dni_reg = %s
+            
         """
         with connection.cursor() as cursor:
             cursor.execute(query, [user.username])
-            row = cursor.fetchone()
+            rows = cursor.fetchall()
         
-        return row[0] if row else None
+        regiones = [row[0] for row in rows] if rows else []
+        print(regiones)
+        return regiones
 
     def get_queryset(self):
         """
@@ -69,7 +71,7 @@ class UGListView(LoginRequiredMixin, ListView):
         regional_usuario = self.get_regional_usuario()
         if regional_usuario:
             # Filtramos PersonalDocCentral por la región correspondiente
-            return PersonalDocCentral.objects.filter(region=regional_usuario)
+            return PersonalDocCentral.objects.filter(region__in=regional_usuario)
         return PersonalDocCentral.objects.none()
 
     @method_decorator(csrf_exempt)

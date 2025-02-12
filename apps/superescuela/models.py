@@ -160,7 +160,8 @@ class EscuelasSupervisadas(models.Model):
     oferta=models.CharField(max_length=255, verbose_name='Oferta')
     region=models.CharField(max_length=100, verbose_name='Regional')
     
-    class Meta:
+    
+    class Meta:        
         verbose_name = 'Escuela_Supervisada'
         verbose_name_plural='Escuelas_Supervisadas'
         db_table= 'escuelas_supervisadas'    
@@ -173,7 +174,7 @@ class EscuelasSupervisadas(models.Model):
         item['cueanexo'] = self.cueanexo
         item['nom_est'] = self.nom_est
         item['oferta']=self.oferta
-        item['region'] = self.region 
+        item['region'] = self.region        
         return item       
         
 

@@ -55,6 +55,8 @@ LOCAL_APPS = [
     'apps.unidadgestion',
     'apps.uegp',
     'apps.funcionarios',
+    'apps.represlegales',
+    
 ]
 
 

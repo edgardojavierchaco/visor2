@@ -24,9 +24,9 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
         """
         user = self.request.user
         query = """
-            SELECT regional 
-            FROM cenpe.cueregional 
-            WHERE cueanexo = %s
+            SELECT region_reg 
+            FROM public."public.director_regional"
+            WHERE dni_reg = %s
             LIMIT 1
         """
         with connection.cursor() as cursor:
@@ -71,7 +71,7 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
         context['title'] = 'Listado de Supervisores'
         context['create_url'] = reverse_lazy('superescuela:super_create')
         context['list_url'] = reverse_lazy('superescuela:super_list')
-        context['update_url'] = reverse_lazy('supervi:super_update', args=[0]) 
+        context['update_url'] = reverse_lazy('superescuela:super_update', args=[0]) 
         context['entity'] = 'Supervisor'
         return context
 
