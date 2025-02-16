@@ -56,13 +56,14 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         oferta = request.POST.get('Oferta')
         nom_est=request.POST.get('nomest')
         cui=request.POST.get('Cui')
+        modalidad=request.POST.get('Modalidad')
 
         print("Parámetros de la solicitud:", ambito, sector, localidad, oferta, nom_est, cui)
 
         
         # Realizar la consulta en la base de datos
         cursor = connection.cursor()
-        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc FROM v_capa_unica_ofertas_cui_cuof WHERE 1=1 "
+        query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc, acronimo FROM v_capa_unica_ofertas_cui_cuof WHERE 1=1 "
         parameters = []
         if cueanexo:
             query += "AND cueanexo = %s"
@@ -91,13 +92,16 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
         if nom_est:
             query += " AND nom_est ILIKE %s"
             parameters.append('%' + nom_est + '%')
+        if modalidad:
+            query += " AND acronimo ILIKE %s"
+            parameters.append('%' + modalidad + '%')
 
         cursor.execute(query, parameters)
         rows = cursor.fetchall()
 
         # Filtrar los marcadores con latitud y longitud distintas de 0 o vacías
-        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc) 
-                         for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad,cui_loc, cuof_loc in rows 
+        filtered_rows = [(cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc, acronimo) 
+                         for cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad,cui_loc, cuof_loc, acronimo in rows 
                          if lat != 0 and lng != '' and lng != 0 and lat != '']
 
         # Obtener los nombres de las columnas

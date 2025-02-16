@@ -11,6 +11,7 @@ from apps.establecimientos.views import establecimientos
 from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
 from apps.unidadgestion import views_pers_doc_central
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('dash/', directores, name='dash'),
@@ -49,6 +50,7 @@ urlpatterns = [
     path('uegp/',include('apps.uegp.urls',namespace='uegp')),
     path('chaco/',include('apps.funcionarios.urls',namespace='chaco')),
     path('rl/',include('apps.represlegales.urls',namespace='rl')),
+    path('indigena/',include('apps.intercultural.urls',namespace='indigena')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

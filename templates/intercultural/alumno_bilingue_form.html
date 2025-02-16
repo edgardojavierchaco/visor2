@@ -1,0 +1,133 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Cargar Alumno Bilingüe</h2>
+
+    <form method="POST" id="alumno-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- CUE Anexo -->
+            <div class="col-md-6">
+                <label for="id_cueanexo">Cueanexo</label>
+                <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" required>
+            </div>
+
+            <!-- Nombre de la Escuela -->
+            <div class="col-md-6">
+                <label for="id_nom_est">Nombre de la Escuela</label>
+                <input type="text" id="id_nom_est" name="nom_est" class="form-control" readonly>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <!-- Nivel -->
+            <div class="col-md-6">
+                <label for="id_nivel">Nivel</label>
+                {{ form.nivel }}
+            </div>
+
+            <!-- Curso -->
+            <div class="col-md-6">
+                <label for="id_curso">Curso</label>
+                {{ form.curso }}
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <!-- Sección -->
+            <div class="col-md-6">
+                <label for="id_seccion">Sección</label>
+                {{ form.seccion }}
+            </div>
+
+            <!-- Lengua -->
+            <div class="col-md-6">
+                <label for="id_lengua">Lengua</label>
+                {{ form.lengua }}
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <!-- Varones -->
+            <div class="col-md-6">
+                <label for="id_varones">Cantidad de Varones</label>
+                <input type="number" id="id_varones" name="varones" class="form-control input-sm"
+                    required min="0" max="9999" oninput="validarDigitos(this)" style="width: 100px; text-align: center;">
+            </div>
+
+            <!-- Mujeres -->
+            <div class="col-md-6">
+                <label for="id_mujeres">Cantidad de Mujeres</label>
+                <input type="number" id="id_mujeres" name="mujeres" class="form-control input-sm"
+                    required min="0" max="9999" oninput="validarDigitos(this)" style="width: 100px; text-align: center;">
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Guardar Alumno</button>
+            <a href="#" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Autocompletar el nombre de la escuela mientras se escribe el Cueanexo
+        $('#id_cueanexo').on('input', function() {
+            var cueanexo = $(this).val(); // Obtener el valor ingresado
+
+            if (cueanexo.length >= 3) { // Buscar solo si tiene 3 caracteres o más
+                $.ajax({
+                    url: "{% url 'intercultural:buscar_escuelas' %}",  // Ruta a la vista que devuelve los datos
+                    data: { term: cueanexo }, // Enviar el cueanexo como parámetro
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data.length > 0) {
+                            $('#id_nom_est').val(data[0].nom_est); // Autocompletar el nombre de la escuela
+                        } else {
+                            $('#id_nom_est').val(''); // Limpiar si no hay coincidencias
+                        }
+                    },
+                    error: function() {
+                        console.log("Error al buscar la escuela.");
+                    }
+                });
+            } else {
+                $('#id_nom_est').val(''); // Si el usuario borra, vaciar el nombre de la escuela
+            }
+        });
+
+        // Filtrar cursos cuando se selecciona el nivel
+        $('#id_nivel').change(function() {
+            var nivelSeleccionado = $(this).val();  // Obtener el nivel seleccionado
+            $.ajax({
+                url: "{% url 'intercultural:filtrar_cursos' %}",  // La URL que filtra los cursos
+                data: { nivel: nivelSeleccionado },
+                success: function(data) {
+                    // Limpiar los cursos anteriores
+                    $('#id_curso').empty();
+                    // Llenar los cursos nuevos
+                    $('#id_curso').append('<option value="">Seleccione Curso</option>');
+                    $.each(data, function(index, curso) {
+                        $('#id_curso').append('<option value="' + curso.id + '">' + curso.curso + '</option>');
+                    });
+                }
+            });
+        });
+    });
+</script>
+<script>
+    function validarDigitos(input) {
+        if (input.value.length > 4) {
+            input.value = input.value.slice(0, 4);  // Limita a 4 dígitos
+        }
+    }
+</script>
+{% endblock %}

@@ -56,7 +56,7 @@ LOCAL_APPS = [
     'apps.uegp',
     'apps.funcionarios',
     'apps.represlegales',
-    
+    'apps.intercultural',
 ]
 
 
@@ -124,14 +124,15 @@ DATABASES = {
     }
 }
 
-# Configuración estática y media
+# Configuración de archivos estáticos
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'productionfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
 
-
+# Configuración de archivos de medios (para producción)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = ROOT_DIR / 'apps/media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'productionfiles/media')
+#MEDIA_ROOT = ROOT_DIR / 'apps/media'
 
 # Configuración de tiempo y formato
 LANGUAGE_CODE = 'es-ar'

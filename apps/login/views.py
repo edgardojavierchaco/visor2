@@ -52,6 +52,10 @@ class LoginFormView(LoginView):
             if evaluacion_group in user.groups.all():
                 return reverse('oplectura:portada_eval')        
             
+            gestor_group = Group.objects.get(name='Gestor')
+            if gestor_group in user.groups.all():
+                return reverse('archivos:portada_gestor')
+            
             director_group = Group.objects.get(name='Director')
             if director_group in user.groups.all():
                 return reverse('directores:institucional')

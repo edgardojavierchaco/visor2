@@ -100,7 +100,8 @@
                        class="nav-link dropdown-toggle"><i class="fas fa-users" style="color:black"></i> Relevamiento </a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">                        
                         <li><a href="{% url 'privada:uegp_list' %}" class="dropdown-item">ABM Relevamiento</a></li> 
-                        <li><a href="{% url 'replegales:dashboard' %}" class="dropdown-item">ABM Representantes Legales</a></li>
+                        <li><a href="{% url 'representantes:dashboard' %}" class="dropdown-item">ABM Representantes Legales</a></li>
+                        <li><a href="{% url 'intercultural:dashboard' %}" class="dropdown-item">ABM Alumnos Comunidad Indígena</a></li>
                     </ul>
                 </li>            
                 {% if user.is_authenticated %}

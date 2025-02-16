@@ -3,6 +3,8 @@ from config.urls import path
 from django.views.generic import TemplateView
 from . import views
 from . import views_matric, views_infograf, views_listados, views_carrerastitulos, views_infodocatividad
+from .views_matric_cueanexo import filtrado_matriccueanexo, filter_data_matric_cueanexo
+from apps.reportes import views_matric_cueanexo
 
 app_name='reportes'
 
@@ -13,6 +15,7 @@ urlpatterns=[
     path('filtrado_aborigen/',views_matric.filtrado_aborigen,name='filtrado_aborigen'),
     path('filtrado_comesp/',views_matric.filtrado_comesp,name='filtrado_comesp'),
     path('filtrado_snu/',views_matric.filtrado_snu,name='filtrado_snu'),
+    path('filtrado_matricueanexo/',filtrado_matriccueanexo,name='filtrado_matricueanexo'),
     path('cargos/',views.filter_data_cargos,name='cargos'), # type: ignore
     path('docentes/',views.filter_data_docentes,name='docentes'), # type: ignore
     path('horas/',views.filter_data_horas,name='horas'), # type: ignore
@@ -29,6 +32,7 @@ urlpatterns=[
     path('equipo/', views_infograf.equipoview,name='equipo'),
     path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),
     path('docactividad/',views_infodocatividad.consulta_docentes_actividad, name='docactividad'),
+    path('matric_cueanexo/',filter_data_matric_cueanexo,name='matric_cueanexo'),
 ]
 
 

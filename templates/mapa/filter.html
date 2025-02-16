@@ -266,6 +266,15 @@
                             </select>
                         </div>
 
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="SwitchCheckModalidad" onchange="toggleDropdown('Modalidad')">
+                            <label class="form-check-label" for="SwitchCheckModalidad">Modalidad</label>
+                            <select class="form-select hidden" id="ModalidadDropdown" name="Modalidad" disabled>
+                                <option selected>Seleccione Modalidad</option>
+                                <option value="BII">BILINGÜE INTERCULTURAL</option>                                
+                            </select>
+                        </div>
+
                         <div class="modal-footer">                            
                             
                             <button type="submit" class="btn btn-success">Enviar</button>
