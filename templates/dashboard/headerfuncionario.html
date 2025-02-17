@@ -66,7 +66,7 @@
                        class="nav-link dropdown-toggle"><i class="fas fa-users" style="color:black"></i> Regional </a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <li><a href="{% url 'funcionario:dashboard' %}" class="dropdown-item">Listado de Supervisores</a></li>
-                        
+                        <li><a href="{% url 'intercultural:dashboard_func' %}" class="dropdown-item">Listado Cantidad Alumnos Bilingües</a></li>                        
                     </ul>
                 </li>                   
                 {% if user.is_authenticated %}

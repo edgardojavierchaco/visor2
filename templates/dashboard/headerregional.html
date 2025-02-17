@@ -67,6 +67,7 @@
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <li><a href="{% url 'superescuela:dashboard' %}" class="dropdown-item">ABM Supervisores</a></li>
                         <li><a href="{% url 'unidadgestion:dashboard' %}" class="dropdown-item">ABM Relevamiento</a></li> 
+                        <li><a href="{% url 'intercultural:dashboard_reg' %}" class="dropdown-item">Listado Cantidad Alumnos Bilingües</a></li> 
                     </ul>
                 </li>                   
                 {% if user.is_authenticated %}

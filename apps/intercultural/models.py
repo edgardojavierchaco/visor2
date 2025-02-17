@@ -49,7 +49,7 @@ class Nivel_curso(models.Model):
         db_table= 'nivel_curso'    
     
     def __str__(self):
-        return f"{self.curso}"
+        return self.curso
 
     def toJSON(self):
         item = model_to_dict(self)
@@ -105,4 +105,34 @@ class Alumnos_Bilingue(models.Model):
         item['lengua'] = self.lengua   
         item['varones'] = self.varones
         item['mujeres'] = self.mujeres  
+        return item
+
+class VistaAlumnosBilingue(models.Model):
+    id = models.AutoField(primary_key=True)
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nom_est=models.CharField(max_length=255, verbose_name='Escuela')
+    lengua=models.CharField(max_length=50, verbose_name='Lengua')
+    varones=models.IntegerField(verbose_name='Varones')
+    mujeres=models.IntegerField(verbose_name='Mujeres')
+    region_loc=models.CharField(max_length=50, verbose_name='Regional')
+    localidad=models.CharField(max_length=155, verbose_name='Localidad')
+    
+    class Meta:    
+        managed=False    
+        verbose_name = 'Vista_Alumno_Bilingue'
+        verbose_name_plural='Vistas_Alumnos_Bilingues'
+        db_table= 'v_alumnos_bilingue'
+    
+    def __str__(self):
+        return f"{self.cueanexo} - ({self.nom_est})"
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['cueanexo'] = self.cueanexo        
+        item['nom_est'] = self.nom_est
+        item['lengua'] = self.lengua
+        item['varones'] = self.varones
+        item['mujeres'] = self.mujeres   
+        item['region_loc'] = self.region_loc
+        item['localidad'] = self.localidad  
         return item

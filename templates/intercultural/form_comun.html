@@ -1,0 +1,160 @@
+{% extends 'intercultural/layout_comun.html' %}
+{% load widget_tweaks %}
+{% block head %}
+    {% block head_form %}
+    {% endblock %}
+{% endblock %}
+{% block content %}
+    <form method="post" action="." enctype="multipart/form-data">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    {% if action == 'add' %}
+                        <i class="fas fa-plus"></i>
+                    {% else %}
+                        <i class="fas fa-edit"></i>
+                    {% endif %}
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action }}">
+
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <!-- Botón para mostrar el popup en la fila superior -->
+                <div class="form-group row">
+                    <div class="col-md-12 text-right">
+                        <button type="button" class="btn btn-info" id="showPopupBtn">
+                            <i class="fas fa-info-circle"></i> Información (Irya - Ñemongaru - Alik'ëy)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Campo CUE Anexo (Solo lectura) -->
+                <div class="form-group">
+                    <label for="id_cueanexo">CUE Anexo:</label>
+                    <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
+                </div>
+
+                <!-- Primera fila: Nivel, Curso, Sección -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="id_nivel">Nivel:</label>
+                        {{ form.nivel|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_curso">Curso:</label>
+                        {{ form.curso|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_seccion">Sección:</label>
+                        {{ form.seccion|add_class:"form-control" }}
+                    </div>
+                </div>
+
+                <!-- Segunda fila: Lengua, Varones, Mujeres -->
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <label for="id_lengua">Lengua:</label>
+                        {{ form.lengua|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_varones">Varones:</label>
+                        {{ form.varones|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_mujeres">Mujeres:</label>
+                        {{ form.mujeres|add_class:"form-control text-center" }}
+                    </div>
+                </div>               
+
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Guardar registro
+                </button>
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // Mostrar alerta con errores si existen
+        {% if form.errors %}
+            var errors = '';
+            {% for field in form %}
+                {% for error in field.errors %}
+                    errors += '{{ error }}\n';
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                errors += '{{ error }}\n';
+            {% endfor %}
+            Swal.fire({
+                title: 'Error!',
+                text: errors,
+                icon: 'error'
+            });
+        {% endif %}
+
+        // Manejo de envío con AJAX
+        $('form').on('submit', function (e) {
+            e.preventDefault();
+            var parameters = new FormData(this);
+            submit_with_ajax(window.location.pathname, 'Notificación', '¿Estas seguro de realizar la siguiente acción?', parameters, function () {
+                location.href = '{{ list_url }}';
+            });
+        });
+
+        // Filtrar cursos cuando se selecciona el nivel
+        $('#id_nivel').change(function() {
+            var nivelSeleccionado = $(this).val();  // Obtener el nivel seleccionado
+            $.ajax({
+                url: "{% url 'intercultural:filtrar_cursos' %}",  // La URL que filtra los cursos
+                data: { nivel: nivelSeleccionado },
+                success: function(data) {
+                    // Limpiar los cursos anteriores
+                    $('#id_curso').empty();
+                    // Llenar los cursos nuevos
+                    $('#id_curso').append('<option value="">Seleccione Curso</option>');
+                    $.each(data, function(index, curso) {
+                        $('#id_curso').append('<option value="' + curso.id + '">' + curso.curso + '</option>');
+                    });
+                }
+            });
+        });
+
+        // Asignar valor al campo cueanexo (si es necesario)
+        document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
+
+        // Mostrar el popup con las traducciones cuando se hace clic en el botón
+        $('#showPopupBtn').click(function() {
+            Swal.fire({
+                title: 'Información',
+                html: `
+                    <p><strong>Castellano:</strong> En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
+                    <p><strong>Qom:</strong> Ñachegach axo, egua'á kyekot vna´tínk hach pëmẽt pë'öti, háj asuero'mën ën wäyi', menék si. </p>
+                    <p><strong>Moqoit:</strong> Etaloxona na’ek, abratat nemet´ha dyet´hént vyéleth, achaye ntáxat mbolúk ath´ xémuk mebarhet´mtxat</p>
+                    <p><strong>Wichi:</strong> Tsalot lhanwet, ayakotnt lhnwet sirmentnon hëntlemt nyekpanek médelpéntov</p>
+                `,
+                icon: 'info'
+            });
+        });
+    </script>
+{% endblock %}

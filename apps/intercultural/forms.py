@@ -82,3 +82,71 @@ class Alumno_BilingueForm(forms.ModelForm):
         except Exception as e:
             data['error'] = str(e)
         return data
+
+class Vista_Alumno_BilingueForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)        
+        
+    class Meta:
+        model = Alumnos_Bilingue
+        fields = '__all__'
+        widgets = {
+            'cueanexo': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ingrese Cueanexo',
+                }
+            ),            
+            'nom_est': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Seleccione Nivel',
+                }
+            ),
+            'lengua': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Seleccione Curso',
+                }
+            ),
+            'varones': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Seleccione Sección',
+                }
+            ),
+            'mujeres': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Seleccione Lengua',
+                }
+            ),
+            'region_loc': forms.TextInput(                
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ingrese cantidad de varones',                                     
+                }
+            ),
+            'localidad': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ingrese cantidad de mujeres',                    
+                }
+            ),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['cueanexo'].widget.attrs['readonly'] = True
+
+    def save(self, commit=True):
+        data = {}
+        form = super()
+        try:
+            if form.is_valid():
+                form.save()
+            else:
+                data['error'] = form.errors
+        except Exception as e:
+            data['error'] = str(e)
+        return data
