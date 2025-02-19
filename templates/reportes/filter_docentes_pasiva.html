@@ -16,7 +16,13 @@
         .is-invalid {
             border-color: red;
         }
-
+        .required-field {
+            color: red;
+        }
+        
+        .small-text {
+            font-size: smaller;
+        }
     </style>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.css">
@@ -37,12 +43,12 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title" id="myModalLabel">Matrícula</h3>
+                    <h3 class="modal-title" id="myModalLabel">Docentes en actividad</h3>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <h5 class="modal-title" id="myModalLabel">Seleccionar Criterios de Búsqueda</h5>
-                    <form action="{% url 'reportes:matric_cueanexo' %}" method="POST">
+                    <form action="{% url 'reportes:docentes_pasiva' %}" method="POST">
                         {% csrf_token %}
                         
                         <div class="form-check form-switch">
@@ -174,7 +180,7 @@
                                 <option value="GENERAL JOSE DE SAN MARTIN">GENERAL JOSE DE SAN MARTIN</option>
                                 <option value="GENERAL PINEDO">GENERAL PINEDO</option>
                                 <option value="GENERAL VEDIA">GENERAL VEDIA</option>
-                                <option value="HAUMONIA">HAUMONIA/option>
+                                <option value="HAUMONIA">HAUMONIA/option</option>
                                 <option value="HERMOSO CAMPO">HERMOSO CAMPO</option>
                                 <option value="HORQUILLA">HORQUILLA</option>
                                 <option value="ISLA DEL CERRITO">ISLA DEL CERRITO</option>
@@ -228,32 +234,35 @@
                         
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="SwitchCheckVista" onchange="toggleDropdown('Vista')">
-                            <label class="form-check-label" for="SwitchCheckVista">Modalidad-Oferta</label>
+                            <label class="form-check-label" for="SwitchCheckVista"><span class="required-field">*</span> Modalidad-Oferta <span class="small-text">(debe seleccionar una)</span></label>
                             <select class="form-select hidden" id="VistaDropdown" name="Vista" disabled>
                                 <option selected>Seleccione Modalidad-Oferta</option>
-                                <option value="matric_aborigen_adulto_primaria">ABORIGEN - ADULTOS - PRIMARIA</option>
-                                <option value="matric_aborigen_adulto_secundaria">ABORIGEN - ADULTOS - SECUNDARIA</option>
-                                <option value="matric_aborigen_comun_inicial">ABORIGEN - COMUN - INICIAL</option>
-                                <option value="matric_aborigen_comun_primaria">ABORIGEN COMUN - PRIMARIA</option>
-                                <option value="matric_aborigen_comun_secundaria">ABORIGEN - COMUN - SECUNDARIA</option>
-                                <option value="matric_aborigen_comun_snu">ABORIGEN - COMUN - SNU</option>
-                                <option value="matric_aborigen_educacion_especial">ABORIGEN - EDUCACION ESPECIAL</option>   
-                                <option value="matric_adulto_fp">ADULTO - FORMACIÓN PROFESIONAL</option>   
-                                <option value="matric_adulto_primaria">ADULTO PRIMARIA</option>    
-                                <option value="matric_adulto_secundaria">ADULTO SECUNDARIA</option>  
-                                <option value="matric_cef">CEF</option>         
-                                <option value="matric_comun_artistica">COMÚN - ARTÍSTICA </option>  
-                                <option value="matric_comun_inicial">COMÚN - INICIAL</option>  
-                                <option value="matric_comun_primaria">COMÚN - PRIMARIA</option>  
-                                <option value="matric_comun_secundaria">COMÚN - SECUNDARIA</option>  
-                                <option value="matric_comun_snu">COMÚN - SNU</option>  
-                                <option value="matric_especial_ed_temprana">ESPECIAL - EDUCACIÓN TEMPRANA</option>
-                                <option value="matric_especial_primaria">ESPECIAL - PRIMARIA</option>                                
+                                <option value="visor_docente_actividad_adulto_fp">ADULTOS - FORMACION PROFESIONAL</option>
+                                <option value="visor_docente_actividad_adulto_primaria">ADULTOS - PRIMARIA</option>
+                                <option value="visor_docente_actividad_adulto_secundaria">ADULTOS - SECUNDARIA</option>                                
+                                <option value="visor_docente_actividad_comun_inicial">COMUN - INICIAL</option>
+                                <option value="visor_docente_actividad_comun_primaria">COMUN - PRIMARIA</option>
+                                <option value="visor_docente_actividad_comun_secundaria">COMUN - SECUNDARIA</option>
+                                <option value="visor_docente_actividad_comun_servicios_complementarios">COMUN - SERVICIOS COMPLEMENTARIOS</option>
+                                <option value="visor_docente_actividad_comun_snu">COMUN - SNU</option>
+                                <option value="visor_docente_actividad_educacion_especial">EDUCACION ESPECIAL</option>                                 
                             </select>
-                        </div>                        
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="SwitchCheckRelevamiento" onchange="toggleDropdown('Relevamiento')">
+                            <label class="form-check-label" for="SwitchCheckRelevamiento"><span class="required-field">*</span> Relevamiento <span class="small-text">(debe seleccionar un año)</span></label>
+                            <select class="form-select hidden" id="RelevamientoDropdown" name="Relevamiento" disabled>
+                                <option selected>Seleccione Relevamiento</option>                                
+                                <option value="ra_carga2019">2019</option>
+                                <option value="ra_carga2020">2020</option>
+                                <option value="ra_carga2021">2021</option>
+                                <option value="ra_carga2022">2022</option> 
+                                <option value="ra_carga2023">2023</option>    
+                                <option value="ra_carga2024">2024</option>                            
+                            </select>
+                        </div>
 
-                        <div class="modal-footer">                            
-                            
+                        <div class="modal-footer">                               
                             <button type="submit" class="btn btn-success" onclick="validateForm()">Enviar</button>
                             <button type="button" class="btn btn-warning" onclick="resetForm()">Limpiar</button>
                             <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="cerrarBtn">Cerrar</button>
@@ -330,19 +339,21 @@
             }
     </script>
     <script>
-       document.getElementById("cerrarBtn").addEventListener("click", function(event) {
+        document.getElementById("cerrarBtn").addEventListener("click", function(event) {
                 event.preventDefault(); // Evita el comportamiento predeterminado del enlace
                 window.history.go(-1); // Regresa a la página anterior en el historial del navegador
             });  
     </script>
     <script>
         function validateForm() {
-            const modalidadSelect = document.getElementById('VistaDropdown');            
+            const modalidadSelect = document.getElementById('VistaDropdown');
+            const relevamientoSelect = document.getElementById('RelevamientoDropdown');
             
-            if (!modalidadSelect.value) {
+            if (modalidadSelect.value === 'Seleccione Modalidad-Oferta' || relevamientoSelect.value === 'Seleccione Relevamiento') {
                 $.confirm({
+                    icon: 'fa-solid fa-circle-info text-danger',
                     title: 'Alerta',
-                    content: 'Por favor, seleccione una Modalidad-Oferta antes de enviar el formulario.',
+                    content: 'Por favor, seleccione una Modalidad-Oferta y un Relevamiento antes de enviar el formulario.',
                     buttons: {
                         ok: {
                             text: 'Ok',
@@ -352,13 +363,12 @@
                 });
                 return false; // No envía el formulario si los campos no están seleccionados
             }
-    
+
             // Continúa enviando el formulario si los campos están seleccionados
             const form = document.querySelector('form');
             form.submit();
         }
     </script>
-
 </body>
 
 </html>

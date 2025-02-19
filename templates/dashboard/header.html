@@ -69,6 +69,7 @@
                             <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
                                 <li><a href="{% url 'reportes:filtrado_cargos' %}" class="dropdown-item">Cargos</a></li>
                                 <li><a href="{% url 'reportes:filtrado_docentes' %}" class="dropdown-item">Docentes en actividad</a></li>
+                                <li><a href="{% url 'reportes:filtrado_docentes_pasiva' %}" class="dropdown-item">Docentes en Tareas Pasivas</a></li>
                                 <li><a href="{% url 'reportes:filtrado_horas' %}" class="dropdown-item">Horas Cátedras</a></li>
                             </ul>
                         </li>
@@ -79,6 +80,10 @@
                                 <li><a href="{% url 'reportes:filtrado_aborigen' %}" class="dropdown-item">Aborigen</a></li>
                                 <li><a href="{% url 'reportes:filtrado_comesp' %}" class="dropdown-item">Común y Especial</a></li>
                                 <li><a href="{% url 'reportes:filtrado_snu' %}" class="dropdown-item">SNU</a></li>
+                                <li><a href="{% url 'reportes:filtrado_matricueanexo' %}" class="dropdown-item">Matrícula - Detalle Cueanexo</a></li>
+                                <li><a href="{% url 'reportes:filtrado_matri_disc_ini_cueanexo' %}" class="dropdown-item">Matrícula Inicial - Detalle Discapacidad</a></li>
+                                <li><a href="{% url 'reportes:filtrado_matri_disc_prim_cueanexo' %}" class="dropdown-item">Matrícula Primaria - Detalle Discapacidad</a></li>
+                                <li><a href="{% url 'reportes:filtrado_matri_disc_sec_cueanexo' %}" class="dropdown-item">Matrícula Secundaria - Detalle Discapacidad</a></li>
                             </ul>
                         </li>            
                         <li><a href="{% url 'mapas:datos_ofertas' %}" class="dropdown-item">Listado Ofertas Educativas</a></li>              

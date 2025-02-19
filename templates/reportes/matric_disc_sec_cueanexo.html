@@ -45,8 +45,17 @@
                             <thead>
                                 <tr class="header-row">
                                     <th class="centered">CUEANEXO</th> 
-                                    <th class="centered">ESCUELA</th>
-                                    <th class="centered">TOTAL</th>                                
+                                    <th class="centered">ESCUELA</th>                                    
+                                    <th class="centered">CEG</th>
+                                    <th class="centered">DISM VIS</th>
+                                    <th class="centered">SORD</th>
+                                    <th class="centered">HIPOAC</th>
+                                    <th class="centered">INTEL</th>
+                                    <th class="centered">MOTORA</th>
+                                    <th class="centered">NEUROM</th>
+                                    <th class="centered">TEA</th>
+                                    <th class="centered">REGION</th>
+                                    <th class="centered">LOCALIDAD</th>                                                                    
                                 </tr>
                                 
                             </thead>
@@ -54,16 +63,33 @@
                                 {% for item in datamatriccueanexo %}
                                     <tr>
                                         <td> {{ item.cueanexo }} </td>
-                                        <td>{{ item.escuela }}</td>
-                                        <td>{{ item.total }}</td>                                    
+                                        <td>{{ item.escuela }}</td>                                            
+                                        <td>{{ item.ceguera }}</td> 
+                                        <td>{{ item.dism_visual }}</td>    
+                                        <td>{{ item.sordera }}</td>      
+                                        <td>{{ item.hipoacusia }}</td>  
+                                        <td>{{ item.intelectual }}</td>
+                                        <td>{{ item.motora_pura }}</td> 
+                                        <td>{{ item.neuromotora }}</td> 
+                                        <td>{{ item.tea }}</td> 
+                                        <td>{{ item.region_loc }}</td>
+                                        <td>{{ item.localidad }}</td>               
                                     </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <th>Total</th>
-                                    <th> - </th>
-                                    <th id="totalTotales"></th>                                                                    
+                                    <th></th>                                                                       
+                                    <th id="total_ceguera"></th>
+                                    <th id="total_dism_visual"></th>
+                                    <th id="total_sordera"></th>
+                                    <th id="total_hipoacusia"></th>
+                                    <th id="total_intelectual"></th>
+                                    <th id="total_motora_pura"></th>
+                                    <th id="total_neuromotora"></th>
+                                    <th id="total_tea"></th>                                    
+                                    <th></th>                                                                   
                                 </tr>
                             </tfoot>
                         </table>                        
@@ -92,8 +118,8 @@
                     autoWidth:false,
                     columnDefs: [        
                         { className: "centered", targets: [0, 1] },
-                        { orderable: true, targets: [0,1] },
-                        { searchable: true, targets: [0,1] },
+                        { orderable: true, targets: [0,10,11] },
+                        { searchable: true, targets: [10,11] },
                         
                     ],
                     language: {
@@ -144,29 +170,40 @@
                         ],
                     pageLength: 4,
                     destroy: true,
-                    footerCallback: function ( row, data, start, end, display ) {
-                        var api = this.api(), data;
-                        // Remove the formatting to get integer data for summation
-                        var intVal = function ( i ) {
+                    footerCallback: function (row, data, start, end, display) {
+                        var api = this.api();
+
+                        var intVal = function (i) {
                             return typeof i === 'string' ?
-                                i.replace(/[\$,]/g, '')*1 :
-                                typeof i === 'number' ?
-                                    i : 0;
+                                i.replace(/[\$,]/g, '') * 1 :
+                                typeof i === 'number' ? i : 0;
                         };
-                        // Total over all pages
-                        totalTotales = api
-                            .column( 2 )
-                            .data()
-                            .reduce( function (a, b) {
-                                return intVal(a) + intVal(b);
-                            }, 0 );
-                        
-                        
-                        // Update footer
-                        $('#totalTotales').html(totalTotales);
-                                              
+
+                        // Índices de las columnas a sumar (de la 3 a la 9, que en DataTables son 2 a 8)
+                        var columnsToSum = [2,3, 4, 5, 6, 7, 8, 9];
+                        var totalValues = {};
+
+                        columnsToSum.forEach(function(colIndex) {
+                            totalValues[colIndex] = api
+                                .column(colIndex, { page: 'all' })
+                                .data()
+                                .reduce(function (a, b) {
+                                    return intVal(a) + intVal(b);
+                                }, 0);
+                        });
+
+                        // Insertar los valores en el footer                        
+                        $("#total_ceguera").html(totalValues[2]);
+                        $("#total_dism_visual").html(totalValues[3]);
+                        $("#total_sordera").html(totalValues[4]);
+                        $("#total_hipoacusia").html(totalValues[5]);
+                        $("#total_intelectual").html(totalValues[6]);
+                        $("#total_motora_pura").html(totalValues[7]);
+                        $("#total_neuromotora").html(totalValues[8]);
+                        $("#total_tea").html(totalValues[9]);
                     }
                 };
+
                 $("#datatable-cargos").DataTable(dataTableOptions);
             });
         </script>

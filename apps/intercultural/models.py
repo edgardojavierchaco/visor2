@@ -63,7 +63,7 @@ SECCIONES_CHOICES.insert(1, ('Múltiple', 'Múltiple'))
 
 LENGUAS_CHOICES = [
     ('QOM', 'QOM'),
-    ('MOCOIT', 'MOCOIT'),
+    ('MOQOIT', 'MOQOIT'),
     ('WICHI', 'WICHI'),
 ]
 
@@ -84,7 +84,7 @@ class Alumnos_Bilingue(models.Model):
     nivel=models.CharField(max_length=50,choices=NIVELES_CHOICES, verbose_name='Nivel')
     curso=models.ForeignKey(Nivel_curso,on_delete=models.CASCADE, verbose_name='Curso',related_name='alumnos_curso')
     seccion=models.CharField(max_length=10, choices=SECCIONES_CHOICES, verbose_name="Sección")
-    lengua=models.CharField(max_length=10, choices=LENGUAS_CHOICES, verbose_name="Lengua")
+    lengua=models.CharField(max_length=10, choices=LENGUAS_CHOICES, verbose_name="Pueblo Originario")
     varones=models.IntegerField(verbose_name='Varones', validators=[MinValueValidator(0), MaxValueValidator(999)])
     mujeres=models.IntegerField(verbose_name='Mujeres', validators=[MinValueValidator(0), MaxValueValidator(999)])
     

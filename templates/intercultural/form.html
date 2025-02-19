@@ -39,7 +39,7 @@
                 <div class="form-group row">
                     <div class="col-md-12 text-right">
                         <button type="button" class="btn btn-info" id="showPopupBtn">
-                            <i class="fas fa-info-circle"></i> Información (Irya - Ñemongaru - Alik'ëy)
+                            <i class="fas fa-info-circle"></i> Información 
                         </button>
                     </div>
                 </div>
@@ -69,7 +69,7 @@
                 <!-- Segunda fila: Lengua, Varones, Mujeres -->
                 <div class="row mt-3">
                     <div class="col-md-4">
-                        <label for="id_lengua">Lengua:</label>
+                        <label for="id_lengua">Pueblo Originario:</label>
                         {{ form.lengua|add_class:"form-control" }}
                     </div>
                     <div class="col-md-4">
@@ -148,10 +148,8 @@
             Swal.fire({
                 title: 'Información',
                 html: `
-                    <p><strong>Castellano:</strong> En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
-                    <p><strong>Qom:</strong> Ñachegach axo, egua'á kyekot vna´tínk hach pëmẽt pë'öti, háj asuero'mën ën wäyi', menék si. </p>
-                    <p><strong>Moqoit:</strong> Etaloxona na’ek, abratat nemet´ha dyet´hént vyéleth, achaye ntáxat mbolúk ath´ xémuk mebarhet´mtxat</p>
-                    <p><strong>Wichi:</strong> Tsalot lhanwet, ayakotnt lhnwet sirmentnon hëntlemt nyekpanek médelpéntov</p>
+                    <p>En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
+                    
                 `,
                 icon: 'info'
             });

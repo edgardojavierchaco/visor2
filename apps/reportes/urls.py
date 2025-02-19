@@ -4,6 +4,9 @@ from django.views.generic import TemplateView
 from . import views
 from . import views_matric, views_infograf, views_listados, views_carrerastitulos, views_infodocatividad
 from .views_matric_cueanexo import filtrado_matriccueanexo, filter_data_matric_cueanexo
+from .views_matric_disc_cueanexo import filtrado_matric_disc_ini_cueanexo, filter_data_matric_disc_ini_cueanexo
+from .views_matric_disc_prim_cueanexo import filter_data_matric_disc_prim_cueanexo, filtrado_matric_disc_prim_cueanexo
+from .views_matric_disc_sec_cueanexo import filter_data_matric_disc_sec_cueanexo, filtrado_matric_disc_sec_cueanexo
 from apps.reportes import views_matric_cueanexo
 
 app_name='reportes'
@@ -11,13 +14,18 @@ app_name='reportes'
 urlpatterns=[
     path('filtrado_cargos/',views.filtrado_cargos,name='filtrado_cargos'),
     path('filtrado_docentes/',views.filtrado_docentes,name='filtrado_docentes'),
+    path('filtrado_docentes_pasiva/',views.filtrado_docentes_pasiva,name='filtrado_docentes_pasiva'),
     path('filtrado_horas/',views.filtrado_horas,name='filtrado_horas'),
     path('filtrado_aborigen/',views_matric.filtrado_aborigen,name='filtrado_aborigen'),
     path('filtrado_comesp/',views_matric.filtrado_comesp,name='filtrado_comesp'),
     path('filtrado_snu/',views_matric.filtrado_snu,name='filtrado_snu'),
     path('filtrado_matricueanexo/',filtrado_matriccueanexo,name='filtrado_matricueanexo'),
+    path('filtrado_matri_disc_ini_cueanexo/',filtrado_matric_disc_ini_cueanexo,name='filtrado_matri_disc_ini_cueanexo'),
+    path('filtrado_matri_disc_prim_cueanexo/',filtrado_matric_disc_prim_cueanexo,name='filtrado_matri_disc_prim_cueanexo'),
+    path('filtrado_matri_disc_sec_cueanexo/',filtrado_matric_disc_sec_cueanexo,name='filtrado_matri_disc_sec_cueanexo'),
     path('cargos/',views.filter_data_cargos,name='cargos'), # type: ignore
     path('docentes/',views.filter_data_docentes,name='docentes'), # type: ignore
+    path('docentes_pasiva/',views.filter_data_docentes_pasiva,name='docentes_pasiva'), # type: ignore
     path('horas/',views.filter_data_horas,name='horas'), # type: ignore
     path('aborigen/',views_matric.filter_data_aborigen,name='aborigen'), # type: ignore
     path('comesp/',views_matric.filter_data_comesp,name='comesp'), # type: ignore
@@ -32,7 +40,10 @@ urlpatterns=[
     path('equipo/', views_infograf.equipoview,name='equipo'),
     path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),
     path('docactividad/',views_infodocatividad.consulta_docentes_actividad, name='docactividad'),
-    path('matric_cueanexo/',filter_data_matric_cueanexo,name='matric_cueanexo'),
+    path('matric_cueanexo/',filter_data_matric_cueanexo,name='matric_cueanexo'), # type: ignore
+    path('matric_disc_ini_cueanexo/',filter_data_matric_disc_ini_cueanexo, name='matric_disc_ini_cueanexo'), # type: ignore
+    path('matric_disc_prim_cueanexo/',filter_data_matric_disc_prim_cueanexo, name='matric_disc_prim_cueanexo'), # type: ignore
+    path('matric_disc_sec_cueanexo/',filter_data_matric_disc_sec_cueanexo, name='matric_disc_sec_cueanexo'), # type: ignore
 ]
 
 

@@ -71,7 +71,7 @@ class AlumnosBilingueListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Listado de Alumnos Bilingües cargados (Ñeqc lhatelat olhayic bilingüe - Lqataxalole leyole bilingüe - Lhante witsaj bilingüe)'
+        context['title'] = 'Listado de Alumnos Bilingües cargados'
         context['create_url'] = reverse_lazy('intercultural:alumnos_create')
         context['list_url'] = reverse_lazy('intercultural:alumnos_list')
         context['update_url'] = reverse_lazy('intercultural:alumnos_update', args=[0]) 
@@ -108,7 +108,7 @@ class AlumnosBilingueListView2(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Listado de Alumnos Bilingües cargados (Ñeqc lhatelat olhayic bilingüe - Lqataxalole leyole bilingüe - Lhante witsaj bilingüe)'
+        context['title'] = 'Listado de Alumnos Bilingües cargados'
         context['create_url'] = reverse_lazy('intercultural:alumnos_create_comun')
         context['list_url'] = reverse_lazy('intercultural:alumnos_list')
         context['update_url'] = reverse_lazy('intercultural:alumnos_update', args=[0]) 
@@ -146,7 +146,7 @@ class AlumnosBilingueCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Carga Cantidad Alumnos (Ñemportoi Ta’ar - Ñembo’e Ávakuá - Alik’ëy Tiiw’ë)'
+        context['title'] = 'Carga Cantidad Alumnos'
         context['entity'] = 'Alumnos Bilingües'
         context['list_url'] = self.success_url
         context['action'] = 'add'
@@ -185,7 +185,7 @@ class AlumnosBilingueCreateView2(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Carga Cantidad Alumnos (Ñemportoi Ta’ar - Ñembo’e Ávakuá - Alik’ëy Tiiw’ë)'
+        context['title'] = 'Carga Cantidad Alumnos'
         context['entity'] = 'Alumnos Bilingües'
         context['list_url'] = self.success_url
         context['action'] = 'add'
