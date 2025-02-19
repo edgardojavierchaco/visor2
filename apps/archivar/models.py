@@ -96,5 +96,5 @@ class ArchRegister(models.Model):
         super().save(*args, **kwargs)        
         
         if self.archivo:
-            self.ruta = os.path.join(settings.MEDIA_URL, self.archivo.name)
+            self.ruta = os.path.join(settings.MEDIA_ROOT, self.archivo.name)
             super().save(update_fields=['ruta']) 
