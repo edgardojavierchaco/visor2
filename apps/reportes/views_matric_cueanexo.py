@@ -70,26 +70,13 @@ def filter_data_matric_cueanexo(request):
         localidad = request.POST.get('Localidad')        
 
         # Validar que tvista esté en la lista de opciones válidas
-        opciones_validas = [
-            'matric_aborigen_adulto_primaria',
-            'matric_aborigen_adulto_secundaria',
-            'matric_aborigen_comun_inicial',
-            'matric_aborigen_comun_primaria',
-            'matric_aborigen_comun_secundaria',
-            'matric_aborigen_comun_snu',
-            'matric_aborigen_educacion_especial',
-            'matric_adulto_fp',
+        opciones_validas = [            
             'matric_adulto_primaria',
-            'matric_adulto_secundaria',
             'matric_cef',
             'matric_comun_artistica',
             'matric_comun_inicial',
             'matric_comun_primaria',
-            'matric_comun_secundaria',
-            'matric_comun_snu',
-            'matric_especial_ed_temprana',
-            'matric_especial_inicial',
-            'matric_especial_primaria'        
+            'matric_comun_secundaria',                    
         ]
 
         # Obtener el valor seleccionado para tvista
@@ -101,26 +88,13 @@ def filter_data_matric_cueanexo(request):
             return render(request, 'error.html', {'mensaje': 'Opción de vista no válida'})
 
         # Asignar un valor descriptivo a la opción de tvista seleccionada
-        opciones_descriptivas = {
-            'matric_aborigen_adulto_primaria': 'Aborigen Adulto Primaria',
-            'matric_aborigen_adulto_secundaria': 'Aborigen Adulto Secundaria',
-            'matric_aborigen_comun_inicial': 'Aborigen Común Inicial',
-            'matric_aborigen_comun_primaria': 'Aborigen Común Primaria',
-            'matric_aborigen_comun_secundaria': 'Aborigen Común Secundaria',
-            'matric_aborigen_comun_snu': 'Aborigen Común SNU',
-            'matric_aborigen_educacion_especial': 'Aborigen Educación Especial', 
-            'matric_adulto_fp': 'Adulto Formación Profesional', 
-            'matric_adulto_primaria': 'Adulto Primaria', 
-            'matric_adulto_secundaria': 'Adulto Secundaria', 
+        opciones_descriptivas = {            
+            'matric_adulto_primaria': 'Adulto Primaria',             
             'matric_cef': 'CEF', 
             'matric_comun_artistica': 'Común Artística', 
             'matric_comun_inicial': 'Común Inicial', 
             'matric_comun_primaria': 'Común Primaria', 
-            'matric_comun_secundaria': 'Común Secundaria', 
-            'matric_comun_snu': 'Común SNU', 
-            'matric_especial_ed_temprana': 'Especial Educación Temprana', 
-            'matric_especial_inicial': 'Especial Inicial', 
-            'matric_especial_primaria': 'Especial Primaria',            
+            'matric_comun_secundaria': 'Común Secundaria',                   
         }
         nvistamatricula = opciones_descriptivas.get(tvistamatricula, 'Común Inicial')
         
