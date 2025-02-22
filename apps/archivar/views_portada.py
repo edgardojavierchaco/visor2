@@ -24,4 +24,4 @@ def DepGestorPortada(request):
         HttpResponse: La respuesta renderizada con la plantilla de portada.
     """
     
-    return render(request, 'archivos/portada_gestor.html')
+    return render(request, 'archivos/base/dashboard.html')

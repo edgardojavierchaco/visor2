@@ -1,0 +1,141 @@
+{% extends 'biblioteca/layout.html' %}
+{% load widget_tweaks %}
+{% block head %}
+    {% block head_form %}
+    {% endblock %}
+{% endblock %}
+{% block content %}
+    <form method="post" action="." enctype="multipart/form-data">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    {% if action == 'add' %}
+                        <i class="fas fa-plus"></i>
+                    {% else %}
+                        <i class="fas fa-edit"></i>
+                    {% endif %}
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action }}">
+
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <!-- Botón para mostrar el popup en la fila superior -->
+                <div class="form-group row">
+                    <div class="col-md-12 text-right">
+                        <button type="button" class="btn btn-info" id="showPopupBtn">
+                            <i class="fas fa-info-circle"></i> Información 
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Campo CUE Anexo (Solo lectura) -->
+                <div class="form-group">
+                    <label for="id_cueanexo">CUE Anexo:</label>
+                    <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
+                </div>
+
+                <!-- Primera fila -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="id_mes">Mes:</label>
+                        {{ form.mes|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_anio">Año:</label>
+                        {{ form.anio|add_class:"form-control" }}
+                    </div>                    
+                </div>
+
+                <!-- Segunda fila -->
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <label for="id_servicio">Servicio:</label>
+                        {{ form.servicio|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_turnos">Turnos:</label>
+                        {{ form.turnos|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_tmaterial">Tipo Material:</label>
+                        {{ form.t_material|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_cantidad">Cantidad:</label>
+                        {{ form.cantidad|add_class:"form-control text-center" }}
+                    </div>
+                </div>               
+
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Guardar registro
+                </button>
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // Mostrar alerta con errores si existen
+        {% if form.errors %}
+            var errors = '';
+            {% for field in form %}
+                {% for error in field.errors %}
+                    errors += '{{ error }}\n';
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                errors += '{{ error }}\n';
+            {% endfor %}
+            Swal.fire({
+                title: 'Error!',
+                text: errors,
+                icon: 'error'
+            });
+        {% endif %}
+
+        // Manejo de envío con AJAX
+        $('form').on('submit', function (e) {
+            e.preventDefault();
+            var parameters = new FormData(this);
+            submit_with_ajax(window.location.pathname, 'Notificación', '¿Estas seguro de realizar la siguiente acción?', parameters, function () {
+                location.href = '{{ list_url }}';
+            });
+        });
+        
+
+        // Asignar valor al campo cueanexo (si es necesario)
+        document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
+
+        // Mostrar el popup con las traducciones cuando se hace clic en el botón
+        $('#showPopupBtn').click(function() {
+            Swal.fire({
+                title: 'Información',
+                html: `
+                    <p>En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
+                    
+                `,
+                icon: 'info'
+            });
+        });
+    </script>
+{% endblock %}

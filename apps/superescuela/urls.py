@@ -24,6 +24,8 @@ urlpatterns = [
     # Asignaciones
     path('asign/add/', AsignacionCreateView.as_view(), name='asign_create'),
     path('asign/list/', AsignacionListView.as_view(), name='asign_list'),
+    path('asign/list_gestor/', AsignacionListGestorView.as_view(), name='asign_list_gestor'),
+    path('asign/list_func/', AsignacionListFuncView.as_view(), name='asign_list_func'),
     path('asign/delete/<int:pk>/', AsignacionDeleteView.as_view(), name='asign_delete'),
     path('asign/update/<int:pk>/', AsignacionUpdateView.as_view(), name='asign_update'),
 ]

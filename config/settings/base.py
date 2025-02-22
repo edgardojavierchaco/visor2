@@ -57,6 +57,7 @@ LOCAL_APPS = [
     'apps.funcionarios',
     'apps.represlegales',
     'apps.intercultural',
+    'apps.biblioteca',
 ]
 
 
@@ -119,7 +120,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=cenpe,public,pof'
+            'options': '-c search_path=pem,cenpe,public,pof'
         }
     }
 }

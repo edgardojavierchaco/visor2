@@ -51,6 +51,7 @@ urlpatterns = [
     path('chaco/',include('apps.funcionarios.urls',namespace='chaco')),
     path('rl/',include('apps.represlegales.urls',namespace='rl')),
     path('indigena/',include('apps.intercultural.urls',namespace='indigena')),
+    path('bbl/',include('apps.biblioteca.urls',namespace='bbl')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

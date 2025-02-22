@@ -5,6 +5,7 @@ from .views_dashboard import DashboardView, DashboardComunView, DashboardFuncVie
 from .views_func import VistaAlumnosBilingueListView, VistaAlumnosBilingueListView2
 from .views_index import IndexView
 from .views_reg import VistaAlumnosBilingueListRegView, VistaAlumnosBilingueListRegView2
+from .views_gestor import VistaAlumnosBilingueGestorListView, VistaAlumnosBilingueGestorListView2
 
 app_name='intercultural'
 
@@ -25,6 +26,8 @@ urlpatterns = [
     path('alumnos/list_func_cue/<str:cueanexo>/', VistaAlumnosBilingueListView2.as_view(), name='alumnos_list_func_cue'),
     path('alumnos/list_reg/', VistaAlumnosBilingueListRegView.as_view(), name='alumnos_list_reg'),
     path('alumnos/list_reg_cue/<str:cueanexo>/', VistaAlumnosBilingueListRegView2.as_view(), name='alumnos_list_reg_cue'),
+    path('alumnos/list_gestor/', VistaAlumnosBilingueGestorListView.as_view(), name='alumnos_list_gestor'),
+    path('alumnos/list_gestor_cue/<str:cueanexo>/', VistaAlumnosBilingueGestorListView2.as_view(), name='alumnos_list_gestor_cue'),
     # home
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard_comun/', DashboardComunView.as_view(), name='dashboard_comun'),

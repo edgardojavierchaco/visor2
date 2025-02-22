@@ -264,3 +264,87 @@ class AsignacionUpdateView(LoginRequiredMixin, UpdateView):
         context['action'] = 'edit'
         context['det'] = self.get_details_escuelas()
         return context
+
+
+################################################################
+#            LISTADO SUPERVISORES PARA GESTORES                #
+################################################################
+
+class AsignacionListGestorView(LoginRequiredMixin, ListView):
+    model = Asignacion
+    template_name = 'superv/asignacion/list_gestor.html'
+
+    
+    def get_queryset(self):
+        return Asignacion.objects.all()
+
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        data = {}
+        try:
+            action = request.POST['action']                      
+            if action == 'searchdata':
+                data = [i.toJSON() for i in Asignacion.objects.all()]
+            elif action == 'search_details_asign':
+                data = []
+                for i in DetalleAsignacion.objects.filter(asignacion_id=request.POST['id']):
+                    data.append(i.toJSON())
+            else:
+                data['error'] = 'Ha ocurrido un error'
+        except Exception as e:
+            data['error'] = str(e)
+        return JsonResponse(data, safe=False)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Listado de Supervisores con Asignaciones'
+        context['create_url'] = reverse_lazy('superescuela:asign_create')
+        context['list_url'] = reverse_lazy('superescuela:asign_list_gestor')
+        context['entity'] = 'Listado'
+        return context
+
+
+################################################################
+#         LISTADO SUPERVISORES PARA FUNCIONARIOS               #
+################################################################
+
+class AsignacionListFuncView(LoginRequiredMixin, ListView):
+    model = Asignacion
+    template_name = 'superv/asignacion/list_func.html'
+
+    
+    def get_queryset(self):
+        return Asignacion.objects.all()
+
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        data = {}
+        try:
+            action = request.POST['action']                      
+            if action == 'searchdata':
+                data = [i.toJSON() for i in Asignacion.objects.all()]
+            elif action == 'search_details_asign':
+                data = []
+                for i in DetalleAsignacion.objects.filter(asignacion_id=request.POST['id']):
+                    data.append(i.toJSON())
+            else:
+                data['error'] = 'Ha ocurrido un error'
+        except Exception as e:
+            data['error'] = str(e)
+        return JsonResponse(data, safe=False)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Listado de Supervisores con Asignaciones'
+        context['create_url'] = reverse_lazy('superescuela:asign_create')
+        context['list_url'] = reverse_lazy('superescuela:asign_list_func')
+        context['entity'] = 'Listado'
+        return context

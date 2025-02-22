@@ -38,11 +38,11 @@ class VistaAlumnosBilingueListRegView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Listado de Alumnos Bilingües cargados'
+        context['title'] = 'Listado de Alumnos Pueblos Originarios'
         context['create_url'] = reverse_lazy('intercultural:alumnos_create')
         context['list_url'] = reverse_lazy('intercultural:alumnos_list_reg')
         context['update_url'] = reverse_lazy('intercultural:alumnos_update', args=[0]) 
-        context['entity'] = 'Alumnos Bilingües'
+        context['entity'] = 'Alumnos Pueblos Originarios'
         return context
 
 
@@ -84,11 +84,11 @@ class VistaAlumnosBilingueListRegView2(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)  
         cueanexo = self.kwargs.get('cueanexo', None)       
-        context['title'] = 'Listado de Alumnos Bilingües cargados' 
+        context['title'] = 'Listado de Alumnos Pueblos Originarios' 
         context['create_url'] = reverse_lazy('intercultural:alumnos_create')
         context['list_url'] = resolve_url('intercultural:alumnos_list_reg_cue', cueanexo) if cueanexo else ''
      
-        context['entity'] = 'Alumnos Bilingües'
+        context['entity'] = 'Alumnos Pueblos Originarios'
         return context
 
 

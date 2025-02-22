@@ -39,4 +39,16 @@ docker rmi $(docker images -f "dangling=true" -q)
 docker compose -f production.yml up --build
 
 
+##########################
+pwd
+
+sudo find / -type d -name "productionfiles"
+
+sudo chown -R usuario:grupo /ruta/a/productionfiles
+sudo chmod -R 775 /ruta/a/productionfiles
+
+cp -r ./productionfiles ./productionfiles_backup
+
+
+
 
