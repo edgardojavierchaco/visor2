@@ -26,7 +26,8 @@ class ArchivoCreateView(GroupRequiredMixin,CreateView):
             action = request.POST['action']
             if action == 'add':
                 form = self.get_form()
-                data = form.save()
+                obj = form.save()
+                data = obj.toJSON()
             else:
                 data['error'] = 'No ha ingresado a ninguna opción'
         except Exception as e:
@@ -94,7 +95,8 @@ class editar_archivos(GroupRequiredMixin,UpdateView):
             action = request.POST['action']
             if action == 'edit':
                 form = self.get_form()
-                data = form.save()
+                obj = form.save()
+                data = obj.toJSON()
             else:
                 data['error'] = 'No ha ingresado a ninguna opción'
         except Exception as e:

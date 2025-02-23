@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from .models import MaterialBibliografico
 from django.db import connection
 from django.shortcuts import render
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, mm
 import tempfile
 import qrcode
 from io import BytesIO
@@ -75,6 +75,7 @@ def generar_pdf_material_bibliografico(request):
     response['Content-Disposition'] = f'attachment; filename="{usuario}-Material Bibliográfico y Especial.pdf"'    
     
     p = canvas.Canvas(response, pagesize=landscape(legal))
+    p.setTitle('Planilla')
     width, height = landscape(legal)
 
     # Aquí puedes agregar los encabezados antes de la tabla
@@ -86,7 +87,7 @@ def generar_pdf_material_bibliografico(request):
     p.drawString(30, height - 70, f"BIBLIOTECA Nº Y NOMBRE: {nom_est} MODALIDAD: ________________")
     p.drawString(30, height - 85, "CATEGORÍA: _______ REG.: _______ DOMICILIO: ____________ LOCALIDAD: ________ MAIL: ________")
     p.drawString(30, height - 100, f"TURNO: {', '.join(turnos_lista)}")
-    p.drawString(550, height - 360, "DIRECTOR:________________")
+    p.drawString(550, height - 560, "RESPONSABLE:________________")
         
     # Aquí va tu código para generar la tabla
     service_categories = [
