@@ -67,7 +67,7 @@ def filtrar_tablas_view_directores_uegp(request):
         ) AND po.estado_loc = %s
     """
     ofertas = """
-        SELECT anexo, calle, numero, cueanexo, oferta, est_oferta
+        SELECT anexo, calle, numero, cueanexo, oferta, est_oferta, acronimo_oferta, sector
         FROM padron_ofertas
         WHERE cueanexo = %s AND est_oferta = %s        
     """
@@ -96,6 +96,12 @@ def filtrar_tablas_view_directores_uegp(request):
     # Cerrar la conexión a la base de datos
     connection.close()
     
+    # Verificamos si alguna oferta comienza con "BI" y si es del sector "Privado"
+    tiene_bibliotecas = any(
+        oferta['acronimo_oferta'].startswith('BI') and oferta['sector'] == 'Privado' 
+        for oferta in resultados3
+    )
+    
     print('institucional:', resultados) 
     print('planes:', resultados1)
     print('anexos:', resultados2)
@@ -106,9 +112,10 @@ def filtrar_tablas_view_directores_uegp(request):
         'planes': resultados1,
         'anexos': resultados2,
         'ofertas': resultados3,
+        'tiene_bibliotecas': tiene_bibliotecas,
     }
     
-    return render(request, 'directores/institucionaluegp.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3})
+    return render(request, 'directores/institucionaluegp.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3, 'tiene_bibliotecas': tiene_bibliotecas})
 
 
 @login_required

@@ -102,6 +102,9 @@
                         <li><a href="{% url 'privada:uegp_list' %}" class="dropdown-item">ABM Relevamiento</a></li> 
                         <li><a href="{% url 'representantes:dashboard' %}" class="dropdown-item">ABM Representantes Legales</a></li>
                         <li><a href="{% url 'intercultural:dashboard' %}" class="dropdown-item">ABM Alumnos Pueblos Originarios</a></li>
+                        {% if tiene_bibliotecas %}
+                            <li><a href="{% url 'bibliotecas:dashboard' %}" class="dropdown-item">ABM Bibliotecas</a></li>
+                        {% endif %}
                     </ul>
                 </li>            
                 {% if user.is_authenticated %}

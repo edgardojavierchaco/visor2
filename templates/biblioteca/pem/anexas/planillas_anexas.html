@@ -1,0 +1,70 @@
+{% extends "biblioteca/layout.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Planillas Anexas</h2>
+    <form method="post" id="planilla-form">
+        {% csrf_token %}
+        
+        <!-- Campos ocultos -->
+        <input type="hidden" name="cueanexo" value="{{ cueanexo }}">
+        <input type="hidden" name="mes" value="{{ mes }}">
+        <input type="hidden" name="anio" value="{{ anio }}">
+
+        <table class="table table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Servicio</th>
+                    <th>Cantidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="planilla-body">
+                <tr class="fila-template d-none">
+                    <td>
+                        <select name="servicio" class="form-control">
+                            {% for servicio in servicios %}
+                                <option value="{{ servicio.id }}">{{ servicio.nom_servicio }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" name="cantidad" class="form-control" min="0">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm eliminar-fila">Eliminar</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" class="btn btn-success" id="agregar-fila">Agregar Fila</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("agregar-fila").addEventListener("click", function () {
+        let tbody = document.getElementById("planilla-body");
+        let newRow = document.querySelector(".fila-template").cloneNode(true);
+        newRow.classList.remove("d-none", "fila-template");
+        tbody.appendChild(newRow);
+    });
+
+    document.getElementById("planilla-body").addEventListener("click", function (e) {
+        if (e.target.classList.contains("eliminar-fila")) {
+            e.target.closest("tr").remove();
+        }
+    });
+
+    document.getElementById("planilla-form").addEventListener("submit", function (e) {
+        let filas = document.querySelectorAll("#planilla-body tr:not(.fila-template)");
+        if (filas.length === 0) {
+            e.preventDefault();
+            alert("Debe agregar al menos una fila antes de guardar.");
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -67,7 +67,7 @@ def filtrar_tablas_view_directores(request):
         ) AND po.estado_loc = %s
     """
     ofertas = """
-        SELECT anexo, calle, numero, cueanexo, oferta, est_oferta
+        SELECT anexo, calle, numero, cueanexo, oferta, est_oferta,acronimo_oferta, sector
         FROM padron_ofertas
         WHERE cueanexo = %s AND est_oferta = %s        
     """
@@ -101,14 +101,22 @@ def filtrar_tablas_view_directores(request):
     print('anexos:', resultados2)
     print('ofertas:', resultados3)
     
+    # Verificamos si "Bibliotecas" está en las ofertas
+    tiene_bibliotecas = any(oferta['acronimo_oferta'].startswith('BI%') for oferta in resultados3)
+    
+    # Verificamos si "Privado" está en las ofertas
+    privado = any(oferta['sector'] == 'Privado' for oferta in resultados3)
+    
     context = {
         'institucional': resultados,
         'planes': resultados1,
         'anexos': resultados2,
         'ofertas': resultados3,
+        'tiene_bibliotecas': tiene_bibliotecas,
+        'privado': privado,
     }
     
-    return render(request, 'directores/institucional.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3})
+    return render(request, 'directores/institucional.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3, 'tiene_bibliotecas': tiene_bibliotecas, 'privado': privado})
 
 
 @login_required
@@ -269,9 +277,12 @@ def filter_matricula_views_directores(request):
             
     except psycopg2.Error as e:
         # Manejar el error de consulta
-        connection.close()
+        connection.close()     
+                
         return render(request, 'error.html', {'mensaje': 'Error al ejecutar la consulta'})
     
+    
+     
     # Transformar los resultados en una respuesta renderizada
     return render(request, 'directores/matricula.html', {'resultados_detalle':resultados_detalle})
 

@@ -150,12 +150,8 @@ class ServicioReferencia(models.Model):
         db_table= 'servicio_referencia'
 
     def __str__(self):
-        return f"{self.cueanexo} - {self.servicio}"
+        return f"{self.cueanexo} - {self.servicio}"   
     
-    def clean(self):
-        """ Validación para permitir solo servicios con cod_servicio=1 """
-        if self.servicio.cod_servicio != 2:
-            raise ValidationError({'servicio': 'El servicio seleccionado no es válido.'})
     
     def toJSON(self):
         item = model_to_dict(self)
@@ -166,8 +162,7 @@ class ServicioReferencia(models.Model):
         item['turnos'] = self.turnos.nom_turno
         item['varones'] = self.varones
         item['total'] = self.total
-        return item
-    
+        return item    
     
     
 class ServicioReferenciaVirtual(models.Model):
@@ -185,12 +180,8 @@ class ServicioReferenciaVirtual(models.Model):
         db_table= 'servicio_referencia_virtual'
 
     def __str__(self):
-        return f"{self.cueanexo} - {self.servicio}"
+        return f"{self.cueanexo} - {self.servicio}"    
     
-    def clean(self):
-        """ Validación para permitir solo servicios con cod_servicio=1 """
-        if self.servicio.cod_servicio != 3:
-            raise ValidationError({'servicio': 'El servicio seleccionado no es válido.'})
     
     def toJSON(self):
         item = model_to_dict(self)
@@ -221,11 +212,7 @@ class ServicioPrestamo(models.Model):
     def __str__(self):
         return f"{self.cueanexo} - {self.servicio}"
     
-    def clean(self):
-        """ Validación para permitir solo servicios con cod_servicio=1 """
-        if self.servicio.cod_servicio != 4:
-            raise ValidationError({'servicio': 'El servicio seleccionado no es válido.'})
-    
+        
     def toJSON(self):
         item = model_to_dict(self)
         item['cueanexo'] = self.cueanexo
@@ -253,12 +240,8 @@ class InformePedagogico(models.Model):
         db_table= 'informe_pedagogico'
 
     def __str__(self):
-        return f"{self.cueanexo} - {self.servicio}"
+        return f"{self.cueanexo} - {self.servicio}"    
     
-    def clean(self):
-        """ Validación para permitir solo servicios con cod_servicio=1 """
-        if self.servicio.cod_servicio != 5:
-            raise ValidationError({'servicio': 'El servicio seleccionado no es válido.'})
     
     def toJSON(self):
         item = model_to_dict(self)
@@ -380,4 +363,86 @@ class Aguapey(models.Model):
         item['anio'] = self.anio
         item['total_mes'] = self.total_mes
         item['total_base'] = self.total_base        
+        return item
+
+
+class Escuelas(models.Model):
+    id = models.IntegerField(primary_key=True)
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nom_est=models.CharField(max_length=255, verbose_name='Nombre')
+    oferta=models.CharField(max_length=255, verbose_name='Ofertas')
+    region_loc=models.CharField(max_length=255, verbose_name='Regional')
+    localidad=models.CharField(max_length=255, verbose_name='Localidad')
+    departamento=models.CharField(max_length=255, verbose_name='Departamento')
+    
+    class Meta:  
+        managed=False      
+        verbose_name = 'Escuela'
+        verbose_name_plural='Escuelas'
+        db_table= 'cueanexo_nomest_ofertas'
+
+    def __str__(self):
+        return f"{self.cueanexo} - {self.nom_est}: {self.oferta}"    
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['id'] = self.id
+        item['cueanexo'] = self.cueanexo
+        item['nom_est'] = self.nom_est
+        item['oferta'] = self.oferta
+        item['region_loc'] = self.region_loc
+        item['localidad'] = self.localidad     
+        item['departamento'] = self.departamento   
+        return item
+
+
+class GenerarInforme(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    meses=models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
+    annos=models.IntegerField(validators=[MinValueValidator(2025)],verbose_name='Año')
+    f_generacion=models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Generación")
+    estado=models.CharField(default='GENERADO', verbose_name='Estado')
+    f_envio=models.DateTimeField(auto_now_add=False,blank=True, null=True, verbose_name='Fecha Envío')
+    
+    class Meta:              
+        verbose_name = 'GenerarInforme'
+        verbose_name_plural='GenerarInformes'
+        db_table= 'generar_informe'
+
+    def __str__(self):
+        return f"{self.cueanexo} - {self.meses}: {self.annos}"    
+    
+    def toJSON(self):
+        item = model_to_dict(self)        
+        item['cueanexo'] = self.cueanexo
+        item['meses'] = self.meses
+        item['annos'] = self.annos
+        item['f_generacion'] = self.f_generacion      
+        item['estado'] = self.estado
+        item['f_envio'] = self.f_envio   
+        return item
+
+
+class PlanillasAnexas(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    mes=models.CharField(max_length=25, verbose_name='Mes')
+    anio=models.IntegerField(verbose_name='Año')
+    servicio=models.ForeignKey(ServiciosMatBiblio, on_delete=models.CASCADE, verbose_name='Servicios')
+    cantidad=models.IntegerField(verbose_name='Cantidad')
+    
+    class Meta:              
+        verbose_name = 'PlanillaAnexa'
+        verbose_name_plural='PlanillasAnexas'
+        db_table= 'planilla_anexa'
+        
+    def __str__(self):
+        return f"{self.cueanexo} {self.mes} {self.anio} - {self.servicio}"
+    
+    def toJSON(self):
+        item = model_to_dict(self)        
+        item['cueanexo'] = self.cueanexo
+        item['mes'] = self.mes
+        item['anios'] = self.anio
+        item['servicio'] = self.servicio.nom_servicio      
+        item['cantidad'] = self.cantidad 
         return item

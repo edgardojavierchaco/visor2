@@ -45,6 +45,16 @@
                 <a href="{{ list_url }}" class="btn btn-success btn-flat">
                     <i class="fas fa-sync"></i> Actualizar
                 </a>
+                {% if not hide_lock_button %}                                   
+                    <a href="{{ next_url }}" class="btn btn-danger btn-flat">
+                        <i class="fas fa-lock"></i> Siguiente
+                    </a>
+                {% endif %}
+                {% if not generar_pdf_button %}                                   
+                    <a href="{{ generar_pdf_url }}" class="btn btn-file btn-flat" target="_blank">
+                        <i class="fas fa-file-upload"></i> Generar PDF
+                    </a>
+                {% endif %}
             {% endblock %}
         </div>
     </div>

@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import MaterialBibliografico
+from .models import MaterialBibliografico, GenerarInforme
 from .forms import MaterialBibliograficoForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -48,7 +48,18 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, CreateView):
         context['entity'] = 'Material'
         context['list_url'] = self.success_url
         context['action'] = 'add'
-        context['cueanexo'] = self.request.user.username
+        context['cueanexo'] = self.request.user.username        
+        
+        # Obtener el último mes y año del usuario logueado
+        ultimo_informe = GenerarInforme.objects.filter(cueanexo=self.request.user.username).order_by('-annos', '-meses').first()
+
+        if ultimo_informe:
+            context['mes'] = ultimo_informe.meses
+            context['anno'] = ultimo_informe.annos
+        else:
+            context['mes'] = None
+            context['anno'] = None
+        
         return context
 
 
@@ -87,6 +98,17 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, UpdateView):
         context['list_url'] = self.success_url
         context['action'] = 'edit'
         context['cueanexo'] = self.request.user.username
+        
+        # Obtener el último mes y año del usuario logueado
+        ultimo_informe = GenerarInforme.objects.filter(cueanexo=self.request.user.username).order_by('-annos', '-meses').first()
+
+        if ultimo_informe:
+            context['mes'] = ultimo_informe.meses
+            context['anno'] = ultimo_informe.annos
+        else:
+            context['mes'] = None
+            context['anno'] = None
+            
         return context
 
 
@@ -154,6 +176,9 @@ class MaterialBibliograficoListView(LoginRequiredMixin, ListView):
         context['create_url'] = reverse_lazy('bibliotecas:materialbibliografico_create')
         context['list_url'] = reverse_lazy('bibliotecas:materialbibliografico_list')
         context['update_url'] = reverse_lazy('bibliotecas:materialbibliografico_update', args=[0]) 
+        context['hide_lock_button'] = False     
+        context['generar_pdf_button'] = True,  
+        context['next_url'] = reverse_lazy('bibliotecas:servref_create')
         context['entity'] = 'Material'
         return context
 

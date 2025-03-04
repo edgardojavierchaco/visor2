@@ -13,5 +13,8 @@ admin.site.register(ServicioReferenciaVirtual)
 admin.site.register(ServiciosMatBiblio)
 admin.site.register(TipoMaterialBiblio)
 admin.site.register(Turnos)
+admin.site.register(Escuelas)
+admin.site.register(GenerarInforme)
+admin.site.register(PlanillasAnexas)
 
 

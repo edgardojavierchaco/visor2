@@ -1,8 +1,6 @@
 {% extends 'biblioteca/layout.html' %}
 {% load widget_tweaks %}
-{% block head %}
-    {% block head_form %}
-    {% endblock %}
+{% block head %}    
 {% endblock %}
 {% block content %}
     <form method="post" action="." enctype="multipart/form-data">
@@ -45,14 +43,12 @@
                 </div>
 
                 <!-- Campo CUE Anexo (Solo lectura) -->
-                <div class="form-group">
-                    <label for="id_cueanexo">CUE Anexo:</label>
-                    <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
-                </div>
-
-                <!-- Primera fila -->
-                <div class="row">
+                <div class="form-group row">
                     <div class="col-md-4">
+                        <label for="id_cueanexo">CUE Anexo:</label>
+                        <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
+                    </div>
+                        <div class="col-md-4">
                         <label for="id_mes">Mes:</label>
                         {{ form.mes|add_class:"form-control" }}
                     </div>
@@ -60,23 +56,23 @@
                         <label for="id_anio">Año:</label>
                         {{ form.anio|add_class:"form-control" }}
                     </div>                    
-                </div>
+                </div>                
 
                 <!-- Segunda fila -->
                 <div class="row mt-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="id_servicio">Servicio:</label>
                         {{ form.servicio|add_class:"form-control" }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="id_turnos">Turnos:</label>
                         {{ form.turnos|add_class:"form-control" }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="id_tmaterial">Tipo Material:</label>
                         {{ form.t_material|add_class:"form-control text-center" }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="id_cantidad">Cantidad:</label>
                         {{ form.cantidad|add_class:"form-control text-center" }}
                     </div>
@@ -125,13 +121,15 @@
 
         // Asignar valor al campo cueanexo (si es necesario)
         document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
+        document.getElementById("id_mes").value = "{{ mes }}";
+        document.getElementById("id_anio").value = "{{ anno }}";
 
         // Mostrar el popup con las traducciones cuando se hace clic en el botón
         $('#showPopupBtn').click(function() {
             Swal.fire({
                 title: 'Información',
                 html: `
-                    <p>En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
+                    <p>En esta sección, ...</p>
                     
                 `,
                 icon: 'info'
