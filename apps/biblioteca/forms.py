@@ -1,3 +1,4 @@
+from pyexpat import model
 from django import forms
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
@@ -6,7 +7,8 @@ from .models import (
     ServiciosMatBiblio, MaterialBibliografico, ServicioReferencia,
     ServicioReferenciaVirtual, ServicioPrestamo, InformePedagogico,
     AsistenciaUsuarios, InstitucionesPrestaServicios, ProcesosTecnicos, Aguapey,
-    GenerarInforme, PlanillasAnexas
+    GenerarInforme, PlanillasAnexas, DestinoFondos, RegistroDestinoFondos,
+        DocentePonMensual, NoDocentesMensual
 )
 
 # Formulario para MaterialBibliografico
@@ -30,7 +32,7 @@ class MaterialBibliograficoForm(forms.ModelForm):
     
         def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
-                self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(cod_servicio__lt=210)
+                self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(cod_servicio__range=(110,113))
                 
                 self.fields['cantidad'].required = True
         
@@ -311,6 +313,10 @@ class AguapeyForm(forms.ModelForm):
                         'style': 'width: 100px; text-align: center;'}),
                 'total_base': forms.NumberInput(attrs={'class': 'form-control', 
                         'style': 'width: 100px; text-align: center;'}),
+                'total_usuarios': forms.NumberInput(attrs={'class': 'form-control',
+                        'style': 'width: 100px; text-align: center;'}),
+                'observaciones': forms.Textarea(attrs={'class': 'form-control',
+                        'style': 'width: 100%; height: 100px;'}),
                 }
 
         def __init__(self, *args, **kwargs):
@@ -378,3 +384,74 @@ class PlanillasAnexasForm(forms.ModelForm):
                 self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(cod_servicio__gt=710)
 
                 self.fields['cantidad'].required = True
+
+
+class RegistroDestinoFondosForm(forms.ModelForm):
+    
+        class Meta:
+                model = RegistroDestinoFondos
+                fields = '__all__'
+                widgets = {
+                'cueanexo': forms.TextInput(attrs={'class': 'form-control','max_length':'9', 
+                        'style': 'width: 100px; text-align: center;', 'readonly':'readonly'}),
+                'mes': forms.TextInput(attrs={'class': 'form-control', 'readonly':'readonly'}),
+                'anio': forms.NumberInput(attrs={'class': 'form-control', 'max_length':'4', 
+                        'style': 'width: 100px; text-align: center;', 'readonly':'readonly'}),
+                'destino': forms.Select(attrs={'class': 'form-control'}),
+                'descripcion': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 100%; height: 100px;'}),
+                }
+                
+
+class NoDocentesMensualForm(forms.ModelForm):
+    class Meta:
+        model = NoDocentesMensual
+        fields = '__all__'  # Incluir todos los campos del modelo
+        widgets = {
+                'id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+                'cueanexo': forms.TextInput(attrs={'class': 'form-control'}),
+                'cuof': forms.TextInput(attrs={'class': 'form-control'}),
+                'cuof_anexo': forms.TextInput(attrs={'class': 'form-control'}),
+                'ptaid': forms.TextInput(attrs={'class': 'form-control'}),
+                'apellidos': forms.TextInput(attrs={'class': 'form-control'}),
+                'nombres': forms.TextInput(attrs={'class': 'form-control'}),
+                'ndoc': forms.TextInput(attrs={'class': 'form-control'}),
+                'cuil': forms.TextInput(attrs={'class': 'form-control'}),        
+                'f_nac': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+                'denom_cargo': forms.TextInput(attrs={'class': 'form-control'}),
+                'categ': forms.Select(attrs={'class': 'form-control'}),
+                'gpo': forms.Select(attrs={'class': 'form-control'}),
+                'apart': forms.Select(attrs={'class': 'form-control'}),
+                'f_desde': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+                'f_hasta': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+                'regional': forms.Select(attrs={'class': 'form-control'}),
+                'localidad': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+  
+class DocentePonMensualForm(forms.ModelForm):
+    class Meta:
+        model = DocentePonMensual
+        fields = '__all__' 
+        widgets = {
+                'id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+                'cueanexo': forms.TextInput(attrs={'class': 'form-control'}),
+                'cuof': forms.TextInput(attrs={'class': 'form-control'}),
+                'cuof_anexo': forms.TextInput(attrs={'class': 'form-control'}),
+                'ptaid': forms.TextInput(attrs={'class': 'form-control'}),
+                'apellidos': forms.TextInput(attrs={'class': 'form-control'}),
+                'nombres': forms.TextInput(attrs={'class': 'form-control'}),
+                'n_doc': forms.TextInput(attrs={'class': 'form-control'}),
+                'cuil': forms.TextInput(attrs={'class': 'form-control'}),
+                'f_nac': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+                'sit_rev': forms.Select(attrs={'class': 'form-control'}),
+                'nivel': forms.Select(attrs={'class': 'form-control'}),
+                'ceic': forms.TextInput(attrs={'class': 'form-control'}),
+                'denom_cargo': forms.TextInput(attrs={'class': 'form-control'}),
+                'f_desde': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+                'f_hasta': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+                'regional': forms.Select(attrs={'class': 'form-control'}),
+                'localidad': forms.Select(attrs={'class': 'form-control'}), 
+                'carga_horaria': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+        

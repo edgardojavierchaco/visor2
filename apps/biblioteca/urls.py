@@ -62,14 +62,22 @@ from .views_aguapey import (
     AguapeyListView
 )
 
+from .views_list_docnodoc import (
+    DocentePonMensualListView,
+    NoDocentePonMensualListView
+)
+
+
 from .views_generarpdf import generar_pdf_material_bibliografico
 from .views_instituciones import ObtenerEscuelaView
 from .views_generarinforme import GenerarInformeView
 from .views_planillasanexas import PlanillasAnexasView, PlanillasAnexasListView, PlanillasAnexasUpdateView, PlanillasAnexasDeleteView
-from .views_dashboard import DashboardView
+from .views_dashboard import DashboardView, DashboardDirView
 from .views_reporteinformes import generar_informe_list, generar_informe
 from .views_cuemesanio import generar_pdf_cuemesanio, modal_generar_pdf_cuemesanio
 from .views_cuemesanio_uno import generar_pdf_cuemesanio_uno, modal_generar_pdf_cuemesanio_uno
+from .views_registrofondos import RegistroDestinoFondosView, RegistroDestinoFondosListView, RegistroDestinoFondosDeleteView
+
 app_name = 'bibliotecas'
 
 urlpatterns = [
@@ -126,18 +134,28 @@ urlpatterns = [
     path('aguapey/add/', AguapeyCreateView.as_view(), name='aguapey_create'),
     path('aguapey/update/<int:pk>/', AguapeyUpdateView.as_view(), name='aguapey_update'),
     path('aguapey/delete/<int:pk>/', AguapeyDeleteView.as_view(), name='aguapey_delete'),
-   
+    
+    # Registro Destino de Fondos
+    path('regfondos/', RegistroDestinoFondosView.as_view(), name='regfondos'),
+    path('regfondos_list/', RegistroDestinoFondosListView.as_view(), name='regfondos_list'),
+    path('regfondos/delete/<int:pk>/', RegistroDestinoFondosDeleteView.as_view(), name='regfondos   _delete'),
+    
     # Planillas Anexas
     path('plan_anexas/', PlanillasAnexasView.as_view(), name='plan_anexas'),
     path('anexas_list/', PlanillasAnexasListView.as_view(), name='anexas_list'),
     path('anexas/update/<int:pk>/', PlanillasAnexasUpdateView.as_view(), name='anexas_update'),
     path('anexas/delete/<int:pk>/', PlanillasAnexasDeleteView.as_view(), name='anexas_delete'),
-     
+    
+    # Planillas Docentes y no Docentes
+    path('nom_doc/', DocentePonMensualListView.as_view(), name='nom_doc'),
+    path('nom_ndoc/', NoDocentePonMensualListView.as_view(), name='nom_ndoc'), 
+    
     # home 
     path('generar_pdf/', generar_pdf_material_bibliografico, name='generar_pdf'),
     path('obtener_escuela/', ObtenerEscuelaView.as_view(), name='obtener_escuela'),
     path('generar_info/', GenerarInformeView.as_view(), name='generar_info'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('dashboard_dir/', DashboardDirView.as_view(), name='dashboard_dir'),
     path('generar_informe_list/', generar_informe_list, name='generar_informe_list'),
     path('generar_informe/', generar_informe, name='generar_informe'),
     path('generar_pdf_cue/', generar_pdf_cuemesanio, name='generar_pdf_cue'),

@@ -193,7 +193,7 @@ class AguapeyListView(LoginRequiredMixin, ListView):
         context['entity'] = 'Aguapey'
         context['hide_lock_button'] = False     
         context['generar_pdf_button'] = True,  
-        context['next_url'] = reverse_lazy('bibliotecas:plan_anexas')
+        context['next_url'] = reverse_lazy('bibliotecas:regfondos')
         return context
 
 

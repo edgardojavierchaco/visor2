@@ -22,7 +22,7 @@ $(function () {
             {"data": "servicio"},
             {"data": "cantidad"},
             {
-                "data": "id",
+                "data": "acciones",
                 "render": function (data, type, row) {
                     return `                        
                         <a href="../anexas/delete/${data}/" class="btn btn-danger btn-xs btn-flat">

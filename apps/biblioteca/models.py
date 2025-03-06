@@ -1,4 +1,6 @@
+from ast import mod
 import os
+import json
 from django.db import models
 from django.conf import settings
 from django.forms import model_to_dict
@@ -118,8 +120,8 @@ class MaterialBibliografico(models.Model):
         return f"{self.cueanexo} - {self.servicio}"
     
     def clean(self):
-        """ Validación para permitir solo servicios con cod_servicio=1 """
-        if self.servicio.cod_servicio != 1:
+        """ Validación para permitir solo servicios con cod_servicio entre 110 y 113 """
+        if self.servicio.cod_servicio not in [110, 111, 112, 113]:
             raise ValidationError({'servicio': 'El servicio seleccionado no es válido.'})
     
     def toJSON(self):
@@ -347,6 +349,8 @@ class Aguapey(models.Model):
     anio = models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')    
     total_mes=models.IntegerField(verbose_name='Total Mes')
     total_base=models.IntegerField(verbose_name='Total Base')
+    total_usuarios=models.IntegerField(verbose_name='Total Usuarios')
+    observaciones=models.TextField(max_length=255, verbose_name='Observaciones')
         
     class Meta:        
         verbose_name = 'Aguapey'
@@ -362,7 +366,9 @@ class Aguapey(models.Model):
         item['mes'] = self.mes 
         item['anio'] = self.anio
         item['total_mes'] = self.total_mes
-        item['total_base'] = self.total_base        
+        item['total_base'] = self.total_base  
+        item['total_usuarios'] = self.total_usuarios
+        item['observaciones'] = self.observaciones      
         return item
 
 
@@ -445,4 +451,189 @@ class PlanillasAnexas(models.Model):
         item['anios'] = self.anio
         item['servicio'] = self.servicio.nom_servicio      
         item['cantidad'] = self.cantidad 
+        return item
+
+class DestinoFondos(models.Model):
+    cod_fondo=models.IntegerField(verbose_name='Codigo')
+    nom_fondo=models.CharField(max_length=255, verbose_name='Nombre')
+    
+    def __str__(self):
+        return self.nom_fondo
+    
+    class Meta:
+        verbose_name='DestinoFondo'
+        verbose_name_plural='DestinosFondos'
+        db_table='destino_fondos'
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['cod_fondo'] = self.cod_fondo
+        item['nom_fondo'] = self.nom_fondo
+        return item
+
+class RegistroDestinoFondos(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    mes=models.CharField(max_length=25, verbose_name='Mes')
+    anio=models.IntegerField(verbose_name='Año')
+    destino=models.ForeignKey(DestinoFondos, on_delete=models.CASCADE, verbose_name='Destino')
+    descripcion=models.CharField(max_length=255, verbose_name='Descripcion')
+    
+    class Meta:
+        verbose_name='RegistroDestinoFondo'
+        verbose_name_plural='RegistroDestinosFondos'
+        db_table='registro_destino_fondos'  
+    
+    def __str__(self):
+        return f"{self.cueanexo} {self.mes} {self.anio} - {self.destino}"
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['cueanexo'] = self.cueanexo
+        item['mes'] = self.mes
+        item['anio'] = self.anio
+        item['destino'] = self.destino.nom_fondo
+        item['descripcion'] = self.descripcion
+        return item
+
+
+class NoDocentesMensual(models.Model):
+    id = models.IntegerField(primary_key=True)
+    cueanexo = models.CharField(max_length=9)
+    cuof = models.CharField(max_length=10)
+    cuof_anexo = models.CharField(max_length=10, null=True, blank=True)
+    ptaid = models.CharField(max_length=20)
+    apellidos = models.CharField(max_length=100)
+    nombres = models.CharField(max_length=100)
+    ndoc = models.CharField(max_length=15)
+    cuil = models.CharField(max_length=15)
+    f_nac = models.DateField(null=True, blank=True)
+    denom_cargo = models.CharField(max_length=100)
+    categ = models.CharField(max_length=50)
+    gpo = models.CharField(max_length=50)
+    apart = models.CharField(max_length=50)
+    f_desde = models.DateField(null=True, blank=True)
+    f_hasta = models.DateField(null=True, blank=True)
+    regional = models.CharField(max_length=100)
+    localidad = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = 'nodocentes_mensual_view'
+        verbose_name = "No_Docente_Mensual"
+        verbose_name_plural = "No_Docentes_Mensuales"
+
+    def __str__(self):
+        return f"{self.apellidos}, {self.nombres} - {self.denom_cargo}"
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['id'] = self.id 
+        item['cueanexo'] = self.cueanexo
+        item['cuof'] = self.cuof
+        item['cuof_anexo'] = self.cuof_anexo
+        item['ptaid'] = self.ptaid
+        item['apellidos'] = self.apellidos
+        item['nombres'] = self.nombres
+        item['ndoc'] = self.ndoc
+        item['cuil'] = self.cuil
+        item['f_nac'] = self.f_nac
+        item['denom_cargo'] = self.denom_cargo
+        item['categ'] = self.categ
+        item['gpo'] = self.gpo
+        item['apart'] = self.apart
+        item['f_desde'] = self.f_desde
+        item['f_hasta'] = self.f_hasta
+        item['regional'] = self.regional
+        item['localidad'] = self.localidad
+        return item
+
+
+    
+class DocentePonMensual(models.Model):
+    id = models.IntegerField(primary_key=True)  # Generado por row_number() en la vista
+    cueanexo = models.CharField(max_length=50)
+    cuof = models.CharField(max_length=50)
+    cuof_anexo = models.CharField(max_length=50)
+    ptaid = models.CharField(max_length=50)
+    apellidos = models.CharField(max_length=100)
+    nombres = models.CharField(max_length=100)
+    n_doc = models.CharField(max_length=20)
+    cuil = models.CharField(max_length=20)
+    f_nac = models.DateField()
+    sit_rev = models.CharField(max_length=50)
+    nivel = models.CharField(max_length=50)
+    ceic = models.CharField(max_length=50)
+    denom_cargo = models.CharField(max_length=100)
+    f_desde = models.DateField()
+    f_hasta = models.DateField()
+    regional = models.CharField(max_length=100)
+    localidad = models.CharField(max_length=100)
+    carga_horaria=models.IntegerField()
+
+    class Meta:
+        managed = False 
+        verbose_name = "Docente_Mensual"
+        verbose_name_plural = "Docentes_Mensuales"
+        db_table = 'docentespon_mensual_view'
+
+    def __str__(self):
+        return f"{self.apellidos} {self.nombres} - {self.denom_cargo}"
+
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['id'] = self.id
+        item['cueanexo'] = self.cueanexo
+        item['cuof'] = self.cuof
+        item['cuof_anexo'] = self.cuof_anexo
+        item['ptaid'] = self.ptaid
+        item['apellidos'] = self.apellidos
+        item['nombres'] = self.nombres
+        item['n_doc'] = self.n_doc
+        item['cuil'] = self.cuil
+        item['f_nac'] = self.f_nac
+        item['sit_rev'] = self.sit_rev
+        item['nivel'] = self.nivel
+        item['ceic'] = self.ceic
+        item['denom_cargo'] = self.denom_cargo
+        item['f_desde'] = self.f_desde
+        item['f_hasta'] = self.f_hasta
+        item['regional'] = self.regional
+        item['localidad'] = self.localidad
+        item['carga_horaria']=self.carga_horaria
+        return item
+
+
+class FocalLicDocentes(models.Model):    
+    ptaid = models.CharField(max_length=9, blank=True, null=True, verbose_name='ptaid')
+    cuil = models.CharField(max_length=11, blank=True, null=True, verbose_name='cuil')
+    ptatipo = models.CharField(max_length=255, blank=True, null=True, verbose_name='ptatipo')
+    lic_desde = models.DateField(blank=True, null=True, verbose_name='lic_desde')
+    lic_hasta = models.DateField(blank=True, null=True, verbose_name='lic_hasta')
+    hs_cat=models.IntegerField(blank=True, null=True, verbose_name='hs_cat')
+    desc_lic = models.CharField(max_length=255, blank=True, null=True, verbose_name='desc_lic')
+    lic_hs=models.IntegerField(blank=True,null=True,verbose_name='lic_hs')
+    cuof = models.CharField(max_length=7, blank=True, null=True, verbose_name='cuof')
+    cuof_anexo = models.CharField(max_length=7, blank=True, null=True, verbose_name='cuof_anexo')
+    
+    class Meta:
+        managed = False 
+        verbose_name = "Focal_Lic_Docente"
+        verbose_name_plural = "Focales_Lic_Docentes"
+        db_table = 'focal_lic_docentes'
+    
+    def __str__(self):
+        return f"{self.cuil} - {self.ptatipo}"
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['ptaid'] = self.ptaid
+        item['cuil'] = self.cuil
+        item['ptatipo'] = self.ptatipo
+        item['lic_desde'] = self.lic_desde
+        item['lic_hasta'] = self.lic_hasta
+        item['hs_cat'] = self.hs_cat
+        item['desc_lic'] = self.desc_lic
+        item['lic_hs'] = self.lic_hs
+        item['cuof'] = self.cuof
+        item['cuof_anexo'] = self.cuof_anexo
         return item

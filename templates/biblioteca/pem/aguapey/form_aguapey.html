@@ -64,19 +64,43 @@
                         {{ form.anio|add_class:"form-control" }}
                     </div>                    
                 </div>
-
-                <div class="row mt-4">
-                    <div class="col-md-3">
-                        <label for="id_totalmes">Total Mes:</label>
-                        {{ form.total_mes|add_class:"form-control text-center" }}
+                
+               <div class="card mt-4 border-success shadow">
+                    <div class="card-header bg-success text-white fw-bold">
+                        AGUAPEY
                     </div>
-                    <div class="col-md-2">
-                        <label for="id_totalbase">Total Base:</label>
-                        {{ form.total_base|add_class:"form-control text-center" }}
-                    </div>                    
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="id_totalmes" class="fw-semibold">Total Mes:</label>
+                                {{ form.total_mes|add_class:"form-control text-center" }}
+                            </div>
+                            <div class="col-md-2">
+                                <label for="id_totalbase" class="fw-semibold">Total Base:</label>
+                                {{ form.total_base|add_class:"form-control text-center" }}
+                            </div>                    
+                        </div>
+                    </div>
                 </div>
-
-            <div class="card-footer">
+                <div class="card mt-4 border-danger shadow">
+                    <div class="card-header bg-danger text-white fw-bold">
+                        REGISTRO DE USUARIOS EN EL MES
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="id_totalusuario" class="fw-semibold">Total Población Asistida:</label>
+                                {{ form.total_usuarios|add_class:"form-control text-center" }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_observacion" class="fw-semibold">Observaciones:</label>
+                                {{ form.observaciones|add_class:"form-control text-justify" }}
+                            </div>                    
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="card-footer">
                 <button type="submit" class="btn btn-primary btn-flat">
                     <i class="fas fa-save"></i> Guardar registro
                 </button>
@@ -126,7 +150,7 @@
             Swal.fire({
                 title: 'Información',
                 html: `
-                    <p>En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
+                    <p>En esta sección, ...</p>
                 `,
                 icon: 'info'
             });
@@ -153,11 +177,7 @@
                         }
                     });
                 },
-                minLength: 3,
-                select: function(event, ui) {
-                    // Cuando el usuario selecciona una opción, actualiza el campo oculto con el cueanexo real.
-                    $("#id_cueanexo").val(ui.item.cueanexo);
-                }
+                minLength: 3,                
             });
         });
         </script>

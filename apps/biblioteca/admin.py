@@ -16,5 +16,10 @@ admin.site.register(Turnos)
 admin.site.register(Escuelas)
 admin.site.register(GenerarInforme)
 admin.site.register(PlanillasAnexas)
+admin.site.register(DestinoFondos)
+admin.site.register(RegistroDestinoFondos)
+admin.site.register(DocentePonMensual)
+admin.site.register(NoDocentesMensual)
+admin.site.register(FocalLicDocentes)
 
 

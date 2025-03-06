@@ -92,6 +92,11 @@
                 alert("Por favor, selecciona un mes.");
             }
         });
+        // Redirigir a la página deseada al cerrar el modal
+        var modalElement = document.getElementById('reporteModal');
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            window.location.href = "{% url 'bibliotecas:dashboard_dir' %}";
+        });
     </script>
 
 </body>

@@ -151,4 +151,4 @@ class PlanillasAnexasDeleteView(View):
         # Eliminar el objeto
         planilla.delete()
 
-        return JsonResponse({'success': 'Planilla Anexa eliminada correctamente.'}, status=200)
+        return redirect('bibliotecas:anexas_list')  # Redirige al listado de planillas anexas

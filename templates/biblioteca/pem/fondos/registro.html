@@ -1,0 +1,117 @@
+{% extends 'biblioteca/layout.html' %}
+
+{% block content %}
+  <h2>Registro de Destino de Fondos</h2>
+
+  <!-- Mostrar los mensajes de error o éxito con SweetAlert -->
+  {% if messages %}
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+      <script type="text/javascript">
+          {% for message in messages %}
+              Swal.fire({
+                  icon: '{% if message.tags == "error" %}error{% else %}success{% endif %}',
+                  title: '{% if message.tags == "error" %}¡Ups...{% else %}¡Éxito!{% endif %}',
+                  text: '{{ message }}',
+                  showConfirmButton: true,
+                  confirmButtonText: 'OK'
+              });
+          {% endfor %}
+      </script>
+  {% endif %}
+
+  <form method="POST" action="{% url 'bibliotecas:regfondos' %}">
+      {% csrf_token %}
+      <div class="form-group" style="display: none;">
+          <label for="cueanexo">Cueanexo: {{ cueanexo }}</label>
+          <input type="hidden" name="cueanexo" value="{{ cueanexo }}">
+      </div>
+
+      <div class="form-group" style="display: none;">
+          <label for="mes">Mes: {{ mes }}</label>
+          <input type="hidden" name="mes" value="{{ mes }}">
+      </div>
+
+      <div class="form-group" style="display: none;">
+          <label for="anio">Año: {{ anio }}</label>
+          <input type="hidden" name="anio" value="{{ anio }}">
+      </div>
+
+      <table class="table table-bordered" id="destinos-table">
+          <thead>
+              <tr>
+                  <th>Destino</th>
+                  <th>Descripción</th>
+                  <th>Acción</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td>
+                      <select name="destino_0" class="form-control">
+                          {% for destino in destino %}
+                              <option value="{{ destino.id }}">{{ destino.nom_fondo }}</option>
+                          {% endfor %}
+                      </select>
+                  </td>
+                  <td>
+                      <input type="text" name="descripcion_0" class="form-control">
+                  </td>
+                  <td>
+                      <button type="button" class="btn btn-danger remove-row">Eliminar</button>
+                  </td>
+              </tr>
+          </tbody>
+      </table>
+
+      <button type="button" class="btn btn-success" id="add-row">Agregar fila</button>
+      <br><br>
+      <button type="submit" class="btn btn-primary">Registrar</button>
+  </form>
+
+  <!-- Script para añadir y eliminar filas en la grilla -->
+  <script type="text/javascript">
+      let rowIndex = 1;  // Establece el índice inicial para las filas
+
+      document.getElementById('add-row').addEventListener('click', function () {
+          var table = document.getElementById('destinos-table').getElementsByTagName('tbody')[0];
+          var newRow = table.insertRow();
+          
+          var cell1 = newRow.insertCell(0);
+          var cell2 = newRow.insertCell(1);
+          var cell3 = newRow.insertCell(2);
+
+          // Crear select para destino
+          var select = document.createElement('select');
+          select.name = 'destino_' + rowIndex;
+          select.classList.add('form-control');
+          {% for destino in destino %}
+              var option = document.createElement('option');
+              option.value = '{{ destino.id }}';
+              option.textContent = '{{ destino.nom_fondo }}';
+              select.appendChild(option);
+          {% endfor %}
+          cell1.appendChild(select);
+
+          // Crear input para descripcion
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.name = 'descripcion_' + rowIndex;
+          input.classList.add('form-control');
+          cell2.appendChild(input);
+
+          // Crear botón de eliminar fila
+          var removeButton = document.createElement('button');
+          removeButton.type = 'button';
+          removeButton.classList.add('btn', 'btn-danger', 'remove-row');
+          removeButton.textContent = 'Eliminar';
+          removeButton.addEventListener('click', function () {
+              table.deleteRow(newRow.rowIndex);
+          });
+          cell3.appendChild(removeButton);
+
+          rowIndex++;  // Incrementar el índice de fila
+      });
+  </script>
+{% endblock %}
+
+

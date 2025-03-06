@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from django.contrib.auth.decorators import login_required
 from .models import GenerarInforme, InstitucionesPrestaServicios, MaterialBibliografico, ProcesosTecnicos, ServicioReferencia, ServicioReferenciaVirtual, ServicioPrestamo, InformePedagogico
-from .models import AsistenciaUsuarios, Aguapey, PlanillasAnexas
+from .models import AsistenciaUsuarios, Aguapey, PlanillasAnexas, RegistroDestinoFondos
 from django.db import connection
 from django.shortcuts import render
 from reportlab.lib.units import inch, mm
@@ -41,13 +41,13 @@ def generar_pdf_material_bibliografico(request):
         # Manejar el error de conexión
         return render(request, 'error.html', {'mensaje': 'Error al conectar a la base de datos'})
 
-    
+    acronimo='BI%'
     query = """SELECT categoria, jornada, oferta, nom_est, ref_loc, calle, numero, anexo, apellido_resp, nombre_resp, resploc_telefono, resploc_email,
-            sup_tecnico, email_suptecnico, tel_suptecnico, cui_loc, cuof_loc, region_loc, localidad
+            sup_tecnico, email_suptecnico, tel_suptecnico, cui_loc, cuof_loc, region_loc, localidad, acronimo_oferta
         FROM public.padron_ofertas        
-        WHERE cueanexo = %s"""
+        WHERE cueanexo = %s and acronimo_oferta ilike %s"""
     
-    cursor.execute(query, (usuario,))
+    cursor.execute(query, (usuario,acronimo))
     datosbiblio = cursor.fetchall()
     print(datosbiblio)
     
@@ -65,6 +65,7 @@ def generar_pdf_material_bibliografico(request):
         cuof_loc= datosbiblio[0][16]
         region_loc = datosbiblio[0][17]
         localidad = datosbiblio[0][18]
+        acronimo= datosbiblio[0][19]
     else:
         nom_est = "No disponible"    
        
@@ -250,7 +251,7 @@ def generar_pdf_material_bibliografico(request):
     
     
     # Formatear los totales para el QR (solo el valor total de la última columna)
-    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nTotal de Material Bibliográfico y Especial: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 1. MATERIAL BIBLIOGRÁFICO Y ESPECIAL\nTotal: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
 
     # Generar el código QR
     qr = qrcode.make(qr_data)
@@ -462,7 +463,7 @@ def generar_pdf_material_bibliografico(request):
     
     
     # Formatear los totales para el QR (solo el valor total de la última columna)
-    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nServicios de Referencia: {total_referencia:,.2f}\nServicios Referencia Virtual: {total_virtual}\nResponsable: {apellido_resp} {nombre_resp}"
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 2. SERVICIOS DE REFERENCIA\nTotal: {total_referencia:,.2f}\nPlanilla: 3. SERVICIOS DE REFERENCIA VIRTUAL\nTotal: {total_virtual}\nResponsable: {apellido_resp} {nombre_resp}"
 
     # Generar el código QR
     qr = qrcode.make(qr_data)
@@ -567,7 +568,7 @@ def generar_pdf_material_bibliografico(request):
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0),'Helvetica-Bold'),
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -576,6 +577,31 @@ def generar_pdf_material_bibliografico(request):
 
     tabla.wrapOn(p, width, height)
     tabla.drawOn(p, x_offset, y_offset - (20 * len(tabla_data)))
+    
+    # Datos para el QR
+    cueanexo = usuario
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Obtener el total de la columna Totales (última columna)
+    total_columna_totales = overall_totals[-1]
+    
+    
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 4. OTROS SERVICIOS / PRESTAMOS\nTotal: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
+
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 890, height - 460, width=100, height=100)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
 
     p.showPage()
     p.setPageSize(portrait(legal))
@@ -626,7 +652,7 @@ def generar_pdf_material_bibliografico(request):
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 12)  
     p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
-    p.setFont("Helvetica-Bold", 12)
+    p.setFont("Helvetica-Bold", 11)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 12)
     p.drawString(30, height - 85, f"CATEGORÍA: {categoria} REG.: {region_loc} MAIL: {resploc_email}")
@@ -700,6 +726,30 @@ def generar_pdf_material_bibliografico(request):
     # Línea final
     p.line(x_start, y_current, x_start + sum(col_widths), y_current)
 
+    # Datos para el QR
+    cueanexo = usuario
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Obtener el total de la columna Totales (última columna)
+    total_columna_totales = overall_totals[-1]
+    
+    
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 5. INFORME PEDAGOGICO DE SERVICIOS\nTotal: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
+
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 890, height - 460, width=100, height=100)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
     
     p.showPage()
 
@@ -828,6 +878,30 @@ def generar_pdf_material_bibliografico(request):
         table.wrapOn(p, width, height)
         table.drawOn(p, 50, y_position - (len(table_data) * 20))
 
+    # Datos para el QR
+    cueanexo = usuario
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Obtener el total de la columna Totales (última columna)
+    total_columna_totales = overall_totals[-1]
+    
+    
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 6. ASISTENCIA DE USUARIOS\nTotal: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
+
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 890, height - 460, width=100, height=100)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
 
     p.showPage()
 
@@ -839,7 +913,8 @@ def generar_pdf_material_bibliografico(request):
     # Obtener datos de la base de datos
     instituciones = list(InstitucionesPrestaServicios.objects.filter(cueanexo=usuario, mes=mess, anio=anios)
                      .values_list('escuela', 'matricula', 'docentes', 'matricdisc', 'etnia'))
-
+    
+        
     p.setFont("Helvetica", 14)    
 
     # Agregar encabezados estáticos
@@ -884,19 +959,45 @@ def generar_pdf_material_bibliografico(request):
         ('GRID', (0, 0), (-1, -1), 1, colors.black)  
     ])
     table.setStyle(style)
-
+   
+    y_position = height - 150
+    
     # Dibujar la tabla en el PDF
     table.wrapOn(p, width, height)
-    table.drawOn(p, 50, y_position - len(table_data)*20)
+    table.drawOn(p, 50, y_position - len(data)*20)
 
+    
+    # Datos para el QR
+    cueanexo = usuario
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")    
+      
+     # Obtener el total de la columna Totales (última columna)
+    total_columna_totales = overall_totals[-1]    
+    
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 7. INSTITTUCIONES A LAS QUE PRESTA SERVICIOS\nTotal: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
+
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 890, height - 460, width=100, height=100)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
+    
     p.showPage()
     
 ###################################
 #        PROCESOS TÉCNICOS        #
 ###################################
    
-    # Crear el canvas        
-    # Crear el canvas (suponiendo que 'p' es un objeto canvas)
+    
     p.setFont("Helvetica-Bold", 12)
     
     # Agregar encabezados estáticos
@@ -961,7 +1062,7 @@ def generar_pdf_material_bibliografico(request):
         ('SPAN', (0, 0), (-1, 0)), 
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Encabezados en negrita
-        ('BACKGROUND', (0, 0), (-1, 1), colors.lightgrey),  # Fondo gris para encabezados
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),  # Fondo gris para encabezados
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),  
         ('BOTTOMPADDING', (0, 0), (-1, 0), 8),  # Espaciado
         ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),  
@@ -982,7 +1083,228 @@ def generar_pdf_material_bibliografico(request):
     table.drawOn(p, 50, y_position - table_height)
     
     
+    # Datos para el QR
+    cueanexo = usuario
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Obtener el total de la columna Totales (última columna)
+    total_columna_totales = overall_totals[-1]
+    
+    
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\nPlanilla: 8. SECTOR PROCESOS TECNICOS\nTotal: {total_columna_totales:,.2f}\nResponsable: {apellido_resp} {nombre_resp}"
+
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 890, height - 460, width=100, height=100)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
+    
+    
     p.showPage()
+    
+    
+    ##########################################
+    #      AGUAPEY - USUARIOS - FONDOS       #
+    ##########################################
+    
+    # Obtener datos de la base de datos
+    aguapey = Aguapey.objects.filter(cueanexo=usuario, mes=mess, anio=anios).first()    
+    
+    # Asignar valores por defecto si no hay datos
+    total_mes = aguapey.total_mes if aguapey and aguapey.total_mes is not None else 0
+    total_base = aguapey.total_base if aguapey and aguapey.total_base is not None else 0
+    total_usuarios = aguapey.total_usuarios if aguapey and aguapey.total_usuarios is not None else 0
+    observaciones = aguapey.observaciones if aguapey and aguapey.observaciones else "Sin observaciones"
+
+    
+    # Agregar encabezados estáticos
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
+    p.setFont("Helvetica", 14)  
+    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
+    p.setFont("Helvetica", 14)
+    p.drawString(30, height - 85, f"CATEGORÍA: {categoria} REG.: {region_loc} DOMICILIO: {calle} {numero} LOCALIDAD: {localidad} MAIL: {resploc_email}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 100, f"TURNO: {', '.join(turnos_lista)}")
+    p.drawString(550, height - 560, f"RESPONSABLE: {apellido_resp} {nombre_resp} - TEL: {resploc_telefono}")
+    
+    # Título de la primera tabla
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(100, height - 150, "BASE DE DATOS AGUAPEY")
+    
+    # Tabla 1: BASE DE DATOS AGUAPEY
+    datos1 = [["Total Mes", "Total Base"], [total_mes, total_base]]
+    tabla1 = Table(datos1)
+    tabla1.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+    ]))
+    tabla1.wrapOn(p, width, height)
+    tabla1.drawOn(p, 100, height - 200)
+    
+    # Título de la segunda tabla
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(100, height - 300, "REGISTRO DE USUARIOS EN EL MES")
+    
+    # Tabla 2: REGISTRO DE USUARIOS EN EL MES
+    datos2 = [["Total Usuarios"], [total_usuarios]]
+    tabla2 = Table(datos2)
+    tabla2.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+    ]))
+    tabla2.wrapOn(p, width, height)
+    tabla2.drawOn(p, 100, height - 350)
+    
+    # Título de la tercera tabla
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(100, height - 450, "OBSERVACIONES")
+    
+    # Tabla 3: OBSERVACIONES
+    datos3 = [["Observaciones"], [observaciones]]
+    tabla3 = Table(datos3, colWidths=[400])
+    tabla3.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+    ]))
+    tabla3.wrapOn(p, width, height)
+    tabla3.drawOn(p, 100, height - 500)
+    
+    # Datos para el QR
+    cueanexo = usuario
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+    # Obtener el total de la columna Totales (última columna)
+    total_columna_totales = overall_totals[-1]
+        
+        
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"""
+    CUE: {cueanexo}
+    Mes: {mess}
+    Año: {anios}
+    Fecha de generación: {fecha_generacion}
+    Planilla: 9. BASE DE DATOS AGUAPEY
+    Total Mes: {total_mes:,.2f}
+    Total Base: {total_base:,.2f}
+    10. REGISTRO USUARIOS DEL MES: {total_usuarios:,.2f}
+    11. OBSERVACIONES: {observaciones}
+    Responsable: {apellido_resp} {nombre_resp}
+    """
+    
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 490, height - 460, width=150, height=150)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
+    
+    p.showPage()
+    
+    
+    #########################################
+    #        REGISTRO DESTINO DE FONDOS     #
+    #########################################
+    
+    registrosfondos = RegistroDestinoFondos.objects.all()
+    
+    p.setFont("Helvetica-Bold", 12)
+    
+    # Encabezado de la tabla
+    datos = [["12. - REGISTRO DESTINO FONDOS BIBLIOTECA"],
+             ["DESTINO", "DESCRIPCIÓN"]]
+    
+    # Agregar encabezados estáticos
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
+    p.setFont("Helvetica", 14)  
+    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
+    p.setFont("Helvetica", 14)
+    p.drawString(30, height - 85, f"CATEGORÍA: {categoria} REG.: {region_loc} DOMICILIO: {calle} {numero} LOCALIDAD: {localidad} MAIL: {resploc_email}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 100, f"TURNO: {', '.join(turnos_lista)}")
+    p.drawString(550, height - 560, f"RESPONSABLE: {apellido_resp} {nombre_resp} - TEL: {resploc_telefono}")
+    
+    # Agregar datos de registros
+    for reg in registrosfondos:
+        datos.append([reg.destino.nom_fondo, reg.descripcion])
+    
+    # Crear la tabla
+    table = Table(datos, colWidths=[120, 180])
+    table.setStyle(TableStyle([
+        ('SPAN', (0, 0), (-1, 0)), 
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    
+    # Dibujar la tabla en el PDF
+    table.wrapOn(p, width, height)
+    table.drawOn(p, 50, height - 200)
+    
+    # Formatear los totales para el QR (solo el valor total de la última columna)
+    qr_data = f"""
+    CUE: {cueanexo}
+    Mes: {mess}
+    Año: {anios}
+    Fecha de generación: {fecha_generacion}
+    Planilla: 12. REGISTRO DESTINO DE FONDOS BIBLIOTECA
+    Destino: {reg.destino.nom_fondo}       
+    Responsable: {apellido_resp} {nombre_resp}
+    """
+    
+    # Generar el código QR
+    qr = qrcode.make(qr_data)
+
+    # Guardar el QR en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    # Insertar la imagen del QR en el PDF
+    p.drawImage(qr_file_path, width - 490, height - 460, width=150, height=150)
+
+    # Eliminar el archivo temporal después de usarlo
+    os.remove(qr_file_path)
+    
+    p.showPage()
+    
     
      #########################################
     #     PLANILLAS ANEXAS DE ESTADÍSTICA   #
@@ -992,13 +1314,13 @@ def generar_pdf_material_bibliografico(request):
     y_position = height - 50  # Margen superior
     
     agrupamientos = {
-        "10. - RECURSOS ELECTRÓNICOS": range(711, 717),
-        "11. - APLICACIONES": range(811, 818),
-        "12. - OTROS SERVICIOS": range(911, 917),
-        "13. EXTENSION BIBLIOTECARIA Y CULTURAL": range(1011, 1017),
-        "14. - PLATAFORMAS": range(1111, 1118),
-        "15. - PROCESOS TECNICOS": range(1211, 1217),
-        "16. - ACONTECIMIENTOS": range(1311, 1317),
+        "13. - RECURSOS ELECTRÓNICOS": range(711, 717),
+        "14. - APLICACIONES": range(811, 818),
+        "15. - OTROS SERVICIOS": range(911, 917),
+        "16. EXTENSION BIBLIOTECARIA Y CULTURAL": range(1011, 1017),
+        "17. - PLATAFORMAS": range(1111, 1118),
+        "18. - PROCESOS TECNICOS": range(1211, 1217),
+        "19. - ACONTECIMIENTOS": range(1311, 1317),
     }
     
     # Función para imprimir encabezados y devolver la nueva posición de y
@@ -1021,9 +1343,7 @@ def generar_pdf_material_bibliografico(request):
         
         return y_position
     
-    # Imprimir encabezados en la primera página
-    #y_position = imprimir_encabezados(p, y_position)
-    
+        
     for nombre, rango in agrupamientos.items():
         registros = (
             PlanillasAnexas.objects
@@ -1076,6 +1396,35 @@ def generar_pdf_material_bibliografico(request):
         tabla.wrapOn(p, width, height)
         tabla.drawOn(p, 50, y_position - table_height)
         y_position -= (table_height + 30)  # Espaciado extra
+        
+        
+        # Datos para el QR
+        cueanexo = usuario
+        fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Obtener el total de la columna Totales (última columna)
+        total_columna_totales = overall_totals[-1]
+        
+        
+        # Formatear los totales para el QR (solo el valor total de la última columna)
+        qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\n" \
+              f"Planilla: {nombre}\nTotal: {total_general:,.2f}\n" \
+              f"Responsable: {apellido_resp} {nombre_resp}"
+
+        # Generar el código QR
+        qr = qrcode.make(qr_data)
+
+        # Guardar el QR en un archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+            qr.save(temp_qr_file, format='PNG')
+            qr_file_path = temp_qr_file.name
+
+        # Insertar la imagen del QR en el PDF
+        p.drawImage(qr_file_path, width - 890, height - 460, width=100, height=100)
+
+        # Eliminar el archivo temporal después de usarlo
+        os.remove(qr_file_path)
+    
         
     p.save()
     
