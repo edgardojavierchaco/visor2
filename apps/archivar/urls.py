@@ -3,6 +3,8 @@ from config.urls import path
 from apps.archivar.views import *
 from apps.archivar.views_portada import DepGestorPortada
 from .views_listdocnodoc import DocentePonMensualListView, NoDocentePonMensualListView, DocentePonMensualSumaListView
+from .views_reporteinformes import generar_informe, generar_informe_list
+
 app_name='archivos'
 
 urlpatterns=[    
@@ -17,4 +19,8 @@ urlpatterns=[
     path('nom_doc/', DocentePonMensualListView.as_view(), name='nom_doc'),
     path('nom_ndoc/', NoDocentePonMensualListView.as_view(), name='nom_ndoc'),
     path('ver_doc/<str:cuil>/', DocentePonMensualSumaListView.as_view(), name='ver_doc'),
+    
+    # Bibliotecas - Monitoreo
+    path('generar_informe_list/', generar_informe_list, name='generar_informe_list'),
+    path('generar_informe/', generar_informe, name='generar_informe'),
 ]
