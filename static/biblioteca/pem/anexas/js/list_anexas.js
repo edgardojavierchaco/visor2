@@ -1,6 +1,6 @@
 $(function () {
     // Destruir DataTable si ya está inicializada
-    if ($.fn.DataTable.isDataTable('#data')) {
+    if ($.fn.dataTable.isDataTable('#data')) {
         $('#data').DataTable().clear().destroy();  // Destruye y limpia la tabla antes de reinicializar
     }
 
@@ -8,6 +8,7 @@ $(function () {
     var table = $('#data').DataTable({
         responsive: true,
         autoWidth: false,
+        destroy: true,
         deferRender: true,
         ajax: {
             url: window.location.pathname,

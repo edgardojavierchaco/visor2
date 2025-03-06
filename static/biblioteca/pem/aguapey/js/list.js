@@ -1,8 +1,14 @@
 $(function () {
+    // Verificar si DataTable ya está inicializado y destruirla si es necesario
+    if ($.fn.dataTable.isDataTable('#data')) {
+        $('#data').DataTable().clear().destroy();
+    }
+
+    // Inicializar la tabla DataTable
     var table = $('#data').DataTable({
         responsive: true,
         autoWidth: false,
-        destroy: true,
+        destroy: true,  // Permite destruir cualquier instancia previa de DataTable (opcional)
         deferRender: true,
         ajax: {
             url: window.location.pathname,
@@ -17,7 +23,9 @@ $(function () {
             {"data": "mes"},
             {"data": "anio"},
             {"data": "total_mes"},
-            {"data": "total_base"},            
+            {"data": "total_base"},  
+            {"data": "total_usuarios"},  
+            {"data": "observaciones"},      
             {"data": "id"}  // Columna extra para los botones
         ],
         columnDefs: [
