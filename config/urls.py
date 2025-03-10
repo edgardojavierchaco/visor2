@@ -12,8 +12,10 @@ from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
 from apps.unidadgestion import views_pers_doc_central
 
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('al/',include('apps.alumnos.urls', namespace='al')),
     path('dash/', directores, name='dash'),
     path('director/',include('apps.directores.urls',namespace='director')),
     path('cargar/', include('apps.archivar.urls', namespace='cargar')),

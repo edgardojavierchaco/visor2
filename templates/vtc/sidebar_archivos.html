@@ -28,62 +28,109 @@
                         </p>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{% url 'archivos:crear' %}" class="nav-link">
-                        <i class="nav-icon fas fa-balance-scale"></i>
+                <li class="nav-item has-treeview">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-balance-scale" style="color:gold;"></i>
                         <p>
-                            Carga de Normativa
+                            Normativa
+                            <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:crear' %}" class="nav-link">
+                                <i class="nav-icon fas fa-upload"></i>
+                                <p>Carga</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:listar' %}" class="nav-link">
+                                <i class="nav-icon fas fa-list-ol"></i>
+                                <p>Listar</p>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-                <li class="nav-item">
-                    <a href="{% url 'archivos:listar' %}" class="nav-link">
-                        <i class="nav-icon fas fa-list-ol"></i>
+
+                <li class="nav-item has-treeview">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-users" style="color:green;"></i>
                         <p>
-                            Listado Normativa
+                            Supervisores
+                            <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'superescuela:super_list_gestor' %}" class="nav-link">
+                                <i class="nav-icon fas fa-chalkboard-teacher"></i>
+                                <p>Nómina</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'superescuela:asign_list_gestor' %}" class="nav-link">
+                                <i class="nav-icon fas fa-tasks"></i>
+                                <p>Unidad Servicio Asignada</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:export_superv' %}" class="nav-link">
+                                <i class="nav-icon fas fa-file-excel"></i>
+                                <p>Exportar</p>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-                <li class="nav-item">
-                    <a href="{% url 'superescuela:asign_list_gestor' %}" class="nav-link">
-                        <i class="nav-icon fas fa-chalkboard-teacher"></i>
-                        <p>
-                            Listado Supervisores
-                        </p>
-                    </a>
-                </li>
+ 
                 <li class="nav-item">
                     <a href="{% url 'intercultural:alumnos_list_gestor' %}" class="nav-link">
-                        <i class="nav-icon fas fa-users"></i>
+                        <i class="nav-icon fas fa-users" style="color:red;"></i>
                         <p>
                             Listado Alumnos Pueblos Originarios
                         </p>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{% url 'archivos:nom_doc' %}" class="nav-link">
-                        <i class="nav-icon fas fa-users"></i>
+                <li class="nav-item has-treeview">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-users" style="color:blue;"></i>
                         <p>
-                            Nómina Docentes PON
+                            Personal PON
+                            <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>
-                </li>  
-                <li class="nav-item">
-                    <a href="{% url 'archivos:nom_doc' %}" class="nav-link">
-                        <i class="nav-icon fas fa-users"></i>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:nom_doc' %}" class="nav-link">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                                <p>Docentes</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:nom_doc' %}" class="nav-link">
+                                <i class="fas fa-user-tie"></i>
+                                <p>No Docentes</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-item has-treeview">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-chart-line" style="color:violet"></i>
                         <p>
-                            Nómina No Docentes PON
+                            Monitoreo
+                            <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>
-                </li> 
-                <li class="nav-item">
-                    <a href="{% url 'archivos:generar_informe_list' %}" class="nav-link">
-                        <i class="nav-icon fas fa-users"></i>
-                        <p>
-                            Monitoreo Carga Biblioteca
-                        </p>
-                    </a>
-                </li>   
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:generar_informe_list' %}" class="nav-link">
+                                <i class="fas fa-book"></i>
+                                <p>Carga Biblioteca</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
             </ul>
         </nav>
     </div>

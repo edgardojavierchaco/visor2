@@ -62,39 +62,41 @@
                         <li><a href="{% url 'indicadores:efectiva' %}" class="dropdown-item">Tasa Efectiva-Abandono-Repitencia</a></li>
                         <li><a href="{% url 'indicadores:sobreedad' %}" class="dropdown-item">Tasa Sobreedad</a></li> 
                     </ul>
-                </li>                
-                 <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
-                        <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
-                        <!-- Menú desplegable para "Resultados" -->
-                        <li>
-                            <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Editar Alumnos</a>
-                        </li>
-                        <li>
-                            <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Cargar Aplicador</a>
-                        </li>
-                        <li class="dropdown">
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                               class="dropdown-item dropdown-toggle">Resultados</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'lectocomprension:resultados' %}" class="dropdown-item">Mayo-2024</a></li>
-                                <li class="dropdown-submenu">
-                                    <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                                       class="dropdown-item dropdown-toggle">Noviembre-2024</a>
-                                    <ul aria-labelledby="dropdownSubMenu3" class="dropdown-menu border-0 shadow">
-                                        <li><a href="{% url 'countdown:cuenta_regresival' %}" class="dropdown-item" id="listado-option">Listado</a></li>
-                                        <li><a href="{% url 'countdown:cuenta_regresivag' %}" class="dropdown-item" id="grafico-option">Gráfico</a></li>                                
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                        <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
-                        <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
-                    </ul>
                 </li>       
+                {% if comun_primaria %}         
+                    <li class="nav-item dropdown">
+                        <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
+                        <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                            <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
+                            <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
+                            <!-- Menú desplegable para "Resultados" -->
+                            <li>
+                                <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Editar Alumnos</a>
+                            </li>
+                            <li>
+                                <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Cargar Aplicador</a>
+                            </li>
+                            <li class="dropdown">
+                                <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                class="dropdown-item dropdown-toggle">Resultados</a>
+                                <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
+                                    <li><a href="{% url 'lectocomprension:resultados' %}" class="dropdown-item">Mayo-2024</a></li>
+                                    <li class="dropdown-submenu">
+                                        <a id="dropdownSubMenu3" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                        class="dropdown-item dropdown-toggle">Noviembre-2024</a>
+                                        <ul aria-labelledby="dropdownSubMenu3" class="dropdown-menu border-0 shadow">
+                                            <li><a href="{% url 'countdown:cuenta_regresival' %}" class="dropdown-item" id="listado-option">Listado</a></li>
+                                            <li><a href="{% url 'countdown:cuenta_regresivag' %}" class="dropdown-item" id="grafico-option">Gráfico</a></li>                                
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
+                            <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
+                        </ul>
+                    </li>
+                {% endif %}       
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Relevamiento</a>
@@ -105,7 +107,7 @@
                             <li><a href="{% url 'representantes:dashboard' %}" class="dropdown-item">ABM Representantes Legales</a></li>
                         {% endif %}
                         {% if tiene_bibliotecas %}
-                            <li><a href="{% url 'bibliotecas:dashboard' %}" class="dropdown-item">Planillas Estadísticas Bibliotecas</a></li>
+                            <li><a href="{% url 'bibliotecas:dashboard' %}" class="dropdown-item">Planilla Estadística Bibliotecas</a></li>
                         {% endif %}
                     </ul>
                 </li>                 

@@ -4,6 +4,7 @@ from apps.archivar.views import *
 from apps.archivar.views_portada import DepGestorPortada
 from .views_listdocnodoc import DocentePonMensualListView, NoDocentePonMensualListView, DocentePonMensualSumaListView
 from .views_reporteinformes import generar_informe, generar_informe_list
+from .view_supervisorexport import export_supervisores_excel
 
 app_name='archivos'
 
@@ -23,4 +24,7 @@ urlpatterns=[
     # Bibliotecas - Monitoreo
     path('generar_informe_list/', generar_informe_list, name='generar_informe_list'),
     path('generar_informe/', generar_informe, name='generar_informe'),
+    
+    # exportar archivo supervisores
+    path('export_superv/', export_supervisores_excel, name='export_superv'), 
 ]

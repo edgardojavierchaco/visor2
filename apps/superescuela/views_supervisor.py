@@ -168,3 +168,34 @@ class SupervisorDeleteView(LoginRequiredMixin, DeleteView):
         context['entity'] = 'Supervisor'
         context['list_url'] = self.success_url
         return context
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SupervisoresListViewGestor(LoginRequiredMixin, ListView):
+    model = Supervisor
+    template_name = 'superv/supervisor/list_gestor.html'
+    
+    def get_queryset(self):
+        return Supervisor.objects.all()  
+
+    
+    def post(self, request, *args, **kwargs):  
+        data = {}
+        try:
+            action = request.POST.get('action', '')  
+            if action == 'searchdata':
+                data = [i.toJSON() for i in self.get_queryset()]  
+            else:
+                data['error'] = 'Acción no válida'
+        except Exception as e:
+            data['error'] = str(e)  # ✅ Convertimos el error en string
+        return JsonResponse(data, safe=False)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Listado de Supervisores',
+            'list_url': reverse_lazy('superescuela:super_list_gestor'),
+            'entity': 'Supervisor'
+        })
+        print('Listado supervisores:',context)
+        return context

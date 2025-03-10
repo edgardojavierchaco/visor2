@@ -10,6 +10,7 @@ app_name = 'superescuela'
 urlpatterns = [    
     # Supervisores
     path('super/list/', SupervisoresListView.as_view(), name='super_list'),
+    path('super/list_gestor/', SupervisoresListViewGestor.as_view(), name='super_list_gestor'),
     path('super/add/', SupervisorCreateView.as_view(), name='super_create'),
     path('super/update/<int:pk>/', SupervisorUpdateView.as_view(), name='super_update'),
     path('super/delete/<int:pk>/', SupervisorDeleteView.as_view(), name='super_delete'),

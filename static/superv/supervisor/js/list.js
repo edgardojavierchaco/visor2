@@ -7,6 +7,7 @@ $(function () {
         ajax: {
             url: window.location.pathname,
             type: 'POST',
+            headers: { "X-CSRFToken": getCookie('csrftoken') },
             data: {
                 'action': 'searchdata'
             },
@@ -35,7 +36,7 @@ $(function () {
             },
         ],
         initComplete: function (settings, json) {
-
+            console.log("Datos recibidos:",json)
         }
     });
 });
