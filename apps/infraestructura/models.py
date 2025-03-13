@@ -6,6 +6,9 @@ from django.forms import model_to_dict
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from numpy import blackman
+from apps.cenpe.models import provincia_tipo
+from django.contrib.gis.db import models as gis_models
 
 
 MESES_CHOICES = [    
@@ -38,8 +41,8 @@ class DatosEscuela(models.Model):
     circ=models.CharField(max_length=5, verbose_name='Circ')
     mz=models.CharField(max_length=5, verbose_name='Mz')
     pc=models.CharField(max_length=5, verbose_name='Mz')
-    departamento=models.CharField(max_length=255, verbose_name='Departamento')
-    localidad=models.CharField(max_length=255, verbose_name='Localidad')
+    departamentos=models.CharField(max_length=255, verbose_name='Departamento')
+    localidades=models.CharField(max_length=255, verbose_name='Localidad')
     anio_edif=models.IntegerField(verbose_name='Inauguracion')
     patrimonio=models.BooleanField(default=False, verbose_name='Patrimonio')
     antiguedad=models.IntegerField(verbose_name='Antigüedad')
@@ -48,9 +51,9 @@ class DatosEscuela(models.Model):
     dist_pavim=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Distancia_Pavimento')
     
     class Meta:
-        verbose_name='Dominio_Escuela'
-        verbose_name_plural='Dominios_Escuelas'
-        db_table='dominio_escuela'
+        verbose_name='Dato_Escuela'
+        verbose_name_plural='Datos_Escuelas'
+        db_table='dato_escuela'
     
     def __str__(self):
         return f'{self.cueanexo} - {self.nom_est}'
@@ -64,8 +67,8 @@ class DatosEscuela(models.Model):
         item=self.circ
         item=self.mz
         item=self.pc
-        item=self.departamento
-        item=self.localidad
+        item=self.departamentos
+        item=self.localidades
         item=self.anio_edif
         item=self.patrimonio
         item=self.antiguedad
@@ -84,7 +87,7 @@ class DominioEscuela(models.Model):
     plan_const=models.CharField(max_length=255, verbose_name='Plan')
     ampliacion=models.IntegerField(verbose_name='Ampliación')
     plan_ampl=models.CharField(max_length=255, verbose_name='Plan_Ampliación')
-    sup_terrreno=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Sup_Terreno')
+    sup_terreno=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Sup_Terreno')
     sup_cub=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Sup_Cubierta')
     
     
@@ -105,7 +108,7 @@ class DominioEscuela(models.Model):
         item=self.plan_const
         item=self.ampliacion
         item=self.plan_ampl
-        item=self.sup_terrreno
+        item=self.sup_terreno
         item=self.sup_cub
         return item
 
@@ -240,4 +243,73 @@ class Seguridad(models.Model):
         return item
     
     
+# Departamentos del Chaco
+class Departamento(models.Model):
+    c_departamento = models.AutoField(primary_key=True)
+    descripcion_dpto = models.CharField(max_length=255)
+    
+    class Meta:
+        verbose_name='Departamento'
+        verbose_name_plural='Departamentos'
+        db_table='departamentos_chaco'
+        
+    
+    def __str__(self):
+        return self.descripcion_dpto
+    
+    def toJSON(self):
+        item=model_to_dict
+        item=self.c_departamento
+        item=self.descripcion_dpto
+        return item
 
+
+class Localidad(models.Model):
+    c_localidad = models.AutoField(primary_key=True)
+    descripcion_loc = models.CharField(max_length=255)
+    c_departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
+    c_provincia = models.ForeignKey(provincia_tipo, db_column='c_provincia', on_delete=models.CASCADE)
+    
+    class Meta:
+        verbose_name='Localidad'
+        verbose_name_plural='Localidades'
+        db_table='localidades'
+    
+    def __str__(self):
+        return f'{self.c_localidad} {self.descripcion_loc}'
+    
+    def toJSON(self):
+        item=model_to_dict
+        item=self.c_localidad
+        item=self.descripcion_loc
+        return item
+
+
+class VCapaUnicaOfertasCuiCuof(models.Model):
+    cueanexo = models.CharField(max_length=9, primary_key=True)
+    geom = gis_models.GeometryField()
+    long = models.FloatField()
+    lat = models.FloatField()
+    nom_est = models.CharField(max_length=255, null=True, blank=True)
+    padron_cueanexo = models.CharField(max_length=9, null=True, blank=True)
+    acronimo = models.TextField(null=True, blank=True)
+    oferta = models.TextField(null=True, blank=True)
+    etiqueta = models.TextField(null=True, blank=True)
+    nro_est = models.IntegerField(null=True, blank=True)
+    ambito = models.CharField(max_length=100, null=True, blank=True)
+    sector = models.CharField(max_length=100, null=True, blank=True)
+    region_loc = models.CharField(max_length=100, null=True, blank=True)
+    ref_loc = models.CharField(max_length=100, null=True, blank=True)
+    calle = models.CharField(max_length=255, null=True, blank=True)
+    numero = models.CharField(max_length=50, null=True, blank=True)
+    localidad = models.CharField(max_length=255, null=True, blank=True)
+    departamento = models.CharField(max_length=255, null=True, blank=True)
+    estado_loc = models.TextField(null=True, blank=True)
+    est_oferta = models.TextField(null=True, blank=True)
+    estado_est = models.TextField(null=True, blank=True)
+    cui_loc = models.CharField(max_length=50, null=True, blank=True)
+    cuof_loc = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        managed = False  # Evita que Django intente crear o modificar la vista
+        db_table = 'v_capa_unica_ofertas_cui_cuof'

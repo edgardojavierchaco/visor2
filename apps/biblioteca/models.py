@@ -8,17 +8,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 
 
-MESES_CHOICES = [
-    ('ENERO', 'ENERO'),
-    ('FEBRERO', 'FEBRERO'),
-    ('MARZO', 'MARZO'),
-    ('ABRIL', 'ABRIL'),
-    ('MAYO', 'MAYO'),
-    ('JUNIO', 'JUNIO'),
-    ('JULIO', 'JULIO'),
-    ('AGOSTO', 'AGOSTO'),
-    ('SEPTIEMBRE', 'SEPTIEMBRE'),
-    ('OCTUBRE', 'OCTUBRE'),
+MESES_CHOICES = [    
+    ('ABRIL', 'ABRIL'),    
+    ('JULIO', 'JULIO'),    
     ('NOVIEMBRE', 'NOVIEMBRE'),
     ('DICIEMBRE', 'DICIEMBRE'),
 ]
@@ -52,6 +44,7 @@ PROCESOS_CHOICES=[
     ('INVENTARIADOS', 'INVENTARIADOS'),
     ('CLASIFICADOS', 'CLASIFICADOS'),     
     ('CATALOGADOS', 'CATALOGADOS'),   
+    ('RESTAURADOS', 'RESTAURADOS'),
     ('RESTAURADOS', 'RESTAURADOS'),
     ('BAJAS', 'BAJAS'),
 ]

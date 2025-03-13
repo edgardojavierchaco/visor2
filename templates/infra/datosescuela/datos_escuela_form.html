@@ -1,0 +1,251 @@
+{% extends 'infra/layout.html' %}
+{% load widget_tweaks %}
+{% block head %}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+    <!-- jQuery Confirm -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.js"></script>
+{% endblock %}
+
+{% block content %}
+    <form method="post" action="." enctype="multipart/form-data">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    {% if action == 'add' %}
+                        <i class="fas fa-plus"></i>
+                    {% else %}
+                        <i class="fas fa-edit"></i>
+                    {% endif %}
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action }}">
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <!-- Botón para mostrar el popup en la fila superior -->
+                <div class="form-group row">
+                    <div class="col-md-12 text-right">
+                        <button type="button" class="btn btn-info" id="showPopupBtn">
+                            <i class="fas fa-info-circle"></i> Información 
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Campos del formulario -->
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label for="id_cueanexo">CUE Anexo:</label>
+                        <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" style="width: 13ch; text-align: right;" readonly>
+                    </div>                
+                    <div class="col-md-4">
+                        <label for="id_nom_est">NOMBRE:</label>
+                        <input type="text" id="id_nom_est" name="nom_est" class="form-control" value="{{ nom_est }}" readonly>
+                    </div>                                  
+                </div>
+                <div class="row mt-6">
+                    <div class="col-md-6">
+                        <label for="id_calle">CALLE:</label>
+                        <input type="text" id="id_calles" name="calle" class="form-control" value="{{ calle }}">
+                    </div>      
+                    <div class="col-md-6">
+                        <label for="id_nro">N°:</label>
+                        <input type="text" id="id_nros" name="nro" class="form-control" value="{{ nro }}" style="width: 10ch; text-align: right;">
+                    </div>                     
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <label for="id_circ">CIRC:</label>
+                        {{ form.circ|add_class:"form-control text-center" |attr:"style: width: 10ch;"}}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_mz">MZ:</label>
+                        {{ form.mz|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_pc">PC:</label>
+                        {{ form.pc|add_class:"form-control" }}
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <label for="id_departamento" name="departamento">DEPARTAMENTO:</label>
+                        <input type="text" id="id_departamentos" name="departamentos" class="form-control" value="{{ departamento }}" >
+                        <input type="hidden" id="selected_departamento" name="selected_departamento">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="id_localidad" name="localidad">LOCALIDAD:</label>
+                        <input type="text" id="id_localidades" name="localidades" class="form-control" value="{{ localidad }}">
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-2">
+                        <label for="id_anioedif">AÑO EDIFICACION:</label>
+                        {{ form.anio_edif|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="id_patrimonio">PATRIMONIO:</label>
+                        {{ form.patrimonio|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="id_antiguedad">ANTIGÜEDAD:</label>
+                        {{ form.antiguedad|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="id_dist_munic">DISTANCIA MUNICIPIO:</label>
+                        {{ form.dist_munic|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="id_dist_tierra">DISTANCIA TIERRA:</label>
+                        {{ form.dist_tierra|add_class:"form-control text-center" }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="id_dist_pavim">DISTANCIA PAVIMENTO:</label>
+                        {{ form.dist_pavim|add_class:"form-control text-center" }}
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Guardar registro
+                </button>
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // Mostrar alerta con errores si existen
+        {% if form.errors %}
+            var errors = '';
+            {% for field in form %}
+                {% for error in field.errors %}
+                    errors += '{{ error }}\n';
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                errors += '{{ error }}\n';
+            {% endfor %}
+            Swal.fire({
+                title: 'Error!',
+                text: errors,
+                icon: 'error'
+            });
+        {% endif %}
+
+        // Manejo de envío con AJAX
+        $('form').on('submit', function (e) {
+            e.preventDefault();
+
+            // Validar que el campo 'departamento' no esté vacío
+            var departamentoValue = $('#id_departamentos').val();
+            if (!departamentoValue) {
+                alert("El campo Departamento no puede estar vacío.");
+                return; // Detener el envío del formulario
+            }
+
+            // Mostrar los valores que se están enviando en la consola
+            var parameters = new FormData(this);
+            for (var pair of parameters.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+
+            submit_with_ajax(window.location.pathname, 'Notificación', '¿Estás seguro de realizar la siguiente acción?', parameters, function () {
+                location.href = '{{ list_url }}';
+            });
+        });
+
+        // Asignar valor al campo cueanexo (si es necesario)
+        document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
+        document.getElementById("id_nom_est").value = "{{ nom_est }}";
+        document.getElementById("id_calles").value = "{{ calle }}";
+        document.getElementById("id_nros").value = "{{ nro }}";
+        document.getElementById("id_nom_est").value = "{{ nom_est }}";
+        document.getElementById("id_departamentos").value = "{{ departamento }}";
+        document.getElementById("id_localidades").value = "{{ localidad }}";
+
+        // Mostrar el popup con la información cuando se hace clic en el botón
+        $('#showPopupBtn').click(function() {
+            Swal.fire({
+                title: 'Información',
+                html: `
+                    <p>En esta sección, ...</p>
+                `,
+                icon: 'info'
+            });
+        });
+    </script>
+
+    <script>
+        $(function() {
+            // Autocompletar departamentos
+            $("#id_departamentos").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "{% url 'infraestructura:autocompletar_departamento' %}",
+                        dataType: "json",
+                        data: {
+                            departamentos: request.term
+                        },
+                        success: function(data) {
+                            response($.map(data, function(item) {
+                                return {
+                                    label: item.label,
+                                    value: item.value
+                                };
+                            }));
+                        }
+                    });
+                },
+                minLength: 3,
+                select: function(event, ui) {
+                    $('#selected_departamento').val(ui.item.value);  // Guardar el departamento seleccionado
+                }
+            });
+
+            // Autocompletar localidades
+            $("#id_localidades").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "{% url 'infraestructura:autocompletar_localidad' %}",
+                        dataType: "json",
+                        data: {
+                            localidades: request.term,
+                            departamento: $('#selected_departamento').val()  // Enviar el departamento seleccionado
+                        },
+                        success: function(data) {
+                            response($.map(data, function(item) {
+                                return {
+                                    label: item.label,
+                                    value: item.value
+                                };
+                            }));
+                        }
+                    });
+                },
+                minLength: 3
+            });
+        });
+    </script>
+{% endblock %}
+
+

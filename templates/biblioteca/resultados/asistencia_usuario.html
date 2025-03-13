@@ -1,0 +1,148 @@
+{% extends 'biblioteca/layout_dir.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Card lateral (Filtros) -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5>Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form id="filter-form">
+                        <!-- CUE Anexo -->
+                        <div class="form-group">
+                            <label for="cueanexo">Cueanexo:</label>
+                            <input type="text" id="cueanexo" name="cueanexo" class="form-control">
+                        </div>
+                        
+                        <!-- Mes -->
+                        <div class="form-group">
+                            <label for="mes">Mes:</label>
+                            <select id="mes" name="mes" class="form-control">
+                                <option value="">Seleccione</option>
+                                {% for numero, nombre in meses %}
+                                    <option value="{{ numero }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="nivel">Nivel:</label>
+                            <select id="nivel" name="nivel" class="form-control">
+                                <option value="">Seleccione</option>
+                                {% for numero, nombre in niveles %}
+                                    <option value="{{ numero }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="usuario">Usuario:</label>
+                            <select id="usuario" name="usuario" class="form-control">
+                                <option value="">Seleccione</option>
+                                {% for numero,nombre in usuarios %}
+                                    <option value="{{ numero }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="regional">Regional:</label>
+                            <select id="regional" name="regional" class="form-control">
+                                <option value="">Seleccione</option>
+                                {% for numero, nombre in regionales %}
+                                    <option value="{{ numero }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Año -->
+                        <div class="form-group">
+                            <label for="anio">Año:</label>
+                            <input type="number" id="anio" name="anio" class="form-control" min="2000" max="2030">
+                        </div>                        
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card central (Resultados) -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5>Resultados Asistencia de Usuarios</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Cueanexo</th>
+                                <th class="text-center">Mes</th>
+                                <th class="text-center">Año</th>
+                                <th class="text-center">Nivel</th>
+                                <th class="text-center">Usuario</th>
+                                <th class="text-center">Varones</th>
+                                <th class="text-center">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultados">
+                            <!-- Aquí se llenarán los datos dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        function actualizarResultados() {
+            var formData = $("#filter-form").serialize(); // Serializar datos del formulario
+            
+            $.ajax({
+                url: "{% url 'bibliotecas:filtrar_asisusua' %}", // Endpoint en Django
+                type: "GET",
+                data: formData,
+                dataType: "json",
+                success: function(response) {
+                    var tbody = $("#resultados");
+                    tbody.empty();
+
+                    if (response.datos.length > 0) {
+                        $.each(response.datos, function(index, item) {
+                            tbody.append(`
+                                <tr>
+                                    <td class="text-center">${item.cueanexo}</td>
+                                    <td>${item.mes}</td>
+                                    <td>${item.anio}</td>
+                                    <td>${item.nivel}</td>
+                                    <td>${item.usuario}</td>
+                                    <td class="text-center">${item.varones}</td>
+                                    <td class="text-center">${item.total}</td>
+                                </tr>
+                            `);
+                        });
+
+                        // Agregar fila del total
+                        tbody.append(`
+                            <tr class="bg-light font-weight-bold">
+                                <td colspan="5" class="text-right"><strong>Total:</strong></td>
+                                <td class="text-center"><strong>${response.total_varones}</strong></td>
+                                <td class="text-center"><strong>${response.total_general}</strong></td>
+                            </tr>
+                        `);
+                    } else {
+                        tbody.append('<tr><td colspan="5" class="text-center">No hay datos</td></tr>');
+                    }
+                }
+            });
+        }
+
+        // Ejecutar al cambiar un filtro
+        $("#filter-form input, #filter-form select").on("change", actualizarResultados);
+    });
+
+</script>
+
+{% endblock %}

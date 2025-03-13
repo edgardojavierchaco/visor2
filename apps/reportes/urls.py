@@ -8,6 +8,7 @@ from .views_matric_disc_cueanexo import filtrado_matric_disc_ini_cueanexo, filte
 from .views_matric_disc_prim_cueanexo import filter_data_matric_disc_prim_cueanexo, filtrado_matric_disc_prim_cueanexo
 from .views_matric_disc_sec_cueanexo import filter_data_matric_disc_sec_cueanexo, filtrado_matric_disc_sec_cueanexo
 from apps.reportes import views_matric_cueanexo
+from .views_tabla import tabla_view, get_table_data, obtener_columnas_cargos
 
 app_name='reportes'
 
@@ -44,6 +45,9 @@ urlpatterns=[
     path('matric_disc_ini_cueanexo/',filter_data_matric_disc_ini_cueanexo, name='matric_disc_ini_cueanexo'), # type: ignore
     path('matric_disc_prim_cueanexo/',filter_data_matric_disc_prim_cueanexo, name='matric_disc_prim_cueanexo'), # type: ignore
     path('matric_disc_sec_cueanexo/',filter_data_matric_disc_sec_cueanexo, name='matric_disc_sec_cueanexo'), # type: ignore
+    path('tabla/', tabla_view, name='tabla'),
+    path('get_data/', get_table_data, name='get_data'),
+    path('obtener_cargos/', obtener_columnas_cargos, name='obtener_columnas_cargos'),
 ]
 
 

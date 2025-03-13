@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 import re
 from datetime import date
 
+
 class CeicPuntos(models.Model):
     """
     Modelo que representa los puntos CEIC asignados a un nivel educativo.

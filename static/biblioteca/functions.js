@@ -3,18 +3,28 @@ function message_error(obj) {
     if (typeof (obj) === 'object') {
         html = '<ul style="text-align: left;">';
         $.each(obj, function (key, value) {
-            html += '<li>' + key + ': ' + value + '</li>';
+            // Si el valor es un arreglo (como en el caso de los errores de validación), los mostramos todos
+            if (Array.isArray(value)) {
+                value.forEach(function (error) {
+                    html += '<li>' + key + ': ' + error + '</li>';
+                });
+            } else {
+                html += '<li>' + key + ': ' + value + '</li>';
+            }
         });
         html += '</ul>';
     } else {
         html = '<p>' + obj + '</p>';
     }
+
+    // Usando SweetAlert para mostrar los errores
     Swal.fire({
         title: 'Error!',
         html: html,
         icon: 'error'
     });
 }
+
 
 function submit_with_ajax(url,title, content, parameters, callback) {
     $.confirm({

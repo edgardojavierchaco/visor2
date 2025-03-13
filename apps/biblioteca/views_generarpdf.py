@@ -346,6 +346,7 @@ def generar_pdf_material_bibliografico(request):
     service_categories_virtual = [
         {"name": "PUBLICACIONES EN REDES", "cod_servicio": 311},
         {"name": "INFORMACION AL CIUDADANO", "cod_servicio": 312},
+        {"name": "CONSULTAS ONLINE", "cod_servicio": 313},
     ]
 
     data_virtual = [
