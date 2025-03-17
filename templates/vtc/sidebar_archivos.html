@@ -130,7 +130,71 @@
                         </li>
                     </ul>
                 </li>
-
+                <li class="nav-item has-treeview">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-archive" style="color:blue;"></i>
+                        <p>
+                            Resultados Biblioteca
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:servicio_matbiblio' %}" class="nav-link">
+                                <i class="fas fa-book-open" style="color:gray;"></i>
+                                <p>Material Bibliográfico</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:servicio_referencia' %}" class="nav-link">
+                                <i class="far fa-hand-point-right" style="color:blue"></i>
+                                <p>Servicio Referencia</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:servicio_refvirtual' %}" class="nav-link">
+                                <i class="fas fa-wifi" style="color:brown;"></i>
+                                <p>Servicio Referencia Virtual</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:servicio_prestamo' %}" class="nav-link">
+                                <i class="fas fa-file-export" style="color:cyan"></i>
+                                <p>Servicio Préstamo</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:infopedagres' %}" class="nav-link">
+                                <i class="fab fa-readme" style="color:lightgreen"></i>
+                                <p>Informe Pedagógico</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:asist_usua' %}" class="nav-link">
+                                <i class="fas fa-user-tie" style="color:black;"></i>
+                                <p>Asistencia Usuarios</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:proctecres' %}" class="nav-link">
+                                <i class="fas fa-cogs" style="color:red;"></i>
+                                <p>Procesos Técnicos</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:destinofondos' %}" class="nav-link">
+                                <i class="fas fa-donate" style="color:green;"></i>
+                                <p>Destino de Fondos</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'archivos:plan_anex' %}" class="nav-link">
+                                <i class="fas fa-file-alt" style="color:violet;"></i>
+                                <p>Planillas Anexas</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li> 
             </ul>
         </nav>
     </div>

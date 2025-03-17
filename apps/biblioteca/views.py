@@ -44,6 +44,7 @@ servicios_sp=ServiciosMatBiblio.objects.filter(cod_servicio__range=(411,414))
 servicios_ip=ServiciosMatBiblio.objects.filter(cod_servicio__range=(511,527))
 tipo_mat=TipoMaterialBiblio.objects.all()
 fondos=DestinoFondos.objects.all()
+servicios_pa=ServiciosMatBiblio.objects.filter(cod_servicio__gt=710)
 
 
 """ SERVICIOS_SP = [
@@ -644,3 +645,70 @@ def filtrar_destino_fondos(request):
         print("Total Cueanexos:", total_cueanexos)
         
     return JsonResponse({"datos": datos, "total_general": total_cueanexos})
+
+
+##########################
+#   PLANILLAS ANEXAS     #
+##########################
+def planillas_anexas_view(request):    
+    return render(request, "biblioteca/resultados/planillas_anexas.html", {'meses': MESES_ES, 'servicios': servicios_pa, 'regionales': REGIONES})
+
+def filtrar_planillas_anexas(request):
+    cueanexo = request.GET.get("cueanexo", "")
+    mes = request.GET.get("mes", "")
+    anio = request.GET.get("anio", "")    
+    servicio_id = request.GET.get("servicio", "")
+    regional = request.GET.get("regional", "")
+    print(cueanexo, mes, anio, servicio_id, regional)
+    
+    condiciones = []
+    parametros = []
+
+    if cueanexo:
+        condiciones.append("cueanexo = %s")
+        parametros.append(cueanexo)
+    if mes:
+        condiciones.append("mes = %s")
+        parametros.append(mes)
+    if anio:
+        condiciones.append("anio = %s")
+        parametros.append(anio)       
+    if servicio_id:
+        condiciones.append("nom_servicio = %s")
+        parametros.append(servicio_id)          
+    if regional:
+        condiciones.append("region_loc = %s")
+        parametros.append(regional)
+
+    sql = """
+        SELECT cueanexo, mes, anio, servicio_id, nom_servicio, cantidad, region_loc, localidad
+        FROM pem.v_planillas_anexas
+        WHERE 1=1
+    """
+    
+    if condiciones:
+        sql += " AND " + " AND ".join(condiciones)
+
+    sql_total = """
+        SELECT COALESCE(SUM(cantidad), 0) as total_general
+        FROM pem.v_planillas_anexas
+        WHERE 1=1
+    """
+
+    if condiciones:
+        sql_total += " AND " + " AND ".join(condiciones)
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, parametros)
+        columnas = [col[0] for col in cursor.description]
+        datos = [dict(zip(columnas, row)) for row in cursor.fetchall()]
+
+        cursor.execute(sql_total, parametros)
+        total_general = cursor.fetchone()
+        if total_general is not None:
+            total_general = total_general[0]
+        else:
+            total_general = 0  # Si no hay resultados, asignamos 0
+        print("Total general:", total_general)
+        
+    return JsonResponse({"datos": datos, "total_general": total_general})

@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.forms import model_to_dict
 from django.core.exceptions import ValidationError
+from django.contrib.gis.db import models
 
 class AsuntoRegister(models.Model):
     
@@ -76,4 +77,37 @@ class ArchRegister(models.Model):
         return item
     
     
+class VCapaUnicaOfertasCuiCuof(models.Model):
+    cueanexo = models.CharField(max_length=9)
+    geom = models.GeometryField()
+    long = models.FloatField()
+    lat = models.FloatField()
+    nom_est = models.CharField(max_length=255, null=True, blank=True)
+    padron_cueanexo = models.CharField(max_length=15, null=True, blank=True)
+    acronimo = models.TextField(null=True, blank=True)
+    oferta = models.TextField(null=True, blank=True)
+    etiqueta = models.TextField(null=True, blank=True)
+    nro_est = models.IntegerField(null=True, blank=True)
+    ambito = models.CharField(max_length=50, null=True, blank=True)
+    sector = models.CharField(max_length=50, null=True, blank=True)
+    region_loc = models.CharField(max_length=50, null=True, blank=True)
+    ref_loc = models.CharField(max_length=255, null=True, blank=True)
+    calle = models.CharField(max_length=255, null=True, blank=True)
+    numero = models.CharField(max_length=50, null=True, blank=True)
+    localidad = models.CharField(max_length=255, null=True, blank=True)
+    departamento = models.CharField(max_length=255, null=True, blank=True)
+    estado_loc = models.TextField(null=True, blank=True)
+    est_oferta = models.TextField(null=True, blank=True)
+    estado_est = models.TextField(null=True, blank=True)
+    cui_loc = models.CharField(max_length=50, null=True, blank=True)
+    cuof_loc = models.CharField(max_length=50, null=True, blank=True)
+    
+    class Meta:
+        managed = False  
+        verbose_name='Capa_Unica'
+        verbose_name_plural='Capas_Unicas'
+        db_table = 'v_capa_unica_ofertas_cui_cuof'  
+        
+    def __str__(self):
+        return f'{self.cueanexo} {self.nom_est}'
     

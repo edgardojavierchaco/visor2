@@ -1,5 +1,25 @@
+console.log("✅ Script ejecutado correctamente");
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Busca la cookie con el nombre "csrftoken"
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+console.log(getCookie('csrftoken'));
+
 $(function () {
-    $('#data').DataTable({
+    console.log("✅ DataTable inicializado");
+
+    $('#data').DataTable({        
         responsive: true,
         autoWidth: false,
         destroy: true,
@@ -11,7 +31,11 @@ $(function () {
             data: {
                 'action': 'searchdata'
             },
-            dataSrc: ""
+            dataSrc: "",
+            error: function (xhr, status, error) {
+                console.error("❌ Error en AJAX:", status, error);
+                console.error("❌ Respuesta del servidor:", xhr.responseText);
+            }
         },
         columns: [
             {"data": "id"},

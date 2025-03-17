@@ -33,6 +33,7 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
             cursor.execute(query, [user.username])
             row = cursor.fetchone()
         
+            print(row)
         return row[0] if row else None
 
     def get_queryset(self):
@@ -43,6 +44,7 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
             QuerySet: Lista de PersonalDocCentral filtrados por la región correspondiente.
         """
         regional_usuario = self.get_regional_usuario()
+        print("regional del usuario:",regional_usuario)
         if regional_usuario:
             # Filtramos PersonalDocCentral por la región correspondiente
             return Supervisor.objects.filter(region=regional_usuario)
@@ -50,20 +52,28 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
+        print(f"📌 Método dispatch ejecutado con {request.method}")
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        print("📌 Método POST ejecutado")
         data = {}
         try:
             action = request.POST['action']
+            print(f"📌 Acción recibida: {action}") 
             if action == 'searchdata':
                 data = []
+                queryset = self.get_queryset()
+                print("Supervisores encontrados:", queryset.count())
                 for i in self.get_queryset():
+                    print("Supervisor:", i.toJSON())
                     data.append(i.toJSON())
+                print("Supervisor:", i.toJSON())
             else:
                 data['error'] = 'Ha ocurrido un error'
         except Exception as e:
             data['error'] = str(e)
+            print("Error en post:", str(e))
         return JsonResponse(data, safe=False)
 
     def get_context_data(self, **kwargs):
@@ -88,6 +98,7 @@ class SupervisorCreateView(LoginRequiredMixin, CreateView):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        print("📌 Método POST ejecutado")
         data = {}
         try:
             action = request.POST['action']

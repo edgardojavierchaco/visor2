@@ -50,5 +50,9 @@ sudo chmod -R 775 /ruta/a/productionfiles
 cp -r ./productionfiles ./productionfiles_backup
 
 
+#######################################
+reentrenar modelo de Machine Learning
 
+docker exec visor_local_django python manage.py reentrenar_modelo
+docker exec visor_production_django python manage.py reentrenar_modelo
 

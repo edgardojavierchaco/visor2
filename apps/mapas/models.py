@@ -1,5 +1,9 @@
+from tabnanny import verbose
 from django.db import models
 from django.contrib.gis.db import models
+from django.forms import model_to_dict
+from apps.usuarios.models import UsuariosVisualizador
+import json
 
 """
 Este módulo define dos modelos de Django que interactúan con tablas específicas en una base de datos externa. 
@@ -57,3 +61,30 @@ class LocalidadesRegion(models.Model):
         managed = False
         db_table = 'localidadesregion'
 
+
+# Modelo para guardar las interacciones en la búsqueda por LN
+class Interaccion(models.Model):
+    user = models.ForeignKey(UsuariosVisualizador, on_delete=models.CASCADE, null=True, blank=True)
+    query = models.TextField()  # Consulta realizada por el usuario
+    resultado = models.TextField()  # Resultado que se devolvió al usuario
+    fecha = models.DateTimeField(auto_now_add=True)  # Fecha de la interacción
+    criterios_extraidos = models.JSONField(null=True, blank=True)  # Criterios extraídos (para posterior análisis)
+    feedback = models.CharField(max_length=255, null=True, blank=True)  # Posible feedback del usuario sobre la respuesta
+
+    class Meta:
+        verbose_name='Interaccion'
+        verbose_name_plural='Interacciones'
+        db_table='interacciones'
+        
+    def __str__(self):
+        return f"Interacción de {self.user} en {self.fecha}"
+    
+    def toJSON(self):
+        item=model_to_dict(self)
+        item['user']=self.user.username
+        item['query']=self.query
+        item['resultado']=self.resultado
+        item['fecha']=self.fecha
+        item['criterios_extraidos']=self.criterios_extraidos
+        item['feedback']=self.feedback
+        return item

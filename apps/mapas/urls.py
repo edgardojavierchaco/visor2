@@ -3,6 +3,7 @@ from . import views
 from . import viewscueradio
 from . import views2
 from . import viewscolectivos, viewscomiarias,viewscentrossalud
+from . views_ai import filter_data, filtrado, extraer_criterios, normalizar_region
 
 app_name='mapas'
 
@@ -25,4 +26,7 @@ urlpatterns=[
     path('comisarias/',viewscomiarias.filter_cueradiocomisarias, name='comisarias'),   
     path('filter_salud/',viewscentrossalud.filtrado_cueradiosalud, name='filter_salud'),
     path('salud/',viewscentrossalud.filter_cueradiosalud, name='salud'), 
+    path('filnat/', filtrado, name='filnat'),
+    path('ofertas/', filter_data, name='filter_data')
 ]
+    

@@ -9,6 +9,7 @@ from .views_matric_disc_prim_cueanexo import filter_data_matric_disc_prim_cueane
 from .views_matric_disc_sec_cueanexo import filter_data_matric_disc_sec_cueanexo, filtrado_matric_disc_sec_cueanexo
 from apps.reportes import views_matric_cueanexo
 from .views_tabla import tabla_view, get_table_data, obtener_columnas_cargos
+from .view_bloques import obtener_tablas, sql_builder, ejecutar_sql
 
 app_name='reportes'
 
@@ -48,6 +49,9 @@ urlpatterns=[
     path('tabla/', tabla_view, name='tabla'),
     path('get_data/', get_table_data, name='get_data'),
     path('obtener_cargos/', obtener_columnas_cargos, name='obtener_columnas_cargos'),
+    path('tablas/', obtener_tablas, name='tablas'),
+    path('sql/', sql_builder, name='sql'),
+    path('ejecutar_sql/', ejecutar_sql, name='ejecutar_sql'), # type: ignore
 ]
 
 

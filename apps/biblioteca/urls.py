@@ -93,7 +93,9 @@ from .views import (
     proceso_tecnico_view,
     filtrar_proceso_tecnico,
     destino_fondos_view,
-    filtrar_destino_fondos
+    filtrar_destino_fondos,
+    planillas_anexas_view,
+    filtrar_planillas_anexas
 )
 
 app_name = 'bibliotecas'
@@ -198,5 +200,8 @@ urlpatterns = [
     path("filtrar_proctec/", filtrar_proceso_tecnico, name="filtrar_proctec"),
     path("destinofondos/", destino_fondos_view, name="destinofondos"),
     path("filtrar_desfondos/", filtrar_destino_fondos, name="filtrar_desfondos"),
+    path("plan_anex/", planillas_anexas_view, name="plan_anex"),
+    path("filtrar_plananex/", filtrar_planillas_anexas, name="filtrar_plananex"),
 ]
+
 

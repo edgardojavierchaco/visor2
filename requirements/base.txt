@@ -190,3 +190,5 @@ wcwidth==0.2.6
 whitenoise==6.5.0
 beautifulsoup4==4.10.0
 lxml==4.6.3
+unidecode
+scikit-learn

@@ -39,7 +39,11 @@ def get_table_data(request):
         grouping_columns.append('cargos')
     if 'regional' in selected_columns:
         grouping_columns.append('regional')
-
+    if 'localidad' in selected_columns:
+        grouping_columns.append('localidad')
+    if 'departamento' in selected_columns:
+        grouping_columns.append('departamento')
+        
     # Si no se ha seleccionado ninguna columna de agrupamiento válida, asignamos un valor por defecto
     if not grouping_columns:
         grouping_columns = ['cueanexo']  # Por ejemplo, siempre agrupar por 'cueanexo' si no se seleccionan otras
@@ -54,25 +58,26 @@ def get_table_data(request):
     query = f'''
         SELECT 
             {", ".join(group_by_columns)}, 
-            SUM(total) as total,
-            SUM(titular) as titular,
-            SUM(interinos) as interinos,
-            SUM(sin_cubrir) as sin_cubrir
+            SUM(vccp.total) as total,
+            SUM(vccp.titular) as titular,
+            SUM(vccp.interinos) as interinos,
+            SUM(vccp.sin_cubrir) as sin_cubrir
         FROM funcion.visor_cargo_comun_primaria('ra_carga2024') as vccp
-        LEFT JOIN(
-            SELECT DISTINCT ON(cueanexo) cueanexo, region_loc as regional from public.v_capa_unica_ofertas
+        LEFT JOIN (
+            SELECT DISTINCT ON(vcuo.padron_cueanexo) vcuo.padron_cueanexo, vcuo.region_loc as regional, departamento, localidad
+            FROM public.v_capa_unica_ofertas as vcuo
         ) as vcuo
-        on vccp.cueanexo::text = vcuo.cueanexo::text
-        WHERE total !=0
+        ON vccp.cueanexo::text = vcuo.padron_cueanexo::text
+        WHERE vccp.total != 0
         GROUP BY 
-            {', '.join(group_by_columns)}  -- Asegurarse de que todas las columnas sean incluidas en GROUP BY
+            {', '.join(group_by_columns)} -- Asegurarse de que todas las columnas sean incluidas en GROUP BY
         ORDER BY 
             {group_by_columns[0]}  -- Orden por la primera columna del agrupamiento
     '''
 
     cursor.execute(query)
     rows = cursor.fetchall()
-
+    print(rows)
     # Formatear a JSON la respuesta
     table_data = []
     for row in rows:
@@ -81,7 +86,7 @@ def get_table_data(request):
             'total': row[len(group_by_columns)],
             'titular': row[len(group_by_columns) + 1],
             'interinos': row[len(group_by_columns) + 2],
-            'sin_cubrir': row[len(group_by_columns) + 3],
+            'sin_cubrir': row[len(group_by_columns) + 3],            
         })
         table_data.append(row_data)
         print(table_data)
@@ -101,7 +106,7 @@ def obtener_columnas_cargos(request):
         sql = """
             SELECT * FROM funcion.visor_cargo_comun_primaria('ra_carga2024') as vccp
             LEFT JOIN(
-                SELECT cueanexo, region_loc as regional, departamento, localidad
+                SELECT cueanexo,region_loc as regional, departamento, localidad
                         FROM public.v_capa_unica_ofertas
                     ) as vcuo
                     on vccp.cueanexo::text=vcuo.cueanexo::text
@@ -111,7 +116,7 @@ def obtener_columnas_cargos(request):
 
         with connection.cursor() as cursor:
             cursor.execute(sql)
-            columnas = [desc[0] for desc in cursor.description]
+            columnas = sorted(set(desc[0] for desc in cursor.description))
 
         return JsonResponse({"columnas": columnas})
 
