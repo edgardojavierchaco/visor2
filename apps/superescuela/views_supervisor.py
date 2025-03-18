@@ -26,15 +26,16 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
         query = """
             SELECT region_reg 
             FROM public."public.director_regional"
-            WHERE dni_reg = %s
-            LIMIT 1
+            WHERE dni_reg = %s            
         """
         with connection.cursor() as cursor:
             cursor.execute(query, [user.username])
-            row = cursor.fetchone()
+            rows = cursor.fetchall()
         
-            print(row)
-        return row[0] if row else None
+        regiones = [row[0] for row in rows]
+        print(f"📌 Regiones obtenidas para {user.username}: {regiones}")
+
+        return regiones
 
     def get_queryset(self):
         """
@@ -47,7 +48,7 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
         print("regional del usuario:",regional_usuario)
         if regional_usuario:
             # Filtramos PersonalDocCentral por la región correspondiente
-            return Supervisor.objects.filter(region=regional_usuario)
+            return Supervisor.objects.filter(region__in=regional_usuario)
         return Supervisor.objects.none()
 
     @method_decorator(csrf_exempt)
