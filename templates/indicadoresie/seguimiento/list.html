@@ -1,0 +1,279 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Seguimiento SIE 2025</h2>
+
+    <!-- Fila con el botón de filtrar y los totales -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <!-- Botón para abrir el modal -->
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                Filtrar y Ordenar
+            </button>
+        </div>
+        <div class="col-md-4 text-center">
+            <!-- Total Preinscriptos -->
+            <strong>Total Preinscriptos: </strong>
+            <span id="totalPreinscriptos" class="badge bg-danger rounded-pill">0</span>
+        </div>
+        <div class="col-md-4 text-center">
+            <!-- Total Regulares -->
+            <strong>Total Regulares: </strong>
+            <span id="totalRegulares" class="badge bg-success rounded-pill">0</span>
+        </div>
+    </div>
+
+    <table id="seguimientoTable" class="table table-striped table-bordered">
+        <thead class="table-success">
+            <tr>                
+                <th>Región</th>
+                <th>Nivel</th>
+                <th>CUE-Anexo</th>
+                <th>Grado</th>
+                <th>Sección</th>
+                <th>Estado Inscripción</th>
+                <th>Total CUE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in object_list %}
+            <tr>                
+                <td>{{ item.region }}</td>
+                <td>{{ item.nivel }}</td>
+                <td>{{ item.cueanexo }}</td>
+                <td>{{ item.grado }}</td>
+                <td>{{ item.seccion }}</td>
+                <td class="estado-inscripcion"
+                    data-total-preinscriptos="{{ item.total_preinscriptos }}"
+                    data-total-regulares="{{ item.total_regulares }}"
+                    data-cueanexo="{{ item.cueanexo }}">
+                    {{ item.estado_inscripcion }}
+                </td>
+                <td>{{ item.total_cue }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Modal para Filtrar y Ordenar -->
+    <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel">Filtrar y Ordenar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="filterForm">
+                        <!-- Contenedor para filtros dinámicos -->
+                        <div id="filterContainer">
+                            <!-- Aquí se agregarán dinámicamente los filtros -->
+                        </div>
+
+                        <!-- Sección para ordenación -->
+                        <div id="orderContainer" class="mt-3">
+                            <h6>Ordenar por:</h6>
+                            <div class="mb-3">
+                                <label for="orderColumn" class="form-label">Columnas</label>
+                                <select class="form-select" id="orderColumn" multiple>
+                                    <!-- Las opciones se llenarán dinámicamente con las columnas -->
+                                </select>
+                            </div>
+                            <div id="orderDirectionsContainer">
+                                <!-- Las direcciones de ordenación se agregarán dinámicamente para cada columna seleccionada -->
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <button type="button" class="btn btn-secondary mt-2" id="addFilter">+ Agregar Filtro</button>
+                        <button type="button" class="btn btn-success mt-2" id="applyFilters">Aplicar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataTables y Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var table = $('#seguimientoTable').DataTable({
+                "language": {
+                    "lengthMenu": "Mostrar _MENU_ registros por página",
+                    "zeroRecords": "No se encontraron resultados",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    "infoEmpty": "No hay registros disponibles",
+                    "infoFiltered": "(filtrado de _MAX_ registros totales)",
+                    "search": "Buscar:",
+                    "paginate": {
+                        "first": "Primero",
+                        "last": "Último",
+                        "next": "Siguiente",
+                        "previous": "Anterior"
+                    }
+                }
+            });
+
+            var filterIndex = 0;
+
+            // Función para agregar un nuevo filtro al modal
+            document.getElementById("addFilter").addEventListener("click", function() {
+                var filterContainer = document.getElementById("filterContainer");
+
+                var filterHTML = `
+                    <div class="filter-group mb-3" id="filter-${filterIndex}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Columna</label>
+                                <select class="form-select column-select">
+                                    <option value="">Seleccione...</option>
+                                    <option value="0">Región</option>
+                                    <option value="1">Nivel</option>
+                                    <option value="2">CUE-Anexo</option>
+                                    <option value="3">Grado</option>
+                                    <option value="4">Sección</option>
+                                    <option value="5">Estado Inscripción</option>
+                                    <option value="6">Total CUE</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Valor</label>
+                                <input type="text" class="form-control filter-input">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger remove-filter">X</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                filterContainer.insertAdjacentHTML("beforeend", filterHTML);
+                filterIndex++;
+            });
+
+            // Eliminar un filtro del modal
+            document.getElementById("filterContainer").addEventListener("click", function(event) {
+                if (event.target.classList.contains("remove-filter")) {
+                    event.target.closest(".filter-group").remove();
+                }
+            });
+
+            // Función para actualizar los totales de preinscriptos y regulares
+            function updateTotals() {
+                var totalPreinscriptos = 0;
+                var totalRegulares = 0;
+
+                // Recorrer las filas filtradas y contar los totales
+                table.rows().every(function() {
+                    var row = this.node();
+                    var estadoInscripcion = row.querySelector('.estado-inscripcion').innerText;
+
+                    if (estadoInscripcion.toLowerCase().includes('preinscripto')) {
+                        totalPreinscriptos++;
+                    } else if (estadoInscripcion.toLowerCase().includes('regular')) {
+                        totalRegulares++;
+                    }
+                });
+
+                // Actualizar los totales en la vista
+                document.getElementById("totalPreinscriptos").innerText = totalPreinscriptos;
+                document.getElementById("totalRegulares").innerText = totalRegulares;
+            }
+
+            // Inicializar totales al cargar la página
+            updateTotals();
+
+            // Se añade la actualización de totales cada vez que la tabla se redibuje (paginación, búsqueda, etc.)
+            table.on('draw', function() {
+                updateTotals();
+            });
+
+            // Obtener las columnas de la tabla para mostrarlas como opciones
+            var columns = Array.from(document.querySelectorAll('#seguimientoTable th')).map(th => th.innerText);
+
+            // Llenar el select de columnas con opciones dinámicamente
+            var orderColumnSelect = document.getElementById('orderColumn');
+            columns.forEach(function(column, index) {
+                var option = document.createElement('option');
+                option.value = index; // Usamos el índice de la columna
+                option.textContent = column;
+                orderColumnSelect.appendChild(option);
+            });
+
+            // Añadir un evento para actualizar las direcciones de ordenación cada vez que el usuario seleccione/deseleccione una columna
+            orderColumnSelect.addEventListener('change', function() {
+                updateOrderDirections();
+            });
+
+            // Función para actualizar las direcciones de ordenación
+            function updateOrderDirections() {
+                var selectedColumns = Array.from(orderColumnSelect.selectedOptions);
+                var orderDirectionsContainer = document.getElementById('orderDirectionsContainer');
+                
+                // Limpiar las direcciones previas
+                orderDirectionsContainer.innerHTML = '';
+                
+                selectedColumns.forEach(function(option, index) {
+                    var columnIndex = option.value;
+                    var directionSelect = document.createElement('select');
+                    directionSelect.classList.add('form-select');
+                    directionSelect.setAttribute('data-column', columnIndex); // Guardar la columna asociada
+                    
+                    var ascOption = document.createElement('option');
+                    ascOption.value = 'asc';
+                    ascOption.textContent = 'Ascendente';
+                    directionSelect.appendChild(ascOption);
+                    
+                    var descOption = document.createElement('option');
+                    descOption.value = 'desc';
+                    descOption.textContent = 'Descendente';
+                    directionSelect.appendChild(descOption);
+
+                    // Añadir al contenedor de direcciones
+                    var directionContainer = document.createElement('div');
+                    directionContainer.classList.add('mb-3');
+                    directionContainer.appendChild(directionSelect);
+                    orderDirectionsContainer.appendChild(directionContainer);
+                });
+            }
+
+            // Evento para aplicar filtros y ordenación
+            document.getElementById('applyFilters').addEventListener('click', function() {
+                var selectedColumns = Array.from(orderColumnSelect.selectedOptions).map(option => option.value);
+                var selectedDirections = Array.from(document.querySelectorAll('#orderDirectionsContainer select')).map(select => ({
+                    column: select.getAttribute('data-column'),
+                    direction: select.value
+                }));
+
+                // Lógica para aplicar el filtrado y ordenación
+                var orderArray = selectedDirections.map(function(direction) {
+                    return [parseInt(direction.column), direction.direction];
+                });
+
+                // Ordenar la tabla según las columnas y direcciones seleccionadas
+                table.order(orderArray).draw();
+
+                // Aplicar filtros dinámicos si los hay
+                document.querySelectorAll("#filterContainer .filter-group").forEach(function(group) {
+                    var columnIndex = group.querySelector(".column-select").value;
+                    var filterValue = group.querySelector(".filter-input").value.toLowerCase();
+
+                    // Aplicar el filtro por columna
+                    table.column(columnIndex).search(filterValue).draw();
+                });
+
+                // Cerrar el modal
+                $('#filterModal').modal('hide');
+            });
+        });
+    </script>
+</div>
+{% endblock %}
+

@@ -5,3 +5,4 @@ admin.site.register(Supervisor)
 admin.site.register(EscuelasSupervisadas)
 admin.site.register(Asignacion)
 admin.site.register(DetalleAsignacion)
+

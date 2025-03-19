@@ -68,8 +68,7 @@ class SupervisoresListView(LoginRequiredMixin, ListView):
                 print("Supervisores encontrados:", queryset.count())
                 for i in self.get_queryset():
                     print("Supervisor:", i.toJSON())
-                    data.append(i.toJSON())
-                print("Supervisor:", i.toJSON())
+                    data.append(i.toJSON())                
             else:
                 data['error'] = 'Ha ocurrido un error'
         except Exception as e:

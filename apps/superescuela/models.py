@@ -177,7 +177,9 @@ class EscuelasSupervisadas(models.Model):
         item['region'] = self.region        
         return item       
         
-
+  
+        
+    
 class Asignacion(models.Model):
     supervisor=models.ForeignKey(Supervisor, on_delete=models.CASCADE, verbose_name='Supervisor')
     total=models.IntegerField(default=0, verbose_name='Total')

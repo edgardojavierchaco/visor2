@@ -1,6 +1,8 @@
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import Group
+from django.http import HttpResponseForbidden
+from django.shortcuts import redirect
 
 class GroupRequiredMixin(UserPassesTestMixin):
     """
@@ -54,4 +56,16 @@ class ReadOnlyAccessMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         # Si el usuario no pertenece a ninguno de los grupos permitidos, lanza una excepción de permiso denegado
         raise PermissionDenied("No tiene permisios para acceder a esta página")
-    
+   
+
+class UsuarioAutorizadoMixin:
+    """
+    Mixin que permite acceder solo a los usuarios en una lista específica.
+    """
+    usuarios_autorizados = ['24024606', 'usuario2', 'usuario3']  # Lista de nombres de usuario autorizados
+
+    def dispatch(self, request, *args, **kwargs):
+        # Verificar si el usuario actual está en la lista de autorizados
+        if request.user.username not in self.usuarios_autorizados:
+            return HttpResponseForbidden("No tienes permisos para acceder a esta página.")
+        return super().dispatch(request, *args, **kwargs) 
