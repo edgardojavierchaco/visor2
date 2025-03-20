@@ -193,13 +193,29 @@
                                 <p>Planillas Anexas</p>
                             </a>
                         </li>                        
-                    </ul>
-                    <li class="nav-item">
-                        <a href="{% url 'indicsie:seguimiento' %}" class="nav-link">
+                    </ul>                    
+                    <li class="nav-item has-treeview">
+                        <a href="#" class="nav-link">
                             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-                            <p>Seguimiento SIE 2025</p>
+                            <p>
+                                Seguimiento SIE 2025                                
+                            </p>
                         </a>
-                    </li>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="{% url 'indicsie:seguimiento' %}" class="nav-link">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    <p>Listado</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{% url 'indicsie:dashboard_seguimiento_sie' %}" class="nav-link">
+                                    <i class="fas fa-chart-pie"></i>
+                                    <p>Gráficos</p>
+                                </a>
+                            </li>
+                        </ul>
+                </li>
                 </li> 
             </ul>
         </nav>

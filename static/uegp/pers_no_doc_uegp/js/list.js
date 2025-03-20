@@ -14,7 +14,6 @@ $(function () {
         },
         columns: [
             {"data": "id"},
-            {"data": "cueanexo"},
             {"data": "t_dni"},
             {"data": "dni"},
             {"data": "cuil"},

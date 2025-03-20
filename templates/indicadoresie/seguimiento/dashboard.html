@@ -1,0 +1,226 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+<div class="container">
+    <h2 class="text-center">Dashboard de Seguimiento SIE 2025</h2>
+
+    <div class="d-flex justify-content-center my-3">
+        <div class="form-check mx-3">
+            <input class="form-check-input" type="radio" name="filterOption" id="filterRegional">
+            <label class="form-check-label" for="filterRegional">Por Regional</label>
+        </div>
+        <div class="form-check mx-3">
+            <input class="form-check-input" type="radio" name="filterOption" id="filterNivel">
+            <label class="form-check-label" for="filterNivel">Por Nivel</label>
+        </div>
+    </div>
+
+    <div id="selectRegionalContainer" class="d-none text-center my-3">
+        <label for="regionalSelect">Seleccione una Regional:</label>
+        <select id="regionalSelect" class="form-select w-50 mx-auto">
+            <option value="">Seleccione...</option>
+            {% for region in regions %}
+            <option value="{{ region }}">{{ region }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="row" id="regionalCharts"></div>
+
+    <div class="row d-none" id="nivelCharts"></div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const filterRegional = document.getElementById("filterRegional");
+        const filterNivel = document.getElementById("filterNivel");
+        const selectRegionalContainer = document.getElementById("selectRegionalContainer");
+        const regionalCharts = document.getElementById("regionalCharts");
+        const nivelCharts = document.getElementById("nivelCharts");
+        const regionalSelect = document.getElementById("regionalSelect");
+
+        function toggleView() {
+            if (filterRegional.checked) {
+                selectRegionalContainer.classList.add("d-none");
+                regionalCharts.classList.remove("d-none");
+                nivelCharts.classList.add("d-none");
+            } else {
+                selectRegionalContainer.classList.remove("d-none");
+                regionalCharts.classList.add("d-none");
+                nivelCharts.classList.add("d-none");
+            }
+        }
+
+        filterRegional.addEventListener("change", toggleView);
+        filterNivel.addEventListener("change", toggleView);
+
+        regionalSelect.addEventListener("change", function() {
+            const selectedRegion = this.value;
+            if (!selectedRegion) return;
+
+            if (filterRegional.checked) {
+                // Llamada para 'Por Regional'
+                fetch("{% url 'indicsie:seguimiento_sie_json' %}")
+                    .then(response => response.json())
+                    .then(responseData => {
+                        if (!responseData.data) {
+                            console.error("Error: No se encontraron datos.");
+                            return;
+                        }
+
+                        regionalCharts.innerHTML = ""; // Limpiar gráficos anteriores
+                        responseData.data.forEach((item, index) => {
+                            let chartId = `chart_${index + 1}`;
+                            regionalCharts.innerHTML += `
+                                <div class="col-md-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
+                                        </div>
+                                    </div>
+                                </div>`;
+
+                            // Crear gráfico después de renderizar el DOM
+                            setTimeout(() => {
+                                let ctx = document.getElementById(chartId)?.getContext('2d');
+                                if (ctx) {
+                                    new Chart(ctx, {
+                                        type: 'pie',
+                                        data: {
+                                            labels: ['Preinscriptos', 'Regulares'],
+                                            datasets: [{
+                                                data: [item.preinscriptos, item.regulares],
+                                                backgroundColor: ['#FF0000', '#008000']
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            plugins: {
+                                                legend: { position: 'top' },
+                                                title: { display: true, text: item.region }
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    console.error("Error: El canvas no fue encontrado o el contexto no se pudo obtener.");
+                                }
+                            }, 100);
+                        });
+
+                        regionalCharts.classList.remove("d-none");
+                    })
+                    .catch(error => console.error("Error en la API:", error));
+            } else if (filterNivel.checked) {
+                // Llamada para 'Por Nivel'
+                fetch("{% url 'indicsie:seguimiento_sie_niveles_json' %}?region=" + selectedRegion)
+                    .then(response => response.json())
+                    .then(responseData => {
+                        if (!responseData.niveles) {
+                            console.error("Error: No se encontraron niveles.");
+                            return;
+                        }
+
+                        nivelCharts.innerHTML = ""; // Limpiar gráficos anteriores
+                        responseData.niveles.forEach((item, index) => {
+                            let chartId = `nivel_chart_${index + 1}`;
+                            nivelCharts.innerHTML += `
+                                <div class="col-md-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title text-center">${item.nivel}</h5>
+                                            <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
+                                        </div>
+                                    </div>
+                                </div>`;
+
+                            // Crear gráfico después de renderizar el DOM
+                            setTimeout(() => {
+                                let ctx = document.getElementById(chartId)?.getContext('2d');
+                                if (ctx) {
+                                    new Chart(ctx, {
+                                        type: 'pie',
+                                        data: {
+                                            labels: ['Preinscriptos', 'Regulares'],
+                                            datasets: [{
+                                                data: [item.preinscriptos, item.regulares],
+                                                backgroundColor: ['#FF0000', '#008000']
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            plugins: {
+                                                legend: { position: 'top' },
+                                                title: { display: true, text: item.nivel }
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    console.error("Error: El canvas no fue encontrado o el contexto no se pudo obtener.");
+                                }
+                            }, 100);
+                        });
+
+                        nivelCharts.classList.remove("d-none");
+                    })
+                    .catch(error => console.error("Error en la API de niveles:", error));
+            }
+        });
+
+        // Llamada inicial para mostrar los gráficos de 'Por Regional' al cargar la página
+        fetch("{% url 'indicsie:seguimiento_sie_json' %}")
+            .then(response => response.json())
+            .then(responseData => {
+                if (!responseData.data) {
+                    console.error("Error: No se encontraron datos.");
+                    return;
+                }
+
+                regionalCharts.innerHTML = ""; // Limpiar gráficos anteriores
+                responseData.data.forEach((item, index) => {
+                    let chartId = `chart_${index + 1}`;
+                    regionalCharts.innerHTML += `
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
+                                </div>
+                            </div>
+                        </div>`;
+
+                    // Crear gráfico después de renderizar el DOM
+                    setTimeout(() => {
+                        let ctx = document.getElementById(chartId)?.getContext('2d');
+                        if (ctx) {
+                            new Chart(ctx, {
+                                type: 'pie',
+                                data: {
+                                    labels: ['Preinscriptos', 'Regulares'],
+                                    datasets: [{
+                                        data: [item.preinscriptos, item.regulares],
+                                        backgroundColor: ['#FF0000', '#008000']
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: { position: 'top' },
+                                        title: { display: true, text: item.region }
+                                    }
+                                }
+                            });
+                        } else {
+                            console.error("Error: El canvas no fue encontrado o el contexto no se pudo obtener.");
+                        }
+                    }, 100);
+                });
+
+                regionalCharts.classList.remove("d-none");
+            })
+            .catch(error => console.error("Error en la API:", error));
+
+        toggleView();
+    });
+</script>
+
+{% endblock %}
