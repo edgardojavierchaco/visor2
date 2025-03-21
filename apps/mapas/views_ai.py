@@ -36,8 +36,10 @@ def normalizar_region(region_tokens):
     region_text = region_text.replace("SUB.", "SUB. R.E.")
     
     parts = region_text.split()
-    if len(parts) >= 2 and parts[1].isdigit():
-        return f"R.E. {parts[1]}" + (f"-{parts[2]}" if len(parts) > 2 else "")
+    if len(parts) >= 3 and parts[1].isdigit() and parts[2].isalpha():
+        return f"R.E. {parts[1]}-{parts[2]}"
+    elif len(parts) == 2 and parts[1].isdigit():
+        return f"R.E. {parts[1]}"
     
     return region_text
 
@@ -49,6 +51,7 @@ def extraer_criterios(consulta):
     print("Entidades detectadas:", [(ent.text, ent.label_) for ent in doc.ents]) 
     print("Tokens detectados:", [token.text for token in doc])
     
+    
     criterios = {
         "cueanexo": None, "ambito": None, "sector": None, "region_loc": None,
         "departamento": None, "localidad": None, "oferta": None, "calle": None,
@@ -57,17 +60,18 @@ def extraer_criterios(consulta):
     
     palabras_clave = {
         "oferta": ["oferta", "ofertas"],
-        "localidad": ["localidad", "localidades"],
+        "localidad": ["localidad", "localidades", "localidad de"],
         "sector": ["sector", "sectores"],
-        "ambito": ["ambito", "ámbito", "ambitos", "ámbitos"],
-        "calle": ["calle"],
+        "ambito": ["ambito", "ámbito", "ambitos", "ámbitos", "en el ambito"],
+        "calle": ["calle","en la calle", "sobre la calle"],
         "etiqueta": ["nombre", "escuela"],
-        "region_loc": ["región", "region", "regional", "Subregional", "subregional", "Sub.", "sub.", "sub", "Sub", "Sub. reg", "sub. reg", "Sub reg"],
+        "region_loc": ["región", "region", "en la regional", "en region", "en la region","regional", "Subregional", "subregional", "Sub.", "sub.", "sub", "Sub", "Sub. reg", "sub. reg", "Sub reg"],
         "departamento": ["departamento", "departamentos"],
         "cueanexo":["cueanexo", "cueanexos", "cue"],
-        "acronimo":["biblioteca", "bibliotecas", "Biblioteca","Bibliotecas"]
+        "acronimo":["buscar", "buscame", "encontrame", "encontrar","mostrar", "mostrame", "mostrame en el mapa"]
     }
     
+
     palabras = [token.text.lower() for token in doc]
     print("Palabras clave encontradas:", palabras)
     
@@ -131,8 +135,47 @@ def extraer_criterios(consulta):
             while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "oferta"):
                 valor.append(palabras[i])
                 i += 1
-            criterios["oferta"] = [ofer.strip() for ofer in " ".join(valor).split(" y ")]
+
+            oferta_raw = " ".join(valor).strip()
+
+            # Normalización y asignación de la oferta
+            if "primaria" in oferta_raw:
+                if "adultos" in oferta_raw:
+                    criterios["oferta"] = ["Adultos - Primaria"]
+                elif "especial" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Primaria"]
+                else:
+                    criterios["oferta"] = ["Común - Primaria"]
+            elif "snu" in oferta_raw:
+                criterios["oferta"] = ["Común - SNU"]
+            elif "inicial" in oferta_raw:            
+                if "especial" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Jardín"] 
+                else:
+                    criterios["oferta"] = ["Común - Jardín"]
+            elif "especial" in oferta_raw:
+                if "cursos" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Cursos/Talleres de la Escuela Especial"]
+                elif "domiciliaria" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Domiciliaria-hospitalaria"]
+                elif "hospitalaria" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Domiciliaria-hospitalaria"]
+                elif "integral" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Educación Integral para Adolescentes y Jóvenes"]
+                elif "integracion" in oferta_raw:
+                    criterios["oferta"] = ["Especial - Integración"]
+                else:
+                    criterios["oferta"] = ["Especial - Taller de"]
+            elif "secundaria" in oferta_raw:
+                if "adultos" in oferta_raw:
+                    criterios["oferta"] = ["Adultos - Secundaria Completa"]
+                else:
+                    criterios["oferta"] = ["Común - Secundaria"]
+            else:
+                criterios["oferta"] = [ofer.strip() for ofer in oferta_raw.split(" y ")]
+
             print(f"Oferta encontrada: {criterios['oferta']}")
+
         
         elif palabra in palabras_clave["localidad"]:
             valor = []
@@ -167,8 +210,21 @@ def extraer_criterios(consulta):
             while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "sector"):
                 valor.append(palabras[i])
                 i += 1
-            criterios["sector"] = " ".join(valor).strip()
+
+            sector_raw = " ".join(valor).strip()
+
+            # Normalización y asignación de sector
+            if "gestion" in sector_raw:
+                if "social" in sector_raw or "comunitaria" in sector_raw:
+                    criterios["sector"] = ["Gestión Social/Cooperativa"]
+                else:
+                    criterios["sector"] = ["Privado"]
+            else:
+                # Corrección en la variable que se usa dentro del bucle
+                criterios["sector"] = [sect.strip() for sect in sector_raw.split(" y ")]  # Cambié "ofer" por "sect"
+
             print(f"Sector encontrado: {criterios['sector']}")
+
         
         elif palabra in palabras_clave["etiqueta"]:
             valor = []
@@ -197,12 +253,63 @@ def extraer_criterios(consulta):
             criterios["cueanexo"] = [loc.strip() for loc in " ".join(valor).split(" y ")]
             print(f"Cueanexos encontrados: {criterios['cueanexo']}")
         
-        elif palabra in palabras_clave["acronimo"]:            
-            criterios["acronimo"] = "BI%"
-            print(f"Acrónimos encontrados: {criterios['acronimo']}")  
-            i += 1          
+        elif palabra in palabras_clave["acronimo"]:     
+            valor = []  # Asegurémonos de que valor esté bien definido, tal vez falte esta línea al principio.
+            i += 1
+            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "acronimo"):
+                valor.append(palabras[i])
+                i += 1
+
+            acron_raw = " ".join(valor).strip()
+            print("acron",acron_raw)
+            # Normalización y asignación de acrónimo
+            if "biblioteca" in acron_raw or "bibliotecas" in acron_raw:              
+                criterios["acronimo"] = ["BI%"]
+            elif "escuela bilingue" in acron_raw or "escuela bilingüe" in acron_raw:
+                criterios["acronimo"] = ["EPGCBII%"]
+            elif "artistica" in acron_raw or "artisticas" in acron_raw:
+                criterios["acronimo"] = ["ARTISTICA"]
+            elif "escuela tecnica" in acron_raw or "escuelas tecnicas" in acron_raw:
+                criterios["acronimo"] = ["EET"]
+            elif "escuela aeronautica" in acron_raw:
+                criterios["acronimo"] = ["EET-A"]
+            elif "cef" in acron_raw:
+                criterios["acronimo"] = ["CEF"]
+            elif "proyecto" in acron_raw or "proyectos" in acron_raw:
+                criterios["acronimo"] = ["PE"]
+            elif "escuela especial" in acron_raw or "escuelas especiales" in acron_raw:
+                criterios["acronimo"] = ["EEE"]
+            elif "formacion profesional" in acron_raw or "formaciones profesionales" in acron_raw:
+                criterios["acronimo"] = ["EFP"]
+            elif "escuela adulto primaria" in acron_raw or "escuelas adulto primaria" in acron_raw:
+                criterios["acronimo"] = ["EPA%"]
+            elif "escuela adulto secundaria" in acron_raw or "escuelas adulto secundaria" in acron_raw:
+                criterios["acronimo"] = ["ESJA%"]
+            elif "escuela gestion social" in acron_raw or "escuelas gestion social" in acron_raw:
+                criterios["acronimo"] = ["EPGS"]    
+            elif "escuelas secundarias comunes" in acron_raw or "escuelas secundarias comunes" in acron_raw:
+                criterios["acronimo"] = ["EES"]
+            elif "escuelas hospitalarias" in acron_raw or "escuelas hospitalarias" in acron_raw:
+                criterios["acronimo"] = ["HOSPITALARIA"]
+            elif "jardin de infantes" in acron_raw or "jardines de infantes" in acron_raw:
+                criterios["acronimo"] = ["JI%"]
+            elif "jardin maternal" in acron_raw or "jardines maternales" in acron_raw:
+                criterios["acronimo"] = ["JM"]
+            elif "snu" in acron_raw or "institutos superiores" in acron_raw:
+                criterios["acronimo"] = ["SNU"]
+            elif "escuela primaria comun" in acron_raw or "escuelas primarias comunes" in acron_raw:
+                criterios["acronimo"] = ["EEP"]
+            elif "taller" in acron_raw or "talleres" in acron_raw:
+                criterios["acronimo"] = ["TALLERES"]
+            elif "unne" in acron_raw or "universidad" in acron_raw:
+                criterios["acronimo"] = ["UNNE"]
+            else:
+                # Corrección en la variable que se usa dentro del bucle
+                criterios["acronimo"] = [acr.strip() for acr in acron_raw.split(" y ")]
+
+            print(f"Acrónimo encontrado: {criterios['acronimo']}")
         else:
-            i += 1  # Continuar con la siguiente palabra
+            i+=1
     
     return criterios
 
