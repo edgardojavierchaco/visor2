@@ -27,10 +27,13 @@ $(function () {
             {"data": "cargo"},
             {"data": "sit_revista"},
             {"data": "f_designacion"},
+            {"data": "subvencionado"},
             {"data": "nom_funcion"},
             {"data": "f_desde"},
             {"data": "f_hasta"},
-            {"data": "carga_horaria_sem"},            
+            {"data": "carga_horaria_sem"},     
+            {"data": "email"},
+            {"data": "telefono"},       
             {"data": "region"},
             {"data": "region"},
         ],
@@ -51,3 +54,5 @@ $(function () {
         }
     });
 });
+
+//verificaciones

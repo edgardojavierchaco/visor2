@@ -366,3 +366,5 @@ class PersonalNoDocUegp(models.Model):
         # Llama a la validación y luego guarda
         self.clean()        
         super(PersonalNoDocUegp, self).save(*args, **kwargs)
+        
+# verificaciones

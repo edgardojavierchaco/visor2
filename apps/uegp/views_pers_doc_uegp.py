@@ -125,19 +125,25 @@ class UEGPCreateView(LoginRequiredMixin, CreateView):
     def post(self, request, *args, **kwargs):
         try:
             action = request.POST.get('action')
+            print("📌 Método POST ejecutado")
             if action == 'add':
                 form = self.get_form()
                 if form.is_valid():
                     # Obtener el username del UsuarioVisualizador relacionado
                     usuario_visualizador = UsuariosVisualizador.objects.get(username=request.user.username)
+                    print(f"✅ Usuario Visualizador encontrado: {usuario_visualizador.username}")
                     form.instance.cueanexo = usuario_visualizador.username
+                    form.instance.subvencionado = self.request.POST.get('subvencionado') == 'on'
                     form.save() 
+                    print("✅ Registro guardado con éxito")                    
                     return HttpResponseRedirect(self.success_url)
                 else:
+                    print("Errores del formulario:", form.errors.as_json()) 
                     return self.form_invalid(form)
             else:
                 return JsonResponse({'error': 'No ha ingresado a ninguna opción'})
         except Exception as e:
+            print("Error en post:", str(e))
             return JsonResponse({'error': str(e)})
 
     def get_context_data(self, **kwargs):
