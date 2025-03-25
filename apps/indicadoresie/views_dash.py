@@ -15,7 +15,7 @@ class DashboardSeguimientoSIE2025View(TemplateView):
         context = super().get_context_data(**kwargs)
         
         # Lista de usuarios exentos de filtrado
-        usuarios_exentos = ['24024606', '39750193', '225685230']  # Agrega los usuarios que no deben ser filtrados
+        usuarios_exentos = ['24024606', '26521492', '225685230', '28122730', '43146847']  # Agrega los usuarios que no deben ser filtrados
         
         agente_user = self.request.user.username
         
@@ -42,7 +42,17 @@ def seguimiento_sie_json(request):
     
     agente_user = request.user.username
     
-    agentes_distintos = SIESegimiento.objects.filter(dni_agente=agente_user).values_list('agente', flat=True).distinct()
+    # Lista de usuarios exentos de filtrado
+    usuarios_exentos = ['24024606', '26521492', '225685230','28122730', '43146847']  # Agrega los usuarios que no deben ser filtrados
+        
+    agente_user = request.user.username
+        
+    # Si el usuario está en la lista de usuarios exentos, omitir el filtrado por agente
+    if agente_user in usuarios_exentos:
+        agentes_distintos = SIESegimiento.objects.values_list('agente', flat=True).distinct()  
+    else:
+        agentes_distintos = SIESegimiento.objects.filter(dni_agente=agente_user).values_list('agente', flat=True).distinct()
+        
 
     
     data = (
