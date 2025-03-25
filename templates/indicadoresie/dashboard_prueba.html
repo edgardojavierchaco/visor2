@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container mt-4">
+    <!-- Parte Superior -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Sección Izquierda</h5>
+                    <p class="card-text">Aquí puedes agregar más contenido.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <button class="btn btn-primary m-1">Botón 1</button>
+                    <button class="btn btn-success m-1">Botón 2</button>
+                    <button class="btn btn-danger m-1">Botón 3</button>
+                    <select class="form-select mt-2">
+                        <option>Opción 1</option>
+                        <option>Opción 2</option>
+                        <option>Opción 3</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuerpo Central -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Gráfico 1</h5>
+                    <canvas id="chart1"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Gráfico 2</h5>
+                    <canvas id="chart2"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Gráfico 3</h5>
+                    <canvas id="chart3"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function generarGrafico(id, tipo, labels, data, color) {
+        new Chart(document.getElementById(id), {
+            type: tipo,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Datos',
+                    data: data,
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+
+    // Datos de ejemplo
+    const labels = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo'];
+    const data1 = [10, 20, 30, 40, 50];
+    const data2 = [50, 40, 30, 20, 10];
+    const data3 = [15, 25, 35, 45, 55];
+
+    // Crear gráficos
+    generarGrafico('chart1', 'bar', labels, data1, 'rgba(75, 192, 192, 0.6)');
+    generarGrafico('chart2', 'line', labels, data2, 'rgba(255, 99, 132, 0.6)');
+    generarGrafico('chart3', 'doughnut', labels, data3, ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']);
+</script>
+
+</body>
+</html>

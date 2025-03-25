@@ -1,5 +1,6 @@
 {% extends 'archivos/base/layout.html' %}
-{% block content %}
+{% block content %}    
+
 <div class="container">
     <h2 class="text-center">Dashboard de Seguimiento SIE 2025</h2>
 
@@ -29,6 +30,8 @@
     <div class="row d-none" id="nivelCharts"></div>
 </div>
 
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -72,11 +75,39 @@
                         regionalCharts.innerHTML = ""; // Limpiar gráficos anteriores
                         responseData.data.forEach((item, index) => {
                             let chartId = `chart_${index + 1}`;
+
+                            // Calcular la diferencia entre total_ciclo_actual y total carga regulares
+                            let diffPercentage = item.regulares
+
+                            // Depuración para verificar el valor de diffPercentage
+                            console.log("Diferencia en porcentaje:", diffPercentage);
+
+                            // Componer el HTML con el ícono de advertencia en amarillo si la diferencia está entre 1% y 40%, o ícono de peligro nuclear si está entre 41% y 100%
+                            let dangerIcon = '';
+                            if (diffPercentage >= 1 && diffPercentage < 40) {
+                                dangerIcon = `<span class="text-danger" title="Peligro está en menos 40% carga"><i class="fas fa-radiation"></i></span>`;
+                            } else if (diffPercentage >= 41 && diffPercentage < 75) {
+                                dangerIcon = `<span class="text-warning" title="Advertencia Crítica está entre 40 y 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+                            } else if (diffPercentage >= 75 && diffPercentage < 100) {
+                                dangerIcon = `<span class="text-primary" title="Advertencia Leve está en más 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+                            }
+
+                                                        
                             regionalCharts.innerHTML += `
                                 <div class="col-md-3">
                                     <div class="card">
                                         <div class="card-body">
+                                            <h5 class="card-title text-center">${item.region}</h5>
                                             <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
+                                            <p class="card-text text-center">
+                                                <strong>Total Ciclo Anterior: ${item.total_ant}</strong>
+                                            </p>
+                                            <p class="card-text text-center">
+                                                <strong>Total Ciclo Actual: ${item.total_ciclo_actual}</strong>
+                                            </p>
+                                            <p class="card-text text-center">
+                                                <strong>Total Regulares: ${item.total_act}</strong> ${dangerIcon}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>`;
@@ -124,12 +155,37 @@
                         nivelCharts.innerHTML = ""; // Limpiar gráficos anteriores
                         responseData.niveles.forEach((item, index) => {
                             let chartId = `nivel_chart_${index + 1}`;
+
+                            // Calcular la diferencia entre total_ciclo_actual y total cargar regulares
+                            let diffPercentage = item.regulares
+                            // Depuración para verificar el valor de diffPercentage
+                            console.log("Diferencia en porcentaje:", diffPercentage);
+
+                            // Componer el HTML con el ícono de advertencia en amarillo si la diferencia está entre 1% y 40%, o ícono de peligro nuclear si está entre 41% y 100%
+                            let dangerIcon = '';
+                            if (diffPercentage >= 1 && diffPercentage < 40) {
+                                dangerIcon = `<span class="text-danger" title="Peligro está en menos 40% carga"><i class="fas fa-radiation"></i></span>`;
+                            } else if (diffPercentage >= 40 && diffPercentage <= 75) {
+                                dangerIcon = `<span class="text-warning" title="Advertencia Crítica está entre 40 y 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+                            } else if (diffPercentage >= 75 && diffPercentage < 100) {
+                                dangerIcon = `<span class="text-primary" title="Advertencia Leve está a más de 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+                            }
+
                             nivelCharts.innerHTML += `
                                 <div class="col-md-3">
                                     <div class="card">
                                         <div class="card-body">
                                             <h5 class="card-title text-center">${item.nivel}</h5>
                                             <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
+                                            <p class="card-text text-center">
+                                                <strong>Total Ciclo Anterior: ${item.total_ant}</strong>
+                                            </p>
+                                            <p class="card-text text-center">
+                                                <strong>Total Ciclo Actual: ${item.total_ciclo_actual}</strong>
+                                            </p>
+                                            <p class="card-text text-center">
+                                                <strong>Total Regulares: ${item.total_act}</strong> ${dangerIcon}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>`;
@@ -179,11 +235,38 @@
                 regionalCharts.innerHTML = ""; // Limpiar gráficos anteriores
                 responseData.data.forEach((item, index) => {
                     let chartId = `chart_${index + 1}`;
+
+                    // Calcular la diferencia entre total_ciclo_actual y total carga regular
+                    let diffPercentage = item.regulares
+                    
+                    // Depuración para verificar el valor de diffPercentage
+                    console.log("Diferencia en porcentaje:", diffPercentage);
+
+                    // Componer el HTML con el ícono de advertencia en amarillo si la diferencia está entre 1% y 40%, o ícono de peligro nuclear si está entre 41% y 100%
+                    let dangerIcon = '';
+                    if (diffPercentage >= 1 && diffPercentage < 40) {
+                        dangerIcon = `<span class="text-danger" title="Peligro está a menos 40% carga"><i class="fas fa-radiation"></i></span>`;
+                    } else if (diffPercentage >= 40 && diffPercentage < 75) {
+                        dangerIcon = `<span class="text-warning" title="Advertencia Crítica está entre 40 y 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+                    } else if (diffPercentage >= 75 && diffPercentage < 100) {
+                        dangerIcon = `<span class="text-primary" title="Advertencia Leve está a más 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+                    }
+
                     regionalCharts.innerHTML += `
                         <div class="col-md-3">
                             <div class="card">
                                 <div class="card-body">
+                                    <h5 class="card-title text-center">${item.region}</h5>
                                     <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
+                                    <p class="card-text text-center">
+                                        <strong>Total Ciclo Anterior: ${item.total_ant}</strong>
+                                    </p>
+                                    <p class="card-text text-center">
+                                        <strong>Total Ciclo Actual: ${item.total_ciclo_actual}</strong>
+                                    </p>
+                                    <p class="card-text text-center">
+                                        <strong>Total Regulares: ${item.total_act}</strong> ${dangerIcon}
+                                    </p>
                                 </div>
                             </div>
                         </div>`;
@@ -218,9 +301,7 @@
                 regionalCharts.classList.remove("d-none");
             })
             .catch(error => console.error("Error en la API:", error));
-
-        toggleView();
     });
 </script>
-
 {% endblock %}
+

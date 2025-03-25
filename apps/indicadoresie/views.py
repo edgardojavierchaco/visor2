@@ -2,6 +2,7 @@ from django.views.generic import ListView
 from django.db.models import Count, F, Value, Q
 from django.db.models.functions import Concat, Coalesce
 from .models import SeguimientoSIE2025, SIESegimiento
+from django.shortcuts import render
 
 class SeguimientoSIE2025ListView(ListView):
     model = SeguimientoSIE2025
@@ -46,3 +47,6 @@ class SeguimientoSIE2025ListView(ListView):
         context = super().get_context_data(**kwargs)
         context['seguimientos'] = self.get_queryset()
         return context
+
+def dashboard_prueba(request):
+    return render(request, "indicadoresie/dashboard_prueba.html")

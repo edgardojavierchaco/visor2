@@ -10,8 +10,8 @@ class SIESegimiento(models.Model):
     cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
     region=models.CharField(max_length=50, verbose_name='Regional')
     nivel=models.CharField(max_length=50, verbose_name='Nivel')
-    sieant=models.IntegerField(verbose_name='Sie_anterior')
-    sieact=models.IntegerField(verbose_name='Sie_actual')
+    sieant=models.IntegerField(verbose_name='Sie_anterior', db_column='SIE2024')
+    sieact=models.IntegerField(verbose_name='Sie_actual', db_column='SIE2025')
     dni_agente=models.CharField(max_length=8, verbose_name='DNI')
     id = models.AutoField(primary_key=True)
     
