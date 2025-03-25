@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 def conectar_bd(request):
     try:
         connection = psycopg2.connect(
-            host='sigechaco.com.ar',
+            host='relevamientoanual.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='visualizador',
@@ -108,7 +108,7 @@ def filter_data_cargos(request):
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=relevamientoanual.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -246,7 +246,7 @@ def filter_data_docentes(request):
                 FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=relevamientoanual.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
@@ -387,7 +387,7 @@ def filter_data_horas(request):
                 FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=sigechaco.com.ar port=5432',
+                        'dbname=Padron user=visualizador password=Estadisticas24 host=relevamientoanual.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,

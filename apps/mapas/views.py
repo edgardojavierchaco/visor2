@@ -27,7 +27,7 @@ def operaciones_comunes(request, template_name='publico/basecriterios.html'):
 
         # Conectarse a la base de datos
         connection = psycopg2.connect(
-            host='sigechaco.com.ar',            
+            host='relevamientoanual.com.ar',            
             user='visualizador',
             password='Estadisticas24',
             database='visualizador'
@@ -117,7 +117,7 @@ async def filtrar_tablas_view(request):
     # Establecer la conexión a la base de datos
     try:
         connection = await asyncpg.connect(
-            host='sigechaco.com.ar',
+            host='relevamientoanual.com.ar',
             user='visualizador',
             password='Estadisticas24',
             database='Padron'

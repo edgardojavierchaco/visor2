@@ -12,7 +12,7 @@ def obtener_cueanexo_y_id_establecimiento_por_usuario(usuario):
         dbname='Padron',
         user='visualizador',
         password='Estadisticas24',
-        host='sigechaco.com.ar',
+        host='relevamientoanual.com.ar',
         port='5432'
     )
 
@@ -38,7 +38,7 @@ def obtener_cueanexos_por_id_establecimiento(id_establecimiento):
             dbname='Padron',
             user='visualizador',
             password='Estadisticas24',
-            host='sigechaco.com.ar',
+            host='relevamientoanual.com.ar',
             port='5432'
         )
 
@@ -86,7 +86,7 @@ def obtener_ciclo_por_cueanexo(cueanexo):
             dbname='visualizador',
             user='visualizador',
             password='Estadisticas24',
-            host='sigechaco.com.ar',
+            host='relevamientoanual.com.ar',
             port='5432'
         )
 
@@ -135,7 +135,7 @@ def obtener_secciones_por_cueanexo_y_ciclo(cueanexo, ciclo_etapa):
             dbname='visualizador',
             user='visualizador',
             password='Estadisticas24',
-            host='sigechaco.com.ar',
+            host='relevamientoanual.com.ar',
             port='5432'
         )
 
@@ -166,7 +166,7 @@ def obtener_resultados_filtrados(nivel,cueanexo, ciclo_etapa,nom_seccion):
             dbname='visualizador',
             user='visualizador',
             password='Estadisticas24',
-            host='sigechaco.com.ar',
+            host='relevamientoanual.com.ar',
             port='5432'
         )
 

@@ -103,6 +103,7 @@ let misDatos = null;
                     feet: false,
                     shapeOptions: {
                         color: '#23bfc2'
+                        title: 'Polilínea'
                     },
                 },
                 locateButton: { // Agrega un botón personalizado
