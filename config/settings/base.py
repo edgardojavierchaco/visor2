@@ -61,7 +61,7 @@ LOCAL_APPS = [
     'apps.especial',
     'apps.infraestructura',
     'apps.indicadoresie',
-    
+    'apps.operativoschaco',
 ]
 
 
@@ -124,7 +124,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=indicadores,pem,cenpe,public,pof'
+            'options': '-c search_path=operativos,indicadores,pem,cenpe,public,pof'
         }
     }
 }

@@ -1,0 +1,73 @@
+{% load static %}
+
+<form method="post" action="{% url 'opechaca:respuesta_create' %}">
+    {% csrf_token %}
+    
+    {{ form.as_p }}
+    
+    <div class="form-group">
+        <label for="id_dni_alumno">DNI</label>
+        {{ form.dni_alumno }}
+    </div>
+    
+    <div class="form-group">
+        <label for="id_alumno_apellido">Apellido</label>
+        {{ form.alumno_apellido }}
+    </div>
+    
+    <div class="form-group">
+        <label for="id_alumno_nombre">Nombre</label>
+        {{ form.alumno_nombre }}
+    </div>
+    
+    <div class="form-group">
+        <label for="id_pregunta">Pregunta</label>
+        {{ form.pregunta }}
+    </div>
+    
+    <div class="form-group">
+        <label for="id_opcion">Opción</label>
+        {{ form.opcion }}
+    </div>
+
+    <div class="form-group">
+        <label for="id_categoria">Categoría</label>
+        {{ form.categoria }}
+    </div>
+
+    <div class="form-group">
+        <label for="id_subcategorias">Subcategorías</label>
+        {{ form.subcategorias }}
+    </div>
+
+    <div class="form-group">
+        <label for="id_puntaje">Puntaje</label>
+        {{ form.puntaje }}
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Guardar Respuesta</button>
+</form>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_dni_alumno').autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: '{% url "opechaca:alumno_autocomplete" %}',
+                    data: {
+                        'term': request.term
+                    },
+                    success: function(data) {
+                        response(data);
+                    }
+                });
+            },
+            minLength: 3,
+            select: function(event, ui) {
+                // Llenar los otros campos con la información seleccionada
+                $('#id_alumno_apellido').val(ui.item.apellido);
+                $('#id_alumno_nombre').val(ui.item.nombre);
+            }
+        });
+    });
+</script>

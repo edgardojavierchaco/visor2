@@ -169,8 +169,9 @@ class UEGPUpdateView(LoginRequiredMixin, UpdateView):
 
     def post(self, request, *args, **kwargs):
         try:
+            print(request.POST)
             action = request.POST.get('action')
-            if action == 'add':
+            if action == 'edit':
                 form = self.get_form()
                 if form.is_valid():
                     form.save()

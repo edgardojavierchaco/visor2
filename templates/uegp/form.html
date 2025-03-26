@@ -1,12 +1,15 @@
 {% extends 'uegp/layout.html' %}
 {% load widget_tweaks %}
+
 {% block head %}
     {% block head_form %}
-        
     {% endblock %}
 {% endblock %}
+
 {% block content %}
-    <form method="post" action="{% url 'privada:uegp_create' %}" enctype="multipart/form-data">
+    <form method="post" 
+          action="{% if action == 'edit' %}{% url 'privada:uegp_update' pk=form.instance.pk %}{% else %}{% url 'privada:uegp_create' %}{% endif %}" 
+          enctype="multipart/form-data">
         <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
@@ -15,7 +18,6 @@
                     {% else %}
                         <i class="fas fa-edit"></i>
                     {% endif %}
-
                     {{ title }}
                 </h3>
             </div>
@@ -37,7 +39,6 @@
                 {% endif %}
                 {% for field in form.visible_fields %}
                    {% if field.name == "subvencionado" %}
-                        <!-- Manejo especial para checkbox -->
                         <div class="form-group form-check">
                             <input type="hidden" name="{{ field.name }}" value="False">
                             <input type="checkbox" name="{{ field.name }}" id="{{ field.id_for_label }}" 
@@ -62,6 +63,7 @@
             </div>
         </div>
     </form>
+    
     <script>
         {% if form.errors %}
             var errors = '';
@@ -79,45 +81,38 @@
                 icon: 'error'
             });
         {% endif %}
-
-        
     </script>
-    <!-- Script para cargar cargos dinámicamente según el nivel-modalidad -->
+    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script type="text/javascript">
         $(document).ready(function () {
             $('#id_nivelmod').change(function () {
                 var nivelmod = $(this).val();
-
-                if (nivelmod) { // Verifica que se haya seleccionado un valor
+                if (nivelmod) {
                     $.ajax({
-                        url: "{% url 'privada:cargar_cargos' %}", // Verifica esta URL
-                        data: {
-                            'nivelmod': nivelmod
-                        },
+                        url: "{% url 'privada:cargar_cargos' %}",
+                        data: {'nivelmod': nivelmod},
                         dataType: 'json',
                         beforeSend: function () {
-                            $("#id_cargo").prop('disabled', true); // Deshabilita el campo mientras carga
+                            $("#id_cargo").prop('disabled', true);
                         },
                         success: function (data) {
                             $("#id_cargo").empty().append('<option value="">Seleccione un cargo</option>');
                             $.each(data, function (key, value) {
                                 $("#id_cargo").append('<option value="' + value.id + '">' + value.nombre + '</option>');
                             });
-                            $("#id_cargo").prop('disabled', false); // Habilita el campo tras cargar
+                            $("#id_cargo").prop('disabled', false);
                         },
                         error: function (xhr, status, error) {
-                            console.error("Error en la solicitud AJAX:", error);  // Mostrar error en la consola
-                            $("#id_cargo").prop('disabled', false); // Habilita el campo incluso en caso de error
+                            console.error("Error en la solicitud AJAX:", error);
+                            $("#id_cargo").prop('disabled', false);
                         }
                     });
                 } else {
                     $("#id_cargo").empty().append('<option value="">Seleccione un cargo</option>');
-                    $("#id_cargo").prop('disabled', true); // Deshabilita el campo si no hay selección válida
+                    $("#id_cargo").prop('disabled', true);
                 }
             });
         });
     </script>
 {% endblock %}
-
-<!---Verificaciones-->
