@@ -61,7 +61,7 @@ LOCAL_APPS = [
     'apps.especial',
     'apps.infraestructura',
     'apps.indicadoresie',
-    'apps.operativoschaco',
+    'apps.operachaco',
 ]
 
 

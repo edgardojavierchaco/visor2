@@ -153,7 +153,7 @@ class UGUpdateViewAdmin(LoginRequiredMixin, UpdateView):
     def post(self, request, *args, **kwargs):
         try:
             action = request.POST.get('action')
-            if action == 'add':
+            if action == 'edit':
                 form = self.get_form()
                 if form.is_valid():
                     form.save()

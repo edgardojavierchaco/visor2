@@ -6,7 +6,8 @@
     {% endblock %}
 {% endblock %}
 {% block content %}
-    <form method="post" action="{% url 'unidadgestion:ug_create_admin' %}" enctype="multipart/form-data">
+    <form method="post" action="{% if action == 'edit' %}{% url 'unidadgestion:ug_update_admin' pk=form.instance.pk %}{% else %}{% url 'unidadgestion:ug_create_admin' %}{% endif %}" 
+        enctype="multipart/form-data">
         <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">

@@ -56,8 +56,8 @@ urlpatterns = [
     path('indigena/',include('apps.intercultural.urls',namespace='indigena')),
     path('bbl/',include('apps.biblioteca.urls',namespace='bbl')),
     path('indic/',include('apps.indicadoresie.urls',namespace='indic')),
-    path('infra/',include('apps.infraestructura.urls',namespace='infra')),    
-    path('opechaca/',include('apps.operativoschaco.urls',namespace='opechaca')),
+    path('infra/',include('apps.infraestructura.urls',namespace='infra')), 
+    
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
