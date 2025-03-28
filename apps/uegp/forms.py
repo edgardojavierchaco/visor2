@@ -60,11 +60,14 @@ class PersonalDocUegpForm(forms.ModelForm):
     def save(self, commit=True):
         # Guardar el formulario con las posibles modificaciones
         instance = super().save(commit=False)
-        
+       
+        # Mantener el valor de cueanexo si ya existe
+        if not instance.cueanexo:
+            instance.cueanexo = self.initial.get('cueanexo', instance.cueanexo) 
+            
         # Guardar los datos si es necesario
         if commit:
-            instance.save()
-        
+            instance.save()            
         return instance
 
 
@@ -192,13 +195,14 @@ class PersonalNoDocUegpForm(ModelForm):
         }
     
     def save(self, commit=True):
-        data = {}
-        form = super()
-        try:
-            if form.is_valid():
-                form.save()
-            else:
-                data['error'] = form.errors
-        except Exception as e:
-            data['error'] = str(e)
-        return data
+        # Guardar el formulario con las posibles modificaciones
+        instance = super().save(commit=False)
+       
+        # Mantener el valor de cueanexo si ya existe
+        if not instance.cueanexo:
+            instance.cueanexo = self.initial.get('cueanexo', instance.cueanexo) 
+            
+        # Guardar los datos si es necesario
+        if commit:
+            instance.save()            
+        return instance

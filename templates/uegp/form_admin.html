@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-    <form method="post" action="{% if action == 'add' %}{% url 'privada:uegp_create_admin' %}{% else %}{% url 'privada:uegp_edit_admin' pk=object.pk %}{% endif %}" enctype="multipart/form-data">
+    <form method="post" action="{% if action == 'add' %}{% url 'privada:uegp_create_admin' %}{% else %}{% url 'privada:uegp_update_admin' pk=object.pk %}{% endif %}" enctype="multipart/form-data">
         <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
