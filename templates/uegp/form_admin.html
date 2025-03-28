@@ -79,35 +79,30 @@
     </script>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script type="text/javascript">
-        $(document).ready(function () {
-            $('#id_nivelmod').change(function () {
-                var nivelmod = $(this).val();
-                if (nivelmod) {
-                    $.ajax({
-                        url: "{% url 'privada:cargar_cargos' %}",
-                        data: { 'nivelmod': nivelmod },
-                        dataType: 'json',
-                        beforeSend: function () {
-                            $("#id_cargo").prop('disabled', true);
-                        },
-                        success: function (data) {
-                            var cargoSelect = $("#id_cargo");
-                            cargoSelect.empty().append('<option value="">Seleccione un cargo</option>');
-                            $.each(data, function (key, value) {
-                                cargoSelect.append('<option value="' + value.id + '">' + value.nombre + '</option>');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function cargarCargos(autoCargar = false) {
+                const nivelmod = document.getElementById('id_nivelmod').value;
+                if (nivelmod || autoCargar) {
+                    fetch("{% url 'privada:cargar_cargos' %}?nivelmod=" + nivelmod)
+                        .then(response => response.json())
+                        .then(data => {
+                            const cargoSelect = document.getElementById('id_cargo');
+                            cargoSelect.innerHTML = '<option value="">Seleccione un cargo</option>';
+                            data.forEach(item => {
+                                cargoSelect.innerHTML += `<option value="${item.id}">${item.nombre}</option>`;
                             });
-                            cargoSelect.prop('disabled', false);
-                        },
-                        error: function (xhr, status, error) {
-                            console.error("Error en AJAX:", error);
-                            $("#id_cargo").prop('disabled', false);
-                        }
-                    });
-                } else {
-                    $("#id_cargo").empty().append('<option value="">Seleccione un cargo</option>').prop('disabled', true);
+                            cargoSelect.disabled = false;
+                        })
+                        .catch(error => console.error('Error en la solicitud:', error));
                 }
-            });
+            }
+
+            document.getElementById('id_nivelmod').addEventListener('change', () => cargarCargos());
+
+            if (document.getElementById('id_nivelmod').value) {
+                cargarCargos(true);
+            }
         });
-    </script>
+    </script> 
 {% endblock %}

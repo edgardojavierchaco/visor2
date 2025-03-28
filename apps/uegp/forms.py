@@ -8,7 +8,11 @@ class PersonalDocUegpForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Enfocar en el campo 'T_DNI' al cargar el formulario
         self.fields['t_dni'].widget.attrs['autofocus'] = True
-
+        self.fields['f_nac'].initial = self.instance.f_nac
+        self.fields['f_designacion'].initial = self.instance.f_designacion
+        self.fields['f_desde'].initial = self.instance.f_desde
+        self.fields['f_hasta'].initial = self.instance.f_hasta
+            
         # Si se ha seleccionado un nivelmod, carga los niveles correspondientes
         if 'nivelmod' in self.data:
             try:
@@ -69,7 +73,10 @@ class PersonalNoDocUegpForm(ModelForm):
         super().__init__(*args, **kwargs)
         # Enfocar en el campo 'T_DNI' al cargar el formulario
         self.fields['t_dni'].widget.attrs['autofocus'] = True
-
+        self.fields['f_nac'].initial = self.instance.f_nac
+        self.fields['f_designacion'].initial = self.instance.f_designacion
+        self.fields['f_desde'].initial = self.instance.f_desde
+        self.fields['f_hasta'].initial = self.instance.f_hasta
     
     class Meta:
         model = PersonalNoDocUegp
