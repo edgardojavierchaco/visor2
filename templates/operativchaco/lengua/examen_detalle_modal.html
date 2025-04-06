@@ -1,0 +1,45 @@
+{% load custom_operativo %}
+
+<table class="table table-sm table-bordered">
+    <tbody>
+        <tr><th>DNI</th><td>{{ examen.dni }}</td></tr>
+        <tr><th>Apellidos</th><td>{{ examen.apellidos }}</td></tr>
+        <tr><th>Nombres</th><td>{{ examen.nombres }}</td></tr>
+        <tr><th>CUE</th><td>{{ examen.cueanexo }}</td></tr>
+        <tr><th>Región</th><td>{{ examen.region }}</td></tr>
+        <tr><th>Año</th><td>{{ examen.anio }}</td></tr>
+        <tr><th>División</th><td>{{ examen.division }}</td></tr>
+        <tr>
+            <th>Puntaje Total</th>
+            <td>
+                {% sum_items items examen as total_puntaje %}
+                {{ total_puntaje }}
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" class="text-end">
+                <a href="{% url 'operativ:exportar_pdf' examen.id %}" target="_blank" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+                </a>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<h5 class="mt-4">🧩 Ítems</h5>
+<table class="table table-bordered table-striped table-sm">
+    <thead>
+        <tr>
+            {% for i in items %}
+                <th>Item {{ i }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            {% for i in items %}
+                <td>{{ examen|get_item:i }}</td>
+            {% endfor %}
+        </tr>
+    </tbody>
+</table>

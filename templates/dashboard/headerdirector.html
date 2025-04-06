@@ -96,7 +96,21 @@
                             <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
                         </ul>
                     </li>
-                {% endif %}       
+                {% endif %}      
+                {% if comun_secundaria %}         
+                    <li class="nav-item dropdown">
+                        <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i>Operativos</a>
+                        <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                            <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
+                            <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
+                            <!-- Menú desplegable para "Resultados" -->                 
+                                                        
+                            <li><a href="{% url 'operative:dashboard' %}" class="dropdown-item">Carga de Exámenes</a></li>
+                            
+                        </ul>
+                    </li>
+                {% endif %}    
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Relevamiento</a>

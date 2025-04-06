@@ -1,0 +1,40 @@
+{% extends "operativoschaco/list.html" %}
+{% load custom_filters1 %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{{ title }}</h2>
+
+    {% if error %}
+        <div class="alert alert-warning">{{ error }}</div>
+    {% else %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Alumno</th>
+                        <th>CUE Anexo</th>
+                        <th>Región</th>
+                        {% for i in rango_preguntas %}
+                            <th>P{{ i }}</th>
+                        {% endfor %}
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alumno in alumnos_totales %}
+                        <tr>
+                            <td>{{ alumno.alumno }}</td>
+                            <td>{{ alumno.cueanexo }}</td>
+                            <td>{{ alumno.region }}</td>
+                            {% for i in rango_preguntas %}
+                                <td>{{ alumno.por_pregunta|get_item:"P"|add:i|default:"0.00" }}</td>
+                            {% endfor %}
+                            <td><strong>{{ alumno.total_general }}</strong></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -37,13 +37,16 @@ decorator==5.1.1
 dill==0.3.7
 distlib==0.3.7
 Django>=5.1.1
+djago-allouth
 django-appconf==1.0.6
 django-autocomplete-light==3.11.0
 django-bootstrap5==24.2
+django-cleanup
 django-cors-headers==4.2.0
 django-crispy-forms==2.0
 django-debug-toolbar==4.1.0
 django-extensions==3.2.3
+django-htmx
 django-redis==5.3.0
 django-select2==8.2.0
 django-stubs==4.2.3

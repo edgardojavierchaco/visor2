@@ -10,9 +10,7 @@ from apps.mapas.views2 import mapapuntos, obtenerdatos
 from apps.establecimientos.views import establecimientos
 from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
 from apps.unidadgestion import views_pers_doc_central
-from apps.operachaco.views import cargar_examen
-
-
+from apps.operativoschaco.views import guardar_examen, examen_guardado
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -57,7 +55,8 @@ urlpatterns = [
     path('bbl/',include('apps.biblioteca.urls',namespace='bbl')),
     path('indic/',include('apps.indicadoresie.urls',namespace='indic')),
     path('infra/',include('apps.infraestructura.urls',namespace='infra')), 
-    path('pregunta/', cargar_examen, name='op'),
+    path('pregunta/',include('apps.operativoschaco.urls',namespace='pregunta')), 
+    path('examendiag/',include('apps.operativchaco.urls',namespace='examendiag')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -26,7 +26,7 @@ class UsuariosVisualizadorAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Información Personal', {'fields': ('apellido', 'nombres', 'correo', 'telefono', 'nivelacceso')}),
-        ('Permisos', {'fields': ('activo', 'is_staff', 'is_superuser','groups')}),
+        ('Permisos', {'fields': ('activo', 'is_staff', 'is_superuser','groups','user_permissions')}),
     )
     add_fieldsets = (
         (None, {
@@ -35,7 +35,7 @@ class UsuariosVisualizadorAdmin(UserAdmin):
         }),
     )
     ordering = ('apellido', 'nombres')
-    filter_horizontal = ()
+    filter_horizontal = ('groups', 'user_permissions')
 
 
 class NivelAccesoAdmin(admin.ModelAdmin):

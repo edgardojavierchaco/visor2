@@ -1,0 +1,196 @@
+{% extends 'operativoschaco/layout.html' %}
+
+{% load static %}
+
+{% load widget_tweaks %}
+
+{% block content %}
+    <style>
+        select.form-select {
+            display: block;
+            width: 100%;
+            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #212529;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml;charset=UTF-8,..."); /* icono flecha Bootstrap */
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            appearance: none;
+        }
+        </style>
+    <div class="container mt-5">
+        <h1 class="mb-4 text-primary">Diagnóstico 2025 - Primera Año - Nivel Secundario</h1>
+
+        <h2 class="mb-4 text-black">Área Matemática</h2>
+
+        <form method="POST" class="card shadow p-4 border-0 rounded-3" id="formulario_examen">
+            {% csrf_token %}
+            
+            <!-- Datos del Alumno -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="dni_alumno" class="form-label">DNI Alumno</label>
+                    {{ form.dni_alumno|add_class:"form-control" }}
+                </div>
+                <div class="col-md-3">
+                    <label for="apellidos" class="form-label">Apellidos</label>
+                    {{ form.apellidos|add_class:"form-control" }}                    
+                </div>
+                <div class="col-md-3">
+                    <label for="nombres" class="form-label">Nombres</label>
+                    {{ form.nombres|add_class:"form-control" }}                    
+                </div>
+                <div class="col-md-3">
+                    <label for="cueanexo" class="form-label">Cueanexo</label>
+                    {{ form.cueanexo|add_class:"form-control" }}                    
+                </div>
+                <div class="col-md-3">
+                    <label for="anio" class="form-label">Año</label>
+                    {{ form.anio|add_class:"form-control" }}                    
+                </div>
+                <div class="col-md-3">
+                    <label for="division" class="form-label">División</label>
+                    {{ form.division|add_class:"form-control" }}                    
+                </div>
+            </div>
+
+            <!-- Preguntas y Categorías -->
+            {% for pregunta_data in preguntas_con_opciones %}
+            <div class="mb-4 p-3 border rounded-3 bg-light">
+                <h5 class="text-secondary">{{ pregunta_data.pregunta.descripcion }}</h5>
+
+                <div class="row">
+                    {% for categoria, opciones in pregunta_data.categorias_opciones.items %}
+                    <div class="col-md-6">
+                        <label class="form-label text-info">
+                            {% if categoria != 'sin_categoria' %}
+                                {% comment %} {{ categoria.nombre }} {% endcomment %}
+                            {% else %}
+                                {% comment %} Sin Categoría {% endcomment %}
+                            {% endif %}
+                        </label>
+                        
+                        <select name="preg_{{ pregunta_data.pregunta.id }}{% if categoria != 'sin_categoria' %}_cat_{{ categoria.id }}{% endif %}" class="form-select">
+                            <option value="" disabled selected>Seleccione una opción</option>
+                            {% for opcion in opciones %}
+                            <option value="{{ opcion.id }}">{{ opcion.descripcion }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary w-100 mt-3">Enviar</button>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function(){
+            $('#id_dni_alumno').on('keyup', function() {
+                let dni = $(this).val();
+
+                if (dni.length === 8) {
+                    $.ajax({
+                        url: "{% url 'operative:buscar_alumno' %}",
+                        data: { 'dni': dni },
+                        success: function(response) {
+                            console.log("Respuesta del servidor:", response); // ✅ Depuración
+                            
+                            if (!response.error) { // ✅ Si error es false, llena los campos
+                                $('#id_apellidos').val(response.apellidos).prop('readonly', true);
+                                $('#id_nombres').val(response.nombres).prop('readonly', true);
+                                $('#id_cueanexo').val(response.cueanexo).prop('readonly', true);
+                                $('#id_anio').val(response.anio).prop('readonly', true);
+                                $('#id_division').val(response.division).prop('readonly', true);
+                            } else {
+                                // Mostrar mensaje de que el alumno puede ser agregado
+                                Swal.fire({
+                                    title: 'Alumno no encontrado',
+                                    text: 'No se encontró un alumno con ese DNI. Puede agregarlo manualmente',
+                                    icon: 'warning',
+                                    confirmButtonText: 'Aceptar'
+                                });
+                                // Desbloquear los campos para que el usuario los complete
+                                $('#id_apellidos').val('').prop('readonly', false);
+                                $('#id_nombres').val('').prop('readonly', false);
+                                $('#id_cueanexo').val('').prop('readonly', false);
+                                $('#id_anio').val('').prop('readonly', false);
+                                $('#id_division').val('').prop('readonly', false);
+                            }
+                        }
+                    });
+                } else {
+                    // Limpiar y desbloquear campos si el DNI no es válido
+                    $('#id_apellidos').val('').prop('readonly', false);
+                    $('#id_nombres').val('').prop('readonly', false);
+                    $('#id_cueanexo').val('').prop('readonly', false);
+                    $('#id_anio').val('').prop('readonly', false);
+                    $('#id_division').val('').prop('readonly', false);
+                }
+            });
+
+            $('form').on('submit', function(event) {
+                event.preventDefault();
+
+                // Variables para verificar campos
+                let isValid = true;
+                let errorMessage = "";
+
+                // Verificar que todos los campos estén completos
+                $('#formulario_examen .form-control').each(function(){
+                    if ($(this).val() === '') {
+                        $(this).css('border', '2px solid red');
+                        isValid = false;
+                    } else {
+                        $(this).css('border', ''); // Remover el borde rojo si está completo
+                    }
+                });
+
+                // Verificar si alguna opción de las preguntas no ha sido seleccionada
+                $('select').each(function(){
+                    if ($(this).val() === null || $(this).val() === '') {
+                        $(this).css('border', '2px solid red');
+                        isValid = false;
+                    } else {
+                        $(this).css('border', ''); // Remover el borde rojo si se seleccionó una opción
+                    }
+                });
+
+                if (!isValid) {
+                    errorMessage = "Por favor complete todos los campos marcados.";
+                    Swal.fire({
+                        title: 'Error',
+                        text: errorMessage,
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar'
+                    });
+                    return false;
+                }
+
+                // Confirmación antes de enviar el formulario
+                Swal.fire({
+                    title: '¿Confirmar envío?',
+                    text: '¿Está seguro de que desea enviar el examen?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, enviar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        event.target.submit();
+                    }
+                });
+            });
+        });
+    </script>
+
+{% endblock %}

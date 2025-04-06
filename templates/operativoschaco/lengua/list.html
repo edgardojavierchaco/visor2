@@ -1,0 +1,26 @@
+{% extends 'operativoschaco/list.html' %}
+{% load static %}
+
+{% block head_list %}
+    <script src="{% static 'operativoschaco/lengua/js/list.js' %}"></script>
+{% endblock %}
+
+{% comment %} {% block content %}  
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'operative:exportar_excel' %}" class="btn btn-success me-2">📊 Exportar a Excel</a>
+        
+    </div> {% endcomment %}
+    {% block columns %}
+            <tr>
+                <th>DNI</th>
+                <th>Apellidos</th>
+                <th>Nombres</th>
+                {% for categoria in categorias %}
+                    <th>{{ categoria.nombre }}</th>
+                {% endfor %}
+                <th>Otros</th>
+                <th>Total</th>
+            </tr>
+    {% endblock %}
+{% comment %} {% endblock %} {% endcomment %}
+

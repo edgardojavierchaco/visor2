@@ -102,9 +102,14 @@ def filtrar_tablas_view_directores(request):
     print('ofertas:', resultados3)
     
     # Verificamos si "Bibliotecas" está en las ofertas
-    tiene_bibliotecas = any(oferta['acronimo_oferta'].startswith('BI') for oferta in resultados3)
+    tiene_bibliotecas = any(
+        oferta and oferta.get('acronimo_oferta') and oferta['acronimo_oferta'].startswith('BI')
+        for oferta in resultados3
+    )
     
     comun_primaria=any(oferta['oferta']=='Común - Primaria de 7 años ' for oferta in resultados3)
+    
+    comun_secundaria=any(oferta['oferta']=='Común - Secundaria Completa req. 7 años ' for oferta in resultados3)
     
     # Verificamos si "Privado" está en las ofertas
     privado = any(oferta['sector'] == 'Privado' for oferta in resultados3)
@@ -117,9 +122,11 @@ def filtrar_tablas_view_directores(request):
         'tiene_bibliotecas': tiene_bibliotecas,
         'comun_primaria': comun_primaria,
         'privado': privado,
+        'comun_secundaria': comun_secundaria,
     }
     print(comun_primaria, 'tiene biblio:',tiene_bibliotecas)
-    return render(request, 'directores/institucional.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3, 'tiene_bibliotecas': tiene_bibliotecas, 'privado': privado, 'comun_primaria':comun_primaria})
+    print('secundaria',comun_secundaria)
+    return render(request, 'directores/institucional.html', {'resultados': resultados, 'resultados1': resultados1, 'resultados2': resultados2, 'resultados3': resultados3, 'tiene_bibliotecas': tiene_bibliotecas, 'privado': privado, 'comun_primaria':comun_primaria, 'comun_secundaria':comun_secundaria})
 
 
 @login_required

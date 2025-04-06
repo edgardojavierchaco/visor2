@@ -1,0 +1,31 @@
+<h2>📝 Detalle del Examen</h2>
+
+<p><strong>DNI:</strong> {{ examen.dni }}</p>
+<p><strong>Apellidos:</strong> {{ examen.apellidos }}</p>
+<p><strong>Nombres:</strong> {{ examen.nombres }}</p>
+<p><strong>CUE:</strong> {{ examen.cueanexo }}</p>
+<p><strong>Región:</strong> {{ examen.region }}</p>
+<p><strong>Año:</strong> {{ examen.anio }}</p>
+<p><strong>División:</strong> {{ examen.division }}</p>
+
+<h3>🧩 Ítems</h3>
+<ul>
+    <li>Item 1: {{ examen.p1 }}</li>
+    <li>Item 2: {{ examen.p2 }}</li>
+    <li>Item 3: {{ examen.p3 }}</li>
+    <li>Item 4: {{ examen.p4 }}</li>
+    <li>Item 5: {{ examen.p5 }}</li>
+    <li>Item 6: {{ examen.p6 }}</li>
+    <li>Item 7: {{ examen.p7 }}</li>
+    <li>Item 8: {{ examen.p8 }}</li>
+    <li>Item 9: {{ examen.p9 }}</li>
+    <li>Item 10: {{ examen.p10 }}</li>
+    <li>Item 11: {{ examen.p11 }}</li>
+    <li>Item 12: {{ examen.p12 }}</li>
+    <li>Item 13: {{ examen.p13 }}</li>
+    <li>Item 14: {{ examen.p14 }}</li>
+    <li>Item 15: {{ examen.p15 }}</li>
+    <li>Item 16: {{ examen.p16 }}</li>
+</ul>
+
+<a href="{% url 'operativ:examen_lengua_listado' %}">⬅ Volver al listado</a>

@@ -4,6 +4,7 @@ volumes:
   production_postgres_data_visor: {}
   production_postgres_data_backups_visor: {}
   production_traefik_visor: {}
+  production_media_visor: {}
   
 
 services:
@@ -19,6 +20,7 @@ services:
       - ./.env  
     volumes:
       - ./productionfiles:/app/productionfiles 
+      - production_media_visor:/app/media
     command: /start        
 
   postgres:

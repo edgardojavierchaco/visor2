@@ -123,7 +123,7 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
     def toJSON(self):
         item = model_to_dict(self, exclude=['user_permissions','last_login', 'date_joined', 'activo', 'is_superuser', 'is_active', 'is_staff'])
         item['nivelacceso']=self.nivelacceso.tacceso
-        item['groups'] = self.groups.name
+        item['groups'] = [group.name for group in self.groups.all()]
         item['activo']=self.activo
         item['is_staff']=self.is_staff
         item['is_superuser']=self.is_superuser
