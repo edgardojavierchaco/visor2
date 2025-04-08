@@ -11,8 +11,8 @@ import nltk
 nltk.download('punkt')
 from nltk.stem import SnowballStemmer
 import unicodedata
-
-
+from sentence_transformers import SentenceTransformer, util
+import torch
 
 nlp = spacy.load("es_core_news_sm")
 stemmer = SnowballStemmer("spanish")
@@ -36,7 +36,7 @@ palabras_clave = {
         "ámbito educativo", "tipo de ámbito", "ambito de gestión"],
     "etiqueta": ["etiqueta", "denominación"],
     "oferta": ["primaria", "primarias", "secundaria", "secundarias", "inicial", "snu", "adulto","adultos", "especial", "servicio complementario", "servicios complementarios","Formación Profesional", "FP", "terciario", "superior", "profesorado", "media", "polimodal",
-               "Fromacion Profesional", "formacion profesional", "educación especial", "educacion especial", "educacion de adultos", "educacion para adultos", "educacion de jovenes y adultos", "educacion para jovenes y adultos"],
+               "Fromacion Profesional", "formacion profesional", "educación especial", "educacion especial", "educacion de adultos", "educacion para adultos", "educacion de jovenes y adultos", "educacion para jovenes y adultos","jardín", "jardin", "jardin maternal", "jardin de infantes", "jardin maternal", "educación integral", "educacion integral", "cursos", "talleres", "integración", "integracion"],
     "cui_loc": ["cui_loc", "cuiloc", "cuiloc", "cui"],
     "cueanexo": ["cueanexo", "cue"],
     "nom_est": ["nombre", "nombre de la escuela", "nombre de la institución", 
@@ -90,6 +90,47 @@ def normalizar_region(region_tokens):
     elif len(parts) == 2 and parts[1].isdigit():
         return f"R.E. {parts[1]}"
     return region_text
+
+
+# Modelo multilingüe compatible con español
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+
+# Frases de referencia por categoría
+frases_referencia = {
+    "Común - Jardín": "escuela jardín o nivel inicial",
+    "Común - primaria": "escuela de educación primaria común",
+    "Común - secundaria": "escuela secundaria común",
+    "Común - SNU": "educación superior, terciario o profesorado",
+    "especial": "educación especial",
+    "Adultos - Primaria": "escuela para adultos con nivel primario",
+    "Adultos - Secundaria": "escuela para adultos con nivel secundario",
+    "Adultos - Formación Profesional": "formación profesional para adultos",
+    "Común - Servicios": "servicio complementario o biblioteca",
+    "Especial - Integración": "integración escolar especial",
+    "Especial - Cursos": "cursos o talleres especiales",
+    "Especial - Domiciliaria": "educación domiciliaria o hospitalaria",
+    "Espacial - Jardín": "jardín especial",
+    "Espacial - Primaria": "primaria especial",
+    "Especial - Taller": "taller especial",
+    "Especial - Educacion": "educación integral especial",
+}
+
+def normalizar_semantico_topn(consulta, top_n=1, umbral=0.6):
+    consulta_emb = model.encode(consulta, convert_to_tensor=True)
+    frases_emb = model.encode(list(frases_referencia.values()), convert_to_tensor=True)
+
+    scores = util.pytorch_cos_sim(consulta_emb, frases_emb)[0]
+    top_resultados = torch.topk(scores, k=top_n)
+
+    resultados = []
+    for idx, score in zip(top_resultados.indices, top_resultados.values):
+        if score.item() >= umbral:
+            categoria = list(frases_referencia.keys())[idx]
+            resultados.append((categoria, score.item()))
+
+    return resultados
+
+
 
 def extraer_criterios(consulta):
     criterios = {}
@@ -154,15 +195,22 @@ def extraer_criterios(consulta):
     consulta_normalizada = normalizar_texto(consulta)
     OFERTA_KEYWORDS = {
         "Común - Jardín": ["inicial", "jardín", "jardin", "jardin maternal", "jardin de infantes", "jardin maternal"],
-        "Común - Primaria": ["primaria", "escuela primaria", "escuela de educación primaria", "educación primaria", "primarias"],
-        "Común - Secundaria": ["secundaria", "media", "polimodal", "secundarias", "escuela secundaria", "escuela de educación secundaria", "educación secundaria"],
+        "Común - primaria": ["primaria", "escuela primaria", "escuela de educación primaria", "educación primaria", "primarias"],
+        "Común - secundaria": ["secundaria", "media", "polimodal", "secundarias", "escuela secundaria", "escuela de educación secundaria", "educación secundaria"],
         "Común - SNU": ["terciario", "superior", "profesorado","educación superior", "educacion superior", "educacion terciaria", "terciaria"],
         "especial": ["especial", "educación especial", "educacion especial", "educación integral", "educacion integral","cursos","talleres","integración","integracion"],
-        "Adultos - Formación Profesional": ["formación profesional", "fp", "formacion profesional", "formacion profesional de adultos", "formacion profesional para adultos"],
-        "Adultos - Primaria":["adultos primaria", "adulto primaria","educación primaria de adultos", "educacion primaria de adultos", "primaria para adultos"],
-        "Adultos - Secundaria Completa": ["adultos secundaria", "adulto secundaria", "secundaria para adultos", "educación secundaria de adultos", "educacion secundaria de adultos"],
-        "Servicios Complementarios": ["servicio complementario", "servicios complementarios", "servicios complementarios de educación", "servicios complementarios de educacion"],
-    }
+        "Adultos - Primaria": ["adultos primaria", "adulto primaria", "educación de adultos primaria", "educacion de adultos primaria", "educacion para adultos primaria", "educacion de jovenes y adultos primaria", "educacion para jovenes y adultos primaria"],
+        "Adultos - Secundaria": ["adultos secundarias", "adulto secundaria", "educación de adultos secundaria", "educacion de adultos secundaria", "educacion para adultos secundaria", "educacion de jovenes y adultos secundaria", "educación para jovenes y adultos secundaria"],
+        "Adultos - Formación Profesional": ["adultos formacion profesional", "adulto formacion profesional", "educación de adultos formacion profesional", "educacion de adultos formacion profesional", "educacion para adultos formacion profesional", "educacion de jovenes y adultos formacion profesional", "educación para jovenes y adultos formacion profesional", "formación profesional", "formacion profesional"],
+        "Común - Servicios": ["Biblioteca", "biblioteca", "bibliotecas","servicios", "servicio" "servicio complementario", "servicios complementarios"],
+        "Especial - Integración": ["integracion", "especial integración","especial integracion"],
+        "Especial - Cursos":["cursos especial", "talleres especial", "especial cursos", "especial talleres"],
+        "Especial - Domiciliaria": ["especial domiciliaria", "domiciliaria especial", "domiciliaria", "hospitalaria", "hospitalaria especial"],
+        "Espacial - Jardín":["jardin especial", "jardin maternal especial", "jardin de infantes especial", "jardin maternal especial"],
+        "Espacial - Primaria":["primaria especial", "escuela primaria especial", "escuela de educación primaria especial", "educación primaria especial"],
+        "Especial - Taller":["talleres especial", "taller especial", "talleres de educación especial", "taller de educación especial"],
+        "Especial - Educacion":["educacion integral", "especial educacion integral"],
+    }   
 
     KEYWORD_TO_SQL = {
         palabra: nivel for nivel, palabras in OFERTA_KEYWORDS.items() for palabra in palabras
@@ -171,6 +219,14 @@ def extraer_criterios(consulta):
     for palabra in consulta_normalizada.split():
         if palabra in KEYWORD_TO_SQL:
             criterios.setdefault("oferta", []).append(KEYWORD_TO_SQL[palabra])
+            
+    
+    # ✅ Normalización semántica si no se detectó oferta con keywords
+    if "oferta" not in criterios:
+        resultado_semantico = normalizar_semantico_topn(consulta, top_n=1, umbral=0.6)
+        if resultado_semantico:
+            categoria_detectada, score = resultado_semantico[0]
+            criterios.setdefault("oferta", []).append(categoria_detectada)
             
     return criterios
 
@@ -251,7 +307,7 @@ def operaciones_comunes(request, template_name='mapa/ofertasmark.html'):
         'data_json': json.dumps(filtered_rows),
         'column_names_json': json.dumps(column_names)
     }
-    
+    print(context)
     return context
     
 
