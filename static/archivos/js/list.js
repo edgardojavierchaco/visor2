@@ -28,7 +28,7 @@ $(function () {
             render: function (data, type, row) {
                 var buttons = '<a href="../editar/' + row.id + '/" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-edit"></i></a> ';
                 buttons += '<a href="../eliminar/' + row.id + '/" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash-alt"></i></a>';
-                buttons += '<button type="button" class="btn btn-info btn-xs btn-flat view-pdf" data-cueanexo="' + row.cueanexo + '" data-asunto="' + row.asunto + '"><i class="fas fa-file-pdf"></i></button>';
+                buttons += '<button type="button" class="btn btn-info btn-xs btn-flat view-pdf" data-id="' + row.id + '"><i class="fas fa-file-pdf"></i></button>'; 
                 return buttons;
             }
         }],
@@ -39,10 +39,11 @@ $(function () {
 
     // Evento para ver PDF
     $('#data tbody').on('click', 'button.view-pdf', function () {
-        let cueanexo = $(this).data('cueanexo');
-        let asunto = $(this).data('asunto');
+        //let cueanexo = $(this).data('cueanexo');
+        //let asunto = $(this).data('asunto');
+        let id=$(this).data('id');
 
-        $.post("/cargar/buscar/", { action: 'buscar_pdf', cueanexo: cueanexo, asunto: asunto }, function (response) {
+        $.post("/cargar/buscar/", { action: 'buscar_pdf_por_id', id:id }, function (response) {
             if (response.ruta_pdf) {
                 window.open(response.ruta_pdf, '_blank');
             } else {

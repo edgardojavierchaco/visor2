@@ -12,7 +12,10 @@ from .forms import PersonalDocUegpForm, PersonalNoDocUegpForm
 from .models import PersonalDocUegp, PersonalNoDocUegp
 from django.shortcuts import get_object_or_404
 from apps.usuarios.models import UsuariosVisualizador
+from utils.decorators import habilitado_despues_de_evento
 
+
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPListViewAdmin(LoginRequiredMixin, ListView):
     """
     Vista para listar PersonalNoDocUegp filtrados por la regional del usuario logueado.
@@ -98,7 +101,7 @@ class UEGPListViewAdmin(LoginRequiredMixin, ListView):
         context['entity'] = 'Personal No Docente'
         return context
 
-
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPCreateViewAdmin(LoginRequiredMixin, CreateView):
     model = PersonalNoDocUegp
     form_class = PersonalNoDocUegpForm
@@ -142,7 +145,7 @@ class UEGPCreateViewAdmin(LoginRequiredMixin, CreateView):
         context['action'] = 'add'
         return context
 
-
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPUpdateViewAdmin(LoginRequiredMixin, UpdateView):
     model = PersonalNoDocUegp
     form_class = PersonalNoDocUegpForm
@@ -179,7 +182,7 @@ class UEGPUpdateViewAdmin(LoginRequiredMixin, UpdateView):
         context['action'] = 'edit'
         return context
 
-
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPDeleteViewAdmin(LoginRequiredMixin, DeleteView):
     model = PersonalNoDocUegp
     template_name = 'uegp/pers_no_doc_uegp/delete_admin.html'

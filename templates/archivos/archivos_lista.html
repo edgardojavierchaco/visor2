@@ -35,7 +35,7 @@
             </thead>
             <tbody>
                 {% for u in archivos %}
-                    <tr>
+                    <tr data-id="{{ u.id }}">
                         <td>{{ u.id }}</td>
                         <td>{{ u.cueanexo }}</td>
                         <td>{{ u.asunto }}</td>
@@ -59,15 +59,15 @@
         $(document).ready(function() {
             // Manejo de evento para el botón btn-search
             $(document).on('click', '.btn-search', function() {
-                var cueanexo = $(this).closest('tr').find('td:eq(1)').text(); // Índice 1 para la columna cueanexo
-                var asunto = $(this).closest('tr').find('td:eq(2)').text(); // Índice 2 para la columna asunto
-                
+                var id = $(this).closest('tr').data('id'); // ID del registro 
+                console.log("ID que se envía:", id);
+
                 $.ajax({
                     type: 'POST',
                     url: '{% url "archivos:buscar" %}',
                     data: {
-                        'cueanexo': cueanexo,
-                        'asunto': asunto,
+                        'action': 'buscar_pdf_por_id',
+                        'id': id,                        
                         'csrfmiddlewaretoken': '{{ csrf_token }}'
                     },
                     success: function(response) {
@@ -76,7 +76,7 @@
                         } else {
                             Swal.fire({
                                 title: 'Error',
-                                text: response.error,
+                                text: response.error||"No se encontró el archivo PDF.",
                                 icon: 'error',
                                 confirmButtonText: 'Cerrar'
                             });

@@ -53,7 +53,7 @@
                         <li><a href="{% url 'directores:matricula' %}" class="dropdown-item">Matrícula</a></li>
                     </ul>
                 </li>
-                <li class="nav-item dropdown">
+                {% comment %} <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Indicadores</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
@@ -62,7 +62,7 @@
                         <li><a href="{% url 'indicadores:efectiva' %}" class="dropdown-item">Tasa Efectiva-Abandono-Repitencia</a></li>
                         <li><a href="{% url 'indicadores:sobreedad' %}" class="dropdown-item">Tasa Sobreedad</a></li> 
                     </ul>
-                </li>       
+                </li>   {% endcomment %}     
                 {% if comun_primaria %}         
                     <li class="nav-item dropdown">
                         <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"

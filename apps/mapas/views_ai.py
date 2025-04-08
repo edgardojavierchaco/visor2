@@ -7,310 +7,171 @@ from django.db import connection
 from sklearn.linear_model import SGDClassifier
 from sklearn.feature_extraction.text import CountVectorizer
 from .models import Interaccion
+import nltk
+nltk.download('punkt')
+from nltk.stem import SnowballStemmer
+import unicodedata
 
 
-# Carga el modelo de spaCy una vez
+
 nlp = spacy.load("es_core_news_sm")
+stemmer = SnowballStemmer("spanish")
 
-# Inicializar vectorizador y clasificador de aprendizaje incremental
 vectorizer = CountVectorizer()
-model = SGDClassifier(loss="log_loss")  # Clasificación binaria con regresión logística
+model = SGDClassifier(loss="log_loss")
 
-# Datos de entrenamiento iniciales
 X_train = []
 y_train = []
 
+palabras_clave = {
+    "departamento": ["departamento", "departamentos", "en el departamento", "del departamento", 
+        "depto", "depto.", "en depto", "departamento de", "zona"],
+    "localidad": ["localidad", "localidades", "localidad de", "localidad en", "localidad en la"],
+    "calle": ["calle", "avenida", "av", "en la calle", "sobre la calle", "ubicado en la calle", 
+        "domicilio", "dirección", "direccion", "direccion escolar", "nombre de la calle"],
+    "region": ["región", "regional", "subregional", "subreg", "sub"],
+    "sector": ["sector", "sectores", "en el sector", "del sector", "sector educativo", 
+        "sector de gestión", "tipo de gestión"],
+    "ambito": ["ámbito", "ambito", "ámbitos", "ambitos", "en el ámbito", "en el ambito", 
+        "ámbito educativo", "tipo de ámbito", "ambito de gestión"],
+    "etiqueta": ["etiqueta", "denominación"],
+    "oferta": ["primaria", "primarias", "secundaria", "secundarias", "inicial", "snu", "adulto","adultos", "especial", "servicio complementario", "servicios complementarios","Formación Profesional", "FP", "terciario", "superior", "profesorado", "media", "polimodal",
+               "Fromacion Profesional", "formacion profesional", "educación especial", "educacion especial", "educacion de adultos", "educacion para adultos", "educacion de jovenes y adultos", "educacion para jovenes y adultos"],
+    "cui_loc": ["cui_loc", "cuiloc", "cuiloc", "cui"],
+    "cueanexo": ["cueanexo", "cue"],
+    "nom_est": ["nombre", "nombre de la escuela", "nombre de la institución", 
+        "nombre de la institucion", "nombre de la institución educativa", 
+        "nombre de la institucion educativa", "escuela", "nombre oficial", 
+        "nombre completo", "establecimiento", "nombre del establecimiento"],
+}
+
+lista_localidades = [
+    "Avia Terai", "Barranqueras", "Basail", "Campo Largo", "Capitan Solari", "Charadai", "Charata", "Chorotis",
+    "Ciervo Petiso", "Colonia Aborigen", "Napalpi", "Colonia Baranda", "Colonia Benitez", "Colonia Elisa",
+    "Colonia Popular", "Colonias Unidas", "Concepcion del Bermejo", "Coronel Du Graty", "Corzuela", "Cote Lai",
+    "El Espinillo", "El Sauzalito", "Enrique Urien", "Fontana", "Fuerte Esperanza", "Gancedo", "General Capdevila",
+    "General San Martin", "General Jose de San Martin", "San Martin", "General Pinedo", "General Vedia",
+    "Hermoso Campo", "Isla del Cerrito", "Juan Jose Castelli", "La Clotilde", "La Eduvigis", "La Escondida",
+    "La Leonesa", "La Tigra", "La Verde", "Laguna Blanca", "Laguna Limpia", "Lapachito", "Las Breñas",
+    "Las Garcitas", "Las Palmas", "Los Frentones", "Machagai", "Makallé", "Margarita Belén", "Miraflores",
+    "Napenay", "Nueva Pompeya", "Pampa Almirón", "Pampa del Indio", "Pampa del Infierno", "Presidencia de la Plaza",
+    "Presidencia Roca", "Presidencia Roque Sáenz Peña", "Sáenz Peña", "Puerto Bermejo", "Puerto Bermejo Nuevo",
+    "Puerto Bermejo Viejo", "Puerto Eva Perón", "Puerto Tirol", "Puerto Vilelas", "Quitilipi", "Resistencia",
+    "Río Muerto", "Samuhú", "San Bernardo", "Santa Sylvina", "Taco Pozo", "Tres Isletas", "Villa Ángela",
+    "Villa Berthet", "Villa Rio Bermejito",
+]
+
+intenciones_comunes = {
+    "buscar_escuelas": ["mostrar", "mostrame", "ver", "buscar", "buscame", "escuela", "escuelas", "quiero", "necesito", "consultar"],
+    "ver_estadisticas": ["estadísticas", "gráficos", "informes", "ver"],
+    "mostrar_mapa": ["mapa", "ubicación", "ver"],
+    "consultar_region": ["región", "regional", "zona"],
+}
+
+def normalizar_texto(texto):
+    texto = texto.lower()
+    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode("utf-8")
+    texto = texto.replace("n°", "nro").replace("nº", "nro").replace("numero", "nro").replace("°", "")
+    texto = re.sub(r"[\.\,]", "", texto)
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return texto
 
 def normalizar_region(region_tokens):
-    """
-    Convierte una entrada de región en el formato estándar R.E. X-Y
-    """
     if not region_tokens:
         return None
-    
     region_text = " ".join(region_tokens).upper()
-    region_text = region_text.replace("REGION", "R.E.")
-    region_text = region_text.replace("REGIONAL", "R.E.")
-    region_text = region_text.replace("SUBREGIONAL", "SUB.R.E.")
-    region_text = region_text.replace("SUB REG", "SUB. R.E.")
+    region_text = region_text.replace("REGION", "R.E.").replace("REGIONAL", "R.E.")
+    region_text = region_text.replace("SUBREGIONAL", "SUB. R.E.").replace("SUB REG", "SUB. R.E.")
     region_text = region_text.replace("SUB.", "SUB. R.E.")
-    
+
     parts = region_text.split()
     if len(parts) >= 3 and parts[1].isdigit() and parts[2].isalpha():
         return f"R.E. {parts[1]}-{parts[2]}"
     elif len(parts) == 2 and parts[1].isdigit():
         return f"R.E. {parts[1]}"
-    
     return region_text
 
 def extraer_criterios(consulta):
-    if not consulta:
-        return {}  # Retorna un diccionario vacío si no hay consulta
-    
+    criterios = {}
+    palabras_usadas = set()
     doc = nlp(consulta.lower())
-    print("Entidades detectadas:", [(ent.text, ent.label_) for ent in doc.ents]) 
-    print("Tokens detectados:", [token.text for token in doc])
-    
-    
-    criterios = {
-        "cueanexo": None, "ambito": None, "sector": None, "region_loc": None,
-        "departamento": None, "localidad": None, "oferta": None, "calle": None,
-        "cui": None, "etiqueta": None, "acronimo": None
-    }
-    
-    palabras_clave = {
-        "oferta": ["oferta", "ofertas"],
-        "localidad": ["localidad", "localidades", "localidad de"],
-        "sector": ["sector", "sectores"],
-        "ambito": ["ambito", "ámbito", "ambitos", "ámbitos", "en el ambito"],
-        "calle": ["calle","en la calle", "sobre la calle"],
-        "etiqueta": ["nombre", "escuela"],
-        "region_loc": ["región", "region", "en la regional", "en region", "en la region","regional", "Subregional", "subregional", "Sub.", "sub.", "sub", "Sub", "Sub. reg", "sub. reg", "Sub reg"],
-        "departamento": ["departamento", "departamentos"],
-        "cueanexo":["cueanexo", "cueanexos", "cue"],
-        "acronimo":["buscar", "buscame", "encontrame", "encontrar","mostrar", "mostrame", "mostrame en el mapa"]
-    }
-    
 
-    palabras = [token.text.lower() for token in doc]
-    print("Palabras clave encontradas:", palabras)
-    
+    EXCLUIR_ENTIDADES = ["escuela", "ees", "epa", "eet", "esja", "epja", "epg", "epgs", "epgc", "uegp", "n°", "nro", "número"]
+    palabras_clave_institucionales = set(EXCLUIR_ENTIDADES)
+
+    for ent in doc.ents:
+        texto = ent.text.strip().lower()
+        if ent.label_ in ["GPE", "LOC"]:
+            criterios.setdefault("localidad", []).append(ent.text)
+        elif ent.label_ == "ORG":
+            if not any(p in texto for p in EXCLUIR_ENTIDADES):
+                criterios.setdefault("etiqueta", []).append(ent.text)
+
+    for palabra in ["privado", "pública", "publico", "privada", "publica", "social", "cooperativo", "social/cooperativo"]:
+        if palabra in consulta and palabra not in palabras_usadas:
+            criterios.setdefault("sector", []).append("privado" if "privad" in palabra else "público")
+            palabras_usadas.add(palabra)
+
+    for palabra in ["rural", "urbano"]:
+        if palabra in consulta and palabra not in palabras_usadas:
+            criterios.setdefault("ambito", []).append(palabra)
+            palabras_usadas.add(palabra)
+
+    region_match = re.search(r'(sub(?:\.?\s*r(?:\.?\s*e)?)?|subre)?\.?\s*reg(?:[ií]on|\.?)?(?:\s+educativa)?\.?\s*(\d{1,2})(-[a-zA-Z])?', consulta)
+    if region_match:
+        es_sub, numero, letra = region_match.group(1), region_match.group(2), region_match.group(3)
+        letra = letra.upper() if letra else ""
+        region_valor = f"SUB. R.E. {numero}{letra}" if es_sub else f"{numero}{letra}"
+        criterios["region_loc"] = [region_valor]
+
+    for localidad in lista_localidades:
+        if re.search(rf'\b{re.escape(localidad.lower())}\b', consulta.lower()) and localidad.lower() not in palabras_clave_institucionales:
+            criterios.setdefault("localidad", []).append(localidad)
+
+    inverso_claves = {
+        stemmer.stem(pal.lower()): clave
+        for clave, palabras in palabras_clave.items()
+        for pal in palabras
+    }
+
+    palabras = re.findall(r'\w+', consulta.lower())
     i = 0
     while i < len(palabras):
         palabra = palabras[i]
-        
-        if palabra in palabras_clave["region_loc"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "region_loc"):
-                valor.append(palabras[i])
-                i += 1
-                
-            # normalización de la región    
-            region_normalizada = normalizar_region(valor)
-            print("Valor antes de normalizar:", valor)  # Para verificar qué estás obteniendo en 'valor'
-            print("Región normalizada:", region_normalizada) 
-            
-            if region_normalizada:  # Aseguramos que no es None
-                # Verificamos si hay un "y" y lo usamos para dividir correctamente
-                region_normalizada = region_normalizada.lower()
-                regiones = [reg.strip() for reg in region_normalizada.split(" y ")]
-                
-                # Si hay más de una región, se agregan todas las regiones
-                if len(regiones) > 1:
-                    criterios["region_loc"] = regiones
-                else:
-                    criterios["region_loc"] = [region_normalizada.strip()]  # Si no, solo una región
-                
-                print(f"Regional encontrada: {criterios['region_loc']}")
-        
-                print(f"palabras_clave['region_loc']: {palabras_clave['region_loc']}")
-            elif 'subregional' in palabras_clave["region_loc"]:
-                print("Entrando en la parte de subregional...")
-                valor = []
-                i += 1
-                while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != 'region_loc'):
-                    valor.append(palabras[i])
+        palabra_stem = stemmer.stem(palabra)
+        if palabra_stem in inverso_claves:
+            categoria = inverso_claves[palabra_stem]
+            valor = None
+            if i + 1 < len(palabras):
+                siguiente = palabras[i + 1]
+                if stemmer.stem(siguiente) not in inverso_claves:
+                    valor = siguiente
                     i += 1
-                
-                    if valor:
-                        if re.match(r'^\d+-\d+$', valor[0]):  # Rango como 5-6
-                            region_param = f"SUB. R.E. {valor[0]}"
-                            criterios["region_loc"] = [region_param]
-                            print(f"Subregional con rango encontrada: {criterios['region_loc']}")
-                        elif re.match(r'^\d+[-]?[A-Za-z]$', valor[0]):  # Como 1-A, 1-B
-                            region_param = f"SUB. R.E. {valor[0]}"
-                            criterios["region_loc"] = [region_param]
-                            print(f"Subregional con formato correcto: {criterios['region_loc']}")
-                        elif valor[0].isdigit():  # Caso simple: Solo un número
-                            region_param = f"SUB. R.E. {valor[0]}"
-                            criterios["region_loc"] = [region_param]
-                            print(f"Subregional simple encontrada: {criterios['region_loc']}")
-                        else:
-                            print("Formato de subregional no válido.")
-        
-        elif palabra in palabras_clave["oferta"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "oferta"):
-                valor.append(palabras[i])
-                i += 1
+            if valor:
+                criterios.setdefault(categoria, []).append(valor)
+        i += 1
 
-            oferta_raw = " ".join(valor).strip()
+    consulta_normalizada = normalizar_texto(consulta)
+    OFERTA_KEYWORDS = {
+        "Común - Jardín": ["inicial", "jardín", "jardin", "jardin maternal", "jardin de infantes", "jardin maternal"],
+        "Común - Primaria": ["primaria", "escuela primaria", "escuela de educación primaria", "educación primaria", "primarias"],
+        "Común - Secundaria": ["secundaria", "media", "polimodal", "secundarias", "escuela secundaria", "escuela de educación secundaria", "educación secundaria"],
+        "Común - SNU": ["terciario", "superior", "profesorado","educación superior", "educacion superior", "educacion terciaria", "terciaria"],
+        "especial": ["especial", "educación especial", "educacion especial", "educación integral", "educacion integral","cursos","talleres","integración","integracion"],
+        "Adultos - Formación Profesional": ["formación profesional", "fp", "formacion profesional", "formacion profesional de adultos", "formacion profesional para adultos"],
+        "Adultos - Primaria":["adultos primaria", "adulto primaria","educación primaria de adultos", "educacion primaria de adultos", "primaria para adultos"],
+        "Adultos - Secundaria Completa": ["adultos secundaria", "adulto secundaria", "secundaria para adultos", "educación secundaria de adultos", "educacion secundaria de adultos"],
+        "Servicios Complementarios": ["servicio complementario", "servicios complementarios", "servicios complementarios de educación", "servicios complementarios de educacion"],
+    }
 
-            # Normalización y asignación de la oferta
-            if "primaria" in oferta_raw:
-                if "adultos" in oferta_raw:
-                    criterios["oferta"] = ["Adultos - Primaria"]
-                elif "especial" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Primaria"]
-                else:
-                    criterios["oferta"] = ["Común - Primaria"]
-            elif "snu" in oferta_raw:
-                criterios["oferta"] = ["Común - SNU"]
-            elif "inicial" in oferta_raw:            
-                if "especial" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Jardín"] 
-                else:
-                    criterios["oferta"] = ["Común - Jardín"]
-            elif "especial" in oferta_raw:
-                if "cursos" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Cursos/Talleres de la Escuela Especial"]
-                elif "domiciliaria" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Domiciliaria-hospitalaria"]
-                elif "hospitalaria" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Domiciliaria-hospitalaria"]
-                elif "integral" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Educación Integral para Adolescentes y Jóvenes"]
-                elif "integracion" in oferta_raw:
-                    criterios["oferta"] = ["Especial - Integración"]
-                else:
-                    criterios["oferta"] = ["Especial - Taller de"]
-            elif "secundaria" in oferta_raw:
-                if "adultos" in oferta_raw:
-                    criterios["oferta"] = ["Adultos - Secundaria Completa"]
-                else:
-                    criterios["oferta"] = ["Común - Secundaria"]
-            else:
-                criterios["oferta"] = [ofer.strip() for ofer in oferta_raw.split(" y ")]
+    KEYWORD_TO_SQL = {
+        palabra: nivel for nivel, palabras in OFERTA_KEYWORDS.items() for palabra in palabras
+    }
 
-            print(f"Oferta encontrada: {criterios['oferta']}")
-
-        
-        elif palabra in palabras_clave["localidad"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "localidad"):
-                valor.append(palabras[i])
-                i += 1
-            criterios["localidad"] = [loc.strip() for loc in " ".join(valor).split(" y ")]
-            print(f"Localidad encontrada: {criterios['localidad']}")
-        
-        elif palabra in palabras_clave["calle"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "calle"):
-                valor.append(palabras[i])
-                i += 1
-            criterios["calle"] = " ".join(valor).strip()
-            print(f"Calle encontrada: {criterios['calle']}")
-        
-        elif palabra in palabras_clave["ambito"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "ambito"):
-                valor.append(palabras[i])
-                i += 1
-            criterios["ambito"] = " ".join(valor).strip()
-            print(f"Ámbito encontrado: {criterios['ambito']}")
-        
-        elif palabra in palabras_clave["sector"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "sector"):
-                valor.append(palabras[i])
-                i += 1
-
-            sector_raw = " ".join(valor).strip()
-
-            # Normalización y asignación de sector
-            if "gestion" in sector_raw:
-                if "social" in sector_raw or "comunitaria" in sector_raw:
-                    criterios["sector"] = ["Gestión Social/Cooperativa"]
-                else:
-                    criterios["sector"] = ["Privado"]
-            else:
-                # Corrección en la variable que se usa dentro del bucle
-                criterios["sector"] = [sect.strip() for sect in sector_raw.split(" y ")]  # Cambié "ofer" por "sect"
-
-            print(f"Sector encontrado: {criterios['sector']}")
-
-        
-        elif palabra in palabras_clave["etiqueta"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "etiqueta"):
-                valor.append(palabras[i])
-                i += 1
-            criterios["etiqueta"] = " ".join(valor).strip()
-            print(f"Etiqueta encontrada: {criterios['etiqueta']}")
-        
-        elif palabra in palabras_clave["departamento"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "departamento"):
-                valor.append(palabras[i])
-                i += 1
-            criterios["departamento"] = [loc.strip() for loc in " ".join(valor).split(" y ")]
-            print(f"Departamento encontrado: {criterios['departamento']}")
-        
-        elif palabra in palabras_clave["cueanexo"]:
-            valor = []
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "cueanexo"):
-                valor.append(palabras[i])
-                i += 1
-            criterios["cueanexo"] = [loc.strip() for loc in " ".join(valor).split(" y ")]
-            print(f"Cueanexos encontrados: {criterios['cueanexo']}")
-        
-        elif palabra in palabras_clave["acronimo"]:     
-            valor = []  # Asegurémonos de que valor esté bien definido, tal vez falte esta línea al principio.
-            i += 1
-            while i < len(palabras) and not any(palabras[i] in palabras_clave[key] for key in palabras_clave if key != "acronimo"):
-                valor.append(palabras[i])
-                i += 1
-
-            acron_raw = " ".join(valor).strip()
-            print("acron",acron_raw)
-            # Normalización y asignación de acrónimo
-            if "biblioteca" in acron_raw or "bibliotecas" in acron_raw:              
-                criterios["acronimo"] = ["BI%"]
-            elif "escuela bilingue" in acron_raw or "escuela bilingüe" in acron_raw:
-                criterios["acronimo"] = ["EPGCBII%"]
-            elif "artistica" in acron_raw or "artisticas" in acron_raw:
-                criterios["acronimo"] = ["ARTISTICA"]
-            elif "escuela tecnica" in acron_raw or "escuelas tecnicas" in acron_raw:
-                criterios["acronimo"] = ["EET"]
-            elif "escuela aeronautica" in acron_raw:
-                criterios["acronimo"] = ["EET-A"]
-            elif "cef" in acron_raw:
-                criterios["acronimo"] = ["CEF"]
-            elif "proyecto" in acron_raw or "proyectos" in acron_raw:
-                criterios["acronimo"] = ["PE"]
-            elif "escuela especial" in acron_raw or "escuelas especiales" in acron_raw:
-                criterios["acronimo"] = ["EEE"]
-            elif "formacion profesional" in acron_raw or "formaciones profesionales" in acron_raw:
-                criterios["acronimo"] = ["EFP"]
-            elif "escuela adulto primaria" in acron_raw or "escuelas adulto primaria" in acron_raw:
-                criterios["acronimo"] = ["EPA%"]
-            elif "escuela adulto secundaria" in acron_raw or "escuelas adulto secundaria" in acron_raw:
-                criterios["acronimo"] = ["ESJA%"]
-            elif "escuela gestion social" in acron_raw or "escuelas gestion social" in acron_raw:
-                criterios["acronimo"] = ["EPGS"]    
-            elif "escuelas secundarias comunes" in acron_raw or "escuelas secundarias comunes" in acron_raw:
-                criterios["acronimo"] = ["EES"]
-            elif "escuelas hospitalarias" in acron_raw or "escuelas hospitalarias" in acron_raw:
-                criterios["acronimo"] = ["HOSPITALARIA"]
-            elif "jardin de infantes" in acron_raw or "jardines de infantes" in acron_raw:
-                criterios["acronimo"] = ["JI%"]
-            elif "jardin maternal" in acron_raw or "jardines maternales" in acron_raw:
-                criterios["acronimo"] = ["JM"]
-            elif "snu" in acron_raw or "institutos superiores" in acron_raw:
-                criterios["acronimo"] = ["SNU"]
-            elif "escuela primaria comun" in acron_raw or "escuelas primarias comunes" in acron_raw:
-                criterios["acronimo"] = ["EEP"]
-            elif "taller" in acron_raw or "talleres" in acron_raw:
-                criterios["acronimo"] = ["TALLERES"]
-            elif "unne" in acron_raw or "universidad" in acron_raw:
-                criterios["acronimo"] = ["UNNE"]
-            else:
-                # Corrección en la variable que se usa dentro del bucle
-                criterios["acronimo"] = [acr.strip() for acr in acron_raw.split(" y ")]
-
-            print(f"Acrónimo encontrado: {criterios['acronimo']}")
-        else:
-            i+=1
-    
+    for palabra in consulta_normalizada.split():
+        if palabra in KEYWORD_TO_SQL:
+            criterios.setdefault("oferta", []).append(KEYWORD_TO_SQL[palabra])
+            
     return criterios
 
 
@@ -324,23 +185,32 @@ def operaciones_comunes(request, template_name='mapa/ofertasmark.html'):
     query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, cui_loc, cuof_loc, acronimo, etiqueta FROM v_capa_unica_ofertas_cui_cuof WHERE 1=1 "
     parameters = []
     
+    # Lista de campos válidos en la tabla para prevenir errores
+    CAMPOS_VALIDOS = {
+        "cueanexo", "lat", "long", "nom_est", "oferta", "ambito", "sector",
+        "region_loc", "calle", "numero", "localidad", "cui_loc", "cuof_loc",
+        "acronimo", "etiqueta"
+    }
+    
     # Agregar condiciones según los criterios
     for campo, valor in criterios.items():
-        if valor and campo != "region_loc":  # Excluimos region_loc aquí:
-            if campo == "cueanexo":  # Caso especial para cueanexo (convertir a texto)
-                if isinstance(valor, list):
-                    query += f" AND ({' OR '.join([f'CAST(cueanexo AS TEXT) ILIKE %s' for _ in valor])})"
-                    parameters.extend([f"%{v}%" for v in valor])
-                else:
-                    query += " AND CAST(cueanexo AS TEXT) ILIKE %s"
-                    parameters.append(f"%{valor}%")
-            else:  # Para los demás campos
-                if isinstance(valor, list):  # Si el valor es una lista (ej. varias localidades)
-                    query += f" AND ({' OR '.join([f'{campo} ILIKE %s' for _ in valor])})"
-                    parameters.extend([f"%{v}%" for v in valor])            
-                else:  # Si es un solo valor (str)
-                    query += f" AND {campo} ILIKE %s"
-                    parameters.append(f"%{valor}%")
+        if campo not in CAMPOS_VALIDOS or not valor or campo == "region_loc":
+            continue  # ignorar campos inválidos o region_loc (se trata aparte)
+
+        if campo == "cueanexo":  # Caso especial para cueanexo (convertir a texto)
+            if isinstance(valor, list):
+                query += f" AND ({' OR '.join([f'CAST(cueanexo AS TEXT) ILIKE %s' for _ in valor])})"
+                parameters.extend([f"%{v}%" for v in valor])
+            else:
+                query += " AND CAST(cueanexo AS TEXT) ILIKE %s"
+                parameters.append(f"%{valor}%")
+        else:  # Para los demás campos
+            if isinstance(valor, list):  # Si el valor es una lista
+                query += f" AND ({' OR '.join([f'{campo} ILIKE %s' for _ in valor])})"
+                parameters.extend([f"%{v}%" for v in valor])            
+            else:  # Si es un solo valor
+                query += f" AND {campo} ILIKE %s"
+                parameters.append(f"%{valor}%")
     
     # Agregar condición para region_loc si existe
     if "region_loc" in criterios and criterios["region_loc"]:
@@ -383,7 +253,7 @@ def operaciones_comunes(request, template_name='mapa/ofertasmark.html'):
     }
     
     return context
-
+    
 
 def entrenar_modelo():
     """

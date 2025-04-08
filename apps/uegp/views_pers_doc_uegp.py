@@ -13,7 +13,7 @@ from .models import PersonalDocUegp, PersonalNoDocUegp
 from django.shortcuts import get_object_or_404
 from .models import CargosCeicUegp
 from apps.usuarios.models import UsuariosVisualizador
-
+from utils.decorators import habilitado_despues_de_evento
 
 def cargar_cargos(request):
     """
@@ -27,6 +27,7 @@ def cargar_cargos(request):
         return JsonResponse(data, safe=False)
     return JsonResponse({'error': 'Nivel no proporcionado o inválido'}, status=400)
 
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPListView(LoginRequiredMixin, ListView):
     """
     Vista para listar PersonalDocUEGP filtrados por la regional del usuario logueado.
@@ -110,7 +111,7 @@ class UEGPListView(LoginRequiredMixin, ListView):
         context['entity'] = 'Personal Docente'
         return context
 
-
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPCreateView(LoginRequiredMixin, CreateView):
     model = PersonalDocUegp
     form_class = PersonalDocUegpForm
@@ -154,7 +155,7 @@ class UEGPCreateView(LoginRequiredMixin, CreateView):
         context['action'] = 'add'
         return context
 
-
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPUpdateView(LoginRequiredMixin, UpdateView):
     model = PersonalDocUegp
     form_class = PersonalDocUegpForm
@@ -192,7 +193,7 @@ class UEGPUpdateView(LoginRequiredMixin, UpdateView):
         context['action'] = 'edit'
         return context
 
-
+@method_decorator(habilitado_despues_de_evento, name='dispatch')
 class UEGPDeleteView(LoginRequiredMixin, DeleteView):
     model = PersonalDocUegp
     template_name = 'uegp/pers_doc_uegp/delete.html'

@@ -1,3 +1,4 @@
+import os
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
@@ -166,5 +167,16 @@ class BuscarPDFView(TemplateView):
             if archivo and archivo.archivo:
                 return JsonResponse({'ruta_pdf': archivo.archivo.url})
             return JsonResponse({'error': 'No se encontró ningún PDF.'})
+        elif action == 'buscar_pdf_por_id':
+            id_archivo = request.POST.get('id')
+            print("ID recibido:", id_archivo)
+            try:
+                archivo = ArchRegister.objects.get(pk=id_archivo)
+                if archivo.archivo and os.path.isfile(archivo.archivo.path):
+                    return JsonResponse({'ruta_pdf': archivo.archivo.url})
+                else:
+                    return JsonResponse({'error': 'El archivo no existe en el servidor.'})
+            except ArchRegister.DoesNotExist:
+                return JsonResponse({'error': 'Archivo no encontrado.'})
         else:
             return JsonResponse({'error': 'Acción no definida.'})
