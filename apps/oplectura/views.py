@@ -35,6 +35,11 @@ def DepEvaluacionPortada(request):
 def RegionalPortada(request):
     return render(request, 'oplectura/portadaregional.html')
 
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
+def SupervisorPortada(request):
+    return render(request, 'oplectura/portadasupervisor.html')
+
 @method_decorator([login_required, cache_control(no_cache=True, must_revalidate=True)], name='dispatch')
 class CreateRegDocporSeccionView(CreateView):
     """

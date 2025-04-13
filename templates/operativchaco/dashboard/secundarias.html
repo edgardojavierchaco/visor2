@@ -144,13 +144,8 @@
 
     <script>
         document.getElementById("boton-reportes").addEventListener("click", function() {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Advertencia',
-                text: 'Una vez finalizada la carga, podrá visualizarlo',
-                confirmButtonColor: '#3085d6',
-                confirmButtonText: 'Entendido'
-            });
+            window.location.href = "{% url 'operativ:dashboard_resultados_final' %}"; 
+            
         });
 
         document.getElementById("boton-monitoreo").addEventListener("click", function() {

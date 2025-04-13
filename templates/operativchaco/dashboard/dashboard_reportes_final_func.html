@@ -1,0 +1,295 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Centrar los encabezados de la tabla */
+        table th {
+            text-align: center;
+        }
+
+        /* Centrar los valores dentro de las celdas */
+        table td {
+            text-align: center;
+            vertical-align: middle; /* Para centrar verticalmente */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <!-- Parte Superior -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <img src="{% static 'img/observador.png' %}" alt="icono" style="height: 24px; transform: scale(1.5); vertical-align: right; margin-right: 5px;">
+                        Monitoreo
+                    </h2>                                   
+                    <h4 class="card-text d-flex justify-content-between align-items-center">
+                        <span>Resultados del Diagnóstico</span>
+                        <a href="{% url 'funcionario:portada_func' %}" class="btn btn-light btn-sm" title="Ir a Dashboard Secundarias">
+                            <img src="{% static 'img/return.jpg' %}" alt="icono" style="height: 48px;" />
+                        </a>
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <select id="selectorRegion" class="form-select mt-2">
+                        <option selected value="Todas">Todas</option>
+                        <option value="R.E. 1">R.E. 1</option>
+                        <option value="R.E. 2">R.E. 2</option>
+                        <option value="R.E. 3">R.E. 3</option>
+                        <option value="R.E. 4-A">R.E. 4-A</option>
+                        <option value="R.E. 4-B">R.E. 4-B</option>
+                        <option value="R.E. 5">R.E. 5</option>
+                        <option value="R.E. 6">R.E. 6</option>
+                        <option value="R.E. 7">R.E. 7</option>
+                        <option value="R.E. 8-A">R.E. 8-A</option>
+                        <option value="R.E. 8-B">R.E. 8-B</option>
+                        <option value="R.E. 9">R.E. 9</option>
+                        <option value="R.E. 10-A">R.E. 10-A</option>
+                        <option value="R.E. 10-B">R.E. 10-B</option>
+                        <option value="R.E. 10-C">R.E. 10-C</option>
+                        <option value="SUB. R.E. 1-A">SUB R.E. 1-A</option>
+                        <option value="SUB. R.E. 1-B">SUB R.E. 1-B</option>
+                        <option value="SUB. R.E. 2">SUB R.E. 2</option>
+                        <option value="SUB. R.E. 3">SUB R.E. 3</option>
+                        <option value="SUB. R.E. 5">SUB R.E. 5</option>
+                    </select>
+                    <button id="btnLengua" class="btn btn-primary m-1">LENGUA</button>
+                    <button id="btnMatematica" class="btn btn-success m-1">MATEMÁTICA</button>
+                    <button id="btnExportarPdf" class="btn btn-outline-danger m-1"
+                            data-url="{% url 'operativ:exportar_pdf_resultados_finales' %}">
+                        Exportar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cuerpo Central -->
+    <div id="contenedorGraficos" class="mt-4"></div>
+    </div>    
+    
+
+<script>
+$(document).ready(function () {
+    const coloresNiveles = {
+        'Debajo del Básico': 'rgba(255, 0,0,1)',  // Rojo
+        'Básico': 'rgba(255, 165, 0, 1)',           // Naranja
+        'Satisfactorio': 'rgba(255, 255, 0, 1)',     // Amarillo
+        'Avanzado': 'rgba(0, 255, 0, 1)'           // Verde
+    };
+
+    function renderGrafico(idCanvas, label, datos) {
+        if (!Array.isArray(datos)) {
+            console.warn(`Los datos recibidos para "${label}" no son válidos:`, datos);
+            datos = [];
+        }
+
+        const ctx = document.getElementById(idCanvas).getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: datos.map(item => item.nivel || "Sin etiqueta"),
+                datasets: [{
+                    label: label,
+                    data: datos.map(item => item.cantidad || 0),
+                    backgroundColor: datos.map(item => coloresNiveles[item.nivel] || 'rgba(54, 162, 235, 0.5)'),
+                    borderColor: datos.map(item => coloresNiveles[item.nivel] || 'rgba(54, 162, 235, 1)'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.label + ': ' + tooltipItem.raw + ' unidades';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function cargarGraficos(data, tipo) {
+    console.log("Datos recibidos:", data);
+
+    $('#contenedorGraficos').empty();
+    let titulo = tipo === 'lengua' ? 'Resultados Lengua' : 'Resultados Matemática';
+    $('#contenedorGraficos').append(`<h3>${titulo} - Región: ${$('#selectorRegion').val()}</h3>`);
+
+    const titulos = {
+        resultado_gral: "Resultado General",
+        resultado_comunicacion: "Comunicación",
+        resultado_reconocimiento: "Reconocimiento",
+        resultado_resolucion: "Resolución"
+    };
+
+    let claves = Object.keys(data).filter(k => k !== 'usuario' && data[k] && Array.isArray(data[k]) && k.trim() !== '');
+    if (claves.length === 0) {
+        $('#contenedorGraficos').append(`<p class="text-muted">No hay datos disponibles.</p>`);
+        return;
+    }
+
+    claves.forEach((clave, index) => {
+        let datos = data[clave];
+        let canvasId = `grafico_${clave}_${index}`;
+        let tablaId = `tabla_${clave}_${index}`;
+
+        let tituloCard = titulos[clave] || clave.replace('resultado_', '').toUpperCase() || "Sin título";
+
+        let card = $(`
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">${tituloCard}</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="${canvasId}" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-bordered table-sm" id="${tablaId}">
+                                <thead><tr><th>Nivel</th><th>Cantidad</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#contenedorGraficos').append(card);
+
+        if (Array.isArray(datos) && datos.length > 0) {
+            // Renderizar gráfico
+            setTimeout(() => {
+                renderGrafico(canvasId, clave, datos);
+            }, 0);
+
+            // Renderizar tabla
+            datos.forEach(item => {
+                console.log(item);
+                let colorFila = coloresNiveles[item.nivel] || 'rgba(54, 162, 235, 0.5)';
+                $(`#${tablaId} tbody`).append(`
+                    <tr style="background-color: ${colorFila};">
+                        <td>${item.nivel || '-'}</td>
+                        <td>${item.cantidad || 0}</td>
+                    </tr>
+                `);
+            });
+        } else {
+            $(`#${canvasId}`).replaceWith('<p class="text-muted">No hay datos disponibles para este resultado.</p>');
+        }
+    });
+
+    // Agregar resumen final
+    $('#resumenFinal').remove();
+
+    let resumen = {};
+    let totalEstudiantes = 0;
+
+    claves.forEach((clave) => {
+        (data[clave] || []).forEach(item => {
+            let nivel = item.nivel || "Sin etiqueta";
+            let cantidad = item.cantidad || 0;
+            resumen[nivel] = (resumen[nivel] || 0) + cantidad;
+            totalEstudiantes += cantidad;
+        });
+    });
+
+    setTimeout(() => {
+        const resumenDiv = document.createElement('div');
+        resumenDiv.id = 'resumenFinal';
+        resumenDiv.style.margin = '40px auto';
+        resumenDiv.style.padding = '20px';
+        resumenDiv.style.maxWidth = '600px';
+        resumenDiv.style.border = '2px solid #ccc';
+        resumenDiv.style.borderRadius = '12px';
+        resumenDiv.style.backgroundColor = '#f9f9f9';
+        resumenDiv.style.fontFamily = 'Arial, sans-serif';
+
+        resumenDiv.innerHTML = `
+            <h2 style="text-align: center;">📌 Resumen General</h2>
+            <p><strong>Total de estudiantes (todas las capacidades):</strong> ${totalEstudiantes}</p>
+            <ul style="list-style-type: none; padding-left: 0;">
+                ${Object.keys(resumen).map(nivel => {
+                    let color = coloresNiveles[nivel] || '#ddd';
+                    let emoji = nivel === "Avanzado" ? "🟢" :
+                                nivel === "Satisfactorio" ? "🟡" :
+                                nivel === "Básico" ? "🟠" :
+                                nivel === "Debajo del Básico" ? "🔴" : "📌";
+                    return `<li style="margin: 5px 0; color: ${color};">
+                                ${emoji} <strong>${nivel}:</strong> ${resumen[nivel]}
+                            </li>`;
+                }).join('')}
+            </ul>
+        `;
+
+        document.getElementById('contenedorGraficos').appendChild(resumenDiv);
+    }, 500);
+}
+
+    
+
+    function obtenerDatos(tipo) {
+        const url = tipo === 'lengua'
+            ? "{% url 'operativ:resultados_region_lengua_api' %}"
+            : "{% url 'operativ:resultados_region_matematica_api' %}";
+        const regionSeleccionada = $('#selectorRegion').val();
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            data: { region: regionSeleccionada },
+            success: function (data) {
+                console.log("Datos recibidos:", data);
+                cargarGraficos(data, tipo);
+            },
+            error: function (err) {
+                console.error('Error al cargar datos:', err);
+                alert("Error al cargar los datos. Intenta nuevamente.");
+            }
+        });
+    }
+
+    // Event listeners
+    $('#btnLengua').on('click', function () {
+        obtenerDatos('lengua');
+    });
+
+    $('#btnMatematica').on('click', function () {
+        obtenerDatos('matematica');
+    });
+    $('#btnExportarPdf').on('click', function () {
+        const region = $('#selectorRegion').val();
+        const materia = $('h3').text().includes('Lengua') ? 'lengua' : 'matematica';
+        const baseUrl = $(this).data('url');
+        const urlConParametros = `${baseUrl}?region=${encodeURIComponent(region)}&materia=${materia}`;
+        window.open(urlConParametros, '_blank');
+    });    
+
+
+    // Cargar los datos inicialmente
+    obtenerDatos('lengua');
+});
+</script>
+</body>
+</html>

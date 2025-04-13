@@ -1,9 +1,7 @@
-version: '3'
-
 volumes:
   visor_local_postgres_data: {}
-  visor_local_postgres_data_backups: {}
-  
+  visor_local_postgres_data_backups: {}  
+
 
 services:
   django: &django
@@ -21,6 +19,7 @@ services:
     ports:
       - "8000:8000"
     command: /start
+    
 
   postgres:
     build:
@@ -35,12 +34,12 @@ services:
       - ./.env
     ports:
       - "5433:5432"
+    
 
   redis:
     image: redis
     container_name: visor_local_redis
     ports:
-      - "6379:6379"
+      - "6379:6379"    
 
   
-    

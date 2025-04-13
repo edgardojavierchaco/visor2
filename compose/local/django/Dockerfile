@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # dependencias para construir paquete Python
   build-essential \
   # psycopg2 dependencias
-  libpq-dev
+  libpq-dev \
+  # wkhtmltopdf para generar PDFs desde HTML
+  wkhtmltopdf
 
 # Los requisitos se instalan aquí para garantizar que se almacenarán en caché.
 COPY ./requirements .
@@ -45,6 +47,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   binutils \
   libproj-dev \
   gdal-bin \
+  wkhtmltopdf \
   # Limpieza de archivos no utilizados
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*

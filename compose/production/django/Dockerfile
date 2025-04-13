@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   build-essential \
   libpq-dev \
   gdal-bin \
-  libgdal-dev
+  libgdal-dev \
+  wkhtmltopdf \ 
 
 # Set environment variable for GDAL
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
@@ -48,6 +49,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   gdal-bin \
   libgdal-dev \
   gettext \
+  wkhtmltopdf \ 
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 

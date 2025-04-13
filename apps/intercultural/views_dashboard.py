@@ -33,3 +33,11 @@ class DashboardRegView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['panel'] = 'Panel de administrador'
         return context
+
+class DashboardSupervView(TemplateView):
+    template_name = 'intercultural/dashboard_superv.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['panel'] = 'Panel de administrador'
+        return context

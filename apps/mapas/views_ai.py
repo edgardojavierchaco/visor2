@@ -11,8 +11,7 @@ import nltk
 nltk.download('punkt')
 from nltk.stem import SnowballStemmer
 import unicodedata
-from sentence_transformers import SentenceTransformer, util
-import torch
+
 
 nlp = spacy.load("es_core_news_sm")
 stemmer = SnowballStemmer("spanish")
@@ -90,46 +89,6 @@ def normalizar_region(region_tokens):
     elif len(parts) == 2 and parts[1].isdigit():
         return f"R.E. {parts[1]}"
     return region_text
-
-
-# Modelo multilingüe compatible con español
-model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-
-# Frases de referencia por categoría
-frases_referencia = {
-    "Común - Jardín": "escuela jardín o nivel inicial",
-    "Común - primaria": "escuela de educación primaria común",
-    "Común - secundaria": "escuela secundaria común",
-    "Común - SNU": "educación superior, terciario o profesorado",
-    "especial": "educación especial",
-    "Adultos - Primaria": "escuela para adultos con nivel primario",
-    "Adultos - Secundaria": "escuela para adultos con nivel secundario",
-    "Adultos - Formación Profesional": "formación profesional para adultos",
-    "Común - Servicios": "servicio complementario o biblioteca",
-    "Especial - Integración": "integración escolar especial",
-    "Especial - Cursos": "cursos o talleres especiales",
-    "Especial - Domiciliaria": "educación domiciliaria o hospitalaria",
-    "Espacial - Jardín": "jardín especial",
-    "Espacial - Primaria": "primaria especial",
-    "Especial - Taller": "taller especial",
-    "Especial - Educacion": "educación integral especial",
-}
-
-def normalizar_semantico_topn(consulta, top_n=1, umbral=0.6):
-    consulta_emb = model.encode(consulta, convert_to_tensor=True)
-    frases_emb = model.encode(list(frases_referencia.values()), convert_to_tensor=True)
-
-    scores = util.pytorch_cos_sim(consulta_emb, frases_emb)[0]
-    top_resultados = torch.topk(scores, k=top_n)
-
-    resultados = []
-    for idx, score in zip(top_resultados.indices, top_resultados.values):
-        if score.item() >= umbral:
-            categoria = list(frases_referencia.keys())[idx]
-            resultados.append((categoria, score.item()))
-
-    return resultados
-
 
 
 def extraer_criterios(consulta):
@@ -218,16 +177,8 @@ def extraer_criterios(consulta):
 
     for palabra in consulta_normalizada.split():
         if palabra in KEYWORD_TO_SQL:
-            criterios.setdefault("oferta", []).append(KEYWORD_TO_SQL[palabra])
-            
-    
-    # ✅ Normalización semántica si no se detectó oferta con keywords
-    if "oferta" not in criterios:
-        resultado_semantico = normalizar_semantico_topn(consulta, top_n=1, umbral=0.6)
-        if resultado_semantico:
-            categoria_detectada, score = resultado_semantico[0]
-            criterios.setdefault("oferta", []).append(categoria_detectada)
-            
+            criterios.setdefault("oferta", []).append(KEYWORD_TO_SQL[palabra])          
+       
     return criterios
 
 

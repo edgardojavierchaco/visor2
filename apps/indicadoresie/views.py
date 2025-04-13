@@ -50,3 +50,12 @@ class SeguimientoSIE2025ListView(ListView):
 
 def dashboard_prueba(request):
     return render(request, "indicadoresie/dashboard_prueba.html")
+
+def dashboard_prueba_superv(request):
+    return render(request, "indicadoresie/dashboard_prueba_superv.html")
+
+def dashboard_prueba_func(request):
+    return render(request, "indicadoresie/dashboard_prueba_func.html")
+
+def dashboard_prueba_regional(request):
+    return render(request, "indicadoresie/dashboard_prueba_regional.html")

@@ -28,7 +28,16 @@ from .views_list_matem import (
     exportar_pdf_matematica,
 )
 
-from .views_dashpresent import dashboard_secundarias
+from .views_dashpresent import(
+    dashboard_secundarias, 
+    dashboard_secundarias_superv, 
+    dashboard_resultados_final,
+    dashboard_resultados_final_superv,
+    dashboard_secundarias_func,
+    dashboard_resultados_final_func,
+    dashboard_secundarias_regional,
+    dashboard_resultados_final_regional,
+)
 
 from .views_grafesc import datos_lengua_por_region, datos_matematica_por_region, escuelas_pendientes_lengua, escuelas_pendientes_matematica
 
@@ -37,6 +46,24 @@ from .views_cuentaregresiva import (
     cuenta_regresiva_lengua_graficos,
     cuenta_regresiva_matematica_graficos,
 )
+
+from .views_resultados import (
+    ResultadosCueanexoLengua, 
+    ResultadosLenguaView, 
+    exportar_pdf_lengua,
+    ResultadosMatematicaView,
+    ResultadosCueanexoMatematica,
+    exportar_pdf_matematica,
+)
+
+from .views_resultados_reg import (
+    ResultadosRegionLengua,
+    ResultadosLenguaRegionalView,    
+    ResultadosRegionMatematica,
+    ResultadosMatematicaRegionalView,
+    exportar_pdf_resultados_finales,
+)
+
 
 app_name='operativ'
 
@@ -62,6 +89,9 @@ urlpatterns = [
     path('exportar_pdf_matematica/<int:examen_id>/', exportar_pdf_matematica, name='exportar_pdf_matematica'),
     path('cerrar-carga-matematica/', cerrar_carga_matematica, name='cerrar_carga_matematica'),
     path('dashboard/secundarias/', dashboard_secundarias, name='dashboard_secundarias'),
+    path('dashboard/secundarias_superv/', dashboard_secundarias_superv, name='dashboard_secundarias_superv'),
+    path('dashboard/secundarias_func/', dashboard_secundarias_func, name='dashboard_secundarias_func'),
+    path('dashboard/secundarias_reg/', dashboard_secundarias_regional, name='dashboard_secundarias_regional'),
     # gráficos de carga escuelas
     path('api/datos_lengua/', datos_lengua_por_region, name='datos_lengua'),
     path('api/datos_matematica/', datos_matematica_por_region, name='datos_matematica'),
@@ -71,6 +101,24 @@ urlpatterns = [
     path('cuenta_regresiva_matematica/', cuenta_regresiva_matematica, name='cuenta_regresiva_matematica'),
     path('cuenta_regresiva_lengua_graficos/', cuenta_regresiva_lengua_graficos, name='cuenta_regresiva_lengua_graficos'),
     path('cuenta_regresiva_matematica_graficos/', cuenta_regresiva_matematica_graficos, name='cuenta_regresiva_matematica_graficos'),
+    # Resultados lengua y matematica cueanexo
+    path('resultados/cueanexo_lengua/', ResultadosLenguaView, name='resultados_cueanexo_lengua'),
+    path('api/resultados/cueanexo_lengua/', ResultadosCueanexoLengua, name='resultados_lengua_api'),
+    path('resultados_lengua_pdf/', exportar_pdf_lengua, name='exportar_pdf_lengua'),
+    path('resultados/cueanexo_matematica/', ResultadosMatematicaView, name='resultados_cueanexo_matematica'),
+    path('api/resultados/cueanexo_matematica/', ResultadosCueanexoMatematica, name='resultados_matematica_api'),
+    path('resultados_matematica_pdf/', exportar_pdf_matematica, name='exportar_pdf_matematica'),
+    # Resultados lengua y matematica regional
+    path('resultados/region_lengua/', ResultadosLenguaRegionalView, name='resultados_region_lengua'),
+    path('api/resultados/region_lengua/', ResultadosRegionLengua, name='resultados_region_lengua_api'),    
+    path('resultados/region_matematica/', ResultadosMatematicaRegionalView, name='resultados_region_matematica'),
+    path('api/resultados/region_matematica/', ResultadosRegionMatematica, name='resultados_region_matematica_api'),
+    path('resultados_finales_pdf/', exportar_pdf_resultados_finales, name='exportar_pdf_resultados_finales'),
+    # Resultados finales
+    path('resultados_final/', dashboard_resultados_final, name='dashboard_resultados_final'),
+    path('resultados_final_superv/', dashboard_resultados_final_superv, name='dashboard_resultados_final_superv'),
+    path('resultados_final_func/', dashboard_resultados_final_func, name='dashboard_resultados_final_func'),
+    path('resultados_final_reg/', dashboard_resultados_final_regional, name='dashboard_resultados_final_regional'),
 ]
 
 

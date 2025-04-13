@@ -4,7 +4,13 @@ from .views_dash import (
     seguimiento_sie_json,
     seguimiento_sie_niveles_json
 )
-from .views import SeguimientoSIE2025ListView, dashboard_prueba
+from .views import (
+    SeguimientoSIE2025ListView, 
+    dashboard_prueba, 
+    dashboard_prueba_superv, 
+    dashboard_prueba_func, 
+    dashboard_prueba_regional,
+)
 
 app_name = 'indicsie'
 
@@ -14,5 +20,7 @@ urlpatterns = [
     path('api/seguimiento-sie/', seguimiento_sie_json, name='seguimiento_sie_json'),
     path('api/seguimiento-sie-niveles/', seguimiento_sie_niveles_json, name='seguimiento_sie_niveles_json'),
     path('prueba/', dashboard_prueba, name='prueba'),
-
+    path('prueba_superv/', dashboard_prueba_superv, name='prueba_superv'),
+    path('prueba_func/', dashboard_prueba_func, name='prueba_func'),
+    path('prueba_reg/', dashboard_prueba_regional, name='prueba_regional'),
 ]

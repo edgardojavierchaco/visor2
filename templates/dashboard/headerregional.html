@@ -41,7 +41,7 @@
                 </li>                               
                  <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
+                       class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:green"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">                        
                         <!-- Menú desplegable para "Resultados" -->
                         <li class="dropdown">
@@ -63,13 +63,21 @@
                 </li>         
                 <li class="nav-item dropdown">
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-users" style="color:black"></i> Regional </a>
+                       class="nav-link dropdown-toggle"><i class="fas fa-users" style="color:brown"></i> Regional </a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                         <li><a href="{% url 'superescuela:dashboard' %}" class="dropdown-item">ABM Supervisores</a></li>
                         <li><a href="{% url 'unidadgestion:dashboard' %}" class="dropdown-item">ABM Relevamiento</a></li> 
                         <li><a href="{% url 'intercultural:dashboard_reg' %}" class="dropdown-item">Listado Cantidad Alumnos Bilingües</a></li> 
                     </ul>
-                </li>                   
+                </li>      
+                <li class="nav-item dropdown">
+                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                       class="nav-link dropdown-toggle"><i class="fa fa-desktop" aria-hidden="true" style="color:yellow"></i>Secundaria </a>
+                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                        <li><a href="{% url 'operativ:dashboard_secundarias_regional' %}" class="dropdown-item">Dashboard</a></li>
+                        
+                    </ul>
+                </li>                
                 {% if user.is_authenticated %}
                 <li class="nav-item">
                     <a href="{% url 'oplectura:portada_regional' %}" class="nav-link">Usuario: {{ user.nombres }}</a>

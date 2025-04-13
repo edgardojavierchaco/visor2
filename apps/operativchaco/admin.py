@@ -8,6 +8,24 @@ from .models import (
     ExamenMatematicaAlumno,
     RegistroAsistenciaMatematica,
     EscuelasSecundarias,
+    CorteGeneralLengua,
+    CorteGeneralMatematica,
+    CorteEvaluarLengua,
+    CorteExtraerLengua,
+    CorteEscrituraLengua,
+    CorteInterpretarLengua,
+    CorteComunicacionMatematica,
+    CorteReconocimientoMatematica,
+    CorteResolucionMatematica,
+    VistaEscrituraLengua,
+    VistaEvaluarLengua,
+    VistaExtraerLengua,
+    VistaInterpretarLengua,
+    VistaGeneralLengua,
+    VistaGeneralMatematica,
+    VistaReconocimientoMatematica,
+    VistaResolucionMatematica,
+    VistaComunicacionMatematica,
 )
 
 admin.site.register(AlumnosSecundariaDiagnostico)
@@ -18,4 +36,22 @@ admin.site.register(ConceptosMatematica)
 admin.site.register(ExamenMatematicaAlumno)
 admin.site.register(RegistroAsistenciaMatematica)
 admin.site.register(EscuelasSecundarias)
+admin.site.register(CorteGeneralLengua)
+admin.site.register(CorteGeneralMatematica)
+admin.site.register(CorteEvaluarLengua)
+admin.site.register(CorteExtraerLengua)
+admin.site.register(CorteEscrituraLengua)
+admin.site.register(CorteInterpretarLengua)
+admin.site.register(CorteComunicacionMatematica)
+admin.site.register(CorteReconocimientoMatematica)
+admin.site.register(CorteResolucionMatematica)
+admin.site.register(VistaEscrituraLengua)
+admin.site.register(VistaEvaluarLengua)
+admin.site.register(VistaExtraerLengua)
+admin.site.register(VistaInterpretarLengua)
+admin.site.register(VistaGeneralLengua)
+admin.site.register(VistaGeneralMatematica)
+admin.site.register(VistaReconocimientoMatematica)
+admin.site.register(VistaResolucionMatematica)
+admin.site.register(VistaComunicacionMatematica)
 

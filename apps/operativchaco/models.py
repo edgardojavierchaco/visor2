@@ -77,6 +77,17 @@ class ExamenLenguaAlumno(models.Model):
         (Decimal('5.00'), '5.00'),
     ]
     
+    DISCAPACIDAD=[
+        ('SI', 'SI'),
+        ('NO', 'NO'),
+    ]
+    
+    ETNIA=[
+        ('NO', 'NO'),
+        ('QOM', 'QOM'),
+        ('WICHI', 'WICHI'),
+        ('MOQOIT', 'MOQOIT'),
+    ]
     
     dni = models.CharField(max_length=8, verbose_name='DNI')  
     apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
@@ -85,6 +96,8 @@ class ExamenLenguaAlumno(models.Model):
     anio=models.CharField(max_length=25, verbose_name='Año')
     division=models.CharField(max_length=5, verbose_name='División')
     region=models.CharField(max_length=25, verbose_name='Regional')
+    discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
+    etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
     p1 = models.DecimalField(
         max_digits=4,
         decimal_places=2,
@@ -267,6 +280,18 @@ class ExamenMatematicaAlumno(models.Model):
         (Decimal('0.00'), '0.00'),
         (Decimal('5.00'), '5.00'),
     ]
+    
+    DISCAPACIDAD=[
+        ('SI', 'SI'),  
+        ('NO', 'NO'),
+    ]
+    
+    ETNIA=[
+        ('NO', 'NO'),
+        ('QOM', 'QOM'),
+        ('WICHI', 'WICHI'),
+        ('MOQOIT', 'MOQOIT'),
+    ]
         
     dni = models.CharField(max_length=8, verbose_name='DNI')  
     apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
@@ -275,7 +300,9 @@ class ExamenMatematicaAlumno(models.Model):
     anio=models.CharField(max_length=25, verbose_name='Año')
     division=models.CharField(max_length=5, verbose_name='División')
     region=models.CharField(max_length=25, verbose_name='Regional')
-    p1 = models.DecimalField(
+    discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
+    etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
+    p1 = models.DecimalField(     
         max_digits=4,
         decimal_places=2,
         choices=PREG1_CHOICES,
@@ -442,3 +469,407 @@ class EscuelasSecundarias(models.Model):
     
     def __str__(self):
         return f'{self.cueanexo} {self.nom_est}'
+
+
+class CorteGeneralLengua(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte General Lengua"
+        verbose_name_plural = "Cortes Generales Lengua"
+        db_table = "corte_general_lengua"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+
+class CorteInterpretarLengua(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Interpretar Lengua"
+        verbose_name_plural = "Cortes Interpretar Lengua"
+        db_table = "corte_interpretar_lengua"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+    
+
+class CorteEvaluarLengua(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Evaluar Lengua"
+        verbose_name_plural = "Cortes Evaluar Lengua"
+        db_table = "corte_evaluar_lengua"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+
+class CorteExtraerLengua(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Extraer Lengua"
+        verbose_name_plural = "Cortes Extraer Lengua"
+        db_table = "corte_extraer_lengua"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+class CorteEscrituraLengua(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Escritura Lengua"
+        verbose_name_plural = "Cortes Escritura Lengua"
+        db_table = "corte_escritura_lengua"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+
+class CorteGeneralMatematica(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte General Matematica"
+        verbose_name_plural = "Cortes Generales Matematica"
+        db_table = "corte_general_matematica"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+
+class CorteReconocimientoMatematica(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Reconocimiento Matematica"
+        verbose_name_plural = "Cortes Reconocimiento Matematica"
+        db_table = "corte_reconocimiento_matematica"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+
+class CorteComunicacionMatematica(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Comunicacion Matematica"
+        verbose_name_plural = "Cortes Comunicacion Matematica"
+        db_table = "corte_comunicacion_matematica"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+    
+
+class CorteResolucionMatematica(models.Model):
+    nivel_desempeño=models.CharField(max_length=50, verbose_name='Nivel Desempeño')
+    punto_corte=models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Punto Corte')
+    
+    class Meta:
+        verbose_name = "Corte Resolucion Matematica"
+        verbose_name_plural = "Cortes Resolucion Matematica"
+        db_table = "corte_resolucion_matematica"
+        
+    def __str__(self):
+        return f'{self.nivel_desempeño} {self.punto_corte}'
+
+
+class VistaGeneralLengua(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista General Lengua"
+        verbose_name_plural = "Vistas Generales Lengua"
+        db_table = "v_gral_lengua"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaEvaluarLengua(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Evaluar Lengua"
+        verbose_name_plural = "Vistas Evaluar Lengua"
+        db_table = "v_evaluar_lengua"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaInterpretarLengua(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Interpretar Lengua"
+        verbose_name_plural = "Vistas Interpretar Lengua"
+        db_table = "v_interpretar_lengua"
+        
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaExtraerLengua(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Extraer Lengua"
+        verbose_name_plural = "Vistas Extraer Lengua"
+        db_table = "v_extraer_lengua"
+        
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaEscrituraLengua(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Escritura Lengua"
+        verbose_name_plural = "Vistas Escritura Lengua"
+        db_table = "v_escritura_lengua"
+        
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+
+class VistaGeneralMatematica(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista General Matematica"
+        verbose_name_plural = "Vistas Generales Matematica"
+        db_table = "v_gral_matematica"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaReconocimientoMatematica(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Reconocimiento Matematica"
+        verbose_name_plural = "Vistas Reconocimiento Matematica"
+        db_table = "v_reconocimiento_matematica"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaComunicacionMatematica(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Comunicacion Matematica"
+        verbose_name_plural = "Vistas Comunicacion Matematica"
+        db_table = "v_comunicacion_matematica"
+        
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaResolucionMatematica(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Resolucion Matematica"
+        verbose_name_plural = "Vistas Resolucion Matematica"
+        db_table = "v_resolucion_matematica"
+        
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+    
+
+#####################
+# Vistas por region #
+#####################
+
+class VistaGeneralLenguaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista General Lengua Region"
+        verbose_name_plural = "Vistas Generales Lengua Region"
+        db_table = "v_gral_lengua_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaEvaluarLenguaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Evaluar Lengua Region"
+        verbose_name_plural = "Vistas Evaluar Lengua Region"
+        db_table = "v_evaluar_lengua_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaInterpretarLenguaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Interpretar Lengua Region"
+        verbose_name_plural = "Vistas Interpretar Lengua Region"
+        db_table = "v_interpretar_lengua_reg"
+        
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaExtraerLenguaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Extraer Lengua Region"
+        verbose_name_plural = "Vistas Extraer Lengua Region"
+        db_table = "v_extraer_lengua_reg"
+        
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaEscrituraLenguaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Escritura Lengua Region"
+        verbose_name_plural = "Vistas Escritura Lengua Region"
+        db_table = "v_escritura_lengua_reg"
+        
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+
+class VistaGeneralMatematicaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista General Matematica Region"
+        verbose_name_plural = "Vistas Generales Matematica Region"
+        db_table = "v_gral_matematica_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaReconocimientoMatematicaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Reconocimiento Matematica Region"
+        verbose_name_plural = "Vistas Reconocimiento Matematica Region"
+        db_table = "v_reconocimiento_matematica_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaComunicacionMatematicaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Comunicacion Matematica Region"
+        verbose_name_plural = "Vistas Comunicacion Matematica Region"
+        db_table = "v_comunicacion_matematica_reg"
+        
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaResolucionMatematicaReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Resolucion Matematica Region"
+        verbose_name_plural = "Vistas Resolucion Matematica Region"
+        db_table = "v_resolucion_matematica_reg"
+        
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'

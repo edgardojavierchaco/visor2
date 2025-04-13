@@ -1,11 +1,17 @@
 from django.urls import path
 from .views import buscar_escuelas, cargar_alumno_bilingue, filtrar_cursos
 from .views import AlumnosBilingueCreateView, AlumnosBilingueCreateView2, AlumnosBilingueUpdateView, AlumnosBilingueDeleteView, AlumnosBilingueListView, AlumnosBilingueListView2, AlumnosBilingueUpdateView2, AlumnosBilingueDeleteView2
-from .views_dashboard import DashboardView, DashboardComunView, DashboardFuncView, DashboardRegView
+from .views_dashboard import (
+    DashboardView, 
+    DashboardComunView, 
+    DashboardFuncView, 
+    DashboardRegView,
+    DashboardSupervView)
 from .views_func import VistaAlumnosBilingueListView, VistaAlumnosBilingueListView2
 from .views_index import IndexView
 from .views_reg import VistaAlumnosBilingueListRegView, VistaAlumnosBilingueListRegView2
 from .views_gestor import VistaAlumnosBilingueGestorListView, VistaAlumnosBilingueGestorListView2
+from .views_superv import VistaAlumnosBilingueSupervListView, VistaAlumnosBilingueSupervListView2
 
 app_name='intercultural'
 
@@ -28,11 +34,14 @@ urlpatterns = [
     path('alumnos/list_reg_cue/<str:cueanexo>/', VistaAlumnosBilingueListRegView2.as_view(), name='alumnos_list_reg_cue'),
     path('alumnos/list_gestor/', VistaAlumnosBilingueGestorListView.as_view(), name='alumnos_list_gestor'),
     path('alumnos/list_gestor_cue/<str:cueanexo>/', VistaAlumnosBilingueGestorListView2.as_view(), name='alumnos_list_gestor_cue'),
+    path('alumnos/list_superv/', VistaAlumnosBilingueSupervListView.as_view(), name='alumnos_list_superv'),
+    path('alumnos/list_superv_cue/<str:cueanexo>/', VistaAlumnosBilingueSupervListView2.as_view(), name='alumnos_list_superv_cue'),
     # home
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard_comun/', DashboardComunView.as_view(), name='dashboard_comun'),
     path('dashboard_func/', DashboardFuncView.as_view(), name='dashboard_func'), 
     path('dashboard_reg/', DashboardRegView.as_view(), name='dashboard_reg'), 
+    path('dashboard_superv/', DashboardSupervView.as_view(), name='dashboard_superv'),
     path('index/', IndexView.as_view(), name='index'),   
 ]
 
