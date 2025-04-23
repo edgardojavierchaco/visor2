@@ -23,6 +23,15 @@ from django.shortcuts import render
 from django.template.loader import render_to_string
 import pdfkit
 from django.db import connection
+import tempfile
+import os
+import qrcode
+import base64
+from io import BytesIO
+from django.conf import settings
+from django.utils.timezone import now
+from django.contrib.auth.decorators import login_required
+from datetime import datetime
 
 #####################
 # Resultados Lengua #
@@ -102,7 +111,7 @@ def exportar_pdf_lengua(request):
         'nom_est': rows[0] if rows else None,
     }
 
-    html_string = render_to_string('operativchaco/lengua/resultados_pdf.html', context)
+    html_string = render_to_string('operativchaco/lengua/resultados_final_lengua_pdf.html', context)
 
     options = {
         'encoding': 'UTF-8',
@@ -183,7 +192,127 @@ def exportar_pdf_matematica(request):
         'titulos': titulos,
         'nom_est': rows[0] if rows else None,
     }
-    html_string = render_to_string('operativchaco/matematica/resultados_pdf.html', context)
+    html_string = render_to_string('operativchaco/matematica/resultados_final_matematica_pdf.html', context)
+    options = {
+        'encoding': 'UTF-8',
+        'enable-local-file-access': None,
+    }
+    pdf = pdfkit.from_string(html_string, False, options=options)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="resultados_matematica_{usuario}.pdf"'
+    return response
+
+
+
+def exportar_pdf_lengua_cueanexo(request):
+    usuario = request.user.username
+    
+    query = """
+            SELECT nom_est 
+            FROM public.v_capa_unica_ofertas
+            WHERE cueanexo = %s            
+        """
+    with connection.cursor() as cursor:
+        cursor.execute(query, [usuario])
+        rows = cursor.fetchone()
+        print(rows)
+    
+    # Generación del QR con los datos de los resultados
+    usuario = request.user.username
+    fecha_hora = now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Iniciar la estructura de datos del QR
+    qr_data = f"Usuario: {usuario}\nEscuela: {rows}\nFecha y Hora: {fecha_hora}\n\n"
+
+    # Crear el QR
+    qr_img = qrcode.make(qr_data)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.MEDIA_ROOT)
+    temp_file_path = temp_file.name + '.png'
+    qr_img.save(temp_file_path)
+    
+    resultado = {
+        'resultado_gral': list(VistaGeneralLengua.objects.filter(cueanexo=usuario).values()),
+        'resultado_evaluar': list(VistaEvaluarLengua.objects.filter(cueanexo=usuario).values()),
+        'resultado_extraer': list(VistaExtraerLengua.objects.filter(cueanexo=usuario).values()),
+        'resultado_escribir': list(VistaEscrituraLengua.objects.filter(cueanexo=usuario).values()),
+        'resultado_interpretar': list(VistaInterpretarLengua.objects.filter(cueanexo=usuario).values()),
+    }
+
+    titulos = {
+        'resultado_gral': 'Resultado General',
+        'resultado_evaluar': 'Evaluar',
+        'resultado_extraer': 'Extraer',
+        'resultado_escribir': 'Escribir',
+        'resultado_interpretar': 'Interpretar'
+    }
+
+    context = {
+        'resultado': resultado,
+        'usuario': usuario,
+        'titulos': titulos,
+        'nom_est': rows[0] if rows else None,
+    }   
+    
+
+    html_string = render_to_string('operativchaco/lengua/resultados_cueanexo_lengua_pdf.html', context)
+
+    options = {
+        'encoding': 'UTF-8',
+        'enable-local-file-access': None,
+    }
+
+    pdf = pdfkit.from_string(html_string, False, options=options)
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="resultados_lengua_{usuario}.pdf"'
+    return response
+
+
+def exportar_pdf_matematica_cueanexo(request):
+    usuario = request.user.username
+    query = """
+            SELECT nom_est 
+            FROM public.v_capa_unica_ofertas
+            WHERE cueanexo = %s            
+        """
+    with connection.cursor() as cursor:
+        cursor.execute(query, [usuario])
+        rows = cursor.fetchone()
+        print(rows)
+    
+    # Generación del QR con los datos de los resultados
+    usuario = request.user.username
+    fecha_hora = now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Iniciar la estructura de datos del QR
+    qr_data = f"Usuario: {usuario}\nEscuela: {rows}\nFecha y Hora: {fecha_hora}\n\n"
+
+    # Crear el QR
+    qr_img = qrcode.make(qr_data)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.MEDIA_ROOT)
+    temp_file_path = temp_file.name + '.png'
+    qr_img.save(temp_file_path)
+    
+    
+    resultado = {
+        'resultado_gral': list(VistaGeneralMatematica.objects.filter(cueanexo=usuario).values()),
+        'resultado_comunicacion': list(VistaComunicacionMatematica.objects.filter(cueanexo=usuario).values()),
+        'resultado_reconocimiento': list(VistaReconocimientoMatematica.objects.filter(cueanexo=usuario).values()),
+        'resultado_resolucion': list(VistaResolucionMatematica.objects.filter(cueanexo=usuario).values()),
+    }
+    titulos = {
+        'resultado_gral': 'Resultado General',
+        'resultado_comunicacion': 'Comunicacion',
+        'resultado_reconocimiento': 'Reconocimiento',
+        'resultado_resolucion': 'Resolucion'
+    }
+    context = {
+        'resultado': resultado,
+        'usuario': usuario,
+        'titulos': titulos,
+        'nom_est': rows[0] if rows else None,
+    }
+    html_string = render_to_string('operativchaco/matematica/resultados_cueanexo_matematica_pdf.html', context)
     options = {
         'encoding': 'UTF-8',
         'enable-local-file-access': None,

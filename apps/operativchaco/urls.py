@@ -54,6 +54,8 @@ from .views_resultados import (
     ResultadosMatematicaView,
     ResultadosCueanexoMatematica,
     exportar_pdf_matematica,
+    exportar_pdf_lengua_cueanexo,
+    exportar_pdf_matematica_cueanexo,   
 )
 
 from .views_resultados_reg import (
@@ -108,6 +110,8 @@ urlpatterns = [
     path('resultados/cueanexo_matematica/', ResultadosMatematicaView, name='resultados_cueanexo_matematica'),
     path('api/resultados/cueanexo_matematica/', ResultadosCueanexoMatematica, name='resultados_matematica_api'),
     path('resultados_matematica_pdf/', exportar_pdf_matematica, name='exportar_pdf_matematica'),
+    path('resultados_matematica_cue_pdf/', exportar_pdf_matematica_cueanexo, name='exportar_pdf_matematica_cue'),
+    path('resultados_lengua_cue_pdf/', exportar_pdf_lengua_cueanexo, name='exportar_pdf_lengua_cue'),
     # Resultados lengua y matematica regional
     path('resultados/region_lengua/', ResultadosLenguaRegionalView, name='resultados_region_lengua'),
     path('api/resultados/region_lengua/', ResultadosRegionLengua, name='resultados_region_lengua_api'),    

@@ -51,7 +51,7 @@ class ExamenLenguaAlumnoForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         # Validación de campos requeridos
-        for field_name in ['dni', 'apellidos', 'nombres']:
+        for field_name in ['dni', 'apellidos', 'nombres', 'discapacidad', 'etnia']:
             if not cleaned_data.get(field_name):
                 self.add_error(field_name, "Este campo es obligatorio.")
 
@@ -117,7 +117,7 @@ class ExamenMatematicaAlumnoForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         # Validación de campos requeridos
-        for field_name in ['dni', 'apellidos', 'nombres']:
+        for field_name in ['dni', 'apellidos', 'nombres', 'discapacidad','etnia']:
             if not cleaned_data.get(field_name):
                 self.add_error(field_name, "Este campo es obligatorio.")
 

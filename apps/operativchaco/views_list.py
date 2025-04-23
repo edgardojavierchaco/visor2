@@ -132,7 +132,7 @@ def cerrar_carga_lengua(request):
     user = request.user
     cueanexo = user.username
     fecha_actual = now().strftime('%d/%m/%Y %H:%M')
-    region_usuario= EscuelasSecundarias.objects.filter(cueanexo=request.user.username).values_list('region', flat=True).first()
+    region_usuario= EscuelasSecundarias.objects.filter(cueanexo=request.user.username).values_list('region_loc', flat=True).first()
     total_registros = ExamenLenguaAlumno.objects.filter(cueanexo=cueanexo).count()
     
     

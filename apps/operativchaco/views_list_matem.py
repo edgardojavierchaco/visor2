@@ -131,7 +131,7 @@ def cerrar_carga_matematica(request):
     user = request.user
     cueanexo = user.username
     fecha_actual = now().strftime('%d/%m/%Y %H:%M')
-    region_usuario= EscuelasSecundarias.objects.filter(cueanexo=request.user.username).values_list('region', flat=True).first()
+    region_usuario= EscuelasSecundarias.objects.filter(cueanexo=request.user.username).values_list('region_loc', flat=True).first()
     total_registros = ExamenMatematicaAlumno.objects.filter(cueanexo=cueanexo).count()
     
     # ⚠️ Validar si ya se cerró la carga
@@ -157,7 +157,7 @@ def cerrar_carga_matematica(request):
     EscuelasSecundarias.objects.filter(cueanexo=cueanexo).update(matematica="CARGADO")
 
     # ✅ Crear el contenido para el código QR
-    qr_data = f"CUEANEXO: {cueanexo}\nFecha: {fecha}\nTotal registros: {total_registros}"
+    qr_data = f"CUEANEXO: {cueanexo}\nFecha: {fecha_actual}\nTotal registros: {total_registros}"
     qr_img = qrcode.make(qr_data)
     qr_io = BytesIO()
     qr_img.save(qr_io, format='PNG')
@@ -175,7 +175,7 @@ def cerrar_carga_matematica(request):
     # Detalles
     p.setFont("Helvetica", 12)
     p.drawString(100, height - 140, f"CUEANEXO: {cueanexo}")
-    p.drawString(100, height - 160, f"Fecha de cierre: {fecha}")
+    p.drawString(100, height - 160, f"Fecha de cierre: {fecha_actual}")
     p.drawString(100, height - 180, f"Cantidad de registros: {total_registros}")
 
     # Imagen QR
