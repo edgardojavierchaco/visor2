@@ -29,7 +29,7 @@ class ExamenMatematicaListView(LoginRequiredMixin, ListView):
     model = ExamenMatematicaAlumno
     template_name = 'operativchaco/matematica/examen_matematica_list.html'
     context_object_name = 'examenes'
-    paginate_by = 20
+    
 
     def get_queryset(self):
         usuario = self.request.user
@@ -190,9 +190,9 @@ def cerrar_carga_matematica(request):
     return FileResponse(pdf_buffer, as_attachment=True, filename=f'cierre_{cueanexo}.pdf')
 
 @login_required
-def exportar_pdf_matematica(request, examen_id):
-    examen = ExamenMatematicaAlumno.objects.get(id=examen_id)
-
+def exportar_pdf_matematica(request, examen_id):    
+    examen = ExamenMatematicaAlumno.objects.get(id=examen_id)    
+    
     # Campos de ítems
     item_fields = [f"p{i}" for i in range(1, 15)]
 

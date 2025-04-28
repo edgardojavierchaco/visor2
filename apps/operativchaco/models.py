@@ -873,3 +873,146 @@ class VistaResolucionMatematicaReg(models.Model):
         
     def __str__(self):
         return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+#####################################################
+#       OPERATIVO FLUIDEZ LECTURA 2 Y 3 GRADO       #
+#####################################################
+
+class AlumnosPrimariaFluidez(models.Model):
+    dni = models.CharField(max_length=8, verbose_name='DNI')  
+    apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='Nombres')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
+    grado=models.CharField(max_length=25, verbose_name='grado')
+    division=models.CharField(max_length=5, verbose_name='División')
+    region=models.CharField(max_length=25, verbose_name='Regional')
+
+    class Meta:
+        verbose_name = "Alumno Primaria Fluidez"
+        verbose_name_plural = "Alumnos Primaria Fluidez"
+        db_table = "Alumno_Primaria_Fluidez"
+
+    def __str__(self):
+        return f'{self.dni} {self.apellidos} {self.nombres}'
+
+
+class ExamenFluidezSegundo(models.Model):
+    PROSODIA_CHOICES = [
+        ('1','1'),
+        ('2','2'),
+        ('3','3'),
+        ('4','4'),
+    ]
+    
+    PREG1_CHOICES = [
+        ('NR','NR'),
+        ('a','a'),
+        ('b','b'),
+        ('c','c'),
+    ]    
+    
+    PREG2_CHOICES = [
+        ('NR','NR'),
+        ('a','a'),
+        ('b','b'),
+        ('c','c'),
+    ] 
+    
+    PREG3_CHOICES = [
+        ('NR','NR'),
+        ('a','a'),
+        ('b','b'),
+        ('c','c'),
+    ]       
+    
+    DISCAPACIDAD=[
+        ('SI', 'SI'),  
+        ('NO', 'NO'),
+    ]
+    
+    ETNIA=[
+        ('NO', 'NO'),
+        ('QOM', 'QOM'),
+        ('WICHI', 'WICHI'),
+        ('MOQOIT', 'MOQOIT'),
+    ]
+        
+    dni = models.CharField(max_length=8, verbose_name='DNI')  
+    apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='Nombres')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
+    grado=models.CharField(max_length=25, verbose_name='Grado')
+    division=models.CharField(max_length=5, verbose_name='División')
+    region=models.CharField(max_length=25, verbose_name='Regional')
+    discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
+    etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
+    velocidad = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Velocidad')
+    precision = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Precisión')
+    prosodia=models.CharField(choices=PROSODIA_CHOICES, verbose_name='Prosodia')
+    p1=models.CharField(choices=PREG1_CHOICES, verbose_name='Pregunta 1')
+    p2=models.CharField(choices=PREG2_CHOICES, verbose_name='Pregunta 2')
+    p3=models.CharField(choices=PREG3_CHOICES, verbose_name='Pregunta 3')
+    
+    class Meta:
+        verbose_name = "Examen Fluidez Segundo"
+        verbose_name_plural = "Examenes Fluidez Segundo"
+        db_table = "Examen_Fluidez_Segundo"
+
+    def __str__(self):
+        return f'{self.dni} {self.apellidos} {self.nombres}'
+
+
+class EscuelasPrimarias(models.Model):
+    id = models.AutoField(primary_key=True)
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo')
+    nom_est=models.CharField(max_length=255, verbose_name='Nombre')
+    oferta=models.CharField(max_length=255, verbose_name='Oferta')
+    region_loc=models.CharField(max_length=255, verbose_name='Region')
+    sector=models.CharField(max_length=255, verbose_name='Sector')
+    ambito=models.CharField(max_length=255, verbose_name='Ambito')
+    localidad=models.CharField(max_length=255, verbose_name='Localidad')
+    departamento=models.CharField(max_length=255, verbose_name='Departamento')
+    segundo=models.CharField(max_length=255, default='PENDIENTE',verbose_name='Segundo')
+    tercero=models.CharField(max_length=255, default='PENDIENTE',verbose_name='Tercero')
+    
+    class Meta:        
+        verbose_name = "Escuela Primaria"
+        verbose_name_plural = "Escuelas Primarias"
+        db_table = "escuelas_primarias"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nom_est}'
+
+
+class TotalPrimarias(models.Model):
+    total_escuelas=models.PositiveIntegerField(verbose_name='Total')
+    estatal=models.PositiveIntegerField(verbose_name='Estatal')
+    privado=models.PositiveIntegerField(verbose_name='Privada')
+    gestion_social=models.PositiveIntegerField(verbose_name='Gestion Social')
+    urbano=models.PositiveIntegerField(verbose_name='Urbano')
+    rural_disperso=models.PositiveIntegerField(verbose_name='Rural_Disperso')
+    rural_aglomerado=models.PositiveIntegerField(verbose_name='Rural_Aglomerado')
+    
+    class Meta:
+        verbose_name = "Total Primaria"
+        verbose_name_plural = "Total Primarias"
+        db_table = "total_primarias"
+    
+    def __str__(self):
+        return f'{self.total_escuelas} {self.estatal} {self.privado} {self.gestion_social} {self.urbano} {self.rural_disperso} {self.rural_aglomerado}'
+
+
+class RegistroAsistenciaFluidezSegundo(models.Model):
+    cueanexo = models.CharField(max_length=15)
+    fecha = models.DateTimeField(auto_now_add=True)
+    region=models.CharField(max_length=25)
+    ausentes = models.PositiveIntegerField()
+    total_registros = models.PositiveIntegerField()
+    
+    class Meta:
+        verbose_name = "Registro Asistencia Fluidez Segundo"
+        verbose_name_plural = "Registros Asistencia Fluidez Segundo"
+        db_table = "Registro_Asistencia_Fluidez_Segundo"
+
+ 

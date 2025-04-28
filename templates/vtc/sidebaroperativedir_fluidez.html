@@ -1,0 +1,66 @@
+{% load static %}
+<aside class="main-sidebar sidebar-light-primary elevation-4">
+    <a href="{% url 'operative:dashboard' %}" class="brand-link">
+        <img src="{% static 'img/logoEstMini.png' %}"
+             alt="Estadística Educativa"
+             class="brand-image img-circle elevation-3"
+             style="opacity: .8">
+        <span class="brand-text font-weight-light">Estadística Educativa</span>
+    </a>
+    <div class="sidebar">
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="image">
+                <img src="{{ request.user.get_image }}" class="img-circle" alt="Usuario">
+            </div>
+            <div class="info">
+                <a href="#" class="d-block">{{ request.user.username }}</a>
+            </div>
+        </div>
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                <li class="nav-header">Mantenimientos</li>
+                
+                <li class="nav-item">
+                    <a href="{% url 'directores:institucional' %}" class="nav-link">
+                        <i class="nav-icon fas fa-home"></i>
+                        <p>
+                            Inicio
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'operativ:examen_segundo_listado' %}" class="nav-link">
+                        <i class="fa fa-language" aria-hidden="true" style="color:green;"></i> 
+                        <p>
+                            Examen Fluidez Segundo
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-square-root-alt" style="color:red;"></i>
+                        <p>
+                            Examen Fluidez Tercero
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'operativ:cuenta_regresiva_lengua_graficos' %}" class="nav-link">
+                        <i class="fas fa-chart-line" style="color:blue;"></i>
+                        <p>
+                            Gráfica de Segundo
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'operativ:cuenta_regresiva_matematica_graficos' %}" class="nav-link">
+                        <i class="fas fa-chart-pie" style="color:orange;"></i>
+                        <p>
+                            Gráfica de Tercero
+                        </p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</aside>

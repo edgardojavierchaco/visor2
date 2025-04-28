@@ -7,7 +7,7 @@
         <tr><th>Nombres</th><td>{{ examen.nombres }}</td></tr>
         <tr><th>CUE</th><td>{{ examen.cueanexo }}</td></tr>
         <tr><th>Región</th><td>{{ examen.region }}</td></tr>
-        <tr><th>Año</th><td>{{ examen.anio }}</td></tr>
+        <tr><th>Grado</th><td>{{ examen.grado }}</td></tr>
         <tr><th>División</th><td>{{ examen.division }}</td></tr>
         <tr><th>Discapacidad</th><td>{{ examen.discapacidad }}</td></tr>
         <tr><th>Etnia</th><td>{{ examen.etnia }}</td></tr>
@@ -18,13 +18,13 @@
                 {{ total_puntaje }}
             </td>
         </tr>
-        {% comment %} <tr>
+        <tr>
             <td colspan="2" class="text-end">
-                <a href="{% url 'operativ:exportar_pdf_matematica' examen.id %}" target="_blank" class="btn btn-sm btn-outline-danger">
+                <a href="{% url 'operativ:exportar_pdf_segundo' examen.id %}" target="_blank" class="btn btn-sm btn-outline-danger">
                     <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
                 </a>
             </td>
-        </tr> {% endcomment %}
+        </tr>
     </tbody>
 </table>
 
@@ -32,16 +32,22 @@
 <table class="table table-bordered table-striped table-sm">
     <thead>
         <tr>
-            {% for i in items %}
-                <th>Item {{ i }}</th>
-            {% endfor %}
+            <th>Velocidad</th>
+            <th>Precisión</th>
+            <th>Prosodia</th>
+            <th>Preg. 1</th>
+            <th>Preg. 2</th>
+            <th>Preg. 3</th>
         </tr>
     </thead>
     <tbody>
-        <tr>
-            {% for i in items %}
-                <td>{{ examen|get_item:i }}</td>
-            {% endfor %}
+        <tr>            
+            <td>{{ examen.velocidad }}</td>
+            <td>{{ examen.precision }}</td>
+            <td>{{ examen.prosodia }}</td>
+            <td>{{ examen.p1 }}</td>
+            <td>{{ examen.p2 }}</td>
+            <td>{{ examen.p3 }}</td>
         </tr>
     </tbody>
 </table>

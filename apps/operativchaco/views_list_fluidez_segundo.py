@@ -23,26 +23,26 @@ from django.utils.timezone import now
 from django.views.generic import DetailView, ListView
 
 # Local
-from .models import EscuelasSecundarias, ExamenLenguaAlumno, RegistroAsistenciaLengua
+from .models import EscuelasPrimarias, ExamenFluidezSegundo, RegistroAsistenciaFluidezSegundo 
 
 
-class ExamenLenguaListView(LoginRequiredMixin, ListView):
-    model = ExamenLenguaAlumno
-    template_name = 'operativchaco/lengua/examen_lengua_list.html'
+class ExamenFluidezSegundoListView(LoginRequiredMixin, ListView):
+    model = ExamenFluidezSegundo
+    template_name = 'operativchaco/fluidez/segundo/examen_segundo_list.html'
     context_object_name = 'examenes'
-
+    paginate_by = 20
 
     def get_queryset(self):
         usuario = self.request.user
         cueanexo_usuario = usuario.username 
-        return ExamenLenguaAlumno.objects.filter(cueanexo=cueanexo_usuario)
+        return ExamenFluidezSegundo.objects.filter(cueanexo=cueanexo_usuario)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
         usuario = self.request.user
         cueanexo_usuario = usuario.username
-        region= EscuelasSecundarias.objects.filter(
+        region= EscuelasPrimarias.objects.filter(
             cueanexo=cueanexo_usuario).values_list('region_loc', flat=True).first()
         print(f"Usuario: {usuario}, CUEAnexo: {cueanexo_usuario}")
         
@@ -52,17 +52,17 @@ class ExamenLenguaListView(LoginRequiredMixin, ListView):
         return context
         
 
-class ExamenLenguaDetailView(LoginRequiredMixin, DetailView):
-    model = ExamenLenguaAlumno
-    template_name = 'operativchaco/lengua/examen_lengua_detail.html'
+class ExamenFluidezSegundoDetailView(LoginRequiredMixin, DetailView):
+    model = ExamenFluidezSegundo
+    template_name = 'operativchaco/fluidez/segundo/examen_segundo_detail.html'
     context_object_name = 'examen'
 
 @login_required
-def exportar_excel_examenes(request):
+def exportar_excel_examenes_segundo(request):
     usuario = request.user
     cueanexo_usuario = usuario.username
 
-    queryset = ExamenLenguaAlumno.objects.filter(cueanexo=cueanexo_usuario)
+    queryset = ExamenFluidezSegundo.objects.filter(cueanexo=cueanexo_usuario)
 
     # Agrupar exámenes por división
     exámenes_por_división = defaultdict(list)
@@ -71,7 +71,7 @@ def exportar_excel_examenes(request):
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Exámenes Lengua"
+    ws.title = "Exámenes Fluidez Lectora 2025 - Segundo Grado"
     ws.sheet_properties.tabColor = "1072BA"
 
     # Ajustar ancho de columnas
@@ -80,14 +80,13 @@ def exportar_excel_examenes(request):
 
     # ENCABEZADO PERSONALIZADO
     fecha_actual = date.today().strftime("%d/%m/%Y")
-    ws.append([f'{cueanexo_usuario} - Diagnóstico Área de Lengua'])
-    ws.append(['1° Año - Ciclo 2025 - Fecha: ' + fecha_actual])
+    ws.append([f'{cueanexo_usuario} - Evaluación Fluidez Lectora'])
+    ws.append(['2° Grado - Ciclo 2025 - Fecha: ' + fecha_actual])
     ws.append([])  # Fila vacía para separar
 
     columnas = [
-        'DNI', 'Apellidos', 'Nombres', 'CUEAnexo', 'Año', 'División', 'Región',
-        'Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 7', 'Item 8',
-        'Item 9', 'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14', 'Item 15', 'Item 16',
+        'DNI', 'Apellidos', 'Nombres', 'Cueanexo', 'Grado', 'División', 'Región',
+        'Velocidad', 'Precisión', 'Prosodia', 'Preg. 1', 'Preg. 2', 'Preg. 3',
         'Total'
     ]
 
@@ -97,48 +96,45 @@ def exportar_excel_examenes(request):
         ws.append([f'División: {division}'])
         for examen in examenes:
             total = sum([
-                examen.p1, examen.p2, examen.p3, examen.p4, examen.p5, examen.p6,
-                examen.p7, examen.p8, examen.p9, examen.p10, examen.p11, examen.p12,
-                examen.p13, examen.p14, examen.p15, examen.p16
+                examen.velocidad, examen.precision, examen.prosodia, examen.p1, examen.p2, examen.p3
             ])
             fila = [
-                examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.anio,
-                examen.division, examen.region, examen.p1, examen.p2, examen.p3, examen.p4,
-                examen.p5, examen.p6, examen.p7, examen.p8, examen.p9, examen.p10,
-                examen.p11, examen.p12, examen.p13, examen.p14, examen.p15, examen.p16,
-                total
+                examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.grado,
+                examen.division, examen.region, examen.velocidad, examen.precision, examen.prosodia, examen.p1,
+                examen.p2, examen.p3, total
             ]
             ws.append(fila)
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = 'attachment; filename=examenes_lengua.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=examenes_fluidez_segundo.xlsx'
     wb.save(response)
     return response
 
 @login_required
-def examen_lengua_detalle_modal(request, pk):
-    examen = get_object_or_404(ExamenLenguaAlumno, pk=pk)
-    items = list(range(1, 17))  # del 1 al 16
-    return render(request, 'operativchaco/lengua/examen_detalle_modal.html', {
+def examen_segundo_detalle_modal(request, pk):
+    examen = get_object_or_404(ExamenFluidezSegundo, pk=pk)
+    items = list(range(1, 7))  # del 1 al 16
+    print(examen)
+    return render(request, 'operativchaco/fluidez/segundo/examen_detalle_modal.html', {
         'examen': examen,
         'items': items,
     })
 
 
 @login_required
-def cerrar_carga_lengua(request):  
+def cerrar_carga_fluidez_segundo(request):  
     user = request.user
     cueanexo = user.username
     fecha_actual = now().strftime('%d/%m/%Y %H:%M')
-    region_usuario= EscuelasSecundarias.objects.filter(cueanexo=request.user.username).values_list('region_loc', flat=True).first()
-    total_registros = ExamenLenguaAlumno.objects.filter(cueanexo=cueanexo).count()
+    region_usuario= EscuelasPrimarias.objects.filter(cueanexo=request.user.username).values_list('region_loc', flat=True).first()
+    total_registros = ExamenFluidezSegundo.objects.filter(cueanexo=cueanexo).count()
     
     
  
     # ⚠️ Validar si ya se cerró la carga
-    if RegistroAsistenciaLengua.objects.filter(cueanexo=cueanexo).exists():
+    if RegistroAsistenciaFluidezSegundo.objects.filter(cueanexo=cueanexo).exists():
         return HttpResponse("⚠️ La carga ya fue cerrada previamente.")
 
     # ✅ Obtener los ausentes del formulario
@@ -148,7 +144,7 @@ def cerrar_carga_lengua(request):
         ausentes = 0
             
     # ✅ Guardar el registro del cierre
-    RegistroAsistenciaLengua.objects.create(
+    RegistroAsistenciaFluidezSegundo.objects.create(
         cueanexo=cueanexo,
         fecha=fecha_actual,
         region=region_usuario,
@@ -157,7 +153,7 @@ def cerrar_carga_lengua(request):
     )
     
     # ✅ Actualizar el estado de carga de lengua en EscuelasSecundarias
-    EscuelasSecundarias.objects.filter(cueanexo=cueanexo).update(lengua="CARGADO")
+    EscuelasPrimarias.objects.filter(cueanexo=cueanexo).update(lengua="CARGADO")
 
     # ✅ Crear el contenido para el código QR
     qr_data = f"CUEANEXO: {cueanexo}\nFecha: {fecha_actual}\nTotal registros: {total_registros}"
@@ -173,7 +169,7 @@ def cerrar_carga_lengua(request):
 
     # Título
     p.setFont("Helvetica-Bold", 16)
-    p.drawString(100, height - 100, "📘 Diagnóstico Área Lengua 2025")
+    p.drawString(100, height - 100, "📘 Evaluación Fluidez y Comprensión Lectora - 2° Grado - 2025")
 
     # Detalles
     p.setFont("Helvetica", 12)
@@ -193,8 +189,8 @@ def cerrar_carga_lengua(request):
     return FileResponse(pdf_buffer, as_attachment=True, filename=f'cierre_{cueanexo}.pdf')
 
 @login_required
-def exportar_pdf(request, examen_id):
-    examen = ExamenLenguaAlumno.objects.get(id=examen_id)
+def exportar_pdf_segundo(request, examen_id):
+    examen = ExamenFluidezSegundo.objects.get(id=examen_id)
 
     # Campos de ítems
     item_fields = [f"p{i}" for i in range(1, 17)]
@@ -208,7 +204,7 @@ Apellidos: {examen.apellidos}
 Nombres: {examen.nombres}
 CUE: {examen.cueanexo}
 Región: {examen.region}
-Año: {examen.anio}
+Año: {examen.grado}
 División: {examen.division}
 Puntaje total: {total_puntaje}
 Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
@@ -233,7 +229,7 @@ Puntajes por ítem:"""
 
     y = height - 50
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, y, "Informe de Diagnóstico de Lengua 2025")
+    p.drawString(50, y, "Informe de Evaluación Fluidez y Comprensión Lectora - 2° Grado - 2025")
     y -= 30
 
     p.setFont("Helvetica", 12)
@@ -243,7 +239,7 @@ Puntajes por ítem:"""
         f"Nombres: {examen.nombres}",
         f"CUE: {examen.cueanexo}",
         f"Región: {examen.region}",
-        f"Año: {examen.anio}",
+        f"Año: {examen.grado}",
         f"División: {examen.division}",
         f"Puntaje total: {total_puntaje}",
         f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
@@ -271,4 +267,4 @@ Puntajes por ítem:"""
     p.save()
     buffer.seek(0)
 
-    return FileResponse(buffer, as_attachment=True, filename='Diagnostico_Lengua_2025.pdf')
+    return FileResponse(buffer, as_attachment=True, filename='Evaluacion_fluidez_lectora_segunda_2025.pdf')

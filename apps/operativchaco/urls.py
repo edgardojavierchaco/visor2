@@ -66,6 +66,22 @@ from .views_resultados_reg import (
     exportar_pdf_resultados_finales,
 )
 
+# Fluidez Lectora 2 y 3 grado
+from .views_fluidez_segundo import (
+    buscar_alumno_por_dni_fluidez,
+    cargar_examen_fluidez_segundo,
+)
+
+from .views_list_fluidez_segundo import (
+    ExamenFluidezSegundoListView,
+    ExamenFluidezSegundoDetailView,
+    exportar_excel_examenes_segundo,
+    examen_segundo_detalle_modal,
+    cerrar_carga_fluidez_segundo,
+    exportar_pdf_segundo,
+    cerrar_carga_fluidez_segundo,
+)
+
 
 app_name='operativ'
 
@@ -123,6 +139,15 @@ urlpatterns = [
     path('resultados_final_superv/', dashboard_resultados_final_superv, name='dashboard_resultados_final_superv'),
     path('resultados_final_func/', dashboard_resultados_final_func, name='dashboard_resultados_final_func'),
     path('resultados_final_reg/', dashboard_resultados_final_regional, name='dashboard_resultados_final_regional'),
+    # Fluidez Segundo
+    path('buscar_dni_fluidez/', buscar_alumno_por_dni_fluidez, name='buscar_dni_fluidez'),
+    path('cargar_examen_fluidez_segundo/', cargar_examen_fluidez_segundo, name='carga_examen_fluidez_segundo'),
+    path('fluidez/examenes/segundo', ExamenFluidezSegundoListView.as_view(), name='examen_segundo_listado'),
+    path('fluidez/examenes/segundo/<int:pk>/', ExamenFluidezSegundoDetailView.as_view(), name='examen_segundo_detalle'),
+    path('fluidez/examenes/segundo/exportar/', exportar_excel_examenes_segundo, name='exportar_excel_examenes_segundo'),
+    path('examenes/segundo/<int:pk>/modal/', examen_segundo_detalle_modal, name='examen_segundo_detalle_modal'),
+    path('cerrar_carga_segundo/',cerrar_carga_fluidez_segundo, name='cerrar_carga_segundo'),
+    path('exportar_pdf_segundo/<int:examen_id>/', exportar_pdf_segundo, name='exportar_pdf_segundo'),    
 ]
 
 

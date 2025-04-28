@@ -1,4 +1,4 @@
-{% extends 'operativoschaco/layout.html' %}
+{% extends 'operativoschaco/layout_fluidez.html' %}
 
 {% load static %}
 
@@ -6,17 +6,17 @@
 
 <div class="text-center mb-5">
     <h1 class="display-5 fw-bold" style="color: #2c3e50;">
-        📋 Diagnóstico en el Área de 
-        <span style="text-decoration: underline; color: #1a73e8;">Matemática</span>
+        📋 Diagnóstico Fluidez y Comprensión Lectora 
+        <span style="text-decoration: underline; color: #1a73e8;">Segundo</span>
     </h1>
     <h2 class="text-secondary fst-italic" style="font-style: italic; color: #6c757d;">
-        1° Año de Secundaria · Ciclo 2025
+        Segundo Grado · Ciclo 2025
     </h2>
 </div>
 
 
 <div class="mb-3">
-    <a href="{% url 'operativ:exportar_excel_examenes_matematica' %}" class="btn btn-success">📤 Exportar a Excel</a>
+    <a href="{% url 'operativ:exportar_excel_examenes_segundo' %}" class="btn btn-success">📤 Exportar a Excel</a>
 </div>
 
 <div class="table-responsive">
@@ -26,7 +26,7 @@
                 <th>DNI</th>
                 <th>Apellidos</th>
                 <th>Nombres</th>                
-                <th>Año</th>
+                <th>Grado</th>
                 <th>División</th>
                 <th>Discapacidad</th>
                 <th>Etnia</th>
@@ -39,15 +39,15 @@
                 <td>{{ examen.dni }}</td>
                 <td>{{ examen.apellidos }}</td>
                 <td>{{ examen.nombres }}</td>                
-                <td>{{ examen.anio }}</td>
+                <td>{{ examen.grado }}</td>
                 <td>{{ examen.division }}</td>
                 <td>{{ examen.discapacidad }}</td>
                 <td>{{ examen.etnia }}</td>
                 <td>
                     <button class="btn btn-sm btn-primary ver-detalle" data-id="{{ examen.pk }}">Ver detalle</button>
                 </td>
-            </tr>       
-            {% endfor %}
+            </tr>      
+            {% endfor %}      
         </tbody>
         {% if examenes|length == 0 %}
           <p class="text-center mt-3">No hay exámenes cargados.</p>
@@ -57,7 +57,7 @@
 
 <div class="card-footer">
     {% block buttons_list %}
-        <a href="{% url 'operativ:cargar_examen_matematica' %}" class="btn btn-primary btn-flat btnTest">
+        <a href="{% url 'operativ:carga_examen_fluidez_segundo' %}" class="btn btn-primary btn-flat btnTest">
             <i class="fas fa-plus"></i> Nuevo registro
         </a>
         <a href="{{ list_url }}" class="btn btn-success btn-flat">
@@ -65,25 +65,25 @@
         </a>
         <a href="#" class="btn btn-danger btn-flat" id="btnCerrarCarga" data-bs-toggle="modal" data-bs-target="#modalCerrarCarga">
             <i class="fas fa-lock"></i> Cerrar Carga
-        </a>
+        </a>         
         <div><br></div>
         <div class="alert alert-warning d-flex align-items-center p-3 rounded shadow-sm" role="alert">
-            <img src="https://i.gifer.com/7efs.gif" alt="Advertencia" width="50" class="me-3" style="border-radius: 8px;">
+          <img src="https://i.gifer.com/7efs.gif" alt="Advertencia" width="50" class="me-3" style="border-radius: 8px;">
             <div>
               <p class="mb-0">
                 El botón <strong>"Cerrar Carga"</strong> es para cerrar <strong>luego de cargar los Resultados de TODAS LAS DIVISIONES</strong> y generar el PDF correspondiente.
               </p>
             </div>
         </div>
+
     {% endblock %}
 </div>
-
 <!-- Modal Detalle -->
 <div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="modalDetalleLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="modalDetalleLabel">📝 Detalle Diagnóstico Matemática</h5>
+        <h5 class="modal-title" id="modalDetalleLabel">📝 Detalle Evaluación Fluidez Segundo</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
@@ -98,7 +98,7 @@
 <!-- Modal Cierre de Carga -->
 <div class="modal fade" id="modalCerrarCarga" tabindex="-1" aria-labelledby="modalCerrarCargaLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form method="post" action="{% url 'operativ:cerrar_carga_matematica' %}" id="formCerrarCarga">
+    <form method="post" action="{% url 'operativ:cerrar_carga_segundo' %}" id="formCerrarCarga">
       {% csrf_token %}
       <div class="modal-content">
         <div class="modal-header bg-danger text-white">
@@ -136,9 +136,8 @@
             language: {
                 url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
             },
-            
-            lengthMenu: [[10, 20, 50, 100,-1], [10, 20, 50, 100, "Todos"]],
-            stateSave: true,
+            pageLength: 20,
+            lengthMenu: [[10, 20, 50, -1], [10, 20, 50, "Todos"]]
         });
 
         // Cargar contenido al presionar "Ver detalle"
@@ -147,7 +146,7 @@
             $('#contenidoDetalle').html('<p class="text-center">Cargando...</p>');
             $('#modalDetalle').modal('show');
             $.ajax({
-                url: '{% url "operativ:examen_matematica_detalle_modal" 0 %}'.replace('0', id),
+                url: '{% url "operativ:examen_segundo_detalle_modal" 0 %}'.replace('0', id),
                 success: function (data) {
                     $('#contenidoDetalle').html(data);
                 },

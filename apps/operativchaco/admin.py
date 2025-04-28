@@ -26,6 +26,11 @@ from .models import (
     VistaReconocimientoMatematica,
     VistaResolucionMatematica,
     VistaComunicacionMatematica,
+    AlumnosPrimariaFluidez,
+    ExamenFluidezSegundo,
+    EscuelasPrimarias,
+    TotalPrimarias,
+    RegistroAsistenciaFluidezSegundo,
 )
 
 admin.site.register(AlumnosSecundariaDiagnostico)
@@ -54,4 +59,9 @@ admin.site.register(VistaGeneralMatematica)
 admin.site.register(VistaReconocimientoMatematica)
 admin.site.register(VistaResolucionMatematica)
 admin.site.register(VistaComunicacionMatematica)
+admin.site.register(AlumnosPrimariaFluidez)
+admin.site.register(ExamenFluidezSegundo)
+admin.site.register(EscuelasPrimarias)
+admin.site.register(TotalPrimarias)
+admin.site.register(RegistroAsistenciaFluidezSegundo)
 

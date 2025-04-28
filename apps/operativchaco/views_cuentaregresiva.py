@@ -22,7 +22,7 @@ def cuenta_regresiva_matematica(request):
     # Compara sólo las fechas sin la hora para mayor precisión
     if fecha_futura.date() <= fecha_actual.date():
         # Renderiza a otro template si las fechas son iguales
-        return redirect('oprativ:examen_matematica_listado')
+        return redirect('operativ:examen_matematica_listado')
     else:
         # Calcula el tiempo restante
         tiempo_restante = fecha_futura - fecha_actual

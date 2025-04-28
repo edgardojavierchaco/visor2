@@ -1,0 +1,234 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados de Lengua</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .section {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 30px auto;
+            max-width: 900px;
+        }
+        .chart-container {
+            width: 400px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 300px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #eee;
+        }
+
+        /* ✅ Estilos base para los títulos */
+        .chart-title {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 8px 16px;
+            margin: 10px auto;
+            text-align: center;
+            border-radius: 12px;
+            width: fit-content;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+            color: #fff;
+        }
+
+        /* 🎨 Colores únicos por título */
+        .titulo-general {
+            background-color: #3498db; /* Azul */
+        }
+        .titulo-evaluar {
+            background-color: #9b59b6; /* Violeta */
+        }
+        .titulo-extraer {
+            background-color: #f39c12; /* Marrón */
+        }
+        .titulo-escribir {
+            background-color: #f1c40f; /* Celeste verdoso */
+        }
+        .titulo-interpretar {
+            background-color: #2ecc71; /* Verde azulado */
+        }
+        .boton-descarga {
+            display: inline-block;
+            background-color: #2ECC71;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .boton-descarga:hover {
+            background-color: #27AE60;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Resultados por Capacidades - Lengua 2025</h1>
+    <h3 style="text-align: center;">Cueanexo: {{ usuario }} - {{ nom_est }}</h3>
+
+    <div style="text-align: right; margin-bottom: 20px;">
+        <a href="{% url 'operativ:exportar_pdf_lengua_cue' %}" target="_blank" class="boton-descarga">
+            📄 Descargar PDF
+        </a>
+    </div>
+
+
+    <div id="contenedorResultados"></div>
+
+    <script>
+        fetch("{% url 'operativ:resultados_lengua_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                const coloresPorNivel = {
+                    "Debajo del Básico": "#E74C3C",
+                    "Básico": "#E67E22",
+                    "Satisfactorio": "#F1C40F",
+                    "Avanzado": "#2ECC71"
+                };
+
+                const clasesTitulo = {
+                    'Resultado General': 'titulo-general',
+                    'Evaluar': 'titulo-evaluar',
+                    'Extraer': 'titulo-extraer',
+                    'Escribir': 'titulo-escribir',
+                    'Interpretar': 'titulo-interpretar'
+                };
+
+                const emojis = {
+                    'Resultado General': '📊',
+                    'Evaluar': '🧠',
+                    'Extraer': '📎',
+                    'Escribir': '✍️',
+                    'Interpretar': '🧐'
+                };
+
+                function getChartData(dataArray) {
+                    return {
+                        labels: dataArray.map(item => item.nivel),
+                        datasets: [{
+                            data: dataArray.map(item => parseFloat(item.porcentaje)),
+                            backgroundColor: dataArray.map(item => coloresPorNivel[item.nivel] || "#CCCCCC")
+                        }]
+                    };
+                }
+
+                // 🧮 Totales acumulados
+                const totalesPorNivel = {
+                    "Debajo del Básico": 0,
+                    "Básico": 0,
+                    "Satisfactorio": 0,
+                    "Avanzado": 0
+                };
+                let totalEstudiantes = 0;
+
+                function crearGraficoConTabla(id, datos, titulo) {
+                    const container = document.createElement('div');
+                    container.className = 'section';
+
+                    const canvas = document.createElement('canvas');
+                    canvas.id = id;
+                    canvas.width = 400;
+                    canvas.height = 400;
+
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'chart-container';
+
+                    const tituloDiv = document.createElement('div');
+                    tituloDiv.className = `chart-title ${clasesTitulo[titulo]}`;
+                    tituloDiv.textContent = `${emojis[titulo]} ${titulo}`;
+                    chartDiv.appendChild(tituloDiv);
+                    chartDiv.appendChild(canvas);
+
+                    const tabla = document.createElement('table');
+                    const thead = document.createElement('thead');
+                    thead.innerHTML = `<tr><th colspan="2">${titulo}</th></tr><tr><th>Nivel</th><th>Cantidad</th></tr>`;
+                    tabla.appendChild(thead);
+
+                    const tbody = document.createElement('tbody');
+                    datos.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.style.backgroundColor = coloresPorNivel[item.nivel] || "#FFF";
+                        row.innerHTML = `<td>${item.nivel}</td><td>${item.cantidad}</td>`;
+                        tbody.appendChild(row);
+
+                        // 📊 Acumular datos para el resumen
+                        totalesPorNivel[item.nivel] += item.cantidad;
+                        totalEstudiantes += item.cantidad;
+                    });
+                    tabla.appendChild(tbody);
+
+                    container.appendChild(chartDiv);
+                    container.appendChild(tabla);
+                    document.getElementById('contenedorResultados').appendChild(container);
+
+                    const ctx = canvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: 'pie',
+                        data: getChartData(datos),
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: { display: false },
+                                datalabels: {
+                                    color: '#fff',
+                                    formatter: (value) => value + '%',
+                                    font: { weight: 'bold', size: 14 }
+                                },
+                                legend: { position: 'bottom' }
+                            }
+                        },
+                        plugins: [ChartDataLabels]
+                    });
+                }
+
+                // Crear todos los gráficos
+                crearGraficoConTabla('chartGeneral', data.resultado_gral, 'Resultado General');
+                crearGraficoConTabla('chartEvaluar', data.resultado_evaluar, 'Evaluar');
+                crearGraficoConTabla('chartExtraer', data.resultado_extraer, 'Extraer');
+                crearGraficoConTabla('chartEscribir', data.resultado_escribir, 'Escribir');
+                crearGraficoConTabla('chartInterpretar', data.resultado_interpretar, 'Interpretar');
+
+                // Mostrar resumen final
+                setTimeout(() => {
+                    const resumenDiv = document.createElement('div');
+                    resumenDiv.style.margin = '40px auto';
+                    resumenDiv.style.padding = '20px';
+                    resumenDiv.style.maxWidth = '600px';
+                    resumenDiv.style.border = '2px solid #ccc';
+                    resumenDiv.style.borderRadius = '12px';
+                    resumenDiv.style.backgroundColor = '#f9f9f9';
+                    resumenDiv.innerHTML = `
+                        <h2 style="text-align: center;">📌 Resumen General</h2>
+                        <p><strong>Total de estudiantes (todas las capacidades):</strong> ${totalEstudiantes}</p>
+                        <ul>
+                            <li style="color:${coloresPorNivel['Avanzado']}">🟢 Avanzado: ${totalesPorNivel["Avanzado"]}</li>
+                            <li style="color:${coloresPorNivel['Satisfactorio']}">🟡 Satisfactorio: ${totalesPorNivel["Satisfactorio"]}</li>
+                            <li style="color:${coloresPorNivel['Básico']}">🟠 Básico: ${totalesPorNivel["Básico"]}</li>
+                            <li style="color:${coloresPorNivel['Debajo del Básico']}">🔴 Debajo del Básico: ${totalesPorNivel["Debajo del Básico"]}</li>
+                        </ul>
+                    `;
+                    document.body.appendChild(resumenDiv);
+                }, 500); // Espera a que los gráficos se hayan creado
+            })
+            .catch(error => console.error('Error al cargar datos:', error));
+    </script>
+
+</body>
+</html>
