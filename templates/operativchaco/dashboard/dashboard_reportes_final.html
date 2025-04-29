@@ -200,20 +200,28 @@ $(document).ready(function () {
         }
     });
 
-    // Agregar resumen final
-    $('#resumenFinal').remove();
+    // Agregar resumen final como promedio
+        $('#resumenFinal').remove();
 
-    let resumen = {};
-    let totalEstudiantes = 0;
+        let resumen = {};
+        let totalGeneral = 0;
+        let conteoTotal = 0;
 
-    claves.forEach((clave) => {
-        (data[clave] || []).forEach(item => {
-            let nivel = item.nivel || "Sin etiqueta";
-            let cantidad = item.cantidad || 0;
-            resumen[nivel] = (resumen[nivel] || 0) + cantidad;
-            totalEstudiantes += cantidad;
+        claves.forEach((clave) => {
+            (data[clave] || []).forEach(item => {
+                let nivel = item.nivel || "Sin etiqueta";
+                let cantidad = item.cantidad || 0;
+                resumen[nivel] = (resumen[nivel] || 0) + cantidad;
+                totalGeneral += cantidad;
+                conteoTotal++;
+            });
         });
-    });
+
+        // Calcular promedio
+        let resumenPromedio = {};
+        Object.keys(resumen).forEach(nivel => {
+            resumenPromedio[nivel] = (resumen[nivel] / conteoTotal).toFixed(2);
+        });
 
     setTimeout(() => {
         const resumenDiv = document.createElement('div');
@@ -226,23 +234,22 @@ $(document).ready(function () {
         resumenDiv.style.backgroundColor = '#f9f9f9';
         resumenDiv.style.fontFamily = 'Arial, sans-serif';
 
-        resumenDiv.innerHTML = `
-            <h2 style="text-align: center;">📌 Resumen General</h2>
-            <p><strong>Total de estudiantes (todas las capacidades):</strong> ${totalEstudiantes}</p>
+        {% comment %} resumenDiv.innerHTML = `
+            <h2 style="text-align: center;">📌 Resumen General (Promedio)</h2>
+            <p><strong>Total de estudiantes (todas las capacidades):</strong> ${totalGeneral}</p>
             <ul style="list-style-type: none; padding-left: 0;">
-                ${Object.keys(resumen).map(nivel => {
+                ${Object.keys(resumenPromedio).map(nivel => {
                     let color = coloresNiveles[nivel] || '#ddd';
                     let emoji = nivel === "Avanzado" ? "🟢" :
                                 nivel === "Satisfactorio" ? "🟡" :
                                 nivel === "Básico" ? "🟠" :
                                 nivel === "Debajo del Básico" ? "🔴" : "📌";
                     return `<li style="margin: 5px 0; color: ${color};">
-                                ${emoji} <strong>${nivel}:</strong> ${resumen[nivel]}
+                                ${emoji} <strong>${nivel}:</strong> ${resumenPromedio[nivel]} promedio
                             </li>`;
                 }).join('')}
             </ul>
-        `;
-
+        `; {% endcomment %}
         document.getElementById('contenedorGraficos').appendChild(resumenDiv);
     }, 500);
 }

@@ -4,6 +4,8 @@ import qrcode
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from django.http import FileResponse
+
+from apps.oplectura import views_resultados
 from .views import cargar_examen_lengua, buscar_alumno_por_dni
 from .views_list import (
     ExamenLenguaListView,
@@ -104,8 +106,7 @@ urlpatterns = [
     path('matematica/examenes/exportar/', exportar_excel_examenes_matematica, name='exportar_excel_examenes_matematica'),
     path('examenes/matematica/<int:pk>/modal/', examen_matematica_detalle_modal, name='examen_matematica_detalle_modal'),
     path('cerrar-carga-matematica/', cerrar_carga_matematica, name='cerrar_carga_matematica'),
-    path('exportar_pdf_matematica/<int:examen_id>/', exportar_pdf_matematica, name='exportar_pdf_matematica'),
-    path('cerrar-carga-matematica/', cerrar_carga_matematica, name='cerrar_carga_matematica'),
+    path('exportar_pdf_matematica/<int:examen_id>/', exportar_pdf_matematica, name='exportar_pdf_matematica'),    
     path('dashboard/secundarias/', dashboard_secundarias, name='dashboard_secundarias'),
     path('dashboard/secundarias_superv/', dashboard_secundarias_superv, name='dashboard_secundarias_superv'),
     path('dashboard/secundarias_func/', dashboard_secundarias_func, name='dashboard_secundarias_func'),

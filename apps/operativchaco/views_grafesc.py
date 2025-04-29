@@ -24,11 +24,11 @@ def datos_lengua_por_region(request):
     
     total_examenes = exlengua.count()    
     total_alumnos = alumnos.count()
-    total_pendientes= total_alumnos- total_examenes
+    total_pendientes= total_alumnos - total_examenes
     total_ausentes = ausentes.aggregate(suma=Sum('total_registros'))['suma'] or 0
     total_sin_calificar= total_alumnos - (total_examenes + total_ausentes)
     
-
+    print(total_alumnos)
     return JsonResponse({
         'labels': ['Pendientes', 'Cargadas','Examenes Cargados', 'Examenes Pendientes', 'Total Examenes', 'Ausentes', 'Sin Calificar'],
         'data': [pendientes, cargadas, total_examenes, total_pendientes, total_alumnos, total_ausentes, total_sin_calificar],

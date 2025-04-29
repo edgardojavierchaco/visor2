@@ -226,7 +226,7 @@ $(document).ready(function () {
         resumenDiv.style.backgroundColor = '#f9f9f9';
         resumenDiv.style.fontFamily = 'Arial, sans-serif';
 
-        resumenDiv.innerHTML = `
+        {% comment %} resumenDiv.innerHTML = `
             <h2 style="text-align: center;">📌 Resumen General</h2>
             <p><strong>Total de estudiantes (todas las capacidades):</strong> ${totalEstudiantes}</p>
             <ul style="list-style-type: none; padding-left: 0;">
@@ -241,7 +241,7 @@ $(document).ready(function () {
                             </li>`;
                 }).join('')}
             </ul>
-        `;
+        `; {% endcomment %}
 
         document.getElementById('contenedorGraficos').appendChild(resumenDiv);
     }, 500);

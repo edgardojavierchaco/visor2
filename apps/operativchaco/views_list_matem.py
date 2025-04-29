@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
+from multiprocessing import context
 
 # Librerías de terceros
 import openpyxl
@@ -191,7 +192,7 @@ def cerrar_carga_matematica(request):
 
 @login_required
 def exportar_pdf_matematica(request, examen_id):    
-    examen = ExamenMatematicaAlumno.objects.get(id=examen_id)    
+    examen = get_object_or_404(ExamenMatematicaAlumno, id=examen_id)
     
     # Campos de ítems
     item_fields = [f"p{i}" for i in range(1, 15)]
