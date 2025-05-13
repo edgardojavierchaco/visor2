@@ -86,8 +86,7 @@ def exportar_excel_examenes_segundo(request):
 
     columnas = [
         'DNI', 'Apellidos', 'Nombres', 'Cueanexo', 'Grado', 'División', 'Región',
-        'Velocidad', 'Precisión', 'Prosodia', 'Preg. 1', 'Preg. 2', 'Preg. 3',
-        'Total'
+        'Velocidad', 'Precisión', 'Prosodia', 'Preg. 1', 'Preg. 2', 'Preg. 3'
     ]
 
     ws.append(columnas)
@@ -95,13 +94,13 @@ def exportar_excel_examenes_segundo(request):
     for division, examenes in exámenes_por_división.items():
         ws.append([f'División: {division}'])
         for examen in examenes:
-            total = sum([
+            """ total = sum([
                 examen.velocidad, examen.precision, examen.prosodia, examen.p1, examen.p2, examen.p3
-            ])
+            ]) """
             fila = [
                 examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.grado,
                 examen.division, examen.region, examen.velocidad, examen.precision, examen.prosodia, examen.p1,
-                examen.p2, examen.p3, total
+                examen.p2, examen.p3
             ]
             ws.append(fila)
 

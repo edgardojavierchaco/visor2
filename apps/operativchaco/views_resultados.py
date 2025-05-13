@@ -182,9 +182,9 @@ def exportar_pdf_matematica(request):
     }
     titulos = {
         'resultado_gral': 'Resultado General',
-        'resultado_comunicacion': 'Comunicacion',
-        'resultado_reconocimiento': 'Reconocimiento',
-        'resultado_resolucion': 'Resolucion'
+        'resultado_comunicacion': 'Comunicacion en Matemática',
+        'resultado_reconocimiento': 'Reconocimiento de Conceptos',
+        'resultado_resolucion': 'Resolucion de Situaciones en Contextos Intra y/o extra matemáticos'
     }
     context = {
         'resultado': resultado,
@@ -302,9 +302,9 @@ def exportar_pdf_matematica_cueanexo(request):
     }
     titulos = {
         'resultado_gral': 'Resultado General',
-        'resultado_comunicacion': 'Comunicacion',
-        'resultado_reconocimiento': 'Reconocimiento',
-        'resultado_resolucion': 'Resolucion'
+        'resultado_comunicacion': 'Comunicacion en Matemática',
+        'resultado_reconocimiento': 'Reconocimiento de Conceptos',
+        'resultado_resolucion': 'Resolucion de Situaciones en Contextos Intra y/o extra matemáticos'
     }
     context = {
         'resultado': resultado,

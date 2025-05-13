@@ -1,0 +1,266 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- jQuery primero -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables y Bootstrap JS luego -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+</head>
+<body>
+
+<div class="container mt-4">
+    <!-- Parte Superior -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <img src="{% static 'img/observador.png' %}" alt="icono" style="height: 24px; transform: scale(1.5); vertical-align: right; margin-right: 5px;">
+                        Monitoreo
+                    </h2>                                   
+                    <h4 class="card-text d-flex justify-content-between align-items-center">
+                        <span>Evolución de carga</span>
+                        <a href="{% url 'operativ:dashboard_primaria' %}" class="btn btn-light btn-sm" title="Ir a Dashboard Primaria">
+                            <img src="{% static 'img/return.jpg' %}" alt="icono" style="height: 48px;" />
+                        </a>
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <select id="selectorRegion" class="form-select mt-2">
+                        <option selected value="Todas">Todas</option>
+                        <option value="R.E. 1">R.E. 1</option>
+                        <option value="R.E. 2">R.E. 2</option>
+                        <option value="R.E. 3">R.E. 3</option>
+                        <option value="R.E. 4-A">R.E. 4-A</option>
+                        <option value="R.E. 4-B">R.E. 4-B</option>
+                        <option value="R.E. 5">R.E. 5</option>
+                        <option value="R.E. 6">R.E. 6</option>
+                        <option value="R.E. 7">R.E. 7</option>
+                        <option value="R.E. 8-A">R.E. 8-A</option>
+                        <option value="R.E. 8-B">R.E. 8-B</option>
+                        <option value="R.E. 9">R.E. 9</option>
+                        <option value="R.E. 10-A">R.E. 10-A</option>
+                        <option value="R.E. 10-B">R.E. 10-B</option>
+                        <option value="R.E. 10-C">R.E. 10-C</option>
+                        <option value="SUB. R.E. 1-A">SUB R.E. 1-A</option>
+                        <option value="SUB. R.E. 1-B">SUB R.E. 1-B</option>
+                        <option value="SUB. R.E. 2">SUB R.E. 2</option>
+                        <option value="SUB. R.E. 3">SUB R.E. 3</option>
+                        <option value="SUB. R.E. 5">SUB R.E. 5</option>
+                    </select>
+                    <button id="btnSegundo" class="btn btn-primary m-1">SEGUNDO</button>
+                    <button id="btnTercero" class="btn btn-success m-1">TERCERO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuerpo Central -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title" id="tituloGrafico1">Estado de Carga por U.S.</h5>
+                    <canvas id="chart1"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title" id="tituloGrafico2">Estado de Exámenes</h5>
+                    <canvas id="chart2"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Agregamos una columna para chart3 -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Resumen General</h5>
+                    <canvas id="chart3"></canvas>
+                </div>
+            </div>
+        </div>        
+    </div>
+</div>
+
+<!-- Tabla de escuelas con pendiente -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title" id="tituloTabla">Escuelas con carga pendiente</h5>
+                <div class="table-responsive">
+                    <table id="tablaPendientes" class="table table-striped table-bordered" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>CUE</th>
+                                <th>Nombre Escuela</th>
+                                <th>Región</th>
+                                <th id="columnaArea">Área</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llenará con JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pasamos las URLs desde Django -->
+<script>
+    const datosSegundoUrl = "{% url 'operativ:datos_segundo' %}";
+    const datosTerceroUrl = "{% url 'operativ:datos_tercero' %}";
+    const tablaSegundoUrl = "{% url 'operativ:escuelas_pendientes_segundo' %}";
+    const tablaTerceroUrl = "{% url 'operativ:escuelas_pendientes_tercero' %}";
+</script>
+
+<script>
+    let chart1 = null;
+    let chart2 = null;
+    let chart3 = null;
+
+    function generarGrafico(id, tipo, labels, data, color) {
+        const ctx = document.getElementById(id).getContext('2d');
+        let chartRef;
+
+        if (id === 'chart1') chartRef = chart1;
+        else if (id === 'chart2') chartRef = chart2;
+        else if (id === 'chart3') chartRef = chart3;
+
+        if (chartRef) chartRef.destroy();
+
+        const newChart = new Chart(ctx, {
+            type: tipo,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Datos',
+                    data: data,
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        if (id === 'chart1') chart1 = newChart;
+        else if (id === 'chart2') chart2 = newChart;
+        else if (id === 'chart3') chart3 = newChart;
+    }
+
+    async function cargarGrafico(url, area, region) {
+        try {
+            const response = await fetch(`${url}?region=${encodeURIComponent(region)}`);
+            const datos = await response.json();
+
+            // Chart1: Pendientes y Cargadas
+            const labels1 = datos.labels.slice(0, 2);
+            const data1 = datos.data.slice(0, 2);
+            generarGrafico('chart1', 'pie', labels1, data1, ['#dc3545', '#228B22']);
+
+            // Chart2: Exámenes cargados y pendientes
+            const labels2 = datos.labels.slice(2, 4);
+            const data2 = datos.data.slice(2, 4);
+            generarGrafico('chart2', 'doughnut', labels2, data2, ['#dc3545', '#228B22']);
+
+            // Chart3: Total Exámenes, Exámenes Cargados, Ausentes, Sin Calificar
+            const labels3 = [                
+                '🧮 Total Exámenes',
+                '📥 Exámenes Cargados',
+                '🚫 Ausentes',
+                '❓ Sin Calificar',
+            ];
+            const data3 = [
+                datos.data[4],
+                datos.data[2],
+                datos.data[5],
+                datos.data[6],
+            ];
+            
+            const colores3 = ['#000000', '#228B22', '#FFA500', '#dc3545'];
+
+            generarGrafico('chart3', 'bar', labels3, data3, colores3);
+        } catch (error) {
+            console.error("Error cargando gráficos:", error);
+        }
+    }
+
+    function actualizarTabla(url, area, region) {
+        $('#tablaPendientes').DataTable().clear().destroy();
+        $('#columnaArea').text(area);
+
+        $.ajax({
+            url: url,
+            data: { region: region },
+            success: function (data) {
+                console.log(data);
+                $('#tablaPendientes').DataTable({
+                    data: data.escuelas,
+                    columns: [
+                        { data: 'cue' },
+                        { data: 'nombre' },
+                        { data: 'region' },
+                        { data: 'estado' }
+                    ],
+                    language: {
+                        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                    }
+                });
+            },
+            error: function () {
+                console.error("Error al cargar la tabla de pendientes.");
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const selectRegion = document.getElementById('selectorRegion');
+        const btnSegundo = document.getElementById('btnSegundo');
+        const btnTercero = document.getElementById('btnTercero');
+
+        btnSegundo.addEventListener('click', () => {
+            const region = selectRegion.value;
+            cargarGrafico(datosSegundoUrl, 'Segundo', region);
+            actualizarTabla(tablaSegundoUrl, 'Segundo', region);
+        });
+
+        btnTercero.addEventListener('click', () => {
+            const region = selectRegion.value;
+            cargarGrafico(datosTerceroUrl, 'Tercero', region);
+            actualizarTabla(tablaTerceroUrl, 'Tercero', region);
+        });
+    });
+</script>
+
+</body>
+</html>
+

@@ -4,7 +4,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Resultados de Lengua</title>
+    <title>Resultados de Fluidez Lectora Tercero</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <style>
@@ -49,21 +49,19 @@
         }
 
         /* 🎨 Colores únicos por título */
-        .titulo-general {
+        .titulo-velocidad {
             background-color: #3498db; /* Azul */
         }
-        .titulo-evaluar {
+        .titulo-precision {
             background-color: #9b59b6; /* Violeta */
         }
-        .titulo-extraer {
+        .titulo-prosodia {
             background-color: #f39c12; /* Marrón */
         }
-        .titulo-escribir {
+        .titulo-comprension {
             background-color: #f1c40f; /* Celeste verdoso */
         }
-        .titulo-interpretar {
-            background-color: #2ecc71; /* Verde azulado */
-        }
+        
         .boton-descarga {
             display: inline-block;
             background-color: #2ECC71;
@@ -80,11 +78,11 @@
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">Resultados por Capacidades - Lengua 2025</h1>
+    <h1 style="text-align: center;">Resultados por Capacidades - Tercero 2025</h1>
     <h3 style="text-align: center;">Cueanexo: {{ usuario }} - {{ nom_est }}</h3>
 
     <div style="text-align: right; margin-bottom: 20px;">
-        <a href="{% url 'operativ:exportar_pdf_lengua_cue' %}" target="_blank" class="boton-descarga">
+        <a href="{% url 'operativ:exportar_pdf_tercero_cue' %}" target="_blank" class="boton-descarga">
             📄 Descargar PDF
         </a>
     </div>
@@ -93,7 +91,7 @@
     <div id="contenedorResultados"></div>
 
     <script>
-        fetch("{% url 'operativ:resultados_lengua_api' %}")
+        fetch("{% url 'operativ:resultados_tercero_api' %}")
             .then(response => response.json())
             .then(data => {
                 const coloresPorNivel = {
@@ -104,19 +102,17 @@
                 };
 
                 const clasesTitulo = {
-                    'Resultado General': 'titulo-general',
-                    'Evaluar': 'titulo-evaluar',
-                    'Extraer': 'titulo-extraer',
-                    'Escribir': 'titulo-escribir',
-                    'Interpretar': 'titulo-interpretar'
+                    'Velocidad': 'titulo-velocidad',
+                    'Precisión': 'titulo-precision',
+                    'Prosodia': 'titulo-prosodia',
+                    'Comprensión': 'titulo-comprension'
                 };
 
                 const emojis = {
-                    'Resultado General': '📊',
-                    'Evaluar': '🧠',
-                    'Extraer': '📎',
-                    'Escribir': '✍️',
-                    'Interpretar': '🧐'
+                    'Velocidad': '📊',
+                    'Precisión': '🧠',
+                    'Prosodia': '📎',
+                    'Comprensión': '✍️'
                 };
 
                 function getChartData(dataArray) {
@@ -199,11 +195,11 @@
                 }
 
                 // Crear todos los gráficos
-                crearGraficoConTabla('chartGeneral', data.resultado_gral, 'Resultado General');
-                crearGraficoConTabla('chartEvaluar', data.resultado_evaluar, 'Evaluar');
-                crearGraficoConTabla('chartExtraer', data.resultado_extraer, 'Extraer');
-                crearGraficoConTabla('chartEscribir', data.resultado_escribir, 'Escribir');
-                crearGraficoConTabla('chartInterpretar', data.resultado_interpretar, 'Interpretar');
+                crearGraficoConTabla('chartVelocidad', data.resultado_velocidad, 'Velocidad');
+                crearGraficoConTabla('chartPrecision', data.resultado_precision, 'Precisión');
+                crearGraficoConTabla('chartProsodia', data.resultado_prosodia, 'Prosodia');
+                crearGraficoConTabla('chartComprension', data.resultado_comprension, 'Comprensión');
+                
 
                 // Mostrar resumen final
                 setTimeout(() => {

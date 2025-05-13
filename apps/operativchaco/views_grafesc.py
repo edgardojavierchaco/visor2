@@ -25,7 +25,7 @@ def datos_lengua_por_region(request):
     total_examenes = exlengua.count()    
     total_alumnos = alumnos.count()
     total_pendientes= total_alumnos - total_examenes
-    total_ausentes = ausentes.aggregate(suma=Sum('total_registros'))['suma'] or 0
+    total_ausentes = ausentes.aggregate(suma=Sum('ausentes'))['suma'] or 0
     total_sin_calificar= total_alumnos - (total_examenes + total_ausentes)
     
     print(total_alumnos)
@@ -55,8 +55,8 @@ def datos_matematica_por_region(request):
     
     total_examenes = exmatematica.count()
     total_alumnos = alumnos.count()
-    total_pendientes= total_alumnos- total_examenes
-    total_ausentes = ausentes.aggregate(suma=Sum('total_registros'))['suma'] or 0
+    total_pendientes= total_alumnos - total_examenes
+    total_ausentes = ausentes.aggregate(suma=Sum('ausentes'))['suma'] or 0
     total_sin_calificar= total_alumnos - (total_examenes + total_ausentes)
 
     return JsonResponse({

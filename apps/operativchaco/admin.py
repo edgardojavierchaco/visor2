@@ -31,6 +31,16 @@ from .models import (
     EscuelasPrimarias,
     TotalPrimarias,
     RegistroAsistenciaFluidezSegundo,
+    ExamenFluidezTercero,
+    RegistroAsistenciaFluidezTercero,
+    VistaVelocidadSegundo,
+    VistaPrecisionSegundo,
+    VistaProsodiaSegundo,
+    VistaComprensionSegundo,
+    VistaVelocidadTercero,
+    VistaPrecisionTercero,
+    VistaProsodiaTercero,
+    VistaComprensionTercero,
 )
 
 admin.site.register(AlumnosSecundariaDiagnostico)
@@ -64,4 +74,14 @@ admin.site.register(ExamenFluidezSegundo)
 admin.site.register(EscuelasPrimarias)
 admin.site.register(TotalPrimarias)
 admin.site.register(RegistroAsistenciaFluidezSegundo)
+admin.site.register(ExamenFluidezTercero)
+admin.site.register(RegistroAsistenciaFluidezTercero)
+admin.site.register(VistaVelocidadSegundo)
+admin.site.register(VistaPrecisionSegundo)
+admin.site.register(VistaProsodiaSegundo)
+admin.site.register(VistaComprensionSegundo)
+admin.site.register(VistaVelocidadTercero)
+admin.site.register(VistaPrecisionTercero)
+admin.site.register(VistaProsodiaTercero)
+admin.site.register(VistaComprensionTercero)
 

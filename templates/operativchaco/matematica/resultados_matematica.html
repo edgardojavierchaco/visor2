@@ -102,16 +102,16 @@
 
                 const clasesTitulo = {
                     'Resultado General': 'titulo-general',
-                    'Comunicación': 'titulo-comunicacion',
-                    'Reconocimiento': 'titulo-reconocimiento',
-                    'Resolución': 'titulo-resolucion'
+                    'Comunicación en Matemática': 'titulo-comunicacion',
+                    'Reconocimiento de Conceptos': 'titulo-reconocimiento',
+                    'Resolución de Situaciones en Contextos Intra y/o extra matemáticos': 'titulo-resolucion'
                 };
 
                 const emojis = {
                     'Resultado General': '📊',
-                    'Resolución': '🧠',                    
-                    'Comunicación': '✍️',
-                    'Reconocimiento': '🧐'
+                    'Resolución de Situaciones en Contextos Intra y/o extra matemáticos': '🧠',                    
+                    'Comunicación en Matemática': '✍️',
+                    'Reconocimiento de Conceptos': '🧐'
                 };
 
                 function getChartData(dataArray) {
@@ -195,9 +195,9 @@
 
                 // Crear todos los gráficos
                 crearGraficoConTabla('chartGeneral', data.resultado_gral, 'Resultado General');
-                crearGraficoConTabla('chartResolucion', data.resultado_resolucion, 'Resolución');
-                crearGraficoConTabla('chartComunicacion', data.resultado_comunicacion, 'Comunicación');
-                crearGraficoConTabla('chartReconocimiento', data.resultado_reconocimiento, 'Reconocimiento');
+                crearGraficoConTabla('chartResolucion', data.resultado_resolucion, 'Resolución de Situaciones en Contextos Intra y/o extra matemáticos');
+                crearGraficoConTabla('chartComunicacion', data.resultado_comunicacion, 'Comunicación en Matemática');
+                crearGraficoConTabla('chartReconocimiento', data.resultado_reconocimiento, 'Reconocimiento de Conceptos');
 
                 // Mostrar resumen final
                 setTimeout(() => {

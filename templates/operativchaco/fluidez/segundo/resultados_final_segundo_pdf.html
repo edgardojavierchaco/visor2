@@ -4,7 +4,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>PDF Resultados Lengua</title>
+    <title>PDF Resultados Fluidez Lectora Segundo</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         h1, h2, h3 { text-align: center; }
@@ -33,8 +33,8 @@
     </style>
 </head>
 <body>
-    <h1>Resultados por Capacidades - Lengua 2025</h1>
-    <h3>Cueanexo: {{ usuario }} </h3>
+    <h1>Resultados por Capacidades - Segundo 2025</h1>
+    <h3>Región: {{ usuario }} </h3>
 
     {% for key, titulo in titulos.items %}
         {% with datos=resultado|dict_get:key %}
@@ -60,7 +60,8 @@
         {% endwith %}
     {% endfor %}
     
-    
+    <h2>QR de los Resultados</h2>    
+    <img src="{{ qr_path }}" alt="QR Code" width="250" height="250">
 
 </body>
 </html>

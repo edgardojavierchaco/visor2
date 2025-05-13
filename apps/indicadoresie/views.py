@@ -59,3 +59,7 @@ def dashboard_prueba_func(request):
 
 def dashboard_prueba_regional(request):
     return render(request, "indicadoresie/dashboard_prueba_regional.html")
+
+def dashboard_prueba_fluidez(request):
+    return render(request, "indicadoresie/dashboard_prueba_fluidez_segter.html")
+

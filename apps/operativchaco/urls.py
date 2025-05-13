@@ -39,6 +39,9 @@ from .views_dashpresent import(
     dashboard_resultados_final_func,
     dashboard_secundarias_regional,
     dashboard_resultados_final_regional,
+    dashboard_primarias_segundo,
+    dashboard_primarias_tercero,
+    dashboard_resultados_final_primaria,
 )
 
 from .views_grafesc import datos_lengua_por_region, datos_matematica_por_region, escuelas_pendientes_lengua, escuelas_pendientes_matematica
@@ -66,9 +69,12 @@ from .views_resultados_reg import (
     ResultadosRegionMatematica,
     ResultadosMatematicaRegionalView,
     exportar_pdf_resultados_finales,
+    exportar_pdf_resultados_finales_primaria,
+    ResultadosRegionSegundo,
+    ResultadosRegionTercero,
 )
 
-# Fluidez Lectora 2 y 3 grado
+# Fluidez Lectora 2° grado
 from .views_fluidez_segundo import (
     buscar_alumno_por_dni_fluidez,
     cargar_examen_fluidez_segundo,
@@ -81,9 +87,40 @@ from .views_list_fluidez_segundo import (
     examen_segundo_detalle_modal,
     cerrar_carga_fluidez_segundo,
     exportar_pdf_segundo,
-    cerrar_carga_fluidez_segundo,
+    cerrar_carga_fluidez_segundo,    
 )
 
+# Fluidez Lectora 3° grado
+from .views_fluidez_tercero import (
+    buscar_alumno_por_dni_fluidezt,
+    cargar_examen_fluidez_tercero,
+)
+
+from .views_list_fluidez_tercero import (
+    ExamenFluidezTerceroListView,
+    ExamenFluidezTerceroDetailView,
+    exportar_excel_examenes_tercero,
+    examen_tercero_detalle_modal,
+    cerrar_carga_fluidez_tercero,
+    exportar_pdf_tercero,
+    cerrar_carga_fluidez_tercero,    
+)
+
+from .views_resultados_fluidez_segundo import (
+    ResultadosCueanexoFluidezSegundo,
+    ResultadosFluidezSegundoView,
+    exportar_pdf_segundo,
+    exportar_pdf_segundo_cueanexo,
+)
+
+from .views_resultados_fluidez_tercero import (
+    ResultadosCueanexoFluidezTercero,
+    ResultadosFluidezTerceroView,
+    exportar_pdf_tercero,
+    exportar_pdf_tercero_cueanexo,
+)
+
+from .views_grafesc_fluidez import datos_segundo_por_region, datos_tercero_por_region, escuelas_pendientes_segundo, escuelas_pendientes_tercero
 
 app_name='operativ'
 
@@ -149,6 +186,37 @@ urlpatterns = [
     path('examenes/segundo/<int:pk>/modal/', examen_segundo_detalle_modal, name='examen_segundo_detalle_modal'),
     path('cerrar_carga_segundo/',cerrar_carga_fluidez_segundo, name='cerrar_carga_segundo'),
     path('exportar_pdf_segundo/<int:examen_id>/', exportar_pdf_segundo, name='exportar_pdf_segundo'),    
+    # Fluidez tercero    
+    path('buscar_dni_fluidezt/', buscar_alumno_por_dni_fluidezt, name='buscar_dni_fluidezt'),
+    path('cargar_examen_fluidez_tercero/', cargar_examen_fluidez_tercero, name='carga_examen_fluidez_tercero'),
+    path('fluidez/examenes/tercero', ExamenFluidezTerceroListView.as_view(), name='examen_tercero_listado'),
+    path('fluidez/examenes/tercero/<int:pk>/', ExamenFluidezTerceroDetailView.as_view(), name='examen_tercero_detalle'),
+    path('fluidez/examenes/tercero/exportar/', exportar_excel_examenes_tercero, name='exportar_excel_examenes_tercero'),
+    path('examenes/tercero/<int:pk>/modal/', examen_tercero_detalle_modal, name='examen_tercero_detalle_modal'),
+    path('cerrar_carga_tercero/',cerrar_carga_fluidez_tercero, name='cerrar_carga_tercero'),
+    path('exportar_pdf_tercero/<int:examen_id>/', exportar_pdf_tercero, name='exportar_pdf_tercero'),    
+    # Resultados Fluidez Lectora Segundo
+    path('resultados/cueanexo_segundo/', ResultadosFluidezSegundoView, name='resultados_cueanexo_segundo'),
+    path('api/resultados/cueanexo_segundo/', ResultadosCueanexoFluidezSegundo, name='resultados_segundo_api'),
+    path('resultados_segundo_pdf/', exportar_pdf_segundo, name='exportar_pdf_segundo'),    
+    path('resultados_segundo_cue_pdf/', exportar_pdf_segundo_cueanexo, name='exportar_pdf_segundo_cue'),
+    # Resultados Fluidez Lectora Tercero
+    path('resultados/cueanexo_tercero/', ResultadosFluidezTerceroView, name='resultados_cueanexo_tercero'),
+    path('api/resultados/cueanexo_tercero/', ResultadosCueanexoFluidezTercero, name='resultados_tercero_api'),
+    path('resultados_tercero_pdf/', exportar_pdf_tercero, name='exportar_pdf_tercero'),    
+    path('resultados_tercero_cue_pdf/', exportar_pdf_tercero_cueanexo, name='exportar_pdf_tercero_cue'),
+    # Resultados Finales Fluidez
+    path('resultados_final_primaria/', dashboard_primarias_segundo, name='dashboard_primaria'),
+    path('resultados_final_primaria_tercero/', dashboard_primarias_tercero, name='dashboard_primarias_tercero'),
+    path('resultados_final_primaria_pdf/', dashboard_resultados_final_primaria, name='dashboard_resultados_final_primaria'),
+    path('resultados_finales_pdf_primaria/', exportar_pdf_resultados_finales_primaria, name='exportar_pdf_resultados_finales_primaria'),
+    path('api/resultados/region_segundo/', ResultadosRegionSegundo, name='resultados_region_segundo_api'),
+    path('api/resultados/region_tercero/', ResultadosRegionTercero, name='resultados_region_tercero_api'),
+    # gráficos de carga escuelas fluidez segundo y tercero
+    path('api/datos_segundo/', datos_segundo_por_region, name='datos_segundo'),
+    path('api/datos_tercero/', datos_tercero_por_region, name='datos_tercero'),
+    path('pendientes_segundo/', escuelas_pendientes_segundo, name='escuelas_pendientes_segundo'),
+    path('pendientes_tercero/', escuelas_pendientes_tercero, name='escuelas_pendientes_tercero'),
 ]
 
 

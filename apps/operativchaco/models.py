@@ -942,7 +942,7 @@ class ExamenFluidezSegundo(models.Model):
     apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
     nombres = models.CharField(max_length=255, verbose_name='Nombres')
     cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
-    grado=models.CharField(max_length=25, verbose_name='Grado')
+    grado=models.CharField(max_length=25, default='2', verbose_name='Grado')
     division=models.CharField(max_length=5, verbose_name='División')
     region=models.CharField(max_length=25, verbose_name='Regional')
     discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
@@ -1015,4 +1015,337 @@ class RegistroAsistenciaFluidezSegundo(models.Model):
         verbose_name_plural = "Registros Asistencia Fluidez Segundo"
         db_table = "Registro_Asistencia_Fluidez_Segundo"
 
- 
+
+############################
+#     FLUIDEZ 3 GRADO      #
+############################
+
+class ExamenFluidezTercero(models.Model):
+    PROSODIA_CHOICES = [
+        ('1','1'),
+        ('2','2'),
+        ('3','3'),
+        ('4','4'),
+    ]
+    
+    PREG1_CHOICES = [
+        ('NR','NR'),
+        ('a','a'),
+        ('b','b'),
+        ('c','c'),
+    ]    
+    
+    PREG2_CHOICES = [
+        ('NR','NR'),
+        ('a','a'),
+        ('b','b'),
+        ('c','c'),
+    ] 
+    
+    PREG3_CHOICES = [
+        ('NR','NR'),
+        ('a','a'),
+        ('b','b'),
+        ('c','c'),
+    ]       
+    
+    DISCAPACIDAD=[
+        ('SI', 'SI'),  
+        ('NO', 'NO'),
+    ]
+    
+    ETNIA=[
+        ('NO', 'NO'),
+        ('QOM', 'QOM'),
+        ('WICHI', 'WICHI'),
+        ('MOQOIT', 'MOQOIT'),
+    ]
+        
+    dni = models.CharField(max_length=8, verbose_name='DNI')  
+    apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='Nombres')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
+    grado=models.CharField(max_length=25, default='3',verbose_name='Grado')
+    division=models.CharField(max_length=5, verbose_name='División')
+    region=models.CharField(max_length=25, verbose_name='Regional')
+    discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
+    etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
+    velocidad = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Velocidad')
+    precision = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Precisión')
+    prosodia=models.CharField(choices=PROSODIA_CHOICES, verbose_name='Prosodia')
+    p1=models.CharField(choices=PREG1_CHOICES, verbose_name='Pregunta 1')
+    p2=models.CharField(choices=PREG2_CHOICES, verbose_name='Pregunta 2')
+    p3=models.CharField(choices=PREG3_CHOICES, verbose_name='Pregunta 3')
+    
+    class Meta:
+        verbose_name = "Examen Fluidez Tercero"
+        verbose_name_plural = "Examenes Fluidez Tercero"
+        db_table = "Examen_Fluidez_Tercero"
+
+    def __str__(self):
+        return f'{self.dni} {self.apellidos} {self.nombres}'
+
+
+class RegistroAsistenciaFluidezTercero(models.Model):
+    cueanexo = models.CharField(max_length=15)
+    fecha = models.DateTimeField(auto_now_add=True)
+    region=models.CharField(max_length=25)
+    ausentes = models.PositiveIntegerField()
+    total_registros = models.PositiveIntegerField()
+    
+    class Meta:
+        verbose_name = "Registro Asistencia Fluidez Tercero"
+        verbose_name_plural = "Registros Asistencia Fluidez Tercero"
+        db_table = "Registro_Asistencia_Fluidez_Tercero"
+
+
+class VistaVelocidadSegundo(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Velocidad Segundo"
+        verbose_name_plural = "Vistas Velocidad Segundo"
+        db_table = "v_velocidad_segundo"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaPrecisionSegundo(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Precision Segundo"
+        verbose_name_plural = "Vistas Precision Segundo"
+        db_table = "v_precision_segundo"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaProsodiaSegundo(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Prosodia Segundo"
+        verbose_name_plural = "Vistas Prosodia Segundo"
+        db_table = "v_prosodia_segundo"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaComprensionSegundo(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Comprension Segundo"
+        verbose_name_plural = "Vistas Comprension Segundo"
+        db_table = "v_comprension_segundo"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaVelocidadTercero(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Velocidad Tercero"
+        verbose_name_plural = "Vistas Velocidad Tercero"
+        db_table = "v_velocidad_tercero"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaPrecisionTercero(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Precision Tercero"
+        verbose_name_plural = "Vistas Precision Tercero"
+        db_table = "v_precision_tercero"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaProsodiaTercero(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Prosodia Tercero"
+        verbose_name_plural = "Vistas Prosodia Tercero"
+        db_table = "v_prosodia_tercero"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaComprensionTercero(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Comprension Tercero"
+        verbose_name_plural = "Vistas Comprension Tercero"
+        db_table = "v_comprension_tercero"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaVelocidadSegundoReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Velocidad Segundo Region"
+        verbose_name_plural = "Vistas Velocidad Segundo Region"
+        db_table = "v_velocidad_segundo_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaVelocidadTerceroReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Velocidad Tercero Region"
+        verbose_name_plural = "Vistas Velocidad Tercero Region"
+        db_table = "v_velocidad_tercero_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaPrecisionSegundoReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Precision Segundo Region"
+        verbose_name_plural = "Vistas Precision Segundo Region"
+        db_table = "v_precision_segundo_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaPrecisionTerceroReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Precision Tercero Region"
+        verbose_name_plural = "Vistas Precision Tercero Region"
+        db_table = "v_precision_tercero_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaProsodiaSegundoReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Prosodia Segundo Region"
+        verbose_name_plural = "Vistas Prosodia Segundo Region"
+        db_table = "v_prosodia_segundo_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaProsodiaTerceroReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Prosodia Tercero Region"
+        verbose_name_plural = "Vistas Prosodia Tercero Region"
+        db_table = "v_prosodia_tercero_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaComprensionSegundoReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Comprension Segundo Region"
+        verbose_name_plural = "Vistas Comprension Segundo Region"
+        db_table = "v_comprension_segundo_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaComprensionTerceroReg(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Región')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Comprension Tercero Region"
+        verbose_name_plural = "Vistas Comprension Tercero Region"
+        db_table = "v_comprension_tercero_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'

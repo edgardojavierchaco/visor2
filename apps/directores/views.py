@@ -294,7 +294,7 @@ def filter_matricula_views_directores(request):
     
      
     # Transformar los resultados en una respuesta renderizada
-    return render(request, 'directores/matricula.html', {'resultados_detalle':resultados_detalle})
+    return render(request, 'directores/matriculauegp.html', {'resultados_detalle':resultados_detalle})
 
 
     
