@@ -11,7 +11,7 @@
         <tr><th>División</th><td>{{ examen.division }}</td></tr>
         <tr><th>Discapacidad</th><td>{{ examen.discapacidad }}</td></tr>
         <tr><th>Etnia</th><td>{{ examen.etnia }}</td></tr>
-        <tr>
+        {% comment %} <tr>
             <th>Puntaje Total</th>
             <td>
                 {% sum_items items examen as total_puntaje %}
@@ -20,11 +20,11 @@
         </tr>
         <tr>
             <td colspan="2" class="text-end">
-                <a href="{% url 'operativ:exportar_pdf_tercero' examen.id %}" target="_blank" class="btn btn-sm btn-outline-danger">
+                <a href="{% url 'operativ:exportar_pdf_tercero' examen.pk %}" target="_blank" class="btn btn-sm btn-outline-danger">
                     <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
                 </a>
             </td>
-        </tr>
+        </tr> {% endcomment %}
     </tbody>
 </table>
 
@@ -35,9 +35,7 @@
             <th>Velocidad</th>
             <th>Precisión</th>
             <th>Prosodia</th>
-            <th>Preg. 1</th>
-            <th>Preg. 2</th>
-            <th>Preg. 3</th>
+            
         </tr>
     </thead>
     <tbody>
@@ -45,9 +43,7 @@
             <td>{{ examen.velocidad }}</td>
             <td>{{ examen.precision }}</td>
             <td>{{ examen.prosodia }}</td>
-            <td>{{ examen.p1 }}</td>
-            <td>{{ examen.p2 }}</td>
-            <td>{{ examen.p3 }}</td>
+            
         </tr>
     </tbody>
 </table>

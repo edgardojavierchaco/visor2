@@ -331,7 +331,6 @@ def exportar_pdf_resultados_finales_primaria(request):
         'resultado_velocidad': 'Velocidad',
         'resultado_precision': 'Precisión',
         'resultado_prosodia': 'Prosodia',
-        'resultado_comprension': 'Comprensión',
     }
 
     # Modelos según materia
@@ -339,16 +338,14 @@ def exportar_pdf_resultados_finales_primaria(request):
         modelos = {
             'resultado_velocidad': VistaVelocidadSegundo,
             'resultado_precision': VistaPrecisionSegundo,
-            'resultado_prosodia': VistaProsodiaSegundo,
-            'resultado_comprension': VistaComprensionSegundo,
+            'resultado_prosodia': VistaProsodiaSegundo,            
         }
         template = 'operativchaco/fluidez/segundo/resultados_final_segundo_pdf.html'
     else:
         modelos = {
             'resultado_velocidad': VistaVelocidadTercero,
             'resultado_precision': VistaPrecisionTercero,
-            'resultado_prosodia': VistaProsodiaTercero,
-            'resultado_comprension': VistaComprensionTercero,
+            'resultado_prosodia': VistaProsodiaTercero,            
         }
         template = 'operativchaco/fluidez/tercero/resultados_final_tercero_pdf.html'
 
@@ -431,29 +428,23 @@ def ResultadosRegionSegundo(request):
             cantidad=Sum('cantidad'),
             porcentaje=Avg('porcentaje')
         )
-        resultado_comprension = VistaComprensionSegundoReg.objects.values('nivel').annotate(
-            cantidad=Sum('cantidad'),
-            porcentaje=Avg('porcentaje')
-        )        
+         
 
         resultado = {
             'resultado_velocidad': redondear(resultado_velocidad),
             'resultado_precision': redondear(resultado_precision),
             'resultado_prosodia': redondear(resultado_prosodia),
-            'resultado_comprension': redondear(resultado_comprension),
             'usuario': region,
         }
     else:
         resultado_velocidad=  VistaVelocidadSegundoReg.objects.filter(region=region).values()
         resultado_precision= VistaPrecisionSegundoReg.objects.filter(region=region).values()
-        resultado_prosodia= VistaProsodiaSegundoReg.objects.filter(region=region).values()
-        resultado_comprension= VistaComprensionSegundoReg.objects.filter(region=region).values()
+        resultado_prosodia= VistaProsodiaSegundoReg.objects.filter(region=region).values()        
         
     resultado= {
         'resultado_velocidad': list(resultado_velocidad) if resultado_velocidad else [],
         'resultado_precision': list(resultado_precision) if resultado_precision else [],
-        'resultado_prosodia': list(resultado_prosodia) if resultado_prosodia else [],
-        'resultado_comprension': list(resultado_comprension) if resultado_comprension else [],        
+        'resultado_prosodia': list(resultado_prosodia) if resultado_prosodia else [],       
         'usuario': region,
     }    
     
@@ -481,30 +472,23 @@ def ResultadosRegionTercero(request):
         resultado_prosodia = VistaProsodiaTerceroReg.objects.values('nivel').annotate(
             cantidad=Sum('cantidad'),
             porcentaje=Avg('porcentaje')
-        )
-        resultado_comprension = VistaComprensionTerceroReg.objects.values('nivel').annotate(
-            cantidad=Sum('cantidad'),
-            porcentaje=Avg('porcentaje')
-        )        
+        )           
 
         resultado = {
             'resultado_velocidad': redondear(resultado_velocidad),
             'resultado_precision': redondear(resultado_precision),
             'resultado_prosodia': redondear(resultado_prosodia),
-            'resultado_comprension': redondear(resultado_comprension),
             'usuario': region,
         }
     else:
         resultado_velocidad=  VistaVelocidadTerceroReg.objects.filter(region=region).values()
         resultado_precision= VistaPrecisionTerceroReg.objects.filter(region=region).values()
-        resultado_prosodia= VistaProsodiaTerceroReg.objects.filter(region=region).values()
-        resultado_comprension= VistaComprensionTerceroReg.objects.filter(region=region).values()
+        resultado_prosodia= VistaProsodiaTerceroReg.objects.filter(region=region).values()        
         
     resultado= {
         'resultado_velocidad': list(resultado_velocidad) if resultado_velocidad else [],
         'resultado_precision': list(resultado_precision) if resultado_precision else [],
-        'resultado_prosodia': list(resultado_prosodia) if resultado_prosodia else [],
-        'resultado_comprension': list(resultado_comprension) if resultado_comprension else [],        
+        'resultado_prosodia': list(resultado_prosodia) if resultado_prosodia else [],               
         'usuario': region,
     }    
     

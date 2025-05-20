@@ -86,7 +86,7 @@ def exportar_excel_examenes_segundo(request):
 
     columnas = [
         'DNI', 'Apellidos', 'Nombres', 'Cueanexo', 'Grado', 'División', 'Región',
-        'Velocidad', 'Precisión', 'Prosodia', 'Preg. 1', 'Preg. 2', 'Preg. 3'
+        'Velocidad', 'Precisión', 'Prosodia'
     ]
 
     ws.append(columnas)
@@ -95,12 +95,11 @@ def exportar_excel_examenes_segundo(request):
         ws.append([f'División: {division}'])
         for examen in examenes:
             """ total = sum([
-                examen.velocidad, examen.precision, examen.prosodia, examen.p1, examen.p2, examen.p3
+                examen.velocidad, examen.precision, examen.prosodia
             ]) """
             fila = [
                 examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.grado,
-                examen.division, examen.region, examen.velocidad, examen.precision, examen.prosodia, examen.p1,
-                examen.p2, examen.p3
+                examen.division, examen.region, examen.velocidad, examen.precision, examen.prosodia
             ]
             ws.append(fila)
 
@@ -114,7 +113,7 @@ def exportar_excel_examenes_segundo(request):
 @login_required
 def examen_segundo_detalle_modal(request, pk):
     examen = get_object_or_404(ExamenFluidezSegundo, pk=pk)
-    items = list(range(1, 7))  # del 1 al 16
+    items = list(range(1, 4))  # del 1 al 4
     print(examen)
     return render(request, 'operativchaco/fluidez/segundo/examen_detalle_modal.html', {
         'examen': examen,
@@ -152,7 +151,7 @@ def cerrar_carga_fluidez_segundo(request):
     )
     
     # ✅ Actualizar el estado de carga de lengua en EscuelasSecundarias
-    EscuelasPrimarias.objects.filter(cueanexo=cueanexo).update(lengua="CARGADO")
+    EscuelasPrimarias.objects.filter(cueanexo=cueanexo).update(segundo="CARGADO")
 
     # ✅ Crear el contenido para el código QR
     qr_data = f"CUEANEXO: {cueanexo}\nFecha: {fecha_actual}\nTotal registros: {total_registros}"
@@ -192,7 +191,7 @@ def exportar_pdf_segundo(request, examen_id):
     examen = ExamenFluidezSegundo.objects.get(id=examen_id)
 
     # Campos de ítems
-    item_fields = [f"p{i}" for i in range(1, 17)]
+    item_fields = [f"p{i}" for i in range(1, 4)]
 
     # Calcular puntaje total
     total_puntaje = sum(getattr(examen, campo, 0) or 0 for campo in item_fields)

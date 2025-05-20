@@ -27,6 +27,14 @@ from .views_biblio import (
     filtrar_planillas_anexas
 )
 
+from .views_fluidez import (
+    ArchivoEvaluacionCreateView,
+    ArchivoEvaluacionListView,
+    ArchivosEvaluacionUpdatateView,
+    ArchivosEvaluacionDeleteView,   
+    BuscarEvaluacionPDFView,
+)
+
 app_name='archivos'
 
 urlpatterns=[    
@@ -67,5 +75,12 @@ urlpatterns=[
     path("destinofondos/", destino_fondos_view, name="destinofondos"),
     path("filtrar_desfondos/", filtrar_destino_fondos, name="filtrar_desfondos"),
     path("plan_anex/", planillas_anexas_view, name="plan_anex"),
-    path("filtrar_plananex/", filtrar_planillas_anexas, name="filtrar_plananex"), 
+    path("filtrar_plananex/", filtrar_planillas_anexas, name="filtrar_plananex"),
+    
+    # Archivos para Evaluación
+    path('crear_fluidez/',ArchivoEvaluacionCreateView.as_view(),name='crear_fluidez'),
+    path('listar_fluidez/',ArchivoEvaluacionListView.as_view(),name='listar_fluidez'),
+    path('buscar_fluidez/',BuscarEvaluacionPDFView.as_view(),name='buscar_fluidez'), 
+    path('editar_fluidez/<int:pk>/',ArchivosEvaluacionUpdatateView.as_view(),name='editar_fluidez'), 
+    path('eliminar_fluidez/<int:pk>/',ArchivosEvaluacionDeleteView.as_view(),name='eliminar_fluidez'),
 ]

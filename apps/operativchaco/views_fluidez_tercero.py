@@ -51,7 +51,7 @@ def cargar_examen_fluidez_tercero(request):
                 )
                 
             form.save()
-            return redirect('operativ:examen_segundo_listado')  
+            return redirect('operativ:examen_tercero_listado')  
     else:
         form = ExamenFluidezTerceroForm(user=request.user, region=region)
 

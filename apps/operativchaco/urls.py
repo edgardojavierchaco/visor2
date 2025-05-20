@@ -52,6 +52,13 @@ from .views_cuentaregresiva import (
     cuenta_regresiva_matematica_graficos,
 )
 
+from .views_cuentaregresiva_fluidez import (
+    cuenta_regresiva_fluidez_segundo, 
+    cuenta_regresiva_fluidez_tercero,
+    cuenta_regresiva_segundo_graficos,
+    cuenta_regresiva_tercero_graficos,
+)
+
 from .views_resultados import (
     ResultadosCueanexoLengua, 
     ResultadosLenguaView, 
@@ -194,7 +201,7 @@ urlpatterns = [
     path('fluidez/examenes/tercero/exportar/', exportar_excel_examenes_tercero, name='exportar_excel_examenes_tercero'),
     path('examenes/tercero/<int:pk>/modal/', examen_tercero_detalle_modal, name='examen_tercero_detalle_modal'),
     path('cerrar_carga_tercero/',cerrar_carga_fluidez_tercero, name='cerrar_carga_tercero'),
-    path('exportar_pdf_tercero/<int:examen_id>/', exportar_pdf_tercero, name='exportar_pdf_tercero'),    
+    path('exportar_pdf_tercero/<int:pk>/', exportar_pdf_tercero, name='exportar_pdf_tercero'),    
     # Resultados Fluidez Lectora Segundo
     path('resultados/cueanexo_segundo/', ResultadosFluidezSegundoView, name='resultados_cueanexo_segundo'),
     path('api/resultados/cueanexo_segundo/', ResultadosCueanexoFluidezSegundo, name='resultados_segundo_api'),
@@ -217,6 +224,11 @@ urlpatterns = [
     path('api/datos_tercero/', datos_tercero_por_region, name='datos_tercero'),
     path('pendientes_segundo/', escuelas_pendientes_segundo, name='escuelas_pendientes_segundo'),
     path('pendientes_tercero/', escuelas_pendientes_tercero, name='escuelas_pendientes_tercero'),
+    # Cuentas regresivas fliuidez
+    path('cuenta_regresiva_fluidez_segundo/', cuenta_regresiva_fluidez_segundo, name='cuenta_regresiva_fluidez_segundo'),
+    path('cuenta_regresiva_fluidez_tercero/', cuenta_regresiva_fluidez_tercero, name='cuenta_regresiva_fluidez_tercero'),
+    path('cuenta_regresiva_segundo_graficos/', cuenta_regresiva_segundo_graficos, name='cuenta_regresiva_segundo_graficos'),
+    path('cuenta_regresiva_tercero_graficos/', cuenta_regresiva_tercero_graficos, name='cuenta_regresiva_tercero_graficos'),
 ]
 
 

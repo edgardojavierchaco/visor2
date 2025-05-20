@@ -44,8 +44,8 @@
                     <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
                     <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'usuarios:listado_op' %}" class="dropdown-item">Editar Directores</a></li>
-                        <li><a href="{% url 'oplectura:listados' %}" class="dropdown-item">Editar Aplicadores</a></li>
+                        {% comment %} <li><a href="{% url 'usuarios:listado_op' %}" class="dropdown-item">Editar Directores</a></li>
+                        <li><a href="{% url 'oplectura:listados' %}" class="dropdown-item">Editar Aplicadores</a></li> {% endcomment %}
                         <!-- Menú desplegable para "Resultados" -->
                         <li class="dropdown">
                             <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
@@ -71,8 +71,8 @@
                                 </li>
                             </ul>
                         </li>                        
-                        <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
-                        <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
+                        <li><a href="{% url 'operativ:dashboard_primaria' %}" class="dropdown-item">Dashboard 2° y 3° Fluidez</a></li>
+                        {% comment %} <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li> {% endcomment %}  
                     </ul>
                 </li>       
                 <li class="nav-item dropdown">

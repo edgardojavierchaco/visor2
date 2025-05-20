@@ -57,9 +57,9 @@
 
 <div class="card-footer">
     {% block buttons_list %}
-        <a href="{% url 'operativ:cargar_examen_lengua' %}" class="btn btn-primary btn-flat btnTest">
+        {% comment %} <a href="{% url 'operativ:cargar_examen_lengua' %}" class="btn btn-primary btn-flat btnTest">
             <i class="fas fa-plus"></i> Nuevo registro
-        </a>
+        </a> {% endcomment %}
         <a href="{{ list_url }}" class="btn btn-success btn-flat">
             <i class="fas fa-sync"></i> Actualizar
         </a>

@@ -71,12 +71,12 @@
                             <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
                             <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
                             <!-- Menú desplegable para "Resultados" -->
-                            <li>
+                            {% comment %} <li>
                                 <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Editar Alumnos</a>
                             </li>
                             <li>
                                 <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Cargar Aplicador</a>
-                            </li>
+                            </li> {% endcomment %}
                             <li class="dropdown">
                                 <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                 class="dropdown-item dropdown-toggle">Resultados</a>
@@ -92,8 +92,8 @@
                                     </li>
                                 </ul>
                             </li>
-                            <li><a href="{% url 'lectocomprension:recomendaciones' %}" class="dropdown-item">Recomendaciones para el docente</a></li>
-                            <li><a href="{% url 'lectocomprension:informe' %}" class="dropdown-item">Informe Final</a></li>  
+                            <li><a href="{% url 'operativ:examen_segundo_listado' %}" class="dropdown-item">Carga Evaluaciones 2° y 3°</a></li>
+                            <li><a href="{% url 'archivos:listar_fluidez' %}" class="dropdown-item">Descarga Material</a></li>  
                         </ul>
                     </li>
                 {% endif %}      

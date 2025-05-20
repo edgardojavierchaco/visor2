@@ -5,6 +5,22 @@ from django.forms import model_to_dict
 from django.core.exceptions import ValidationError
 from django.contrib.gis.db import models
 
+MESES_DEL_AÑO = [
+    ('01', 'Enero'),
+    ('02', 'Febrero'),
+    ('03', 'Marzo'),
+    ('04', 'Abril'),
+    ('05', 'Mayo'),
+    ('06', 'Junio'),
+    ('07', 'Julio'),
+    ('08', 'Agosto'),
+    ('09', 'Septiembre'),
+    ('10', 'Octubre'),
+    ('11', 'Noviembre'),
+    ('12', 'Diciembre'),
+]
+
+
 class AsuntoRegister(models.Model):
     
     asunto = models.CharField(max_length=150, blank=False, verbose_name='asunto')
@@ -110,4 +126,69 @@ class VCapaUnicaOfertasCuiCuof(models.Model):
         
     def __str__(self):
         return f'{self.cueanexo} {self.nom_est}'
+
+
+class AsuntoEvaluacion(models.Model):
     
+    asunto = models.CharField(max_length=150, blank=False, verbose_name='asunto')
+
+    class Meta: 
+        verbose_name='Asunto_Evaluacion'
+        verbose_name_plural='Asuntos_Evaluacion'
+        db_table = 'asunto_evaluacion'  
+      
+    def __str__(self):
+        return self.asunto
+
+
+class TEvaluacion(models.Model):
+    
+    t_evaluacion=models.CharField(max_length=150, blank=False, verbose_name='t_norma')
+    
+    class Meta:
+        verbose_name='Tipo_Evaluacion'
+        verbose_name_plural='Tipos_Evaluacion'
+        db_table = 't_evaluacion'        
+        
+    def __str__(self):
+        return self.t_evaluacion
+
+
+class ArchModelosEvaluacion(models.Model):        
+    asunto = models.ForeignKey(AsuntoEvaluacion, on_delete=models.CASCADE, verbose_name='asunto')
+    nivel=models.ForeignKey(nivel,on_delete=models.CASCADE, verbose_name='nivel')
+    t_eval=models.ForeignKey(TEvaluacion,on_delete=models.CASCADE, verbose_name='t_evaluacion')    
+    mes=models.CharField(max_length=25, blank=False, choices=MESES_DEL_AÑO, verbose_name='mes')
+    anio=models.IntegerField(blank=False, verbose_name='año')
+    descripcion = models.TextField(verbose_name='descripcion')
+    archivo = models.FileField(upload_to='archivo_evaluacion/')
+    ruta = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.asunto} - {self.nivel} - {self.t_eval}"
+    
+    @property
+    def nombre_asunto(self):
+        
+        return self.asunto.asunto if self.asunto else ""
+
+
+    def save(self, *args, **kwargs):     
+        
+        super().save(*args, **kwargs)        
+        
+        if self.archivo:
+            self.ruta = os.path.join(settings.MEDIA_ROOT, self.archivo.name)
+            super().save(update_fields=['ruta'])         
+    
+    def toJSON(self):
+        item = model_to_dict(self)        
+        item['asunto'] = self.asunto.asunto
+        item['nivel'] = self.nivel.niveles
+        item['t_eval'] = self.t_eval .t_evaluacion
+        item['mes'] = self.mes
+        item['anio'] = self.anio
+        item['descripcion'] = self.descripcion
+        item['archivo'] = self.archivo.url
+        item['ruta'] = self.ruta        
+        return item

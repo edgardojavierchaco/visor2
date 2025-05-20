@@ -17,7 +17,7 @@ from reportlab.pdfgen import canvas
 # Django
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import FileResponse, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.timezone import now
 from django.views.generic import DetailView, ListView
@@ -86,7 +86,7 @@ def exportar_excel_examenes_tercero(request):
 
     columnas = [
         'DNI', 'Apellidos', 'Nombres', 'Cueanexo', 'Grado', 'División', 'Región',
-        'Velocidad', 'Precisión', 'Prosodia', 'Preg. 1', 'Preg. 2', 'Preg. 3'
+        'Velocidad', 'Precisión', 'Prosodia'
     ]
 
     ws.append(columnas)
@@ -95,12 +95,11 @@ def exportar_excel_examenes_tercero(request):
         ws.append([f'División: {division}'])
         for examen in examenes:
             """ total = sum([
-                examen.velocidad, examen.precision, examen.prosodia, examen.p1, examen.p2, examen.p3
+                examen.velocidad, examen.precision, examen.prosodia
             ]) """
             fila = [
                 examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.grado,
-                examen.division, examen.region, examen.velocidad, examen.precision, examen.prosodia, examen.p1,
-                examen.p2, examen.p3
+                examen.division, examen.region, examen.velocidad, examen.precision, examen.prosodia
             ]
             ws.append(fila)
 
@@ -114,7 +113,7 @@ def exportar_excel_examenes_tercero(request):
 @login_required
 def examen_tercero_detalle_modal(request, pk):
     examen = get_object_or_404(ExamenFluidezTercero, pk=pk)
-    items = list(range(1, 7))  # del 1 al 16
+    items = list(range(1, 4))  # del 1 al 4
     print(examen)
     return render(request, 'operativchaco/fluidez/tercero/examen_detalle_modal.html', {
         'examen': examen,
@@ -152,7 +151,7 @@ def cerrar_carga_fluidez_tercero(request):
     )
     
     # ✅ Actualizar el estado de carga de lengua en EscuelasSecundarias
-    EscuelasPrimarias.objects.filter(cueanexo=cueanexo).update(lengua="CARGADO")
+    EscuelasPrimarias.objects.filter(cueanexo=cueanexo).update(tercero="CARGADO")
 
     # ✅ Crear el contenido para el código QR
     qr_data = f"CUEANEXO: {cueanexo}\nFecha: {fecha_actual}\nTotal registros: {total_registros}"
@@ -188,40 +187,36 @@ def cerrar_carga_fluidez_tercero(request):
     return FileResponse(pdf_buffer, as_attachment=True, filename=f'cierre_{cueanexo}.pdf')
 
 @login_required
-def exportar_pdf_tercero(request, examen_id):
-    examen = ExamenFluidezTercero.objects.get(id=examen_id)
+def exportar_pdf_tercero(pk):
+    print(f"📌 examen_dni recibido: {pk}")
+    examen = get_object_or_404(ExamenFluidezTercero, id=pk)
 
-    # Campos de ítems
-    item_fields = [f"p{i}" for i in range(1, 17)]
-
-    # Calcular puntaje total
+    item_fields = [f"p{i}" for i in range(1, 4)]
     total_puntaje = sum(getattr(examen, campo, 0) or 0 for campo in item_fields)
 
-    # Crear texto para el QR
-    qr_data = f"""DNI: {examen.dni}
-    Apellidos: {examen.apellidos}
-    Nombres: {examen.nombres}
-    CUE: {examen.cueanexo}
-    Región: {examen.region}
-    Año: {examen.grado}
-    División: {examen.division}
-    Puntaje total: {total_puntaje}
-    Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
-    Puntajes por ítem:"""
-
+    qr_data = (
+        f"DNI: {examen.dni}\n"
+        f"Apellidos: {examen.apellidos}\n"
+        f"Nombres: {examen.nombres}\n"
+        f"CUE: {examen.cueanexo}\n"
+        f"Región: {examen.region}\n"
+        f"Año: {examen.grado}\n"
+        f"División: {examen.division}\n"
+        f"Puntaje total: {total_puntaje}\n"
+        f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+        "Puntajes por ítem:"
+    )
     for i, campo in enumerate(item_fields, start=1):
         valor = getattr(examen, campo, 0) or 0
         simbolo = "✔️" if valor else "❌"
         qr_data += f"\nÍtem {i}: {simbolo} ({valor})"
 
-    # Crear imagen QR
     qr_img = qrcode.make(qr_data)
     qr_io = io.BytesIO()
     qr_img.save(qr_io, format='PNG')
     qr_io.seek(0)
     qr_pil = Image.open(qr_io)
 
-    # Crear PDF
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -252,15 +247,13 @@ def exportar_pdf_tercero(request, examen_id):
     for i, campo in enumerate(item_fields, start=1):
         valor = getattr(examen, campo, 0) or 0
         simbolo = "✔️" if valor else "❌"
-        texto_item = f"Ítem {i}: {simbolo} ({valor})"
-        p.drawString(60, y, texto_item)
+        p.drawString(60, y, f"Ítem {i}: {simbolo} ({valor})")
         y -= 18
         if y < 100:
             p.showPage()
             y = height - 50
             p.setFont("Helvetica", 12)
 
-    # Insertar QR
     p.drawInlineImage(qr_pil, width - 200, 50, width=150, height=150)
     p.showPage()
     p.save()

@@ -950,9 +950,7 @@ class ExamenFluidezSegundo(models.Model):
     velocidad = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Velocidad')
     precision = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Precisión')
     prosodia=models.CharField(choices=PROSODIA_CHOICES, verbose_name='Prosodia')
-    p1=models.CharField(choices=PREG1_CHOICES, verbose_name='Pregunta 1')
-    p2=models.CharField(choices=PREG2_CHOICES, verbose_name='Pregunta 2')
-    p3=models.CharField(choices=PREG3_CHOICES, verbose_name='Pregunta 3')
+    
     
     class Meta:
         verbose_name = "Examen Fluidez Segundo"
@@ -1072,10 +1070,7 @@ class ExamenFluidezTercero(models.Model):
     etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
     velocidad = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Velocidad')
     precision = models.IntegerField(validators=[MaxValueValidator(120)], verbose_name='Precisión')
-    prosodia=models.CharField(choices=PROSODIA_CHOICES, verbose_name='Prosodia')
-    p1=models.CharField(choices=PREG1_CHOICES, verbose_name='Pregunta 1')
-    p2=models.CharField(choices=PREG2_CHOICES, verbose_name='Pregunta 2')
-    p3=models.CharField(choices=PREG3_CHOICES, verbose_name='Pregunta 3')
+    prosodia=models.CharField(choices=PROSODIA_CHOICES, verbose_name='Prosodia')    
     
     class Meta:
         verbose_name = "Examen Fluidez Tercero"

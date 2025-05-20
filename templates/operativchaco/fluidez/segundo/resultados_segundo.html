@@ -58,9 +58,6 @@
         .titulo-prosodia {
             background-color: #f39c12; /* Marrón */
         }
-        .titulo-comprension {
-            background-color: #f1c40f; /* Celeste verdoso */
-        }
         
         .boton-descarga {
             display: inline-block;
@@ -105,14 +102,14 @@
                     'Velocidad': 'titulo-velocidad',
                     'Precisión': 'titulo-precision',
                     'Prosodia': 'titulo-prosodia',
-                    'Comprensión': 'titulo-comprension'
+                    
                 };
 
                 const emojis = {
                     'Velocidad': '📊',
                     'Precisión': '🧠',
                     'Prosodia': '📎',
-                    'Comprensión': '✍️'
+                    
                 };
 
                 function getChartData(dataArray) {
@@ -198,8 +195,7 @@
                 crearGraficoConTabla('chartVelocidad', data.resultado_velocidad, 'Velocidad');
                 crearGraficoConTabla('chartPrecision', data.resultado_precision, 'Precisión');
                 crearGraficoConTabla('chartProsodia', data.resultado_prosodia, 'Prosodia');
-                crearGraficoConTabla('chartComprension', data.resultado_comprension, 'Comprensión');                
-
+                
                 // Mostrar resumen final
                 setTimeout(() => {
                     const resumenDiv = document.createElement('div');

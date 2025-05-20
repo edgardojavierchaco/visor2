@@ -36,12 +36,11 @@ def ResultadosCueanexoFluidezTercero(request):
     resultado_velocidad=  VistaVelocidadTercero.objects.filter(cueanexo=usuario).values()
     resultado_precision= VistaPrecisionTercero.objects.filter(cueanexo=usuario).values()
     resultado_prosodia= VistaProsodiaTercero.objects.filter(cueanexo=usuario).values()
-    resultado_comprension= VistaComprensionTercero.objects.filter(cueanexo=usuario).values()
+    
     resultado= {
         'resultado_velocidad': list(resultado_velocidad),
         'resultado_precision': list(resultado_precision),
         'resultado_prosodia': list(resultado_prosodia),
-        'resultado_comprension': list(resultado_comprension),
         'usuario': usuario,
     }    
     
@@ -63,7 +62,7 @@ def ResultadosFluidezTerceroView(request):
         'usuario': request.user.username,
         'nom_est': rows[0] if rows else None,
     }
-    return render(request, 'operativchaco/tercero/resultados_tercero.html', context)
+    return render(request, 'operativchaco/fluidez/tercero/resultados_tercero.html', context)
 
 
 def exportar_pdf_tercero(request):
@@ -82,15 +81,13 @@ def exportar_pdf_tercero(request):
     resultado = {
         'resultado_velocidad': list(VistaVelocidadTercero.objects.filter(cueanexo=usuario).values()),
         'resultado_precision': list(VistaPrecisionTercero.objects.filter(cueanexo=usuario).values()),
-        'resultado_prosodia': list(VistaProsodiaTercero.objects.filter(cueanexo=usuario).values()),
-        'resultado_comprension': list(VistaComprensionTercero.objects.filter(cueanexo=usuario).values()),
+        'resultado_prosodia': list(VistaProsodiaTercero.objects.filter(cueanexo=usuario).values()),        
     }
 
     titulos = {
         'resultado_velocidad': 'Velocidad',
         'resultado_precision': 'Precisión',
-        'resultado_prosodia': 'Prosodia',
-        'resultado_comprension': 'Comprensión'
+        'resultado_prosodia': 'Prosodia'        
     }
 
     context = {
@@ -100,7 +97,7 @@ def exportar_pdf_tercero(request):
         'nom_est': rows[0] if rows else None,
     }
 
-    html_string = render_to_string('operativchaco/tercero/resultados_final_tercero_pdf.html', context)
+    html_string = render_to_string('operativchaco/fluidez/tercero/resultados_final_tercero_pdf.html', context)
 
     options = {
         'encoding': 'UTF-8',
@@ -142,15 +139,13 @@ def exportar_pdf_tercero_cueanexo(request):
     resultado = {
         'resultado_velocidad': list(VistaVelocidadTercero.objects.filter(cueanexo=usuario).values()),
         'resultado_precision': list(VistaPrecisionTercero.objects.filter(cueanexo=usuario).values()),
-        'resultado_prosodia': list(VistaProsodiaTercero.objects.filter(cueanexo=usuario).values()),
-        'resultado_comprension': list(VistaComprensionTercero.objects.filter(cueanexo=usuario).values()),
+        'resultado_prosodia': list(VistaProsodiaTercero.objects.filter(cueanexo=usuario).values()),        
     }
 
     titulos = {
         'resultado_velocidad': 'Velocidad',
         'resultado_precision': 'Precisión',
-        'resultado_prosodia': 'Prosodia',
-        'resultado_comprension': 'Comprensión'
+        'resultado_prosodia': 'Prosodia'        
     }
 
     context = {
@@ -161,7 +156,7 @@ def exportar_pdf_tercero_cueanexo(request):
     }   
     
 
-    html_string = render_to_string('operativchaco/tercero/resultados_cueanexo_tercero_pdf.html', context)
+    html_string = render_to_string('operativchaco/fluidez/tercero/resultados_cueanexo_tercero_pdf.html', context)
 
     options = {
         'encoding': 'UTF-8',
