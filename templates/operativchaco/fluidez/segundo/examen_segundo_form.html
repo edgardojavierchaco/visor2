@@ -6,28 +6,35 @@
 
 {% block content %}
 <style>
-        select.form-select {
-            display: block;
-            width: 100%;
-            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
-            font-size: 1rem;
-            font-weight: 400;
-            line-height: 1.5;
-            color: #212529;
-            background-color: #fff;
-            background-image: url("data:image/svg+xml;charset=UTF-8,..."); /* icono flecha Bootstrap */
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 16px 12px;
-            border: 1px solid #ced4da;
-            border-radius: 0.375rem;
-            appearance: none;
-        }
-        </style>
+    select.form-select {
+        display: block;
+        width: 100%;
+        padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-image: url("data:image/svg+xml;charset=UTF-8,..."); /* icono flecha Bootstrap */
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        appearance: none;
+    }
+</style>
+
 <div class="container mt-5">
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">📘 Cargar Evaluación</h4>
+            <h4 class="mb-0">
+                {% if form.instance.pk %}
+                    ✏️ Editar Evaluación
+                {% else %}
+                    📘 Cargar Evaluación
+                {% endif %}
+            </h4>
         </div>
         <div class="card-body">
             <form method="post" id="form-examen">
@@ -79,10 +86,14 @@
                     {% endfor %}
                 </div>
 
-                <button type="submit" class="btn btn-success w-100">💾 Guardar</button>
+                <button type="submit" class="btn btn-success w-100">
+                    {% if form.instance.pk %}
+                        💾 Actualizar
+                    {% else %}
+                        💾 Guardar
+                    {% endif %}
+                </button>
             </form>
-
-
         </div>
     </div>
 </div>
@@ -91,6 +102,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+{% if not form.instance.pk %}
 <script>
     $(document).ready(function () {
         $("#id_dni").on("input", function () {
@@ -129,5 +141,7 @@
         });
     });
 </script>
+{% endif %}
 
 {% endblock %}
+

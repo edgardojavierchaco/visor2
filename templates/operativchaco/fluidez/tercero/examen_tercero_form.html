@@ -24,10 +24,17 @@
             appearance: none;
         }
         </style>
+
 <div class="container mt-5">
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">📘 Cargar Evaluación</h4>
+           <h4 class="mb-0">
+                {% if form.instance.pk %}
+                    ✏️ Editar Evaluación
+                {% else %}
+                    📘 Cargar Evaluación
+                {% endif %}
+            </h4> 
         </div>
         <div class="card-body">
             <form method="post" id="form-examen">
@@ -79,10 +86,14 @@
                     {% endfor %}
                 </div>
 
-                <button type="submit" class="btn btn-success w-100">💾 Guardar</button>
+                <button type="submit" class="btn btn-success w-100">
+                    {% if form.instance.pk %}
+                        💾 Actualizar
+                    {% else %}
+                        💾 Guardar
+                    {% endif %}
+                </button>
             </form>
-
-
         </div>
     </div>
 </div>
@@ -91,6 +102,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+{% if not form.instance.pk %}
 <script>
     $(document).ready(function () {
         $("#id_dni").on("input", function () {
@@ -129,5 +141,6 @@
         });
     });
 </script>
+{% endif %}
 
 {% endblock %}

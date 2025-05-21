@@ -4,6 +4,11 @@ from .forms import ExamenFluidezTerceroForm
 from .models import AlumnosPrimariaFluidez, ExamenFluidezTercero
 from django.contrib.auth.decorators import login_required
 from apps.establecimientos.models import PadronOfertas
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.http import HttpResponseRedirect
+from django.views.generic import UpdateView
+
 
 @login_required
 def buscar_alumno_por_dni_fluidezt(request):
@@ -56,3 +61,19 @@ def cargar_examen_fluidez_tercero(request):
         form = ExamenFluidezTerceroForm(user=request.user, region=region)
 
     return render(request, 'operativchaco/fluidez/tercero/examen_tercero_form.html', {'form': form})
+
+
+class EditarEvaluacionTerceroView(LoginRequiredMixin, UpdateView):
+    model = ExamenFluidezTercero
+    form_class = ExamenFluidezTerceroForm
+    template_name = 'operativchaco/fluidez/tercero/examen_tercero_form.html'
+    success_url = reverse_lazy('operativ:examen_tercero_listado')  # Cambiá esta URL por la que necesites
+
+    def get_queryset(self):
+        """
+        Opcional: restringe la edición según el cueanexo del usuario logueado.
+        """
+        qs = super().get_queryset()
+        if self.request.user.is_authenticated:
+            return qs.filter(cueanexo=self.request.user.username)
+        return qs

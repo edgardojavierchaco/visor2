@@ -85,6 +85,7 @@ from .views_resultados_reg import (
 from .views_fluidez_segundo import (
     buscar_alumno_por_dni_fluidez,
     cargar_examen_fluidez_segundo,
+    EditarEvaluacionSegundoView,    
 )
 
 from .views_list_fluidez_segundo import (
@@ -101,6 +102,7 @@ from .views_list_fluidez_segundo import (
 from .views_fluidez_tercero import (
     buscar_alumno_por_dni_fluidezt,
     cargar_examen_fluidez_tercero,
+    EditarEvaluacionTerceroView,
 )
 
 from .views_list_fluidez_tercero import (
@@ -193,6 +195,7 @@ urlpatterns = [
     path('examenes/segundo/<int:pk>/modal/', examen_segundo_detalle_modal, name='examen_segundo_detalle_modal'),
     path('cerrar_carga_segundo/',cerrar_carga_fluidez_segundo, name='cerrar_carga_segundo'),
     path('exportar_pdf_segundo/<int:examen_id>/', exportar_pdf_segundo, name='exportar_pdf_segundo'),    
+    path('editar/fluidez/examenes/segundo/<int:pk>/', EditarEvaluacionSegundoView.as_view(), name='editar_fluidez_examen_segundo'),
     # Fluidez tercero    
     path('buscar_dni_fluidezt/', buscar_alumno_por_dni_fluidezt, name='buscar_dni_fluidezt'),
     path('cargar_examen_fluidez_tercero/', cargar_examen_fluidez_tercero, name='carga_examen_fluidez_tercero'),
@@ -202,6 +205,7 @@ urlpatterns = [
     path('examenes/tercero/<int:pk>/modal/', examen_tercero_detalle_modal, name='examen_tercero_detalle_modal'),
     path('cerrar_carga_tercero/',cerrar_carga_fluidez_tercero, name='cerrar_carga_tercero'),
     path('exportar_pdf_tercero/<int:pk>/', exportar_pdf_tercero, name='exportar_pdf_tercero'),    
+    path('editar/fluidez/examenes/tercero/<int:pk>/', EditarEvaluacionTerceroView.as_view(), name='editar_fluidez_examen_tercero'),
     # Resultados Fluidez Lectora Segundo
     path('resultados/cueanexo_segundo/', ResultadosFluidezSegundoView, name='resultados_cueanexo_segundo'),
     path('api/resultados/cueanexo_segundo/', ResultadosCueanexoFluidezSegundo, name='resultados_segundo_api'),

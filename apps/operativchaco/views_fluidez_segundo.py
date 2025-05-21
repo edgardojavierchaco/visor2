@@ -1,9 +1,13 @@
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from .forms import ExamenFluidezSegundoForm
 from .models import AlumnosPrimariaFluidez, ExamenFluidezSegundo
 from django.contrib.auth.decorators import login_required
 from apps.establecimientos.models import PadronOfertas
+from django.views.generic import UpdateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.http import HttpResponseRedirect
 
 @login_required
 def buscar_alumno_por_dni_fluidez(request):
@@ -56,3 +60,19 @@ def cargar_examen_fluidez_segundo(request):
         form = ExamenFluidezSegundoForm(user=request.user, region=region)
 
     return render(request, 'operativchaco/fluidez/segundo/examen_segundo_form.html', {'form': form})
+
+
+class EditarEvaluacionSegundoView(LoginRequiredMixin, UpdateView):
+    model = ExamenFluidezSegundo
+    form_class = ExamenFluidezSegundoForm
+    template_name = 'operativchaco/fluidez/segundo/examen_segundo_form.html'
+    success_url = reverse_lazy('operativ:examen_segundo_listado')  # Cambiá esta URL por la que necesites
+
+    def get_queryset(self):
+        """
+        Opcional: restringe la edición según el cueanexo del usuario logueado.
+        """
+        qs = super().get_queryset()
+        if self.request.user.is_authenticated:
+            return qs.filter(cueanexo=self.request.user.username)
+        return qs

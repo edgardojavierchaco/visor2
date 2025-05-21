@@ -43,8 +43,11 @@
                 <td>{{ examen.division }}</td>
                 <td>{{ examen.discapacidad }}</td>
                 <td>{{ examen.etnia }}</td>
-                <td>
+                <td class="d-flex gap-2">
                     <button class="btn btn-sm btn-primary ver-detalle" data-id="{{ examen.pk }}">Ver detalle</button>
+                    <a href="{% url 'operativ:editar_fluidez_examen_segundo' examen.pk %}" class="btn btn-sm btn-warning">
+                        ✏️ Editar
+                    </a>
                 </td>
             </tr>      
             {% endfor %}      
