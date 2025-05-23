@@ -136,3 +136,24 @@ class VistaAlumnosBilingue(models.Model):
         item['region_loc'] = self.region_loc
         item['localidad'] = self.localidad  
         return item
+
+
+class ExportarAlumnoBilingueConId(models.Model):
+    id = models.IntegerField(primary_key=True)
+    cueanexo = models.CharField(max_length=15)
+    nom_est = models.CharField(max_length=255)
+    sector = models.CharField(max_length=100)
+    ambito = models.CharField(max_length=100)
+    region_loc = models.CharField(max_length=100)
+    localidad = models.CharField(max_length=100)
+    departamento = models.CharField(max_length=100)
+    nivel = models.CharField(max_length=50)
+    curso = models.CharField(max_length=50)
+    seccion = models.CharField(max_length=10)
+    lengua = models.CharField(max_length=100)
+    varones = models.IntegerField()
+    mujeres = models.IntegerField()
+
+    class Meta:
+        managed = False  
+        db_table = 'v_alumnos_bilingues_con_id'

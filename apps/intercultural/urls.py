@@ -12,6 +12,7 @@ from .views_index import IndexView
 from .views_reg import VistaAlumnosBilingueListRegView, VistaAlumnosBilingueListRegView2
 from .views_gestor import VistaAlumnosBilingueGestorListView, VistaAlumnosBilingueGestorListView2
 from .views_superv import VistaAlumnosBilingueSupervListView, VistaAlumnosBilingueSupervListView2
+from .views_exportar import export_alumnos_bilingues_xlsx
 
 app_name='intercultural'
 
@@ -36,6 +37,7 @@ urlpatterns = [
     path('alumnos/list_gestor_cue/<str:cueanexo>/', VistaAlumnosBilingueGestorListView2.as_view(), name='alumnos_list_gestor_cue'),
     path('alumnos/list_superv/', VistaAlumnosBilingueSupervListView.as_view(), name='alumnos_list_superv'),
     path('alumnos/list_superv_cue/<str:cueanexo>/', VistaAlumnosBilingueSupervListView2.as_view(), name='alumnos_list_superv_cue'),
+    path('alumnos/exportar/', export_alumnos_bilingues_xlsx, name='exportar_alumnos_bilingues'),
     # home
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard_comun/', DashboardComunView.as_view(), name='dashboard_comun'),

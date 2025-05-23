@@ -5,6 +5,12 @@
 {% endblock %}
 
 {% block columns %}
+<!-- Botón de exportación -->
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'intercultural:exportar_alumnos_bilingues' %}" class="btn btn-success">
+            📥 Exportar a Excel
+        </a>
+    </div>
    <thead>
         <tr>
             <th scope="col" style="width: 15%;">CUEANEXO</th>
