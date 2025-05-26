@@ -207,6 +207,13 @@ class ExamenFluidezSegundoForm(forms.ModelForm):
 
         return cleaned_data
     
+    def clean_grado(self):
+        grado = self.cleaned_data.get("grado", "").strip()
+        if grado != '2':
+            raise forms.ValidationError("El grado debe ser 2")
+        return grado
+
+    
 ######################################
 
 class ExamenFluidezTerceroForm(forms.ModelForm):
@@ -273,3 +280,11 @@ class ExamenFluidezTerceroForm(forms.ModelForm):
                     self.add_error(field_name, "Debe tener exactamente dos decimales (por ejemplo: 7.00).")
 
         return cleaned_data
+    
+    def clean_grado(self):
+        grado = self.cleaned_data.get("grado", "").strip()
+        if grado != '3':
+            raise forms.ValidationError("El grado debe ser 3")
+        return grado
+
+
