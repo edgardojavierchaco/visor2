@@ -39,3 +39,9 @@ def dashboard_secundarias_regional(request):
 
 def dashboard_resultados_final_regional(request):    
     return render(request, 'operativchaco/dashboard/dashboard_reportes_final_regional.html')
+
+
+def dashboard_matematica_quinto_segundo(request):
+    totalesprim = TotalPrimarias.objects.first()  
+    totalessec = TotalSecundarias.objects.first()
+    return render(request, 'operativchaco/dashboard/matematica_quinto_segundo.html', {'totalesprim': totalesprim, 'totalessec': totalessec})

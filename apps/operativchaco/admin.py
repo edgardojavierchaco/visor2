@@ -41,6 +41,13 @@ from .models import (
     VistaPrecisionTercero,
     VistaProsodiaTercero,
     VistaComprensionTercero,
+    EscuelasPrimariasMatematica,
+    ExamenMatematicaQuintoGrado,
+    RegistroAsistenciaMatematicaQuinto,
+    RespuestaCorrectaMatematicaQuinto,
+    AlumnosPrimariaQuinto,
+    VistaResultadoMatematicaQuinto,
+    VistaMatematicaQuinto,
 )
 
 admin.site.register(AlumnosSecundariaDiagnostico)
@@ -84,4 +91,11 @@ admin.site.register(VistaVelocidadTercero)
 admin.site.register(VistaPrecisionTercero)
 admin.site.register(VistaProsodiaTercero)
 admin.site.register(VistaComprensionTercero)
+admin.site.register(EscuelasPrimariasMatematica)
+admin.site.register(ExamenMatematicaQuintoGrado)
+admin.site.register(RegistroAsistenciaMatematicaQuinto)
+admin.site.register(RespuestaCorrectaMatematicaQuinto)
+admin.site.register(AlumnosPrimariaQuinto)
+admin.site.register(VistaResultadoMatematicaQuinto)
+admin.site.register(VistaMatematicaQuinto)
 

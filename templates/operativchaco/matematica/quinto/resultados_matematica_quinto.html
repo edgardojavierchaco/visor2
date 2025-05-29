@@ -1,0 +1,214 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados de la Evaluación de Matemática - 5° Grado</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .section {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin: 30px auto;
+            max-width: 900px;
+        }
+        .chart-container {
+            width: 400px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 300px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #eee;
+        }
+
+        /* ✅ Estilos base para los títulos */
+        .chart-title {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 8px 16px;
+            margin: 10px auto;
+            text-align: center;
+            border-radius: 12px;
+            width: fit-content;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+            color: #fff;
+        }
+
+        /* 🎨 Colores únicos por título */
+        .titulo-velocidad {
+            background-color: #3498db; /* Azul */
+        }
+        .titulo-precision {
+            background-color: #9b59b6; /* Violeta */
+        }
+        .titulo-prosodia {
+            background-color: #f39c12; /* Marrón */
+        }
+        
+        .boton-descarga {
+            display: inline-block;
+            background-color: #2ECC71;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .boton-descarga:hover {
+            background-color: #27AE60;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Resultados Generales - Quinto Grado 2025</h1>
+    <h3 style="text-align: center;">Cueanexo: {{ usuario }} - {{ nom_est }}</h3>
+
+    <div style="text-align: right; margin-bottom: 20px;">
+        <a href="{% url 'operativ:exportar_pdf_quinto_cue' %}" target="_blank" class="boton-descarga">
+            📄 Descargar PDF
+        </a>
+    </div>
+
+
+    <div id="contenedorResultados"></div>
+
+    <script>
+        fetch("{% url 'operativ:resultados_quinto_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                const coloresPorNivel = {
+                    "En proceso": "#E74C3C",
+                    "Alcanzó": "#E67E22",                    
+                    "Superó": "#2ECC71"
+                };
+
+                const clasesTitulo = {
+                    'General': 'titulo-velocidad',                   
+                    
+                };
+
+                const emojis = {
+                    'General': '📊',                    
+                };
+
+                function getChartData(dataArray) {
+                    return {
+                        labels: dataArray.map(item => item.nivel),
+                        datasets: [{
+                            data: dataArray.map(item => parseFloat(item.porcentaje)),
+                            backgroundColor: dataArray.map(item => coloresPorNivel[item.nivel] || "#CCCCCC")
+                        }]
+                    };
+                }
+
+                // 🧮 Totales acumulados
+                const totalesPorNivel = {
+                    "En proceso": 0,
+                    "Alcanzó": 0,
+                    "Superó": 0
+                };
+                let totalEstudiantes = 0;
+
+                function crearGraficoConTabla(id, datos, titulo) {
+                    const container = document.createElement('div');
+                    container.className = 'section';
+
+                    const canvas = document.createElement('canvas');
+                    canvas.id = id;
+                    canvas.width = 400;
+                    canvas.height = 400;
+
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'chart-container';
+
+                    const tituloDiv = document.createElement('div');
+                    tituloDiv.className = `chart-title ${clasesTitulo[titulo]}`;
+                    tituloDiv.textContent = `${emojis[titulo]} ${titulo}`;
+                    chartDiv.appendChild(tituloDiv);
+                    chartDiv.appendChild(canvas);
+
+                    const tabla = document.createElement('table');
+                    const thead = document.createElement('thead');
+                    thead.innerHTML = `<tr><th colspan="2">${titulo}</th></tr><tr><th>Nivel</th><th>Cantidad</th></tr>`;
+                    tabla.appendChild(thead);
+
+                    const tbody = document.createElement('tbody');
+                    datos.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.style.backgroundColor = coloresPorNivel[item.nivel] || "#FFF";
+                        row.innerHTML = `<td>${item.nivel}</td><td>${item.cantidad}</td>`;
+                        tbody.appendChild(row);
+
+                        // 📊 Acumular datos para el resumen
+                        totalesPorNivel[item.nivel] += item.cantidad;
+                        totalEstudiantes += item.cantidad;
+                    });
+                    tabla.appendChild(tbody);
+
+                    container.appendChild(chartDiv);
+                    container.appendChild(tabla);
+                    document.getElementById('contenedorResultados').appendChild(container);
+
+                    const ctx = canvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: 'pie',
+                        data: getChartData(datos),
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: { display: false },
+                                datalabels: {
+                                    color: '#fff',
+                                    formatter: (value) => value + '%',
+                                    font: { weight: 'bold', size: 14 }
+                                },
+                                legend: { position: 'bottom' }
+                            }
+                        },
+                        plugins: [ChartDataLabels]
+                    });
+                }
+
+                // Crear todos los gráficos
+                crearGraficoConTabla('chartGeneral', data.resultado_general, 'General');                
+                
+                // Mostrar resumen final
+                setTimeout(() => {
+                    const resumenDiv = document.createElement('div');
+                    resumenDiv.style.margin = '40px auto';
+                    resumenDiv.style.padding = '20px';
+                    resumenDiv.style.maxWidth = '600px';
+                    resumenDiv.style.border = '2px solid #ccc';
+                    resumenDiv.style.borderRadius = '12px';
+                    resumenDiv.style.backgroundColor = '#f9f9f9';
+                    resumenDiv.innerHTML = `
+                        <h2 style="text-align: center;">📌 Resumen General</h2>
+                        <p><strong>Total de estudiantes (todas las capacidades):</strong> ${totalEstudiantes}</p>                        <ul>
+                            <li style="color:${coloresPorNivel['Superó']}">🟢 Superó: ${totalesPorNivel["Superó"]}</li>                            
+                            <li style="color:${coloresPorNivel['Alcanzó']}">🟠 Alcanzó: ${totalesPorNivel["Alcanzó"]}</li>
+                            <li style="color:${coloresPorNivel['En proceso']}">🔴 En proceso: ${totalesPorNivel["En proceso"]}</li>
+                        </ul>
+                    `;
+                    document.body.appendChild(resumenDiv);
+                }, 500); // Espera a que los gráficos se hayan creado
+            })
+            .catch(error => console.error('Error al cargar datos:', error));
+    </script>
+
+</body>
+</html>

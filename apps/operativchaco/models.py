@@ -3,6 +3,75 @@ from django.db import models
 from decimal import Decimal
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+DISCAPACIDAD=[
+        ('SI', 'SI'),  
+        ('NO', 'NO'),
+    ]
+    
+ETNIA=[
+    ('NO', 'NO'),
+    ('QOM', 'QOM'),
+    ('WICHI', 'WICHI'),
+    ('MOQOIT', 'MOQOIT'),
+]
+
+ALTERNATIVA =[
+    ('SI', 'SI'),
+    ('NO', 'NO'),
+]
+
+VERDADERO=[
+    ('V','V'),
+    ('F','F'),
+]
+
+FIGURAS=[
+    ('CIRCULO', 'CIRCULO'),
+    ('CUADRADO', 'CUADRADO'),
+    ('TRIANGULO', 'TRIANGULO'),
+    ('RECTANGULO', 'RECTANGULO'),
+    ('ROMBO', 'ROMBO'),
+    ('TRAPECIO', 'TRAPECIO'),
+    ('NINGUNA', 'NINGUNA'),
+]
+
+LADOS=[
+    ('TRES', 'TRES'),
+    ('CUATRO', 'CUATRO'),
+    ('CINCO', 'CINCO'),
+    ('SEIS', 'SEIS'),
+    ('SIETE', 'SIETE'),
+    ('OCHO', 'OCHO'),
+    ('NUEVE', 'NUEVE'),
+]
+
+VERTICES=[
+    ('TRES', 'TRES'),
+    ('CUATRO', 'CUATRO'),
+    ('CINCO', 'CINCO'),
+    ('SEIS', 'SEIS'),
+    ('SIETE', 'SIETE'),
+    ('OCHO', 'OCHO'),
+    ('NUEVE', 'NUEVE'),
+]
+
+UNIDADES=[
+    ('CENTIMETRO', 'CENTIMETRO'),
+    ('METRO', 'METRO'),
+    ('KILOMETRO', 'KILOMETRO'),
+]
+
+PLANTEO=[
+    ('PLANTEO A', 'PLANTEO A'),    
+    ('PLANTEO B', 'PLANTEO B'),
+    ('SIN UNIDAD MONETARIA', 'SIN UNIDAD MONETARIA'),    
+]
+
+SOLUCION=[
+    ('SOLUCION A', 'SOLUCION A'),
+    ('SOLUCION B', 'SOLUCION B'),
+    ('SIN UNIDAD MONETARIA', 'SIN UNIDAD MONETARIA'),
+]
 
 class AlumnosSecundariaDiagnostico(models.Model):
     dni = models.CharField(max_length=8, unique=True, verbose_name='DNI')  
@@ -983,6 +1052,27 @@ class EscuelasPrimarias(models.Model):
         return f'{self.cueanexo} {self.nom_est}'
 
 
+class EscuelasPrimariasMatematica(models.Model):
+    id = models.AutoField(primary_key=True)
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo')
+    nom_est=models.CharField(max_length=255, verbose_name='Nombre')
+    oferta=models.CharField(max_length=255, verbose_name='Oferta')
+    region_loc=models.CharField(max_length=255, verbose_name='Region')
+    sector=models.CharField(max_length=255, verbose_name='Sector')
+    ambito=models.CharField(max_length=255, verbose_name='Ambito')
+    localidad=models.CharField(max_length=255, verbose_name='Localidad')
+    departamento=models.CharField(max_length=255, verbose_name='Departamento')
+    quinto=models.CharField(max_length=255, default='PENDIENTE',verbose_name='Segundo')
+    
+    class Meta:        
+        verbose_name = "Escuela Primaria Matematica"
+        verbose_name_plural = "Escuelas Primarias Matematica"
+        db_table = "escuelas_primarias_matematica"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nom_est}'
+
+
 class TotalPrimarias(models.Model):
     total_escuelas=models.PositiveIntegerField(verbose_name='Total')
     estatal=models.PositiveIntegerField(verbose_name='Estatal')
@@ -1047,17 +1137,7 @@ class ExamenFluidezTercero(models.Model):
         ('c','c'),
     ]       
     
-    DISCAPACIDAD=[
-        ('SI', 'SI'),  
-        ('NO', 'NO'),
-    ]
     
-    ETNIA=[
-        ('NO', 'NO'),
-        ('QOM', 'QOM'),
-        ('WICHI', 'WICHI'),
-        ('MOQOIT', 'MOQOIT'),
-    ]
         
     dni = models.CharField(max_length=8, verbose_name='DNI')  
     apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
@@ -1344,3 +1424,169 @@ class VistaComprensionTerceroReg(models.Model):
     
     def __str__(self):
         return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+################################
+# OPERATIVO MATEMATICA 5 GRADO #
+################################
+
+class ExamenMatematicaQuintoGrado(models.Model):
+    dni = models.CharField(max_length=8, verbose_name='DNI')  
+    apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='Nombres')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
+    grado=models.CharField(max_length=1, default='5',verbose_name='Grado')
+    division=models.CharField(max_length=1, verbose_name='División')
+    region=models.CharField(max_length=25, verbose_name='Regional')
+    discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
+    etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
+    preg1a = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 A')
+    preg1b = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 B')
+    preg1c = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 C')
+    preg1d = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 D')
+    preg2a = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 A')
+    preg2b = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 B')
+    preg2c = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 C')
+    preg2d = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 D')
+    preg3a = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 A')
+    preg3b = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 B')
+    preg3c = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 C')
+    preg3d = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 D')
+    preg4a = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 4 A')
+    preg4b = models.CharField(max_length=25, choices=LADOS, verbose_name='Pregunta 4 B')
+    preg4c = models.CharField(max_length=25, choices=VERTICES, verbose_name='Pregunta 4 C')
+    preg4d = models.CharField(max_length=2, choices=ALTERNATIVA, verbose_name='Pregunta 4 D')
+    preg5 = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 5')
+    preg6a = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 6 A')
+    preg6b = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 6 B')
+    preg6c = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 6 C')
+    preg7a = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 A')
+    preg7b = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 B')
+    preg7c = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 C')
+    preg7d = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 D')
+    preg8a = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 A')
+    preg8b = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 B')
+    preg8c = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 C')
+    preg8d = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 D')
+    preg9a = models.CharField(max_length=50, choices=PLANTEO, verbose_name='Pregunta 9 Planteo')
+    preg9b = models.CharField(max_length=50, choices=SOLUCION, verbose_name='Pregunta 9 Solución')   
+    
+    class Meta:
+        verbose_name = "Examen Matematica Quinto Grado"
+        verbose_name_plural = "Examenes Matematica Quinto Grado"
+        db_table = "Examen_Matematica_Quinto_Grado"
+
+    def __str__(self):
+        return f'{self.dni} {self.apellidos} {self.nombres}'
+
+
+class RegistroAsistenciaMatematicaQuinto(models.Model):
+    cueanexo = models.CharField(max_length=15)
+    fecha = models.DateTimeField(auto_now_add=True)
+    region=models.CharField(max_length=25)
+    ausentes = models.PositiveIntegerField()
+    total_registros = models.PositiveIntegerField()
+    
+    class Meta:
+        verbose_name = "Registro Asistencia Matematica Quinto"
+        verbose_name_plural = "Registros Asistencia Matematica Quinto"
+        db_table = "Registro_Asistencia_Matematica_Quinto"
+
+
+class RespuestaCorrectaMatematicaQuinto(models.Model):
+    pregunta = models.CharField(max_length=50, verbose_name='Pregunta')
+    respuesta_correcta = models.CharField(max_length=50, verbose_name='Respuesta Correcta')
+    puntaje = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Puntaje')
+    
+    class Meta:
+        verbose_name = "Respuesta Correcta Matematica Quinto"
+        verbose_name_plural = "Respuestas Correctas Matematica Quinto"
+        db_table = "respuesta_correcta_matematica_quinto"
+    
+    def __str__(self):
+        return f'{self.pregunta} {self.respuesta_correcta}'
+
+
+class AlumnosPrimariaQuinto(models.Model):
+    dni = models.CharField(max_length=8, verbose_name='DNI')  
+    apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='Nombres')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
+    grado=models.CharField(max_length=25, verbose_name='grado')
+    division=models.CharField(max_length=5, verbose_name='División')
+    region=models.CharField(max_length=25, verbose_name='Regional')
+
+    class Meta:
+        verbose_name = "Alumno Primaria Quinto"
+        verbose_name_plural = "Alumnos Primaria Quinto"
+        db_table = "Alumno_Primaria_Quinto"
+
+    def __str__(self):
+        return f'{self.dni} {self.apellidos} {self.nombres}'
+
+
+class VistaResultadoMatematicaQuinto(models.Model):
+    dni = models.CharField(max_length=8, verbose_name='DNI')  
+    apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='Nombres')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo') 
+    grado=models.CharField(max_length=1, default='5',verbose_name='Grado')
+    division=models.CharField(max_length=1, verbose_name='División')
+    region=models.CharField(max_length=25, verbose_name='Regional')
+    discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
+    etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
+    puntaje_preg1a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 A')
+    puntaje_preg1b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 B')
+    puntaje_preg1c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 C')
+    puntaje_preg1d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 D')
+    puntaje_preg2a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 2 A')
+    puntaje_preg2b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 B')
+    puntaje_preg2c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 C')
+    puntaje_preg2d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 D')
+    puntaje_preg3a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 A')
+    puntaje_preg3b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 B')
+    puntaje_preg3c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 C')
+    puntaje_preg3d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 D')
+    puntaje_preg4a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 A')
+    puntaje_preg4b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 B')
+    puntaje_preg4c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 C')
+    puntaje_preg4d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 D')
+    puntaje_preg5 = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 5')
+    puntaje_preg6a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 6 A')
+    puntaje_preg6b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 6 B')
+    puntaje_preg6c = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 6 C')
+    puntaje_preg7a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 7 A')
+    puntaje_preg7b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 7 B')
+    puntaje_preg7c = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 7 C')
+    puntaje_preg7d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 7 D')
+    puntaje_preg8a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 A')
+    puntaje_preg8b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 B')
+    puntaje_preg8c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 C')
+    puntaje_preg8d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 D')
+    puntaje_preg9a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 9 Planteo')
+    puntaje_preg9b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 9 Solución')   
+    puntaje_total = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Puntaje Total')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Resultado Matematica Quinto Grado"
+        verbose_name_plural = "Vistas Resultados Matematica Quinto Grado"
+        db_table = "v_resultado_matematica_quinto"
+
+    def __str__(self):
+        return f'{self.dni} {self.apellidos} {self.nombres} {self.puntaje_total}'
+
+
+class VistaMatematicaQuinto(models.Model):
+    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Matematica Quinto"
+        verbose_name_plural = "Vistas Matematica Quinto"
+        db_table = "v_matematica_quinto"
+    
+    def __str__(self):
+        return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'

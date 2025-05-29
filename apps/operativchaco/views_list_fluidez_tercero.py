@@ -30,7 +30,7 @@ class ExamenFluidezTerceroListView(LoginRequiredMixin, ListView):
     model = ExamenFluidezTercero
     template_name = 'operativchaco/fluidez/tercero/examen_tercero_list.html'
     context_object_name = 'examenes'
-    paginate_by = 20
+    #paginate_by = 20
 
     def get_queryset(self):
         usuario = self.request.user

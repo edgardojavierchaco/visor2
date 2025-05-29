@@ -5,6 +5,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from django.http import FileResponse
 
+from apps.operativchaco.views_resultados_matematica_quinto import ResultadosCueanexoMatematicaQuinto
 from apps.oplectura import views_resultados
 from .views import cargar_examen_lengua, buscar_alumno_por_dni
 from .views_list import (
@@ -131,6 +132,28 @@ from .views_resultados_fluidez_tercero import (
 
 from .views_grafesc_fluidez import datos_segundo_por_region, datos_tercero_por_region, escuelas_pendientes_segundo, escuelas_pendientes_tercero
 
+from .views_matematica_quinto import (
+    buscar_alumno_por_dni_matematica_quinto,
+    cargar_examen_matematica_quinto,
+    EditarEvaluacionMatematicaQuintoView,
+)
+
+from .views_list_matematica_quinto import (
+    ExamenMatematicaQuintoListView,
+    cerrar_carga_matematica_quinto,
+    exportar_excel_examenes_quinto,
+    examen_quinto_detalle_modal,
+    exportar_pdf_quinto,
+    ExamenMatematicaQuintoDetailView,
+)
+
+from .views_resultados_matematica_quinto import (
+    ResultadosCueanexoMatematicaQuinto,
+    ResultadosMatematicaQuintoView,
+    exportar_pdf_matematica_quinto,
+    exportar_pdf_quinto_cueanexo,
+)
+
 app_name='operativ'
 
 urlpatterns = [
@@ -233,6 +256,21 @@ urlpatterns = [
     path('cuenta_regresiva_fluidez_tercero/', cuenta_regresiva_fluidez_tercero, name='cuenta_regresiva_fluidez_tercero'),
     path('cuenta_regresiva_segundo_graficos/', cuenta_regresiva_segundo_graficos, name='cuenta_regresiva_segundo_graficos'),
     path('cuenta_regresiva_tercero_graficos/', cuenta_regresiva_tercero_graficos, name='cuenta_regresiva_tercero_graficos'),
+    # Matemática Quinto Grado
+    path('buscar_dni_matem_quinto/', buscar_alumno_por_dni_matematica_quinto, name='buscar_dni_matem_quinto'),
+    path('cargar_examen_matematica_quinto/', cargar_examen_matematica_quinto, name='carga_examen_matematica_quinto'),
+    path('matematica/examenes/quinto', ExamenMatematicaQuintoListView.as_view(), name='examen_matematica_quinto_listado'),
+    path('matematica/examenes/quinto/<int:pk>/', ExamenMatematicaQuintoDetailView.as_view(), name='examen_quinto_detalle'),
+    path('matematica/examenes/quinto/exportar/', exportar_excel_examenes_quinto, name='exportar_excel_examenes_quinto'),
+    path('examenes/quinto/<int:pk>/modal/', examen_quinto_detalle_modal, name='examen_quinto_detalle_modal'),
+    path('exportar_pdf_quinto/<int:n_dni>/', exportar_pdf_quinto, name='exportar_pdf_quinto'),
+    path('editar/matematica/examenes/quinto/<int:pk>/', EditarEvaluacionMatematicaQuintoView.as_view(), name='editar_matematica_examen_quinto'),
+    path('cerrar_carga_matem_quinto/',cerrar_carga_matematica_quinto, name='cerrar_carga_matem_quinto'),
+    # Resultados Matemática Quinto Grado
+    path('resultados/cueanexo_quinto/', ResultadosMatematicaQuintoView, name='resultados_cueanexo_quinto'),
+    path('api/resultados/cueanexo_quinto/', ResultadosCueanexoMatematicaQuinto, name='resultados_quinto_api'),
+    path('resultados_quinto_pdf/', exportar_pdf_matematica_quinto, name='exportar_pdf_quinto'),    
+    path('resultados_quinto_cue_pdf/', exportar_pdf_quinto_cueanexo, name='exportar_pdf_quinto_cue'),
 ]
 
 
