@@ -66,7 +66,7 @@
                 {% if comun_primaria %}         
                     <li class="nav-item dropdown">
                         <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Fluidez Lectora</a>
+                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Operativos Primaria</a>
                         <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                             <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
                             <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
@@ -93,6 +93,7 @@
                                 </ul>
                             </li>
                             <li><a href="{% url 'operative:dashboard_fluidez' %}" class="dropdown-item">Carga Evaluaciones 2° y 3°</a></li>
+                            <li><a href="{% url 'operative:dashboard_matem_quinto' %}" class="dropdown-item">Carga Evaluaciones 5°</a></li>
                             <li><a href="{% url 'archivos:listar_fluidez' %}" class="dropdown-item">Descarga Material</a></li>  
                         </ul>
                     </li>
@@ -100,14 +101,14 @@
                 {% if comun_secundaria %}         
                     <li class="nav-item dropdown">
                         <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i>Operativos</a>
+                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i>Operativos Secundaria</a>
                         <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                             <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
                             <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
                             <!-- Menú desplegable para "Resultados" -->                 
                                                         
                             <li><a href="{% url 'operative:dashboard' %}" class="dropdown-item">Carga de Exámenes</a></li>
-                            
+                            <li><a href="{% url 'operative:dashboard_matem_segundo_anio' %}" class="dropdown-item">Carga Evaluaciones 2°</a></li>
                         </ul>
                     </li>
                 {% endif %}    

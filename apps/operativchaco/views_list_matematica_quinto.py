@@ -167,7 +167,7 @@ def cerrar_carga_matematica_quinto(request):
     )
     
     # ✅ Actualizar el estado de carga de quinto en EscuelasPrimariasMatematica
-    EscuelasPrimariasMatematica.objects.filter(cueanexo=cueanexo).update(segundo="CARGADO")
+    EscuelasPrimariasMatematica.objects.filter(cueanexo=cueanexo).update(quinto="CARGADO")
 
     # ✅ Crear el contenido para el código QR
     qr_data = f"CUEANEXO: {cueanexo}\nFecha: {fecha_actual}\nTotal registros: {total_registros}"

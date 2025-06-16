@@ -37,7 +37,7 @@
                     </h2>                                   
                     <h4 class="card-text d-flex justify-content-between align-items-center">
                         <span>Resultados de la Evaluación</span>
-                        <a href="{% url 'operativ:dashboard_primaria' %}" class="btn btn-light btn-sm" title="Ir a Dashboard Secundarias">
+                        <a href="{% url 'operativ:dashboard_primaria' %}" class="btn btn-light btn-sm" title="Ir a Dashboard Primarias">
                             <img src="{% static 'img/return.jpg' %}" alt="icono" style="height: 48px;" />
                         </a>
                     </h4>
@@ -73,7 +73,7 @@
                     <button id="btnSegundo" class="btn btn-primary m-1">SEGUNDO</button>
                     <button id="btnTercero" class="btn btn-success m-1">TERCERO</button>
                     <button id="btnExportarPdf" class="btn btn-outline-danger m-1"
-                            data-url="{% url 'operativ:exportar_pdf_resultados_finales_primaria' %}">
+                            data-url="{% url 'operativ:exportar_pdf_resultados_finales_primaria_reg' %}">
                         Exportar PDF
                     </button>
                 </div>

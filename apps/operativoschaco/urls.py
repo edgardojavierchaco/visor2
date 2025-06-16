@@ -6,7 +6,7 @@ from .views_matem import guardar_examen_matematica
 from .views_grafico import grafico_examen
 from .views_grafmat import GraficoMatematicaView
 from .views_export import exportar_excel
-from .views_dashboard import DashboardView, DashboardFluidezView, DashboardMatemQuintoView
+from .views_dashboard import DashboardView, DashboardFluidezView, DashboardMatemQuintoView, DashboardMatemSegundoAnioView
 from .views_export_matem import exportar_excel_matematica_lista
 from .views_qr import cerrar_carga
 from .views_qrm import cerrar_carga_matem
@@ -28,6 +28,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard_fluidez/', DashboardFluidezView.as_view(), name='dashboard_fluidez'),
     path('dashboard_matem_quinto/', DashboardMatemQuintoView.as_view(), name='dashboard_matem_quinto'),
+    path('dashboard_matem_segundo_anio/', DashboardMatemSegundoAnioView.as_view(), name='dashboard_matem_segundo_anio'),
     path('exportar_excel_matematica_lista/', exportar_excel_matematica_lista, name='exportar_excel_matematica_lista'),
     path('cerrar_carga/', cerrar_carga, name='cerrar_carga'),
     path('cerrar_carga_m/', cerrar_carga_matem, name='cerrar_carga_m'),

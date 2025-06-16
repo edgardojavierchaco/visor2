@@ -37,6 +37,11 @@ def RegionalPortada(request):
 
 @cache_control(no_cache=True, must_revalidate=True)
 @login_required
+def FuncionarioPortada(request):
+    return render(request, 'oplectura/portadafunc.html')
+
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
 def SupervisorPortada(request):
     return render(request, 'oplectura/portadasupervisor.html')
 

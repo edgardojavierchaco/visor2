@@ -1,0 +1,79 @@
+{% load custom_operativo %}
+
+<table class="table table-sm table-bordered">
+    <tbody>
+        <tr><th>DNI</th><td>{{ examen.dni }}</td></tr>
+        <tr><th>Apellidos</th><td>{{ examen.apellidos }}</td></tr>
+        <tr><th>Nombres</th><td>{{ examen.nombres }}</td></tr>
+        <tr><th>CUE</th><td>{{ examen.cueanexo }}</td></tr>
+        <tr><th>Región</th><td>{{ examen.region }}</td></tr>
+        <tr><th>Grado</th><td>{{ examen.grado }}</td></tr>
+        <tr><th>División</th><td>{{ examen.division }}</td></tr>
+        <tr><th>Discapacidad</th><td>{{ examen.discapacidad }}</td></tr>
+        <tr><th>Etnia</th><td>{{ examen.etnia }}</td></tr>
+        <tr>
+            <th>Puntaje Total</th>
+            <td>
+                {% sum_items items examen as total_puntaje %}
+                {{ total_puntaje }}
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" class="text-end">
+                <a href="{% url 'operativ:exportar_pdf_segundo_anio' examen.dni %}" target="_blank" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+                </a>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<h5 class="mt-4">🧩 Ítems</h5>
+<table class="table table-bordered table-striped table-sm">
+    <thead>
+        <tr>
+            <th>P1_a</th>
+            <th>P1_b</th>            
+            <th>P2_a</th>
+            <th>P2_b</th>            
+            <th>P3_a</th>
+            <th>P3_b</th>
+            <th>P3_c</th>            
+            <th>P4_a</th>
+            <th>P4_b</th>
+            <th>P4_c</th>            
+            <th>P5_a</th>
+            <th>P5_b</th>
+            <th>P5_c</th>
+            <th>P6</th>
+            <th>P7_a</th>
+            <th>P7_b</th>            
+            <th>P8_a</th>
+            <th>P8_b</th>
+            <th>P8_c</th>            
+        </tr>
+    </thead>
+    <tbody>
+        <tr>            
+            <td>{{ examen.preg1a }}</td>
+            <td>{{ examen.preg1b }}</td>            
+            <td>{{ examen.preg2a }}</td>
+            <td>{{ examen.preg2b }}</td>            
+            <td>{{ examen.preg3a }}</td>
+            <td>{{ examen.preg3b }}</td>
+            <td>{{ examen.preg3c }}</td>            
+            <td>{{ examen.preg4a }}</td>
+            <td>{{ examen.preg4b }}</td>
+            <td>{{ examen.preg4c }}</td>            
+            <td>{{ examen.preg5a }}</td>
+            <td>{{ examen.preg5b }}</td>
+            <td>{{ examen.preg5c }}</td>
+            <td>{{ examen.preg6 }}</td>
+            <td>{{ examen.preg7a }}</td>
+            <td>{{ examen.preg7b }}</td>            
+            <td>{{ examen.preg8a }}</td>
+            <td>{{ examen.preg8b }}</td>
+            <td>{{ examen.preg8c }}</td>            
+        </tr>
+    </tbody>
+</table>

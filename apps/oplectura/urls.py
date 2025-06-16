@@ -3,7 +3,7 @@ from .views import CreateRegDocporSeccionView, ListadoDocentesView, EditarDocent
 from .views import EliminarEvaluacionAlumnoView, RegAlumnosFluidezLectoraCreateView, ListadoAlumnosDirectoresView, EditarAlumnosDirectoresView, EliminarEvaluacionAlumnoDirectoresView
 from .views import RegAlumnosFluidezLectoraDirectorCreateView, ListadoEvaluacionLectoraDirectoresView, DepEvaluacionPortada
 from .views_resultados import tu_vista, cargar_grafico_reg, mostrar_grafico_reg
-from .views import ListadoAplicadoresView, EditarAplicadorView, RegionalPortada, SupervisorPortada, directoresregistrados, mostrar_directores
+from .views import ListadoAplicadoresView, EditarAplicadorView, RegionalPortada, SupervisorPortada, directoresregistrados, mostrar_directores, FuncionarioPortada
 from .views_aplicdir import ListadoAplicadoresDirView, EditarAplicadorDirView
 from .views_evolcarga import grafico_evaluacion_lectora, grafico_aplicador_region
 from .views_resultadosxloc import *
@@ -38,6 +38,7 @@ urlpatterns = [
     path('grafico_reg/', mostrar_grafico_reg, name='grafico_reg'),    
     path('portada_eval/', DepEvaluacionPortada, name='portada_eval'),
     path('portada_regional/', RegionalPortada, name='portada_regional'),
+    path('portada_func/', FuncionarioPortada, name='portada_func'),
     path('portada_supervisor/', SupervisorPortada, name='portada_supervisor'),
     path('evol_carga/', grafico_evaluacion_lectora, name='evol_carga'),
     path('evol_aplicador/', grafico_aplicador_region, name='evol_aplicador'),

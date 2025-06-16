@@ -6,6 +6,9 @@ from django.conf import settings
 from django.forms import model_to_dict
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from datetime import date
+
+from apps.oplectura.models import turno
 
 
 MESES_CHOICES = [    
@@ -630,3 +633,122 @@ class FocalLicDocentes(models.Model):
         item['cuof'] = self.cuof
         item['cuof_anexo'] = self.cuof_anexo
         return item
+    
+T_DOC_CHOICES = [
+    ('DNI', 'DNI'),
+    ('LC', 'LC'),
+    ('LE', 'LE'),    
+]
+
+SIT_REVISTA_CHOICES = [
+    ('TITULAR', 'TITULAR'),
+    ('INTERINO', 'INTERINO'),
+    ('SUPLENTE', 'SUPLENTE'),
+    ('CONTRATADO', 'CONTRATADO'),
+]
+
+CARGO_CHOICES = [
+    ('BIBLIOTECARIO', 'BIBLIOTECARIO'),
+    ('DIRECTOR BIBLIOTECA 1RA', 'DIRECTOR BIBLIOTECA 1RA'),
+    ('DIRECTOR BIBLIOTECA 2DA', 'DIRECTOR BIBLIOTECA 2DA'),
+    ('DIRECTOR BIBLIOTECA 3RA', 'DIRECTOR BIBLIOTECA 3RA'),
+    ('DIRECTOR BIBLIOTECA CENTRAL', 'DIRECTOR BIBLIOTECA CENTRAL'),
+    ('VICEDIRECTOR BIBLIOTECA', 'BICEDIRECTOR BIBLIOTECA'),
+]
+
+class TiposLicenciasPermisos(models.Model):
+    id = models.AutoField(primary_key=True)
+    tipo_licencia = models.CharField(max_length=255, verbose_name='Tipo de Licencia')
+    
+    
+    class Meta:
+        verbose_name = 'Tipo_Licencia_Permiso'
+        verbose_name_plural = 'Tipos_Licencias_Permisos'
+        db_table = 'tipos_licencias_permisos'
+    
+    def __str__(self):
+        return self.tipo_licencia
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['id'] = self.id
+        item['tipo_licencia'] = self.tipo_licencia
+        return item
+
+class TiposSituacionLaboral(models.Model):
+    id = models.AutoField(primary_key=True)
+    tipo_situacion = models.CharField(max_length=255, verbose_name='Tipo de Situación Laboral')
+    
+    class Meta:
+        verbose_name = 'Tipo_Situacion_Laboral'
+        verbose_name_plural = 'Tipos_Situaciones_Laborales'
+        db_table = 'tipos_situacion_laboral'
+    
+    def __str__(self):
+        return self.tipo_situacion
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['id'] = self.id
+        item['tipo_situacion'] = self.tipo_situacion
+        return item
+
+class BibliotecariosCue(models.Model):    
+    cueanexo = models.CharField(max_length=9, verbose_name='cueanexo')
+    cuil = models.CharField(max_length=11, verbose_name='cuil')
+    t_doc= models.CharField(max_length=3, choices= T_DOC_CHOICES, verbose_name='t_doc')
+    n_doc = models.CharField(max_length=8, verbose_name='n_doc')
+    apellidos = models.CharField(max_length=255, verbose_name='apellidos')
+    nombres = models.CharField(max_length=255, verbose_name='nombres')
+    f_nac = models.DateField(verbose_name='f_nac')
+    cargo= models.CharField(max_length=255, choices=CARGO_CHOICES, verbose_name='cargo')
+    situacion_revista = models.CharField(max_length=255, choices=SIT_REVISTA_CHOICES, verbose_name='situacion_revista')
+    f_ingreso = models.DateField(verbose_name='f_ingreso')
+    f_hasta = models.DateField(default=date(2039, 12, 31), verbose_name='f_hasta')
+    turno = models.ForeignKey(turno, on_delete=models.CASCADE, verbose_name='turno')
+    cuof = models.CharField(max_length=4, blank=True, null=True, verbose_name='cuof')
+    cuof_anexo = models.CharField(max_length=4, blank=True, null=True, verbose_name='cuof_anexo')
+    mes= models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='mes')
+    anio = models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='anio') 
+    licencia_permiso = models.ForeignKey(TiposLicenciasPermisos, on_delete=models.CASCADE, blank=True, null=True, verbose_name='Licencia_Permiso')
+    f_desde_lic=models.DateField(verbose_name='f_desde_lic', blank=True, null=True)
+    f_hasta_lic=models.DateField(verbose_name='f_hasta_lic', blank=True, null=True)
+    observaciones = models.TextField(max_length=255, blank=True, null=True, verbose_name='observaciones')
+    situacion_laboral = models.ForeignKey(TiposSituacionLaboral, on_delete=models.CASCADE, blank=True, null=True, verbose_name='Situacion_Laboral')
+    
+    class Meta:        
+        verbose_name = "Bibliotecario_Cue"
+        verbose_name_plural = "Bibliotecarios_Cues"
+        db_table = 'bibliotecarios_cue'
+    
+    def __str__(self):
+        return f"{self.n_doc} - {self.apellidos}, {self.nombres})"
+    
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['cueanexo'] = self.cueanexo
+        item['cuil'] = self.cuil
+        item['t_doc'] = self.t_doc
+        item['n_doc'] = self.n_doc        
+        item['apellidos'] = self.apellidos
+        item['nombres'] = self.nombres
+        item['f_nac'] = self.f_nac
+        item['cargo'] = self.cargo
+        item['situacion_revista'] = self.situacion_revista
+        item['f_ingreso'] = self.f_ingreso
+        item['f_hasta'] = self.f_hasta
+        item['turno'] = self.turno.nom_turno
+        item['cuof'] = self.cuof
+        item['cuof_anexo'] = self.cuof_anexo
+        item['mes'] = self.mes
+        item['anio'] = self.anio
+        item['licencia_permiso'] = self.licencia_permiso.tipo_licencia if self.licencia_permiso else None
+        item['f_desde_lic'] = self.f_desde_lic
+        item['f_hasta_lic'] = self.f_hasta_lic
+        item['observaciones'] = self.observaciones
+        item['situacion_laboral'] = self.situacion_laboral.tipo_situacion if self.situacion_laboral else None
+        return item
+        
+        
+    
+    

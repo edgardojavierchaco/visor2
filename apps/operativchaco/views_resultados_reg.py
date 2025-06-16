@@ -494,3 +494,92 @@ def ResultadosRegionTercero(request):
     
     print('ver los resultados', resultado)
     return JsonResponse(resultado)
+
+
+@login_required
+def exportar_pdf_resultados_finales_primaria_regional(request):    
+    materia = request.GET.get('materia')  # "Segundo" o "Tercero"
+    region = request.GET.get('region')    # puede ser "Todas" o una regional
+
+    if materia not in ['Segundo', 'Tercero']:
+        return HttpResponse("Parámetro 'materia' inválido", status=400)
+
+    # Títulos según materia
+    titulos = {
+        'resultado_velocidad': 'Velocidad',
+        'resultado_precision': 'Precisión',
+        'resultado_prosodia': 'Prosodia',
+    }
+
+    # Modelos según materia
+    if materia == 'Segundo':
+        modelos = {
+            'resultado_velocidad': VistaVelocidadSegundoReg,
+            'resultado_precision': VistaPrecisionSegundoReg,
+            'resultado_prosodia': VistaProsodiaSegundoReg,            
+        }
+        template = 'operativchaco/fluidez/segundo/resultados_final_segundo_pdf.html'
+    else:
+        modelos = {
+            'resultado_velocidad': VistaVelocidadTerceroReg,
+            'resultado_precision': VistaPrecisionTerceroReg,
+            'resultado_prosodia': VistaProsodiaTerceroReg,            
+        }
+        template = 'operativchaco/fluidez/tercero/resultados_final_tercero_pdf.html'
+
+    resultado = {}
+    niveles_orden = ['Debajo del Básico', 'Básico', 'Satisfactorio', 'Avanzado']
+    totales = {}
+
+    for key, modelo in modelos.items():
+        queryset = modelo.objects.all()
+        if region != 'Todas':
+            queryset = queryset.filter(region=region)
+
+        queryset = queryset.values('nivel').annotate(cantidad=Sum('cantidad'))
+        total = sum(item['cantidad'] for item in queryset)
+        for item in queryset:
+            item['porcentaje'] = round((item['cantidad'] / total) * 100, 2) if total > 0 else 0
+
+        ordenados = [next((i for i in queryset if i['nivel'] == nivel), None) for nivel in niveles_orden]
+        ordenados = [i for i in ordenados if i]  # eliminar None
+        otros = [i for i in queryset if i['nivel'] not in niveles_orden]
+        ordenados.extend(otros)
+
+        resultado[key] = ordenados
+        totales[key] = total
+
+    # Generación del QR con los datos de los resultados
+    usuario = request.user.username
+    fecha_hora = now().strftime('%Y-%m-%d %H:%M:%S')
+    qr_data = f"Usuario: {usuario}\nRegión: {region}\nMateria: {materia}\nFecha y Hora: {fecha_hora}\n\n"
+    for key, result in resultado.items():
+        qr_data += f"\n{titulos[key]}:\n"
+        for item in result:
+            qr_data += f"  - Nivel: {item['nivel']} | Cantidad: {item['cantidad']} | Porcentaje: {item['porcentaje']}%\n"
+
+    qr_img = qrcode.make(qr_data)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.MEDIA_ROOT)
+    temp_file_path = temp_file.name + '.png'
+    qr_img.save(temp_file_path)
+
+    context = {
+        'resultado': resultado,
+        'usuario': region,
+        'titulos': titulos,
+        'totales': totales,
+        'qr_path': temp_file_path,
+    }
+
+    html_string = render_to_string(template, context)
+
+    options = {
+        'encoding': 'UTF-8',
+        'enable-local-file-access': None,
+    }
+
+    pdf = pdfkit.from_string(html_string, False, options=options)
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="resultados_{materia}_{region}.pdf"'
+    return response

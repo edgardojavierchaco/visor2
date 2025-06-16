@@ -98,6 +98,13 @@ from .views import (
     filtrar_planillas_anexas
 )
 
+from .views_bibliotecarios import (
+    BibliotecariosCueCreateView,
+    BibliotecariosCueListView,
+    BibliotecariosCueUpdateView,
+    BibliotecariosCueDeleteView,
+)
+
 app_name = 'bibliotecas'
 
 urlpatterns = [
@@ -202,6 +209,12 @@ urlpatterns = [
     path("filtrar_desfondos/", filtrar_destino_fondos, name="filtrar_desfondos"),
     path("plan_anex/", planillas_anexas_view, name="plan_anex"),
     path("filtrar_plananex/", filtrar_planillas_anexas, name="filtrar_plananex"),
+    
+    # Bibliotecarios
+    path('bibliotecarios/list/', BibliotecariosCueListView.as_view(), name='bibliotecario_list'),
+    path('bibliotecarios/add/', BibliotecariosCueCreateView.as_view(), name='bibliotecario_create'),
+    path('bibliotecarios/update/<int:pk>/', BibliotecariosCueUpdateView.as_view(), name='bibliotecario_update'),
+    path('bibliotecarios/delete/<int:pk>/', BibliotecariosCueDeleteView.as_view(), name='bibliotecario_delete'),
 ]
 
 

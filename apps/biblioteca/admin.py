@@ -21,5 +21,8 @@ admin.site.register(RegistroDestinoFondos)
 admin.site.register(DocentePonMensual)
 admin.site.register(NoDocentesMensual)
 admin.site.register(FocalLicDocentes)
+admin.site.register(BibliotecariosCue)
+admin.site.register(TiposLicenciasPermisos)
+admin.site.register(TiposSituacionLaboral)
 
 

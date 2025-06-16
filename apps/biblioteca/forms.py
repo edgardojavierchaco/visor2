@@ -8,7 +8,7 @@ from .models import (
     ServicioReferenciaVirtual, ServicioPrestamo, InformePedagogico,
     AsistenciaUsuarios, InstitucionesPrestaServicios, ProcesosTecnicos, Aguapey,
     GenerarInforme, PlanillasAnexas, DestinoFondos, RegistroDestinoFondos,
-        DocentePonMensual, NoDocentesMensual
+        DocentePonMensual, NoDocentesMensual, BibliotecariosCue,
 )
 
 # Formulario para MaterialBibliografico
@@ -454,4 +454,49 @@ class DocentePonMensualForm(forms.ModelForm):
                 'carga_horaria': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-        
+class BibliotecariosCueForm(forms.ModelForm):
+    class Meta:
+        model = BibliotecariosCue
+        exclude = ['cueanexo']
+        widgets = {
+            'f_nac': forms.DateInput(attrs={'type': 'date'}),
+            'f_ingreso': forms.DateInput(attrs={'type': 'date'}),
+            'f_hasta': forms.DateInput(attrs={'type': 'date'}),
+            'f_desde_lic': forms.DateInput(attrs={'type': 'date'}),
+            'f_hasta_lic': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean_n_doc(self):
+        n_doc = self.cleaned_data.get('n_doc', '')
+        if not n_doc.isdigit():
+            raise forms.ValidationError("Debe contener solo números.")
+        if len(n_doc) < 7:
+            raise forms.ValidationError("Debe tener al menos 7 dígitos.")
+        return n_doc
+
+    def clean_apellidos(self):
+        apellidos = self.cleaned_data.get('apellidos', '')
+        return apellidos.upper()
+
+    def clean_nombres(self):
+        nombres = self.cleaned_data.get('nombres', '')
+        return nombres.upper()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        licencia = cleaned_data.get('licencia_permiso')
+        f_desde = cleaned_data.get('f_desde_lic')
+        f_hasta = cleaned_data.get('f_hasta_lic')
+
+        if licencia:
+            if not f_desde:
+                self.add_error('f_desde_lic', "Debe completar esta fecha.")
+            if not f_hasta:
+                self.add_error('f_hasta_lic', "Debe completar esta fecha.")
+            if f_desde and f_hasta and f_desde > f_hasta:
+                self.add_error('f_desde_lic', "La fecha desde no puede ser mayor que la fecha hasta.")
+                self.add_error('f_hasta_lic', "La fecha hasta no puede ser menor que la fecha desde.")
+        elif f_desde or f_hasta:
+            self.add_error('licencia_permiso', "Debe seleccionar un tipo de licencia si indica fechas.")
+
+        return cleaned_data

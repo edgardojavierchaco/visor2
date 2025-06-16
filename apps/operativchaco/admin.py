@@ -48,6 +48,12 @@ from .models import (
     AlumnosPrimariaQuinto,
     VistaResultadoMatematicaQuinto,
     VistaMatematicaQuinto,
+    ExamenMatematicaSegundoAnio,
+    AlumnosSegundoSecundaria,
+    RegistroAsistenciaMatematicaSegundoAnio,
+    RespuestaCorrectaMatematicaSegundoAnio,
+    VistaResultadoMatematicaSegundoAnio,
+    VistaMatematicaSegundoAnio,
 )
 
 admin.site.register(AlumnosSecundariaDiagnostico)
@@ -98,4 +104,9 @@ admin.site.register(RespuestaCorrectaMatematicaQuinto)
 admin.site.register(AlumnosPrimariaQuinto)
 admin.site.register(VistaResultadoMatematicaQuinto)
 admin.site.register(VistaMatematicaQuinto)
-
+admin.site.register(ExamenMatematicaSegundoAnio)
+admin.site.register(AlumnosSegundoSecundaria)
+admin.site.register(RegistroAsistenciaMatematicaSegundoAnio)
+admin.site.register(RespuestaCorrectaMatematicaSegundoAnio)
+admin.site.register(VistaResultadoMatematicaSegundoAnio)
+admin.site.register(VistaMatematicaSegundoAnio)

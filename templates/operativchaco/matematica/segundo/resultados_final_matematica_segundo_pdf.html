@@ -1,0 +1,68 @@
+{% load custom_operativo %}
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Resultados Evaluación de Matemática 2° Año</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        h1, h2, h3 { text-align: center; }
+        h2 {
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            margin-top: 40px;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #aaa;
+            padding: 8px;
+            text-align: center;
+        }
+        th { background-color: #ddd; }
+        .nivel-proceso { background-color: #E74C3C; }        
+        .nivel-alcanzo { background-color: #F1C40F; }
+        .nivel-supero { background-color: #2ECC71; }
+    </style>
+</head>
+<body>
+    <h1>Resultados Evaluación Matemática 2° Año - 2025</h1>
+    <h3>Región: {{ usuario }} </h3>
+
+    {% for key, titulo in titulos.items %}
+        {% with datos=resultado|dict_get:key %}
+        <h2>{{ titulo }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nivel</th>
+                    <th>Cantidad</th>
+                    <th>Porcentaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in datos %}
+                <tr class="nivel-{{ item.nivel|default_if_none:''|cut:' ' }}">
+                    <td>{{ item.nivel }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>{{ item.porcentaje }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endwith %}
+    {% endfor %}
+    
+    <h2>QR de los Resultados</h2>    
+    <img src="{{ qr_path }}" alt="QR Code" width="250" height="250">
+
+</body>
+</html>
+
+

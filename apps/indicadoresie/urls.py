@@ -11,6 +11,8 @@ from .views import (
     dashboard_prueba_func, 
     dashboard_prueba_regional,
     dashboard_prueba_fluidez,
+    dashboard_prueba_fluidez_regional,
+    dashboard_prueba_fluidez_func,
 )
 
 app_name = 'indicsie'
@@ -25,4 +27,6 @@ urlpatterns = [
     path('prueba_func/', dashboard_prueba_func, name='prueba_func'),
     path('prueba_reg/', dashboard_prueba_regional, name='prueba_regional'),
     path('prueba_fluidez/', dashboard_prueba_fluidez, name='prueba_fluidez'),
+    path('prueba_fluidez_regional/', dashboard_prueba_fluidez_regional, name='prueba_fluidez_reg'),
+    path('prueba_fluidez_func/', dashboard_prueba_fluidez_func, name='prueba_fluidez_func'),
 ]

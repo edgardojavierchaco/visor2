@@ -9,6 +9,14 @@ def dashboard_primarias_segundo(request):
     totales = TotalPrimarias.objects.first()  
     return render(request, 'operativchaco/dashboard/primarias_segundo.html', {'totales': totales})
 
+def dashboard_primarias_segundo_regional(request):
+    totales = TotalPrimarias.objects.first()  
+    return render(request, 'operativchaco/dashboard/primarias_segundo_regional.html', {'totales': totales})
+
+def dashboard_primarias_segundo_func(request):
+    totales = TotalPrimarias.objects.first()  
+    return render(request, 'operativchaco/dashboard/primarias_segundo_func.html', {'totales': totales})
+
 def dashboard_primarias_tercero(request):
     totales = TotalPrimarias.objects.first()  
     return render(request, 'operativchaco/dashboard/primarias_tercero.html', {'totales': totales})
@@ -22,6 +30,12 @@ def dashboard_resultados_final(request):
 
 def dashboard_resultados_final_primaria(request):    
     return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria.html')
+
+def dashboard_resultados_final_primaria_regional(request):    
+    return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria_reg.html')
+
+def dashboard_resultados_final_primaria_func(request):    
+    return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria_func.html')
 
 def dashboard_resultados_final_superv(request):    
     return render(request, 'operativchaco/dashboard/dashboard_reportes_final_superv.html')
