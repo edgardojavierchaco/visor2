@@ -54,6 +54,8 @@ from .models import (
     RespuestaCorrectaMatematicaSegundoAnio,
     VistaResultadoMatematicaSegundoAnio,
     VistaMatematicaSegundoAnio,
+    VistaMatematicaQuintoRegional,
+    VistaMatematicaSegundoAnioRegional,
 )
 
 admin.site.register(AlumnosSecundariaDiagnostico)
@@ -110,3 +112,5 @@ admin.site.register(RegistroAsistenciaMatematicaSegundoAnio)
 admin.site.register(RespuestaCorrectaMatematicaSegundoAnio)
 admin.site.register(VistaResultadoMatematicaSegundoAnio)
 admin.site.register(VistaMatematicaSegundoAnio)
+admin.site.register(VistaMatematicaQuintoRegional)
+admin.site.register(VistaMatematicaSegundoAnioRegional)

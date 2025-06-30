@@ -120,7 +120,7 @@ class RegistroDestinoFondosListView(View):
             'hide_lock_button': False, 
             'generar_pdf_button' : True,
             'entity': 'Fondos',
-            'next_url':reverse_lazy('bibliotecas:plan_anexas'),
+            'next_url':reverse_lazy('bibliotecas:bibliotecario_create'),
             
         }            
         

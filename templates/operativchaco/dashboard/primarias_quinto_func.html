@@ -1,0 +1,231 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Primarias</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  <!-- Librería SweetAlert -->
+
+    <style>
+        .boton-redondo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 6px solid #ccc;
+            outline: 3px solid #999;
+            position: relative;
+            transition: transform 0.1s;
+            box-shadow:
+                inset -5px -5px 20px rgba(255, 255, 255, 0.4),
+                inset 5px 5px 15px rgba(0, 0, 0, 0.4),
+                0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .boton-redondo::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 60%;
+            height: 30%;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        .boton-redondo:active {
+            transform: scale(0.95);
+            box-shadow:
+                inset -2px -2px 10px rgba(255, 255, 255, 0.3),
+                inset 2px 2px 8px rgba(0, 0, 0, 0.3),
+                0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .boton-rojo {
+            background: radial-gradient(circle at 30% 30%, #ff5b5b, #cc0000);
+        }
+
+        .boton-verde {
+            background: radial-gradient(circle at 30% 30%, #6eff72, #007f1d);
+        }
+
+        .boton-azul {
+            background: radial-gradient(circle at 30% 30%, #6ecbff, #0077b6);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="max-w-6xl mx-auto px-4 py-6">
+        
+       <!-- Caja con título y estilo chaqueño -->
+        <div class="bg-green-100 border-2 border-green-500 rounded-xl shadow-md p-6 mb-6 text-center">
+            <h1 class="text-3xl font-bold text-green-800">
+                Evaluación Matemática alumnos de 5° Grado de Escuelas Primarias y 2° Año de Escuelas Secundarias - 2025
+            </h1>
+            <p class="text-lg text-green-700 mt-2">🧑‍🎓📚📝👥</p>
+        </div>
+
+        <!-- Cards Primarias -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <!-- Total -->
+            <div class="bg-white rounded-xl shadow p-6 text-center">
+                <h2 class="text-xl font-semibold text-gray-600 flex items-center justify-center">
+                    Unidades de Servicio Primaria 🏫
+                    <button onclick="mostrarInfoUnidad()" class="ml-2 text-blue-600 hover:text-blue-800" title="Más información">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                        </svg>
+                    </button>
+                </h2>
+                <p class="text-4xl font-bold text-indigo-600 mt-2">{{ totalesprim.total_escuelas }}</p>
+            </div>
+
+            <!-- Sectores -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-600 text-center mb-4">Por Sector 🏢</h2>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-blue-600 font-bold">
+                        <span>🏛️ Estatal</span>
+                        <span>{{ totalesprim.estatal }}</span>
+                    </div>
+                    <div class="flex justify-between text-green-600 font-bold">
+                        <span>🏠 Privado</span>
+                        <span>{{ totalesprim.privado }}</span>
+                    </div>
+                    <div class="flex justify-between text-yellow-600 font-bold">
+                        <span>🤝 Gestión Social/Comunitarias</span>
+                        <span>{{ totalesprim.gestion_social }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ámbitos -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-600 text-center mb-4">Por Ámbito 🌍</h2>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-pink-600 font-bold">
+                        <span>🏙️ Urbano</span>
+                        <span>{{ totalesprim.urbano }}</span>
+                    </div>
+                    <div class="flex justify-between text-purple-600 font-bold">
+                        <span>🌾 Rural Aglomerado</span>
+                        <span>{{ totalesprim.rural_aglomerado }}</span>
+                    </div>
+                    <div class="flex justify-between text-red-600 font-bold">
+                        <span>🏞️ Rural Disperso</span>
+                        <span>{{ totalesprim.rural_disperso }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards Secundaria -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <!-- Total -->
+            <div class="bg-white rounded-xl shadow p-6 text-center">
+                <h2 class="text-xl font-semibold text-gray-600 flex items-center justify-center">
+                    Unidades de Servicio Secundaria 🏫
+                    <button onclick="mostrarInfoUnidad()" class="ml-2 text-blue-600 hover:text-blue-800" title="Más información">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                        </svg>
+                    </button>
+                </h2>
+                <p class="text-4xl font-bold text-indigo-600 mt-2">{{ totalessec.total_escuelas }}</p>
+            </div>
+
+            <!-- Sectores -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-600 text-center mb-4">Por Sector 🏢</h2>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-blue-600 font-bold">
+                        <span>🏛️ Estatal</span>
+                        <span>{{ totalessec.estatal }}</span>
+                    </div>
+                    <div class="flex justify-between text-green-600 font-bold">
+                        <span>🏠 Privado</span>
+                        <span>{{ totalessec.privado }}</span>
+                    </div>
+                    <div class="flex justify-between text-yellow-600 font-bold">
+                        <span>🤝 Gestión Social/Comunitarias</span>
+                        <span>{{ totalessec.gestion_social }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ámbitos -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-600 text-center mb-4">Por Ámbito 🌍</h2>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-pink-600 font-bold">
+                        <span>🏙️ Urbano</span>
+                        <span>{{ totalessec.urbano }}</span>
+                    </div>
+                    <div class="flex justify-between text-purple-600 font-bold">
+                        <span>🌾 Rural Aglomerado</span>
+                        <span>{{ totalessec.rural_aglomerado }}</span>
+                    </div>
+                    <div class="flex justify-between text-red-600 font-bold">
+                        <span>🏞️ Rural Disperso</span>
+                        <span>{{ totalessec.rural_disperso }}</span>
+                    </div>
+                </div>
+            </div>
+        </div> 
+
+        <!-- Botones circulares -->
+        <div class="flex justify-center gap-12 mt-10">
+            <div class="text-center">
+                <button id="boton-monitoreo" class="boton-redondo boton-rojo"></button>
+                <div class="mt-3 text-lg font-semibold text-gray-700">Monitoreo</div>
+            </div>
+            <div class="text-center">
+                <button id="boton-reportes" class="boton-redondo boton-verde"></button>
+                <div class="mt-3 text-lg font-semibold text-gray-700">Reportes</div>
+            </div>
+            <div class="text-center">
+                <button id="boton-volver" class="boton-redondo boton-azul"></button>
+                <div class="mt-3 text-lg font-semibold text-gray-700">Volver</div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        {% include 'superv/footer.html' %}
+    </div>
+
+    <script>
+        document.getElementById("boton-reportes").addEventListener("click", function() {
+            window.location.href = "{% url 'operativ:dashboard_resultados_final_primaria_quinto_func' %}"; 
+            
+        });
+
+        document.getElementById("boton-monitoreo").addEventListener("click", function() {
+            window.location.href = "{% url 'indicsie:prueba_matematica_func' %}";
+        });
+
+        document.getElementById("boton-volver").addEventListener("click", function() {
+            window.location.href = "{% url 'oplectura:portada_func' %}";
+        });
+
+
+        function mostrarInfoUnidad() {
+            Swal.fire({
+                title: '¿Qué es una Unidad de Servicio?',
+                html: `
+                    <p class="text-left">
+                        La unidad de servicio es la concreción de la oferta de un servicio educativo en una localización (sede o anexo) de un establecimiento.<br><br>
+                        Es decir, refiere a la cantidad de <strong>CUE Anexos</strong> por nivel/modalidad educativa.
+                    </p>
+                `,
+                icon: 'info',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#007f1d'
+            });
+        }
+    </script>
+</body>
+</html>

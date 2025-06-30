@@ -207,7 +207,7 @@ class ServiciosReferenciaListView(LoginRequiredMixin, ListView):
         context['update_url'] = reverse_lazy('bibliotecas:servref_update', args=[0])
         context['hide_lock_button'] = False      
         context['generar_pdf_button'] = True,   
-        context['next_url'] = reverse_lazy('bibliotecas:servrefvirtual_create')
+        context['next_url'] = reverse_lazy('bibliotecas:infopedago_create')
         context['entity'] = 'Servicios_Referencia'
         return context
         

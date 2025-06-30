@@ -26,11 +26,13 @@ from .models import (
     VistaInterpretarLenguaReg,
     VistaEscrituraLenguaReg,
     VistaGeneralMatematicaReg,
+    VistaMatematicaSegundoAnioRegional,
     VistaPrecisionSegundo,
     VistaProsodiaSegundo,
     VistaReconocimientoMatematicaReg,
     VistaResolucionMatematicaReg,
     VistaComunicacionMatematicaReg,
+    VistaResultadoMatematicaQuinto,
     VistaVelocidadSegundo,
     VistaPrecisionSegundo,
     VistaProsodiaSegundo,
@@ -47,6 +49,7 @@ from .models import (
     VistaProsodiaTerceroReg,
     VistaComprensionSegundoReg,
     VistaComprensionTerceroReg,
+    VistaMatematicaQuintoRegional,
 )
 
 
@@ -553,6 +556,152 @@ def exportar_pdf_resultados_finales_primaria_regional(request):
     usuario = request.user.username
     fecha_hora = now().strftime('%Y-%m-%d %H:%M:%S')
     qr_data = f"Usuario: {usuario}\nRegión: {region}\nMateria: {materia}\nFecha y Hora: {fecha_hora}\n\n"
+    for key, result in resultado.items():
+        qr_data += f"\n{titulos[key]}:\n"
+        for item in result:
+            qr_data += f"  - Nivel: {item['nivel']} | Cantidad: {item['cantidad']} | Porcentaje: {item['porcentaje']}%\n"
+
+    qr_img = qrcode.make(qr_data)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.MEDIA_ROOT)
+    temp_file_path = temp_file.name + '.png'
+    qr_img.save(temp_file_path)
+
+    context = {
+        'resultado': resultado,
+        'usuario': region,
+        'titulos': titulos,
+        'totales': totales,
+        'qr_path': temp_file_path,
+    }
+
+    html_string = render_to_string(template, context)
+
+    options = {
+        'encoding': 'UTF-8',
+        'enable-local-file-access': None,
+    }
+
+    pdf = pdfkit.from_string(html_string, False, options=options)
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="resultados_{materia}_{region}.pdf"'
+    return response
+
+
+@require_GET
+def ResultadosRegionQuinto(request):
+    region=request.GET.get('region')
+    print('region', region)
+    
+    if not region:
+        return JsonResponse({'error': 'Region not provided'}, status=400)
+    
+    if region == 'Todas':
+        # Agrupar por nivel y calcular la suma de cantidad y el promedio de porcentaje
+        resultado_general = VistaMatematicaQuintoRegional.objects.values('nivel').annotate(
+            cantidad=Sum('cantidad'),
+            porcentaje=Avg('porcentaje')
+        )
+                 
+
+        resultado = {
+            'resultado_general': redondear(resultado_general),            
+            'usuario': region,
+        }
+    else:
+        resultado_general=  VistaMatematicaQuintoRegional.objects.filter(region=region).values()             
+        
+    resultado= {
+        'resultado_general': list(resultado_general) if resultado_general else [],             
+        'usuario': region,
+    }    
+    
+    print('ver los resultados', resultado)
+    return JsonResponse(resultado)
+
+@require_GET
+def ResultadosRegionSegundoSec(request):
+    region=request.GET.get('region')
+    print('region', region)
+    
+    if not region:
+        return JsonResponse({'error': 'Region not provided'}, status=400)
+    
+    if region == 'Todas':
+        # Agrupar por nivel y calcular la suma de cantidad y el promedio de porcentaje
+        resultado_general = VistaMatematicaSegundoAnioRegional.objects.values('nivel').annotate(
+            cantidad=Sum('cantidad'),
+            porcentaje=Avg('porcentaje')
+        )
+                 
+
+        resultado = {
+            'resultado_general': redondear(resultado_general),            
+            'usuario': region,
+        }
+    else:
+        resultado_general=  VistaMatematicaSegundoAnioRegional.objects.filter(region=region).values()             
+        
+    resultado= {
+        'resultado_general': list(resultado_general) if resultado_general else [],             
+        'usuario': region,
+    }    
+    
+    print('ver los resultados', resultado)
+    return JsonResponse(resultado)
+
+
+@login_required
+def exportar_pdf_resultados_finales_primaria_quinseg_regional(request):    
+    materia = request.GET.get('materia')  # "Quinto" o "Segundo"
+    region = request.GET.get('region')    # puede ser "Todas" o una regional
+
+    if materia not in ['Segundo', 'Quinto']:
+        return HttpResponse("Parámetro 'materia' inválido", status=400)
+
+    # Títulos según materia
+    titulos = {
+        'resultado_general': 'General',
+    }
+
+    # Modelos según materia
+    if materia == 'Segundo':
+        modelos = {
+            'resultado_general': VistaMatematicaSegundoAnioRegional,                      
+        }
+        template = 'operativchaco/matematica/segundo/resultados_final_segundosec_pdf.html'
+    else:
+        modelos = {
+            'resultado_general': VistaMatematicaQuintoRegional,                    
+        }
+        template = 'operativchaco/matematica/quinto/resultados_final_matematica_quinto_pdf.html'
+
+    resultado = {}
+    niveles_orden = ['En Proceso', 'Alcanzó', 'Distingudo', 'Superó']
+    totales = {}
+
+    for key, modelo in modelos.items():
+        queryset = modelo.objects.all()
+        if region != 'Todas':
+            queryset = queryset.filter(region=region)
+
+        queryset = queryset.values('nivel').annotate(cantidad=Sum('cantidad'))
+        total = sum(item['cantidad'] for item in queryset)
+        for item in queryset:
+            item['porcentaje'] = round((item['cantidad'] / total) * 100, 2) if total > 0 else 0
+
+        ordenados = [next((i for i in queryset if i['nivel'] == nivel), None) for nivel in niveles_orden]
+        ordenados = [i for i in ordenados if i]  # eliminar None
+        otros = [i for i in queryset if i['nivel'] not in niveles_orden]
+        ordenados.extend(otros)
+
+        resultado[key] = ordenados
+        totales[key] = total
+
+    # Generación del QR con los datos de los resultados
+    usuario = request.user.username
+    fecha_hora = now().strftime('%Y-%m-%d %H:%M:%S')
+    qr_data = f"Usuario: {usuario}\nRegión: {region}\nAño: {materia}\nFecha y Hora: {fecha_hora}\n\n"
     for key, result in resultado.items():
         qr_data += f"\n{titulos[key]}:\n"
         for item in result:

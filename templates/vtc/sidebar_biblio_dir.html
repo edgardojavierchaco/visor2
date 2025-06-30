@@ -70,13 +70,7 @@
                                 <i class="fas fa-wifi" style="color:brown;"></i>
                                 <p>Servicio Referencia Virtual</p>
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{% url 'bibliotecas:servicio_prestamo' %}" class="nav-link">
-                                <i class="fas fa-file-export" style="color:cyan"></i>
-                                <p>Servicio Préstamo</p>
-                            </a>
-                        </li>
+                        </li>                        
                         <li class="nav-item">
                             <a href="{% url 'bibliotecas:infopedagres' %}" class="nav-link">
                                 <i class="fab fa-readme" style="color:lightgreen"></i>
@@ -102,11 +96,17 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="{% url 'bibliotecas:servicio_prestamo' %}" class="nav-link">
+                                <i class="fa fa-users" style="color:cyan"></i>
+                                <p>Personal Biblioteca</p>
+                            </a>
+                        </li>
+                        {% comment %} <li class="nav-item">
                             <a href="{% url 'bibliotecas:plan_anex' %}" class="nav-link">
                                 <i class="fas fa-file-alt" style="color:violet;"></i>
                                 <p>Planillas Anexas</p>
                             </a>
-                        </li>
+                        </li> {% endcomment %}
                     </ul>
                 </li> 
             </ul>

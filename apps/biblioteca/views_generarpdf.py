@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from django.contrib.auth.decorators import login_required
 from .models import GenerarInforme, InstitucionesPrestaServicios, MaterialBibliografico, ProcesosTecnicos, ServicioReferencia, ServicioReferenciaVirtual, ServicioPrestamo, InformePedagogico
-from .models import AsistenciaUsuarios, Aguapey, PlanillasAnexas, RegistroDestinoFondos
+from .models import AsistenciaUsuarios, Aguapey, PlanillasAnexas, RegistroDestinoFondos, BibliotecariosCue
 from django.db import connection
 from django.shortcuts import render
 from reportlab.lib.units import inch, mm
@@ -488,7 +488,7 @@ def generar_pdf_material_bibliografico(request):
 ########################################################
     
         
-    turnos_sp = ServicioPrestamo.objects.filter(cueanexo=usuario).select_related('turnos_id').values_list('turnos__nom_turno', flat=True).distinct()
+    """ turnos_sp = ServicioPrestamo.objects.filter(cueanexo=usuario).select_related('turnos_id').values_list('turnos__nom_turno', flat=True).distinct()
    
     
     # Obtener los datos desde el modelo ServicioPrestamo
@@ -605,13 +605,12 @@ def generar_pdf_material_bibliografico(request):
     os.remove(qr_file_path)
 
     p.showPage()
-    p.setPageSize(portrait(legal))
+    p.setPageSize(portrait(legal)) """
     
 
 ###########################################
 #          INFORME PEDAGÓGICO             #
-###########################################
-    
+###########################################    
         
        
     # Obtener los datos desde el modelo InformePedagogico
@@ -1307,7 +1306,90 @@ def generar_pdf_material_bibliografico(request):
     p.showPage()
     
     
-     #########################################
+    #########################################
+    #        PLANILLAS BIBLIOTECARIOS       #
+    #########################################    
+    
+    
+    # Agregar encabezados estáticos
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
+    p.setFont("Helvetica", 14)  
+    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
+    p.setFont("Helvetica", 14)
+    p.drawString(30, height - 85, f"CATEGORÍA: {categoria} REG.: {region_loc} DOMICILIO: {calle} {numero} LOCALIDAD: {localidad} MAIL: {resploc_email}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(30, height - 100, f"TURNO: {', '.join(turnos_lista)}")
+    p.drawString(550, height - 560, f"RESPONSABLE: {apellido_resp} {nombre_resp} - TEL: {resploc_telefono}")
+    
+
+    # Obtener registros del modelo
+    registros = BibliotecariosCue.objects.filter(cueanexo=usuario, mes=mess, anio=anios)
+
+    encabezado = [
+        ["13. - DATOS DE BIBLIOTECARIOS"],
+        ["CUIL", "Apellidos", "Nombres", "F. Nac", "Cargo", "Sit. Revista", "F. Ingreso", "F. Hasta", "Turno", "Licencia", "Desde", "Hasta"]
+    ]
+
+    filas = []
+    for r in registros:
+        fila = [
+            r.n_doc,
+            r.apellidos,
+            r.nombres,
+            r.f_nac.strftime("%d/%m/%Y") if r.f_nac else "",
+            r.cargo,
+            r.situacion_revista,
+            r.f_ingreso.strftime("%d/%m/%Y") if r.f_ingreso else "",
+            r.f_hasta.strftime("%d/%m/%Y") if r.f_hasta else "",
+            r.turno.nom_turno,
+            r.licencia_permiso.tipo_licencia if r.licencia_permiso else "",
+            r.f_desde_lic.strftime("%d/%m/%Y") if r.f_desde_lic else "",
+            r.f_hasta_lic.strftime("%d/%m/%Y") if r.f_hasta_lic else "",
+        ]
+        filas.append(fila)
+
+    data = encabezado + filas
+    col_widths = [70, 80, 90, 60, 60, 80, 65, 65, 60, 80, 65, 65]
+
+    tabla = Table(data, colWidths=col_widths)
+
+    estilo = TableStyle([
+        ('SPAN', (0, 0), (-1, 0)),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BACKGROUND', (0, 1), (-1, 1), colors.whitesmoke),
+        ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ])
+    tabla.setStyle(estilo)
+
+    y_pos = height - 180
+    tabla.wrapOn(p, width, height)
+    tabla.drawOn(p, 30, y_pos - 20 * len(data))
+
+    # Generar código QR
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    total_bibliotecarios = len(registros)
+    qr_data = f"CUE: {usuario}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\n" \
+              f"Planilla: 7. DATOS DE BIBLIOTECARIOS\nTotal registros: {total_bibliotecarios}\n" \
+              f"Responsable: {apellido_resp} {nombre_resp}"
+
+    qr = qrcode.make(qr_data)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_qr_file:
+        qr.save(temp_qr_file, format='PNG')
+        qr_file_path = temp_qr_file.name
+
+    p.drawImage(qr_file_path, width - 120, height - 180, width=100, height=100)
+    os.remove(qr_file_path)
+
+    p.showPage()
+    
+    
+    #########################################
     #     PLANILLAS ANEXAS DE ESTADÍSTICA   #
     #########################################
     

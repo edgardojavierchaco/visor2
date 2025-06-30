@@ -1768,3 +1768,34 @@ class VistaMatematicaSegundoAnio(models.Model):
     
     def __str__(self):
         return f'{self.cueanexo} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+
+class VistaMatematicaQuintoRegional(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Region')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Matematica Quinto Regional"
+        verbose_name_plural = "Vistas Matematica Quinto Regional"
+        db_table = "v_resultado_matematica_quinto_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'
+
+class VistaMatematicaSegundoAnioRegional(models.Model):
+    region=models.CharField(max_length=9, verbose_name='Region')
+    nivel=models.CharField(max_length=50, verbose_name='Nivel')
+    cantidad=models.PositiveIntegerField(verbose_name='Cantidad')
+    porcentaje=models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Porcentaje')
+    
+    class Meta:
+        managed=False
+        verbose_name = "Vista Matematica Segundo Anio Regional"
+        verbose_name_plural = "Vistas Matematica Segundo Anio Regional"
+        db_table = "v_resultado_matematica_segundo_anio_reg"
+    
+    def __str__(self):
+        return f'{self.region} {self.nivel} {self.cantidad} {self.porcentaje}'

@@ -68,3 +68,12 @@ def dashboard_prueba_fluidez_regional(request):
 
 def dashboard_prueba_fluidez_func(request):
     return render(request, "indicadoresie/dashboard_prueba_fluidez_segter_func.html")
+
+def dashboard_prueba_matematica(request):
+    return render(request, "indicadoresie/dashboard_prueba_matematica_quinseg.html")
+
+def dashboard_prueba_matematica_regional(request):
+    return render(request, "indicadoresie/dashboard_prueba_matematica_quinseg_reg.html")
+
+def dashboard_prueba_matematica_func(request):
+    return render(request, "indicadoresie/dashboard_prueba_matematica_quinseg_func.html")

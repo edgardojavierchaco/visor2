@@ -1,0 +1,8 @@
+{% extends "operativoschaco/layout_matem_quinto.html" %}
+{% block content %}
+  <h2>¿Estás seguro de que querés eliminar esta evaluación?</h2>
+  <form method="post">{% csrf_token %}
+    <button type="submit">Confirmar eliminación</button>
+    <a href="{% url 'operativ:examen_matematica_quinto_listado' %}">Cancelar</a>
+  </form>
+{% endblock %}

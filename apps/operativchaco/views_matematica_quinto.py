@@ -7,7 +7,7 @@ from apps.establecimientos.models import PadronOfertas
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.http import HttpResponseRedirect
-from django.views.generic import UpdateView
+from django.views.generic import UpdateView, DeleteView
 
 
 @login_required
@@ -77,3 +77,18 @@ class EditarEvaluacionMatematicaQuintoView(LoginRequiredMixin, UpdateView):
         if self.request.user.is_authenticated:
             return qs.filter(cueanexo=self.request.user.username)
         return qs
+
+
+class EliminarEvaluacionMatematicaQuintoView(LoginRequiredMixin, DeleteView):
+    model = ExamenMatematicaQuintoGrado
+    template_name = 'operativchaco/matematica/quinto/examen_quinto_confirm_delete.html'
+    success_url = reverse_lazy('operativ:examen_matematica_quinto_listado')
+
+    def get_queryset(self):
+        """
+        Restringe la eliminación según el cueanexo del usuario logueado.
+        """
+        qs = super().get_queryset()
+        if self.request.user.is_authenticated:
+            return qs.filter(cueanexo=self.request.user.username)
+        return qs.none()

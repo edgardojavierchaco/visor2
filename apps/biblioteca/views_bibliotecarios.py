@@ -1,5 +1,6 @@
 from django.http import JsonResponse
-from django.urls import reverse_lazy
+from django.shortcuts import render
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
@@ -172,14 +173,27 @@ class BibliotecariosCueListView(LoginRequiredMixin, ListView):
             data['error'] = str(e)
         return JsonResponse(data, safe=False)
 
-    def get_context_data(self, **kwargs):
+    def get(self, request, *args, **kwargs):
+        context = {
+            'create_url': reverse('bibliotecas:bibliotecario_create'),  # URL para el botón de nuevo registro
+            'list_url': reverse('bibliotecas:bibliotecario_list'),
+            'title': 'Bibliotecarios',
+            'hide_lock_button': True, 
+            'generar_pdf_button' : False,
+            'entity': 'Bibliotecarios',
+            'generar_pdf_url': reverse_lazy('bibliotecas:generar_pdf'), 
+            
+        }           
+        return render(request, self.template_name, context)
+        
+    """ def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Listado de Personal Bibliotecario'
         context['create_url'] = reverse_lazy('bibliotecas:bibliotecario_create')
         context['list_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
-        context['update_url'] = reverse_lazy('bibliotecas:bibliotecario_update', args=[0]) 
+        context['update_url'] = reverse_lazy('bibliotecas:bibliotecario_update', args=[0])
         context['entity'] = 'Bibliotecarios'
-        context['hide_lock_button'] = False      
-        context['generar_pdf_button'] = True,  
-        context['next_url'] = reverse_lazy('bibliotecas:proctec_create')
-        return context
+        context['hide_lock_button'] = True     
+        context['generar_pdf_button'] = False
+        context['generar_pdf_url'] = reverse_lazy('bibliotecas:generar_pdf'),
+        return context """

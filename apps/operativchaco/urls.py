@@ -47,6 +47,12 @@ from .views_dashpresent import(
     dashboard_primarias_segundo_func,
     dashboard_resultados_final_primaria_regional,
     dashboard_resultados_final_primaria_func,
+    dashboard_primarias_quinto,
+    dashboard_primarias_quinto_regional,
+    dashboard_primarias_quinto_func,
+    dashboard_resultados_final_primaria_quinto,
+    dashboard_resultados_final_primaria_quinto_regional,
+    dashboard_resultados_final_primaria_quinto_func,
 )
 
 from .views_grafesc import datos_lengua_por_region, datos_matematica_por_region, escuelas_pendientes_lengua, escuelas_pendientes_matematica
@@ -89,6 +95,9 @@ from .views_resultados_reg import (
     ResultadosRegionSegundo,
     ResultadosRegionTercero,
     exportar_pdf_resultados_finales_primaria_regional,
+    ResultadosRegionQuinto,
+    ResultadosRegionSegundoSec,
+    exportar_pdf_resultados_finales_primaria_quinseg_regional,
 )
 
 # Fluidez Lectora 2° grado
@@ -141,10 +150,18 @@ from .views_resultados_fluidez_tercero import (
 
 from .views_grafesc_fluidez import datos_segundo_por_region, datos_tercero_por_region, escuelas_pendientes_segundo, escuelas_pendientes_tercero
 
+from .views_grafesc_matematica import (
+    datos_segundosec_por_region,
+    datos_quinto_por_region,
+    escuelas_pendientes_segundosec,
+    escuelas_pendientes_quinto,
+)
+
 from .views_matematica_quinto import (
     buscar_alumno_por_dni_matematica_quinto,
     cargar_examen_matematica_quinto,
     EditarEvaluacionMatematicaQuintoView,
+    EliminarEvaluacionMatematicaQuintoView,
 )
 
 from .views_list_matematica_quinto import (
@@ -166,7 +183,8 @@ from .views_resultados_matematica_quinto import (
 from .views_matematica_segundo_anio import (
     buscar_alumno_por_dni_matematica_segundo_anio,
     cargar_examen_matematica_segundo_anio,
-    EditarEvaluacionMatematicaSegundoAnioView
+    EditarEvaluacionMatematicaSegundoAnioView,
+    EliminarEvaluacionMatematicaSegundoAnioView,
 )
 
 from .views_list_matematica_segundo_anio import (
@@ -301,6 +319,7 @@ urlpatterns = [
     path('examenes/quinto/<int:pk>/modal/', examen_quinto_detalle_modal, name='examen_quinto_detalle_modal'),
     path('exportar_pdf_quinto/<int:n_dni>/', exportar_pdf_quinto, name='exportar_pdf_quinto'),
     path('editar/matematica/examenes/quinto/<int:pk>/', EditarEvaluacionMatematicaQuintoView.as_view(), name='editar_matematica_examen_quinto'),
+    path('eliminar/matematica/examenes/quinto/<int:pk>/',EliminarEvaluacionMatematicaQuintoView.as_view(),name='eliminar_matematica_examen_quinto'),
     path('cerrar_carga_matem_quinto/',cerrar_carga_matematica_quinto, name='cerrar_carga_matem_quinto'),
     # Resultados Matemática Quinto Grado
     path('resultados/cueanexo_quinto/', ResultadosMatematicaQuintoView, name='resultados_cueanexo_quinto'),
@@ -316,6 +335,7 @@ urlpatterns = [
     path('examenes/segundo_anio/<int:pk>/modal/', examen_segundo_detalle_modal, name='examen_segundo_anio_detalle_modal'),
     path('exportar_pdf_segundo_anio/<int:n_dni>/', exportar_pdf_segundo_anio, name='exportar_pdf_segundo_anio'),
     path('editar/matematica/examenes/segundo_anio/<int:pk>/', EditarEvaluacionMatematicaSegundoAnioView.as_view(), name='editar_matematica_examen_segundo_anio'),
+    path('eliminar/matematica/examenes/segundo_anio/<int:pk>/',EliminarEvaluacionMatematicaSegundoAnioView.as_view(),name='eliminar_matematica_examen_segundo_anio'),
     path('cerrar_carga_matem_quinto/',cerrar_carga_matematica_segundo_anio, name='cerrar_carga_matem_segundo_anio'),
     # Resultados Matemática Segundo Año
     path('resultados/cueanexo_segundo_anio/', ResultadosMatematicaSegundoAnioView, name='resultados_cueanexo_segundo_anio'),
@@ -327,6 +347,21 @@ urlpatterns = [
     path('cuenta_regresiva_matem_quinto_grado/', cuenta_regresiva_matematica_quinto, name='cuenta_regresiva_matem_quinto_grado'),
     path('cuenta_regresiva_graficos_segundo_anio/', cuenta_regresiva_matematica_graficos_segundo_anio, name='cuenta_regresiva_segundo_anio_graficos'),
     path('cuenta_regresiva_graficos_quinto_grado/', cuenta_regresiva_matematica_graficos_quinto_grado, name='cuenta_regresiva_quinto_grado_graficos'),
+    # Resultados Finales Matemática Quinto Grado y Segundo Año
+    path('resultados_final_primaria_quinto/', dashboard_primarias_quinto, name='dashboard_primaria_quinto'),
+    path('resultados_final_primaria_quinto_reg/', dashboard_primarias_quinto_regional, name='dashboard_primaria_quinto_reg'),
+    path('resultados_final_primaria_quinto_func/', dashboard_primarias_quinto_func, name='dashboard_primaria_quinto_func'),    
+    path('resultados_final_primaria_quinto_pdf/', dashboard_resultados_final_primaria_quinto, name='dashboard_resultados_final_primaria_quinto'),
+    path('resultados_final_primaria_quinto_pdf_reg/', dashboard_resultados_final_primaria_quinto_regional, name='dashboard_resultados_final_primaria_quinto_reg'),
+    path('resultados_final_primaria_quinto_pdf_func/', dashboard_resultados_final_primaria_quinto_func, name='dashboard_resultados_final_primaria_quinto_func'),
+    # gráficos de carga escuelas quinto grado y segundo año Matemática
+    path('api/datos_quinto/', datos_quinto_por_region, name='datos_quinto'),
+    path('api/datos_segundosec/', datos_segundosec_por_region, name='datos_segundosec'),
+    path('pendientes_quinto/', escuelas_pendientes_quinto, name='escuelas_pendientes_quinto'),
+    path('pendientes_segundosec/', escuelas_pendientes_segundosec, name='escuelas_pendientes_segundosec'), 
+    path('api/resultados/region_quinto/', ResultadosRegionQuinto, name='resultados_region_quinto_api'),
+    path('api/resultados/region_segundosec/', ResultadosRegionSegundoSec, name='resultados_region_segundosec_api'),
+    path('resultados_finales_pdf_primaria_quinseg_reg/', exportar_pdf_resultados_finales_primaria_quinseg_regional, name='exportar_pdf_resultados_finales_primaria_quinseg_reg'),
 ]
 
 

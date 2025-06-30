@@ -95,7 +95,9 @@ from .views import (
     destino_fondos_view,
     filtrar_destino_fondos,
     planillas_anexas_view,
-    filtrar_planillas_anexas
+    filtrar_planillas_anexas,
+    filtrar_personal_bibliotecario,
+    personal_bibliotecario_view
 )
 
 from .views_bibliotecarios import (
@@ -209,6 +211,8 @@ urlpatterns = [
     path("filtrar_desfondos/", filtrar_destino_fondos, name="filtrar_desfondos"),
     path("plan_anex/", planillas_anexas_view, name="plan_anex"),
     path("filtrar_plananex/", filtrar_planillas_anexas, name="filtrar_plananex"),
+    path("personal_bibliotecario/", personal_bibliotecario_view, name="personal_bibliotecario"),
+    path("filtrar_personal_bibliotecario/", filtrar_personal_bibliotecario, name="filtrar_personal_bibliotecario"),
     
     # Bibliotecarios
     path('bibliotecarios/list/', BibliotecariosCueListView.as_view(), name='bibliotecario_list'),

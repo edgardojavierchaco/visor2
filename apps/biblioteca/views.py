@@ -3,7 +3,7 @@ import locale
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
-from .models import ServiciosMatBiblio, TipoMaterialBiblio, DestinoFondos
+from .models import BibliotecariosCue, ServiciosMatBiblio, TipoMaterialBiblio, DestinoFondos
 
 MESES_ES = [
     (1, "ENERO"), (2, "FEBRERO"), (3, "MARZO"), (4, "ABRIL"), (5, "MAYO"), (6, "JUNIO"),
@@ -37,6 +37,15 @@ PROCESOS_CHOICES=[
     ('BAJAS', 'BAJAS'),
 ]
 
+CARGOS_CHOICES=[
+    ('BIBLIOTECARIO', 'BIBLIOTECARIO'),
+    ('DIRECTOR BIBLIOTECA 1RA', 'DIRECTOR BIBLIOTECA 1RA'),
+    ('DIRECTOR BIBLIOTECA 2DA', 'DIRECTOR BIBLIOTECA 2DA'),
+    ('DIRECTOR BIBLIOTECA 3RA', 'DIRECTOR BIBLIOTECA 3RA'),
+    ('DIRECTOR BIBLIOTECA CENTRAL', 'DIRECTOR BIBLIOTECA CENTRAL'),
+    ('VICEDIRECTOR BIBLIOTECA', 'BICEDIRECTOR BIBLIOTECA'),
+]
+
 servicios_mb=ServiciosMatBiblio.objects.filter(cod_servicio__range=(111,114))
 servicios_sr=ServiciosMatBiblio.objects.filter(cod_servicio__range=(211,212))
 servicios_srv=ServiciosMatBiblio.objects.filter(cod_servicio__range=(311,313))
@@ -45,6 +54,7 @@ servicios_ip=ServiciosMatBiblio.objects.filter(cod_servicio__range=(511,527))
 tipo_mat=TipoMaterialBiblio.objects.all()
 fondos=DestinoFondos.objects.all()
 servicios_pa=ServiciosMatBiblio.objects.filter(cod_servicio__gt=710)
+personal_bibliotecario= BibliotecariosCue.objects.all()
 
 
 """ SERVICIOS_SP = [
@@ -712,3 +722,63 @@ def filtrar_planillas_anexas(request):
         print("Total general:", total_general)
         
     return JsonResponse({"datos": datos, "total_general": total_general})
+
+
+#############################
+#   PERSONAL BIBLIOTECARIO  #
+#############################
+def personal_bibliotecario_view(request):    
+    return render(request, "biblioteca/resultados/personal_bibliotecario_gestor.html", {'meses':MESES_ES, 'usuarios':USUARIOS_CHOICES, 'niveles': NIVELES_CHOICES,'regionales':REGIONES})  # Renderiza el template
+
+def filtrar_personal_bibliotecario(request):
+    cueanexo = request.GET.get("cueanexo", "")
+    mes = request.GET.get("mes", "")
+    anio = request.GET.get("anio", "")    
+    cargo_id = request.GET.get("cargo","")
+    sitrev_id = request.GET.get("situacion_revista", "")
+    regional=request.GET.get("regional","")
+
+    # Armamos la condición para cada filtro y pasamos valores según corresponda
+    condiciones = []
+    parametros = []
+
+    if cueanexo:
+        condiciones.append("cueanexo = %s")
+        parametros.append(cueanexo)
+    if mes:
+        condiciones.append("mes = %s")
+        parametros.append(mes)
+    if anio:
+        condiciones.append("anio = %s")
+        parametros.append(anio)       
+    if cargo_id:
+        condiciones.append("cargo = %s")
+        parametros.append(cargo_id)        
+    if sitrev_id:
+        condiciones.append("situacion_revista = %s")
+        parametros.append(sitrev_id)    
+    if regional:
+        condiciones.append("region_loc = %s")
+        parametros.append(regional)
+
+
+    # Construcción dinámica de la parte de la consulta
+    sql = """
+        SELECT cueanexo, mes, anio, apellidos, nombres, cargo, situacion_revista, region_loc, localidad
+        FROM pem.v_personal_bibliotecario
+        WHERE 1=1
+    """
+
+    if condiciones:
+        sql += " AND " + " AND ".join(condiciones)
+    
+
+    with connection.cursor() as cursor:
+        # Obtener datos filtrados
+        cursor.execute(sql, parametros)
+        columnas = [col[0] for col in cursor.description]
+        datos = [dict(zip(columnas, row)) for row in cursor.fetchall()]        
+        
+
+    return JsonResponse({"datos": datos})
+

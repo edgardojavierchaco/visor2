@@ -37,6 +37,33 @@ def dashboard_resultados_final_primaria_regional(request):
 def dashboard_resultados_final_primaria_func(request):    
     return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria_func.html')
 
+# Resultados Evaluación Matemática Quinto Primaria y Segundo Secundaria
+def dashboard_primarias_quinto(request):
+    totalesprim = TotalPrimarias.objects.first()  
+    totalessec = TotalSecundarias.objects.first()
+    return render(request, 'operativchaco/dashboard/primarias_quinto.html', {'totalesprim': totalesprim, 'totalessec': totalessec})
+
+def dashboard_resultados_final_primaria_quinto(request):    
+    return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria_quinto.html')
+
+def dashboard_resultados_final_primaria_quinto_regional(request):    
+    return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria_quinto_reg.html')
+
+def dashboard_resultados_final_primaria_quinto_func(request):    
+    return render(request, 'operativchaco/dashboard/dashboard_reportes_final_primaria_quinto_func.html')
+
+def dashboard_primarias_quinto_regional(request):
+    totalesprim = TotalPrimarias.objects.first()  
+    totalessec = TotalSecundarias.objects.first()
+    return render(request, 'operativchaco/dashboard/primarias_quinto_regional.html', {'totalesprim': totalesprim, 'totalessec': totalessec})
+
+def dashboard_primarias_quinto_func(request):
+    totalesprim = TotalPrimarias.objects.first()  
+    totalessec = TotalSecundarias.objects.first()
+    return render(request, 'operativchaco/dashboard/primarias_quinto_func.html', {'totalesprim': totalesprim, 'totalessec': totalessec})
+
+
+
 def dashboard_resultados_final_superv(request):    
     return render(request, 'operativchaco/dashboard/dashboard_reportes_final_superv.html')
 

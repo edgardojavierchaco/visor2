@@ -48,6 +48,9 @@
                     <a href="{% url 'operativ:editar_matematica_examen_quinto' examen.pk %}" class="btn btn-sm btn-warning">
                         ✏️ Editar
                     </a>
+                    <a href="#" class="btn btn-sm btn-danger btn-eliminar" data-id="{{ examen.pk }}">
+                        🗑️
+                    </a>
                 </td>
             </tr>      
             {% endfor %}      
@@ -159,6 +162,49 @@
             });
         });
     });
+</script>
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const botones = document.querySelectorAll('.btn-eliminar');
+
+    botones.forEach(function(boton) {
+        boton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const id = this.getAttribute('data-id');
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción no se puede deshacer.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Crear y enviar formulario para el DeleteView
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `{% url 'operativ:eliminar_matematica_examen_quinto' 0 %}`.replace('0', id);
+
+                    const csrfToken = '{{ csrf_token }}'; 
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrfmiddlewaretoken';
+                    input.value = csrfToken;
+                    form.appendChild(input);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
+});
 </script>
 
 {% endblock %}
