@@ -1,25 +1,27 @@
+version: "3.9"
+
 volumes:
   visor_local_postgres_data: {}
-  visor_local_postgres_data_backups: {}  
-
+  visor_local_postgres_data_backups: {}
 
 services:
-  django: &django
+  django:
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
+      target: python-run-stage   # Apunta a la etapa final optimizada
     image: visor_local_django
     container_name: visor_local_django
     depends_on:
       - postgres
+      - redis
     volumes:
-      - .:/app:z      
+      - .:/app:cached   # cached para acelerar montajes
     env_file:
       - ./.env
     ports:
       - "8000:8000"
     command: /start
-    
 
   postgres:
     build:
@@ -28,18 +30,17 @@ services:
     image: visor_production_postgres
     container_name: visor_local_postgres
     volumes:
-      - visor_local_postgres_data:/var/lib/postgresql/data:z
-      - visor_local_postgres_data_backups:/backups:z
+      - visor_local_postgres_data:/var/lib/postgresql/data
+      - visor_local_postgres_data_backups:/backups
     env_file:
       - ./.env
     ports:
       - "5433:5432"
-    
+    restart: unless-stopped
 
   redis:
-    image: redis
+    image: redis:7
     container_name: visor_local_redis
     ports:
-      - "6379:6379"    
-
-  
+      - "6379:6379"
+    restart: unless-stopped

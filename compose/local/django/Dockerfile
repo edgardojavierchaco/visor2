@@ -1,74 +1,80 @@
-# define un alias para la versión específica de python usada en este archivo.
-FROM python:3.10.10-slim-bullseye as python
+# Etapa base: Python 3.10 slim
+FROM python:3.10.10-slim-bullseye AS python
 
 LABEL maintainer="Edgardo Javier Gómez"
 
-# Python etapa de construcción
-FROM python as python-build-stage
+# Etapa build: instalar dependencias y crear wheels
+FROM python AS python-build-stage
 
 ARG BUILD_ENVIRONMENT=local
 
-# Instala paquete apt
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencias para construir paquete Python
-  build-essential \
-  # psycopg2 dependencias
-  libpq-dev \
-  # wkhtmltopdf para generar PDFs desde HTML
-  wkhtmltopdf
+# Configuración para APT: retries y timeout
+RUN echo 'Acquire::Retries "5"; Acquire::http::Timeout "120";' > /etc/apt/apt.conf.d/99-retries \
+    && apt-get update \
+    && apt-get install --no-install-recommends -y \
+        build-essential \
+        libpq-dev \
+        wkhtmltopdf \
+    || apt-get install --no-install-recommends -y --fix-missing \
+        build-essential \
+        libpq-dev \
+        wkhtmltopdf \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/*
 
-# Los requisitos se instalan aquí para garantizar que se almacenarán en caché.
+# Copiar requirements y crear wheels
 COPY ./requirements .
+RUN pip wheel --wheel-dir /usr/src/app/wheels -r ${BUILD_ENVIRONMENT}.txt
 
-# Crea dependencias y subdependencias de Python
-RUN pip wheel --wheel-dir /usr/src/app/wheels  \
-  -r ${BUILD_ENVIRONMENT}.txt
-
-
-# Etapa 'run' de python
-FROM python as python-run-stage
+# Etapa run: instalar dependencias de sistema y Python
+FROM python AS python-run-stage
 
 ARG BUILD_ENVIRONMENT=local
 ARG APP_HOME=/app
 
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV BUILD_ENV ${BUILD_ENVIRONMENT}
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV BUILD_ENV=${BUILD_ENVIRONMENT}
 
 WORKDIR ${APP_HOME}
 
-# Instala los requerimientos de las dependencias del systema
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  # psycopg2 dependencias
-  libpq-dev \
-  # Translations dependencias
-  gettext \
-  # GDAL
-  binutils \
-  libproj-dev \
-  gdal-bin \
-  wkhtmltopdf \
-  # Limpieza de archivos no utilizados
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+# Instala dependencias de sistema con retries y mirror confiable
+RUN echo 'Acquire::Retries "5"; Acquire::http::Timeout "120";' > /etc/apt/apt.conf.d/99-retries \
+    && sed -i 's|http://deb.debian.org/debian|http://deb.debian.org/debian|g' /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install --no-install-recommends -y \
+        libpq-dev \
+        gettext \
+        binutils \
+        libproj-dev \
+        gdal-bin \
+        wkhtmltopdf \
+    || apt-get install --no-install-recommends -y --fix-missing \
+        libpq-dev \
+        gettext \
+        binutils \
+        libproj-dev \
+        gdal-bin \
+        wkhtmltopdf \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/*
 
-# Todas las copias de directorio absolutas ignoran la instrucción workdir. Todas las copias relativas del directorio se escriben según la instrucción workdir
-# Copiar ruedas de dependencia de Python de python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+# Copiar wheels desde la etapa build
+COPY --from=python-build-stage /usr/src/app/wheels /wheels/
 
-# use wheels para instalar las dependencias de python
-RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
-	&& rm -rf /wheels/
+# Instalar paquetes de Python desde wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* \
+    && rm -rf /wheels/
 
+# Copiar entrypoint y start scripts
 COPY ./compose/production/django/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
+RUN sed -i 's/\r$//g' /entrypoint && chmod +x /entrypoint
 
 COPY ./compose/local/django/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
+RUN sed -i 's/\r$//g' /start && chmod +x /start
 
-# copia el código de la aplicación a WORKDIR
+# Copiar código de la app
 COPY . ${APP_HOME}
 
 ENTRYPOINT ["/entrypoint"]
+

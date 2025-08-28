@@ -23,7 +23,8 @@ BASE_APPS = [
     'widget_tweaks',
     'django_select2',
     'django.forms',
-    'django.contrib.gis',   
+    'django.contrib.gis',  
+    'rest_framework',
 ]
 
 LOCAL_APPS = [
@@ -63,6 +64,7 @@ LOCAL_APPS = [
     'apps.indicadoresie',
     'apps.operativoschaco',
     'apps.operativchaco',
+    'apps.consultas',
 ]
 
 
@@ -125,7 +127,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=operativoschaco,indicadores,pem,cenpe,public,pof'
+            'options': '-c search_path=public,operativoschaco,indicadores,pem,cenpe,pof'
         }
     }
 }
@@ -179,14 +181,6 @@ X_FRAME_OPTIONS = 'DENY'
 # URL de Django Admin
 ADMIN_URL = 'admin/'
 
-# Configuración de correo electrónico
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-
 # Configuración de log
 LOGGING = {
     'version': 1,
@@ -206,3 +200,12 @@ LOGGING = {
     },
     'root': {'level': 'INFO', 'handlers': ['console']},
 }
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'sgechaco@gmail.com'
+EMAIL_HOST_PASSWORD = 'idjetmjzbqeokuxh'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

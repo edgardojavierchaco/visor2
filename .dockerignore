@@ -14,3 +14,55 @@ app/*/*/*/__pycache__/
 #Local Postgresql data
 data/
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django local settings / env
+*.env
+local_settings.py
+
+# Database files
+*.sqlite3
+*.db
+
+# Media and static (servidos aparte)
+media/
+staticfiles/
+productionfiles/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Node / frontend build
+node_modules/
+build/
+dist/
+
+# Logs
+*.log
+*.pot
+*.mo
+
+# Docker / IDE
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# Python packaging
+*.egg-info/
+dist/
+*.egg
+
+# Other temporary files
+*.bak
+*.tmp
+*.orig
+

@@ -57,7 +57,8 @@ urlpatterns = [
     path('infra/',include('apps.infraestructura.urls',namespace='infra')), 
     path('pregunta/',include('apps.operativoschaco.urls',namespace='pregunta')), 
     path('examendiag/',include('apps.operativchaco.urls',namespace='examendiag')),
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    path('consultas/', include('apps.consultas.urls', namespace='consultas_api')),
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),    
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
