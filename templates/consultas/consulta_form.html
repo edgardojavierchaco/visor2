@@ -18,35 +18,59 @@
 
         <form id="consultaForm">
             {% csrf_token %}
-            <div class="mb-3">
-                {{ form.cueanexo.label_tag }}  
-                {{ form.cueanexo }}
+            
+            <!-- Fila 1: cueanexo, regional, nivel_modalidad -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    {{ form.cueanexo.label_tag }}
+                    {{ form.cueanexo }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.regional.label_tag }}
+                    {{ form.regional }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.nivel_modalidad.label_tag }}
+                    {{ form.nivel_modalidad }}
+                </div>
             </div>
-            <div class="mb-3">
-                {{ form.regional.label_tag }}  
-                {{ form.regional }}
+
+            <!-- Fila 2: sge_modulo, sge_rol -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.sge_modulo.label_tag }}
+                    {{ form.sge_modulo }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.sge_rol.label_tag }}
+                    {{ form.sge_rol }}
+                </div>
             </div>
-            <div class="mb-3">
-                {{ form.nivel_modalidad.label_tag }}  
-                {{ form.nivel_modalidad }}
+
+            <!-- Fila 3: apellido_nombre, email -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.apellido_nombre.label_tag }}
+                    {{ form.apellido_nombre }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.email.label_tag }}
+                    {{ form.email }}
+                </div>
             </div>
-            <div class="mb-3">
-                {{ form.sge_modulo.label_tag }}  
-                {{ form.sge_modulo }}
+
+            <!-- Fila 4: mensaje (full width) -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    {{ form.mensaje.label_tag }}
+                    {{ form.mensaje }}
+                </div>
             </div>
-            <div class="mb-3">
-                {{ form.apellido_nombre.label_tag }}  
-                {{ form.apellido_nombre }}
+
+            <div class="d-flex justify-content-between mt-4">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back();">Regresar</button>
+                <button type="submit" class="btn btn-primary">Enviar Consulta</button>
             </div>
-            <div class="mb-3">
-                {{ form.email.label_tag }}  
-                {{ form.email }}
-            </div>
-            <div class="mb-3">
-                {{ form.mensaje.label_tag }}  
-                {{ form.mensaje }}
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Enviar Consulta</button>
         </form>
     </div>
 </div>
@@ -100,3 +124,4 @@ $(document).ready(function(){
 
 </body>
 </html>
+

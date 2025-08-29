@@ -3,8 +3,10 @@ from django.core.mail import send_mail, BadHeaderError
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 from .forms import ConsultaForm
 from .models import Consulta
+from apps.usuarios.models import UsuariosVisualizador
 
 def consulta_form_view(request):
     form = ConsultaForm()
@@ -50,9 +52,24 @@ def monitoreo_consultas(request):
 def actualizar_estado(request, consulta_id):
     if request.method == 'POST':
         consulta = get_object_or_404(Consulta, id=consulta_id)
+        
+        # Obtenemos usuario desde la tabla personalizada
+        usuario_logueado = None
+        if request.user.is_authenticated:
+            usuario_logueado = UsuariosVisualizador.objects.filter(
+                username=request.user.username
+            ).first()
+            
         if consulta.estado == 'Pendiente':
             consulta.estado = 'Solucionado'
+            consulta.estado_usuario = f"{usuario_logueado.apellido}, {usuario_logueado.nombres}" if usuario_logueado else "Anónimo"
+            consulta.estado_fecha = timezone.now()
             consulta.save()
-            return JsonResponse({'status': 'success', 'nuevo_estado': consulta.estado})
+            return JsonResponse({
+                'status': 'success',
+                'nuevo_estado': consulta.estado,
+                'usuario': consulta.estado_usuario,
+                'fecha': consulta.estado_fecha.strftime('%d/%m/%Y %H:%M')
+            })
         return JsonResponse({'status': 'error', 'message': 'El estado ya es Solucionado'})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido'})
