@@ -87,15 +87,9 @@ def exportar_excel_examenes_quinto(request):
 
     columnas = [
         'DNI', 'Apellidos', 'Nombres', 'Cueanexo', 'Grado', 'División', 'Región',
-        'Preg 1 A', 'Preg 1 B', 'Preg 1 C', 'Preg 1 D',
-        'Preg 2 A', 'Preg 2 B', 'Preg 2 C', 'Preg 2 D',
-        'Preg 3 A', 'Preg 3 B', 'Preg 3 C', 'Preg 3 D',
-        'Preg 4 A', 'Preg 4 B', 'Preg 4 C', 'Preg 4 D',
-        'Preg 5', 
-        'Preg 6 A', 'Preg 6 B', 'Preg 6 C', 
-        'Preg 7 A', 'Preg 7 B', 'Preg 7 C', 'Preg 7 D',
-        'Preg 8 A', 'Preg 8 B', 'Preg 8 C', 'Preg 8 D',
-        'Preg 9 Planteo', 'Preg 9 Solución', 'Puntaje Total'
+        'Preg 1', 'Preg 2', 'Preg 3', 'Preg 4',
+        'Preg 5', 'Preg 6', 'Preg 7', 'Preg 8',
+        'Preg 9', 'Preg 10', 'Preg 11', 'Preg 12'
     ]
 
     ws.append(columnas)
@@ -106,16 +100,9 @@ def exportar_excel_examenes_quinto(request):
             fila = [
                 examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.grado,
                 examen.division, examen.region,
-                examen.puntaje_preg1a, examen.puntaje_preg1b, examen.puntaje_preg1c, examen.puntaje_preg1d,
-                examen.puntaje_preg2a, examen.puntaje_preg2b, examen.puntaje_preg2c, examen.puntaje_preg2d,
-                examen.puntaje_preg3a, examen.puntaje_preg3b, examen.puntaje_preg3c, examen.puntaje_preg3d,
-                examen.puntaje_preg4a, examen.puntaje_preg4b, examen.puntaje_preg4c, examen.puntaje_preg4d,
-                examen.puntaje_preg5,
-                examen.puntaje_preg6a, examen.puntaje_preg6b, examen.puntaje_preg6c,
-                examen.puntaje_preg7a, examen.puntaje_preg7b, examen.puntaje_preg7c, examen.puntaje_preg7d,
-                examen.puntaje_preg8a, examen.puntaje_preg8b, examen.puntaje_preg8c, examen.puntaje_preg8d,
-                examen.puntaje_preg9a, examen.puntaje_preg9b,
-                examen.puntaje_total,
+                examen.preg1, examen.preg2, examen.preg3, examen.preg4,
+                examen.preg5, examen.preg6, examen.preg7, examen.preg8,
+                examen.preg9, examen.preg10, examen.preg11, examen.preg12,                
             ]
             ws.append(fila)
 
@@ -229,20 +216,14 @@ def exportar_pdf_quinto(request, n_dni):
 
     # Campos de ítems
     item_fields = [
-    "puntaje_preg1a", "puntaje_preg1b", "puntaje_preg1c", "puntaje_preg1d",
-    "puntaje_preg2a", "puntaje_preg2b", "puntaje_preg2c", "puntaje_preg2d",
-    "puntaje_preg3a", "puntaje_preg3b", "puntaje_preg3c", "puntaje_preg3d",
-    "puntaje_preg4a", "puntaje_preg4b", "puntaje_preg4c", "puntaje_preg4d",
-    "puntaje_preg5",
-    "puntaje_preg6a", "puntaje_preg6b", "puntaje_preg6c",
-    "puntaje_preg7a", "puntaje_preg7b", "puntaje_preg7c", "puntaje_preg7d",
-    "puntaje_preg8a", "puntaje_preg8b", "puntaje_preg8c", "puntaje_preg8d",
-    "puntaje_preg9a", "puntaje_preg9b"
+    "preg1", "preg2", "preg3", "preg4",
+    "preg5", "preg6", "preg7", "preg8",
+    "preg9", "preg10", "preg11", "preg12",    
 ]
 
 
     # Calcular puntaje total
-    total_puntaje = sum(getattr(examen, campo, 0) or 0 for campo in item_fields)
+    #total_puntaje = sum(getattr(examen, campo, 0) or 0 for campo in item_fields)
 
     # Logging detallado
     logger.info(f"""
@@ -254,7 +235,7 @@ CUE: {examen.cueanexo}
 Región: {examen.region}
 Grado: {examen.grado}
 División: {examen.division}
-Puntaje total: {total_puntaje}
+
 """)
     for i, campo in enumerate(item_fields, start=1):
         valor = getattr(examen, campo, 0) or 0
@@ -269,7 +250,7 @@ CUE: {examen.cueanexo}
 Región: {examen.region}
 Año: {examen.grado}
 División: {examen.division}
-Puntaje total: {total_puntaje}
+
 Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 Puntajes por ítem:"""
 
@@ -304,7 +285,7 @@ Puntajes por ítem:"""
         f"Región: {examen.region}",
         f"Año: {examen.grado}",
         f"División: {examen.division}",
-        f"Puntaje total: {total_puntaje}",
+        
         f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         "Puntajes por ítem:"
     ]

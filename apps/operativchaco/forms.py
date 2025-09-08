@@ -320,7 +320,7 @@ class ExamenMatematicaQuintoGradoForm(forms.ModelForm):
             raise forms.ValidationError("El DNI debe tener exactamente 8 dígitos numéricos.")
 
         # Validar duplicado
-        if ExamenLenguaAlumno.objects.filter(dni=dni).exclude(pk=self.instance.pk).exists():
+        if ExamenMatematicaQuintoGrado.objects.filter(dni=dni).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("Ya existe un alumno con este DNI.")
         
         return dni
@@ -394,7 +394,7 @@ class ExamenMatematicaSegundoAnioForm(forms.ModelForm):
             raise forms.ValidationError("El DNI debe tener exactamente 8 dígitos numéricos.")
 
         # Validar duplicado
-        if ExamenLenguaAlumno.objects.filter(dni=dni).exclude(pk=self.instance.pk).exists():
+        if ExamenMatematicaSegundoAnio.objects.filter(dni=dni).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("Ya existe un alumno con este DNI.")
         
         return dni

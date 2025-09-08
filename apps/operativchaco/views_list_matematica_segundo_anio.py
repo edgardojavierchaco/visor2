@@ -87,15 +87,11 @@ def exportar_excel_examenes_segundo_anio(request):
 
     columnas = [
         'DNI', 'Apellidos', 'Nombres', 'Cueanexo', 'Año', 'División', 'Región',
-        'Preg 1 A', 'Preg 1 B', 
-        'Preg 2 A', 'Preg 2 B', 
-        'Preg 3 A', 'Preg 3 B', 'Preg 3 C', 
-        'Preg 4 A', 'Preg 4 B', 'Preg 4 C', 
-        'Preg 5 A', 'Preg 5 B', 'Preg 5 C', 
-        'Preg 6', 
-        'Preg 7 A', 'Preg 7 B', 
-        'Preg 8 A', 'Preg 8 B', 'Preg 8 C', 
-        'Puntaje Total'
+        'Preg 1', 'Preg 2', 
+        'Preg 3', 'Preg 4', 
+        'Preg 5', 'Preg 6 A', 'Preg 6 B', 
+        'Preg 7', 'Preg 8 A', 'Preg 8 B', 
+        'Preg 9', 'Preg 10', 
     ]
 
     ws.append(columnas)
@@ -106,15 +102,11 @@ def exportar_excel_examenes_segundo_anio(request):
             fila = [
                 examen.dni, examen.apellidos, examen.nombres, examen.cueanexo, examen.grado,
                 examen.division, examen.region,
-                examen.puntaje_preg1a, examen.puntaje_preg1b, 
-                examen.puntaje_preg2a, examen.puntaje_preg2b, 
-                examen.puntaje_preg3a, examen.puntaje_preg3b, examen.puntaje_preg3c, 
-                examen.puntaje_preg4a, examen.puntaje_preg4b, examen.puntaje_preg4c, 
-                examen.puntaje_preg5a, examen.puntaje_preg5b, examen.puntaje_preg5c,
-                examen.puntaje_preg6,                
-                examen.puntaje_preg7a, examen.puntaje_preg7b, 
-                examen.puntaje_preg8a, examen.puntaje_preg8b, examen.puntaje_preg8c,                 
-                examen.puntaje_total,
+                examen.preg1, examen.preg2, 
+                examen.preg3, examen.preg4, 
+                examen.preg5, examen.preg6a, examen.preg6b, 
+                examen.preg7, examen.preg8a, examen.preg8b, 
+                examen.preg9, examen.preg10,
             ]
             ws.append(fila)
 
@@ -124,7 +116,7 @@ def exportar_excel_examenes_segundo_anio(request):
     response['Content-Disposition'] = 'attachment; filename=examenes_matematica_segundo_anio.xlsx'
     wb.save(response)
     return response
-
+    
 @login_required
 def examen_segundo_detalle_modal(request, pk):
     examen = get_object_or_404(ExamenMatematicaSegundoAnio, pk=pk)
@@ -217,19 +209,16 @@ def exportar_pdf_segundo_anio(request, n_dni):
 
     # Campos de ítems
     item_fields = [
-    "puntaje_preg1a", "puntaje_preg1b", 
-    "puntaje_preg2a", "puntaje_preg2b", 
-    "puntaje_preg3a", "puntaje_preg3b", "puntaje_preg3c", 
-    "puntaje_preg4a", "puntaje_preg4b", "puntaje_preg4c", 
-    "puntaje_preg5a", "puntaje_preg5b", "puntaje_preg5c",
-    "puntaje_preg6",    
-    "puntaje_preg7a", "puntaje_preg7b", 
-    "puntaje_preg8a", "puntaje_preg8b", "puntaje_preg8c"
+    "preg1", "preg2", 
+    "preg3", "preg4", 
+    "preg5", "preg6a", "preg6b", 
+    "preg7", "preg8a", "preg8b", 
+    "preg9", "preg10"
 ]
 
 
     # Calcular puntaje total
-    total_puntaje = sum(getattr(examen, campo, 0) or 0 for campo in item_fields)
+    #total_puntaje = sum(getattr(examen, campo, 0) or 0 for campo in item_fields)
 
     # Logging detallado
     logger.info(f"""
@@ -241,7 +230,7 @@ CUE: {examen.cueanexo}
 Región: {examen.region}
 Grado: {examen.grado}
 División: {examen.division}
-Puntaje total: {total_puntaje}
+
 """)
     for i, campo in enumerate(item_fields, start=1):
         valor = getattr(examen, campo, 0) or 0
@@ -256,7 +245,7 @@ CUE: {examen.cueanexo}
 Región: {examen.region}
 Año: {examen.grado}
 División: {examen.division}
-Puntaje total: {total_puntaje}
+
 Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 Puntajes por ítem:"""
 
@@ -291,7 +280,7 @@ Puntajes por ítem:"""
         f"Región: {examen.region}",
         f"Año: {examen.grado}",
         f"División: {examen.division}",
-        f"Puntaje total: {total_puntaje}",
+        
         f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         "Puntajes por ítem:"
     ]

@@ -1440,6 +1440,97 @@ class VistaComprensionTerceroReg(models.Model):
 ################################
 
 class ExamenMatematicaQuintoGrado(models.Model):
+    
+    PREG1_CHOICES = [
+        ('3','3'),  
+        ('0','0'),  
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG2_CHOICES = [
+        ('5','5'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG3_CHOICES = [
+        ('5','5'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG4_CHOICES = [
+        ('6','6'),
+        ('4','4'),
+        ('2','2'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]   
+    
+    PREG5_CHOICES = [
+        ('6','6'),
+        ('4','4'),
+        ('2','2'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG6_CHOICES = [
+        ('5','5'),     
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG7_CHOICES = [
+        ('5','5'),     
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG8_CHOICES = [
+        ('9','9'), 
+        ('6','6'),
+        ('3','3'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG9_CHOICES = [
+        ('2','2'),
+        ('3','3'),
+        ('4','4'),
+        ('5','5'),
+        ('6','6'),
+        ('7','7'),
+        ('8','8'),
+        ('10','10'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG10_CHOICES = [
+        ('15','15'),
+        ('10','10'),
+        ('5','5'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG11_CHOICES = [
+        ('15','15'),
+        ('10','10'),
+        ('5','5'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG12_CHOICES = [
+        ('16','16'),
+        ('8','8'),  
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
     dni = models.CharField(max_length=8, verbose_name='DNI')  
     apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
     nombres = models.CharField(max_length=255, verbose_name='Nombres')
@@ -1449,36 +1540,19 @@ class ExamenMatematicaQuintoGrado(models.Model):
     region=models.CharField(max_length=25, verbose_name='Regional')
     discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
     etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
-    preg1a = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 A')
-    preg1b = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 B')
-    preg1c = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 C')
-    preg1d = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 1 D')
-    preg2a = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 A')
-    preg2b = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 B')
-    preg2c = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 C')
-    preg2d = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 2 D')
-    preg3a = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 A')
-    preg3b = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 B')
-    preg3c = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 C')
-    preg3d = models.IntegerField(validators=[MaxValueValidator(999)], verbose_name='Pregunta 3 D')
-    preg4a = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 4 A')
-    preg4b = models.CharField(max_length=25, choices=LADOS, verbose_name='Pregunta 4 B')
-    preg4c = models.CharField(max_length=25, choices=VERTICES, verbose_name='Pregunta 4 C')
-    preg4d = models.CharField(max_length=2, choices=ALTERNATIVA, verbose_name='Pregunta 4 D')
-    preg5 = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 5')
-    preg6a = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 6 A')
-    preg6b = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 6 B')
-    preg6c = models.CharField(max_length=25, choices=FIGURAS, verbose_name='Pregunta 6 C')
-    preg7a = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 A')
-    preg7b = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 B')
-    preg7c = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 C')
-    preg7d = models.CharField(max_length=25, choices=UNIDADES, verbose_name='Pregunta 7 D')
-    preg8a = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 A')
-    preg8b = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 B')
-    preg8c = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 C')
-    preg8d = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 8 D')
-    preg9a = models.CharField(max_length=50, choices=PLANTEO, verbose_name='Pregunta 9 Planteo')
-    preg9b = models.CharField(max_length=50, choices=SOLUCION, verbose_name='Pregunta 9 Solución')   
+    preg1 = models.CharField(max_length=25, choices=PREG1_CHOICES, verbose_name='Pregunta 1')
+    preg2 = models.CharField(max_length=25, choices=PREG2_CHOICES, verbose_name='Pregunta 2')
+    preg3 = models.CharField(max_length=25, choices=PREG3_CHOICES, verbose_name='Pregunta 3')
+    preg4 = models.CharField(max_length=25, choices=PREG4_CHOICES, verbose_name='Pregunta 4')
+    preg5 = models.CharField(max_length=25, choices=PREG5_CHOICES, verbose_name='Pregunta 5')
+    preg6 = models.CharField(max_length=25, choices=PREG6_CHOICES, verbose_name='Pregunta 6')
+    preg7 = models.CharField(max_length=25, choices=PREG7_CHOICES, verbose_name='Pregunta 7')
+    preg8 = models.CharField(max_length=25, choices=PREG8_CHOICES, verbose_name='Pregunta 8')
+    preg9 = models.CharField(max_length=25, choices=PREG9_CHOICES, verbose_name='Pregunta 9')
+    preg10 = models.CharField(max_length=25, choices=PREG10_CHOICES, verbose_name='Pregunta 10')
+    preg11 = models.CharField(max_length=25, choices=PREG11_CHOICES, verbose_name='Pregunta 11')
+    preg12 = models.CharField(max_length=25, choices=PREG12_CHOICES, verbose_name='Pregunta 12')
+    
     
     class Meta:
         verbose_name = "Examen Matematica Quinto Grado"
@@ -1544,37 +1618,18 @@ class VistaResultadoMatematicaQuinto(models.Model):
     region=models.CharField(max_length=25, verbose_name='Regional')
     discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
     etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
-    puntaje_preg1a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 A')
-    puntaje_preg1b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 B')
-    puntaje_preg1c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 C')
-    puntaje_preg1d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 D')
-    puntaje_preg2a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 2 A')
-    puntaje_preg2b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 B')
-    puntaje_preg2c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 C')
-    puntaje_preg2d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 D')
-    puntaje_preg3a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 A')
-    puntaje_preg3b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 B')
-    puntaje_preg3c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 C')
-    puntaje_preg3d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 D')
-    puntaje_preg4a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 A')
-    puntaje_preg4b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 B')
-    puntaje_preg4c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 C')
-    puntaje_preg4d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 D')
-    puntaje_preg5 = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 5')
-    puntaje_preg6a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 6 A')
-    puntaje_preg6b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 6 B')
-    puntaje_preg6c = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 6 C')
-    puntaje_preg7a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 7 A')
-    puntaje_preg7b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 7 B')
-    puntaje_preg7c = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 7 C')
-    puntaje_preg7d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 7 D')
-    puntaje_preg8a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 A')
-    puntaje_preg8b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 B')
-    puntaje_preg8c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 C')
-    puntaje_preg8d = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 D')
-    puntaje_preg9a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 9 Planteo')
-    puntaje_preg9b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 9 Solución')   
-    puntaje_total = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Puntaje Total')
+    preg1 = models.CharField(max_length=25, verbose_name='Pregunta 1')
+    preg2 = models.CharField(max_length=25, verbose_name='Pregunta 2')
+    preg3 = models.CharField(max_length=25,verbose_name='Pregunta 3')
+    preg4 = models.CharField(max_length=25, verbose_name='Pregunta 4')
+    preg5 = models.CharField(max_length=25,verbose_name='Pregunta 5')
+    preg6 = models.CharField(max_length=25, verbose_name='Pregunta 6')
+    preg7 = models.CharField(max_length=25, verbose_name='Pregunta 7')
+    preg8 = models.CharField(max_length=25, verbose_name='Pregunta 8')
+    preg9 = models.CharField(max_length=25, verbose_name='Pregunta 9')
+    preg10 = models.CharField(max_length=25, verbose_name='Pregunta 10')
+    preg11 = models.CharField(max_length=25, verbose_name='Pregunta 11')
+    preg12 = models.CharField(max_length=25, verbose_name='Pregunta 12')    
     
     class Meta:
         managed=False
@@ -1583,7 +1638,7 @@ class VistaResultadoMatematicaQuinto(models.Model):
         db_table = "v_resultado_matematica_quinto"
 
     def __str__(self):
-        return f'{self.dni} {self.apellidos} {self.nombres} {self.puntaje_total}'
+        return f'{self.dni} {self.apellidos} {self.nombres} {self.cueanexo}'
 
 
 class VistaMatematicaQuinto(models.Model):
@@ -1608,6 +1663,84 @@ class VistaMatematicaQuinto(models.Model):
 ################################
 
 class ExamenMatematicaSegundoAnio(models.Model):
+    PREG1_CHOICES = [
+        ('5','5'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG2_CHOICES = [
+        ('10','10'),
+        ('6','6'),
+        ('3','3'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG3_CHOICES = [
+        ('5','5'),
+        ('0','0'), 
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG4_CHOICES = [
+        ('10','10'),
+        ('3','3'),
+        ('2','2'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG5_CHOICES = [
+        ('10','10'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG6A_CHOICES = [
+        ('5','5'),
+        ('0','0'),  
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG6B_CHOICES = [
+        ('5','5'),
+        ('0','0'),  
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG7_CHOICES = [
+        ('10','10'),
+        ('0','0'),  
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG8A_CHOICES = [
+        ('5','5'),
+        ('2.5','2.5'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG8B_CHOICES = [
+        ('10','10'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG9_CHOICES = [
+        ('10','10'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+    
+    PREG10_CHOICES = [
+        ('15','15'),
+        ('10','10'),
+        ('0','0'),
+        ('Ausente','Ausente'),
+    ]
+        
     dni = models.CharField(max_length=8, verbose_name='DNI')  
     apellidos = models.CharField(max_length=255, verbose_name='Apellidos')
     nombres = models.CharField(max_length=255, verbose_name='Nombres')
@@ -1617,27 +1750,20 @@ class ExamenMatematicaSegundoAnio(models.Model):
     region=models.CharField(max_length=25, verbose_name='Regional')
     discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
     etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
-    preg1a = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 1 A')
-    preg1b = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 1 B')
-    preg2a = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 2 A')
-    preg2b = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 2 B')
-    preg3a = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 3 A')
-    preg3b = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 3 B')
-    preg3c = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 3 C')
-    preg4a = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 4 A')
-    preg4b = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 4 B')
-    preg4c = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 4 C')
-    preg5a = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 5 A')
-    preg5b = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 5 B')
-    preg5c = models.CharField(max_length=1, choices=VERDADERO, verbose_name='Pregunta 5 C')
-    preg6 = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 6')    
-    preg7a = models.CharField(max_length=60, choices=RESOL_RPTA, verbose_name='Pregunta 7 A')
-    preg7b = models.CharField(max_length=60, choices=RESOL_RPTA, verbose_name='Pregunta 7 B')
-    preg8a = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 8 Gráfico')
-    preg8b = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 8 Desarrollo')
-    preg8c = models.CharField(max_length=25, choices=RESPUESTA, verbose_name='Pregunta 8 Respuesta')
+    preg1 = models.CharField(max_length=25, choices=PREG1_CHOICES, verbose_name='Pregunta 1')    
+    preg2 = models.CharField(max_length=25, choices=PREG2_CHOICES, verbose_name='Pregunta 2')
+    preg3 = models.CharField(max_length=25, choices=PREG3_CHOICES, verbose_name='Pregunta 3')
+    preg4 = models.CharField(max_length=25, choices=PREG4_CHOICES, verbose_name='Pregunta 4')
+    preg5 = models.CharField(max_length=25, choices=PREG5_CHOICES, verbose_name='Pregunta 5')
+    preg6a = models.CharField(max_length=25, choices=PREG6A_CHOICES, verbose_name='Pregunta 6 A')
+    preg6b = models.CharField(max_length=25, choices=PREG6B_CHOICES, verbose_name='Pregunta 6 B')    
+    preg7 = models.CharField(max_length=25, choices=PREG7_CHOICES, verbose_name='Pregunta 7')
+    preg8a = models.CharField(max_length=25, choices=PREG8A_CHOICES, verbose_name='Pregunta 8 A')
+    preg8b = models.CharField(max_length=25, choices=PREG8B_CHOICES, verbose_name='Pregunta 8 B')
+    preg9 = models.CharField(max_length=25, choices=PREG9_CHOICES, verbose_name='Pregunta 9')
+    preg10 = models.CharField(max_length=25, choices=PREG10_CHOICES, verbose_name='Pregunta 10')
        
-    
+           
     class Meta:
         verbose_name = "Examen Matematica Segundo Anio"
         verbose_name_plural = "Examenes Matematica Segundo Anio"
@@ -1723,26 +1849,18 @@ class VistaResultadoMatematicaSegundoAnio(models.Model):
     region=models.CharField(max_length=25, verbose_name='Regional')
     discapacidad=models.CharField(max_length=2, choices=DISCAPACIDAD,verbose_name='Discapacidad')
     etnia=models.CharField(max_length=10, choices=ETNIA,verbose_name='Etnia')
-    puntaje_preg1a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 A')
-    puntaje_preg1b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 1 B')    
-    puntaje_preg2a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 2 A')
-    puntaje_preg2b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 2 B')    
-    puntaje_preg3a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 A')
-    puntaje_preg3b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 B')
-    puntaje_preg3c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 3 C')    
-    puntaje_preg4a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 A')
-    puntaje_preg4b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 B')
-    puntaje_preg4c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 4 C')    
-    puntaje_preg5a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 5 A')
-    puntaje_preg5b = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 5 B')
-    puntaje_preg5c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 5 C')
-    puntaje_preg6 = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 6')
-    puntaje_preg7a = models.DecimalField(max_digits=4, decimal_places=2,verbose_name='Pregunta 7 A')
-    puntaje_preg7b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 7 B')
-    puntaje_preg8a = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 A')
-    puntaje_preg8b = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 B')
-    puntaje_preg8c = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Pregunta 8 C')    
-    puntaje_total = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Puntaje Total')
+    preg1 = models.CharField(max_length=25, verbose_name='Pregunta 1')    
+    preg2 = models.CharField(max_length=25, verbose_name='Pregunta 2')
+    preg3 = models.CharField(max_length=25, verbose_name='Pregunta 3')
+    preg4 = models.CharField(max_length=25, verbose_name='Pregunta 4')   
+    preg5 = models.CharField(max_length=25, verbose_name='Pregunta 5')
+    preg6a = models.CharField(max_length=25,verbose_name='Pregunta 6 A')
+    preg6b = models.CharField(max_length=25,verbose_name='Pregunta 6 B')
+    preg7 = models.CharField(max_length=25, verbose_name='Pregunta 7')
+    preg8a = models.CharField(max_length=25, verbose_name='Pregunta 8 A')
+    preg8b = models.CharField(max_length=25, verbose_name='Pregunta 8 B')
+    preg9 = models.CharField(max_length=25, verbose_name='Pregunta 9')    
+    preg10 = models.CharField(max_length=25, verbose_name='Puntaje 10')
     
     class Meta:
         managed=False
@@ -1751,7 +1869,7 @@ class VistaResultadoMatematicaSegundoAnio(models.Model):
         db_table = "v_resultado_matematica_segundo_anio"
 
     def __str__(self):
-        return f'{self.dni} {self.apellidos} {self.nombres} {self.puntaje_total}'
+        return f'{self.dni} {self.apellidos} {self.nombres} {self.cueanexo}'
 
 
 class VistaMatematicaSegundoAnio(models.Model):

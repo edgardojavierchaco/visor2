@@ -17,25 +17,22 @@ def videoteca(request):
     
     videos=[
         {
-            'titulo': 'Estadísticas Educativas',
-            'url':'https://youtu.be/m5r-nDNGhnI?si=4Td51_DC7PY9Emnp',
+            'titulo': 'Carga de Relevamiento Anual 2025',
+            'url':'https://youtu.be/ZxVp6hDHybY?si=J2iZSQ7Dq3cYCAy4',
         },
         {
-            'titulo': 'Administración de Personal',
-            'url':'https://youtu.be/VcDAPC2lSfU?si=uUzDn0IT7K2D7njy',
+            'titulo': 'SiNIDE - SGE',
+            'url':'https://youtu.be/x60jrnhJFNQ?si=QXcqEwLl6WXs2nWu',
         },
         {
-            'titulo': 'Asistencia',
-            'url':'https://youtu.be/W7agb4AN4Cc?si=EcDPQZS4QnzWy7Wx',
+            'titulo': 'SGE - Primeros Pasos',
+            'url':'https://youtu.be/11lXVxLXu2Q?si=-5bSutfjDGXeBETZ',
         },
         {
-            'titulo': 'Calificación',
-            'url':'https://youtu.be/PBD-zeI8nkM?si=OluVS00C6E7KDsxY',
+            'titulo': 'ReNPE - Primeros Pasos',
+            'url':'https://www.canva.com/design/DAGxLefxMWg/xsHOarBHXMmxdGe3bkjwSg/view?utm_content=DAGxLefxMWg&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h3264040a97#20',
         },
-        {
-            'titulo': 'Control de Secciones',
-            'url':'https://youtu.be/m8CCsNWD9F4?si=eL8Hw46wFNG-4KES',
-        },        
+        
     ]
     
     contexto={'videos':videos}
