@@ -1,0 +1,14 @@
+{% extends "dashboard/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Glosario de Conceptos</h2>
+    <ul class="list-group mt-3">
+        {% for concepto in conceptos %}
+        <li class="list-group-item">
+            <h5>{{ concepto.termino }}</h5>
+            <p>{{ concepto.definicion|linebreaks }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+[
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 1,
+    "fields": {
+      "termino": "Condición de actividad",
+      "definicion": "Es la situación laboral del personal educativo, docente y no docente, referida al ejercicio de su función o designación en los establecimientos educativos, en distintas situaciones de revista y percibiendo o no un sueldo. Se clasifica en activas o pasivas, con categorías específicas en cada grupo.",
+      "orden": 1
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 2,
+    "fields": {
+      "termino": "Activo",
+      "definicion": "Personal educativo que percibe haberes según su designación o función. Incluye estados: en actividad, tareas pasivas, licencias con goce, disponibilidad con goce, suspendido con goce, comisiones de servicio (léase afectación) con goce.",
+      "orden": 2
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 3,
+    "fields": {
+      "termino": "Pasivo",
+      "definicion": "Personal educativo que no percibe haberes según su designación o función. Incluye estados: licencias sin goce, disponibilidad sin goce, comisiones de servicio en otras instituciones, suspendido sin goce, funciones públicas electivas.",
+      "orden": 3
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 4,
+    "fields": {
+      "termino": "Designación",
+      "definicion": "Acto administrativo por el cual el personal educativo desempeña sus actividades en establecimientos educativos o unidades de gestión central (Regionales Educativas). Puede ser por cargo, horas cátedra o módulos.",
+      "orden": 4
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 5,
+    "fields": {
+      "termino": "Función educativa",
+      "definicion": "Conjunto de tareas efectivamente desarrolladas por el personal educativo. Puede coincidir o no con la designación. Se clasifica en: frente a alumnos, directiva, supervisión, apoyo pedagógico, apoyo técnico profesional y no docente.",
+      "orden": 5
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 6,
+    "fields": {
+      "termino": "Planta Orgánico Funcional (POF)",
+      "definicion": "Conjunto de cargos, horas cátedra y módulos asignados administrativa y presupuestariamente a cada establecimiento educativo. Todo cambio debe aprobarlo la autoridad competente.",
+      "orden": 6
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 7,
+    "fields": {
+      "termino": "Fuera de la POF",
+      "definicion": "Personal que desempeña tareas en los establecimientos, pero cuyos cargos no están contemplados legal ni presupuestariamente en la institución, aunque formalmente están afectados a ella.",
+      "orden": 7
+    }
+  },
+  {
+    "model": "ayudarenpe.concepto",
+    "pk": 8,
+    "fields": {
+      "termino": "Situación de revista",
+      "definicion": "Condición contractual vinculada a la designación. Puede ser dentro de POF (titular, interino, suplente) o fuera de POF (contratados, planta permanente, jornalizados).",
+      "orden": 8
+    }
+  }
+]

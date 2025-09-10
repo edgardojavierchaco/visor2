@@ -65,6 +65,7 @@ LOCAL_APPS = [
     'apps.operativoschaco',
     'apps.operativchaco',
     'apps.consultas',
+    'apps.ayudarenpe',
 ]
 
 
@@ -127,7 +128,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public,operativoschaco,indicadores,pem,cenpe,pof'
+            'options': '-c search_path=cenpe,public,operativoschaco,indicadores,pem,pof'
         }
     }
 }
