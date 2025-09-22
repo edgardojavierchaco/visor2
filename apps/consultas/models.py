@@ -97,6 +97,7 @@ class Consulta(models.Model):
         verbose_name = 'ConsultaSGE'
         verbose_name_plural = 'ConsultasSGE'
         db_table = 'consultas_sge'
+        ordering = ['-fecha']
 
 
 class ConsultaRenpe(models.Model):

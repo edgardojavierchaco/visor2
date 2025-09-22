@@ -25,3 +25,9 @@ def DepGestorPortada(request):
     """
     
     return render(request, 'archivos/base/dashboard.html')
+
+
+@cache_control(no_cache=True, must_revalidate=True)
+@login_required
+def DepGestorPortadaRenpe(request):
+    return render(request, 'archivos/base/dashboard_renpe.html')

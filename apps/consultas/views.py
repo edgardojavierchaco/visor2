@@ -7,6 +7,11 @@ from django.utils import timezone
 from .forms import ConsultaForm, ConsultaRenpeForm
 from .models import Consulta, ConsultaRenpe
 from apps.usuarios.models import UsuariosVisualizador
+import datetime
+from django.http import HttpResponse
+from openpyxl import Workbook
+from django.utils.dateparse import parse_date
+
 
 def enviar_email(subject, message, from_user, password, recipient_list):
     connection = get_connection(
@@ -112,3 +117,129 @@ def actualizar_estado(request, consulta_id):
             })
         return JsonResponse({'status': 'error', 'message': 'El estado ya es Solucionado'})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido'})
+
+
+def exportar_excel(request):
+    desde = request.GET.get("desde")
+    hasta = request.GET.get("hasta")
+
+    try:
+        fecha_desde = parse_date(desde)
+        fecha_hasta = parse_date(hasta)
+        # incluir todo el día final
+        fecha_hasta = fecha_hasta + datetime.timedelta(days=1)
+    except:
+        return HttpResponse("Fechas inválidas", status=400)
+
+    # Filtrar consultas por rango
+    consultas = Consulta.objects.filter(fecha__range=[fecha_desde, fecha_hasta])
+
+    # Crear workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Consultas"
+
+    # Encabezados
+    columnas = ["Fecha", "CUEANEXO", "Nombre", "Regional", "Nivel", "Módulo", "Email", "Mensaje", "Estado"]
+    ws.append(columnas)
+
+    # Filas
+    for c in consultas:
+        ws.append([
+            c.fecha.strftime("%d/%m/%Y %H:%M"),
+            c.cueanexo,
+            c.apellido_nombre,
+            c.regional,
+            c.nivel_modalidad,
+            c.sge_modulo,
+            c.email,
+            c.mensaje,
+            c.estado,
+        ])
+
+    # Preparar respuesta HTTP
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response['Content-Disposition'] = f'attachment; filename=consultas_{desde}_a_{hasta}.xlsx'
+    wb.save(response)
+    return response
+
+
+#################################################
+#                       RENPE                   #
+#################################################
+def monitoreo_consultas_renpe(request):
+    consultas_renpe = ConsultaRenpe.objects.all().order_by('-fecha')
+    return render(request, 'consultas/monitoreo_consultas_renpe.html', {'consultas': consultas_renpe})
+
+def actualizar_estado_renpe(request, consulta_id):
+    if request.method == 'POST':
+        consulta_renpe = get_object_or_404(ConsultaRenpe, id=consulta_id)
+        
+        # Obtenemos usuario desde la tabla personalizada
+        usuario_logueado = None
+        if request.user.is_authenticated:
+            usuario_logueado = UsuariosVisualizador.objects.filter(
+                username=request.user.username
+            ).first()
+            
+        if consulta_renpe.estado == 'Pendiente':
+            consulta_renpe.estado = 'Solucionado'
+            consulta_renpe.estado_usuario = f"{usuario_logueado.apellido}, {usuario_logueado.nombres}" if usuario_logueado else "Anónimo"
+            consulta_renpe.estado_fecha = timezone.now()
+            consulta_renpe.save()
+            return JsonResponse({
+                'status': 'success',
+                'nuevo_estado': consulta_renpe.estado,
+                'usuario': consulta_renpe.estado_usuario,
+                'fecha': consulta_renpe.estado_fecha.strftime('%d/%m/%Y %H:%M')
+            })
+        return JsonResponse({'status': 'error', 'message': 'El estado ya es Solucionado'})
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'})
+
+
+def exportar_excel_renpe(request):
+    desde = request.GET.get("desde")
+    hasta = request.GET.get("hasta")
+
+    try:
+        fecha_desde = parse_date(desde)
+        fecha_hasta = parse_date(hasta)
+        # incluir todo el día final
+        fecha_hasta = fecha_hasta + datetime.timedelta(days=1)
+    except:
+        return HttpResponse("Fechas inválidas", status=400)
+
+    # Filtrar consultas por rango
+    consultas_renpe = ConsultaRenpe.objects.filter(fecha__range=[fecha_desde, fecha_hasta])
+
+    # Crear workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Consultas"
+
+    # Encabezados
+    columnas = ["Fecha", "CUEANEXO", "Regional", "Módulo", "Apellido y Nombre", "Email", "Mensaje", "Estado"]
+    ws.append(columnas)
+
+    # Filas
+    for c in consultas_renpe:
+        ws.append([
+            c.fecha.strftime("%d/%m/%Y %H:%M"),
+            c.cueanexo,
+            c.apellido_nombre,
+            c.regional,
+            c.renpe_modulo,
+            c.email,
+            c.mensaje,
+            c.estado,
+        ])
+
+    # Preparar respuesta HTTP
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response['Content-Disposition'] = f'attachment; filename=consultas_{desde}_a_{hasta}.xlsx'
+    wb.save(response)
+    return response

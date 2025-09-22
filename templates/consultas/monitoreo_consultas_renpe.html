@@ -12,7 +12,7 @@
 <body class="bg-light">
 
 <div class="container mt-5">
-    <h2 class="mb-4 text-center">Monitoreo de Consultas SGE</h2>
+    <h2 class="mb-4 text-center">Monitoreo de Consultas ReNPE</h2>
 
     <!-- Botones arriba -->
     <div class="mb-3 d-flex justify-content-between align-items-center">
@@ -38,7 +38,6 @@
                 <th>CUEANEXO</th>
                 <th>Nombre</th>
                 <th>Regional</th>
-                <th>Nivel</th>
                 <th>Módulo</th>
                 <th>Email</th>
                 <th>Mensaje</th>
@@ -53,8 +52,7 @@
                 <td>{{ c.cueanexo }}</td>
                 <td>{{ c.apellido_nombre }}</td>
                 <td>{{ c.regional }}</td>
-                <td>{{ c.nivel_modalidad }}</td>
-                <td>{{ c.sge_modulo }}</td>
+                <td>{{ c.renpe_modulo }}</td>
                 <td>{{ c.email }}</td>
                 <td>{{ c.mensaje }}</td>
                 <td id="estado-{{ c.id }}">
@@ -65,7 +63,7 @@
                 </td>
                 <td>
                     {% if c.estado == "Pendiente" %}
-                    <button class="btn btn-success btn-sm actualizar-estado" data-id="{{ c.id }}">Marcar Solucionado</button>
+                    <button class="btn btn-success btn-sm actualizar-estado-renpe" data-id="{{ c.id }}">Marcar Solucionado</button>
                     {% else %}
                     <span class="text-success">✔ Solucionado</span>
                     {% endif %}
@@ -96,12 +94,12 @@ $(document).ready(function() {
     });
 
     // Cambiar estado vía AJAX
-    $('.actualizar-estado').click(function(){
+    $('.actualizar-estado-renpe').click(function(){
         let consultaId = $(this).data('id');
         let boton = $(this);
 
         $.ajax({
-            url: "{% url 'consultas_api:actualizar_estado' 0 %}".replace('0', consultaId),
+            url: "{% url 'consultas_api:actualizar_estado_renpe' 0 %}".replace('0', consultaId),
             type: "POST",
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             success: function(response){
@@ -131,7 +129,7 @@ $(document).ready(function() {
             return;
         }
 
-        let url = "{% url 'consultas_api:exportar_excel' %}" + "?desde=" + desde + "&hasta=" + hasta;
+        let url = "{% url 'consultas_api:exportar_excel_renpe' %}" + "?desde=" + desde + "&hasta=" + hasta;
         window.location.href = url;
     });
 });

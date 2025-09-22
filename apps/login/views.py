@@ -83,6 +83,10 @@ class LoginFormView(LoginView):
             funcionarios_group=Group.objects.get(name='Supervisor')
             if funcionarios_group in user.groups.all():
                 return reverse('operativo:portada_supervisor')
+            
+            funcionarios_group=Group.objects.get(name='Renpe')
+            if funcionarios_group in user.groups.all():
+                return reverse('archivos:portada_gestor_renpe')
                 
             if not user.groups.exists():
                 return settings.LOGIN_REDIRECT_URL            

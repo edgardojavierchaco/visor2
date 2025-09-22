@@ -1,7 +1,7 @@
 from apps.biblioteca.models import FocalLicDocentes
 from config.urls import path
 from apps.archivar.views import *
-from apps.archivar.views_portada import DepGestorPortada
+from apps.archivar.views_portada import DepGestorPortada, DepGestorPortadaRenpe
 from .views_listdocnodoc import DocentePonMensualListView, NoDocentePonMensualListView, DocentePonMensualSumaListView
 from .views_reporteinformes import generar_informe, generar_informe_list
 from .view_supervisorexport import export_supervisores_excel
@@ -44,6 +44,7 @@ urlpatterns=[
     path('editar/<int:pk>/',editar_archivos.as_view(),name='editar'), 
     path('eliminar/<int:pk>/',EliminarArchivosView.as_view(),name='eliminar'), 
     path('portada_gestor/',DepGestorPortada,name='portada_gestor'),
+    path('portada_gestor_renpe/',DepGestorPortadaRenpe,name='portada_gestor_renpe'),
     
     # Nómina Docentes y no Docentes
     path('nom_doc/', DocentePonMensualListView.as_view(), name='nom_doc'),

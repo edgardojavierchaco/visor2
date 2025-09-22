@@ -69,18 +69,18 @@
         <a href="{{ list_url }}" class="btn btn-success btn-flat">
             <i class="fas fa-sync"></i> Actualizar
         </a>
-        <a href="#" class="btn btn-danger btn-flat" id="btnCerrarCarga" data-bs-toggle="modal" data-bs-target="#modalCerrarCarga">
+        {% comment %} <a href="#" class="btn btn-danger btn-flat" id="btnCerrarCarga" data-bs-toggle="modal" data-bs-target="#modalCerrarCarga">
             <i class="fas fa-lock"></i> Cerrar Carga
-        </a>         
+        </a>   {% endcomment %}       
         <div><br></div>
-        <div class="alert alert-warning d-flex align-items-center p-3 rounded shadow-sm" role="alert">
+        {% comment %} <div class="alert alert-warning d-flex align-items-center p-3 rounded shadow-sm" role="alert">
           <img src="https://i.gifer.com/7efs.gif" alt="Advertencia" width="50" class="me-3" style="border-radius: 8px;">
             <div>
               <p class="mb-0">
                 El botón <strong>"Cerrar Carga"</strong> es para cerrar <strong>luego de cargar los Resultados de TODAS LAS DIVISIONES</strong> y generar el PDF correspondiente.
               </p>
             </div>
-        </div>
+        </div> {% endcomment %}
 
     {% endblock %}
 </div>
@@ -102,7 +102,7 @@
 </div>
 
 <!-- Modal Cierre de Carga -->
-<div class="modal fade" id="modalCerrarCarga" tabindex="-1" aria-labelledby="modalCerrarCargaLabel" aria-hidden="true">
+{% comment %} <div class="modal fade" id="modalCerrarCarga" tabindex="-1" aria-labelledby="modalCerrarCargaLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form method="post" action="{% url 'operativ:cerrar_carga_matem_segundo_anio' %}" id="formCerrarCarga">
       {% csrf_token %}
@@ -126,7 +126,7 @@
       </div>
     </form>
   </div>
-</div>
+</div> {% endcomment %}
 
 <!-- Bootstrap 5 + DataTables -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
