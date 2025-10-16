@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot ReNPE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .chat-container {
+            max-width: 700px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .chat-box {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: #fdfdfd;
+        }
+        .message {
+            display: flex;
+            align-items: flex-end;
+            margin: 10px 0;
+        }
+        .message.user { justify-content: flex-end; }
+        .message.bot { justify-content: flex-start; }
+        .message .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        .message .bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin: 0 10px;
+            word-wrap: break-word;
+        }
+        .message.user .bubble { background: #0d6efd; color: white; }
+        .message.bot .bubble { background: #e9ecef; color: black; }
+        .suggestion-card { margin-top: 10px; }
+        .spinner-container { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <h4 class="text-center mb-3">🤖 Chatbot ReNPE</h4>
+
+    <div class="chat-box" id="chat-box"></div>
+
+    <div class="input-group">
+        <input type="text" id="user-input" class="form-control" placeholder="Escribí tu consulta...">
+        <button class="btn btn-primary" onclick="sendMessage()">Enviar</button>
+    </div>
+</div>
+
+<script>
+const botAvatar = "https://i.ibb.co/zm9Px2m/bot-avatar.png"; 
+const userAvatar = "https://i.ibb.co/ZmZ2p0m/user-avatar.png"; 
+
+// URL dinámica del endpoint API usando Django template tag
+const chatbotApiUrl = "{% url 'ayuda:chatbot_api' %}";
+
+function scrollToBottom() {
+    const chatBox = document.getElementById("chat-box");
+    chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+}
+
+function appendMessage(text, sender="bot") {
+    const chatBox = document.getElementById("chat-box");
+    const div = document.createElement("div");
+    div.classList.add("message", sender);
+    div.innerHTML = `
+        <img src="${sender === 'bot' ? botAvatar : userAvatar}" class="avatar">
+        <div class="bubble">${text}</div>
+    `;
+    chatBox.appendChild(div);
+    scrollToBottom();
+}
+
+function appendSpinner() {
+    const chatBox = document.getElementById("chat-box");
+    const spinnerId = "spinner-" + Date.now();
+    const div = document.createElement("div");
+    div.classList.add("spinner-container");
+    div.id = spinnerId;
+    div.innerHTML = `
+        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+        <span>🤖 Pensando...</span>
+    `;
+    chatBox.appendChild(div);
+    scrollToBottom();
+    return spinnerId;
+}
+
+function removeSpinner(spinnerId) {
+    const spinner = document.getElementById(spinnerId);
+    if (spinner) spinner.remove();
+}
+
+function clearSuggestions() {
+    const chatBox = document.getElementById("chat-box");
+    const cards = chatBox.querySelectorAll(".suggestion-card");
+    cards.forEach(c => c.remove());
+}
+
+function sendMessage(pregunta = null) {
+    const input = document.getElementById("user-input");
+    const userMessage = pregunta || input.value.trim();
+    if (!userMessage) return;
+
+    clearSuggestions();
+    appendMessage(userMessage, "user");
+    input.value = "";
+
+    const spinnerId = appendSpinner();
+
+    fetch(`${chatbotApiUrl}?q=${encodeURIComponent(userMessage)}`)
+        .then(r => r.json())
+        .then(data => {
+            removeSpinner(spinnerId);
+            appendMessage(data.respuesta, "bot");
+
+            if (data.sugerencias) {
+                data.sugerencias.forEach(s => {
+                    const chatBox = document.getElementById("chat-box");
+                    const card = document.createElement("div");
+                    card.classList.add("card", "suggestion-card");
+
+                    const preguntaEscapada = s.pregunta.replace(/'/g, "\\'");
+
+                    card.innerHTML = `
+                        <div class="card-body">
+                            <p class="card-text"><b>❓ ${s.pregunta}</b></p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="sendMessage('${preguntaEscapada}')">Preguntar esto</button>
+                        </div>
+                    `;
+                    chatBox.appendChild(card);
+                    scrollToBottom();
+                });
+            }
+        })
+        .catch(() => {
+            removeSpinner(spinnerId);
+            appendMessage("⚠️ Hubo un error al procesar tu consulta.", "bot");
+        });
+}
+
+document.getElementById("user-input").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+</script>
+</body>
+</html>
+

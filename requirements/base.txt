@@ -57,7 +57,7 @@ djangorestframework-gis==1.0
 dm-tree==0.1.8
 docutils==0.20.1
 drf-spectacular==0.26.5
-es_core_news_sm
+es-core-news-sm 
 et-xmlfile==1.1.0
 etuples==0.3.9
 exceptiongroup==1.1.2
@@ -199,3 +199,4 @@ beautifulsoup4==4.10.0
 lxml==4.6.3
 unidecode
 scikit-learn
+
