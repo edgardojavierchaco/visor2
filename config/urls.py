@@ -59,6 +59,7 @@ urlpatterns = [
     path('examendiag/',include('apps.operativchaco.urls',namespace='examendiag')),
     path('consultas/', include('apps.consultas.urls', namespace='consultas_api')),
     path('ayuda/', include('apps.ayudarenpe.urls', namespace='ayuda')),
+    path('evaluaciones_educativas/', include('apps.evaluaciones_educativas.urls', namespace='evaluaciones_educativas')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),    
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

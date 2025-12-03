@@ -1,4 +1,4 @@
-#!/home/edgardochaco/Documentos/visor2/venv/bin/python
+#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
 
 # Author:
 # Contact: grubert@users.sf.net

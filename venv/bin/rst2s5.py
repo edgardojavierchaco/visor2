@@ -1,4 +1,4 @@
-#!/home/edgardochaco/Documentos/visor2/venv/bin/python
+#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
 
 # $Id: rst2s5.py 9115 2022-07-28 17:06:24Z milde $
 # Author: Chris Liechti <cliechti@gmx.net>

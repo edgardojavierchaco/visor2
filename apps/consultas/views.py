@@ -1,16 +1,20 @@
 from django.http import JsonResponse
 from django.core.mail import send_mail, BadHeaderError, EmailMessage, get_connection
 from django.conf import settings
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from .forms import ConsultaForm, ConsultaRenpeForm
-from .models import Consulta, ConsultaRenpe
+from django.contrib import messages
+from django.core.mail import EmailMessage
+from .forms import ConsultaForm, ConsultaRenpeForm, ConsultaDocentesRenpeForm
+from .models import Consulta, ConsultaRenpe, ConsultaDocentesRenpe
 from apps.usuarios.models import UsuariosVisualizador
 import datetime
 from django.http import HttpResponse
 from openpyxl import Workbook
 from django.utils.dateparse import parse_date
+import mimetypes
+
 
 
 def enviar_email(subject, message, from_user, password, recipient_list):
@@ -243,3 +247,98 @@ def exportar_excel_renpe(request):
     response['Content-Disposition'] = f'attachment; filename=consultas_{desde}_a_{hasta}.xlsx'
     wb.save(response)
     return response
+
+
+
+
+
+def consulta_renpe_view(request):
+    if request.method == "POST":
+        form = ConsultaDocentesRenpeForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            consulta = form.save()
+
+            subject = f"Nueva Consulta RENPE – {consulta.apellido}, {consulta.nombre}"
+            body = f"""
+Nueva consulta RENPE recibida:
+
+Apellido: {consulta.apellido}
+Nombre: {consulta.nombre}
+CUIL: {consulta.cuil}
+
+Categoría: {consulta.categoria}
+
+Cuenta MiArgentina: {consulta.cuenta_miargentina}
+Ingresó MiArgentina: {consulta.ingreso_miargentina}
+Reseteo contraseña: {consulta.reseteo_contraseña_miargentina}
+Formulario sin MiArgentina: {consulta.formulario_sin_miargentina}
+
+Email de contacto: {consulta.email}
+
+Mensaje:
+{consulta.mensaje}
+
+Fecha: {consulta.fecha.strftime("%d/%m/%Y %H:%M")}
+"""
+
+            to_email = "renpechaco@gmail.com"
+
+            # Elegir cuenta de envío según la necesidad
+            if consulta.email.endswith("@chaco.gob.ar"):
+                from_email = settings.EMAIL_HOST_USER1
+                password = settings.EMAIL_HOST_PASSWORD1
+            else:
+                from_email = settings.EMAIL_HOST_USER2
+                password = settings.EMAIL_HOST_PASSWORD2
+
+            connection = get_connection(
+                backend='django.core.mail.backends.smtp.EmailBackend',
+                host=settings.EMAIL_HOST,
+                port=settings.EMAIL_PORT,
+                username=from_email,
+                password=password,
+                use_tls=settings.EMAIL_USE_TLS,
+            )
+
+            email = EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=from_email,
+                to=[to_email],
+                connection=connection
+            )
+
+            # Adjuntar imagen si existe
+            if consulta.imagen:
+                mime_type, _ = mimetypes.guess_type(consulta.imagen.name)
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+                consulta.imagen.seek(0)
+                email.attach(
+                    consulta.imagen.name,
+                    consulta.imagen.read(),
+                    mime_type
+                )
+
+            try:
+                email.send(fail_silently=False)
+                print(f">>> EMAIL ENVIADO DESDE {from_email}")
+            except Exception as e:
+                print(">>> ERROR EN ENVÍO DE EMAIL")
+                print(e)
+
+            return redirect("consultas_api:consulta_renpe_docente_exito")
+
+        else:
+            print(">>> ERRORES DEL FORMULARIO:")
+            print(form.errors)
+
+    else:
+        form = ConsultaDocentesRenpeForm()
+
+    return render(request, "consultas/consulta_renpe_docente_form.html", {"form": form})
+
+
+def consulta_renpe_exito(request):
+    return render(request, "consultas/consulta_renpe_exito.html")

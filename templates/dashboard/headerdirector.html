@@ -66,7 +66,7 @@
                 {% if comun_primaria %}         
                     <li class="nav-item dropdown">
                         <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Operativos Primaria</a>
+                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Evaluación Fluidez</a>
                         <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
                             <!--<li><a href="{% url 'oplectura:listado_alumnos' %}" class="dropdown-item">Editar Alumnos</a></li>
                             <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
@@ -77,7 +77,7 @@
                             <li>
                                 <a href="javascript:void(0);" class="dropdown-item fuera-de-termino">Cargar Aplicador</a>
                             </li> {% endcomment %}
-                            <li class="dropdown">
+                            {% comment %} <li class="dropdown">
                                 <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                 class="dropdown-item dropdown-toggle">Resultados</a>
                                 <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
@@ -94,8 +94,18 @@
                             </li>
                             <li><a href="{% url 'operative:dashboard_fluidez' %}" class="dropdown-item">Carga Evaluaciones 2° y 3°</a></li>
                             <li><a href="{% url 'operative:dashboard_matem_quinto' %}" class="dropdown-item">Carga Evaluaciones 5°</a></li>
-                            <li><a href="{% url 'archivos:listar_fluidez' %}" class="dropdown-item">Descarga Material</a></li>  
+                            <li><a href="{% url 'archivos:listar_fluidez' %}" class="dropdown-item">Descarga Material</a></li>   {% endcomment %}
+                             <li>
+                            <a
+                                href="{% url 'evaluaciones_educativas:grados' %}"
+                                class="dropdown-item"
+                                >Carga evaluación
+                            </a>
+                            </li>
                         </ul>
+                        
+                           
+                       
                     </li>
                 {% endif %}      
                 {% if comun_secundaria %}         
@@ -112,20 +122,23 @@
                         </ul>
                     </li>
                 {% endif %}    
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Relevamiento</a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'intercultural:dashboard_comun' %}" class="dropdown-item">ABM Alumnos Pueblos Originarios</a></li>
-                        {% if privado %}
-                            <li><a href="{% url 'privada:uegp_list' %}" class="dropdown-item">ABM Relevamiento</a></li> 
-                            <li><a href="{% url 'representantes:dashboard' %}" class="dropdown-item">ABM Representantes Legales</a></li>
-                        {% endif %}
-                        {% if tiene_bibliotecas %}
-                            <li><a href="{% url 'bibliotecas:dashboard' %}" class="dropdown-item">Planilla Estadística Bibliotecas</a></li>
-                        {% endif %}
-                    </ul>
-                </li>                 
+                    <li class="nav-item dropdown">
+                        <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                        class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Relevamiento</a>
+                        <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                            <li><a href="{% url 'intercultural:dashboard_comun' %}" class="dropdown-item">ABM Alumnos Pueblos Originarios</a></li>
+                            {% if privado %}
+                                <li><a href="{% url 'privada:uegp_list' %}" class="dropdown-item">ABM Relevamiento</a></li> 
+                                <li><a href="{% url 'representantes:dashboard' %}" class="dropdown-item">ABM Representantes Legales</a></li>
+                            {% endif %}
+                            {% if tiene_bibliotecas %}
+                                <li><a href="{% url 'bibliotecas:dashboard' %}" class="dropdown-item">Planilla Estadística Bibliotecas</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>      
+                    <li class="nav-item dropdown">
+            
+            </li>           
                 {% if user.is_authenticated %}
                 <li class="nav-item">
                     <a href="{% url 'directores:institucional' %}" class="nav-link">Usuario: {{ user.nombres }}</a>

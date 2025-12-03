@@ -1,4 +1,4 @@
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator, MinLengthValidator, MaxLengthValidator
 from django.db import models
 from django.utils import timezone
 
@@ -56,6 +56,16 @@ RENPE_CHOICES = [
     ('ACCESO', 'ACCESO'),
     ('VALIDACIONES', 'VALIDACIONES'),
     ('OTROS', 'OTROS'),
+]
+
+RENPE_PERSONAL_CHOICES=[
+    ('DOCENTE', 'DOCENTE'),
+    ('NO DOCENTE', 'NO DOCENTE'),
+]
+
+RENPE_RESPUESTA_CHOICES=[
+    ('SÍ', 'SÍ'),
+    ('NO', 'NO'),
 ]
 
 class Consulta(models.Model):
@@ -137,3 +147,51 @@ class ConsultaRenpe(models.Model):
         verbose_name = 'ConsultaRENPE'
         verbose_name_plural = 'ConsultasRENPE'
         db_table = 'consultas_renpe'
+
+
+class ConsultaDocentesRenpe(models.Model):
+    apellido = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100)
+
+    cuil = models.CharField(
+        max_length=11,
+        validators=[
+            RegexValidator(r'^\d+$', 'El CUIL debe contener solo números.'),
+            MinLengthValidator(10, 'El CUIL debe tener al menos 10 dígitos.'),
+            MaxLengthValidator(11, 'El CUIL debe tener como máximo 11 dígitos.')
+        ]
+    )
+
+    categoria = models.CharField(max_length=50, choices=RENPE_PERSONAL_CHOICES)
+    cuenta_miargentina = models.CharField(max_length=3, choices=RENPE_RESPUESTA_CHOICES)
+    ingreso_miargentina = models.CharField(max_length=3, choices=RENPE_RESPUESTA_CHOICES)
+    reseteo_contraseña_miargentina = models.CharField(max_length=3, choices=RENPE_RESPUESTA_CHOICES)
+    formulario_sin_miargentina = models.CharField(max_length=3, choices=RENPE_RESPUESTA_CHOICES)
+
+    email = models.EmailField()
+    mensaje = models.TextField()
+
+    fecha = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, default='Pendiente')
+    estado_usuario = models.CharField(max_length=150, null=True, blank=True)
+    estado_fecha = models.DateTimeField(default=timezone.now, blank=True)
+
+    imagen = models.ImageField(upload_to='adjuntos/', null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Pasa a mayúsculas automáticamente
+        if self.apellido:
+            self.apellido = self.apellido.upper()
+
+        if self.nombre:
+            self.nombre = self.nombre.upper()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.cuil} - {self.apellido}, {self.nombre}"
+
+    class Meta:
+        verbose_name = 'ConsultaDocenteRENPE'
+        verbose_name_plural = 'ConsultasDocentesRENPE'
+        db_table = 'consultas_docentes_renpe'

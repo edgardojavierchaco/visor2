@@ -1,4 +1,4 @@
-#!/home/edgardochaco/Documentos/visor2/venv/bin/python
+#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
 
 # $Id: rst2odt.py 9115 2022-07-28 17:06:24Z milde $
 # Author: Dave Kuhlman <dkuhlman@rexx.com>

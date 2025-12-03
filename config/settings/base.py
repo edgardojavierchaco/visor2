@@ -66,6 +66,7 @@ LOCAL_APPS = [
     'apps.operativchaco',
     'apps.consultas',
     'apps.ayudarenpe',
+    'apps.evaluaciones_educativas',
 ]
 
 
@@ -128,10 +129,23 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=cenpe,public,operativoschaco,indicadores,pem,pof'
+            'options': '-c search_path=evaluacion,cenpe,public,operativoschaco,indicadores,pem,pof'
+        }
+    },
+    'Evaluacion': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ.get('POSTGRES_DB_EVALUACION'),
+        'USER': os.environ.get('POSTGRES_USER_EVALUACION'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD_EVALUACION'),
+        'HOST': os.environ.get('POSTGRES_HOST_EVALUACION'),
+        'PORT': os.environ.get('POSTGRES_PORT_EVALUACION'),
+        'OPTIONS': {
+            'options': '-c search_path=evaluacion,public',
         }
     }
 }
+
+DATABASE_ROUTERS = ['apps.evaluaciones_educativas.routers.SecondaryDBRouter']
 
 # Configuración de archivos estáticos
 STATIC_URL = '/static/'

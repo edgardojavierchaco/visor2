@@ -14,4 +14,6 @@ urlpatterns = [
     path('actualizar-estado-renpe/<int:consulta_id>/', views.actualizar_estado_renpe, name='actualizar_estado_renpe'),
     path("exportar_excel/", views.exportar_excel, name="exportar_excel"),
     path("exportar_excel_renpe/", views.exportar_excel_renpe, name="exportar_excel_renpe"),
+    path("consulta/docente/", views.consulta_renpe_view, name="consulta_docente_renpe"),
+    path("consulta/exito/docente/", views.consulta_renpe_exito, name="consulta_renpe_docente_exito"),
 ]
