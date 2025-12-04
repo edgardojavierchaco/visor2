@@ -318,7 +318,7 @@ def descargar_excel(request,grado_public_id):
     ws = wb.active
     fecha_hora_actual = datetime.now()
     ws['A1'] = f'CUEANEXO: {instancia_grado.cueanexo}'
-    ws['B1'] = f'Fecha y hora:  {fecha_hora_actual.strftime("%d/%m/%Y %I:%M:%S %p")}'
+    ws['G1'] = f'Fecha y hora:  {fecha_hora_actual.strftime("%d/%m/%Y %I:%M:%S %p")}'
     lista=['NOMBRE','APELLIDO','DNI','COMUNIDAD INDIGENA','DISCAPACIDAD','GRADO','SECCION','TURNO','ASISTENCIA','FLUIDEZ','P1','P2','P3','P4','P5','P6']
     #print(alumnos)
     ws.append(lista)
