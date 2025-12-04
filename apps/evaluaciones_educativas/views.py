@@ -311,7 +311,13 @@ def descargar_excel(request,grado_public_id):
     
     # 2. Configurar el encabezado Content-Disposition
     # Esto le dice al navegador que DEBE descargar el contenido y le asigna un nombre de archivo.
-    response['Content-Disposition'] = 'attachment; filename="reporte_fluidez_noviembre_2025.xlsx"'
+    if instancia_grado.nombre_grado=='2do Año/Grado':
+        nombre_grado='2do_Grado_'
+    elif instancia_grado.nombre_grado=='3er Año/Grado':
+        nombre_grado='3er_Grado_'
+    else:
+        nombre_grado='_'
+    response['Content-Disposition'] = f'attachment; filename="reporte_fluidez_{nombre_grado}noviembre_2025.xlsx"'
 
     # 3. Generar el contenido del Excel (lo mismo que tenías)
     wb = Workbook()
