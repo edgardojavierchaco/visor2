@@ -79,13 +79,25 @@
     {% endfor %}
       </div>
     </div>
-          <button type="submit" class="btn btn-primary btn-custom">
-            Guardar
-          </button>
+          <button id="btn-guardar" type="submit" class="btn btn-primary btn-custom" disabled>
+  Guardar
+</button>
         </form>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+     <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const radios = document.querySelectorAll('input[type="radio"]');
+    const btn = document.getElementById("btn-guardar");
+
+    radios.forEach(radio => {
+      radio.addEventListener("change", () => {
+        btn.disabled = false;
+      });
+    });
+  });
+</script>
   </body>
 </html>

@@ -1,3 +1,4 @@
+from encodings.punycode import T
 from django.db import models
 import uuid
 
@@ -53,8 +54,8 @@ class Seccion(models.Model):
     ('DOBLE', 'Doble'),
     ]
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
-    seccion = models.CharField(max_length=5, choices=OPCIONES_SECCION, default='UNICO')
-    turno = models.CharField(max_length=6, choices=OPCIONES_TURNO, default='MANANA' )
+    seccion = models.CharField(max_length=5, choices=OPCIONES_SECCION, blank=True)
+    turno = models.CharField(max_length=6, choices=OPCIONES_TURNO, blank=True )
     grado = models.ForeignKey(Grado, on_delete=models.CASCADE)
     class Meta:
         #managed = False
@@ -67,21 +68,21 @@ class Seccion(models.Model):
 
 class Alumno(models.Model):
     OPCIONES_COMUNIDAD_INDIGENA = [
-    ('QOM', 'Qom (Toba)'),
-    ('MOQOIT', 'Moqoit (Mocoví)'),
-    ('WICHI', 'Wichí (Mataco)'),
-    ('NINGUNA', 'Ninguna / No Aplica'),
+    ('QOM', 'Qom'),
+    ('MOQOIT', 'Moqoit'),
+    ('WICHI', 'Wichí'),
+    ('NINGUNA', 'Ninguna'),
 ]
     OPCIONES_DISCAPACIDAD = [
     ('SI', 'Sí, la persona tiene una discapacidad'),
-    ('NO', 'No aplica'),
+    ('NO', 'Ninguna'),
 ]
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
     dni = models.CharField(max_length=8,unique=True,null=True,blank=True)
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)
-    comunidad_indigena=models.CharField(max_length=11, choices= OPCIONES_COMUNIDAD_INDIGENA, default='NINGUNA')
-    discapacidad = models.CharField(choices=OPCIONES_DISCAPACIDAD, default='NO')
+    comunidad_indigena=models.CharField(max_length=11, choices= OPCIONES_COMUNIDAD_INDIGENA, blank=True)
+    discapacidad = models.CharField(choices=OPCIONES_DISCAPACIDAD, blank=True)
     seccion = models.ForeignKey(Seccion, on_delete=models.CASCADE)
     class Meta:
         #managed = False
@@ -105,12 +106,12 @@ class EvaluacionFluidezLectora(models.Model):
     ('AUSENTE','Ausente'),    
 	]
     cantidad_palabras_leidas = models.IntegerField(default=0, null=True)
-    pregunta_1 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, default='NORESPONDE',null=True)
-    pregunta_2 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, default='NORESPONDE',null=True)
-    pregunta_3 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, default='NORESPONDE',null=True)
-    pregunta_4 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, default='NORESPONDE',null=True)
-    pregunta_5 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, default='NORESPONDE',null=True)
-    pregunta_6 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, default='NORESPONDE',null=True)
+    pregunta_1 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, blank=True,null=True)
+    pregunta_2 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, blank=True,null=True)
+    pregunta_3 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, blank=True,null=True)
+    pregunta_4 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, blank=True,null=True)
+    pregunta_5 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, blank=True,null=True)
+    pregunta_6 = models.CharField(max_length=10,choices= OPCIONES_EVALUACION, blank=True,null=True)
     asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     encargado_carga=models.CharField(max_length=9)
     alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)

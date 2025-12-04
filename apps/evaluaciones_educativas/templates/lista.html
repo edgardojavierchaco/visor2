@@ -191,14 +191,20 @@
           </a>
         </li>
         <li class="nav-item">
-          <a href="{% url 'evaluaciones_educativas:lista_grado' grado='SEGUNDO'%}" class="nav-link">
+          <a
+            href="{% url 'evaluaciones_educativas:lista_grado' grado='SEGUNDO'%}"
+            class="nav-link"
+          >
             <i class="bi bi-book"></i>
             <span>Examen Fluidez Segundo</span>
           </a>
         </li>
 
         <li class="nav-item">
-          <a href="{% url 'evaluaciones_educativas:lista_grado' grado='TERCERO'%}" class="nav-link">
+          <a
+            href="{% url 'evaluaciones_educativas:lista_grado' grado='TERCERO'%}"
+            class="nav-link"
+          >
             <i class="bi bi-book"></i>
             <span>Examen Fluidez Tercero</span>
           </a>
@@ -225,7 +231,7 @@
                       Datos del Alumno
                     </th>
                     <th colspan="9" class="text-center bg-comprension">
-                      Fluidez Lectora (Respuestas)
+                      Fluidez y Comprensión Lectora
                     </th>
                   </tr>
 
@@ -236,7 +242,7 @@
                     <th>Seccion</th>
                     <th>Turno</th>
                     <th>Asistencia</th>
-                    <th>P. Leídas</th>
+                    <th>Fluidez</th>
                     <th>P1</th>
                     <th>P2</th>
                     <th>P3</th>
@@ -315,14 +321,29 @@
         </div>
 
         <div class="d-flex justify-content-between">
-          <a href="{% url 'evaluaciones_educativas:grados' %}" class="btn btn-primary btn-custom"
+          <a
+            href="{% url 'evaluaciones_educativas:grados' %}"
+            class="btn btn-primary btn-custom"
             >Añadir Alumno</a
           >
-          {% comment %}
-          <a href="{% url 'salir' %}" class="btn btn-danger btn-custom"
-            >Cerrar Sesión</a
-          >
-          {% endcomment %}
+         {% if grado_public_id %}
+    {# Opción 1: El ID existe, botón funcional (con etiqueta <a>) #}
+    <a
+        href="{% url 'evaluaciones_educativas:excel' grado_public_id=grado_public_id %}"
+        class="btn btn-danger btn-custom"
+    >
+        Descargar Lista
+    </a>
+{% else %}
+    {# Opción 2: El ID NO existe, botón deshabilitado (con etiqueta <button>) #}
+    <button 
+        class="btn btn-danger btn-custom"
+        disabled 
+        title="El ID del grado no está disponible para la descarga."
+    >
+        Descargar Lista
+    </button>
+{% endif %}
         </div>
       </div>
     </div>

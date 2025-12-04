@@ -6,6 +6,8 @@ from apps.evaluaciones_educativas.forms.forms import *
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from datetime import date, datetime
+from openpyxl import Workbook
 
 
 @login_required
@@ -91,6 +93,7 @@ def lista(request,grado_public_id):
         'lista_alumnos': alumnos,
         'evaluciones': evaluacion,
         'nombre_grado':instancia_grado.nombre_grado,
+        'grado_public_id':instancia_grado.public_id
     }
     return render(request,"lista.html", contexto)
 #-----------------lista para grados------------------
@@ -221,7 +224,7 @@ def asistencia(request,alumno_public_id):
     alumno_id=get_object_or_404(Alumno, public_id=alumno_public_id)
     #SI instanciamos aca se crea antes de que confirme asistencia (puede ser conveniente)...
     instancia_evaluacion, creando_evaluacion=EvaluacionFluidezLectora.objects.get_or_create(
-        alumno_id=alumno_id.id, encargado_carga='DIRECTOR')
+        alumno_id=alumno_id.id,cantidad_palabras_leidas=None, pregunta_1=None, pregunta_2=None, pregunta_3=None, pregunta_4=None, pregunta_5=None, pregunta_6=None, asistencia='AUSENTE',encargado_carga='DIRECTOR')
     instancia_seccion=get_object_or_404(Seccion,id=alumno_id.seccion_id)
     instancia_grado=get_object_or_404(Grado,id=instancia_seccion.grado_id)
     grado_public=instancia_grado.public_id
@@ -236,7 +239,7 @@ def asistencia(request,alumno_public_id):
                         #llamamos a funcion ausentismo
                         evaluacion=ausentismo_evaluacion(instancia_evaluacion)
                         evaluacion.save()
-                        return redirect("lista", grado_public_id=grado_public)
+                        return redirect("evaluaciones_educativas:lista", grado_public_id=grado_public)
     else:
         form = AsistenciaForm()
     context = {'form': form,
@@ -265,7 +268,7 @@ def editar_asistencia(request,alumno_public_id):
                     instancia_evaluacion, creando_evaluacion=EvaluacionFluidezLectora.objects.get_or_create(alumno_id=alumno_id.id)
                     evaluacion=ausentismo_evaluacion(instancia_evaluacion)
                     evaluacion.save()
-                    return redirect("lista", grado_public_id=grado_public)
+                    return redirect("evaluaciones_educativas:lista", grado_public_id=grado_public)
     else:
         asistencia_form = AsistenciaForm()
     context = {'form': asistencia_form}
@@ -293,7 +296,53 @@ def borrar_registro_alumno(request,alumno_public_id):
                'alumno':alumno_id
                }
     return render(request,"borrar_registro_alumno.html",context)
+#DESCARGAR EXCEL
+@login_required
+def descargar_excel(request,grado_public_id):
+    instancia_grado=get_object_or_404(Grado,public_id=grado_public_id)
+    instancia_seccion=Seccion.objects.filter(grado_id=instancia_grado)
+    alumnos = Alumno.objects.filter(seccion_id__in=instancia_seccion).order_by('nombre')
+    evaluacion = EvaluacionFluidezLectora.objects.filter(alumno__in=alumnos)
+    # 1. Configurar la respuesta HTTP para un archivo Excel
+    # El 'mimetype' (o Content-Type) es crucial para que el navegador sepa que es un archivo .xlsx
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    
+    # 2. Configurar el encabezado Content-Disposition
+    # Esto le dice al navegador que DEBE descargar el contenido y le asigna un nombre de archivo.
+    response['Content-Disposition'] = 'attachment; filename="reporte_fluidez_noviembre_2025.xlsx"'
 
+    # 3. Generar el contenido del Excel (lo mismo que tenías)
+    wb = Workbook()
+    ws = wb.active
+    fecha_hora_actual = datetime.now()
+    ws['A1'] = f'CUEANEXO: {instancia_grado.cueanexo}'
+    ws['B1'] = f'Fecha y hora:  {fecha_hora_actual.strftime("%d/%m/%Y %I:%M:%S %p")}'
+    lista=['NOMBRE','APELLIDO','DNI','COMUNIDAD INDIGENA','DISCAPACIDAD','GRADO','SECCION','TURNO','ASISTENCIA','FLUIDEZ','P1','P2','P3','P4','P5','P6']
+    #print(alumnos)
+    ws.append(lista)
+    for i,v in enumerate(evaluacion):
+        ws[f'A{i + 3}']=v.alumno.nombre
+        ws[f'B{i + 3}']=v.alumno.apellido
+        ws[f'C{i + 3}']=v.alumno.dni
+        ws[f'D{i + 3}']=v.alumno.comunidad_indigena
+        ws[f'E{i + 3}']=v.alumno.discapacidad
+        ws[f'F{i + 3}']=v.alumno.seccion.grado.nombre_grado
+        ws[f'G{i + 3}']=v.alumno.seccion.seccion
+        ws[f'H{i + 3}']=v.alumno.seccion.turno
+        ws[f'I{i + 3}']=v.asistencia
+        ws[f'J{i + 3}']=v.cantidad_palabras_leidas
+        ws[f'K{i + 3}']=v.pregunta_1
+        ws[f'L{i + 3}']=v.pregunta_2
+        ws[f'M{i + 3}']=v.pregunta_3
+        ws[f'N{i + 3}']=v.pregunta_4
+        ws[f'O{i + 3}']=v.pregunta_5
+        ws[f'P{i + 3}']=v.pregunta_6
+
+    wb.save(response)
+    # 5. Retornar la respuesta al navegador
+    return response
 # @login_required
 # def monitoreo(request):
 #     instancia_grado_cueanexo=Grado.objects.all()

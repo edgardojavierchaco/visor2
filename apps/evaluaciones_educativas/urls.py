@@ -15,7 +15,7 @@ urlpatterns = [
 	path('asistencia/<uuid:alumno_public_id>/',views.asistencia, name='asistencia'),
 	path('editar_asistencia/<uuid:alumno_public_id>/',views.editar_asistencia, name='editar_asistencia'),
     path('borrar_registro_alumno/<uuid:alumno_public_id>/',views.borrar_registro_alumno, name='borrar_registro_alumno'),
+	path('descargar_excel/<uuid:grado_public_id>/',views.descargar_excel, name='excel'),
 	# path('monitoreo/',views.monitoreo, name='monitoreo'),
-    # path('salir/',views.salir, name='salir')
 	
 ]
