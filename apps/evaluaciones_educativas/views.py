@@ -34,6 +34,8 @@ def carga_alumno(request,grado_public_id):
                 alumno = alumno_form.save(commit=False)
                 alumno.seccion = instancia_seccion
                 alumno.save()
+                instancia_evaluacion, creando_evaluacion=EvaluacionFluidezLectora.objects.get_or_create(
+                alumno_id=alumno.id,cantidad_palabras_leidas=None, pregunta_1=None, pregunta_2=None, pregunta_3=None, pregunta_4=None, pregunta_5=None, pregunta_6=None, asistencia='AUSENTE',encargado_carga='DIRECTOR')
             return redirect("evaluaciones_educativas:asistencia", alumno_public_id=alumno.public_id)
             
     context = {
@@ -88,7 +90,14 @@ def lista(request,grado_public_id):
     instancia_grado=get_object_or_404(Grado,public_id=grado_public_id)
     instancia_seccion=Seccion.objects.filter(grado_id=instancia_grado)
     alumnos = Alumno.objects.filter(seccion_id__in=instancia_seccion).order_by('nombre')
+    # print(instancia_grado)
+    # print('-'*50)
+    # print(instancia_seccion)
+    # print('-'*50)
+    # print(alumnos)
     evaluacion = EvaluacionFluidezLectora.objects.filter(alumno__in=alumnos)
+    # print('-'*50)
+    # print(evaluacion)
     contexto = {
         'lista_alumnos': alumnos,
         'evaluciones': evaluacion,
@@ -145,7 +154,7 @@ def grado(request):
         if grado_form_data.is_valid():
             with transaction.atomic():
                 grado=grado_form_data.cleaned_data["grado"]
-                print(grado)
+                #print(grado)
                 instancia_grado, creado_grado=Grado.objects.get_or_create(
                     nombre_grado=grado,
                     cueanexo=nombre_usuario_cueanexo
@@ -164,8 +173,6 @@ def grado(request):
 def carga_evaluacion(request, alumno_public_id):
     alumno_id=get_object_or_404(Alumno, public_id=alumno_public_id)
     instancia_seccion=get_object_or_404(Seccion,id=alumno_id.seccion_id)
-    # seccion_public=instancia_seccion.public_id
-    # turno_seccion=instancia_seccion.turno
     instancia_grado=get_object_or_404(Grado,id=instancia_seccion.grado_id)
     grado_public=instancia_grado.public_id
     # print(instancia_grado.nombre_grado)
@@ -173,8 +180,24 @@ def carga_evaluacion(request, alumno_public_id):
         cantidad_palabra_maxima=170
     else:
         cantidad_palabra_maxima=211
+        
+    evaluacion_existente = None
+    try:
+        # Buscamos el examen que se creó previamente con get_or_create
+        # ASUMO que tu modelo se llama EvaluacionFluidezLectora
+        evaluacion_existente = EvaluacionFluidezLectora.objects.get(alumno=alumno_id.id)
+    except EvaluacionFluidezLectora.DoesNotExist:
+        # Si no existe, el formulario será de CREACIÓN (INSERT)
+        pass
+
     if request.method == 'POST':
-        form = EvaluacionFluidezForm(request.POST, max_cantidad_palabra=cantidad_palabra_maxima)
+        # 3. Rama POST: Se usa la instancia para forzar la ACTUALIZACIÓN (Sobrescritura)
+        
+        # Al pasar 'instance=evaluacion_existente' el form sabe qué registro modificar
+        # Aunque el usuario lo haya visto vacío, los datos que se guardarán son los nuevos.
+        form = EvaluacionFluidezForm(request.POST, 
+                                     max_cantidad_palabra=cantidad_palabra_maxima,
+                                     instance=evaluacion_existente)
         if form.is_valid():
             with transaction.atomic():
                 evaluacion = form.save(commit=False)
@@ -197,7 +220,7 @@ def editar_evaluacion(request, alumno_public_id):
     instancia_seccion=get_object_or_404(Seccion,id=alumno_id.seccion_id)
     instancia_grado=get_object_or_404(Grado,id=instancia_seccion.grado_id)
     grado_public=instancia_grado.public_id
-    instancia_evaluacion=EvaluacionFluidezLectora.objects.get(alumno_id=alumno_id.id)
+    instancia_evaluacion=get_object_or_404(EvaluacionFluidezLectora,alumno_id=alumno_id.id)
     if instancia_grado.nombre_grado =='SEGUNDO':
         cantidad_palabra_maxima=170
     else:
@@ -222,9 +245,8 @@ def editar_evaluacion(request, alumno_public_id):
 @login_required
 def asistencia(request,alumno_public_id):
     alumno_id=get_object_or_404(Alumno, public_id=alumno_public_id)
-    #SI instanciamos aca se crea antes de que confirme asistencia (puede ser conveniente)...
-    instancia_evaluacion, creando_evaluacion=EvaluacionFluidezLectora.objects.get_or_create(
-        alumno_id=alumno_id.id,cantidad_palabras_leidas=None, pregunta_1=None, pregunta_2=None, pregunta_3=None, pregunta_4=None, pregunta_5=None, pregunta_6=None, asistencia='AUSENTE',encargado_carga='DIRECTOR')
+    #SI instanciamos aca recibe la evalaucion que se creo en carga...
+    instancia_evaluacion=get_object_or_404(EvaluacionFluidezLectora, alumno_id=alumno_id.id)
     instancia_seccion=get_object_or_404(Seccion,id=alumno_id.seccion_id)
     instancia_grado=get_object_or_404(Grado,id=instancia_seccion.grado_id)
     grado_public=instancia_grado.public_id
@@ -265,7 +287,7 @@ def editar_asistencia(request,alumno_public_id):
                     return redirect("evaluaciones_educativas:editar_evaluacion", alumno_public_id=alumno_id.public_id)
                 else:
                     #Recien instanciamos en el ELSE 
-                    instancia_evaluacion, creando_evaluacion=EvaluacionFluidezLectora.objects.get_or_create(alumno_id=alumno_id.id)
+                    instancia_evaluacion=get_object_or_404(EvaluacionFluidezLectora, alumno_id=alumno_id.id)
                     evaluacion=ausentismo_evaluacion(instancia_evaluacion)
                     evaluacion.save()
                     return redirect("evaluaciones_educativas:lista", grado_public_id=grado_public)
@@ -324,8 +346,8 @@ def descargar_excel(request,grado_public_id):
     ws = wb.active
     fecha_hora_actual = datetime.now()
     ws['A1'] = f'CUEANEXO: {instancia_grado.cueanexo}'
-    ws['G1'] = f'Fecha y hora:  {fecha_hora_actual.strftime("%d/%m/%Y %I:%M:%S %p")}'
-    lista=['NOMBRE','APELLIDO','DNI','COMUNIDAD INDIGENA','DISCAPACIDAD','GRADO','SECCION','TURNO','ASISTENCIA','FLUIDEZ','P1','P2','P3','P4','P5','P6']
+    ws['G1'] = f'FECHA Y HORA:  {fecha_hora_actual.strftime("%d/%m/%Y %I:%M:%S %p")}'
+    lista=['NOMBRE','APELLIDO','DNI','COMUNIDAD INDíGENA','DISCAPACIDAD','GRADO','SECCIÓN','TURNO','ASISTENCIA','FLUIDEZ','P1','P2','P3','P4','P5','P6']
     #print(alumnos)
     ws.append(lista)
     for i,v in enumerate(evaluacion):
@@ -349,6 +371,7 @@ def descargar_excel(request,grado_public_id):
     wb.save(response)
     # 5. Retornar la respuesta al navegador
     return response
+
 # @login_required
 # def monitoreo(request):
 #     instancia_grado_cueanexo=Grado.objects.all()
@@ -368,9 +391,3 @@ def ausentismo_evaluacion(instancia_evaluacion):
         if not i.primary_key and i.null:
             setattr(instancia_evaluacion, i.name, None)
     return instancia_evaluacion
-
-#logica de logue--BORRAR-------------------
-# def salir(request):
-#     logout(request)
-#     return redirect('accounts/login.html')
-#-----------------------------
