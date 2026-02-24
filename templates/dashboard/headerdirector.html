@@ -227,7 +227,7 @@
                 >Descarga Material</a
               >
             </li>
-            {% endcomment %}
+
             <li>
               <a
                 href="{% url 'evaluaciones_educativas:grados' %}"
@@ -246,6 +246,14 @@
                 class="dropdown-item"
                 >Control de carga 3 Grado
               </a>
+            </li>
+            {% endcomment %}
+            <li>
+              <a class="dropdown-item">🚧Estamos trabajando🚧</a>
+              <a
+                >📊Los resultados estarán disponibles a partir del 15 de
+                marzo.📅</a
+              >
             </li>
           </ul>
         </li>
@@ -269,6 +277,7 @@
                             <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
             <!-- Menú desplegable para "Resultados" -->
 
+            {% comment %}
             <li>
               <a href="{% url 'operative:dashboard' %}" class="dropdown-item"
                 >Carga de Exámenes</a
@@ -279,6 +288,14 @@
                 href="{% url 'operative:dashboard_matem_segundo_anio' %}"
                 class="dropdown-item"
                 >Carga Evaluaciones 2°</a
+              >
+            </li>
+            {% endcomment %}
+            <li>
+              <a class="dropdown-item">🚧Estamos trabajando🚧</a>
+              <a
+                >📊Los resultados estarán disponibles a partir del 15 de
+                marzo.📅</a
               >
             </li>
           </ul>
