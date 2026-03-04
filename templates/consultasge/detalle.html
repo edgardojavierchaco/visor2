@@ -1,0 +1,50 @@
+{% extends "consultasge/layout.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>{{ consulta.asunto }}</h3>
+
+<p><strong>Escuela:</strong> {{ consulta.escuela }}</p>
+
+<hr>
+
+<div class="card">
+<div class="card-body">
+{{ consulta.mensaje }}
+</div>
+</div>
+
+{% if consulta.adjuntos.all %}
+<hr>
+<h5>Archivos adjuntos</h5>
+<ul>
+{% for adj in consulta.adjuntos.all %}
+<li>
+<a href="{{ adj.archivo.url }}" target="_blank">
+{{ adj.archivo.name|cut:"consultas/" }}
+</a>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<hr>
+
+<h4>Respuestas</h4>
+
+{% for r in consulta.respuestas.all %}
+<div class="card mt-2">
+<div class="card-body">
+<b>{{ r.usuario.apellido }}</b><br>
+{{ r.mensaje }}<br>
+<small>{{ r.fecha|date:"d/m/Y H:i" }}</small>
+</div>
+</div>
+{% empty %}
+<p>No hay respuestas.</p>
+{% endfor %}
+
+</div>
+
+{% endblock %}

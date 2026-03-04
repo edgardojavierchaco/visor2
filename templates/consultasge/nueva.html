@@ -1,0 +1,37 @@
+{% extends "consultasge/layout.html" %}
+{% block content %}
+
+<div class="container mt-4">
+<h2>Nueva Consulta</h2>
+
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+
+<div class="mb-3">
+<label>Asunto</label>
+{{ form.asunto }}
+</div>
+
+<div class="mb-3">
+<label>Categoría</label>
+{{ form.categoria }}
+</div>
+
+<div class="mb-3">
+<label>Consulta</label>
+{{ form.mensaje }}
+</div>
+
+<div class="mb-3">
+<label>Adjuntar archivos</label>
+<input type="file" name="archivos" class="form-control" multiple>
+</div>
+
+<button class="btn btn-primary">
+Enviar consulta
+</button>
+
+</form>
+</div>
+
+{% endblock %}

@@ -198,4 +198,5 @@ whitenoise==6.5.0
 beautifulsoup4==4.10.0
 unidecode
 scikit-learn
+xhtml2pdf>=0.2.17
 

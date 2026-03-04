@@ -1,0 +1,115 @@
+{% extends "consultasge/layout_gestor.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">Responder Consulta</h2>
+
+<!-- DATOS DE LA CONSULTA -->
+<div class="card mb-4">
+
+    <div class="card-header bg-light">
+        <strong>{{ consulta.asunto }}</strong>
+    </div>
+
+    <div class="card-body">
+
+        <p>
+            <strong>Fecha:</strong>
+            {{ consulta.fecha_creacion|date:"d/m/Y H:i" }}
+        </p>
+
+        <p>
+            <strong>Escuela:</strong>
+            {{ consulta.escuela }}
+        </p>
+
+        <p>
+            <strong>Usuario:</strong>
+            {{ consulta.usuario.username }}
+        </p>
+
+        <p>
+            <strong>Estado:</strong>
+
+            {% if consulta.estado == "pendiente" %}
+                <span class="badge bg-danger">Pendiente</span>
+            {% elif consulta.estado == "en_proceso" %}
+                <span class="badge bg-warning text-dark">
+                    En Proceso
+                </span>
+            {% elif consulta.estado == "respondida" %}
+                <span class="badge bg-success">Respondida</span>
+            {% endif %}
+        </p>
+
+        <hr>
+
+        <p>{{ consulta.mensaje }}</p>
+
+    </div>
+</div>
+
+
+<!-- HISTORIAL DE RESPUESTAS -->
+{% if consulta.respuestas.all %}
+<div class="card mb-4">
+
+    <div class="card-header bg-light">
+        Historial de Respuestas
+    </div>
+
+    <div class="card-body">
+
+        {% for respuesta in consulta.respuestas.all %}
+            <div class="mb-3">
+
+                <p class="mb-1">
+                    <strong>{{ respuesta.usuario.username }}</strong>
+                    <small class="text-muted">
+                        {{ respuesta.fecha|date:"d/m/Y H:i" }}
+                    </small>
+                </p>
+
+                <p>{{ respuesta.mensaje }}</p>
+
+                <hr>
+            </div>
+        {% endfor %}
+
+    </div>
+</div>
+{% endif %}
+
+
+<!-- FORMULARIO DE RESPUESTA -->
+<div class="card">
+
+    <div class="card-header bg-light">
+        Nueva Respuesta
+    </div>
+
+    <div class="card-body">
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label">Respuesta</label>
+                {{ form.mensaje }}
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                Enviar Respuesta
+            </button>
+
+            <a href="{% url 'consultasge:gestor_consultas' %}"
+               class="btn btn-secondary">
+                Volver
+            </a>
+
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

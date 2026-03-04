@@ -1,0 +1,49 @@
+{% extends "consultasge/layout.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+<h2>Mis consultas</h2>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Fecha</th>
+<th>Asunto</th>
+<th>Estado</th>
+<th></th>
+</tr>
+</thead>
+
+<tbody>
+{% for c in consultas %}
+<tr>
+
+<td>{{ c.fecha_creacion|date:"d/m/Y H:i" }}</td>
+<td>{{ c.asunto }}</td>
+
+<td>
+{% if c.estado == "abierta" %}
+<span class="badge bg-warning">Abierta</span>
+{% elif c.estado == "respondida" %}
+<span class="badge bg-success">Respondida</span>
+{% endif %}
+</td>
+
+<td>
+<a href="{% url 'consultasge:consulta_detalle' c.id %}"
+class="btn btn-sm btn-primary">
+Ver
+</a>
+</td>
+
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

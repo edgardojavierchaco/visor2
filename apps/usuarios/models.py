@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.forms import model_to_dict
+from .models_regional import RegionalUsuariosAgentes
 
 class CustomUserManager(BaseUserManager):
     """

@@ -1,0 +1,87 @@
+{% extends "consultasge/layout.html" %}
+
+{% block content %}
+
+<h2>Dashboard</h2>
+
+<div class="row">
+
+<div class="col">
+
+<div class="card">
+
+<div class="card-body">
+
+<h5>Consultas abiertas</h5>
+
+<h2>{{ abiertas }}</h2>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col">
+
+<div class="card">
+
+<div class="card-body">
+
+<h5>Consultas respondidas</h5>
+
+<h2>{{ respondidas }}</h2>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col">
+
+<div class="card">
+
+<div class="card-body">
+
+<h5>Total consultas</h5>
+
+<h2>{{ total }}</h2>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<hr>
+
+<canvas id="chartConsultas"></canvas>
+
+<script>
+
+const ctx = document.getElementById('chartConsultas');
+
+new Chart(ctx, {
+
+type: 'pie',
+
+data: {
+
+labels: ['Abiertas','Respondidas'],
+
+datasets: [{
+
+data: [{{ abiertas }}, {{ respondidas }}]
+
+}]
+
+}
+
+});
+
+</script>
+
+{% endblock %}

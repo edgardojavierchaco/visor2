@@ -1,0 +1,121 @@
+{% extends "consultasge/layout_gestor.html" %}
+{% load consultas_extras %}
+
+{% block content %}
+
+<h2 class="mb-4">Consultas de mi Regional</h2>
+
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    <a href="?estado=pendiente" class="btn btn-sm btn-outline-danger">Pendientes</a>
+    <a href="?estado=en_proceso" class="btn btn-sm btn-outline-warning">En Proceso</a>
+    <a href="?estado=respondida" class="btn btn-sm btn-outline-success">Respondidas</a>
+    <a href="?estado=cerrada" class="btn btn-sm btn-outline-secondary">Cerradas</a>
+    <a href="?estado=vencidas" class="btn btn-sm btn-outline-dark">Vencidas</a>
+    <a href="{% url 'consultasge:gestor_consultas' %}" class="btn btn-sm btn-outline-primary">Todas</a>
+</div>
+
+{% if consultas %}
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-light text-center">
+        <tr>
+            <th>Fecha</th>
+            <th>Asunto</th>
+            <th>Escuela</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>SLA</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for consulta in consultas %}
+        <tr>
+            <td class="text-center">{{ consulta.fecha_creacion|date:"d/m/Y H:i" }}</td>
+            <td>{{ consulta.asunto }}</td>
+            <td>{{ consulta.escuela }}</td>
+            <td class="text-center">{{ consulta.usuario.username }}</td>
+            <td class="text-center">
+                {% with estado=consulta|estado_sla_filter %}
+                    {% if consulta.estado == "pendiente" %}
+                        <span class="badge bg-danger">Pendiente</span>
+                    {% elif consulta.estado == "en_proceso" %}
+                        <span class="badge bg-warning text-dark">En Proceso</span>
+                    {% elif consulta.estado == "respondida" %}
+                        <span class="badge bg-success">Respondida</span>
+                    {% elif consulta.estado == "cerrada" %}
+                        <span class="badge bg-secondary">Cerrada</span>
+                    {% endif %}
+                {% endwith %}
+            </td>
+            <td class="text-center">
+                {% with progreso=consulta|progreso_sla_filter:request.user %}
+                    {% if progreso %}
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-{{ progreso.color }}" role="progressbar"
+                                 style="width: {{ progreso.porcentaje }}%"
+                                 data-bs-toggle="tooltip"
+                                 title="Horas consumidas: {{ progreso.horas_consumidas }} | Restantes: {{ progreso.horas_restantes }}">
+                                {{ progreso.porcentaje_real }}%
+                            </div>
+                        </div>
+                    {% else %}
+                        -
+                    {% endif %}
+                {% endwith %}
+            </td>
+            <td class="text-center">
+                <a href="{% url 'consultasge:gestor_responder' consulta.id %}" class="btn btn-sm btn-primary">
+                    Ver
+                </a>
+
+                {% if consulta.estado == "respondida" %}
+                <form method="post"
+                      action="{% url 'consultasge:cerrar_consulta' consulta.id %}"
+                      class="d-inline cerrar-form">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cerrar">
+                        Cerrar
+                    </button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">
+    No hay consultas para el filtro seleccionado.
+</div>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Confirmación para cerrar consulta
+    document.querySelectorAll(".btn-cerrar").forEach(function(button) {
+        button.addEventListener("click", function() {
+            let form = this.closest("form");
+            Swal.fire({
+                title: "¿Confirmar cierre?",
+                text: "Una vez cerrada, la consulta no podrá modificarse.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, cerrar",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+
+    // Inicializar tooltips Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
+
+{% endblock %}

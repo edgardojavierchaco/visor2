@@ -1,0 +1,103 @@
+{% extends "consultasge/layout_admin.html" %}
+{% block content %}
+<h2 class="mb-4">Dashboard Administrador Interactivo</h2>
+
+<div class="mb-3">
+    <label>Desde: <input type="date" id="fecha_inicio"></label>
+    <label>Hasta: <input type="date" id="fecha_fin"></label>
+    <label>Rango:
+        <select id="rango">
+            <option value="total">Total</option>
+            <option value="semanal">Última semana</option>
+            <option value="mensual">Último mes</option>
+        </select>
+    </label>
+    <button class="btn btn-primary" id="btnActualizar">Actualizar</button>
+    <a class="btn btn-success" id="btnExcel" href="#">Exportar Excel</a>
+    <a class="btn btn-danger" id="btnPDF" href="#">Exportar PDF</a>
+</div>
+
+<canvas id="graficoGestores"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+let chart;
+
+function cargarDatos(inicio=null, fin=null){
+    let rango = $('#rango').val();
+    let params = {};
+    if(inicio) params["inicio"] = inicio;
+    if(fin) params["fin"] = fin;
+    params["rango"] = rango;
+
+    $.get("{% url 'consultasge:admin_dashboard_datos' %}", params, function(res){
+        const labels = res.labels;
+        const data = res.datasets;
+
+        // Colores SLA desde 50%
+        const backgroundSLA = data.SLA.map(p => {
+            if(p <= 50) return '#28a745'; // verde
+            if(p <= 85) return '#ffc107'; // amarillo
+            if(p <= 100) return '#fd7e14'; // naranja
+            return '#dc3545'; // rojo
+        });
+
+        if(chart) chart.destroy();
+
+        const ctx = document.getElementById('graficoGestores');
+        chart = new Chart(ctx, {
+            type:'bar',
+            data:{
+                labels: labels,
+                datasets:[
+                    {label:'Pendientes', data:data.pendiente, backgroundColor:'#dc3545'},
+                    {label:'En Proceso', data:data.en_proceso, backgroundColor:'#ffc107'},
+                    {label:'Respondidas', data:data.respondida, backgroundColor:'#28a745'},
+                    {label:'Cerradas', data:data.cerrada, backgroundColor:'#6c757d'},
+                    {label:'Vencidas', data:data.vencidas, backgroundColor:'#343a40'},
+                    {label:'SLA Promedio', data:data.SLA, type:'line', borderColor:'#000', backgroundColor:backgroundSLA, fill:false, yAxisID:'y1'},
+                    {label:'Rango ' + rango, data:data[rango], type:'line', borderColor:'#0000FF', fill:false, yAxisID:'y2'}
+                ]
+            },
+            options:{
+                responsive:true,
+                interaction: { mode: 'index', intersect:false },
+                plugins:{
+                    tooltip:{
+                        callbacks:{
+                            label: function(context){
+                                const idx = context.dataIndex;
+                                const label = context.dataset.label;
+                                if(label === "SLA Promedio") return label + ": " + data.SLA[idx] + "%";
+                                else return label + ": " + context.dataset.data[idx] + " consultas";
+                            }
+                        }
+                    },
+                    legend:{ position:'top' }
+                },
+                scales:{
+                    y:{ beginAtZero:true, title:{display:true,text:'Cantidad de consultas'} },
+                    y1:{ type:'linear', position:'right', beginAtZero:true, grid:{drawOnChartArea:false}, title:{display:true,text:'SLA (%)'} },
+                    y2:{ type:'linear', position:'right', beginAtZero:true, grid:{drawOnChartArea:false}, title:{display:true,text:'Rango'} }
+                }
+            }
+        });
+
+        // Actualizar links de export
+        let baseExcel = "{% url 'consultasge:admin_dashboard_exportar_excel' %}";
+        let basePDF = "{% url 'consultasge:admin_dashboard_exportar_pdf' %}";
+        $('#btnExcel').attr('href', baseExcel + '?inicio=' + (inicio||'') + '&fin=' + (fin||''));
+        $('#btnPDF').attr('href', basePDF + '?inicio=' + (inicio||'') + '&fin=' + (fin||''));
+    });
+}
+
+$('#btnActualizar').click(function(){
+    const inicio = $('#fecha_inicio').val();
+    const fin = $('#fecha_fin').val();
+    cargarDatos(inicio, fin);
+});
+
+cargarDatos();
+</script>
+{% endblock %}

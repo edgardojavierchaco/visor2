@@ -67,6 +67,8 @@ LOCAL_APPS = [
     'apps.consultas',
     'apps.ayudarenpe',
     'apps.evaluaciones_educativas',
+    'apps.consultasge',
+    'apps.tickets',
 ]
 
 
@@ -129,7 +131,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=evaluacion,cenpe,public,operativoschaco,indicadores,pem,pof'
+            'options': '-c search_path=public,evaluacion,cenpe,operativoschaco,indicadores,pem,pof'
         }
     },
     'Evaluacion': {

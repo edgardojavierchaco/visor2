@@ -1,0 +1,37 @@
+<h2>Tickets asignados</h2>
+
+<table border="1">
+
+<tr>
+<th>ID</th>
+<th>Escuela</th>
+<th>Asunto</th>
+<th>Estado</th>
+<th></th>
+</tr>
+
+{% for t in tickets %}
+
+<tr>
+
+<td>{{t.id}}</td>
+
+<td>{{t.escuela_cueanexo}}</td>
+
+<td>{{t.asunto}}</td>
+
+<td>{{t.estado}}</td>
+
+<td>
+
+<a href="{% url 'ver_ticket' t.id %}">
+Abrir
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
