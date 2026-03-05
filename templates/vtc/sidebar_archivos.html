@@ -1,3 +1,4 @@
+{% load grupos %}
 {% load static %}
 <aside class="main-sidebar sidebar-light-primary elevation-4">
     <a href="{% url 'archivos:portada_gestor' %}" class="brand-link">
@@ -223,7 +224,36 @@
                                 </a>
                             </li>
                         </ul>
-                </li>
+                    </li>
+                </li> 
+                <li class="nav-item has-treeview">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                            <p>
+                                Mensajería SGE - SiNIDE                                
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            {% if request.user|has_group:"Gestor" %}
+                            <li class="nav-item">
+                                <a href="{% url 'consultasge:gestor_consultas' %}" class="nav-link">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    <p>Consultas</p>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% if request.user|has_group:"Administrador" %}
+                            <li class="nav-item">
+                                <a href="{% url 'consultasge:admin_dashboard_interactivo' %}" class="nav-link">
+                                    <i class="fas fa-chart-pie"></i>
+                                    <p>Dashboard</p>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                        </ul>
+                    </li>
                 </li> 
             </ul>
         </nav>

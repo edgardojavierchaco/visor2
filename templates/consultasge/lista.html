@@ -24,11 +24,9 @@
 <td>{{ c.asunto }}</td>
 
 <td>
-{% if c.estado == "abierta" %}
-<span class="badge bg-warning">Abierta</span>
-{% elif c.estado == "respondida" %}
-<span class="badge bg-success">Respondida</span>
-{% endif %}
+<span class="badge bg-secondary">
+    {{ c.get_estado_display }}
+</span>
 </td>
 
 <td>

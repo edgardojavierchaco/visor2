@@ -3,7 +3,13 @@
 
 {% block content %}
 
-<h2 class="mb-4">Consultas de mi Regional</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Consultas de mi Regional</h2>
+    <a href="{% url 'archivos:portada_gestor' %}" class="btn btn-danger">
+        <i class="bi bi-folder2-open me-1"></i>
+        Inicio
+    </a>
+</div>
 
 <div class="mb-3 d-flex gap-2 flex-wrap">
     <a href="?estado=pendiente" class="btn btn-sm btn-outline-danger">Pendientes</a>
@@ -35,17 +41,14 @@
             <td>{{ consulta.escuela }}</td>
             <td class="text-center">{{ consulta.usuario.username }}</td>
             <td class="text-center">
-                {% with estado=consulta|estado_sla_filter %}
-                    {% if consulta.estado == "pendiente" %}
-                        <span class="badge bg-danger">Pendiente</span>
-                    {% elif consulta.estado == "en_proceso" %}
-                        <span class="badge bg-warning text-dark">En Proceso</span>
-                    {% elif consulta.estado == "respondida" %}
-                        <span class="badge bg-success">Respondida</span>
-                    {% elif consulta.estado == "cerrada" %}
-                        <span class="badge bg-secondary">Cerrada</span>
-                    {% endif %}
-                {% endwith %}
+                <span class="badge 
+                    {% if consulta.estado == "pendiente" %}bg-danger
+                    {% elif consulta.estado == "en_proceso" %}bg-warning text-dark
+                    {% elif consulta.estado == "respondida" %}bg-success
+                    {% elif consulta.estado == "cerrada" %}bg-secondary
+                    {% endif %}">
+                    {{ consulta.get_estado_display }}
+                </span>
             </td>
             <td class="text-center">
                 {% with progreso=consulta|progreso_sla_filter:request.user %}
@@ -59,7 +62,7 @@
                             </div>
                         </div>
                     {% else %}
-                        -
+                        <span class="text-muted">Sin datos SLA</span>
                     {% endif %}
                 {% endwith %}
             </td>
@@ -73,7 +76,7 @@
                       action="{% url 'consultasge:cerrar_consulta' consulta.id %}"
                       class="d-inline cerrar-form">
                     {% csrf_token %}
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cerrar">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cerrar" data-id="{{ consulta.id }}">
                         Cerrar
                     </button>
                 </form>
@@ -91,6 +94,12 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+    // Inicializar tooltips Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
     // Confirmación para cerrar consulta
     document.querySelectorAll(".btn-cerrar").forEach(function(button) {
         button.addEventListener("click", function() {
@@ -108,12 +117,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             });
         });
-    });
-
-    // Inicializar tooltips Bootstrap
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
     });
 });
 </script>

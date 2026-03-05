@@ -48,9 +48,13 @@ class LoginFormView(LoginView):
         user = self.request.user
         
         if user.is_authenticated and user.is_staff:
+            admin_group = Group.objects.get(name='Administrador')
+            if admin_group in user.groups.all():
+                return reverse('archivos:portada_gestor')
+            
             evaluacion_group = Group.objects.get(name='Evaluacion')
             if evaluacion_group in user.groups.all():
-                return reverse('oplectura:portada_eval')        
+                return reverse('oplectura:portada_eval')                   
             
             gestor_group = Group.objects.get(name='Gestor')
             if gestor_group in user.groups.all():

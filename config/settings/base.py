@@ -69,6 +69,7 @@ LOCAL_APPS = [
     'apps.evaluaciones_educativas',
     'apps.consultasge',
     'apps.tickets',
+    
 ]
 
 
@@ -116,6 +117,7 @@ TEMPLATES = [
                 'django.template.context_processors.static',
                 'django.template.context_processors.tz',
                 'django.contrib.messages.context_processors.messages',
+                "apps.consultasge.context_processors.consultas_notificaciones",
             ],
         },
     },

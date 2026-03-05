@@ -1,50 +1,37 @@
 from django.db import models
-from regex import B
-
+from django.core.exceptions import ValidationError
 
 class RegionalUsuariosAgentes(models.Model):
-
     TURNOS = (
         ("manana", "Mañana (07:00 - 13:00)"),
         ("tarde", "Tarde (13:00 - 18:00)"),
     )
-
-    usuario = models.OneToOneField(
-        "usuarios.UsuariosVisualizador",  # 🔥 referencia por string
-        on_delete=models.CASCADE,
-        related_name="perfil_regional",
-        db_column="usuario_id",
-        to_field="username"
-    )
-
-    region_loc = models.CharField(
-        max_length=100,
-        verbose_name="Regional",
-        db_index=True  # 🚀 mejora rendimiento en filtros
-    )
-
-    turno = models.CharField(
-        max_length=10,
-        choices=TURNOS,
-        verbose_name="Turno laboral",
-        db_index=True
-    )
-
-    activo = models.BooleanField(
-        default=True,
-        db_index=True
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
+    
+    usuario = models.CharField(max_length=150, db_index=True) 
+    region_loc = models.CharField(max_length=100, db_index=True)
+    turno = models.CharField(max_length=10, choices=TURNOS, db_index=True)
+    activo = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Gestor Regional"
         verbose_name_plural = "Gestores Regionales"
         indexes = [
-            models.Index(fields=["region_loc", "turno"]),
+            models.Index(fields=["region_loc", "activo"]),
         ]
 
+    def clean(self):
+        # Mantenemos la lógica de validación para asegurar un solo gestor activo por región
+        if self.activo and RegionalUsuariosAgentes.objects.filter(
+            region_loc__iexact=self.region_loc, 
+            activo=True
+        ).exclude(pk=self.pk).exists():
+            raise ValidationError(f"Ya existe un gestor activo en la región {self.region_loc}.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.usuario.username} - {self.region_loc} ({self.get_turno_display()})"
+        # Ahora 'usuario' es directamente el string (ej. el username)
+        return f"{self.usuario} - {self.region_loc} ({self.get_turno_display()})"

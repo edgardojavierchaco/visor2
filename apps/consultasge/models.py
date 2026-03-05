@@ -6,60 +6,49 @@ from .models_padron import CapaUnicaOfertas
 
 SLA_HORAS_DEFAULT = 48
 
+# TURNOS disponibles para los gestores
 TURNOS = {
     "manana": {"inicio": 7, "fin": 13},
     "tarde": {"inicio": 13, "fin": 18},
 }
 
+# ========================
+# CATEGORÍA
+# ========================
 class Categoria(models.Model):
     nombre = models.CharField(max_length=200)
-    sla_horas = models.IntegerField(default=48)
+    sla_horas = models.IntegerField(default=SLA_HORAS_DEFAULT)
 
     def __str__(self):
         return self.nombre
 
-
+# ========================
+# CONSULTA
+# ========================
 class Consulta(models.Model):
-
     class Estado(models.TextChoices):
         PENDIENTE = "pendiente", "Pendiente"
         EN_PROCESO = "en_proceso", "En proceso"
         RESPONDIDA = "respondida", "Respondida"
         CERRADA = "cerrada", "Cerrada"
 
-    usuario = models.ForeignKey(
-        "usuarios.UsuariosVisualizador",
-        on_delete=models.CASCADE
-    )
-
+    usuario = models.ForeignKey(UsuariosVisualizador, on_delete=models.CASCADE)
     cueanexo = models.CharField(max_length=9)
     escuela = models.CharField(max_length=255)
     region = models.CharField(max_length=20)
-
     asunto = models.CharField(max_length=255)
     mensaje = models.TextField()
-
-    categoria = models.ForeignKey(
-        "consultasge.Categoria",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-
-    estado = models.CharField(
-        max_length=20,
-        choices=Estado.choices,
-        default=Estado.PENDIENTE
-    )
-
+    categoria = models.ForeignKey(Categoria, null=True, blank=True, on_delete=models.SET_NULL)
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
+    gestor_asignado = models.CharField(max_length=150, null=True, blank=True, db_index=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_limite = models.DateTimeField(null=True, blank=True)
     fecha_respuesta = models.DateTimeField(null=True, blank=True)
     fecha_cierre = models.DateTimeField(null=True, blank=True)
 
-    # -------------------------
-    # TRANSICIONES
-    # -------------------------
+    @property
+    def vencida(self):
+        return self.fecha_limite and self.estado in [self.Estado.PENDIENTE, self.Estado.EN_PROCESO] and timezone.now() > self.fecha_limite
 
     def pasar_a_en_proceso(self):
         if self.estado != self.Estado.PENDIENTE:
@@ -81,62 +70,53 @@ class Consulta(models.Model):
         self.fecha_cierre = timezone.now()
         self.save(update_fields=["estado", "fecha_cierre"])
 
-    # -------------------------
-    # SLA
-    # -------------------------
-
-    @property
-    def vencida(self):
-        if not self.fecha_limite:
-            return False
-        if self.estado in [self.Estado.RESPONDIDA, self.Estado.CERRADA]:
-            return False
-        return timezone.now() > self.fecha_limite
-
     class Meta:
         indexes = [
             models.Index(fields=["region", "estado"]),
             models.Index(fields=["fecha_limite"]),
         ]
 
+# ========================
+# RESPUESTA
+# ========================
 class Respuesta(models.Model):
-
     consulta = models.ForeignKey(
         Consulta,
         related_name="respuestas",
         on_delete=models.CASCADE
     )
-
     usuario = models.ForeignKey(
         UsuariosVisualizador,
         on_delete=models.CASCADE
     )
-
     mensaje = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
 
 
+# ========================
+# ADJUNTO
+# ========================
 class Adjunto(models.Model):
-
     consulta = models.ForeignKey(
         Consulta,
         related_name="adjuntos",
         on_delete=models.CASCADE
     )
-
     archivo = models.FileField(upload_to="consultas/")
 
 
+# ========================
+# AUDITORIA
+# ========================
 class Auditoria(models.Model):
-
     usuario = models.ForeignKey(
         UsuariosVisualizador,
         on_delete=models.SET_NULL,
         null=True
     )
-
     accion = models.CharField(max_length=255)
-
     consulta_id = models.IntegerField(null=True)
-
     fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.usuario} - {self.accion} ({self.fecha})"

@@ -1,3 +1,4 @@
+import cons
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -8,94 +9,92 @@ from django.utils import timezone
 from django.http import HttpResponseForbidden
 from django.db.models import Count, Q
 from django.http import JsonResponse
+from apps.usuarios.models_regional import RegionalUsuariosAgentes
 
 from .decorators import rol_requerido
-from .models import Consulta
-from .utils import (
-    obtener_region_gestor,
-    validar_consulta_regional,
-    filtrar_vencidas,
-    progreso_sla,
-    obtener_turno_gestor,
-    horas_habiles_transcurridas,
-    SLA_HORAS_DEFAULT
-)
+from .models import Consulta, Respuesta
+from .forms import RespuestaForm
+from .utils import validar_consulta_regional, filtrar_vencidas, progreso_sla, horas_habiles_transcurridas, SLA_HORAS_DEFAULT
 
 
-# =========================================================
-# 📋 LISTADO DE CONSULTAS DEL GESTOR
-# =========================================================
-
+# --------------------------
+# Gestor: Lista consultas
+# --------------------------
 @login_required
 @rol_requerido("Gestor")
 def gestor_consultas(request):
-
-    region = obtener_region_gestor(request.user)
-
-    if not region:
+    perfiles = RegionalUsuariosAgentes.objects.filter(
+        usuario=request.user.username,  # O request.user.id si guardas el ID como texto
+        activo=True
+    )
+    if not perfiles.exists():
         messages.error(request, "No tiene regional asignada.")
         return redirect("home")
-
-    consultas = (
-        Consulta.objects
-        .select_related("usuario")
-        .filter(region=region)
-        .order_by("-fecha_creacion")
-    )
-
+    region = perfiles.first().region_loc
+    consultas = Consulta.objects.filter(region=region).order_by("-fecha_creacion")
     estado = request.GET.get("estado")
-
     if estado in ["pendiente", "en_proceso", "respondida", "cerrada"]:
         consultas = consultas.filter(estado=estado)
-
     elif estado == "vencidas":
         consultas = filtrar_vencidas(consultas)
-    
-
     return render(request, "consultasge/gestor_lista.html", {"consultas": consultas, "estado_actual": estado})
 
-
-# =========================================================
-# 📨 RESPONDER CONSULTA
-# =========================================================
-
+# --------------------------
+# Gestor: Responder consulta
+# --------------------------
 @login_required
 @transaction.atomic
 @rol_requerido("Gestor")
 def gestor_responder(request, pk):
-
-    consulta = get_object_or_404(
-        Consulta.objects.select_for_update(),
-        pk=pk
-    )
-
+    consulta = get_object_or_404(Consulta.objects.select_for_update(), pk=pk)
     validar_consulta_regional(consulta, request.user)
-
-    # Cambio automático a EN_PROCESO cuando se abre
+    # cambiar a "en_proceso" si es la primera vez que se accede a la consulta
     if request.method == "GET" and consulta.estado == Consulta.Estado.PENDIENTE:
         consulta.pasar_a_en_proceso()
-
+        consulta.save()
+        
     if request.method == "POST":
-        try:
+        form = RespuestaForm(request.POST)
+        if form.is_valid():
+            # Crear la respuesta pero no guardar aún
+            respuesta = form.save(commit=False)
+            respuesta.consulta = consulta
+            respuesta.usuario = request.user
+            respuesta.save()
+            
+            # Actualizar el estado de la consulta a "respondida"
             consulta.pasar_a_respondida()
-            messages.success(request, "Consulta respondida correctamente.")
+            consulta.save()
+            
+            messages.success(request, "Respuesta enviada correctamente.")
             return redirect("consultasge:gestor_consultas")
+    else:
+        form = RespuestaForm()
+        
+    return render(request, "consultasge/gestor_responder.html", {
+        "consulta": consulta,
+        "form": form
+        })
 
-        except ValidationError as e:
-            messages.error(request, str(e))
-
-    return render(
-        request,
-        "consultasge/gestor_responder.html",
-        {"consulta": consulta}
-    )
+# --------------------------
+# Gestor: Cerrar consulta
+# --------------------------
+@login_required
+@rol_requerido("Gestor")
+@transaction.atomic
+def cerrar_consulta(request, pk):
+    consulta = get_object_or_404(Consulta.objects.select_for_update(), pk=pk)
+    validar_consulta_regional(consulta, request.user)
+    consulta.cerrar()
+    messages.success(request, "Consulta cerrada correctamente.")
+    return redirect("consultasge:gestor_consultas")
 
 
 # =========================================================
 # 📊 DASHBOARD DEL GESTOR
 # =========================================================
 
-@login_required
+""" @login_required
 @rol_requerido("Gestor")
 def gestor_dashboard(request):
 
@@ -126,40 +125,12 @@ def gestor_dashboard(request):
 
     return render(request, "consultasge/gestor_dashboard.html", {**stats, "datos_grafico": stats})
 
-
-# =========================================================
-# 🔒 CERRAR CONSULTA
-# =========================================================
-
-@login_required
-@rol_requerido("Gestor")
-@require_POST
-@transaction.atomic
-def cerrar_consulta(request, pk):
-
-    consulta = get_object_or_404(
-        Consulta.objects.select_for_update(),
-        pk=pk
-    )
-
-    validar_consulta_regional(consulta, request.user)
-
-    try:
-        consulta.cerrar()
-        messages.success(request, "Consulta cerrada correctamente.")
-
-    except ValidationError as e:
-        messages.error(request, str(e))
-
-    return redirect("consultasge:gestor_consultas")
-
-
-@login_required
+ """
+""" @login_required
 @rol_requerido("Gestor")
 def gestor_dashboard_interactivo_json(request):
-    """
     Retorna los datos para el gráfico interactivo en JSON.
-    """
+    
     region = obtener_region_gestor(request.user)
     if not region:
         return JsonResponse({"error": "No tiene regional asignada."}, status=403)
@@ -206,10 +177,10 @@ def gestor_dashboard_interactivo_json(request):
 @login_required
 @rol_requerido("Gestor")
 def gestor_dashboard_interactivo_template(request):
-    """
+    
     Renderiza el template del dashboard interactivo.
     Los datos reales se obtendrán por AJAX.
-    """
+    
     region = obtener_region_gestor(request.user)
     if not region:
         return HttpResponseForbidden("No tiene regional asignada.")
@@ -217,4 +188,4 @@ def gestor_dashboard_interactivo_template(request):
     # Pasamos la URL del endpoint JSON al template
     return render(request, "consultasge/gestor_dashboard_interactivo.html", {
         "json_endpoint": request.build_absolute_uri("/consultasge/gestor/dashboard/json/"),
-    })
+    }) """

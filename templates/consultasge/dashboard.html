@@ -1,87 +1,100 @@
 {% extends "consultasge/layout.html" %}
-
 {% block content %}
 
-<h2>Dashboard</h2>
+<div class="container mt-4">
+    <h2>Dashboard de Consultas SGE - {{ user.username }}</h2>
+    <hr>
 
-<div class="row">
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Pendientes</h6>
+                    <h2 class="text-warning fw-bold">{{ pendientes }}</h2>
+                </div>
+            </div>
+        </div>
 
-<div class="col">
+        <div class="col-md-2">
+            <div class="card shadow-sm border-info">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">En proceso</h6>
+                    <h2 class="text-info fw-bold">{{ en_proceso }}</h2>
+                </div>
+            </div>
+        </div>
 
-<div class="card">
+        <div class="col-md-2">
+            <div class="card shadow-sm border-success">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Respondidas</h6>
+                    <h2 class="text-success fw-bold">{{ respondidas }}</h2>
+                </div>
+            </div>
+        </div>
 
-<div class="card-body">
+        <div class="col-md-2">
+            <div class="card shadow-sm border-secondary">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Cerradas</h6>
+                    <h2 class="text-secondary fw-bold">{{ cerrada }}</h2>
+                </div>
+            </div>
+        </div>
 
-<h5>Consultas abiertas</h5>
+        <div class="col-md-4">
+            <div class="card shadow-sm bg-light">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total consultas</h6>
+                    <h2 class="fw-bold">{{ total }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<h2>{{ abiertas }}</h2>
-
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm p-3">
+                <canvas id="chartConsultas"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
 
-</div>
-
-</div>
-
-<div class="col">
-
-<div class="card">
-
-<div class="card-body">
-
-<h5>Consultas respondidas</h5>
-
-<h2>{{ respondidas }}</h2>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col">
-
-<div class="card">
-
-<div class="card-body">
-
-<h5>Total consultas</h5>
-
-<h2>{{ total }}</h2>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-<hr>
-
-<canvas id="chartConsultas"></canvas>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-
-const ctx = document.getElementById('chartConsultas');
-
-new Chart(ctx, {
-
-type: 'pie',
-
-data: {
-
-labels: ['Abiertas','Respondidas'],
-
-datasets: [{
-
-data: [{{ abiertas }}, {{ respondidas }}]
-
-}]
-
-}
-
-});
-
+    const ctx = document.getElementById('chartConsultas').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Pendientes', 'En proceso', 'Respondidas', 'Cerradas'],
+            datasets: [{
+                label: 'Distribución de Consultas',
+                data: [
+                    {{ pendientes|default:0 }},
+                    {{ en_proceso|default:0 }},
+                    {{ respondidas|default:0 }},
+                    {{ cerrada|default:0 }}
+                ],
+                backgroundColor: [
+                    '#ffc107', // Warning
+                    '#0dcaf0', // Info
+                    '#198754', // Success
+                    '#6c757d'  // Secondary
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
 </script>
 
 {% endblock %}

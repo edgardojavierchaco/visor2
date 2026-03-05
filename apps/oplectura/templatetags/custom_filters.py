@@ -16,3 +16,7 @@ def add_class(field, css_class):
 @register.filter
 def widget_class(field):
     return field.field.widget.__class__.__name__
+
+@register.filter
+def has_group(user, group_name):
+    return user.groups.filter(name=group_name).exists()
