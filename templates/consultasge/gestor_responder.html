@@ -1,115 +1,148 @@
 {% extends "consultasge/layout_gestor.html" %}
-
 {% block content %}
 
-<h2 class="mb-4">Responder Consulta</h2>
-
-<!-- DATOS DE LA CONSULTA -->
-<div class="card mb-4">
-
-    <div class="card-header bg-light">
-        <strong>{{ consulta.asunto }}</strong>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-headset me-2"></i>Atender Consulta #{{ consulta.id }}</h2>
+        <a href="{% url 'consultasge:gestor_consultas' %}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
     </div>
 
-    <div class="card-body">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm border-0">
+                <div class="card-header bg-dark text-white">Detalles del Solicitante</div>
+                <div class="card-body small">
+                    <p class="mb-1"><strong>Director:</strong> {{ consulta.usuario.apellido }}, {{ consulta.usuario.nombres }} ({{ consulta.usuario.username }})</p>
+                    <p class="mb-1"><strong>Escuela:</strong> {{ consulta.escuela }}</p>
+                    <p class="mb-1"><strong>CUE-Anexo:</strong> {{ consulta.cueanexo }}</p>
+                    <p class="mb-1"><strong>Región:</strong> {{ consulta.region }}</p>
+                    <hr>
+                    <p class="mb-0"><strong>Estado Actual:</strong> 
+                        <span class="badge {% if consulta.estado == 'pendiente' %}bg-danger{% elif consulta.estado == 'en_proceso' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                            {{ consulta.get_estado_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
 
-        <p>
-            <strong>Fecha:</strong>
-            {{ consulta.fecha_creacion|date:"d/m/Y H:i" }}
-        </p>
+        <div class="col-md-8">
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-header bg-light d-flex justify-content-between">
+                    <strong>Asunto: {{ consulta.asunto }}</strong>
+                    <small class="text-muted">{{ consulta.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                </div>
+                
+                <div class="card-body bg-secondary bg-opacity-10" style="height: 500px; overflow-y: auto;">
+                    
+                    <div class="d-flex justify-content-start mb-4">
+                        <div class="bg-white p-3 rounded-3 shadow-sm border-start border-primary border-4" style="max-width: 85%;">
+                            <small class="text-primary fw-bold d-block border-bottom mb-2">
+                                CONSULTA INICIAL - {{ consulta.usuario.username }}
+                            </small>
+                            <p class="mb-2">{{ consulta.mensaje }}</p>
+                            
+                            {% if consulta.adjuntos.all %}
+                                {% for adj in consulta.adjuntos.all %}
+                                    {% if not adj.respuesta %}
+                                        <a href="{{ adj.archivo.url }}" target="_blank" class="badge bg-light text-dark border text-decoration-none py-2">
+                                            <i class="bi bi-paperclip"></i> {{ adj.archivo.name|cut:"consultas/adjuntos/" }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
 
-        <p>
-            <strong>Escuela:</strong>
-            {{ consulta.escuela }}
-        </p>
+                    {% for r in respuestas %}
+                    <div class="d-flex {% if r.usuario.nivelacceso_id == 'Gestor' %}justify-content-end{% else %}justify-content-start{% endif %} mb-3">
+                        
+                        <div class="p-3 rounded-3 shadow-sm {% if r.usuario.nivelacceso_id == 'Gestor' %}bg-info text-white border-end border-primary border-4{% else %}bg-white border-start border-secondary border-4{% endif %}" style="max-width: 85%;">
+                            
+                            <small class="d-block fw-bold mb-1" style="font-size: 0.75rem;">
+                                {% if r.usuario.nivelacceso_id == 'Gestor' %}
+                                    {{ r.usuario.apellido }}, {{ r.usuario.nombres }}
+                                {% else %}
+                                    {{ r.usuario.apellido }}, {{ r.usuario.nombres }} - {{ r.usuario.username }}
+                                {% endif %}
+                            </small>
+                            
+                            <p class="mb-1" style="white-space: pre-wrap;">{{ r.mensaje }}</p>
+                            
+                            {% for adj in r.adjuntos_respuesta.all %}
+                                <div class="mt-2 pt-1 border-top border-white border-opacity-25">
+                                    <a href="{{ adj.archivo.url }}" class="{% if r.usuario.nivelacceso_id == 'Gestor' %}text-white{% else %}text-primary{% endif %} small text-decoration-none" target="_blank">
+                                        <i class="bi bi-file-earmark-arrow-down"></i> {{ adj.archivo.name|cut:"consultas/adjuntos/" }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                            
+                            <small class="d-block text-end mt-2 opacity-75" style="font-size: 0.65rem;">
+                                {{ r.fecha|date:"d/m H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-        <p>
-            <strong>Usuario:</strong>
-            {{ consulta.usuario.username }}
-        </p>
-
-        <p>
-            <strong>Estado:</strong>
-
-            {% if consulta.estado == "pendiente" %}
-                <span class="badge bg-danger">Pendiente</span>
-            {% elif consulta.estado == "en_proceso" %}
-                <span class="badge bg-warning text-dark">
-                    En Proceso
-                </span>
-            {% elif consulta.estado == "respondida" %}
-                <span class="badge bg-success">Respondida</span>
+            {% if consulta.estado != 'cerrada' %}
+            <div class="card shadow-sm border-0 border-top border-primary border-3">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-primary">Redactar Respuesta:</label>
+                            {{ form.mensaje }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted"><i class="bi bi-paperclip"></i> Adjuntar archivos adicionales:</label>
+                            {{ form.archivos }}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                    <i class="bi bi-send me-1"></i> Enviar Respuesta
+                                </button>
+                                <button type="button" class="btn btn-outline-danger ms-2 btn-cerrar-consulta">
+                                    <i class="bi bi-lock"></i> Finalizar Caso
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <form id="form-cerrar-definitivo" method="post" action="{% url 'consultasge:cerrar_consulta' consulta.id %}" style="display:none;">
+                        {% csrf_token %}
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-dark text-center shadow-sm">
+                <i class="bi bi-archive me-2"></i> Esta consulta está finalizada. No se pueden añadir más mensajes.
+            </div>
             {% endif %}
-        </p>
-
-        <hr>
-
-        <p>{{ consulta.mensaje }}</p>
-
+        </div>
     </div>
 </div>
 
-
-<!-- HISTORIAL DE RESPUESTAS -->
-{% if consulta.respuestas.all %}
-<div class="card mb-4">
-
-    <div class="card-header bg-light">
-        Historial de Respuestas
-    </div>
-
-    <div class="card-body">
-
-        {% for respuesta in consulta.respuestas.all %}
-            <div class="mb-3">
-
-                <p class="mb-1">
-                    <strong>{{ respuesta.usuario.username }}</strong>
-                    <small class="text-muted">
-                        {{ respuesta.fecha|date:"d/m/Y H:i" }}
-                    </small>
-                </p>
-
-                <p>{{ respuesta.mensaje }}</p>
-
-                <hr>
-            </div>
-        {% endfor %}
-
-    </div>
-</div>
-{% endif %}
-
-
-<!-- FORMULARIO DE RESPUESTA -->
-<div class="card">
-
-    <div class="card-header bg-light">
-        Nueva Respuesta
-    </div>
-
-    <div class="card-body">
-
-        <form method="post">
-            {% csrf_token %}
-
-            <div class="mb-3">
-                <label class="form-label">Respuesta</label>
-                {{ form.mensaje }}
-            </div>
-
-            <button type="submit" class="btn btn-success">
-                Enviar Respuesta
-            </button>
-
-            <a href="{% url 'consultasge:gestor_consultas' %}"
-               class="btn btn-secondary">
-                Volver
-            </a>
-
-        </form>
-
-    </div>
-</div>
-
+<script>
+document.querySelector(".btn-cerrar-consulta")?.addEventListener("click", function() {
+    Swal.fire({
+        title: "¿Confirmar Cierre Definitivo?",
+        text: "Al cerrar el caso, el Director ya no podrá enviar más mensajes en este hilo.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Sí, cerrar caso",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById("form-cerrar-definitivo").submit();
+        }
+    });
+});
+</script>
 {% endblock %}

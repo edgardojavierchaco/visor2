@@ -1,5 +1,6 @@
 # apps/consultasge/templatetags/consultas_extras.py
 from django import template
+import os
 from apps.consultasge.utils import estado_sla, progreso_sla, obtener_turno_gestor
 
 register = template.Library()
@@ -19,3 +20,6 @@ def turno_gestor(user):
     """Devuelve el primer turno activo que encuentre para mostrar en el perfil/header."""
     return obtener_turno_gestor(user) # Aquí no pasamos región, solo para info general
 
+@register.filter
+def split_path(value):
+    return os.path.basename(value)

@@ -92,17 +92,27 @@ class Respuesta(models.Model):
     mensaje = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"Respuesta de {self.usuario.username} en consulta {self.consulta.id}"
 
 # ========================
 # ADJUNTO
 # ========================
 class Adjunto(models.Model):
-    consulta = models.ForeignKey(
-        Consulta,
-        related_name="adjuntos",
-        on_delete=models.CASCADE
+    consulta = models.ForeignKey(Consulta, related_name="adjuntos", on_delete=models.CASCADE)
+    # ESTA ES LA LÍNEA CRÍTICA:
+    respuesta = models.ForeignKey(
+        'Respuesta',  # Usamos comillas si Respuesta está definida más abajo
+        related_name="adjuntos_respuesta", 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True
     )
-    archivo = models.FileField(upload_to="consultas/")
+    archivo = models.FileField(upload_to="consultas/adjuntos")
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Adjunto: {self.archivo.name}"
 
 
 # ========================

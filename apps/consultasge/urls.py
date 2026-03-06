@@ -29,6 +29,7 @@ urlpatterns = [
     path("gestor/<int:pk>/", gestor_responder, name="gestor_responder"),
     path("gestor/cerrar/<int:pk>/", cerrar_consulta, name="cerrar_consulta"),
     path("notificaciones/",views.notificaciones_consultas, name="notificaciones_consultas"),
+    path("<int:id>/mensajes/", views.mensajes_ajax, name="mensajes_ajax"),
     # Dashboard interactivo (template + datos JSON)
     #path("gestor/dashboard/barras/", gestor_dashboard_interactivo_template, name="gestor_dashboard_barras_template"),
     #path(     "gestor/dashboard/barras/json/",         gestor_dashboard_interactivo_json, name="gestor_dashboard_barras_json"),

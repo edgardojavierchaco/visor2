@@ -1,50 +1,95 @@
 {% extends "consultasge/layout.html" %}
+{% load consultas_extras %}
 {% block content %}
 
 <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ consulta.asunto }}</h3>
+        <span class="badge {% if consulta.estado == 'cerrada' %}bg-secondary{% else %}bg-primary{% endif %}">
+            {{ consulta.get_estado_display }}
+        </span>
+    </div>
 
-<h3>{{ consulta.asunto }}</h3>
+    <h4>Historial de Conversación</h4>
+    <div id="chat-container" class="chat-box mb-4 p-3 bg-light rounded border shadow-inner" style="height: 500px; overflow-y: auto; display: flex; flex-direction: column;">
+        <div id="historial-mensajes">
+            {% include 'consultasge/includes/lista_mensajes.html' %}
+        </div>
+    </div>
 
-<p><strong>Escuela:</strong> {{ consulta.escuela }}</p>
-
-<hr>
-
-<div class="card">
-<div class="card-body">
-{{ consulta.mensaje }}
-</div>
-</div>
-
-{% if consulta.adjuntos.all %}
-<hr>
-<h5>Archivos adjuntos</h5>
-<ul>
-{% for adj in consulta.adjuntos.all %}
-<li>
-<a href="{{ adj.archivo.url }}" target="_blank">
-{{ adj.archivo.name|cut:"consultas/" }}
-</a>
-</li>
-{% endfor %}
-</ul>
-{% endif %}
-
-<hr>
-
-<h4>Respuestas</h4>
-
-{% for r in consulta.respuestas.all %}
-<div class="card mt-2">
-<div class="card-body">
-<b>{{ r.usuario.apellido }}</b><br>
-{{ r.mensaje }}<br>
-<small>{{ r.fecha|date:"d/m/Y H:i" }}</small>
-</div>
-</div>
-{% empty %}
-<p>No hay respuestas.</p>
-{% endfor %}
-
+    {% if consulta.estado != 'cerrada' %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body bg-white rounded">
+            <h5 class="card-title">Responder al Gestor</h5>
+            <form id="form-respuesta-ajax" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">{{ form.mensaje }}</div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold"><i class="bi bi-paperclip"></i> Adjuntos:</label>
+                    {{ form.archivos }}
+                </div>
+                <div class="text-end">
+                    <button type="submit" id="btn-enviar" class="btn btn-primary px-4">
+                        <i class="bi bi-send me-2"></i>Enviar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
+<script>
+    const chatContainer = document.getElementById('chat-container');
+    const historialDiv = document.getElementById('historial-mensajes');
+    const formRespuesta = document.getElementById('form-respuesta-ajax');
+    const btnEnviar = document.getElementById('btn-enviar');
+
+    // Función para bajar el scroll al final
+    function scrollAlFinal() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 1. Cargar mensajes automáticamente cada 5 segundos
+    function refrescarChat() {
+        fetch("{% url 'consultasge:mensajes_ajax' consulta.id %}")
+            .then(response => response.text())
+            .then(html => {
+                const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
+                historialDiv.innerHTML = html;
+                if (isAtBottom) scrollAlFinal();
+            });
+    }
+
+    setInterval(refrescarChat, 5000);
+    window.onload = scrollAlFinal;
+
+    // 2. Envío de formulario por AJAX
+    if (formRespuesta) {
+        formRespuesta.addEventListener('submit', function(e) {
+            e.preventDefault();
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+
+            const formData = new FormData(this);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => {
+                if (response.ok) {
+                    formRespuesta.reset(); // Limpia el form
+                    refrescarChat();       // Actualiza mensajes inmediatamente
+                    setTimeout(scrollAlFinal, 500);
+                }
+            })
+            .finally(() => {
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i class="bi bi-send me-2"></i>Enviar';
+            });
+        });
+    }
+</script>
 {% endblock %}
