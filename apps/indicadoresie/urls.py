@@ -6,6 +6,7 @@ from .views_dash import (
 )
 from .views import (
     SeguimientoSIE2025ListView, 
+    InformeSGEListView, 
     dashboard_prueba, 
     dashboard_prueba_superv, 
     dashboard_prueba_func, 
@@ -21,10 +22,19 @@ from .views import (
 app_name = 'indicsie'
 
 urlpatterns = [
-    path('seguimiento/', SeguimientoSIE2025ListView.as_view(), name='seguimiento'),
+    # --- VISTAS DE SEGUIMIENTO ---
+    # Ahora 'seguimiento/' muestra el Informe del Excel (InformeSGE)
+    path('seguimiento/', InformeSGEListView.as_view(), name='seguimiento'),
+    
+    # Mantenemos la vista de alumnos bajo una ruta distinta por si la necesitas consultar
+    path('seguimiento/alumnos/', SeguimientoSIE2025ListView.as_view(), name='seguimiento_alumnos'),
+    
+    # --- DASHBOARDS Y API ---
     path('dashboard/', DashboardSeguimientoSIE2025View.as_view(), name='dashboard_seguimiento_sie'),
     path('api/seguimiento-sie/', seguimiento_sie_json, name='seguimiento_sie_json'),
     path('api/seguimiento-sie-niveles/', seguimiento_sie_niveles_json, name='seguimiento_sie_niveles_json'),
+    
+    # --- PRUEBAS Y OTROS DASHBOARDS ---
     path('prueba/', dashboard_prueba, name='prueba'),
     path('prueba_superv/', dashboard_prueba_superv, name='prueba_superv'),
     path('prueba_func/', dashboard_prueba_func, name='prueba_func'),

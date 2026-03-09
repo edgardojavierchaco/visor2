@@ -5,36 +5,36 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 
 class SIESegimiento(models.Model):    
-    agente=models.CharField(max_length=100, verbose_name='Agente')
-    escuela=models.CharField(max_length=100, verbose_name='Escuela')
-    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
-    region=models.CharField(max_length=50, verbose_name='Regional')
-    nivel=models.CharField(max_length=50, verbose_name='Nivel')
-    sieant=models.IntegerField(verbose_name='Sie_anterior', db_column='SIE2024')
-    sieact=models.IntegerField(verbose_name='Sie_actual', db_column='SIE2025')
-    dni_agente=models.CharField(max_length=8, verbose_name='DNI')
+    agente = models.CharField(max_length=100, verbose_name='Agente')
+    escuela = models.CharField(max_length=100, verbose_name='Escuela')
+    cueanexo = models.CharField(max_length=9, verbose_name='Cueanexo')
+    region = models.CharField(max_length=50, verbose_name='Regional')
+    nivel = models.CharField(max_length=50, verbose_name='Nivel')
+    sieant = models.IntegerField(verbose_name='Sie_anterior', db_column='SIE2024')
+    sieact = models.IntegerField(verbose_name='Sie_actual', db_column='SIE2025')
+    dni_agente = models.CharField(max_length=8, verbose_name='DNI')
     id = models.AutoField(primary_key=True)
     
     class Meta:
-        managed=False
-        verbose_name='sie_seguimiento'
-        verbose_name_plural='sies_seguimientos'
-        db_table='sie_seguimiento'
+        managed = False
+        verbose_name = 'sie_seguimiento'
+        verbose_name_plural = 'sies_seguimientos'
+        db_table = 'sie_seguimiento'
     
     def __str__(self):
         return f'{self.agente} - {self.cueanexo}{self.escuela}'
     
     def toJSON(self):
-        item=model_to_dict(self)
-        item['agente']=self.agente
-        item['escuela']=self.escuela
-        item['cueanexo']=self.cueanexo
-        item['region']=self.region
-        item['nivel']=self.nivel
-        item['sieant']=self.sieant
-        item['sieact']=self.sieact
-        item['dni_agente']=self.dni_agente
-        item['id']=self.id
+        item = model_to_dict(self)
+        item['agente'] = self.agente
+        item['escuela'] = self.escuela
+        item['cueanexo'] = self.cueanexo
+        item['region'] = self.region
+        item['nivel'] = self.nivel
+        item['sieant'] = self.sieant
+        item['sieact'] = self.sieact
+        item['dni_agente'] = self.dni_agente
+        item['id'] = self.id
         return item
     
     
@@ -60,33 +60,65 @@ class SeguimientoSIE2025(models.Model):
     class Meta:
         db_table = 'seguimiento_sie_2025'
         managed = False  
-        verbose_name='seguimiento_sie'
-        verbose_name_plural='seguimientos_sies'
+        verbose_name = 'seguimiento_sie'
+        verbose_name_plural = 'seguimientos_sies'
 
     def __str__(self):
         return f"{self.apellidos}, {self.nombres} ({self.nro_documento})"   
     
     def toJSON(self):
-        item=model_to_dict(self)
-        item['nivel']=self.nivel
-        item['region']=self.region
-        item['agente']=self.agente
-        item['localidad']=self.localidad
-        item['cue']=self.cue
-        item['anexo']=self.anexo
-        item['grado']=self.grado
-        item['seccion']=self.seccion
-        item['turno_nombre']=self.turno_nombre
-        item['ciclo_lectivo']=self.ciclo_lectivo
-        item['estado_inscripcion']=self.estado_inscripcion
-        item['nro_documento']=self.nro_documento
-        item['apellidos']=self.apellidos
-        item['nombres']=self.nombres
-        item['discapacidad']=self.discapacidad
-        item['comunidad_aborigen']=self.comunidad_aborigen
-        item['id']=self.id 
+        item = model_to_dict(self)
+        item['nivel'] = self.nivel
+        item['region'] = self.region
+        item['agente'] = self.agente
+        item['localidad'] = self.localidad
+        item['cue'] = self.cue
+        item['anexo'] = self.anexo
+        item['grado'] = self.grado
+        item['seccion'] = self.seccion
+        item['turno_nombre'] = self.turno_nombre
+        item['ciclo_lectivo'] = self.ciclo_lectivo
+        item['estado_inscripcion'] = self.estado_inscripcion
+        item['nro_documento'] = self.nro_documento
+        item['apellidos'] = self.apellidos
+        item['nombres'] = self.nombres
+        item['discapacidad'] = self.discapacidad
+        item['comunidad_aborigen'] = self.comunidad_aborigen
+        item['id'] = self.id 
         return item
         
-    
-    
 
+class InformeSGE(models.Model):    
+    # CORREGIDO: Eliminamos el db_column. Django buscará 'id_excel' por defecto.
+    id_excel = models.CharField(max_length=100, blank=True, null=True)
+    
+    cueanexo = models.CharField(max_length=20, blank=True, null=True)
+    agente = models.CharField(max_length=150, blank=True, null=True)
+    nombre = models.CharField(max_length=250, blank=True, null=True)
+    tipo_oferta = models.CharField(max_length=100, blank=True, null=True)
+    sector = models.CharField(max_length=50, blank=True, null=True)
+    ambito = models.CharField(max_length=50, blank=True, null=True)
+    regional = models.CharField(max_length=50, blank=True, null=True)
+    cue = models.CharField(max_length=20, blank=True, null=True)
+    anexo = models.CharField(max_length=10, blank=True, null=True)
+    escuela_cod_tel = models.CharField(max_length=50, blank=True, null=True)
+    escuela_tel = models.CharField(max_length=50, blank=True, null=True)
+    escuela_email = models.CharField(max_length=150, blank=True, null=True)
+    responsable_apellido = models.CharField(max_length=100, blank=True, null=True)
+    responsable_nombre = models.CharField(max_length=100, blank=True, null=True)
+    telefono_responsable = models.CharField(max_length=50, blank=True, null=True)
+    sge_2025 = models.CharField(max_length=50, blank=True, null=True)
+    sge_2026 = models.CharField(max_length=50, blank=True, null=True)
+    inscriptos_2025 = models.CharField(max_length=50, blank=True, null=True)
+    inscriptos_2026 = models.CharField(max_length=50, blank=True, null=True)
+    
+    id = models.AutoField(primary_key=True)
+    
+    class Meta:
+        managed = False  
+        db_table = 'sie_seguimiento_actualizado2026'
+        verbose_name = 'Informe SGE'
+        verbose_name_plural = 'Informes SGE'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.cueanexo})"

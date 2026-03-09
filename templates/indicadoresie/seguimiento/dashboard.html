@@ -1,307 +1,385 @@
 {% extends 'archivos/base/layout.html' %}
-{% block content %}    
+{% block content %}
 
-<div class="container">
-    <h2 class="text-center">Dashboard de Seguimiento SIE 2025</h2>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="d-flex justify-content-center my-3">
-        <div class="form-check mx-3">
-            <input class="form-check-input" type="radio" name="filterOption" id="filterRegional">
-            <label class="form-check-label" for="filterRegional">Por Regional</label>
-        </div>
-        <div class="form-check mx-3">
-            <input class="form-check-input" type="radio" name="filterOption" id="filterNivel">
-            <label class="form-check-label" for="filterNivel">Por Nivel</label>
+<style>
+    :root {
+        --db-bg: #f4f6f9;           
+        --db-surface: #ffffff;      
+        --db-border: #e2e8f0;       
+        --db-text: #1e293b;         
+        --db-text-muted: #64748b;   
+        --db-accent: #2563eb;       
+        
+        /* CONTRASTE MÁXIMO DEFINIDO - COLORES NUEVOS */
+        --db-2025: #cbd5e1;         /* Gris Plata Claro (Fondo/Meta) */
+        --db-2026: #2563eb;         /* Azul vibrante y notorio (Actual/Carga) */
+        --db-pending: #f1f5f9;      /* Gris casi blanco para la brecha */
+        
+        --db-radius: 12px;
+        --db-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+    }
+
+    .db-wrapper {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--db-bg);
+        min-height: 100vh;
+        padding: 1.5rem 2rem 3rem;
+        color: var(--db-text);
+    }
+
+    .db-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--db-border);
+    }
+    .db-header h1 { font-size: 1.65rem; font-weight: 700; margin: 0; }
+
+    .db-tabs { display: flex; gap: .5rem; margin-bottom: 1.75rem; }
+    .db-tab {
+        padding: .55rem 1.25rem;
+        border-radius: 8px;
+        border: 1px solid var(--db-border);
+        background: var(--db-surface);
+        color: var(--db-text-muted);
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .db-tab.active { background: var(--db-accent); color: #fff; border-color: var(--db-accent); }
+
+    /* Selector de Regional */
+    .db-select-wrap {
+        display: none;
+        padding: 1.25rem;
+        background: var(--db-surface);
+        border-radius: var(--db-radius);
+        margin-bottom: 1.5rem;
+        box-shadow: var(--db-shadow);
+        border: 1px solid var(--db-border);
+        align-items: center; 
+        gap: 15px;
+    }
+    .db-select-wrap.visible { display: flex; }
+
+    .select-icon-box {
+        width: 40px; height: 40px;
+        background: #eff6ff;
+        color: var(--db-accent);
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 10px; font-size: 1.2rem;
+    }
+
+    #regionSelect {
+        width: 100%; max-width: 380px;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        border: 1.5px solid var(--db-border);
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--db-text);
+        outline: none;
+    }
+
+    /* KPIs (Escalados para mejor lectura) */
+    .db-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .db-kpi {
+        background: var(--db-surface);
+        padding: 1.5rem 1.25rem;
+        border-radius: var(--db-radius);
+        box-shadow: var(--db-shadow);
+        border-top: 5px solid var(--db-border);
+    }
+    .db-kpi-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--db-text-muted); letter-spacing: 0.5px; }
+    .db-kpi-value { font-size: 2rem; font-weight: 800; margin-top: 10px; }
+
+    /* Gráficos con espaciado corregido */
+    .db-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .db-chart-card { background: var(--db-surface); padding: 1.5rem 1.25rem; border-radius: var(--db-radius); box-shadow: var(--db-shadow); }
+    
+    .db-chart-title { 
+        font-size: 1.05rem; font-weight: 700; 
+        border-bottom: 1px solid var(--db-border); 
+        padding-bottom: 14px; margin-bottom: 20px;
+        display: flex; align-items: center;
+    }
+    .db-chart-title i { margin-right: 15px; }
+
+    /* Tarjetas de Regionales (Escaladas) */
+    .db-region-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.5rem; }
+    .db-region-card { background: var(--db-surface); padding: 1.5rem; border-radius: var(--db-radius); box-shadow: var(--db-shadow); }
+    .db-card-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem; display: block; color: var(--db-text); }
+    
+    /* Cajas de estadísticas (Escaladas "lo justo") */
+    .db-stat-box { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        background: #f8f9fa; 
+        padding: 12px 15px; 
+        border-radius: 8px; 
+        margin-top: 10px; 
+        border: 1px solid #e2e8f0; 
+    }
+    .db-stat-box span { font-size: 0.95rem; font-weight: 600; opacity: 0.85; }
+    .db-stat-box b { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.3px; }
+
+    .db-loading { text-align: center; padding: 4rem; }
+
+    @media (max-width: 768px) { .db-charts-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="db-wrapper">
+    <div class="db-header">
+        <h1><i class="fas fa-chart-line me-2 text-primary"></i>Dashboard Seguimiento SIE 2026</h1>
+        <p class="text-muted" style="font-size: 1.05rem; margin-top: 5px;">Estado de carga comparativo frente al ciclo histórico anterior</p>
+    </div>
+
+    <div class="db-tabs">
+        <button class="db-tab active" id="tabRegional"><i class="fas fa-globe me-2"></i> Por Regional</button>
+        <button class="db-tab" id="tabNivel"><i class="fas fa-layer-group me-2"></i> Nivel</button>
+    </div>
+
+    <div class="db-select-wrap" id="nivelSelectWrap">
+        <div class="select-icon-box"><i class="fas fa-map-marked-alt"></i></div>
+        <div>
+            <select id="regionSelect">
+                <option value="" disabled selected>Seleccione una regional para ver niveles...</option>
+                {% for region in regions %}
+                <option value="{{ region }}">{{ region }}</option>
+                {% endfor %}
+            </select>
         </div>
     </div>
 
-    <div id="selectRegionalContainer" class="d-none text-center my-3">
-        <label for="regionalSelect">Seleccione una Regional:</label>
-        <select id="regionalSelect" class="form-select w-50 mx-auto">
-            <option value="">Seleccione...</option>
-            {% for region in regions %}
-            <option value="{{ region }}">{{ region }}</option>
-            {% endfor %}
-        </select>
+    <div class="db-kpi-row" id="kpiRow"></div>
+
+    <div class="db-charts-grid" id="mainChartsRow">
+        <div class="db-chart-card">
+            <div class="db-chart-title"><i class="fas fa-chart-column text-primary"></i> Comparativa de Volúmenes (Inscripciones)</div>
+            <div style="height:280px;"><canvas id="mainBarChart"></canvas></div>
+        </div>
+        <div class="db-chart-card">
+            <div class="db-chart-title"><i class="fas fa-percent text-success"></i> Estado de Avance respecto a 2025</div>
+            <div style="height:280px;"><canvas id="mainStackedChart"></canvas></div>
+        </div>
     </div>
 
-    <div class="row" id="regionalCharts"></div>
+    <div id="detailSection"></div>
 
-    <div class="row d-none" id="nivelCharts"></div>
+    <div id="loadingState" class="db-loading" style="display:none;">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 fw-bold text-muted" style="font-size: 1.1rem;">Sincronizando datos con el servidor...</p>
+    </div>
 </div>
 
-<!-- Font Awesome -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const filterRegional = document.getElementById("filterRegional");
-        const filterNivel = document.getElementById("filterNivel");
-        const selectRegionalContainer = document.getElementById("selectRegionalContainer");
-        const regionalCharts = document.getElementById("regionalCharts");
-        const nivelCharts = document.getElementById("nivelCharts");
-        const regionalSelect = document.getElementById("regionalSelect");
+document.addEventListener("DOMContentLoaded", function () {
+    const tabRegional = document.getElementById("tabRegional");
+    const tabNivel = document.getElementById("tabNivel");
+    const regionSelect = document.getElementById("regionSelect");
+    const detailSection = document.getElementById("detailSection");
+    const loadingState = document.getElementById("loadingState");
+    const kpiRow = document.getElementById("kpiRow");
+    const mainChartsRow = document.getElementById("mainChartsRow");
+    
+    let currentTab = "regional";
+    let chartInstances = [];
 
-        function toggleView() {
-            if (filterRegional.checked) {
-                selectRegionalContainer.classList.add("d-none");
-                regionalCharts.classList.remove("d-none");
-                nivelCharts.classList.add("d-none");
-            } else {
-                selectRegionalContainer.classList.remove("d-none");
-                regionalCharts.classList.add("d-none");
-                nivelCharts.classList.add("d-none");
-            }
-        }
+    // COLORES DE ALTO CONTRASTE
+    const color25 = '#cbd5e1'; // Gris Plata
+    const color26 = '#2563eb'; // Azul Vibrante / Azul Rey
 
-        filterRegional.addEventListener("change", toggleView);
-        filterNivel.addEventListener("change", toggleView);
+    function format(n) { return n.toLocaleString("es-AR"); }
 
-        regionalSelect.addEventListener("change", function() {
-            const selectedRegion = this.value;
-            if (!selectedRegion) return;
+    function destroyCharts() {
+        chartInstances.forEach(c => c.destroy());
+        chartInstances = [];
+    }
 
-            if (filterRegional.checked) {
-                // Llamada para 'Por Regional'
-                fetch("{% url 'indicsie:seguimiento_sie_json' %}")
-                    .then(response => response.json())
-                    .then(responseData => {
-                        if (!responseData.data) {
-                            console.error("Error: No se encontraron datos.");
-                            return;
-                        }
+    function renderKPIs(items) {
+        let meta = 0, actual = 0;
+        items.forEach(i => { meta += i.total_ant; actual += i.total_act; });
+        const pct = meta > 0 ? ((actual / meta) * 100).toFixed(1) : 0;
 
-                        regionalCharts.innerHTML = ""; // Limpiar gráficos anteriores
-                        responseData.data.forEach((item, index) => {
-                            let chartId = `chart_${index + 1}`;
+        kpiRow.innerHTML = `
+            <div class="db-kpi" style="border-top-color: ${color25}">
+                <div class="db-kpi-label">Inscripciones 2025 (SGE)</div>
+                <div class="db-kpi-value">${format(meta)}</div>
+            </div>
+            <div class="db-kpi" style="border-top-color: ${color26}">
+                <div class="db-kpi-label">Inscripciones 2026 (SGE)</div>
+                <div class="db-kpi-value" style="color:${color26}">${format(actual)}</div>
+            </div>
+            <div class="db-kpi" style="border-top-color: var(--db-accent)">
+                <div class="db-kpi-label">Avance de Carga respecto a 2025</div>
+                <div class="db-kpi-value" style="color:var(--db-accent)">${pct}%</div>
+            </div>
+        `;
+        kpiRow.style.display = "grid";
+    }
 
-                            // Calcular la diferencia entre total_ciclo_actual y total carga regulares
-                            let diffPercentage = item.regulares
+    function renderCharts(items, labelKey) {
+        destroyCharts();
+        const labels = items.map(i => i[labelKey]);
 
-                            // Depuración para verificar el valor de diffPercentage
-                            console.log("Diferencia en porcentaje:", diffPercentage);
-
-                            // Componer el HTML con el ícono de advertencia en amarillo si la diferencia está entre 1% y 40%, o ícono de peligro nuclear si está entre 41% y 100%
-                            let dangerIcon = '';
-                            if (diffPercentage >= 1 && diffPercentage < 40) {
-                                dangerIcon = `<span class="text-danger" title="Peligro está en menos 40% carga"><i class="fas fa-radiation"></i></span>`;
-                            } else if (diffPercentage >= 41 && diffPercentage < 75) {
-                                dangerIcon = `<span class="text-warning" title="Advertencia Crítica está entre 40 y 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
-                            } else if (diffPercentage >= 75 && diffPercentage < 100) {
-                                dangerIcon = `<span class="text-primary" title="Advertencia Leve está en más 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
+        // Gráfico 1: Barras Comparativas Principales
+        const ctx1 = document.getElementById("mainBarChart").getContext("2d");
+        chartInstances.push(new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Inscripciones 2025', data: items.map(i => i.total_ant), backgroundColor: color25, borderRadius: 4 },
+                    { label: 'Inscripciones 2026', data: items.map(i => i.total_act), backgroundColor: color26, borderRadius: 4 }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { position: 'bottom', labels: { font: { size: 13, family: "'DM Sans', sans-serif" } } },
+                    tooltip: {
+                        bodyFont: { size: 14, family: "'DM Sans', sans-serif" },
+                        callbacks: {
+                            label: function(ctx) {
+                                return " " + ctx.dataset.label + ": " + format(ctx.raw);
                             }
-
-                                                        
-                            regionalCharts.innerHTML += `
-                                <div class="col-md-3">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h5 class="card-title text-center">${item.region}</h5>
-                                            <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
-                                            <p class="card-text text-center">
-                                                <strong>Total Ciclo Anterior: ${item.total_ant}</strong>
-                                            </p>
-                                            <p class="card-text text-center">
-                                                <strong>Total Ciclo Actual: ${item.total_ciclo_actual}</strong>
-                                            </p>
-                                            <p class="card-text text-center">
-                                                <strong>Total Regulares: ${item.total_act}</strong> ${dangerIcon}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>`;
-
-                            // Crear gráfico después de renderizar el DOM
-                            setTimeout(() => {
-                                let ctx = document.getElementById(chartId)?.getContext('2d');
-                                if (ctx) {
-                                    new Chart(ctx, {
-                                        type: 'pie',
-                                        data: {
-                                            labels: ['Preinscriptos', 'Regulares'],
-                                            datasets: [{
-                                                data: [item.preinscriptos, item.regulares],
-                                                backgroundColor: ['#FF0000', '#008000']
-                                            }]
-                                        },
-                                        options: {
-                                            responsive: true,
-                                            plugins: {
-                                                legend: { position: 'top' },
-                                                title: { display: true, text: item.region }
-                                            }
-                                        }
-                                    });
-                                } else {
-                                    console.error("Error: El canvas no fue encontrado o el contexto no se pudo obtener.");
-                                }
-                            }, 100);
-                        });
-
-                        regionalCharts.classList.remove("d-none");
-                    })
-                    .catch(error => console.error("Error en la API:", error));
-            } else if (filterNivel.checked) {
-                // Llamada para 'Por Nivel'
-                fetch("{% url 'indicsie:seguimiento_sie_niveles_json' %}?region=" + selectedRegion)
-                    .then(response => response.json())
-                    .then(responseData => {
-                        if (!responseData.niveles) {
-                            console.error("Error: No se encontraron niveles.");
-                            return;
                         }
-
-                        nivelCharts.innerHTML = ""; // Limpiar gráficos anteriores
-                        responseData.niveles.forEach((item, index) => {
-                            let chartId = `nivel_chart_${index + 1}`;
-
-                            // Calcular la diferencia entre total_ciclo_actual y total cargar regulares
-                            let diffPercentage = item.regulares
-                            // Depuración para verificar el valor de diffPercentage
-                            console.log("Diferencia en porcentaje:", diffPercentage);
-
-                            // Componer el HTML con el ícono de advertencia en amarillo si la diferencia está entre 1% y 40%, o ícono de peligro nuclear si está entre 41% y 100%
-                            let dangerIcon = '';
-                            if (diffPercentage >= 1 && diffPercentage < 40) {
-                                dangerIcon = `<span class="text-danger" title="Peligro está en menos 40% carga"><i class="fas fa-radiation"></i></span>`;
-                            } else if (diffPercentage >= 40 && diffPercentage <= 75) {
-                                dangerIcon = `<span class="text-warning" title="Advertencia Crítica está entre 40 y 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
-                            } else if (diffPercentage >= 75 && diffPercentage < 100) {
-                                dangerIcon = `<span class="text-primary" title="Advertencia Leve está a más de 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
-                            }
-
-                            nivelCharts.innerHTML += `
-                                <div class="col-md-3">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h5 class="card-title text-center">${item.nivel}</h5>
-                                            <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
-                                            <p class="card-text text-center">
-                                                <strong>Total Ciclo Anterior: ${item.total_ant}</strong>
-                                            </p>
-                                            <p class="card-text text-center">
-                                                <strong>Total Ciclo Actual: ${item.total_ciclo_actual}</strong>
-                                            </p>
-                                            <p class="card-text text-center">
-                                                <strong>Total Regulares: ${item.total_act}</strong> ${dangerIcon}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>`;
-
-                            // Crear gráfico después de renderizar el DOM
-                            setTimeout(() => {
-                                let ctx = document.getElementById(chartId)?.getContext('2d');
-                                if (ctx) {
-                                    new Chart(ctx, {
-                                        type: 'pie',
-                                        data: {
-                                            labels: ['Preinscriptos', 'Regulares'],
-                                            datasets: [{
-                                                data: [item.preinscriptos, item.regulares],
-                                                backgroundColor: ['#FF0000', '#008000']
-                                            }]
-                                        },
-                                        options: {
-                                            responsive: true,
-                                            plugins: {
-                                                legend: { position: 'top' },
-                                                title: { display: true, text: item.nivel }
-                                            }
-                                        }
-                                    });
-                                } else {
-                                    console.error("Error: El canvas no fue encontrado o el contexto no se pudo obtener.");
-                                }
-                            }, 100);
-                        });
-
-                        nivelCharts.classList.remove("d-none");
-                    })
-                    .catch(error => console.error("Error en la API de niveles:", error));
-            }
-        });
-
-        // Llamada inicial para mostrar los gráficos de 'Por Regional' al cargar la página
-        fetch("{% url 'indicsie:seguimiento_sie_json' %}")
-            .then(response => response.json())
-            .then(responseData => {
-                if (!responseData.data) {
-                    console.error("Error: No se encontraron datos.");
-                    return;
-                }
-
-                regionalCharts.innerHTML = ""; // Limpiar gráficos anteriores
-                responseData.data.forEach((item, index) => {
-                    let chartId = `chart_${index + 1}`;
-
-                    // Calcular la diferencia entre total_ciclo_actual y total carga regular
-                    let diffPercentage = item.regulares
-                    
-                    // Depuración para verificar el valor de diffPercentage
-                    console.log("Diferencia en porcentaje:", diffPercentage);
-
-                    // Componer el HTML con el ícono de advertencia en amarillo si la diferencia está entre 1% y 40%, o ícono de peligro nuclear si está entre 41% y 100%
-                    let dangerIcon = '';
-                    if (diffPercentage >= 1 && diffPercentage < 40) {
-                        dangerIcon = `<span class="text-danger" title="Peligro está a menos 40% carga"><i class="fas fa-radiation"></i></span>`;
-                    } else if (diffPercentage >= 40 && diffPercentage < 75) {
-                        dangerIcon = `<span class="text-warning" title="Advertencia Crítica está entre 40 y 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
-                    } else if (diffPercentage >= 75 && diffPercentage < 100) {
-                        dangerIcon = `<span class="text-primary" title="Advertencia Leve está a más 75% carga"><i class="fas fa-exclamation-triangle"></i></span>`;
                     }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 12, family: "'DM Sans', sans-serif", weight: '600' } } },
+                    y: { ticks: { font: { size: 12, family: "'DM Sans', sans-serif" } } }
+                }
+            }
+        }));
 
-                    regionalCharts.innerHTML += `
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title text-center">${item.region}</h5>
-                                    <canvas id="${chartId}" style="width: 100%; height: 250px;"></canvas>
-                                    <p class="card-text text-center">
-                                        <strong>Total Ciclo Anterior: ${item.total_ant}</strong>
-                                    </p>
-                                    <p class="card-text text-center">
-                                        <strong>Total Ciclo Actual: ${item.total_ciclo_actual}</strong>
-                                    </p>
-                                    <p class="card-text text-center">
-                                        <strong>Total Regulares: ${item.total_act}</strong> ${dangerIcon}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>`;
-
-                    // Crear gráfico después de renderizar el DOM
-                    setTimeout(() => {
-                        let ctx = document.getElementById(chartId)?.getContext('2d');
-                        if (ctx) {
-                            new Chart(ctx, {
-                                type: 'pie',
-                                data: {
-                                    labels: ['Preinscriptos', 'Regulares'],
-                                    datasets: [{
-                                        data: [item.preinscriptos, item.regulares],
-                                        backgroundColor: ['#FF0000', '#008000']
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    plugins: {
-                                        legend: { position: 'top' },
-                                        title: { display: true, text: item.region }
-                                    }
-                                }
-                            });
-                        } else {
-                            console.error("Error: El canvas no fue encontrado o el contexto no se pudo obtener.");
+        // Gráfico 2: Avance %
+        const ctx2 = document.getElementById("mainStackedChart").getContext("2d");
+        chartInstances.push(new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: '% Cargado', data: items.map(i => i.regulares), backgroundColor: color26, borderRadius: 2 },
+                    { label: '% Pendiente', data: items.map(i => i.preinscriptos), backgroundColor: '#f1f5f9', borderRadius: 2 }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    x: { stacked: true, ticks: { font: { size: 12, family: "'DM Sans', sans-serif", weight: '600' } } }, 
+                    y: { stacked: true, max: 100, ticks: { font: { size: 12, family: "'DM Sans', sans-serif" } } } 
+                },
+                plugins: { 
+                    legend: { position: 'bottom', labels: { font: { size: 13, family: "'DM Sans', sans-serif" } } },
+                    tooltip: {
+                        bodyFont: { size: 14, family: "'DM Sans', sans-serif" },
+                        callbacks: {
+                            label: function(ctx) {
+                                return " " + ctx.dataset.label + ": " + ctx.raw.toFixed(1) + "%";
+                            }
                         }
-                    }, 100);
-                });
+                    }
+                }
+            }
+        }));
 
-                regionalCharts.classList.remove("d-none");
-            })
-            .catch(error => console.error("Error en la API:", error));
-    });
+        mainChartsRow.style.display = "grid";
+
+        // Tarjetas individuales de cada Regional (Mini-Gráficos)
+        detailSection.innerHTML = '<div class="db-region-grid"></div>';
+        const grid = detailSection.querySelector('.db-region-grid');
+        
+        items.forEach((item, idx) => {
+            const canvasId = `card_chart_${idx}`;
+            const card = document.createElement('div');
+            card.className = 'db-region-card';
+            
+            card.innerHTML = `
+                <span class="db-card-title">${item[labelKey]}</span>
+                <div style="height:150px; margin-bottom: 10px;"><canvas id="${canvasId}"></canvas></div>
+                <div class="db-stat-box"><span>Inscripciones 2025:</span> <b>${format(item.total_ant)}</b></div>
+                <div class="db-stat-box" style="color:${color26}; border-color:#bfdbfe; background:#eff6ff;">
+                    <span>Inscripciones 2026:</span> <b>${format(item.total_act)}</b>
+                </div>
+            `;
+            grid.appendChild(card);
+            
+            const ctxCard = document.getElementById(canvasId).getContext("2d");
+            chartInstances.push(new Chart(ctxCard, {
+                type: 'bar',
+                data: {
+                    labels: ['2025', '2026'],
+                    datasets: [{ 
+                        data: [item.total_ant, item.total_act], 
+                        backgroundColor: [color25, color26], 
+                        borderRadius: 4 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: {
+                        x: { ticks: { font: { size: 13, family: "'DM Sans', sans-serif", weight: '700' } } },
+                        y: { display: false } // Ocultamos el eje Y para que quede más limpio
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            bodyFont: { size: 14, family: "'DM Sans', sans-serif" },
+                            callbacks: {
+                                label: function(ctx) {
+                                    return " Inscripciones " + ctx.label + ": " + format(ctx.raw);
+                                }
+                            }
+                        }
+                    } 
+                }
+            }));
+        });
+    }
+
+    function loadData() {
+        loadingState.style.display = "block";
+        let url = currentTab === "regional" ? "{% url 'indicsie:seguimiento_sie_json' %}" : "{% url 'indicsie:seguimiento_sie_niveles_json' %}?region=" + encodeURIComponent(regionSelect.value);
+        
+        fetch(url).then(r => r.json()).then(resp => {
+            const data = currentTab === "regional" ? resp.data : resp.niveles;
+            loadingState.style.display = "none";
+            if (!data || data.length === 0) return;
+            renderKPIs(data);
+            renderCharts(data, currentTab === "regional" ? "region" : "nivel");
+        });
+    }
+
+    tabRegional.onclick = () => { 
+        currentTab = "regional"; 
+        tabRegional.classList.add("active"); 
+        tabNivel.classList.remove("active"); 
+        document.getElementById("nivelSelectWrap").classList.remove("visible"); 
+        loadData(); 
+    };
+
+    tabNivel.onclick = () => { 
+        currentTab = "nivel"; 
+        tabNivel.classList.add("active"); 
+        tabRegional.classList.remove("active"); 
+        regionSelect.selectedIndex = 0; 
+        document.getElementById("nivelSelectWrap").classList.add("visible"); 
+        detailSection.innerHTML = ""; 
+        kpiRow.innerHTML = "";
+        kpiRow.style.display = "none";
+        mainChartsRow.style.display = "none";
+        destroyCharts();
+    };
+
+    regionSelect.onchange = loadData;
+    loadData();
+});
 </script>
 {% endblock %}
-

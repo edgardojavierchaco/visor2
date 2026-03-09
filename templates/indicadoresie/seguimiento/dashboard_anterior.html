@@ -1,0 +1,790 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    :root {
+        --db-bg: #0f1117;
+        --db-surface: #1a1d27;
+        --db-surface-2: #22262f;
+        --db-border: rgba(255,255,255,0.06);
+        --db-text: #e4e6eb;
+        --db-text-muted: #8b8fa3;
+        --db-accent: #6366f1;
+        --db-accent-light: #818cf8;
+        --db-green: #22c55e;
+        --db-green-soft: rgba(34,197,94,0.12);
+        --db-amber: #f59e0b;
+        --db-amber-soft: rgba(245,158,11,0.12);
+        --db-red: #ef4444;
+        --db-red-soft: rgba(239,68,68,0.12);
+        --db-blue: #3b82f6;
+        --db-blue-soft: rgba(59,130,246,0.12);
+        --db-cyan: #06b6d4;
+        --db-radius: 14px;
+        --db-radius-sm: 8px;
+        --font-main: 'DM Sans', sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    .db-wrapper {
+        font-family: var(--font-main);
+        background: var(--db-bg);
+        min-height: 100vh;
+        padding: 1.5rem 2rem 3rem;
+        color: var(--db-text);
+    }
+
+    /* Header */
+    .db-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--db-border);
+    }
+    .db-header-left h1 {
+        font-size: 1.65rem;
+        font-weight: 700;
+        color: #fff;
+        margin: 0 0 .3rem;
+        letter-spacing: -0.02em;
+    }
+    .db-header-left p {
+        font-size: .82rem;
+        color: var(--db-text-muted);
+        margin: 0;
+    }
+    .db-header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: var(--db-accent);
+        color: #fff;
+        font-size: .7rem;
+        font-weight: 600;
+        padding: .3rem .7rem;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    /* Tab navigation */
+    .db-tabs {
+        display: flex;
+        gap: .5rem;
+        margin-bottom: 1.75rem;
+    }
+    .db-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .55rem 1.2rem;
+        border-radius: var(--db-radius-sm);
+        border: 1px solid var(--db-border);
+        background: transparent;
+        color: var(--db-text-muted);
+        font-family: var(--font-main);
+        font-size: .82rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all .2s;
+    }
+    .db-tab:hover {
+        background: var(--db-surface);
+        color: var(--db-text);
+        border-color: rgba(255,255,255,0.12);
+    }
+    .db-tab.active {
+        background: var(--db-accent);
+        color: #fff;
+        border-color: var(--db-accent);
+    }
+
+    /* Region selector */
+    .db-select-wrap {
+        display: none;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem 1.25rem;
+        background: var(--db-surface);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+    }
+    .db-select-wrap.visible { display: flex; }
+    .db-select-wrap label {
+        font-size: .8rem;
+        color: var(--db-text-muted);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .db-select-wrap select {
+        flex: 1;
+        max-width: 340px;
+        background: var(--db-surface-2);
+        color: var(--db-text);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius-sm);
+        padding: .5rem .75rem;
+        font-family: var(--font-main);
+        font-size: .82rem;
+        outline: none;
+        transition: border-color .2s;
+    }
+    .db-select-wrap select:focus { border-color: var(--db-accent); }
+    .db-select-wrap select option { background: var(--db-surface-2); color: var(--db-text); }
+
+    /* KPI Cards Row */
+    .db-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .db-kpi {
+        background: var(--db-surface);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+        padding: 1.15rem 1.25rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .db-kpi::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+    }
+    .db-kpi.kpi-ant::before { background: var(--db-amber); }
+    .db-kpi.kpi-act::before { background: var(--db-blue); }
+    .db-kpi.kpi-reg::before { background: var(--db-green); }
+    .db-kpi.kpi-diff::before { background: var(--db-accent); }
+
+    .db-kpi-label {
+        font-size: .7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--db-text-muted);
+        margin-bottom: .5rem;
+    }
+    .db-kpi-value {
+        font-family: var(--font-mono);
+        font-size: 1.55rem;
+        font-weight: 500;
+        color: #fff;
+        line-height: 1;
+    }
+    .db-kpi-sub {
+        font-size: .72rem;
+        color: var(--db-text-muted);
+        margin-top: .35rem;
+    }
+
+    /* Charts grid */
+    .db-charts-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .db-charts-grid.two-col {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .db-chart-card {
+        background: var(--db-surface);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+        padding: 1.25rem;
+    }
+    .db-chart-title {
+        font-size: .82rem;
+        font-weight: 600;
+        color: var(--db-text);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .db-chart-title i {
+        color: var(--db-accent-light);
+        font-size: .85rem;
+    }
+
+    .db-chart-canvas-wrap {
+        position: relative;
+        width: 100%;
+        height: 280px;
+    }
+
+    /* Region detail cards */
+    .db-region-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.1rem;
+        margin-top: 1.5rem;
+    }
+    .db-region-card {
+        background: var(--db-surface);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+        padding: 1.15rem;
+        transition: border-color .2s, transform .2s;
+    }
+    .db-region-card:hover {
+        border-color: rgba(99,102,241,0.3);
+        transform: translateY(-2px);
+    }
+    .db-region-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .85rem;
+    }
+    .db-region-card-name {
+        font-size: .88rem;
+        font-weight: 600;
+        color: #fff;
+    }
+    .db-region-card-badge {
+        font-size: .65rem;
+        font-weight: 600;
+        padding: .2rem .55rem;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .badge-danger { background: var(--db-red-soft); color: var(--db-red); }
+    .badge-warning { background: var(--db-amber-soft); color: var(--db-amber); }
+    .badge-info { background: var(--db-blue-soft); color: var(--db-blue); }
+    .badge-success { background: var(--db-green-soft); color: var(--db-green); }
+
+    .db-region-card .chart-wrap {
+        height: 180px;
+        margin-bottom: .75rem;
+    }
+
+    .db-region-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: .5rem;
+    }
+    .db-region-stat {
+        text-align: center;
+        padding: .5rem .25rem;
+        background: var(--db-surface-2);
+        border-radius: var(--db-radius-sm);
+    }
+    .db-region-stat-val {
+        font-family: var(--font-mono);
+        font-size: .92rem;
+        font-weight: 500;
+        color: #fff;
+    }
+    .db-region-stat-label {
+        font-size: .62rem;
+        color: var(--db-text-muted);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-top: .15rem;
+    }
+
+    /* Loading */
+    .db-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem;
+        color: var(--db-text-muted);
+    }
+    .db-spinner {
+        width: 36px; height: 36px;
+        border: 3px solid var(--db-border);
+        border-top-color: var(--db-accent);
+        border-radius: 50%;
+        animation: dbSpin .7s linear infinite;
+        margin-bottom: 1rem;
+    }
+    @keyframes dbSpin { to { transform: rotate(360deg); } }
+
+    .db-empty {
+        text-align: center;
+        padding: 3rem;
+        color: var(--db-text-muted);
+        font-size: .85rem;
+    }
+
+    @media (max-width: 768px) {
+        .db-wrapper { padding: 1rem; }
+        .db-header { flex-direction: column; align-items: flex-start; gap: .75rem; }
+        .db-charts-grid.two-col { grid-template-columns: 1fr; }
+        .db-region-grid { grid-template-columns: 1fr; }
+        .db-kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+
+<div class="db-wrapper">
+
+    <div class="db-header">
+        <div class="db-header-left">
+            <h1><i class="fas fa-chart-bar" style="color:var(--db-accent-light);margin-right:.4rem;"></i> Dashboard Comparativo SIE</h1>
+            <p>Comparación interanual de seguimiento · Ciclo 2025 vs 2026</p>
+        </div>
+        <span class="db-header-badge"><i class="fas fa-sync-alt"></i> Datos en vivo</span>
+    </div>
+
+    <div class="db-tabs">
+        <button class="db-tab active" id="tabRegional">
+            <i class="fas fa-map-marker-alt"></i> Por Regional
+        </button>
+        <button class="db-tab" id="tabNivel">
+            <i class="fas fa-layer-group"></i> Por Nivel
+        </button>
+    </div>
+
+    <div class="db-select-wrap" id="nivelSelectWrap">
+        <i class="fas fa-filter" style="color:var(--db-accent-light);"></i>
+        <label for="regionSelect">Regional:</label>
+        <select id="regionSelect">
+            <option value="">Seleccione una regional…</option>
+            {% for region in regions %}
+            <option value="{{ region }}">{{ region }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="db-kpi-row" id="kpiRow" style="display:none;"></div>
+
+    <div class="db-charts-grid two-col" id="mainChartsRow" style="display:none;">
+        <div class="db-chart-card">
+            <div class="db-chart-title"><i class="fas fa-chart-bar"></i> Comparación por Totales</div>
+            <div class="db-chart-canvas-wrap">
+                <canvas id="mainBarChart"></canvas>
+            </div>
+        </div>
+        <div class="db-chart-card">
+            <div class="db-chart-title"><i class="fas fa-percentage"></i> Porcentaje Regulares vs Preinscriptos</div>
+            <div class="db-chart-canvas-wrap">
+                <canvas id="mainStackedChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailSection"></div>
+
+    <div class="db-loading" id="loadingState">
+        <div class="db-spinner"></div>
+        <span>Cargando datos…</span>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tabRegional = document.getElementById("tabRegional");
+    const tabNivel = document.getElementById("tabNivel");
+    const nivelSelectWrap = document.getElementById("nivelSelectWrap");
+    const regionSelect = document.getElementById("regionSelect");
+    const kpiRow = document.getElementById("kpiRow");
+    const mainChartsRow = document.getElementById("mainChartsRow");
+    const detailSection = document.getElementById("detailSection");
+    const loadingState = document.getElementById("loadingState");
+
+    let currentTab = "regional";
+    let mainBarChartInstance = null;
+    let mainStackedChartInstance = null;
+    let detailChartInstances = [];
+
+    Chart.defaults.color = "#8b8fa3";
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.pointStyleWidth = 8;
+    Chart.defaults.plugins.legend.labels.padding = 14;
+
+    tabRegional.addEventListener("click", function () {
+        currentTab = "regional";
+        tabRegional.classList.add("active");
+        tabNivel.classList.remove("active");
+        nivelSelectWrap.classList.remove("visible");
+        loadRegionalData();
+    });
+
+    tabNivel.addEventListener("click", function () {
+        currentTab = "nivel";
+        tabNivel.classList.add("active");
+        tabRegional.classList.remove("active");
+        nivelSelectWrap.classList.add("visible");
+        clearDashboard();
+        kpiRow.style.display = "none";
+        mainChartsRow.style.display = "none";
+        loadingState.style.display = "none";
+    });
+
+    regionSelect.addEventListener("change", function () {
+        const val = this.value;
+        if (!val) return;
+        if (currentTab === "nivel") {
+            loadNivelData(val);
+        }
+    });
+
+    function clearDashboard() {
+        detailChartInstances.forEach(c => c.destroy());
+        detailChartInstances = [];
+        if (mainBarChartInstance) { mainBarChartInstance.destroy(); mainBarChartInstance = null; }
+        if (mainStackedChartInstance) { mainStackedChartInstance.destroy(); mainStackedChartInstance = null; }
+        detailSection.innerHTML = "";
+        kpiRow.innerHTML = "";
+    }
+
+    function showLoading() {
+        loadingState.style.display = "flex";
+        kpiRow.style.display = "none";
+        mainChartsRow.style.display = "none";
+        clearDashboard();
+    }
+
+    function hideLoading() {
+        loadingState.style.display = "none";
+    }
+
+    function formatNum(n) {
+        return n != null ? n.toLocaleString("es-AR") : "–";
+    }
+
+    function getBadge(regularesPct) {
+        if (regularesPct < 40) return { cls: "badge-danger", text: "Crítico" };
+        if (regularesPct < 75) return { cls: "badge-warning", text: "Alerta" };
+        if (regularesPct < 100) return { cls: "badge-info", text: "En progreso" };
+        return { cls: "badge-success", text: "Completo" };
+    }
+
+    function renderKPIs(items) {
+        let totalAnt = 0, totalReg = 0, totalCicloActual = 0;
+        items.forEach(item => {
+            totalAnt += item.total_ant || 0;
+            totalReg += item.total_act || 0;
+            totalCicloActual += item.total_ciclo_actual || 0;
+        });
+
+        const diff = totalCicloActual - totalAnt;
+        const diffPct = totalAnt > 0 ? ((diff / totalAnt) * 100).toFixed(1) : "–";
+        const diffSign = diff >= 0 ? "+" : "";
+        const diffColor = diff >= 0 ? "var(--db-green)" : "var(--db-red)";
+
+        kpiRow.innerHTML =
+            '<div class="db-kpi kpi-ant">' +
+                '<div class="db-kpi-label">Total Ciclo 2025</div>' +
+                '<div class="db-kpi-value">' + formatNum(totalAnt) + '</div>' +
+                '<div class="db-kpi-sub">Ciclo anterior consolidado</div>' +
+            '</div>' +
+            '<div class="db-kpi kpi-act">' +
+                '<div class="db-kpi-label">Total Ciclo 2026</div>' +
+                '<div class="db-kpi-value">' + formatNum(totalCicloActual) + '</div>' +
+                '<div class="db-kpi-sub">Preinscriptos + Regulares</div>' +
+            '</div>' +
+            '<div class="db-kpi kpi-reg">' +
+                '<div class="db-kpi-label">Total Regulares 2026</div>' +
+                '<div class="db-kpi-value">' + formatNum(totalReg) + '</div>' +
+                '<div class="db-kpi-sub">Estado regular confirmado</div>' +
+            '</div>' +
+            '<div class="db-kpi kpi-diff">' +
+                '<div class="db-kpi-label">Variación Interanual</div>' +
+                '<div class="db-kpi-value" style="color:' + diffColor + '">' + diffSign + formatNum(diff) + '</div>' +
+                '<div class="db-kpi-sub" style="color:' + diffColor + '">' + diffSign + diffPct + '% respecto a 2025</div>' +
+            '</div>';
+        kpiRow.style.display = "grid";
+    }
+
+    function renderMainCharts(items, labelKey) {
+        var labels = items.map(function(i) { return i[labelKey]; });
+        var dataAnt = items.map(function(i) { return i.total_ant || 0; });
+        var dataActual = items.map(function(i) { return i.total_ciclo_actual || 0; });
+        var dataReg = items.map(function(i) { return i.total_act || 0; });
+
+        var ctx1 = document.getElementById("mainBarChart").getContext("2d");
+        mainBarChartInstance = new Chart(ctx1, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: "Ciclo 2025",
+                        data: dataAnt,
+                        backgroundColor: "rgba(245,158,11,0.75)",
+                        borderColor: "rgba(245,158,11,1)",
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.65
+                    },
+                    {
+                        label: "Ciclo 2026 (Total)",
+                        data: dataActual,
+                        backgroundColor: "rgba(59,130,246,0.75)",
+                        borderColor: "rgba(59,130,246,1)",
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.65
+                    },
+                    {
+                        label: "Regulares 2026",
+                        data: dataReg,
+                        backgroundColor: "rgba(34,197,94,0.75)",
+                        borderColor: "rgba(34,197,94,1)",
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.65
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: "top" },
+                    tooltip: {
+                        backgroundColor: "#1a1d27",
+                        borderColor: "rgba(255,255,255,0.1)",
+                        borderWidth: 1,
+                        padding: 10,
+                        titleFont: { weight: "600" },
+                        callbacks: {
+                            label: function(ctx) { return " " + ctx.dataset.label + ": " + formatNum(ctx.raw); }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "rgba(255,255,255,0.04)" },
+                        border: { color: "rgba(255,255,255,0.06)" },
+                        ticks: { callback: function(v) { return formatNum(v); } }
+                    },
+                    x: {
+                        grid: { color: "rgba(255,255,255,0.04)" },
+                        border: { color: "rgba(255,255,255,0.06)" }
+                    }
+                }
+            }
+        });
+
+        var ctx2 = document.getElementById("mainStackedChart").getContext("2d");
+        mainStackedChartInstance = new Chart(ctx2, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: "Regulares %",
+                        data: items.map(function(i) { return i.regulares || 0; }),
+                        backgroundColor: "rgba(34,197,94,0.8)",
+                        borderRadius: 4
+                    },
+                    {
+                        label: "Preinscriptos %",
+                        data: items.map(function(i) { return i.preinscriptos || 0; }),
+                        backgroundColor: "rgba(239,68,68,0.7)",
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: "top" },
+                    tooltip: {
+                        backgroundColor: "#1a1d27",
+                        borderColor: "rgba(255,255,255,0.1)",
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: function(ctx) { return " " + ctx.dataset.label + ": " + ctx.raw.toFixed(1) + "%"; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: "rgba(255,255,255,0.04)" },
+                        border: { color: "rgba(255,255,255,0.06)" }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: "rgba(255,255,255,0.04)" },
+                        border: { color: "rgba(255,255,255,0.06)" },
+                        ticks: { callback: function(v) { return v + "%"; } }
+                    }
+                }
+            }
+        });
+
+        mainChartsRow.style.display = "grid";
+    }
+
+    function renderDetailCards(items, labelKey) {
+        var html = '<div class="db-region-grid">';
+
+        items.forEach(function(item, idx) {
+            var name = item[labelKey];
+            var badge = getBadge(item.regulares);
+            var chartId = "detail_chart_" + idx;
+            var diff = (item.total_ciclo_actual || 0) - (item.total_ant || 0);
+            var diffSign = diff >= 0 ? "+" : "";
+            var diffColor = diff >= 0 ? "var(--db-green)" : "var(--db-red)";
+
+            html +=
+                '<div class="db-region-card">' +
+                    '<div class="db-region-card-header">' +
+                        '<span class="db-region-card-name">' + name + '</span>' +
+                        '<span class="db-region-card-badge ' + badge.cls + '">' + badge.text + ' · ' + item.regulares.toFixed(0) + '%</span>' +
+                    '</div>' +
+                    '<div class="chart-wrap">' +
+                        '<canvas id="' + chartId + '"></canvas>' +
+                    '</div>' +
+                    '<div class="db-region-stats">' +
+                        '<div class="db-region-stat">' +
+                            '<div class="db-region-stat-val" style="color:var(--db-amber)">' + formatNum(item.total_ant || 0) + '</div>' +
+                            '<div class="db-region-stat-label">Ciclo 2025</div>' +
+                        '</div>' +
+                        '<div class="db-region-stat">' +
+                            '<div class="db-region-stat-val" style="color:var(--db-blue)">' + formatNum(item.total_ciclo_actual) + '</div>' +
+                            '<div class="db-region-stat-label">Ciclo 2026</div>' +
+                        '</div>' +
+                        '<div class="db-region-stat">' +
+                            '<div class="db-region-stat-val" style="color:' + diffColor + '">' + diffSign + formatNum(diff) + '</div>' +
+                            '<div class="db-region-stat-label">Variación</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+        });
+
+        html += '</div>';
+        detailSection.innerHTML = html;
+
+        items.forEach(function(item, idx) {
+            var chartId = "detail_chart_" + idx;
+            setTimeout(function() {
+                var canvas = document.getElementById(chartId);
+                if (!canvas) return;
+                var ctx = canvas.getContext("2d");
+                var chart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: ["Ciclo 2025", "Total 2026", "Regulares 2026"],
+                        datasets: [{
+                            data: [item.total_ant || 0, item.total_ciclo_actual, item.total_act],
+                            backgroundColor: [
+                                "rgba(245,158,11,0.8)",
+                                "rgba(59,130,246,0.8)",
+                                "rgba(34,197,94,0.8)"
+                            ],
+                            borderColor: [
+                                "rgba(245,158,11,1)",
+                                "rgba(59,130,246,1)",
+                                "rgba(34,197,94,1)"
+                            ],
+                            borderWidth: 1,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: "#1a1d27",
+                                borderColor: "rgba(255,255,255,0.1)",
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: function(ctx) { return " " + formatNum(ctx.raw); }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: "rgba(255,255,255,0.04)" },
+                                border: { color: "rgba(255,255,255,0.06)" },
+                                ticks: {
+                                    callback: function(v) { return formatNum(v); },
+                                    maxTicksLimit: 5
+                                }
+                            },
+                            x: {
+                                grid: { color: "rgba(255,255,255,0.04)" },
+                                border: { color: "rgba(255,255,255,0.06)" },
+                                ticks: { font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+                detailChartInstances.push(chart);
+            }, 60);
+        });
+    }
+
+    function loadRegionalData() {
+        showLoading();
+        fetch("{% url 'indicsie:seguimiento_sie_json' %}")
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                hideLoading();
+                if (!resp.data || !resp.data.length) {
+                    detailSection.innerHTML = '<div class="db-empty"><i class="fas fa-inbox" style="font-size:2rem;margin-bottom:.5rem;display:block;"></i>No se encontraron datos para su usuario.</div>';
+                    return;
+                }
+                renderKPIs(resp.data);
+                renderMainCharts(resp.data, "region");
+                renderDetailCards(resp.data, "region");
+            })
+            .catch(function(err) {
+                hideLoading();
+                console.error("Error:", err);
+                detailSection.innerHTML = '<div class="db-empty">Error al cargar datos.</div>';
+            });
+    }
+
+    function loadNivelData(region) {
+        showLoading();
+        fetch("{% url 'indicsie:seguimiento_sie_niveles_json' %}?region=" + encodeURIComponent(region))
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                hideLoading();
+                if (!resp.niveles || !resp.niveles.length) {
+                    detailSection.innerHTML = '<div class="db-empty"><i class="fas fa-inbox" style="font-size:2rem;margin-bottom:.5rem;display:block;"></i>No se encontraron datos para esta regional.</div>';
+                    return;
+                }
+                renderKPIs(resp.niveles);
+                renderMainCharts(resp.niveles, "nivel");
+                renderDetailCards(resp.niveles, "nivel");
+            })
+            .catch(function(err) {
+                hideLoading();
+                console.error("Error:", err);
+                detailSection.innerHTML = '<div class="db-empty">Error al cargar datos.</div>';
+            });
+    }
+
+    loadRegionalData();
+});
+</script>
+
+{% endblock %}
