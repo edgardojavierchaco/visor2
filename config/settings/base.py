@@ -1,235 +1,60 @@
-import os
-from pathlib import Path
-from dotenv import load_dotenv
+version: '3'
 
-# Directorios base y raíz del proyecto
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-ROOT_DIR = BASE_DIR
+volumes:
+  production_postgres_data_visor: {}
+  production_postgres_data_backups_visor: {}
+  production_traefik_visor: {}
+  production_media_visor: {}
+  
 
-# Cargar variables de entorno
-load_dotenv(BASE_DIR / '.env')
+services:
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+    image: visor_production_django
+    platform: linux/x86_64
+    depends_on:
+      - postgres
+    env_file:
+      - ./.env  
+    volumes:
+      - ./productionfiles:/app/productionfiles 
+      - ./media:/app/media
+    command: /start        
 
-# Directorio de aplicaciones
-APPS_DIR = ROOT_DIR / 'apps'
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: visor_production_postgres
+    volumes:
+      - production_postgres_data_visor:/var/lib/postgresql/data_visor:Z
+      - production_postgres_data_backups_visor:/backups_visor:z      
+    env_file:
+      - ./.env   
+    ports:
+      - "5433:5432"  
+ 
+  traefik:
+    build:
+      context: .
+      dockerfile: ./compose/production/traefik/Dockerfile
+    image: traefik:latest
+    depends_on:
+      - django
+    volumes:
+      - production_traefik_visor:/etc/traefik/acme:z 
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"   
+    labels:
+      - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls.certresolver=le"
+      - "traefik.http.services.django.loadbalancer.server.port=5000"
+ 
 
-# Configuración de aplicaciones
-BASE_APPS = [
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.admin',
-    'widget_tweaks',
-    'django_select2',
-    'django.forms',
-    'django.contrib.gis',  
-    'rest_framework',
-]
+  
 
-LOCAL_APPS = [
-    'apps.mapas',
-    'apps.reportes',
-    'apps.core',
-    'apps.videoteca',
-    'apps.usuarios',
-    'apps.login',
-    'apps.establecimientos',
-    'apps.dashboard',
-    'apps.archivar',
-    'apps.mapoteca',
-    'apps.normativa',
-    'apps.docentes',
-    'apps.alumnos',
-    'apps.directores',
-    'apps.regacceso',
-    'apps.lectocomp',
-    'apps.indicadores',
-    'apps.asistendoc',
-    'apps.cenpe',
-    'apps.oplectura',
-    'apps.supervisores',
-    'apps.cuenta_regresiva',
-    'apps.superescuela',
-    'apps.pof',
-    'apps.evaluaciones',
-    'apps.unidadgestion',
-    'apps.uegp',
-    'apps.funcionarios',
-    'apps.represlegales',
-    'apps.intercultural',
-    'apps.biblioteca',
-    'apps.especial',
-    'apps.infraestructura',
-    'apps.indicadoresie',
-    'apps.operativoschaco',
-    'apps.operativchaco',
-    'apps.consultas',
-    'apps.ayudarenpe',
-    'apps.evaluaciones_educativas',
-    'apps.consultasge',
-    'apps.tickets',
-    
-]
-
-
-INSTALLED_APPS = BASE_APPS + LOCAL_APPS
-
-# Middleware
-BASE_MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.regacceso.middleware.RegistroAccesoMiddleware',
-]
-
-THIRD_MIDDLEWARE = [    
-    'corsheaders.middleware.CorsMiddleware',
-]
-
-MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
-
-# Autenticación
-AUTH_USER_MODEL = 'usuarios.UsuariosVisualizador'
-AUTHENTICATION_BACKENDS = [
-    'apps.usuarios.backends.CustomAuthBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
-
-# Configuración de plantillas
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.template.context_processors.media',
-                'django.template.context_processors.static',
-                'django.template.context_processors.tz',
-                'django.contrib.messages.context_processors.messages',
-                "apps.consultasge.context_processors.consultas_notificaciones",
-            ],
-        },
-    },
-]
-
-# Base de datos
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.environ.get('POSTGRES_DB'),
-        'USER': os.environ.get('POSTGRES_USER'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': os.environ.get('POSTGRES_HOST'),
-        'PORT': os.environ.get('POSTGRES_PORT'),
-        'OPTIONS': {
-            'options': '-c search_path=public,evaluacion,cenpe,operativoschaco,indicadores,pem,pof'
-        }
-    },
-    'Evaluacion': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.environ.get('POSTGRES_DB_EVALUACION'),
-        'USER': os.environ.get('POSTGRES_USER_EVALUACION'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD_EVALUACION'),
-        'HOST': os.environ.get('POSTGRES_HOST_EVALUACION'),
-        'PORT': os.environ.get('POSTGRES_PORT_EVALUACION'),
-        'OPTIONS': {
-            'options': '-c search_path=evaluacion,public',
-        }
-    }
-}
-
-DATABASE_ROUTERS = ['apps.evaluaciones_educativas.routers.SecondaryDBRouter']
-
-# Configuración de archivos estáticos
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'productionfiles')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
-
-# Configuración de archivos de medios (para producción)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'productionfiles/media')
-#MEDIA_ROOT = ROOT_DIR / 'apps/media'
-
-# Configuración de tiempo y formato
-LANGUAGE_CODE = 'es-ar'
-TIME_ZONE = 'America/Argentina/Buenos_Aires'
-USE_I18N = True
-USE_L10N = True
-USE_TZ = True
-DATE_INPUT_FORMATS = ['%d/%m/%Y']
-
-LOGIN_REDIRECT_URL='dash:portada'
-
-# Configuración de CORS y REST Framework
-CORS_URLS_REGEX = r'^/api/.*'
-CORS_ORIGIN_ALLOW_ALL = True
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
-    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
-}
-
-ROOT_URLCONF='config.urls'
-
-# Configuración de Leaflet
-LEAFLET_CONFIG = {
-    "DEFAULT_CENTER": (-26.270826, -60.604297),
-    "DEFAULT_ZOOM": 6,
-}
-
-# Configuración de seguridad
-SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
-SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = 'DENY'
-
-# URL de Django Admin
-ADMIN_URL = 'admin/'
-
-# Configuración de log
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s '
-            '%(process)d %(thread)d %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        }
-    },
-    'root': {'level': 'INFO', 'handlers': ['console']},
-}
-
-
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-
-EMAIL_HOST_USER1 = os.environ.get('EMAIL_HOST_USER1')
-EMAIL_HOST_PASSWORD1 = os.environ.get('EMAIL_HOST_PASSWORD1')
-EMAIL_HOST_USER2 = os.environ.get('EMAIL_HOST_USER2')
-EMAIL_HOST_PASSWORD2 = os.environ.get('EMAIL_HOST_PASSWORD2')
-
-#DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
