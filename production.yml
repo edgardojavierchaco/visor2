@@ -20,7 +20,7 @@ services:
       - ./.env  
     volumes:
       - ./productionfiles:/app/productionfiles 
-      - production_media_visor:/app/media
+      - ./media:/app/media
     command: /start        
 
   postgres:
@@ -53,6 +53,10 @@ services:
       - "traefik.http.routers.django.entrypoints=websecure"
       - "traefik.http.routers.django.tls.certresolver=le"
       - "traefik.http.services.django.loadbalancer.server.port=5000"
+ 
+
+  
+
  
 
   
