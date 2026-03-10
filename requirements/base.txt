@@ -199,4 +199,6 @@ beautifulsoup4==4.10.0
 unidecode
 scikit-learn
 xhtml2pdf>=0.2.17
+django-ckeditor
+
 

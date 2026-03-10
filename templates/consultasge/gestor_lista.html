@@ -6,20 +6,36 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Consultas de mi Regional</h2>
     <a href="{% url 'archivos:portada_gestor' %}" class="btn btn-danger">
-        <i class="bi bi-folder2-open me-1"></i>
-        Inicio
+        <i class="bi bi-folder2-open me-1"></i> Inicio
     </a>
 </div>
 
-<div class="mb-3 d-flex gap-2 flex-wrap">
-    <a href="?estado=pendiente" class="btn btn-sm btn-outline-danger">Pendientes</a>
-    <a href="?estado=en_proceso" class="btn btn-sm btn-outline-warning">En Proceso</a>
-    <a href="?estado=respondida" class="btn btn-sm btn-outline-success">Respondidas</a>
-    <a href="?estado=cerrada" class="btn btn-sm btn-outline-secondary">Cerradas</a>
-    <a href="?estado=vencidas" class="btn btn-sm btn-outline-dark">Vencidas</a>
-    <a href="{% url 'consultasge:gestor_consultas' %}" class="btn btn-sm btn-outline-primary">Todas</a>
+{# Panel de métricas con estados y totales #}
+<div class="row mb-4 g-3">
+    {% for estado in estados_panel %}
+    <div class="col-md-2 col-sm-4">
+        <a href="{% if estado.key != 'todas' %}?estado={{ estado.key }}{% else %}{% url 'consultasge:gestor_consultas' %}{% endif %}" class="text-decoration-none">
+            <div class="card shadow-sm h-100 
+                {{ estado.color }}
+                {% if estado.key == estado_actual %} border border-3 border-primary {% endif %}
+            ">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+                    <i class="bi {{ estado.icono }} display-4 mb-2"></i>
+                    <div class="fw-bold text-uppercase">{{ estado.nombre }}</div>
+                    {% if estado.key == 'todas' %}
+                        <span class="badge bg-light text-dark fs-6 mt-1">{{ consultas.count }}</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark fs-6 mt-1">{{ resumen|get_item:estado.key }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
 </div>
 
+{# Tabla de consultas #}
+<div id="tabla-consultas">
 {% if consultas %}
 <table class="table table-bordered table-hover align-middle">
     <thead class="table-light text-center">
@@ -29,56 +45,38 @@
             <th>Escuela</th>
             <th>Usuario</th>
             <th>Estado</th>
-            <th>SLA</th>
+            <th>Arch.</th>
+            <th>Resp.</th>
             <th>Acción</th>
         </tr>
     </thead>
     <tbody>
     {% for consulta in consultas %}
-        <tr>
+        <tr class="{% if consulta.vencida %}table-danger{% elif consulta.estado == 'pendiente' %}table-warning{% endif %}">
             <td class="text-center">{{ consulta.fecha_creacion|date:"d/m/Y H:i" }}</td>
-            <td>{{ consulta.asunto }}</td>
+            <td><a href="{% url 'consultasge:gestor_responder' consulta.id %}">{{ consulta.asunto }}</a></td>
             <td>{{ consulta.escuela }}</td>
             <td class="text-center">{{ consulta.usuario.username }}</td>
             <td class="text-center">
-                <span class="badge 
-                    {% if consulta.estado == "pendiente" %}bg-danger
-                    {% elif consulta.estado == "en_proceso" %}bg-warning text-dark
-                    {% elif consulta.estado == "respondida" %}bg-success
-                    {% elif consulta.estado == "cerrada" %}bg-secondary
-                    {% endif %}">
-                    {{ consulta.get_estado_display }}
-                </span>
-            </td>
-            <td class="text-center">
-                {% with progreso=consulta|progreso_sla_filter:request.user %}
-                    {% if progreso %}
-                        <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-{{ progreso.color }}" role="progressbar"
-                                 style="width: {{ progreso.porcentaje }}%"
-                                 data-bs-toggle="tooltip"
-                                 title="Horas consumidas: {{ progreso.horas_consumidas }} | Restantes: {{ progreso.horas_restantes }}">
-                                {{ progreso.porcentaje_real }}%
-                            </div>
-                        </div>
-                    {% else %}
-                        <span class="text-muted">Sin datos SLA</span>
+                <span class="badge
+                    {% if consulta.estado == 'pendiente' %}bg-danger
+                    {% elif consulta.estado == 'en_proceso' %}bg-warning text-dark
+                    {% elif consulta.estado == 'respondida' %}bg-success
+                    {% elif consulta.estado == 'cerrada' %}bg-secondary
                     {% endif %}
-                {% endwith %}
+                ">{{ consulta.get_estado_display }}</span>
+                {% if consulta.vencida %}
+                    <span class="badge bg-dark ms-1">Vencida</span>
+                {% endif %}
             </td>
+            <td class="text-center">{% if consulta.adjuntos.count %}📎 {{ consulta.adjuntos.count }}{% else %}—{% endif %}</td>
+            <td class="text-center"><span class="badge bg-info">{{ consulta.total_respuestas }}</span></td>
             <td class="text-center">
-                <a href="{% url 'consultasge:gestor_responder' consulta.id %}" class="btn btn-sm btn-primary">
-                    Ver
-                </a>
-
+                <a href="{% url 'consultasge:gestor_responder' consulta.id %}" class="btn btn-sm btn-primary">Ver</a>
                 {% if consulta.estado == "respondida" %}
-                <form method="post"
-                      action="{% url 'consultasge:cerrar_consulta' consulta.id %}"
-                      class="d-inline cerrar-form">
+                <form method="post" action="{% url 'consultasge:cerrar_consulta' consulta.id %}" class="d-inline cerrar-form">
                     {% csrf_token %}
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cerrar" data-id="{{ consulta.id }}">
-                        Cerrar
-                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cerrar">Cerrar</button>
                 </form>
                 {% endif %}
             </td>
@@ -87,37 +85,48 @@
     </tbody>
 </table>
 {% else %}
-<div class="alert alert-info">
-    No hay consultas para el filtro seleccionado.
-</div>
+<div class="alert alert-info">No hay consultas para el filtro seleccionado.</div>
 {% endif %}
+</div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Inicializar tooltips Bootstrap
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-
-    // Confirmación para cerrar consulta
-    document.querySelectorAll(".btn-cerrar").forEach(function(button) {
-        button.addEventListener("click", function() {
+document.addEventListener("DOMContentLoaded", function(){
+    // SweetAlert cierre de consulta
+    document.querySelectorAll(".btn-cerrar").forEach(function(button){
+        button.addEventListener("click", function(){
             let form = this.closest("form");
             Swal.fire({
                 title: "¿Confirmar cierre?",
-                text: "Una vez cerrada, la consulta no podrá modificarse.",
+                text: "Una vez cerrada la consulta no podrá modificarse",
                 icon: "warning",
                 showCancelButton: true,
                 confirmButtonText: "Sí, cerrar",
                 cancelButtonText: "Cancelar"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            });
+            }).then((result)=>{
+                if(result.isConfirmed){ form.submit(); }
+            })
         });
     });
+
+    // Actualización automática de tabla y panel resumen
+    setInterval(function(){
+        fetch(window.location.href, { headers: { "X-Requested-With":"XMLHttpRequest" } })
+        .then(response => response.text())
+        .then(html => {
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(html,"text/html");
+
+            // Actualizar tabla
+            let nuevaTabla = doc.querySelector("#tabla-consultas");
+            let tablaActual = document.querySelector("#tabla-consultas");
+            if(nuevaTabla && tablaActual){ tablaActual.innerHTML = nuevaTabla.innerHTML; }
+
+            // Actualizar panel resumen
+            let nuevoResumen = doc.querySelector(".row.mb-4.g-3");
+            let panelActual = document.querySelector(".row.mb-4.g-3");
+            if(nuevoResumen && panelActual){ panelActual.innerHTML = nuevoResumen.innerHTML; }
+        });
+    }, 30000);
 });
 </script>
 

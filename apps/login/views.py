@@ -74,8 +74,7 @@ class LoginFormView(LoginView):
             
             privada_group=Group.objects.get(name='Director_Privada')
             if privada_group in user.groups.all():
-                return reverse('directores:institucional_uegp')
-            
+                return reverse('directores:institucional')    
             privada_group=Group.objects.get(name='DirGral_Privada')
             if privada_group in user.groups.all():
                 return reverse('privada:dashboard')

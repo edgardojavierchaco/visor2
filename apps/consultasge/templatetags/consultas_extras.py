@@ -23,3 +23,8 @@ def turno_gestor(user):
 @register.filter
 def split_path(value):
     return os.path.basename(value)
+
+@register.filter
+def get_item(dictionary, key):
+    """Permite acceder a diccionarios en templates"""
+    return dictionary.get(key, 0)

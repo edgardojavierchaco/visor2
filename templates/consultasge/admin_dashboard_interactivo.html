@@ -1,6 +1,14 @@
 {% extends "consultasge/layout_admin.html" %}
 
 {% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Consultas de mi Regional</h2>
+    <a href="{% url 'archivos:portada_gestor' %}" class="btn btn-danger">
+        <i class="bi bi-folder2-open me-1"></i> Inicio
+    </a>
+</div>
+
 <div class="container-fluid py-4">
     <h2 class="mb-4">Dashboard Administrador</h2>
 

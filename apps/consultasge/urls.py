@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 from .views_gestor import (
@@ -33,6 +33,7 @@ urlpatterns = [
     # Dashboard interactivo (template + datos JSON)
     #path("gestor/dashboard/barras/", gestor_dashboard_interactivo_template, name="gestor_dashboard_barras_template"),
     #path(     "gestor/dashboard/barras/json/",         gestor_dashboard_interactivo_json, name="gestor_dashboard_barras_json"),
+    
     
     # Administrador
     path("admin/dashboard/", admin_dashboard_interactivo, name="admin_dashboard_interactivo"),

@@ -128,7 +128,7 @@ def notificaciones_consultas(request):
     stats = notificaciones_usuario(request.user)
     return JsonResponse(stats)
 
-
+@login_required
 def mensajes_ajax(request, id):
     consulta = get_object_or_404(Consulta, id=id)
     # Importante: prefetch para optimizar nombres y adjuntos

@@ -25,6 +25,8 @@ BASE_APPS = [
     'django.forms',
     'django.contrib.gis',  
     'rest_framework',
+    'ckeditor',
+    'ckeditor_uploader',
 ]
 
 LOCAL_APPS = [
@@ -155,6 +157,10 @@ DATABASE_ROUTERS = ['apps.evaluaciones_educativas.routers.SecondaryDBRouter']
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'productionfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
+
+# Ruta para guardar imágenes pegadas desde CKEditor
+CKEDITOR_UPLOAD_PATH = "ckeditor/"  # Dentro de MEDIA_ROOT
+CKEDITOR_IMAGE_BACKEND = "pillow"
 
 # Configuración de archivos de medios (para producción)
 MEDIA_URL = '/media/'

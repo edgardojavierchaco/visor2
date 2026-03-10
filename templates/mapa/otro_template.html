@@ -337,10 +337,10 @@
         document.getElementById('cueanexo').textContent = cueanexo;
     </script>
     <script>
-        console.log("Resultados:", {{ resultados }});
-        console.log("Resultados1:", {{ resultados1 }});
-        console.log("Resultados2:", {{ resultados2 }});
-        console.log("Resultados3:", {{ resultados3 }});
+        console.log("Resultados:", {{ resultados|safe }});
+        console.log("Resultados1:", {{ resultados1|safe }});
+        console.log("Resultados2:", {{ resultados2|safe }});
+        console.log("Resultados3:", {{ resultados3|safe }});
         console.log("Resultados_detalle:",{{ resultados_detalle}})
     </script>
 

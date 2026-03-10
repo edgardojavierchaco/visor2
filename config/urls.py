@@ -61,6 +61,7 @@ urlpatterns = [
     path('ayuda/', include('apps.ayudarenpe.urls', namespace='ayuda')),
     path('consultasge/',include('apps.consultasge.urls',namespace='consultasge')),
     path('sge/',include('apps.tickets.urls',namespace='sge')),
+    path('ckeditor/', include('ckeditor_uploader.urls')),
     path('evaluaciones_educativas/', include('apps.evaluaciones_educativas.urls', namespace='evaluaciones_educativas')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),    
 
