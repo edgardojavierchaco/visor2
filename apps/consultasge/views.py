@@ -116,13 +116,19 @@ def consulta_detalle(request, id):
     else:
         form = RespuestaForm()
 
+    # ✅ Aquí generamos los colores HSL para cada mensaje
+    mensajes = list(consulta.respuestas.all().order_by('fecha'))
+    for msg in mensajes:
+        hue = (msg.usuario.id * 137) % 360  # número pseudo-aleatorio
+        msg.color_hsl = f"hsl({hue}, 70%, 45%)"
+
     return render(request, "consultasge/detalle.html", {
         "consulta": consulta,
-        "respuestas": consulta.respuestas.all().order_by('fecha'),
+        "mensajes": mensajes,  # enviamos ya con color_hsl
         "form": form,
         "progreso": progreso_sla(consulta, request.user)
     })
-
+    
 @login_required
 def notificaciones_consultas(request):
     stats = notificaciones_usuario(request.user)
