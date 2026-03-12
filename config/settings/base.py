@@ -120,6 +120,7 @@ TEMPLATES = [
                 'django.template.context_processors.tz',
                 'django.contrib.messages.context_processors.messages',
                 "apps.consultasge.context_processors.consultas_notificaciones",
+                "apps.core.context_processors.user_roles",
             ],
         },
     },

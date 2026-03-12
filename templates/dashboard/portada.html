@@ -2,45 +2,241 @@
 {% load static %}
 
 {% block head %}
-    <style>
-        .content-container {
-            height: 100%;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .video-container {
-            position: relative;
-            margin-top:10px;
-            margin-left:150px;
-            width: 800px;
-            height: 500px;
-            overflow: hidden;
-            border: 20px solid #333; /* color del marco */
-            border-radius: 20px; /* bordes redondeados */
-            
-        }
+<style>
+/* Contenedor general centrado */
+.content-container {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
 
-        .video-frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* ajusta el video al tamaño del contenedor sin distorsión */
-        }
-    </style>
+/* Contenedor tipo "video" para slideshow */
+.video-container {
+    position: relative;
+    width: 850px;
+    height: 520px;
+    border: 20px solid #333;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    background: #000;
+    display: flex;
+}
+
+/* Slideshow interno */
+#slideshow {
+    width: calc(100% - 140px); /* deja espacio a la derecha para los botones */
+    height: 100%;
+    position: relative;
+    font-family: 'Roboto', sans-serif;
+    padding-right: 20px;
+}
+
+/* Cada slide */
+.slide {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0; left: 0;
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+    color: white;
+    transition: opacity 1s ease-in-out, transform 0.5s ease, box-shadow 0.5s ease;
+    z-index: 1;
+}
+
+/* Slide activo */
+.slide.active {
+    opacity: 1;
+    z-index: 2;
+}
+
+/* Hover sobre slide activo */
+.slide.active:hover {
+    transform: scale(1.03);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+
+/* Títulos y textos */
+.slide h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 6px rgba(0,0,0,0.5);
+}
+.slide p {
+    font-size: 1.1rem;
+    max-width: 85%;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+}
+
+/* Logo institucional */
+.slide img.logo-slide {
+    width: 120px;
+    margin-bottom: 20px;
+    border-radius: 15px;
+    border: 3px solid rgba(255,255,255,0.5);
+}
+
+/* Botones internos del slide */
+.slide .btn-slide {
+    margin-top: 15px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: #fff;
+}
+.slide .btn-slide:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+}
+
+/* Colores por tema */
+.slide.mapas { background: #0d6efd; }
+.slide.reportes { background: #6f42c1; }
+.slide.repositorio { background: #343a40; }
+.slide.consultas { background: #17a2b8; }
+.slide.equipo { background: #28a745; }
+.slide.ayuda { background: #ffc107; color: #212529; }
+
+/* Nuevos slides institucionales */
+.slide.mision { background: #198754; }   /* Verde institucional */
+.slide.vision { background: #0dcaf0; color: #212529; } /* Azul claro */
+.slide.datos { background: #fd7e14; }    /* Naranja institucional */
+
+/* Botones de navegación decorativos */
+.nav-fixed {
+    position: relative;
+    width: 120px;
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+    align-self: center;
+}
+.nav-fixed div {
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0,0,0,0.4);
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: default; /* no clicable */
+}
+.nav-fixed div:hover {
+    background: rgba(0,0,0,0.6);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.nav-fixed div.mapas { background:#0d6efd; }
+.nav-fixed div.reportes { background:#6f42c1; }
+.nav-fixed div.repositorio { background:#343a40; }
+.nav-fixed div.consultas { background:#17a2b8; }
+.nav-fixed div.equipo { background:#28a745; }
+.nav-fixed div.ayuda { background:#ffc107; color:#212529; }
+</style>
 {% endblock %}
 
+{% block content %}
 <div class="content-container">
-    {% block content %}
-        <div class="video-container">
-            <video class="video-frame" controls autoplay>
-                    <!-- Video de presentación Estadísticas Educativas -->
-                    <source src="{% static 'media/presentacionestedu.mp4' %}" type="video/mp4">
-                    Tu navegador no soporta el elemento de video.
-            </video>
+    <div class="video-container">
+
+        <!-- Slideshow -->
+        <div id="slideshow">
+
+            <!-- Slide 1: Presentación -->
+            <div class="slide active mapas">
+                <img src="{% static 'img/logoEstMini.png' %}" alt="Logo Departamento" class="logo-slide">
+                <h2>Departamento de Estadísticas Educativas</h2>
+                <p>Producción de información confiable para la toma de decisiones en el sistema educativo del Chaco.</p>
+            </div>
+
+            <!-- Slide 2: Misión -->
+            <div class="slide mision">
+                <h2>Misión</h2>
+                <p>Generar información estadística educativa confiable y oportuna para apoyar la toma de decisiones del sistema educativo del Chaco.</p>
+            </div>
+
+            <!-- Slide 3: Visión -->
+            <div class="slide vision">
+                <h2>Visión</h2>
+                <p>Ser un referente en producción de información educativa, promoviendo la transparencia, innovación y mejora continua en la gestión educativa.</p>
+            </div>
+
+            <!-- Slide 4: Datos Clave -->
+            <div class="slide datos">
+                <h2>Datos Clave</h2>
+                <p>Miles de registros, indicadores actualizados, cobertura de todas las instituciones educativas de la provincia y herramientas de consulta accesibles para docentes y autoridades.</p>
+            </div>
+
+            <!-- Slide 5: Reportes -->
+            <div class="slide reportes">
+                <h2>Reportes Educativos</h2>
+                <p>Accede a indicadores de matrícula, docentes, ofertas educativas y más.</p>
+            </div>
+
+            <!-- Slide 6: Repositorio -->
+            <div class="slide repositorio">
+                <h2>Repositorio Institucional</h2>
+                <p>Mapoteca, videoteca, normativa y documentos de consulta para todo el sistema educativo.</p>
+            </div>
+
+            <!-- Slide 7: Consultas -->
+            <div class="slide consultas">
+                <h2>Consultas SGE y ReNPE</h2>
+                <p>Herramientas para la búsqueda de información detallada sobre docentes y unidades educativas.</p>
+            </div>
+
+            <!-- Slide 8: Equipo -->
+            <div class="slide equipo">
+                <h2>Conoce al Equipo</h2>
+                <p>Departamento de Estadísticas del Chaco, especialistas en producción de información educativa.</p>
+            </div>
+
+            <!-- Slide 9: Ayuda -->
+            <div class="slide ayuda">
+                <h2>Preguntas Frecuentes</h2>
+                <p>Guías y soporte para el uso de las herramientas y consultas del portal educativo.</p>
+            </div>
+
         </div>
-    {% endblock %}
+
+        <!-- Botones decorativos -->
+        <div class="nav-fixed">
+            <div class="mapas">Mapas</div>
+            <div class="reportes">Reportes</div>
+            <div class="repositorio">Repositorio</div>
+            <div class="consultas">Consultas</div>
+            <div class="equipo">Equipo</div>
+            <div class="ayuda">Ayuda</div>
+        </div>
+
+    </div>
 </div>
+
+<script>
+// Slideshow automático
+const slides = document.querySelectorAll('#slideshow .slide');
+let current = 0;
+setInterval(() => {
+    slides[current].classList.remove('active');
+    current = (current + 1) % slides.length;
+    slides[current].classList.add('active');
+}, 6000); // cada 6 segundos
+</script>
+{% endblock %}

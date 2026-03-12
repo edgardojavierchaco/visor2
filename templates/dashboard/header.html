@@ -1,495 +1,390 @@
 {% load static %}
 
+<!-- Estilos -->
 <style>
-/* CSS para que los submenús funcionen correctamente */
-.dropdown-menu .dropdown-menu {
-    position: absolute;
-    left: 100%;
+/* Navbar general */
+.navbar-custom {
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    font-family: 'Roboto', sans-serif;
+    position: sticky;
     top: 0;
-    margin-left: .1rem;
-    margin-right: .1rem;
-    display: none; /* Oculto por defecto */
+    z-index: 1030;
 }
 
-.dropdown-menu .dropdown-item.dropdown-toggle:hover + .dropdown-menu,
-.dropdown-menu .dropdown-menu:hover {
-    display: block; /* Mostrar submenú al pasar el ratón */
+.navbar-custom .nav-link {
+    color: #343a40;
+    font-weight: 500;
+    transition: color 0.3s ease;
 }
 
-.dropdown-submenu {
+.navbar-custom .nav-link:hover {
+    color: #007bff;
+}
+
+/* Mega menu */
+.dropdown-menu.mega-menu {
+    width: 100%;
+    max-width: 1300px;
+    padding: 25px;
+    border-radius: 14px;
+    border: none;
+    display: none;
+    opacity: 0;
+    transition: all 0.4s ease;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+}
+
+.nav-item.dropdown:hover .dropdown-menu.mega-menu {
+    display: flex !important;
+    opacity: 1;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 16px;
+}
+
+/* Tarjetas principales */
+.mega-card {
+    background: #f8f9fa;
+    border-radius: 14px;
+    padding: 20px;
+    flex: 1 1 240px;
+    min-width: 240px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
     position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+}
+
+.mega-card::after {
+    content: '';
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    top: -110%;
+    left: -10%;
+    background: rgba(0,123,255,0.05);
+    transform: rotate(25deg);
+    transition: all 0.5s ease;
+    z-index: 0;
+}
+
+.mega-card * {
+    position: relative;
+    z-index: 1;
+}
+
+.mega-card:hover::after {
+    top: -10%;
+}
+
+.mega-card:hover {
+    background: #e9ecef;
+    transform: translateY(-6px);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.18);
+}
+
+/* Iconos */
+.mega-card i {
+    font-size: 36px;
+    margin-bottom: 8px;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.mega-card:hover i {
+    transform: scale(1.2);
+}
+
+/* Categorías */
+.mega-card.mapas i { color: #0d6efd; }
+.mega-card.reportes i { color: #6f42c1; }
+.mega-card.repositorio i { color: #343a40; }
+.mega-card.consultas i { color: #17a2b8; }
+.mega-card.equipo i { color: #28a745; }
+.mega-card.ayuda i { color: #ffc107; }
+
+.mega-card h6 {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.mega-card p {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Subcards */
+.subcard {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 12px;
+    margin: 6px 0;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.subcard:hover {
+    background: #e9ecef;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
+.subcard i {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+/* Perfil usuario */
+.navbar-tools .dropdown-menu {
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Animaciones generales */
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-menu.mega-menu > .mega-card {
+    animation: fadeIn 0.4s ease forwards;
 }
 </style>
 
 <!-- Navbar -->
-<nav class="main-header navbar navbar-expand-md navbar-light navbar-white">
+<nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container">
-        <a href="#" class="navbar-brand">
-            <img src="{% static 'img/logoEstMini.png' %}" alt="Estadística Educativa"
-                 class="brand-image"
-                 style="opacity: .8">
-            <span class="brand-text font-weight-light">Estadística Educativa</span>
+        <a class="navbar-brand d-flex align-items-center" href="#">
+            <img src="{% static 'img/logoEstMini.png' %}" alt="Logo" class="me-2" style="width:35px; opacity:.9;">
+            <span class="fw-bold">Estadística Educativa</span>
         </a>
-        <button class="navbar-toggler order-1" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu"
+                aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse order-3" id="navbarCollapse">
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a href="{% url 'home' %}" class="nav-link"><i class="fas fa-home" style="color:orange"></i> Home</a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-globe" style="color:blue"></i> Mapas</a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'mapas:filtrado' %}" class="dropdown-item"><img src="{% static 'img/mapadatos.png' %}"> Filtrado por Criterios Seleccionados</a></li>
-                        <li><a href="{% url 'dibujararea' %}" class="dropdown-item"><img src="{% static 'img/forma.png' %}"> Filtrado por Área Dibujada</a></li>
-                        <li>
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                               class="dropdown-item dropdown-toggle"><img src="{% static 'img/radar.png' %}">Filtrado por Radio</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'mapas:filcueradio' %}" class="dropdown-item">Cueanexos cercanos</a></li>
-                                <li><a href="{% url 'mapas:filter_colectivos' %}" class="dropdown-item">Líneas de Colectivos</a></li>
-                                <li><a href="{% url 'mapas:filter_comisarias' %}" class="dropdown-item">Comisarias</a></li>
-                                <li><a href="{% url 'mapas:filter_salud' %}" class="dropdown-item">Centros Asistenciales</a></li>
-                            </ul>
-                        </li>     
-                        <li><a href="{% url 'mapas:obtener_geometria' %}" class="dropdown-item"><img src="{% static 'img/reg.png' %}">Regiones Educativas</a></li>                      
-                        <li>
-                            <a href="#" class="dropdown-item" id="abrirModalIA">
-                                🔍 Buscar Unidades de Servicios con IA
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                       class="nav-link dropdown-toggle"><i class="fas fa-file" style="color:violet"></i> Reportes</a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <!-- Menú desplegable para "Reportes" -->
-                        <li class="dropdown">
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                               class="dropdown-item dropdown-toggle">Docentes</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'reportes:filtrado_cargos' %}" class="dropdown-item">Cargos</a></li>
-                                <li><a href="{% url 'reportes:filtrado_docentes' %}" class="dropdown-item">Docentes en actividad</a></li>
-                                <li><a href="{% url 'reportes:filtrado_docentes_pasiva' %}" class="dropdown-item">Docentes en Tareas Pasivas</a></li>
-                                <li><a href="{% url 'reportes:filtrado_horas' %}" class="dropdown-item">Horas Cátedras</a></li>
-                            </ul>
-                        </li>
-                        <li class="dropdown">
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                               class="dropdown-item dropdown-toggle">Matrícula</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'reportes:filtrado_aborigen' %}" class="dropdown-item">Aborigen</a></li>
-                                <li><a href="{% url 'reportes:filtrado_comesp' %}" class="dropdown-item">Común y Especial</a></li>
-                                <li><a href="{% url 'reportes:filtrado_snu' %}" class="dropdown-item">SNU</a></li>
-                                <li><a href="{% url 'reportes:filtrado_matricueanexo' %}" class="dropdown-item">Matrícula - Detalle Cueanexo</a></li>
-                                <li><a href="{% url 'reportes:filtrado_matri_disc_ini_cueanexo' %}" class="dropdown-item">Matrícula Inicial - Detalle Discapacidad</a></li>
-                                <li><a href="{% url 'reportes:filtrado_matri_disc_prim_cueanexo' %}" class="dropdown-item">Matrícula Primaria - Detalle Discapacidad</a></li>
-                                <li><a href="{% url 'reportes:filtrado_matri_disc_sec_cueanexo' %}" class="dropdown-item">Matrícula Secundaria - Detalle Discapacidad</a></li>
-                            </ul>
-                        </li>            
-                        <li><a href="{% url 'mapas:datos_ofertas' %}" class="dropdown-item">Listado Ofertas Educativas</a></li>              
-                         
-                        <li class="dropdown">
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                               class="dropdown-item dropdown-toggle">Ofertas Educativas por ...</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'reportes:consulta_ofertas_reg' %}" class="dropdown-item">Región</a></li>
-                                <li><a href="{% url 'reportes:consulta_ofertas' %}" class="dropdown-item">Departamento</a></li>                                
-                            </ul>
-                        </li>        
-                        <li><a href="{% url 'reportes:consulta_titulos' %}" class="dropdown-item">Carreras - Títulos</a></li>
-                        <li class="dropdown">
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                               class="dropdown-item dropdown-toggle">Indicadores</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'indicadores:efectivaprimtotal' %}" class="dropdown-item">Primaria</a></li>
-                                <li><a href="{% url 'indicadores:efectivasectotal' %}" class="dropdown-item">Secundaria</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>                
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle"><i class="fas fa-archive" style="color:black"></i> Repositorio</a>
-                    <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'mapoteca:mapas' %}" class="dropdown-item">Mapoteca</a></li>
-                        <li><a href="{% url 'videoteca:videos' %}" class="dropdown-item">Videoteca</a></li>
-                        <!-- Menú desplegable de Normativa -->
-                        <li class="dropdown">
-                            <a id="dropdownSubMenu2" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                                class="dropdown-item dropdown-toggle">Normativa</a>
-                            <ul aria-labelledby="dropdownSubMenu2" class="dropdown-menu border-0 shadow">
-                                <li><a href="{% url 'digesto:norma' %}" class="dropdown-item">Normativa</a></li>
-                                <li><a href="https://dirdocumentacion.chaco.gob.ar/documentos/buscar" class="dropdown-item">Búsqueda Resoluciones</a></li>
-                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/calendario-2025/" class="dropdown-item">Calendario Escolar</a></li>
-                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/directorio_2024/" class="dropdown-item">Directorio MECCyT</a></li>
-                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/dossier_educativos/" class="dropdown-item">Dossier Digital</a></li>
-                                <li><a href="https://dirdocumentacion.educacion.chaco.gob.ar/formularios-planillas/" class="dropdown-item">Formularios Docentes</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>       
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle">
-                        {% comment %} {% if user.is_authenticated %}
-                            <i class="fas fa-lock-open" style="color:green"></i>
-                        {% else %}
-                            <i class="fas fa-lock" style="color:red"></i>
-                        {% endif %} {% endcomment %}
-                        Equipo
-                    </a>
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'reportes:equipo' %}" class="dropdown-item">Departamento Estadísticas</a></li>
-                        {% comment %} {% if nivelAcceso == '4' %}
-                            <li><a href="{% url 'reportes:gestores' %}" class="dropdown-item">Gestores de Datos</a></li>
-                        {% endif %} {% endcomment %}
-                    </ul>                    
-                </li>
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle">
-                        {% comment %} {% if user.is_authenticated %}
-                            <i class="fas fa-lock-open" style="color:green"></i>
-                        {% else %}
-                            <i class="fas fa-lock" style="color:red"></i>
-                        {% endif %} {% endcomment %}
-                        Consultas
-                    </a>                    
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'consultas_api:consulta_form' %}" class="dropdown-item">Consultas SGE</a></li>
-                        <li><a href="{% url 'consultas_api:consulta_docente_renpe' %}" class="dropdown-item">Consultas ReNPE - Etapa2</a></li>
-                        {% comment %} {% if nivelAcceso == '4' %}
-                            <li><a href="{% url 'reportes:gestores' %}" class="dropdown-item">Gestores de Datos</a></li>
-                        {% endif %} {% endcomment %}
-                    </ul>                    
-                </li>
-                <li class="nav-item dropdown">
-                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                        class="nav-link dropdown-toggle">
-                        {% comment %} {% if user.is_authenticated %}
-                            <i class="fas fa-lock-open" style="color:green"></i>
-                        {% else %}
-                            <i class="fas fa-lock" style="color:red"></i>
-                        {% endif %} {% endcomment %}
-                        Ayuda
-                    </a>                    
-                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
-                        <li><a href="{% url 'ayudarenpe:index' %}" class="dropdown-item">Preguntas Frecuentes ReNPE</a></li>
-                        {% comment %} <li><a href="{% url 'consultas_api:consulta_renpe_form' %}" class="dropdown-item">Consultas ReNPE</a></li> {% endcomment %}
-                        {% comment %} {% if nivelAcceso == '4' %}
-                            <li><a href="{% url 'reportes:gestores' %}" class="dropdown-item">Gestores de Datos</a></li>
-                        {% endif %} {% endcomment %}
-                    </ul>                    
-                </li>
-            </ul>
-        </div>
 
-        <div class="order-1 order-md-3 navbar-tools text-md-right">
-            <ul class="navbar-nav">
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link" data-toggle="dropdown" title="User Menu">
-                        <i class="far fa-user-circle" style="font-size: 30px; color: red;"></i>
+        <div class="collapse navbar-collapse" id="navbarMenu">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                <!-- Home -->
+                <li class="nav-item">
+                    <a href="{% url 'home' %}" class="nav-link"><i class="fas fa-home text-warning"></i> Home</a>
+                </li>
+
+                <!-- Mapas -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuMapas" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-globe"></i> Mapas
                     </a>
-                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                        <span class="dropdown-item dropdown-header">Opciones de usuario</span>
-                        <div class="dropdown-divider"></div>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuMapas">
+                        <a class="mega-card mapas" href="{% url 'mapas:filtrado' %}">
+                            <i class="fas fa-filter"></i>
+                            <h6>Filtrado por Criterios</h6>
+                            <p>Selecciona filtros según tus criterios educativos.</p>
+                        </a>
+                        <a class="mega-card mapas" href="{% url 'dibujararea' %}">
+                            <i class="fas fa-draw-polygon"></i>
+                            <h6>Área Dibujada</h6>
+                            <p>Dibuja un área para filtrar unidades dentro de ella.</p>
+                        </a>
+                        <div class="mega-card mapas">
+                            <i class="fas fa-radar"></i>
+                            <h6>Filtrado por Radio</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'mapas:filcueradio' %}"><i class="fas fa-school"></i> Cueanexos cercanos</a>
+                                <a class="subcard" href="{% url 'mapas:filter_colectivos' %}"><i class="fas fa-bus"></i> Líneas de Colectivos</a>
+                                <a class="subcard" href="{% url 'mapas:filter_comisarias' %}"><i class="fas fa-shield-alt"></i> Comisarías</a>
+                                <a class="subcard" href="{% url 'mapas:filter_salud' %}"><i class="fas fa-hospital"></i> Centros Asistenciales</a>
+                            </div>
+                        </div>
+                        <a class="mega-card mapas" href="{% url 'mapas:obtener_geometria' %}">
+                            <i class="fas fa-map"></i>
+                            <h6>Regiones Educativas</h6>
+                        </a>
+                        <a class="mega-card mapas" href="#" id="abrirModalIA">
+                            <i class="fas fa-magic"></i>
+                            <h6>Búsqueda con IA</h6>
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Reportes -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuReportes" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-file"></i> Reportes
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuReportes">
+                        <!-- Docentes -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                            <h6>Docentes</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'reportes:filtrado_cargos' %}">Cargos</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_docentes' %}">Docentes en actividad</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_docentes_pasiva' %}">Docentes en Tareas Pasivas</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_horas' %}">Horas Cátedras</a>
+                            </div>
+                        </div>
+                        <!-- Matrícula -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-user-graduate"></i>
+                            <h6>Matrícula</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'reportes:filtrado_aborigen' %}">Aborigen</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_comesp' %}">Común y Especial</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_snu' %}">SNU</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matricueanexo' %}">Detalle Cueanexo</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matri_disc_ini_cueanexo' %}">Inicial - Detalle Discapacidad</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matri_disc_prim_cueanexo' %}">Primaria - Detalle Discapacidad</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matri_disc_sec_cueanexo' %}">Secundaria - Detalle Discapacidad</a>
+                            </div>
+                        </div>
+                        <!-- Ofertas Educativas -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-book-open"></i>
+                            <h6>Ofertas Educativas</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'reportes:consulta_ofertas_reg' %}">Región</a>
+                                <a class="subcard" href="{% url 'reportes:consulta_ofertas' %}">Departamento</a>
+                                <a class="subcard" href="{% url 'reportes:consulta_titulos' %}">Carreras - Títulos</a>
+                            </div>
+                        </div>
+                        <!-- Indicadores -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-chart-line"></i>
+                            <h6>Indicadores</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'indicadores:efectivaprimtotal' %}">Primaria</a>
+                                <a class="subcard" href="{% url 'indicadores:efectivasectotal' %}">Secundaria</a>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Repositorio -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuRepositorio" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-archive"></i> Repositorio
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuRepositorio">
+                        <a class="mega-card repositorio" href="{% url 'mapoteca:mapas' %}">
+                            <i class="fas fa-map"></i>
+                            <h6>Mapoteca</h6>
+                        </a>
+                        <a class="mega-card repositorio" href="{% url 'videoteca:videos' %}">
+                            <i class="fas fa-video"></i>
+                            <h6>Videoteca</h6>
+                        </a>
+                        <div class="mega-card repositorio">
+                            <i class="fas fa-file-alt"></i>
+                            <h6>Normativa</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'digesto:norma' %}">Normativa</a>
+                                <a class="subcard" href="https://dirdocumentacion.chaco.gob.ar/documentos/buscar" target="_blank">Búsqueda Resoluciones</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/calendario-2025/" target="_blank">Calendario Escolar</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/directorio_2024/" target="_blank">Directorio MECCyT</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/dossier_educativos/" target="_blank">Dossier Digital</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/formularios-planillas/" target="_blank">Formularios Docentes</a>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Consultas -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuConsultas" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-search"></i> Consultas
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuConsultas">
+                        <a class="mega-card consultas" href="{% url 'consultas_api:consulta_form' %}">
+                            <i class="fas fa-search-plus"></i>
+                            <h6>Consultas SGE</h6>
+                        </a>
+                        <a class="mega-card consultas" href="{% url 'consultas_api:consulta_docente_renpe' %}">
+                            <i class="fas fa-user-check"></i>
+                            <h6>ReNPE - Etapa2</h6>
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Equipo -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuEquipo" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-users"></i> Equipo
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuEquipo">
+                        <a class="mega-card equipo" href="{% url 'reportes:equipo' %}">
+                            <i class="fas fa-building"></i>
+                            <h6>Departamento Estadísticas</h6>
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Ayuda -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuAyuda" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-question-circle"></i> Ayuda
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuAyuda">
+                        <a class="mega-card ayuda" href="{% url 'ayudarenpe:index' %}">
+                            <i class="fas fa-info-circle"></i>
+                            <h6>Preguntas Frecuentes</h6>
+                        </a>
+                    </div>
+                </li>
+
+            </ul>
+
+            <!-- Perfil usuario -->
+            <ul class="navbar-nav ms-auto navbar-tools">
+                <li class="nav-item dropdown">
+                    <a class="nav-link" href="#" data-bs-toggle="dropdown">
+                        <i class="far fa-user-circle fs-3 text-danger"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="dropdown-header">Opciones de usuario</li>
+                        <li><hr class="dropdown-divider"></li>
                         {% if user.is_authenticated %}
-                            <a href="#" class="dropdown-item">
-                                <i class="fas fa-user-edit mr-2"></i> Editar Perfil
-                            </a>
-                            <div class="dropdown-divider"></div>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-edit me-2"></i>Editar Perfil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
                             <form method="POST" action="{% url 'login:logout' %}">
                                 {% csrf_token %}
-                                <button type="submit" class="dropdown-item">
-                                    <i class="fas fa-power-off mr-2" style="color:red"></i> Logout
-                                </button>
+                                <button class="dropdown-item" type="submit"><i class="fas fa-power-off text-danger me-2"></i> Logout</button>
                             </form>
+                        </li>
                         {% else %}
-                            <a href="{% url 'usuarios:registro' %}" class="dropdown-item">
-                                <i class="fas fa-sign-in-alt mr-2"></i> Login
-                            </a>
+                        <li><a class="dropdown-item" href="{% url 'usuarios:registro' %}"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
                         {% endif %}
-                    </div>
+                    </ul>
                 </li>
             </ul>
         </div>
     </div>
 </nav>
 
+<!-- JS Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Modal -->
-<div class="modal fade" id="buscarModal" tabindex="-1" aria-labelledby="buscarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow-lg rounded-4">
-            <div class="modal-header bg-primary text-white rounded-4">
-                <h5 class="modal-title" id="buscarModalLabel">🔍</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Imagen de Fondo con Animación de Búsqueda -->
-                <div class="search-background">
-                    <div class="search-ring"></div>
-                    <h4 class="text-primary">Explora las Unidades de Servicios y sus ofertas educativas</h4>
-                    <p class="text-muted">Busca por oferta, localidad, sector, ámbito u otros criterios.</p>
-                </div>
-
-                <!-- Formulario de búsqueda -->
-                <form method="get" action="{% url 'mapas:filter_data' %}">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="query" class="form-label text-muted">Ingrese su búsqueda:</label>
-                        <textarea name="query" id="query" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="text-end">                        
-                        <button type="submit" class="btn btn-success">Buscar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-{% comment %} <!-- Resultados -->
-{% if data_json %}
-<div class="mt-4">
-    <h2>Resultados:</h2>
-    <ul class="list-group">
-        {% for item in data_json %}
-            <li class="list-group-item">
-                <strong>{{ item.nom_est }}</strong> - {{ item.oferta }} en {{ item.localidad }}
-            </li>
-        {% endfor %}
-    </ul>
-</div>  
-{% endif %} {% endcomment %}
-
-<!-- Estilos de animación y diseño elegante -->
-<style>
-    .search-background {
-        position: relative;
-        background: #f8f9fa;
-        border-radius: 15px;
-        padding: 30px;
-        text-align: center;
-        margin-bottom: 20px;
-        overflow: hidden;
-        box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .search-ring {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 100px;
-        height: 100px;
-        background-color: rgba(0, 123, 255, 0.2);
-        border-radius: 50%;
-        animation: ring-pulse 2s infinite;
-        transform: translate(-50%, -50%);
-    }
-
-    @keyframes ring-pulse {
-        0% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0.8;
-        }
-        50% {
-            transform: translate(-50%, -50%) scale(1.4);
-            opacity: 0.6;
-        }
-        100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0.8;
-        }
-    }
-
-    /* Estilos para el Modal */
-    .modal-content {
-        background: #ffffff;
-        border-radius: 10px;
-    }
-
-    .modal-header {
-        background-color: #007bff;
-        color: white;
-        border-radius: 10px 10px 0 0;
-    }
-
-    .modal-title {
-        font-weight: 600;
-    }
-
-    .modal-body {
-        font-family: 'Roboto', sans-serif;
-        padding: 30px;
-    }
-
-    .form-label {
-        font-weight: 500;
-    }
-
-    .btn-primary {
-        background-color: #007bff;
-        border-color: #007bff;
-    }
-
-    .btn-primary:hover {
-        background-color: #0056b3;
-        border-color: #004085;
-    }
-
-    .btn-success {
-        background-color: #28a745;
-        border-color: #28a745;
-    }
-
-    .btn-success:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
-    }
-
-    /* Estilos de los resultados */
-    .list-group-item {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 10px;
-        transition: background-color 0.3s ease-in-out;
-    }
-
-    .list-group-item:hover {
-        background-color: #e9ecef;
-    }
-
-    .search-background h4 {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #007bff;
-    }
-
-    .search-background p {
-        font-size: 1.2rem;
-        color: #6c757d;
-    }
-    
-
-</style>
-
-<!-- Agregar los links de Bootstrap 5 -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.responsivevoice.org/responsivevoice.js?key=5yusZnhF"></script>
-
-
-<!-- Script para saludar al usuario con voz -->
+<!-- Modal IA -->
 <script>
-    function saludarUsuario() {
-        {% if user.is_authenticated %}
-            var nombreUsuario = "{{ user.nombres }}";
-            var fechaActual = new Date();
-            var hora = fechaActual.getHours();
-            var momentoDelDia = (hora >= 6 && hora < 12) ? "Buenos días" :
-                                (hora >= 12 && hora < 18) ? "Buenas tardes" :
-                                "Buenas noches";
-            var quetal = (hora >= 6 && hora < 12) ? "¿Qué tal tu mañana en " :
-                        (hora >= 12 && hora < 18) ? "¿Qué tal tu tarde en " :
-                        "¿Qué tal tu noche en ";
-            
-            var saludoBase = `${momentoDelDia}, ${nombreUsuario}. ${quetal}`;
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function (position) {
-                    var lat = position.coords.latitude;
-                    var lon = position.coords.longitude;
-
-                    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
-                        .then(response => response.json())
-                        .then(data => {
-                            var ciudad = data.address.city || data.address.town || data.address.village || "tu ciudad";
-                            var saludoFinal = `${saludoBase} ${ciudad}. ¿Qué ofertas quieres explorar hoy?`;
-                            responsiveVoice.speak(saludoFinal, "Spanish Latin American Female");
-                        })
-                        .catch(error => {
-                            console.error("Error obteniendo la ciudad: ", error);
-                            responsiveVoice.speak(saludoBase + "tu ciudad. ¿Qué ofertas quieres explorar hoy?", "Spanish Latin American Female");
-                        });
-                }, function (error) {
-                    console.error("Error obteniendo la ubicación: " + error.message);
-                    responsiveVoice.speak(saludoBase + "tu ciudad. ¿Qué ofertas quieres explorar hoy?", "Spanish Latin American Female");
-                });
-            } else {
-                console.error("Geolocalización no soportada en este navegador.");
-                responsiveVoice.speak(saludoBase + "tu ciudad. ¿Qué ofertas quieres explorar hoy?", "Spanish Latin American Female");
-            }
-        {% else %}
-            var fechaActual = new Date();
-            var hora = fechaActual.getHours();
-            var momentoDelDia = (hora >= 6 && hora < 12) ? "Buenos días" :
-                                (hora >= 12 && hora < 18) ? "Buenas tardes" :
-                                "Buenas noches";
-            var quetal = (hora >= 6 && hora < 12) ? "¿Qué tal tu mañana en " :
-                        (hora >= 12 && hora < 18) ? "¿Qué tal tu tarde en " :
-                        "¿Qué tal tu noche en ";
-            
-            var saludoBase = `${momentoDelDia}. Bienvenido a la búsqueda de ofertas educativas. ${quetal}`;
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function (position) {
-                    var lat = position.coords.latitude;
-                    var lon = position.coords.longitude;
-
-                    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
-                        .then(response => response.json())
-                        .then(data => {
-                            var ciudad = data.address.city || data.address.town || data.address.village || "tu ciudad";
-                            var saludoFinal = `${saludoBase} ${ciudad}. ¿Qué ofertas quieres explorar hoy?`;
-                            responsiveVoice.speak(saludoFinal, "Spanish Latin American Female");
-                        })
-                        .catch(error => {
-                            console.error("Error obteniendo la ciudad: ", error);
-                            responsiveVoice.speak(saludoBase + "tu ciudad. ¿Qué ofertas quieres explorar hoy?", "Spanish Latin American Female");
-                        });
-                }, function (error) {
-                    console.error("Error obteniendo la ubicación: " + error.message);
-                    responsiveVoice.speak(saludoBase + "tu ciudad. ¿Qué ofertas quieres explorar hoy?", "Spanish Latin American Female");
-                });
-            } else {
-                console.error("Geolocalización no soportada en este navegador.");
-                responsiveVoice.speak(saludoBase + "tu ciudad. ¿Qué ofertas quieres explorar hoy?", "Spanish Latin American Female");
-            }
-        {% endif %}
-    } 
-
-    
-</script>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function() {
     var botonIA = document.getElementById("abrirModalIA");
-    
-    if (botonIA) {
-        botonIA.addEventListener("click", function(event) {
-            event.preventDefault();  
-            console.log("Botón Buscar utilizando IA clickeado"); // Verificación en consola
-            var modalElement = document.getElementById("buscarModal");
-
-            if (modalElement) {
-                var modal = new bootstrap.Modal(modalElement);
-                modal.show();
-                saludarUsuario();
-            } else {
-                console.error("No se encontró el modal con id 'buscarModal'");
-            }
+    if(botonIA){
+        botonIA.addEventListener("click", function(e){
+            e.preventDefault();
+            var modal = new bootstrap.Modal(document.getElementById("buscarModal"));
+            modal.show();
         });
-    } else {
-        console.error("No se encontró el botón con id 'abrirModalIA'");
     }
 });
-    
 </script>
