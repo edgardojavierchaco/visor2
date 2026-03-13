@@ -1,263 +1,112 @@
 {% extends 'dashboard/body.html' %}
-
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <style>
-    .data-box {
-        flex: 1;
-        background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 10px;
-        text-align: center;
-        margin-right: 5px;
-    }
-
-    .data-box:last-child {
-        margin-right: 0;
-    }
-
-    .data-box p {
-        margin: 0;
-        font-weight: bold;
-        font-size: 0.9em;
-    }
-
-    .data-box span {
-        display: block;
-        margin-top: 5px;
-        font-size: 1.2em;
-        font-weight: bold;
-        color: white;
-    }
-
-    .bg-green { background-color: green; }
-    .bg-yellow { background-color: yellow; color: black; }
-    .bg-orange { background-color: orange; }
-    .bg-blue { background-color: blue; }
-    .bg-black { background-color: black; }
-    .bg-violet { background-color: violet; color: black; }
-    .bg-brown { background-color: brown; }
-
-    .card {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        margin: 0 10px;
-    }
-
-    .card-title {
-        font-weight: bold;
-        font-size: 1.5em;
-        margin-bottom: 20px;
-    }
-
-    h3 {
-        font-weight: bold;
-        font-size: 1.2em;
-        margin-top: 20px;
-        margin-bottom: 10px;
-    }
-
-    .container {
-        display: flex;
-        align-items: flex-start;
-    }
+body { font-family: "Segoe UI", Roboto, Helvetica, sans-serif; background-color: #f4f5f7; color: #333; }
+.card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; background-color: #fff; }
+.card-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 15px; }
+.data-box { flex: 1; padding: 15px; border-radius: 8px; text-align: center; color: #fff; font-weight: 600; }
+.data-box p { margin:0; font-size:0.9rem; }
+.data-box span { display:block; font-size:1.4rem; margin-top:5px; }
+.bg-primary{background:#0d6efd;} .bg-success{background:#198754;} .bg-warning{background:#ffc107;color:#212529;} 
+.bg-danger{background:#dc3545;} .bg-info{background:#0dcaf0;color:#212529;} .bg-dark{background:#343a40;} 
+.container-flex{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;}
+.region-img{max-width:400px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+.select-region{margin:20px 0; max-width:400px;}
+canvas{background:#fff; border-radius:12px; padding:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08);}
 </style>
 
-<form id="regionForm" style="margin-top:20px;">
-    <label for="region">Selecciona una Regional Educativa:</label>
-    <select id="region" name="region">
+<div class="select-region">
+    <label for="region" class="form-label fw-bold">Selecciona una Regional Educativa:</label>
+    <select id="region" class="form-select">
         <option value="">--Seleccione--</option>
         {% for region in regionales %}
             <option value="{{ region }}">{{ region }}</option>
         {% endfor %}
     </select>
-</form>
+</div>
 
-<div id="resultado-container" style="display: none; margin-top: 30px;">
-    <div class="container">
-        <img id="imagen-departamento" src="{% static 'img/regioneschaco.png' %}" alt="Imagen de la Regional Educativa" style="width: 400px; height: auto;">
-        <div class="card" style="flex: 1;">
-            <div class="card-body">
-                <h2 class="card-title">Regional: <span id="nombre-departamento"></span></h2>
-                <br>
-                <br>
-                <br>
-                <div class="section" style="margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <div class="data-box bg-green">
-                            <p>Sedes</p>
-                            <span id="total_sedes"></span>
-                        </div>
-                        <div class="data-box bg-black">
-                            <p>Anexos</p>
-                            <span id="total_anexos"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <h3>Ámbito</h3>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <div class="data-box bg-blue">
-                        <p>Urbano</p>
-                        <span id="total_urbanos"></span>
-                    </div>
-                    <div class="data-box bg-yellow">
-                        <p>Rural Disperso</p>
-                        <span id="total_rurales_dispersos"></span>
-                    </div>
-                    <div class="data-box bg-yellow">
-                        <p>Rural Aglomerado</p>
-                        <span id="total_rurales_aglomerados"></span>
-                    </div>
-                </div>
-
-                <h3>Sector</h3>
-                <div style="display: flex; justify-content: space-between;">
-                    <div class="data-box bg-brown">
-                        <p>Estatal</p>
-                        <span id="total_estatales"></span>
-                    </div>
-                    <div class="data-box bg-orange">
-                        <p>Privado</p>
-                        <span id="total_privados"></span>
-                    </div>
-                    <div class="data-box bg-violet">
-                        <p>Gestión Social/Comunitario</p>
-                        <span id="total_soccom"></span>
-                    </div>
-                </div>
+<div id="resultado-container" style="display:none;">
+    <div class="container-flex">
+        <div class="card flex-fill">
+            <h2 class="card-title">Regional: <span id="nombre-departamento"></span></h2>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <div class="data-box bg-success"><p>Inicial</p><span id="total_inicial"></span></div>
+                <div class="data-box bg-warning"><p>Primario</p><span id="total_primario"></span></div>
+                <div class="data-box bg-danger"><p>Secundario</p><span id="total_secundaria"></span></div>
+                <div class="data-box bg-info"><p>Adulto Primario</p><span id="total_adultoprim"></span></div>
+                <div class="data-box bg-info"><p>Adulto Secundario</p><span id="total_adultosec"></span></div>
+                <div class="data-box bg-info"><p>Adulto Form. Prof.</p><span id="total_adultofp"></span></div>
+                <div class="data-box bg-dark"><p>Biblioteca</p><span id="total_biblio"></span></div>
+                <div class="data-box bg-dark"><p>CEF</p><span id="total_cef"></span></div>
+                <div class="data-box bg-dark"><p>Especial</p><span id="total_especial"></span></div>
             </div>
         </div>
 
-        <div class="card" style="width: 350px;">
-            <div class="card-body">
-                <h3>Datos de Oferta</h3>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <div class="data-box bg-green">
-                        <p>Inicial</p>
-                        <span id="total_inicial"></span>
-                    </div>
-                    <div class="data-box bg-yellow">
-                        <p>Primario</p>
-                        <span id="total_primario"></span>
-                    </div>
-                    <div class="data-box bg-orange">
-                        <p>Secundario</p>
-                        <span id="total_secundaria"></span>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <div class="data-box bg-blue">
-                        <p>Adulto Primario</p>
-                        <span id="total_adultoprim"></span>
-                    </div>
-                    <div class="data-box bg-blue">
-                        <p>Adulto Secundario</p>
-                        <span id="total_adultosec"></span>
-                    </div>
-                    <div class="data-box bg-blue">
-                        <p>Adulto Form. Prof.</p>
-                        <span id="total_adultofp"></span>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <div class="data-box bg-black">
-                        <p>Biblioteca</p>
-                        <span id="total_biblio"></span>
-                    </div>
-                    <div class="data-box bg-black">
-                        <p>CEF</p>
-                        <span id="total_cef"></span>
-                    </div>
-                    <div class="data-box bg-black">
-                        <p>Especial</p>
-                        <span id="total_especial"></span>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between;">
-                    <div class="data-box bg-violet">
-                        <p>SNU</p>
-                        <span id="total_snu"></span>
-                    </div>
-                </div>
-            </div>
+        <div class="card flex-fill">
+            <canvas id="ambitoChart" height="200"></canvas>
+            <canvas id="sectorChart" height="200" style="margin-top:20px;"></canvas>
         </div>
+
+        <img id="imagen-departamento" class="region-img" src="{% static 'img/regioneschaco.png' %}" alt="Imagen Regional">
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // Ejecutar la consulta al cargar la página
-        $.ajax({
-            url: "{% url 'reportes:consulta_ofertas_reg' %}",
-            data: {},  // No enviamos el parámetro 'region' para obtener todos los datos
-            success: function(data) {
-                // Actualizamos los datos en la vista inicial
-                actualizarDatos(data);
-            }
+$(function(){
+    let ambitoChart, sectorChart;
+
+    function actualizarCharts(datos){
+        const ambitoData = [datos.total_urbanos, datos.total_rurales_dispersos, datos.total_rurales_aglomerados];
+        const sectorData = [datos.total_estatales, datos.total_privados, datos.total_soccom];
+
+        if(ambitoChart) ambitoChart.destroy();
+        if(sectorChart) sectorChart.destroy();
+
+        ambitoChart = new Chart($('#ambitoChart'), {
+            type:'pie',
+            data:{labels:['Urbano','Rural Disperso','Rural Aglomerado'], datasets:[{data:ambitoData, backgroundColor:['#0d6efd','#ffc107','#ffc107']}]},
+            options:{plugins:{title:{display:true,text:'Ámbito Educativo'}}}
         });
 
-        // Evento para cambiar la región
-        $('#region').change(function() {
-            const regionSeleccionada = $(this).val();
-            if (regionSeleccionada) {
-                $.ajax({
-                    url: "{% url 'reportes:consulta_ofertas_reg' %}",
-                    data: { region: regionSeleccionada },
-                    success: function(data) {
-                        // Actualizamos los datos en base a la región seleccionada
-                        actualizarDatos(data);
-                        $('#nombre-departamento').text(regionSeleccionada);  
-                        
-                        // Actualizar la imagen según la región seleccionada
-                        let imagenPath = '/static/img/' + regionSeleccionada.toLowerCase().replace(/\s+/g, '') + '.png';  // Cambiamos la ruta de la imagen según la región
-                        
-                        // Si la imagen no existe, mostramos una imagen por defecto
-                        $('#imagen-departamento').attr('src', imagenPath).on('error', function() {
-                            $(this).attr('src', '/static/img/regioneschaco.png');  
-                        });
-
-                        // Mostrar el contenedor de resultados
-                        $('#resultado-container').show();
-                    }
-                });
-            } else {
-                // Si no se selecciona ninguna región, escondemos los datos
-                $('#resultado-container').hide();
-            }
+        sectorChart = new Chart($('#sectorChart'), {
+            type:'bar',
+            data:{labels:['Estatal','Privado','Gestión Social'], datasets:[{label:'Cantidad', data:sectorData, backgroundColor:['#6c757d','#dc3545','#0dcaf0']}]},
+            options:{plugins:{title:{display:true,text:'Sector'}}}
         });
+    }
 
-        // Función para actualizar los datos en la vista
-        function actualizarDatos(data) {
-            $('#total_sedes').text(data.total_sedes);
-            $('#total_anexos').text(data.total_anexos);
-            $('#total_urbanos').text(data.total_urbanos);
-            $('#total_rurales_dispersos').text(data.total_rurales_dispersos);
-            $('#total_rurales_aglomerados').text(data.total_rurales_aglomerados);
-            $('#total_estatales').text(data.total_estatales);
-            $('#total_privados').text(data.total_privados);
-            $('#total_soccom').text(data.total_soccom);
-            $('#total_inicial').text(data.total_inicial);
-            $('#total_primario').text(data.total_primario);
-            $('#total_adultoprim').text(data.total_adultoprim);
-            $('#total_secundaria').text(data.total_secundaria);
-            $('#total_adultosec').text(data.total_adultosec);
-            $('#total_adultofp').text(data.total_adultofp);
-            $('#total_biblio').text(data.total_biblio);
-            $('#total_cef').text(data.total_cef);
-            $('#total_especial').text(data.total_especial);
-            $('#total_snu').text(data.total_snu);
+    function actualizarDatos(data){
+        for(const key in data){
+            $('#'+key).text(data[key]);
         }
+        actualizarCharts(data);
+    }
+
+    $('#region').change(function(){
+        const region = $(this).val();
+        if(!region){ $('#resultado-container').hide(); return; }
+
+        $.ajax({
+            url:"{% url 'reportes:consulta_ofertas' %}",
+            data:{region:region},
+            success:function(data){
+                actualizarDatos(data);
+                $('#nombre-departamento').text(region);
+                let imgPath='/static/img/'+region.toLowerCase().replace(/\s+/g,'')+'.png';
+                $('#imagen-departamento').attr('src',imgPath).on('error',function(){ $(this).attr('src','/static/img/regioneschaco.png'); });
+                $('#resultado-container').fadeIn();
+            }
+        });
     });
+
+    // Carga inicial
+    $.ajax({url:"{% url 'reportes:consulta_ofertas' %}", success:function(data){ actualizarDatos(data); }});
+});
 </script>
-
 {% endblock %}
-

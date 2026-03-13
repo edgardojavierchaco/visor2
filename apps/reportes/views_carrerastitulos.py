@@ -51,7 +51,7 @@ def consulta_carrerastitulos(request):
 
     # lógica para obtener los datos según los filtros seleccionados
     query = """
-        SELECT DISTINCT cueanexo, nom_est, sector, calle, numero, telefono_loc, email_loc, localidad, carrera, titulo
+        SELECT DISTINCT cueanexo, nom_est, sector, calle, numero, telefono_loc, email_loc, localidad, carrera, titulo, niveltitulotipo
         FROM public.carreras_titulos
         WHERE est_oferta = 'Activo'
     """
@@ -68,18 +68,13 @@ def consulta_carrerastitulos(request):
         rows = cursor.fetchall()
 
         for row in rows:
-            datos.append([
-                row[0],  # cueanexo
-                row[1],  # nom_est
-                row[2],  # sector
-                row[3],  # calle
-                row[4],  # numero
-                row[5],  # telefono_loc
-                row[6],  # email_loc
-                row[7],  # localidad
-                row[8],  # carrera
-                row[9],  # titulo
-            ])
+            datos.append({
+                "cueanexo": row[0],
+                "nom_est": row[1],
+                "sector": row[2],
+                "localidad": row[7],
+                "nivel": row[10]
+            })
 
     # Si es una solicitud AJAX para actualizar títulos
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -95,47 +90,142 @@ def consulta_carrerastitulos(request):
     return render(request, 'reportes/indexcarreras.html', context)
 
 
-# datos para el modal carreras-titulos
+def dashboard_carreras(request):
+    localidades, niveles, titulos = [], [], []
+
+    selected_localidades = request.GET.getlist('localidad[]')
+    selected_nivel = request.GET.get('nivel')
+    selected_titulo = request.GET.get('titulo')
+
+    # -----------------------------
+    # Localidades y niveles únicos
+    # -----------------------------
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT DISTINCT localidad 
+            FROM public.carreras_titulos 
+            WHERE est_oferta='Activo' 
+            ORDER BY localidad
+        """)
+        localidades = [row[0] for row in cursor.fetchall()]
+
+        cursor.execute("""
+            SELECT DISTINCT niveltitulotipo 
+            FROM public.carreras_titulos 
+            WHERE est_oferta='Activo' 
+            ORDER BY niveltitulotipo
+        """)
+        niveles = [row[0] for row in cursor.fetchall()]
+
+    # -----------------------------
+    # Filtrar títulos según filtros
+    # -----------------------------
+    titulo_query = "SELECT DISTINCT titulo FROM public.carreras_titulos WHERE est_oferta='Activo'"
+    if selected_localidades:
+        loc_str = ','.join(f"'{loc}'" for loc in selected_localidades)
+        titulo_query += f" AND localidad IN ({loc_str})"
+    if selected_nivel:
+        titulo_query += f" AND niveltitulotipo='{selected_nivel}'"
+    
+    titulo_query += " ORDER BY titulo"
+
+    with connection.cursor() as cursor:
+        cursor.execute(titulo_query)
+        titulos = [row[0] for row in cursor.fetchall()]
+
+    # -----------------------------
+    # Datos para la tabla
+    # -----------------------------
+    query = "SELECT cueanexo, nom_est, sector, localidad, niveltitulotipo FROM public.carreras_titulos WHERE est_oferta='Activo'"
+    if selected_localidades:
+        query += f" AND localidad IN ({loc_str})"
+    if selected_nivel:
+        query += f" AND niveltitulotipo='{selected_nivel}'"
+    if selected_titulo:
+        query += f" AND titulo='{selected_titulo}'"
+
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        columnas = [col[0] for col in cursor.description]  # nombres de columnas
+        datos = [dict(zip(columnas, row)) for row in cursor.fetchall()]  # filas como dict
+
+    # -----------------------------
+    # Mapear datos exactos para DataTables
+    # -----------------------------
+    datos_json = [
+        {
+            'cueanexo': d.get('cueanexo', ''),
+            'nom_est': d.get('nom_est', ''),
+            'sector': d.get('sector', ''),
+            'localidad': d.get('localidad', ''),
+            'nivel': d.get('niveltitulotipo', '')
+        }
+        for d in datos
+    ]
+
+    # -----------------------------
+    # Resumen
+    # -----------------------------
+    resumen = {'total_carreras': len(datos_json), 'por_sector': {}, 'por_nivel': {}, 'por_localidad': {}}
+    for d in datos_json:
+
+        sector = d.get('sector')
+        nivel = d.get('nivel')
+        localidad = d.get('localidad')
+
+        if sector:
+            resumen['por_sector'][sector] = resumen['por_sector'].get(sector, 0) + 1
+
+        if nivel:
+            resumen['por_nivel'][nivel] = resumen['por_nivel'].get(nivel, 0) + 1
+
+        if localidad:
+            resumen['por_localidad'][localidad] = resumen['por_localidad'].get(localidad, 0) + 1
+
+    # -----------------------------
+    # Respuesta AJAX
+    # -----------------------------
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'titulos': titulos, 'data': datos_json, 'resumen': resumen})
+
+    # -----------------------------
+    # Render inicial de la página
+    # -----------------------------
+    return render(request, 'reportes/dashboard_carreras.html', {
+        'localidades': localidades,
+        'niveles': niveles,
+        'titulos': titulos,
+        'resumen': resumen
+    })
+    
+
 def datoscarreras(request):
-    """
-    Obtiene los datos de una carrera específica basándose en el cueanexo proporcionado.
 
-    Args:
-        request: La solicitud HTTP que contiene el cueanexo.
-
-    Returns:
-        HttpResponse: Renderiza la plantilla del modal con los resultados obtenidos de la base de datos.
-                       Si no se proporciona cueanexo o hay un error de conexión, renderiza una página de error.
-    """
-    
     cueanexo = request.GET.get('cueanexo')
-    
-    # Validar y sanitizar el valor de cueanexo
-    if cueanexo is None:
-        # Manejar el caso si no se proporciona cueanexo
-        return render(request, 'error.html', {'mensaje': 'No se proporcionó el parámetro cueanexo'})
 
-    # Establecer la conexión a la base de datos Padrón
-    try:
-        connection = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD'),
-            database=os.getenv('DB_NAME1')
-        )
-        cursor = connection.cursor()
-    except psycopg2.Error as e:
-        # Manejar el error de conexión
-        return render(request, 'error.html', {'mensaje': 'Error al conectar a la base de datos'})
-    
+    if not cueanexo:
+        return JsonResponse({'error': 'No se proporcionó cueanexo'}, status=400)
 
-    datosmodal=f"""SELECT DISTINCT cueanexo, calle, numero, telefono_loc, email_loc
-                    FROM public.padron_ofertas
-                    WHERE est_oferta='Activo' AND cueanexo='{cueanexo}'
-    """
-    
-    cursor.execute(datosmodal)                
-    resultadosmodal= cursor.fetchall()      
-        
-    # Transformar los resultados en una respuesta renderizada
-    return render(request, 'reportes/modaldatos.html', {'resultados': resultadosmodal})
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT cueanexo, nom_est, sector, calle, numero,
+                   telefono_loc, email_loc, localidad,
+                   carrera, titulo, niveltitulotipo
+            FROM public.carreras_titulos
+            WHERE est_oferta='Activo'
+            AND cueanexo=%s
+        """, [cueanexo])
+
+        resultado = cursor.fetchone()
+
+    if not resultado:
+        return JsonResponse({'error': 'No se encontraron datos'}, status=404)
+
+    keys = [
+        'cueanexo','nom_est','sector','calle','numero',
+        'telefono','email','localidad','carrera','titulo','nivel'
+    ]
+
+    data = dict(zip(keys, resultado))
+
+    return JsonResponse(data)

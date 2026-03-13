@@ -41,6 +41,7 @@ urlpatterns=[
     path('consulta_titulos/', views_carrerastitulos.consulta_carrerastitulos, name='consulta_titulos'),
     path('equipo/', views_infograf.equipoview,name='equipo'),
     path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),
+    path('carreras/',views_carrerastitulos.dashboard_carreras,name='carreras'),
     path('docactividad/',views_infodocatividad.consulta_docentes_actividad, name='docactividad'),
     path('matric_cueanexo/',filter_data_matric_cueanexo,name='matric_cueanexo'), # type: ignore
     path('matric_disc_ini_cueanexo/',filter_data_matric_disc_ini_cueanexo, name='matric_disc_ini_cueanexo'), # type: ignore

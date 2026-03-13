@@ -2,172 +2,493 @@
 {% load static %}
 
 {% block content %}
+
 <div class="container-fluid py-3">
-    {% block content_header %}
-    <div class="content-header mb-3">
-        <div class="row">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Ubicación Geográfica de Unidades de Servicio</h1>
-            </div>
-            <div class="col-sm-6 text-end">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'dash:portada' %}">Regresar</a></li>
-                    <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
-                </ol>
-            </div>
-        </div>
-    </div>
-    {% endblock %}
 
-    <!-- Contenedor del mapa -->
-    <div id="map-container" class="mb-4">
-        <div id="map"></div>
-    </div>
+<h4 class="mb-3 fw-semibold">
+<i class="fas fa-map-marked-alt me-2 text-primary"></i>
+Ubicación Geográfica de Unidades de Servicio
+</h4>
 
-    <!-- Contenedor de la tabla -->
-    <div id="table-container">
-        <table id="marker-table" class="table table-striped table-bordered display nowrap" style="width:100%">
-            <thead>
-                <tr>
-                    <th>Cueanexo</th>
-                    <th>Establecimiento</th>
-                    <th>Ofertas</th>
-                    <th>Ámbito</th>
-                    <th>Sector</th>
-                    <th>Región Educativa</th>
-                    <th>Calle</th>
-                    <th>Número</th>
-                    <th>Localidad</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+<div id="map"></div>
+
+<div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+
+<div class="badge bg-primary fs-6">
+Escuelas dentro del área:
+<span id="count-schools">0</span>
 </div>
 
-<!-- Estilos específicos -->
+<div>
+<button id="btn-undo-filter" class="btn btn-warning btn-sm me-2">
+<i class="fas fa-undo"></i> Deshacer filtro
+</button>
+
+<button id="btn-clear-filter" class="btn btn-secondary btn-sm">
+<i class="fas fa-eraser"></i> Limpiar filtros
+</button>
+</div>
+
+</div>
+
+
+<div class="row g-3 mb-4">
+
+<div class="col-md-4">
+<div class="card chart-card">
+<div class="card-body">
+<canvas id="chartOfertas"></canvas>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card chart-card">
+<div class="card-body">
+<canvas id="chartSector"></canvas>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card chart-card">
+<div class="card-body">
+<canvas id="chartRegion"></canvas>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="card shadow-sm">
+
+<div class="card-header bg-white">
+<div id="datatable-filters" class="row g-3 align-items-end"></div>
+</div>
+
+<div class="card-body">
+
+<table id="marker-table"
+class="table table-striped table-hover table-bordered align-middle"
+style="width:100%">
+
+<thead class="table-light">
+<tr>
+<th>Cueanexo</th>
+<th>Establecimiento</th>
+<th>Ofertas</th>
+<th>Ámbito</th>
+<th>Sector</th>
+<th>Región</th>
+<th>Calle</th>
+<th>Número</th>
+<th>Localidad</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+</div>
+
+</div>
+
+
+
 <style>
-#map-container { position: relative; }
-#map { height: 450px; width: 100%; border-radius: 8px; }
+
+#map{
+height:520px;
+border-radius:12px;
+box-shadow:0 8px 25px rgba(0,0,0,0.15);
+border:1px solid #dee2e6;
+margin-bottom:10px;
+}
+
+.chart-card{
+border-radius:12px;
+box-shadow:0 6px 16px rgba(0,0,0,0.08);
+border:1px solid #e9ecef;
+}
+
+.school-marker{
+background:#0d6efd;
+border-radius:50%;
+width:30px;
+height:30px;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:14px;
+border:2px solid white;
+box-shadow:0 3px 8px rgba(0,0,0,0.35);
+}
+
+.popup-school{
+font-size:13px;
+min-width:230px;
+}
+
+#datatable-filters{
+background:#f8f9fa;
+padding:12px;
+border-radius:8px;
+border:1px solid #e9ecef;
+margin-bottom:10px;
+}
+
 </style>
 
-<!-- Librerías externas (una sola versión de cada) -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"/>
-<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.0.1/css/buttons.bootstrap5.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css"/>
 
-<script src="https://code.jquery.com/jquery-3.7.0.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js" defer></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
-<script src="https://cdn.datatables.net/buttons/2.0.1/js/dataTables.buttons.min.js" defer></script>
-<script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.bootstrap5.min.js" defer></script>
-<script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js" defer></script>
-<script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.print.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js" defer></script>
+<!-- Select2 Bootstrap 5 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap5-theme@1.5.2/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet"/>
 
-<script defer>
-document.addEventListener('DOMContentLoaded', function(){
 
-    // Parseamos los datos desde el backend
-    const markersData = JSON.parse('{{ data_json|escapejs }}');
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 
-    // Inicializamos el mapa
-    const map = L.map('map');
-    const bounds = L.latLngBounds();
-    const markerClusterGroup = L.markerClusterGroup();
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-    // Capas base
-    const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-        maxZoom: 18
-    }).addTo(map);
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri',
-        maxZoom: 18
-    });
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 
-    L.control.layers({"Mosaico": openStreetMap, "Satélite": esriSatellite}, null, {collapsed:true}).addTo(map);
-    L.control.scale({position:'bottomleft', imperial:false}).addTo(map);
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    // Colores por región
-    const regionColors = {
-        'R.E. 1': 'orange', 'R.E. 2': 'blue', 'R.E. 3': 'violet',
-        'R.E. 4-B': 'red', 'R.E. 4-A':'green', 'R.E. 5': 'orange',
-        'R.E. 6': 'blue', 'R.E. 7': 'violet', 'R.E. 8-A': 'red',
-        'R.E. 8-B':'green', 'R.E. 9': 'orange', 'R.E. 10-A': 'red',
-        'R.E. 10-B': 'blue', 'R.E. 10-C': 'green'
-    };
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    const getMarkerColor = region => regionColors[region] || 'gray';
+<!-- Select2 -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    // DataTables: construimos data array
-    const tableData = [];
 
-    markersData.forEach(m => {
-        const [cueanexo, lat, lng, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad] = m;
+<script>
 
-        // Creamos marcador en mapa
-        if(lat && lng){
-            const color = getMarkerColor(region_loc);
-            const marker = L.marker([lat, lng], {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: `<i class="fas fa-map-marker-alt" style="color:${color};font-size:24px;" title="${nom_est}"></i>`,
-                    iconSize: [24,24],
-                    iconAnchor: [12,24]
-                })
-            }).bindPopup(
-                `<strong>Cueanexo:</strong> <a href="#" onclick="filterTable('${cueanexo}','${oferta}')" title="Ver detalle del Cueanexo">${cueanexo}</a><br>` +
-                `<strong>Establecimiento:</strong> ${nom_est}<br>` +
-                `<strong>Ofertas:</strong> ${oferta}<br>` +
-                `<strong>Ámbito:</strong> ${ambito}<br>` +
-                `<strong>Sector:</strong> ${sector}<br>` +
-                `<strong>Región:</strong> ${region_loc}<br>` +
-                `<strong>Calle:</strong> ${calle} Nro ${numero} - ${localidad}`
-            );
-            markerClusterGroup.addLayer(marker);
-            bounds.extend(marker.getLatLng());
-        }
+document.addEventListener('DOMContentLoaded',function(){
 
-        // Agregamos fila a DataTables
-        tableData.push([cueanexo, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad]);
-    });
+const data = JSON.parse('{{ data_json|escapejs }}');
 
-    map.addLayer(markerClusterGroup);
-    map.fitBounds(bounds);
+const map = L.map('map').setView([-27.45,-59.0],7);
 
-    // Inicializamos DataTables
-    $('#marker-table').DataTable({
-        data: tableData,
-        columns: [
-            { data: 0, render: (d,r)=>`<a href="#" onclick="filterTable('${d}','${r[2]}')">${d}</a>` },
-            { data: 1 }, { data: 2 }, { data: 3 }, { data: 4 }, { data: 5 },
-            { data: 6 }, { data: 7 }, { data: 8 }
-        ],
-        responsive: true,
-        autoWidth: false,
-        dom: '<"top"lBf>rt<"bottom"ip>',
-        buttons: [
-            { extend:'excel', className:'btn btn-secondary', text:'<i class="fas fa-file-excel"></i>', title:'Mapa_Unidades' },
-            { extend:'csv', className:'btn btn-secondary', text:'<i class="fas fa-file-csv"></i>', title:'Mapa_Unidades' },
-            { extend:'pdf', className:'btn btn-secondary', text:'<i class="fas fa-file-pdf"></i>', title:'Mapa_Unidades' },
-            { extend:'print', className:'btn btn-secondary', text:'<i class="fas fa-print"></i>', title:'Mapa_Unidades' }
-        ],
-        language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" }
-    });
 
-    // Función de filtrado
-    window.filterTable = (cueanexo, oferta) => {
-        window.location.href = `/map/listados/?cueanexo=${cueanexo}&oferta=${oferta}`;
-    };
+/* CAPAS */
+
+const baseLight=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
+const baseDark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+const baseSat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+const baseMosaic=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png');
+
+baseLight.addTo(map);
+
+L.control.layers({
+"Mapa claro":baseLight,
+"Mapa oscuro":baseDark,
+"Satélite":baseSat,
+"Mosaico":baseMosaic
+}).addTo(map);
+
+
+/* MARCADORES */
+
+const iconSchool=L.divIcon({
+className:"school-marker",
+html:"🎓",
+iconSize:[30,30],
+iconAnchor:[15,30]
 });
+
+const cluster=L.markerClusterGroup();
+const allMarkers=[];
+const markersIndex={};
+const bounds=L.latLngBounds();
+
+data.forEach(row=>{
+
+const [cue,lat,lng,esc,oferta,ambito,sector,region,calle,numero,localidad]=row;
+
+if(lat && lng){
+
+const popup=`<div class="popup-school">
+<b>🏫 ${esc}</b><br><br>
+<b>CUE:</b> ${cue}<br>
+<b>Oferta:</b> ${oferta}<br>
+<b>Ámbito:</b> ${ambito}<br>
+<b>Sector:</b> ${sector}<br>
+<b>Región:</b> ${region}<br>
+<b>Dirección:</b> ${calle} ${numero}<br>
+<b>Localidad:</b> ${localidad}
+</div>`;
+
+const marker=L.marker([lat,lng],{icon:iconSchool}).bindPopup(popup);
+
+marker.dataRow=[cue,esc,oferta,ambito,sector,region,calle,numero,localidad];
+
+cluster.addLayer(marker);
+allMarkers.push(marker);
+markersIndex[cue]=marker;
+
+bounds.extend(marker.getLatLng());
+
+}
+
+});
+
+map.addLayer(cluster);
+map.fitBounds(bounds);
+
+
+/* FILTRO ESPACIAL */
+
+const drawnItems=new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+const history=[];
+
+map.addControl(new L.Control.Draw({
+draw:{polygon:true,rectangle:true,circle:false,polyline:false,marker:false},
+edit:{featureGroup:drawnItems}
+}));
+
+map.on(L.Draw.Event.CREATED,function(e){
+
+drawnItems.clearLayers();
+
+const layer=e.layer;
+drawnItems.addLayer(layer);
+
+const selected=[];
+
+allMarkers.forEach(marker=>{
+if(layer.getBounds().contains(marker.getLatLng())){
+selected.push(marker);
+}
+});
+
+history.push(selected);
+applyFilter(selected);
+
+});
+
+
+document.getElementById("btn-clear-filter").onclick=function(){
+drawnItems.clearLayers();
+history.length=0;
+applyFilter(allMarkers);
+};
+
+document.getElementById("btn-undo-filter").onclick=function(){
+history.pop();
+const prev=history.length?history[history.length-1]:allMarkers;
+applyFilter(prev);
+};
+
+
+
+/* DATATABLE */
+
+const table=$('#marker-table').DataTable({
+
+data:data.map(m=>[
+m[0],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10]
+]),
+
+columns:[
+{data:0,render:d=>`<a href="#" onclick="zoomToSchool('${d}')">${d}</a>`},
+{data:1},{data:2},{data:3},{data:4},{data:5},{data:6},{data:7},{data:8}
+],
+
+pageLength:10,
+
+dom:
+"<'row mb-3'<'col-md-6'B><'col-md-6'f>>"+
+"<'row'<'col-12'tr>>"+
+"<'row mt-2'<'col-md-5'i><'col-md-7'p>>",
+
+buttons:[{
+extend:'excel',
+text:'Exportar Excel',
+className:'btn btn-success btn-sm'
+}],
+
+language:{
+decimal:"",
+emptyTable:"No hay datos disponibles",
+info:"Mostrando _START_ a _END_ de _TOTAL_ registros",
+infoEmpty:"Mostrando 0 a 0 de 0 registros",
+infoFiltered:"(filtrado de _MAX_ registros totales)",
+lengthMenu:"Mostrar _MENU_ registros",
+loadingRecords:"Cargando...",
+processing:"Procesando...",
+search:"Buscar:",
+zeroRecords:"No se encontraron resultados",
+paginate:{
+first:"Primero",
+last:"Último",
+next:"Siguiente",
+previous:"Anterior"
+}
+},
+
+initComplete: function() {
+    const api = this.api();
+
+    // Columnas específicas: Oferta (2), Ámbito (3), Sector (4)
+    [2,3,4].forEach(function(i){
+        let column = api.column(i);
+        let title = $(column.header()).text();
+
+        // Contenedor responsive para cada select
+        let col = $('<div class="col-md-3 col-sm-6 mb-2"></div>').appendTo('#datatable-filters');
+        $('<label class="form-label small fw-semibold">'+title+'</label>').appendTo(col);
+
+        // Select básico
+        let select = $('<select class="form-select form-select-sm"><option value="">Todos</option></select>')
+            .appendTo(col)
+            .on('change', function(){
+                let val = $.fn.dataTable.util.escapeRegex($(this).val());
+                column.search(val ? '^'+val+'$' : '', true, false).draw();
+            });
+
+        // Llenar opciones
+        column.data().unique().sort().each(function(d){
+            if(d) select.append('<option value="'+d+'">'+d+'</option>');
+        });
+
+        // Inicializar Select2 con tema Bootstrap 5
+        select.select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Seleccione...',
+            allowClear: true,
+            minimumResultsForSearch: 5
+        });
+    });
+}
+
+
+});
+
+
+window.zoomToSchool=function(cue){
+const m=markersIndex[cue];
+map.setView(m.getLatLng(),14);
+m.openPopup();
+};
+
+
+
+/* GRAFICOS */
+
+let chartOfertas, chartAmbito, chartSector;
+
+const colorPalettes = {
+    ofertas: {
+        "Adultos - Formación Profesional": "#0d6efd",
+        "Adultos - Primaria": "#198754",
+        "Adultos - Secundaria Completa": "#ffc107",
+        "Común - Domiciliaria": "#dc3545",
+        "Común - Jardín de infantes": "#6610f2",
+        "Común - Jardín maternal": "#6610f2",
+        "Común - Primaria de 7 años": "#fd7e14",
+        "Común - Secundaria Completa req. 7 años": "#20c997",
+        "Común - Servicios Complementarios": "#6f42c1",
+        "Común - SNU": "#0dcaf0",
+        "Común - Ciclos de Eseñanza Artística": "#adb5bd",
+        "Común - Cursos de Capacitación de SNU": "#fd7e14",
+        "Común - Cursos y Talleres de Artística": "#198754",
+        "Especial - Primaria de 7 años ": "#ffc107",
+        "Especial - Jardín de infantes ": "#0d6efd",
+        "Especial - Jardín maternal ": "#dc3545",
+        "Especial - Cursos/Talleres de la Escuela Especial": "#6610f2",
+        "Especial - Educacion integral para adolescentes y jovenes": "#20c997",
+        "Especial - Integración": "#6f42c1"
+    },
+    ambito: {
+        "Urbano": "#0d6efd",
+        "Rural Disperso": "#198754",
+        "Rural Aglomerado": "#ffc107"
+    },
+    sector: {
+        "Estatal": "#0d6efd",
+        "Privado": "#198754",
+        "Gestión social/cooperativa": "#ffc107"
+    }
+};
+
+function normalizeKey(k){return k?k.trim():'';}
+function getColors(data,palette){
+    return Object.keys(data).map(k=>{
+        for(let p in palette){if(normalizeKey(p)===normalizeKey(k)) return palette[p];}
+        return '#6c757d';
+    });
+}
+
+function count(markers,index){
+    const c={};
+    markers.forEach(m=>{
+        const k=m.dataRow[index];
+        c[k]=(c[k]||0)+1;
+    });
+    return c;
+}
+
+function createChart(id,data,title,palette){
+    return new Chart(document.getElementById(id),{
+        type:'bar',
+        data:{labels:Object.keys(data),datasets:[{data:Object.values(data),backgroundColor:getColors(data,palette),borderRadius:6}]},
+        options:{plugins:{legend:{display:false},title:{display:true,text:title}},responsive:true,scales:{y:{beginAtZero:true}}}
+    });
+}
+
+function updateCharts(markers){
+    if(chartOfertas) chartOfertas.destroy();
+    if(chartAmbito) chartAmbito.destroy();
+    if(chartSector) chartSector.destroy();
+    chartOfertas = createChart('chartOfertas',count(markers,2),'Ofertas',colorPalettes.ofertas);
+    chartAmbito  = createChart('chartRegion',count(markers,3),'Ámbito',colorPalettes.ambito);
+    chartSector  = createChart('chartSector',count(markers,4),'Sector',colorPalettes.sector);
+}
+
+
+
+/* APLICAR FILTRO */
+
+function applyFilter(markers){
+
+cluster.clearLayers();
+table.clear();
+
+markers.forEach(m=>{
+cluster.addLayer(m);
+table.row.add(m.dataRow);
+});
+
+table.draw();
+
+document.getElementById("count-schools").innerText=markers.length;
+
+updateCharts(markers);
+
+}
+
+applyFilter(allMarkers);
+
+});
+
 </script>
+
 {% endblock %}
