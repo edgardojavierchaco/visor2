@@ -1,52 +1,112 @@
-#from django.urls import path
-from config.urls import path
+from django.urls import path
 from django.views.generic import TemplateView
 from . import views
 from . import views_matric, views_infograf, views_listados, views_carrerastitulos, views_infodocatividad
-from .views_matric_cueanexo import filtrado_matriccueanexo, filter_data_matric_cueanexo
-from .views_matric_disc_cueanexo import filtrado_matric_disc_ini_cueanexo, filter_data_matric_disc_ini_cueanexo
-from .views_matric_disc_prim_cueanexo import filter_data_matric_disc_prim_cueanexo, filtrado_matric_disc_prim_cueanexo
-from .views_matric_disc_sec_cueanexo import filter_data_matric_disc_sec_cueanexo, filtrado_matric_disc_sec_cueanexo
-from apps.reportes import views_matric_cueanexo
+
+# IMPORTACIÓN CORREGIDA: Traemos el archivo de CUE-Anexo limpio
+from . import views_matric_cueanexo 
+
+# IMPORTACIÓN DE TUS VISTAS DE DISCAPACIDAD INICIAL (NUEVAS Y VIEJAS)
+from .views_matric_disc_cueanexo import (
+    filtrado_matric_disc_ini_cueanexo, 
+    filter_data_matric_disc_ini_cueanexo,
+    dashboard_matric_discapacidad, 
+    matric_disc_ajax
+)
+
+# IMPORTACIÓN DE TUS VISTAS DE DISCAPACIDAD PRIMARIA (NUEVAS Y VIEJAS)
+from .views_matric_disc_prim_cueanexo import (
+    filter_data_matric_disc_prim_cueanexo, 
+    filtrado_matric_disc_prim_cueanexo,
+    matric_disc_prim_ajax   # <-- CORRECCIÓN 1: VISTA IMPORTADA
+)
+
+# IMPORTACIÓN DE TUS VISTAS DE DISCAPACIDAD SECUNDARIA (NUEVAS Y VIEJAS)
+from .views_matric_disc_sec_cueanexo import (
+    filter_data_matric_disc_sec_cueanexo, 
+    filtrado_matric_disc_sec_cueanexo,
+    dashboard_matric_discapacidad_secundaria,
+    matric_disc_sec_ajax
+)
+
 from .views_tabla import tabla_view, get_table_data, obtener_columnas_cargos
 from .view_bloques import obtener_tablas, sql_builder, ejecutar_sql
 
-app_name='reportes'
+app_name = 'reportes'
 
-urlpatterns=[
-    path('filtrado_cargos/',views.filtrado_cargos,name='filtrado_cargos'),
-    path('filtrado_docentes/',views.filtrado_docentes,name='filtrado_docentes'),
-    path('filtrado_docentes_pasiva/',views.filtrado_docentes_pasiva,name='filtrado_docentes_pasiva'),
-    path('filtrado_horas/',views.filtrado_horas,name='filtrado_horas'),
-    path('filtrado_aborigen/',views_matric.filtrado_aborigen,name='filtrado_aborigen'),
-    path('filtrado_comesp/',views_matric.filtrado_comesp,name='filtrado_comesp'),
-    path('filtrado_snu/',views_matric.filtrado_snu,name='filtrado_snu'),
-    path('filtrado_matricueanexo/',filtrado_matriccueanexo,name='filtrado_matricueanexo'),
-    path('filtrado_matri_disc_ini_cueanexo/',filtrado_matric_disc_ini_cueanexo,name='filtrado_matri_disc_ini_cueanexo'),
-    path('filtrado_matri_disc_prim_cueanexo/',filtrado_matric_disc_prim_cueanexo,name='filtrado_matri_disc_prim_cueanexo'),
-    path('filtrado_matri_disc_sec_cueanexo/',filtrado_matric_disc_sec_cueanexo,name='filtrado_matri_disc_sec_cueanexo'),
-    path('cargos/',views.filter_data_cargos,name='cargos'), # type: ignore
-    path('docentes/',views.filter_data_docentes,name='docentes'), # type: ignore
-    path('docentes_pasiva/',views.filter_data_docentes_pasiva,name='docentes_pasiva'), # type: ignore
-    path('horas/',views.filter_data_horas,name='horas'), # type: ignore
-    path('aborigen/',views_matric.filter_data_aborigen,name='aborigen'), # type: ignore
-    path('comesp/',views_matric.filter_data_comesp,name='comesp'), # type: ignore
-    path('snu/',views_matric.filter_data_snu,name='snu'), # type: ignore
-    path('panel/', TemplateView.as_view(template_name='reportes/panel_reportes.html'),name='panel'),
-    path('infografia/',TemplateView.as_view(template_name='reportes/panel_infografia.html'),name='infografia'),
-    path('info1/',views_infograf.infografiaview,name='info1'),
-    path('info2/',views_infograf.infografiaview2,name='info2'),
-    path('consulta_ofertas/',views_listados.consulta_ofertas,name='consulta_ofertas'),   
-    path('consulta_ofertas_reg/',views_listados.consulta_ofertas_reg,name='consulta_ofertas_reg'), 
+urlpatterns = [
+    path('docentes-cargos-dashboard/', views.docentes_cargos_dashboard, name='docentes_cargos_dashboard'),
+    path('api/data/', views.api_reportes_data, name='api_reportes_data'),
+
+    # ── NUEVOS DASHBOARDS (SISTEMA MODERNO) ──
+    path('filtrado_cargos/',           views.filtrado_cargos,           name='filtrado_cargos'),
+    path('filtrado_docentes/',         views.filtrado_docentes,          name='filtrado_docentes'),
+    path('filtrado_docentes_pasiva/',  views.filtrado_docentes_pasiva,   name='filtrado_docentes_pasiva'),
+    
+    # ── NUEVAS RUTAS DISCAPACIDAD (PÁGINAS COMPLETAS) ──
+    path('dashboard-matricula-discapacidad/', dashboard_matric_discapacidad, name='dashboard_matric_disc'),
+    path('dashboard-matricula-discapacidad-prim/', filtrado_matric_disc_prim_cueanexo, name='dashboard_matric_disc_prim'),
+    path('dashboard-matricula-discapacidad-sec/', dashboard_matric_discapacidad_secundaria, name='dashboard_matric_disc_sec'),
+    
+    # ── ENDPOINTS AJAX (DATATABLES) ──
+    path('ajax/cargos/',          views.cargos_ajax,          name='cargos_ajax'),
+    path('ajax/docentes/',        views.docentes_ajax,         name='docentes_ajax'),
+    path('ajax/docentes-pasiva/', views.docentes_pasiva_ajax,  name='docentes_pasiva_ajax'),
+    path('ajax/horas/',           views.horas_ajax,            name='horas_ajax'),
+    path('ajax/jerarquia-geografica/', views.get_jerarquia_geografica, name='jerarquia_geografica'),
+    
+    # ── MATRÍCULA DETALLE CUEANEXO (NUEVO DASHBOARD) ──
+    # Redirigimos el botón viejo de tu menú a la vista nueva
+    path('filtrado_matricueanexo/', views_matric_cueanexo.filtrado_matric_cueanexo, name='filtrado_matricueanexo'),
+    # Ruta silenciosa AJAX
+    path('ajax/matricula-cueanexo/', views_matric_cueanexo.ajax_matric_cueanexo, name='ajax_matric_cueanexo'),
+
+    # AJAX para Discapacidad
+    path('ajax/matricula-discapacidad/', matric_disc_ajax, name='ajax_matric_disc'),
+    path('ajax/matricula-discapacidad-prim/', matric_disc_prim_ajax, name='ajax_matric_disc_prim'), # <-- CORRECCIÓN 2: RUTA HABILITADA
+    path('ajax/matricula-discapacidad-sec/', matric_disc_sec_ajax, name='ajax_matric_disc_sec'),
+
+    # ── MATRÍCULA Y OTROS REPORTES ──
+    path('filtrado_horas/', views.filtrado_horas, name='filtrado_horas'),
+    path('filtrado_aborigen/', views_matric.filtrado_aborigen, name='filtrado_aborigen'),
+    path('ajax/aborigen/', views_matric.aborigen_ajax, name='aborigen_ajax'),
+    path('ajax/comun-especial/', views_matric.comunespecial_ajax, name='comunespecial_ajax'),
+    path('filtrado_comesp/', views_matric.filtrado_comesp, name='filtrado_comesp'),
+    path('ajax/snu/', views_matric.snu_ajax, name='snu_ajax'),
+    path('filtrado_snu/', views_matric.filtrado_snu, name='filtrado_snu'),
+    
+    # ── PUENTES PARA DISCAPACIDAD ──
+    # Los nombres viejos de los botones ahora apuntan a las vistas de los nuevos Dashboards
+    path('filtrado_matri_disc_ini_cueanexo/', dashboard_matric_discapacidad, name='filtrado_matri_disc_ini_cueanexo'),
+    path('filtrado_matri_disc_prim_cueanexo/', filtrado_matric_disc_prim_cueanexo, name='filtrado_matri_disc_prim_cueanexo'),
+    path('filtrado_matri_disc_sec_cueanexo/', dashboard_matric_discapacidad_secundaria, name='filtrado_matri_disc_sec_cueanexo'),
+    
+    path('horas/', views.filter_data_horas, name='horas'), # type: ignore
+    path('aborigen/', views_matric.filter_data_aborigen, name='aborigen'), # type: ignore
+    path('comesp/', views_matric.filter_data_comesp, name='comesp'), # type: ignore
+    path('snu/', views_matric.filter_data_snu, name='snu'), # type: ignore
+    
+    # ── PANEL E INFOGRAFÍAS ──
+    path('panel/', TemplateView.as_view(template_name='reportes/panel_reportes.html'), name='panel'),
+    path('infografia/', TemplateView.as_view(template_name='reportes/panel_infografia.html'), name='infografia'),
+    path('info1/', views_infograf.infografiaview, name='info1'),
+    path('info2/', views_infograf.infografiaview2, name='info2'),
+    path('equipo/', views_infograf.equipoview, name='equipo'),
+    
+    # ── CONSULTAS Y LISTADOS ──
+    path('consulta_ofertas/', views_listados.consulta_ofertas, name='consulta_ofertas'),   
+    path('consulta_ofertas_reg/', views_listados.consulta_ofertas_reg, name='consulta_ofertas_reg'), 
     path('consulta_titulos/', views_carrerastitulos.consulta_carrerastitulos, name='consulta_titulos'),
-    path('equipo/', views_infograf.equipoview,name='equipo'),
-    path('datoscarreras/',views_carrerastitulos.datoscarreras,name='datoscarreras'),
     path('carreras/',views_carrerastitulos.dashboard_carreras,name='carreras'),
-    path('docactividad/',views_infodocatividad.consulta_docentes_actividad, name='docactividad'),
-    path('matric_cueanexo/',filter_data_matric_cueanexo,name='matric_cueanexo'), # type: ignore
-    path('matric_disc_ini_cueanexo/',filter_data_matric_disc_ini_cueanexo, name='matric_disc_ini_cueanexo'), # type: ignore
-    path('matric_disc_prim_cueanexo/',filter_data_matric_disc_prim_cueanexo, name='matric_disc_prim_cueanexo'), # type: ignore
-    path('matric_disc_sec_cueanexo/',filter_data_matric_disc_sec_cueanexo, name='matric_disc_sec_cueanexo'), # type: ignore
+    path('datoscarreras/', views_carrerastitulos.datoscarreras, name='datoscarreras'),
+    path('docactividad/', views_infodocatividad.consulta_docentes_actividad, name='docactividad'),
+    
+    # ── MATRÍCULA CUEANEXO (PROCESAMIENTO) ──
+    path('matric_disc_ini_cueanexo/', filter_data_matric_disc_ini_cueanexo, name='matric_disc_ini_cueanexo'), # type: ignore
+    path('matric_disc_prim_cueanexo/', filter_data_matric_disc_prim_cueanexo, name='matric_disc_prim_cueanexo'), # type: ignore
+    path('matric_disc_sec_cueanexo/', filter_data_matric_disc_sec_cueanexo, name='matric_disc_sec_cueanexo'), # type: ignore
+    
+    # ── SQL BUILDER Y TABLAS DINÁMICAS ──
     path('tabla/', tabla_view, name='tabla'),
     path('get_data/', get_table_data, name='get_data'),
     path('obtener_cargos/', obtener_columnas_cargos, name='obtener_columnas_cargos'),
@@ -54,5 +114,3 @@ urlpatterns=[
     path('sql/', sql_builder, name='sql'),
     path('ejecutar_sql/', ejecutar_sql, name='ejecutar_sql'), # type: ignore
 ]
-
-

@@ -1,0 +1,1233 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Docentes en Actividad</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+   <style>
+
+        /* ── CORRECCIÓN DATATABLES PARA BOTONES Y BUSCADOR ── */
+    .dataTables_wrapper .top {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    .dataTables_wrapper .dataTables_length {
+        margin-right: 15px;
+        margin-bottom: 0;
+    }
+    .dataTables_wrapper .dt-buttons {
+        display: flex;
+        gap: 5px;
+    }
+    .dataTables_wrapper .dataTables_filter {
+        margin-left: auto;
+        margin-bottom: 0;
+    }
+        :root {
+            --sidebar-width: 280px;
+            --color-primary: #1a3a5c;
+            --color-accent: #2e7db8;
+            --color-light: #eef4fb;
+            --color-border: #cddff0;
+            --color-text: #1e2d3d;
+            --color-muted: #6b849e;
+        }
+
+        body {
+            background: #f0f4f8;
+            font-family: 'Segoe UI', sans-serif;
+            color: var(--color-text);
+            overflow-y: auto;
+        }
+
+        /* ── LAYOUT ── */
+        .dashboard-wrapper {
+            display: flex;
+            gap: 0;
+            min-height: 500px;
+            align-items: stretch;
+            overflow: visible;
+        }
+
+        /* ── SIDEBAR ── */
+        .filter-sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            flex-shrink: 0;
+            background: #fff;
+            border-right: 2px solid var(--color-border);
+            border-radius: 12px 0 0 12px;
+            box-shadow: 4px 0 16px rgba(26,58,92,0.07); /* Sombra en tono azul */
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 10;
+        }
+
+        .sidebar-header { background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); color: #fff; padding: 16px 20px; border-radius: 10px 0 0 0; }
+        .sidebar-header h5 { margin: 0; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+        .sidebar-header p { margin: 4px 0 0; font-size: 0.75rem; opacity: 0.8; }
+        
+        .filter-group { padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
+        .filter-group:last-child { border-bottom: none; }
+        
+        .filter-label { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 600; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; cursor: pointer; }
+        .filter-label i { color: var(--color-accent); width: 14px; text-align: center; }
+        
+        /* Botonera corregida */
+        .filter-toggle { margin-left: auto; width: 36px; height: 20px; background: #dce8f5; border-radius: 10px; position: relative; transition: background 0.2s; cursor: pointer; flex-shrink: 0; border: none; outline: none; }
+        .filter-toggle.active { background: var(--color-accent); }
+        .filter-toggle::after { content: ''; position: absolute; width: 16px; height: 16px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .filter-toggle.active::after { left: 18px; }
+        
+        .filter-control { display: none; margin-top: 6px; }
+        .filter-control.visible { display: block; animation: slideDown 0.2s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .filter-control select, .filter-control input { width: 100%; padding: 6px 10px; border: 1.5px solid var(--color-border); border-radius: 6px; font-size: 0.82rem; color: var(--color-text); background: var(--color-light); transition: border-color 0.2s; }
+        .filter-control select:focus, .filter-control input:focus { outline: none; border-color: var(--color-accent); background: #fff; }
+        
+        /* Badge Requerido corregido */
+        .required-badge { background: #e74c3c; color: #fff; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; margin-left: 4px; font-weight: 600; }
+        
+        .sidebar-actions { padding: 14px 16px; background: var(--color-light); border-top: 2px solid var(--color-border); border-radius: 0 0 0 10px; display: flex; gap: 8px; flex-direction: column; }
+        .btn-limpiar { background: #fff; color: var(--color-muted); border: 1.5px solid var(--color-border); padding: 6px 16px; border-radius: 7px; font-size: 0.8rem; cursor: pointer; width: 100%; transition: all 0.2s; }
+        .btn-limpiar:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+        /* ── CONTENT ── */
+        .content-panel {
+            flex: 1;
+            min-width: 0;
+            background: #fff;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 0 4px 20px rgba(26,58,92,0.07); /* Sombra en tono azul */
+            padding: 0;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        .content-header-bar { background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .content-header-bar h4 { margin: 0; font-size: 1rem; font-weight: 700; }
+        .content-header-bar .subtitle { font-size: 0.78rem; opacity: 0.8; margin-top: 2px; }
+        
+        .active-filters { padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 42px; align-items: center; background: var(--color-light); border-bottom: 1px solid var(--color-border); }
+        .active-filters .label { font-size: 0.75rem; color: var(--color-muted); font-weight: 600; }
+        .filter-chip { background: var(--color-accent); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        .filter-chip .remove-chip { cursor: pointer; opacity: 0.8; }
+        .filter-chip .remove-chip:hover { opacity: 1; }
+        
+        /* Barra de totales con ancho distribuido uniforme */
+        .totals-bar { display: flex; gap: 12px; flex-wrap: wrap; padding: 16px 24px; border-bottom: 1px solid var(--color-border); }
+        .total-card { background: var(--color-light); border: 1.5px solid var(--color-border); border-radius: 8px; padding: 10px 18px; text-align: center; min-width: 100px; flex: 1; }
+        .total-card .val { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); }
+        .total-card .lbl { font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; font-weight: bold; }
+        
+        /* Tablas */
+        .table-section { padding: 20px 24px; min-height: 600px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) { .table-section { padding: 12px 8px; } }
+        
+        .table-section table thead tr.header-row th { background: var(--color-primary); color: #fff; font-size: 0.78rem; font-weight: 600; text-align: center; border: none; padding: 10px 14px; }
+        .table-section table tbody td { font-size: 0.85rem; vertical-align: middle; text-align: center; padding: 9px 14px; }
+        .table-section table tbody tr:hover td { background: var(--color-light); }
+        .table-section table tfoot th { background: var(--color-primary); color: #fff; text-align: center; font-size: 0.82rem; padding: 9px 14px; }
+        
+        .state-placeholder { text-align: center; padding: 60px 30px; color: var(--color-muted); }
+        .state-placeholder i { font-size: 3rem; margin-bottom: 14px; display: block; opacity: 0.4; }
+        .state-placeholder p { font-size: 0.9rem; margin: 0; }
+        
+        .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 60px; gap: 12px; color: var(--color-muted); }
+        .spinner-border-custom { width: 28px; height: 28px; border: 3px solid var(--color-border); border-top-color: var(--color-accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .content-header { display: none; }
+        
+        @media (max-width: 768px) {
+            .dashboard-wrapper { flex-direction: column; height: auto; overflow: visible; }
+            .filter-sidebar { width: 100%; min-width: 100%; position: relative; top: 0; border-radius: 12px 12px 0 0; overflow-y: visible; max-height: none; }
+            .content-panel { border-radius: 0 0 12px 12px; overflow-y: visible; overflow-x: auto; }
+        }
+    </style>
+</head>
+
+<body>
+{% block content_header %}{% endblock %}
+
+<div class="container-fluid mt-3 mb-4">
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <a href="{% url 'dash:portada' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Regresar
+        </a>
+        <div>
+            <h5 class="mb-0 fw-bold" style="color:var(--color-primary);">
+                <i class="fas fa-chalkboard-teacher me-2" style="color:var(--color-accent);"></i>
+                Dashboard — Docentes en Actividad
+            </h5>
+            <small class="text-muted">Filtrá en el panel izquierdo — los resultados se actualizan en tiempo real</small>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper">
+        <aside class="filter-sidebar">
+            <div class="sidebar-header">
+                <h5><i class="fas fa-sliders-h me-2"></i>Filtros</h5>
+                <p>Resultados en tiempo real</p>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('relevamiento')">
+                    <i class="fas fa-calendar-alt"></i> Relevamiento
+                    <span class="required-badge">REQ</span>
+                    <button class="filter-toggle active" id="toggle-relevamiento"></button>
+                </div>
+                <div class="filter-control visible" id="fc-relevamiento">
+                    <select id="sel-relevamiento" onchange="aplicarFiltros()">
+                        <option value="">— Seleccione año —</option>
+                        <option value="ra_carga2019">2019</option>
+                        <option value="ra_carga2020">2020</option>
+                        <option value="ra_carga2021">2021</option>
+                        <option value="ra_carga2022">2022</option>
+                        <option value="ra_carga2023">2023</option>
+                        <option value="ra_carga2024">2024</option>
+                        <option value="ra_carga2025">2025</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('vista')">
+                    <i class="fas fa-graduation-cap"></i> Modalidad / Oferta
+                    <span class="required-badge">REQ</span>
+                    <button class="filter-toggle active" id="toggle-vista"></button>
+                </div>
+                <div class="filter-control visible" id="fc-vista">
+                    <select id="sel-vista" onchange="aplicarFiltros()">
+                        <option value="">— Seleccione modalidad —</option>
+                       
+                    <option value="visor_docente_actividad_adulto_fp">ADULTOS — Formación Profesional</option>
+                    <option value="visor_docente_actividad_adulto_primaria">ADULTOS — Primaria</option>
+                    <option value="visor_docente_actividad_adulto_secundaria">ADULTOS — Secundaria</option>
+                    <option value="visor_docente_actividad_comun_inicial">COMÚN — Inicial</option>
+                    <option value="visor_docente_actividad_comun_primaria">COMÚN — Primaria</option>
+                    <option value="visor_docente_actividad_comun_secundaria">COMÚN — Secundaria</option>
+                    <option value="visor_docente_actividad_comun_servicios_complementarios">COMÚN — Servicios Complementarios</option>
+                    <option value="visor_docente_actividad_comun_snu">COMÚN — SNU</option>
+                    <option value="visor_docente_actividad_educacion_especial">EDUCACIÓN ESPECIAL</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('cueanexo')">
+                    <i class="fas fa-school"></i> Cueanexo
+                    <button class="filter-toggle" id="toggle-cueanexo"></button>
+                </div>
+                <div class="filter-control" id="fc-cueanexo">
+                    <input type="text" id="inp-cueanexo" placeholder="Ej: 220012345" maxlength="9"
+                           onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                           oninput="aplicarFiltrosDebounced()">
+                    <small style="color:#e74c3c;font-size:0.7rem;" id="cue-error" class="d-none">Debe comenzar con 22 y tener 9 dígitos</small>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('ambito')">
+                    <i class="fas fa-map"></i> Ámbito
+                    <button class="filter-toggle" id="toggle-ambito"></button>
+                </div>
+                <div class="filter-control" id="fc-ambito">
+                    <select id="sel-ambito" onchange="aplicarFiltros()">
+                        <option value="">— Todos —</option>
+                        <option value="Urbano">Urbano</option>
+                        <option value="Rural Disperso">Rural Disperso</option>
+                        <option value="Rural Aglomerado">Rural Aglomerado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('sector')">
+                    <i class="fas fa-building"></i> Sector
+                    <button class="filter-toggle" id="toggle-sector"></button>
+                </div>
+                <div class="filter-control" id="fc-sector">
+                    <select id="sel-sector" onchange="aplicarFiltros()">
+                        <option value="">— Todos —</option>
+                        <option value="Estatal">Estatal</option>
+                        <option value="Privado">Privado</option>
+                        <option value="Gestión social/cooperativa">Gestión Social/Cooperativa</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('region')">
+                    <i class="fas fa-map-marked-alt"></i> Región
+                    <button class="filter-toggle" id="toggle-region"></button>
+                </div>
+                <div class="filter-control" id="fc-region">
+                    <select id="sel-region" onchange="actualizarFiltrosJerarquicosYAplicar()">
+                        <option value="">— Todas —</option>
+                        <option value="R.E. 1">R.E. 1</option>
+                        <option value="R.E. 2">R.E. 2</option>
+                        <option value="R.E. 3">R.E. 3</option>
+                        <option value="R.E. 4-A">R.E. 4-A</option>
+                        <option value="R.E. 4-B">R.E. 4-B</option>
+                        <option value="R.E. 5">R.E. 5</option>
+                        <option value="R.E. 6">R.E. 6</option>
+                        <option value="R.E. 7">R.E. 7</option>
+                        <option value="R.E. 8-A">R.E. 8-A</option>
+                        <option value="R.E. 8-B">R.E. 8-B</option>
+                        <option value="R.E. 9">R.E. 9</option>
+                        <option value="R.E. 10-A">R.E. 10-A</option>
+                        <option value="R.E. 10-B">R.E. 10-B</option>
+                        <option value="R.E. 10-C">R.E. 10-C</option>
+                        <option value="SUB. R.E. 1-A">SUB R.E. 1-A</option>
+                        <option value="SUB. R.E. 1-B">SUB R.E. 1-B</option>
+                        <option value="SUB. R.E. 2">SUB R.E. 2</option>
+                        <option value="SUB. R.E. 3">SUB R.E. 3</option>
+                        <option value="SUB. R.E. 5">SUB R.E. 5</option>
+                    </select>
+                    <div id="advertencia-region" style="display:none; margin-top:8px; padding:8px 10px; background:#fff8e1; border-left:3px solid #f59e0b; border-radius:4px; font-size:0.73rem; color:#7c5a00; line-height:1.45;">
+                        <i class="fas fa-exclamation-triangle" style="color:#f59e0b; margin-right:4px;"></i>
+                        <strong>Advertencia:</strong> Al filtrar por Región, se recomienda no aplicar filtros de Departamento o Localidad. Esto se debe a que existen CUE-Anexos (Localizaciones) que pertenecen a una Región Educativa específica, pero se encuentran geográficamente en una ubicación distinta.
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('departamento')">
+                    <i class="fas fa-city"></i> Departamento
+                    <button class="filter-toggle" id="toggle-departamento"></button>
+                </div>
+                <div class="filter-control" id="fc-departamento">
+                    <select id="sel-departamento" onchange="actualizarFiltrosJerarquicosYAplicar()">
+                        <option value="">— Todos —</option>
+                        <option value="12 DE OCTUBRE">12 DE OCTUBRE</option>
+                        <option value="1§ DE MAYO">1° DE MAYO</option>
+                        <option value="25 DE MAYO">25 DE MAYO</option>
+                        <option value="QUITILIPI">QUITILIPI</option>
+                        <option value="2 DE ABRIL">2 DE ABRIL</option>
+                        <option value="9 DE JULIO">9 DE JULIO</option>
+                        <option value="GENERAL BELGRANO">GENERAL BELGRANO</option>
+                        <option value="ALMIRANTE BROWN">ALMIRANTE BROWN</option>
+                        <option value="BERMEJO">BERMEJO</option>
+                        <option value="CHACABUCO">CHACABUCO</option>
+                        <option value="COMANDANTE FERNANDEZ">COMANDANTE FERNANDEZ</option>
+                        <option value="FRAY JUSTO SANTA MARIA DE ORO">FRAY JUSTO SANTA MARIA DE ORO</option>
+                        <option value="GENERAL BELGRANO">GENERAL BELGRANO</option>
+                        <option value="GENERAL DONOVAN">GENERAL DONOVAN</option>
+                        <option value="GENERAL GUEMES">GENERAL GUEMES</option>
+                        <option value="INDEPENDENCIA">INDEPENDENCIA</option>
+                        <option value="LIBERTAD">LIBERTAD</option>
+                        <option value="LIBERTADOR GENERAL SAN MARTIN">LIBERTADOR GENERAL SAN MARTIN</option>
+                        <option value="MAIPU">MAIPU</option>
+                        <option value="MAYOR LUIS J FONTANA">MAYOR LUIS J. FONTANA</option>
+                        <option value="O HIGGINS">O'HIGGINS</option>
+                        <option value="PRESIDENCIA DE LA PLAZA">PRESIDENCIA DE LA PLAZA</option>
+                        <option value="SAN FERNANDO">SAN FERNANDO</option>
+                        <option value="SAN LORENZO">SAN LORENZO</option>
+                        <option value="SARGENTO CABRAL">SARGENTO CABRAL</option>
+                        <option value="TAPENAGA">TAPENAGA</option>
+                        </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('localidad')">
+                    <i class="fas fa-map-pin"></i> Localidad
+                    <button class="filter-toggle" id="toggle-localidad"></button>
+                </div>
+                <div class="filter-control" id="fc-localidad">
+                    <select id="sel-localidad" onchange="actualizarFiltrosJerarquicosYAplicar()">
+                         <option value="">— Todas —</option>
+                        <option value="AVIA TERAI">AVIA TERAI</option>
+                        <option value="BARRANQUERAS">BARRANQUERAS</option>
+                        <option value="BASAIL">BASAIL</option>
+                        <option value="CAMPO LARGO">CAMPO LARGO</option>
+                        <option value="CAPITAN SOLARI">CAPITAN SOLARI</option>
+                        <option value="CHARADAI">CHARADAI</option>
+                        <option value="CHARATA">CHARATA</option>
+                        <option value="CHOROTIS">CHOROTIS</option>
+                        <option value="CIERVO PETISO">CIERVO PETISO</option>
+                        <option value="PAMPA ALMIRON">PAMPA ALMIRON</option>
+                        <option value="SELVA RIO DE ORO">SELVA RIO DE ORO</option>
+                        <option value="COLONIA BARANDA">COLONIA BARANDA</option>
+                        <option value="COLONIA BENITEZ">COLONIA BENITEZ</option>
+                        <option value="COLONIA ELISA">COLONIA ELISA</option>
+                        <option value="COLONIA POPULAR">COLONIA POPULAR</option>
+                        <option value="COLONIAS UNIDAS">COLONIAS UNIDAS</option>
+                        <option value="CONCEPCION DEL BERMEJO">CONCEPCION DEL BERMEJO</option>
+                        <option value="CORONEL DU GRATY">CORONEL DU GRATY</option>
+                        <option value="CORZUELA">CORZUELA</option>
+                        <option value="COTE LAI">COTE LAI</option>
+                        <option value="EL ESPINILLO">EL ESPINILLO</option>
+                        <option value="EL SAUZALITO">EL SAUZALITO</option>
+                        <option value="EL VIZCACHERAL">EL VIZCACHERAL</option>
+                        <option value="ENRIQUE URIEN">ENRIQUE URIEN</option>
+                        <option value="FONTANA">FONTANA</option>
+                        <option value="FUERTE ESPERANZA">FUERTE ESPERANZA</option>
+                        <option value="COMANDANCIA FRIAS">COMANDANCIA FRIAS</option>
+                        <option value="GANCEDO">GANCEDO</option>
+                        <option value="GRAL CAPDEVILA">GENERAL CAPDEVILA</option>
+                        <option value="GENERAL JOSE DE SAN MARTIN">GENERAL JOSE DE SAN MARTIN</option>
+                        <option value="GENERAL PINEDO">GENERAL PINEDO</option>
+                        <option value="GENERAL VEDIA">GENERAL VEDIA</option>
+                        <option value="HERMOSO CAMPO">HERMOSO CAMPO</option>
+                        <option value="HORQUILLA">HORQUILLA</option>
+                        <option value="ISLA DEL CERRITO">ISLA DEL CERRITO</option>
+                        <option value="JUAN JOSE CASTELLI">JUAN JOSE CASTELLI</option>
+                        <option value="LA CLOTILDE">LA CLOTILDE</option>
+                        <option value="LA EDUVIGIS">LA EDUVIGIS</option>
+                        <option value="LA ESCONDIDA">LA ESCONDIDA</option>
+                        <option value="LAGUNA BLANCA">LAGUNA BLANCA</option>
+                        <option value="LAGUNA LIMPIA">LAGUNA LIMPIA</option>
+                        <option value="LA LEONESA">LA LEONESA</option>
+                        <option value="LAPACHITO">LAPACHITO</option>
+                        <option value="LA SABANA">LA SABANA</option>
+                        <option value="LAS BREÑAS">LAS BREÑAS</option>
+                        <option value="LAS GARCITAS">LAS GARCITAS</option>
+                        <option value="LAS PALMAS">LAS PALMAS</option>
+                        <option value="LA TIGRA">LA TIGRA</option>
+                        <option value="LA VERDE">LA VERDE</option>
+                        <option value="LOS FRENTONES">LOS FRENTONES</option>
+                        <option value="MACHAGAI">MACHAGAI</option>
+                        <option value="MAKALLE">MAKALLE</option>
+                        <option value="MARGARITA BELEN">MARGARITA BELEN</option>
+                        <option value="MIRAFLORES">MIRAFLORES</option>
+                        <option value="NUEVA POMPEYA">MISION NUEVA POMPEYA</option>
+                        <option value="NAPENAY">NAPENAY</option>
+                        <option value="PAMPA DEL INDIO">PAMPA DEL INDIO</option>
+                        <option value="PAMPA DEL INFIERNO">PAMPA DEL INFIERNO</option>
+                        <option value="PRESIDENCIA DE LA PLAZA">PRESIDENCIA DE LA PLAZA</option>
+                        <option value="PRESIDENCIA ROCA">PRESIDENCIA ROCA</option>
+                        <option value="PRESIDENCIA ROQUE SAENZ PEÑA">PRESIDENCIA ROQUE SAENZ PEÑA</option>
+                        <option value="PUERTO BERMEJO NUEVO">PUERTO BERMEJO NUEVO</option>
+                        <option value="PUERTO BERMEJO VIEJO">PUERTO BERMEJO VIEJO</option>
+                        <option value="PUERTO EVA PERON">PUERTO EVA PERON</option>
+                        <option value="PUERTO TIROL">PUERTO TIROL</option>
+                        <option value="PUERTO VILELAS">PUERTO VILELAS</option>
+                        <option value="QUITILIPI">QUITILIPI</option>
+                        <option value="RESISTENCIA">RESISTENCIA</option>
+                        <option value="RIO MUERTO">RIO MUERTO</option>
+                        <option value="SAMUHU">SAMUHU</option>
+                        <option value="SAN BERNARDO">SAN BERNARDO</option>
+                        <option value="SANTA SYLVINA">SANTA SYLVINA</option>
+                        <option value="TACO POZO">TACO POZO</option>
+                        <option value="TRES ISLETAS">TRES ISLETAS</option>
+                        <option value="VENADOS GRANDES">VENADOS GRANDES</option>
+                        <option value="VILLA ANGELA">VILLA ANGELA</option>
+                        <option value="VILLA BERTHET">VILLA BERTHET</option>
+                        <option value="VILLA RIO BERMEJITO">VILLA RIO BERMEJITO</option>
+                        <option value="ZAPARINQUI">ZAPARINQUI</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="btn-limpiar" onclick="limpiarFiltros()">
+                    <i class="fas fa-eraser me-1"></i> Limpiar filtros
+                </button>
+            </div>
+        </aside>
+
+        <main class="content-panel">
+            <div class="content-header-bar">
+                <div>
+                    <h4><i class="fas fa-chalkboard-teacher me-2"></i>Docentes en Actividad</h4>
+                    <div class="subtitle" id="header-subtitle">Seleccioná Relevamiento y Modalidad para comenzar</div>
+                </div>
+            </div>
+
+            <div class="active-filters">
+                <span class="label">Filtros activos:</span>
+                <span id="chips-container" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+                <span id="no-filters-msg" style="font-size:0.75rem;color:var(--color-muted);font-style:italic;">Ninguno</span>
+            </div>
+
+            <div class="totals-bar" id="totals-bar" style="display:none;">
+                <div class="total-card">
+                    <div class="val" id="tot-total">—</div>
+                    <div class="lbl">Total Docentes</div>
+                </div>
+                <div class="total-card">
+                    <div class="val" id="tot-varones">—</div>
+                    <div class="lbl">Varones</div>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <div class="state-placeholder" id="state-initial">
+                    <i class="fas fa-filter"></i>
+                    <p>Seleccioná <strong>Relevamiento</strong> y <strong>Modalidad</strong> en el panel izquierdo</p>
+                </div>
+                <div class="loading-spinner d-none" id="state-loading">
+                    <div class="spinner-border-custom"></div>
+                    <span style="font-size:0.85rem;">Consultando datos…</span>
+                </div>
+                <div class="state-placeholder d-none" id="state-empty">
+                    <i class="fas fa-inbox"></i>
+                    <p>Sin resultados para los filtros seleccionados</p>
+                </div>
+                <div id="table-container" style="display:none;">
+                    <table id="datatable-main" class="table table-hover table-bordered" style="width:100%">
+                        <thead>
+                            <tr class="header-row">
+                                <th>DOCENTES</th>
+                                <th>TOTALES</th>
+                                <th>VARONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                        <tfoot>
+                            <tr>
+                                <th>TOTAL</th>
+                                <th id="ft-total"></th>
+                                <th id="ft-varones"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.0.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.print.min.js"></script>
+
+<script>
+const AJAX_URL   = "{% url 'reportes:docentes_ajax' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+const filtersState = {
+    relevamiento: true, vista: true,
+    cueanexo: false, ambito: false, sector: false,
+    region: false, departamento: false, localidad: false,
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FILTRADO JERÁRQUICO: REGIÓN → DEPARTAMENTO → LOCALIDAD
+// ══════════════════════════════════════════════════════════════════════════════
+
+let jerarquiaGeografica = null;
+
+const REGION_NAME_MAP = {
+    'REGION 1': 'R.E. 1', 'REGION 2': 'R.E. 2', 'REGION 3': 'R.E. 3',
+    'REGION 4-A': 'R.E. 4-A', 'REGION 4-B': 'R.E. 4-B', 'REGION 5': 'R.E. 5',
+    'REGION 6': 'R.E. 6', 'REGION 7': 'R.E. 7', 'REGION 8-A': 'R.E. 8-A',
+    'REGION 8-B': 'R.E. 8-B', 'REGION 9': 'R.E. 9', 'REGION 10-A': 'R.E. 10-A',
+    'REGION 10-B': 'R.E. 10-B', 'REGION 10-C': 'R.E. 10-C',
+    'SUBSEDE 1 A': 'SUB. R.E. 1-A', 'SUBSEDE 1 B': 'SUB. R.E. 1-B',
+    'SUBSEDE 2': 'SUB. R.E. 2', 'SUBSEDE 3': 'SUB. R.E. 3', 'SUBSEDE 5': 'SUB. R.E. 5'
+};
+
+const REGION_NAME_MAP_INVERSE = {};
+for (const [key, value] of Object.entries(REGION_NAME_MAP)) {
+    REGION_NAME_MAP_INVERSE[value] = key;
+}
+
+// DICCIONARIOS DE NORMALIZACIÓN CORREGIDOS
+const DEPT_NAME_MAP = {
+    'MAYOR LUIS J.FONTANA': 'MAYOR LUIS J. FONTANA',
+    'MAYOR LUIS J FONTANA': 'MAYOR LUIS J. FONTANA',
+    'PCIA,DE LA PLAZA': 'PRESIDENCIA DE LA PLAZA',
+    'PCIA.DE LA PLAZA': 'PRESIDENCIA DE LA PLAZA',
+    'PCIA, DE LA PLAZA': 'PRESIDENCIA DE LA PLAZA',
+    'PCIA. DE LA PLAZA': 'PRESIDENCIA DE LA PLAZA',
+    'QUITILIPI' : 'QUITILIPI',
+    "O'HIGGINS": "O'HIGGINS",
+    "O’HIGGINS": "O'HIGGINS",
+    "O''HIGGINS": "O'HIGGINS",
+    'GRAL BELGRANO': 'GENERAL BELGRANO',
+    'FRAY JUSTO SANTA M. DE ORO': 'FRAY JUSTO SANTA MARIA DE ORO'
+};
+
+const LOC_NAME_MAP = {
+    'GRAL. JOSE DE SAN MARTIN': 'GENERAL JOSE DE SAN MARTIN',
+    'GRAL CAPDEVILA': 'GENERAL CAPDEVILA',
+    'GRAL. CAPDEVILA': 'GENERAL CAPDEVILA',
+    'QUITILIPI': 'QUITILIPI',
+    'PAMPA DEL INFIER.': 'PAMPA DEL INFIERNO',
+    'PUERTO BERMEJO NUEVO': 'PUERTO BERMEJO NUEVO',  
+    'PUERTO BERMEJO': 'PUERTO BERMEJO NUEVO',  
+    'MISIÓN NUEVA POMPEYA': 'MISION NUEVA POMPEYA',
+    'NUEVA POMPEYA': 'MISION NUEVA POMPEYA',
+    'PCIA.DE LA PLAZA': 'PRESIDENCIA DE LA PLAZA',
+    'PCIA,DE LA PLAZA': 'PRESIDENCIA DE LA PLAZA'
+};
+async function cargarJerarquiaGeografica() {
+    try {
+        const response = await fetch("{% url 'reportes:jerarquia_geografica' %}");
+        const data = await response.json();
+        jerarquiaGeografica = data.region_depto_localidad;
+        console.log('Jerarquía geográfica cargada exitosamente');
+    } catch (error) {
+        console.error('Error al cargar jerarquía geográfica:', error);
+    }
+}
+
+function normalizarNombreRegion(nombreSelect) {
+    return REGION_NAME_MAP_INVERSE[nombreSelect] || nombreSelect;
+}
+
+function desnormalizarNombreRegion(nombreInterno) {
+    return REGION_NAME_MAP[nombreInterno] || nombreInterno;
+}
+
+function normalizarNombreDepartamento(nombre) {
+    const normalizado = nombre.toUpperCase().trim();
+    return DEPT_NAME_MAP[normalizado] || normalizado;
+}
+
+function normalizarNombreLocalidad(nombre) {
+    const normalizado = nombre.toUpperCase().trim();
+    return LOC_NAME_MAP[normalizado] || normalizado;
+}
+
+function getDepartamentosPorRegion(regionSelect) {
+    if (!jerarquiaGeografica) return [];
+    const regionInterna = normalizarNombreRegion(regionSelect);
+    const departamentos = jerarquiaGeografica[regionInterna];
+    return departamentos ? Object.keys(departamentos).sort() : [];
+}
+
+function getLocalidadesPorRegionYDepartamento(regionSelect, departamento) {
+    if (!jerarquiaGeografica) return [];
+    const regionInterna = normalizarNombreRegion(regionSelect);
+    const deptoNormalizado = normalizarNombreDepartamento(departamento);
+    const departamentos = jerarquiaGeografica[regionInterna];
+    if (!departamentos) return [];
+    for (const [deptoKey, localidades] of Object.entries(departamentos)) {
+        if (normalizarNombreDepartamento(deptoKey) === deptoNormalizado) {
+            return localidades.sort();
+        }
+    }
+    return [];
+}
+
+function getRegionesPorDepartamento(departamento) {
+    if (!jerarquiaGeografica) return [];
+    const deptoNormalizado = normalizarNombreDepartamento(departamento);
+    const regiones = [];
+    for (const [region, departamentos] of Object.entries(jerarquiaGeografica)) {
+        for (const deptoKey of Object.keys(departamentos)) {
+            if (normalizarNombreDepartamento(deptoKey) === deptoNormalizado) {
+                regiones.push(desnormalizarNombreRegion(region));
+                break;
+            }
+        }
+    }
+    return regiones.sort();
+}
+
+function getDepartamentosPorLocalidad(localidad) {
+    if (!jerarquiaGeografica) return [];
+    const locNormalizada = normalizarNombreLocalidad(localidad);
+    const departamentos = new Set();
+    for (const [region, deptos] of Object.entries(jerarquiaGeografica)) {
+        for (const [depto, localidades] of Object.entries(deptos)) {
+            for (const loc of localidades) {
+                if (normalizarNombreLocalidad(loc) === locNormalizada) {
+                    departamentos.add(depto);
+                }
+            }
+        }
+    }
+    return Array.from(departamentos).sort();
+}
+
+function getRegionesPorLocalidad(localidad) {
+    if (!jerarquiaGeografica) return [];
+    const locNormalizada = normalizarNombreLocalidad(localidad);
+    const regiones = new Set();
+    for (const [region, deptos] of Object.entries(jerarquiaGeografica)) {
+        for (const [depto, localidades] of Object.entries(deptos)) {
+            for (const loc of localidades) {
+                if (normalizarNombreLocalidad(loc) === locNormalizada) {
+                    regiones.add(desnormalizarNombreRegion(region));
+                }
+            }
+        }
+    }
+    return Array.from(regiones).sort();
+}
+
+function actualizarOpcionesRegion(regionesPermitidas = null) {
+    const select = document.getElementById('sel-region');
+    if (!select) return;
+    const valorActual = select.value;
+    Array.from(select.options).forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
+            option.disabled = false;
+        } else if (regionesPermitidas === null || regionesPermitidas.includes(option.value)) {
+            option.style.display = '';
+            option.disabled = false;
+        } else {
+            option.style.display = 'none';
+            option.disabled = true;
+        }
+    });
+    if (valorActual && regionesPermitidas && !regionesPermitidas.includes(valorActual)) {
+        select.value = '';
+    }
+}
+
+function actualizarOpcionesDepartamento(departamentosPermitidos = null) {
+    const select = document.getElementById('sel-departamento');
+    if (!select) return;
+    const valorActual = select.value;
+    Array.from(select.options).forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
+            option.disabled = false;
+        } else {
+            const optionNormalizado = normalizarNombreDepartamento(option.value);
+            if (departamentosPermitidos === null) {
+                option.style.display = '';
+                option.disabled = false;
+            } else {
+                const permitidosNormalizados = departamentosPermitidos.map(d => normalizarNombreDepartamento(d));
+                if (permitidosNormalizados.includes(optionNormalizado)) {
+                    option.style.display = '';
+                    option.disabled = false;
+                } else {
+                    option.style.display = 'none';
+                    option.disabled = true;
+                }
+            }
+        }
+    });
+    if (valorActual && departamentosPermitidos) {
+        const actualNormalizado = normalizarNombreDepartamento(valorActual);
+        const permitidosNormalizados = departamentosPermitidos.map(d => normalizarNombreDepartamento(d));
+        if (!permitidosNormalizados.includes(actualNormalizado)) {
+            select.value = '';
+        }
+    }
+}
+
+function actualizarOpcionesLocalidad(localidadesPermitidas = null) {
+    const select = document.getElementById('sel-localidad');
+    if (!select) return;
+    const valorActual = select.value;
+    Array.from(select.options).forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
+            option.disabled = false;
+        } else {
+            const optionNormalizada = normalizarNombreLocalidad(option.value);
+            if (localidadesPermitidas === null) {
+                option.style.display = '';
+                option.disabled = false;
+            } else {
+                const permitidasNormalizadas = localidadesPermitidas.map(l => normalizarNombreLocalidad(l));
+                if (permitidasNormalizadas.includes(optionNormalizada)) {
+                    option.style.display = '';
+                    option.disabled = false;
+                } else {
+                    option.style.display = 'none';
+                    option.disabled = true;
+                }
+            }
+        }
+    });
+    if (valorActual && localidadesPermitidas) {
+        const actualNormalizada = normalizarNombreLocalidad(valorActual);
+        const permitidasNormalizadas = localidadesPermitidas.map(l => normalizarNombreLocalidad(l));
+        if (!permitidasNormalizadas.includes(actualNormalizada)) {
+            select.value = '';
+        }
+    }
+}
+
+// Wrapper: actualiza jerarquía Y luego aplica filtros en el orden correcto
+// Esto evita que aplicarFiltros() se dispare con valores viejos antes de
+// que actualizarFiltrosJerarquicos() limpie departamento/localidad.
+function actualizarFiltrosJerarquicosYAplicar() {
+    actualizarFiltrosJerarquicos();
+    aplicarFiltros();
+}
+
+function actualizarFiltrosJerarquicos() {
+    if (!jerarquiaGeografica) return;
+    const selRegion = document.getElementById('sel-region');
+    const selDepartamento = document.getElementById('sel-departamento');
+    const selLocalidad = document.getElementById('sel-localidad');
+    const regionActual = selRegion?.value || '';
+    const departamentoActual = selDepartamento?.value || '';
+    const localidadActual = selLocalidad?.value || '';
+    
+    if (regionActual) {
+        // CORRECCIÓN: Liberar siempre el menú de Regiones para evitar que quede congelado
+        actualizarOpcionesRegion(null);
+        
+        const deptosPermitidos = getDepartamentosPorRegion(regionActual);
+        actualizarOpcionesDepartamento(deptosPermitidos);
+        if (departamentoActual) {
+            const locsPermitidas = getLocalidadesPorRegionYDepartamento(regionActual, departamentoActual);
+            actualizarOpcionesLocalidad(locsPermitidas);
+        } else {
+            const todasLocsRegion = [];
+            const deptosRegion = jerarquiaGeografica[normalizarNombreRegion(regionActual)] || {};
+            for (const locs of Object.values(deptosRegion)) {
+                todasLocsRegion.push(...locs);
+            }
+            actualizarOpcionesLocalidad(todasLocsRegion);
+        }
+    } else if (departamentoActual) {
+        const regionesPermitidas = getRegionesPorDepartamento(departamentoActual);
+        actualizarOpcionesRegion(regionesPermitidas);
+        if (localidadActual) {
+            actualizarOpcionesLocalidad(null);
+        } else {
+            const locsPermitidas = [];
+            for (const [region, deptos] of Object.entries(jerarquiaGeografica)) {
+                for (const [depto, locs] of Object.entries(deptos)) {
+                    if (normalizarNombreDepartamento(depto) === normalizarNombreDepartamento(departamentoActual)) {
+                        locsPermitidas.push(...locs);
+                    }
+                }
+            }
+            actualizarOpcionesLocalidad(locsPermitidas);
+        }
+    } else if (localidadActual) {
+        const deptosPermitidos = getDepartamentosPorLocalidad(localidadActual);
+        actualizarOpcionesDepartamento(deptosPermitidos);
+        const regionesPermitidas = getRegionesPorLocalidad(localidadActual);
+        actualizarOpcionesRegion(regionesPermitidas);
+    } else {
+        actualizarOpcionesRegion(null);
+        actualizarOpcionesDepartamento(null);
+        actualizarOpcionesLocalidad(null);
+    }
+}
+
+
+function toggleFilter(name) {
+    const btn = document.getElementById('toggle-' + name);
+    const fc  = document.getElementById('fc-' + name);
+    filtersState[name] = !filtersState[name];
+
+    if (filtersState[name]) {
+        btn.classList.add('active');
+        fc.classList.add('visible');
+        if (['region', 'departamento', 'localidad'].includes(name)) {
+            actualizarFiltrosJerarquicos();
+        }
+        if (name === 'region') {
+            const adv = document.getElementById('advertencia-region');
+            if (adv) adv.style.display = 'block';
+        }
+    } else {
+        btn.classList.remove('active');
+        fc.classList.remove('visible');
+        const sel = document.getElementById('sel-' + name);
+        const inp = document.getElementById('inp-' + name);
+        if (sel) sel.value = '';
+        if (inp) inp.value = '';
+        if (['region', 'departamento', 'localidad'].includes(name)) {
+            actualizarFiltrosJerarquicos();
+        }
+        if (name === 'region') {
+            const adv = document.getElementById('advertencia-region');
+            if (adv) adv.style.display = 'none';
+        }
+        aplicarFiltros();
+    }
+}
+
+function getFiltros() {
+    return {
+        Relevamiento: document.getElementById('sel-relevamiento')?.value || '',
+        Vista:        document.getElementById('sel-vista')?.value || '',
+        Cueanexo:     filtersState.cueanexo    ? (document.getElementById('inp-cueanexo')?.value || '') : '',
+        Ambito:       filtersState.ambito       ? (document.getElementById('sel-ambito')?.value || '') : '',
+        Sector:       filtersState.sector       ? (document.getElementById('sel-sector')?.value || '') : '',
+        Region:       filtersState.region       ? (document.getElementById('sel-region')?.value || '') : '',
+        Departamento: filtersState.departamento ? (document.getElementById('sel-departamento')?.value || '') : '',
+        Localidad:    filtersState.localidad    ? (document.getElementById('sel-localidad')?.value || '') : '',
+    };
+}
+
+const LABEL_MAP = {
+    Relevamiento:'Relevamiento', Vista:'Modalidad', Cueanexo:'Cueanexo',
+    Ambito:'Ámbito', Sector:'Sector', Region:'Región',
+    Departamento:'Departamento', Localidad:'Localidad'
+};
+
+function actualizarChips(filtros) {
+    const container = document.getElementById('chips-container');
+    const noMsg     = document.getElementById('no-filters-msg');
+    container.innerHTML = '';
+    const activos = Object.entries(filtros).filter(([k,v]) => v);
+    activos.forEach(([key, val]) => {
+        let display = val;
+        const sel = document.getElementById('sel-' + key.toLowerCase());
+        if (sel) { const opt = Array.from(sel.options).find(o => o.value === val); if (opt) display = opt.text; }
+        const chip = document.createElement('span');
+        chip.className = 'filter-chip';
+        chip.innerHTML = `<b>${LABEL_MAP[key]||key}:</b>&nbsp;${display}<span class="remove-chip" onclick="quitarFiltro('${key}')">×</span>`;
+        container.appendChild(chip);
+    });
+    noMsg.style.display = activos.length ? 'none' : 'inline';
+}
+
+function quitarFiltro(key) {
+    const sel = document.getElementById('sel-' + key.toLowerCase());
+    const inp = document.getElementById('inp-' + key.toLowerCase());
+    if (sel) sel.value = '';
+    if (inp) inp.value = '';
+    aplicarFiltros();
+}
+
+let dt = null;
+function inicializarDT() {
+    if (dt) { dt.destroy(); dt = null; }
+
+    try {
+        var filtros = getFiltros();
+        var filtrosActivos = [];
+
+        var selRel   = document.getElementById('sel-relevamiento');
+        var selVista = document.getElementById('sel-vista');
+
+        var relText = filtros.Relevamiento;
+        if (selRel && selRel.selectedIndex >= 0) relText = selRel.options[selRel.selectedIndex].text;
+        if (filtros.Relevamiento) filtrosActivos.push("Relevamiento: " + relText);
+
+        var vistaText = filtros.Vista;
+        if (selVista && selVista.selectedIndex >= 0) vistaText = selVista.options[selVista.selectedIndex].text;
+        if (filtros.Vista) filtrosActivos.push("Modalidad: " + vistaText);
+
+        if (filtros.Cueanexo)     filtrosActivos.push("Cueanexo: "     + filtros.Cueanexo);
+        if (filtros.Ambito)       filtrosActivos.push("Ámbito: "       + filtros.Ambito);
+        if (filtros.Sector)       filtrosActivos.push("Sector: "       + filtros.Sector);
+
+        const sReg = document.getElementById('sel-region');
+        const sDep = document.getElementById('sel-departamento');
+        const sLoc = document.getElementById('sel-localidad');
+        if (filtros.Region)       filtrosActivos.push("Región: "       + (sReg?.options[sReg.selectedIndex]?.text || filtros.Region));
+        if (filtros.Departamento) filtrosActivos.push("Departamento: " + (sDep?.options[sDep.selectedIndex]?.text || filtros.Departamento));
+        if (filtros.Localidad)    filtrosActivos.push("Localidad: "    + (sLoc?.options[sLoc.selectedIndex]?.text || filtros.Localidad));
+
+        var lineasFiltros = [];
+        for (var i = 0; i < filtrosActivos.length; i += 3) {
+            lineasFiltros.push(filtrosActivos.slice(i, i + 3).join('  |  '));
+        }
+        var textoFiltros    = lineasFiltros.join('\n');
+        var tituloPrincipal = 'Distribución de Docentes en Actividad';
+
+        dt = $('#datatable-main').DataTable({
+            responsive: false,
+            scrollX:    true,
+            autoWidth:  false,
+            language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
+            columnDefs: [
+                { type: 'string', targets: [0] },
+                { type: 'num',    targets: [1, 2] }
+            ],
+            dom: '<"top"lBf>rt<"bottom"ip>',
+            buttons: [
+                {
+                    extend:    'excel',
+                    text:      '<i class="fas fa-file-excel"></i>',
+                    className: 'btn btn-sm btn-secondary',
+                    titleAttr: 'Excel',
+                    title:      tituloPrincipal,
+                    messageTop: textoFiltros,
+                    customize: function(xlsx) {
+                        try {
+                            var sheet      = xlsx.xl.worksheets['sheet1.xml'];
+                            var alturaFila = (lineasFiltros.length * 20) + 15;
+                            $('row:nth-child(2)', sheet).attr('ht', alturaFila).attr('customHeight', '1');
+
+                            var estiloNumero = $('sheetData row:first c:nth-child(2)', sheet).attr('s') || '0';
+
+                            function limpiarNumero(id) {
+                                var txt = document.getElementById(id).textContent || '0';
+                                return parseInt(txt.replace(/\./g, '').replace(/\s/g, '')) || 0;
+                            }
+
+                            var totTotal   = limpiarNumero('ft-total');
+                            var totVarones = limpiarNumero('ft-varones');
+
+                            var lastRow = $('sheetData row:last', sheet);
+                            var newRow  = '<row>' +
+                                '<c t="inlineStr"><is><t>TOTAL</t></is></c>' +
+                                '<c s="' + estiloNumero + '"><v>' + totTotal   + '</v></c>' +
+                                '<c s="' + estiloNumero + '"><v>' + totVarones + '</v></c>' +
+                            '</row>';
+                            lastRow.after(newRow);
+
+                        } catch(e) {
+                            console.error("Error en customize Excel:", e);
+                        }
+                    }
+                },
+                {
+                    extend:    'csv',
+                    text:      '<i class="fas fa-file-csv"></i>',
+                    className: 'btn btn-sm btn-secondary',
+                    titleAttr: 'CSV',
+                    title:      tituloPrincipal + ' - Filtros: ' + filtrosActivos.join(' | ')
+                },
+                {
+                    extend:    'pdf',
+                    text:      '<i class="fas fa-file-pdf"></i>',
+                    className: 'btn btn-sm btn-secondary',
+                    titleAttr: 'PDF',
+                    title:      tituloPrincipal,
+                    messageTop: textoFiltros,
+                    orientation: 'landscape'
+                },
+                {
+                    extend:    'print',
+                    text:      '<i class="fas fa-print"></i>',
+                    className: 'btn btn-sm btn-secondary',
+                    titleAttr: 'Impr.',
+                    title:      tituloPrincipal,
+                    messageTop: textoFiltros,
+                    customize: function(win) {
+                        $(win.document.body).find('h1').css({
+                            'text-align':    'center',
+                            'font-size':     '16pt',
+                            'margin-bottom': '10px'
+                        });
+                        $(win.document.body).find('.messageTop').css({
+                            'text-align':    'center',
+                            'font-size':     '11pt',
+                            'white-space':   'pre-line',
+                            'margin-bottom': '20px',
+                            'color':         '#444'
+                        });
+
+                        var totTotal   = document.getElementById('ft-total').textContent   || '0';
+                        var totVarones = document.getElementById('ft-varones').textContent || '0';
+
+                        $(win.document.body).find('table tbody').append(
+                            '<tr style="background-color:#1a3a5c; color:#ffffff; font-weight:bold;">' +
+                                '<td>TOTAL</td>' +
+                                '<td>' + totTotal   + '</td>' +
+                                '<td>' + totVarones + '</td>' +
+                            '</tr>'
+                        );
+                    }
+                }
+            ],
+            pageLength: 15,
+        });
+
+    } catch (error) {
+        console.error("Error crítico en inicializarDT:", error);
+        if (!dt) {
+            dt = $('#datatable-main').DataTable({
+                responsive: false,
+                scrollX:    true,
+                language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" }
+            });
+        }
+    }
+}
+function mostrarEstado(estado) {
+    ['state-initial','state-loading','state-empty','table-container'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('d-none'); el.style.display = 'none';
+    });
+    const t = document.getElementById(estado);
+    t.classList.remove('d-none');
+    t.style.display = (estado === 'table-container') ? 'block' : 'flex';
+    if (estado !== 'table-container') {
+        t.style.display = 'block';
+        document.getElementById('totals-bar').style.display = 'none';
+    }
+}
+
+function actualizarSubtitle(filtros) {
+    const rel = document.getElementById('sel-relevamiento');
+    const vis = document.getElementById('sel-vista');
+    const relT = rel.options[rel.selectedIndex]?.text || '';
+    const visT = vis.options[vis.selectedIndex]?.text || '';
+    const parts = [relT, visT].filter(Boolean);
+    document.getElementById('header-subtitle').textContent =
+        parts.length ? parts.join(' — ') : 'Seleccioná Relevamiento y Modalidad para comenzar';
+}
+
+function renderTabla(data) {
+    if (dt) { dt.destroy(); dt = null; }
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    let totTotal = 0, totVarones = 0;
+
+    data.forEach(item => {
+        totTotal   += parseInt(item.total)   || 0;
+        totVarones += parseInt(item.varones) || 0;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${item.docentes}</td><td>${item.total}</td><td>${item.varones}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('ft-total').textContent    = totTotal;
+    document.getElementById('ft-varones').textContent  = totVarones;
+    document.getElementById('tot-total').textContent   = totTotal.toLocaleString('es-AR');
+    document.getElementById('tot-varones').textContent = totVarones.toLocaleString('es-AR');
+    document.getElementById('totals-bar').style.display = 'flex';
+
+    setTimeout(function() { if (dt) dt.columns.adjust(); }, 10);
+    inicializarDT();
+}
+let debounceTimer = null;
+let currentAjaxRequest = null;
+
+function aplicarFiltrosDebounced() {
+    aplicarFiltros();
+}
+
+function aplicarFiltros() {
+    // 0. ¡LA SOLUCIÓN! Forzar la limpieza de localidades incompatibles ANTES de leer la información
+    if (typeof actualizarFiltrosJerarquicos === 'function') {
+        actualizarFiltrosJerarquicos();
+    }
+
+    // 1. Recopilar datos y actualizar la interfaz visual de inmediato
+    const filtros = getFiltros();
+    actualizarChips(filtros);
+    actualizarSubtitle(filtros);
+
+    // 2. Validar Cueanexo de forma rápida
+    if (filtros.Cueanexo) {
+        const ok = /^22\d{7}$/.test(filtros.Cueanexo);
+        document.getElementById('cue-error').classList.toggle('d-none', ok);
+        if (!ok) {
+            mostrarEstado('state-initial');
+            return;
+        }
+    } else {
+        document.getElementById('cue-error')?.classList.add('d-none');
+    }
+
+    // 3. Validar filtros mínimos requeridos
+    if (!filtros.Relevamiento || !filtros.Vista) {
+        mostrarEstado('state-initial');
+        return;
+    }
+
+    // 4. Mostrar el spinner visualmente para que el usuario sepa que responde
+    mostrarEstado('state-loading');
+
+    // 5. ESCUDO PROTECTOR DE LA BASE DE DATOS (Debounce + Abort)
+    clearTimeout(debounceTimer);
+    
+    // Esperamos 800 milisegundos a que el usuario termine de armar su filtro
+    debounceTimer = setTimeout(function() {
+        
+        // Si por alguna razón había una petición vieja atascada, la quitamos
+        if (currentAjaxRequest) {
+            currentAjaxRequest.abort();
+        }
+
+        // Forzamos la vista de "Cargando"
+        mostrarEstado('state-loading');
+
+        // --- ENVOLVEMOS EL AJAX EN UNA FUNCIÓN PARA PODER REINTENTAR ---
+        function hacerPeticion(intentosRestantes) {
+            currentAjaxRequest = $.ajax({
+                url: AJAX_URL,
+                type: 'POST',
+                data: { ...filtros, csrfmiddlewaretoken: CSRF_TOKEN },
+                timeout: 60000, // Le damos 60 segundos de paciencia a la BD
+                success: function(response) {
+                    if (response.data && response.data.length > 0) {
+                        mostrarEstado('table-container');
+                        renderTabla(response.data);
+                        // El conteo de cabeceras viene directamente en la misma respuesta
+                        const cab = (response.total_cabeceras !== null && response.total_cabeceras !== undefined)
+                            ? response.total_cabeceras.toLocaleString('es-AR') : '—';
+                        document.getElementById('tot-cueanexos-cabecera').textContent = cab;
+                    } else {
+                        mostrarEstado('state-empty');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Si nosotros cancelamos la consulta (abort), no hacemos nada
+                    if (status === 'abort' || xhr.status === 0) return;
+                    
+                    // Si falló (ej: por Timeout) y nos quedan intentos, volvemos a intentar
+                    if (intentosRestantes > 0) {
+                        console.warn("La BD tardó mucho (Caché frío). Reintentando...");
+                        hacerPeticion(intentosRestantes - 1);
+                        return;
+                    }
+                    
+                    // Si ya agotamos los intentos, mostramos el error
+                    console.error("Aviso de Base de Datos:", error);
+                    mostrarEstado('state-empty');
+                }
+            });
+        }
+
+        // Disparamos la petición y le damos 1 intento extra de rescate
+        hacerPeticion(1);
+
+    }, 800);
+}
+
+function limpiarFiltros() {
+    ['relevamiento','vista','ambito','sector','region','departamento','localidad'].forEach(n => {
+        const s = document.getElementById('sel-' + n); if (s) s.value = '';
+    });
+    const i = document.getElementById('inp-cueanexo'); if (i) i.value = '';
+    ['cueanexo','ambito','sector','region','departamento','localidad'].forEach(n => {
+        if (filtersState[n]) toggleFilter(n);
+    });
+    aplicarFiltros();
+}
+
+function ajustarAlturaDashboard() {
+    const wrapper = document.querySelector('.dashboard-wrapper');
+    if (!wrapper) return;
+    if (window.innerWidth <= 768) { wrapper.style.height = ''; return; }
+    const rect = wrapper.getBoundingClientRect();
+    const availableHeight = window.innerHeight - rect.top - 16;
+    wrapper.style.height = Math.max(availableHeight, 400) + 'px';
+}
+
+$(document).ready(async function() {
+    ajustarAlturaDashboard();
+   // Evento que detecta cuando la pantalla cambia de tamaño (ej: al abrir Inspeccionar Elemento o girar el celular)
+    window.addEventListener('resize', function() {
+        ajustarAlturaDashboard(); // Mantiene la altura de tu dashboard
+        
+        // ¡LA MAGIA PARA LA TABLA!
+        if (dt) {
+            dt.columns.adjust(); // Recalcula los anchos de los Títulos y el Pie de página
+            if (dt.responsive) {
+                dt.responsive.recalc(); // Reacomoda el modo responsivo si está activado
+            }
+        }
+    });
+    await cargarJerarquiaGeografica();
+    const selRegion = document.getElementById('sel-region');
+    const selDepartamento = document.getElementById('sel-departamento');
+    const selLocalidad = document.getElementById('sel-localidad');
+    if (selRegion) selRegion.addEventListener('change', actualizarFiltrosJerarquicosYAplicar);
+    if (selDepartamento) selDepartamento.addEventListener('change', actualizarFiltrosJerarquicosYAplicar);
+    if (selLocalidad) selLocalidad.addEventListener('change', actualizarFiltrosJerarquicosYAplicar);
+    aplicarFiltros();
+});
+</script>
+
+{% endblock %}

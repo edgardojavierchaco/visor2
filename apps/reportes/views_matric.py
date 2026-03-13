@@ -3,19 +3,12 @@ import os
 import dotenv
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
-# Función para conectar a la base de datos
+# ===================================================================== #
+#  CONEXIÓN A BASE DE DATOS                                             #
+# ===================================================================== #
 def conectar_bd(request):
-    """
-    Establece una conexión a la base de datos PostgreSQL.
-
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        connection: Un objeto de conexión a la base de datos si la conexión es exitosa, de lo contrario None.
-    """
-    
     try:
         connection = psycopg2.connect(
             host=os.getenv('POSTGRES_HOST'),
@@ -25,68 +18,25 @@ def conectar_bd(request):
         )
         return connection
     except psycopg2.Error as e:
-        # Manejar el error de conexión
         return None
 
-# Vista para mostrar el formulario de filtrado de matricula aborigen
+# ===================================================================== #
+#  VISTAS ORIGINALES DE RENDERIZADO                                     #
+# ===================================================================== #
 def filtrado_aborigen(request):
-    """
-    Renderiza el formulario de filtrado de matrícula aborigen.
+    return render(request, 'reportes/dashboard_reportes_aborigen.html')
 
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        Renderizado de la plantilla 'reportes/filter_aborigen.html'.
-    """
-    
-    return render(request, 'reportes/filter_aborigen.html')
-
-# Vista para mostrar el formulario de filtrado de matricula común y especial
 def filtrado_comesp(request):
-    """
-    Renderiza el formulario de filtrado de matrícula común y especial.
+    return render(request, 'reportes/dashboard_reportes_comesp.html')
 
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        Renderizado de la plantilla 'reportes/filter_comesp.html'.
-    """
-    
-    return render(request, 'reportes/filter_comesp.html')
-
-# Vista para mostrar el formulario de filtrado de matricula SNU
 def filtrado_snu(request):
-    """
-    Renderiza el formulario de filtrado de matrícula SNU.
+    return render(request, 'reportes/dashboard_reportes_snu.html')
 
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        Renderizado de la plantilla 'reportes/filter_snu.html'.
-    """
-    
-    return render(request, 'reportes/filter_snu.html')
-
-#####################################################################
-#               PARA REPORTE DE MATRICULA ABORIGEN                  #
-#####################################################################
-
-# Vista para procesar los datos del formulario de filtrado de matricula aborigen
+# ===================================================================== #
+#  FUNCIONES TRADICIONALES ORIGINALES (Para que no tire error Docker)   #
+# ===================================================================== #
 @csrf_exempt
 def filter_data_aborigen(request):
-    """
-    Procesa los datos del formulario de filtrado de matrícula aborigen y devuelve los resultados.
-
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.
-    """
-    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -96,7 +46,6 @@ def filter_data_aborigen(request):
         localidad = request.POST.get('Localidad')
         relevamiento = request.POST.get('Relevamiento')
 
-        # Validar que tvista esté en la lista de opciones válidas
         opciones_validas = [
             'visor_matric_aborigen_adulto_primaria',
             'visor_matric_aborigen_adulto_secundaria',
@@ -107,15 +56,11 @@ def filter_data_aborigen(request):
             'visor_matric_aborigen_educacion_especial'            
         ]
 
-        # Obtener el valor seleccionado para tvista
         tvistaaborigen = request.POST.get('Vista')
-        print(relevamiento, 'vista:'+tvistaaborigen, sector)
 
-        # Validar que tvista esté en la lista de opciones válidas
         if tvistaaborigen not in opciones_validas:
             return render(request, 'error.html', {'mensaje': 'Opción de vista no válida'})
 
-        # Asignar un valor descriptivo a la opción de tvista seleccionada
         opciones_descriptivas = {
             'visor_matric_aborigen_adulto_primaria': 'Aborigen Adulto Primaria',
             'visor_matric_aborigen_adulto_secundaria': 'Aborigen Adulto Secundaria',
@@ -127,18 +72,17 @@ def filter_data_aborigen(request):
         }
         nvistaaborigen = opciones_descriptivas.get(tvistaaborigen, 'Aborigen Educación Especial')
 
-        # Asignar un valor descriptivo a la opción de relevamiento seleccionado
         opciones_relevamiento={      
             'ra_carga2019':'Relevamiento 2019',
             'ra_carga2020':'Relevamiento 2020',
             'ra_carga2021':'Relevamiento 2021',                  
             'ra_carga2022':'Relevamiento 2022',  
             'ra_carga2023':'Relevamiento 2023',  
-            'ra_carga2024':'Relevamiento 2024',           
+            'ra_carga2024':'Relevamiento 2024',   
+            'ra_carga2025':'Relevamiento 2025',       
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
-        # Conectarse a la base de datos
         connection = conectar_bd(request)
         if not connection:
             return render(request, 'error_conexion.html')
@@ -164,69 +108,33 @@ def filter_data_aborigen(request):
             WHERE 1=1           
         """
         parameters = []
-        if cueanexo:
-            query += "AND p.cueanexo = %s"
-            parameters.append(cueanexo)
-        if ambito:
-            query += " AND p.ambito = %s"
-            parameters.append(ambito)
-        if sector:
-            query += " AND p.sector = %s"
-            parameters.append(sector)
-        if region:
-            query += " AND p.region = %s"
-            parameters.append(region)
-        if departamento:
-            query += " AND p.departamento = %s"
-            parameters.append(departamento)
-        if localidad:
-            query += "AND p.localidad = %s"
-            parameters.append(localidad)
-        
+        if cueanexo: query += " AND p.cueanexo = %s"; parameters.append(cueanexo)
+        if ambito: query += " AND p.ambito = %s"; parameters.append(ambito)
+        if sector: query += " AND p.sector = %s"; parameters.append(sector)
+        if region: query += " AND p.region = %s"; parameters.append(region)
+        if departamento: query += " AND p.departamento = %s"; parameters.append(departamento)
+        if localidad: query += " AND p.localidad = %s"; parameters.append(localidad)
 
         cursor.execute(query, parameters)
         rows = cursor.fetchall()
-
-        # verificar si hay datos en rows 
         datos_encontrados = len(rows)>0
 
-        # Convertir los resultados de la consulta a formato JSON
         dataaborigen = []
         for row in rows:
             dataaborigen.append({
-                
-                'total': int(row[0]),
-                'tot_var': int(row[1])
+                'total': int(row[0]) if row[0] else 0,
+                'tot_var': int(row[1]) if row[1] else 0
             })
 
-        # Cerrar la conexión a la base de datos
         connection.close()
-        print(dataaborigen)
 
-        # Si no hay datos para la consulta
         if not datos_encontrados:
             return render(request, 'consulta_vacia.html')
         
-        # Devolver los datos como contexto a la plantilla 'cargos.html'
         return render(request, 'reportes/aborigenes.html', {'dataaborigen': dataaborigen, 'nvistaaborigen': nvistaaborigen, 'nrelevamiento':nrelevamiento})
-    
-#####################################################################
-#           PARA REPORTE DE MATRICULA COMÚN Y ESPECIAL              #
-#####################################################################
 
-# Vista para procesar los datos del formulario de filtrado de matricula común y especial
 @csrf_exempt
 def filter_data_comesp(request):
-    """
-    Procesa los datos del formulario de filtrado de matrícula común y especial y devuelve los resultados.
-
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.
-    """
-    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -236,28 +144,15 @@ def filter_data_comesp(request):
         localidad = request.POST.get('Localidad')
         relevamiento = request.POST.get('Relevamiento')
 
-        # Validar que tvista esté en la lista de opciones válidas
         opciones_validas = [
-            'visor_matric_adulto_fp',
-            'visor_matric_adulto_primaria',
-            'visor_matric_adulto_secundaria',
-            'visor_matric_comun_inicial',
-            'visor_matric_comun_primaria',
-            'visor_matric_comun_secundaria',            
-            'visor_matric_especial_ed_temprana',
-            'visor_matric_especial_inicial',
-            'visor_matric_especial_primaria',           
+            'visor_matric_adulto_fp', 'visor_matric_adulto_primaria', 'visor_matric_adulto_secundaria',
+            'visor_matric_comun_inicial', 'visor_matric_comun_primaria', 'visor_matric_comun_secundaria',            
+            'visor_matric_especial_ed_temprana', 'visor_matric_especial_inicial', 'visor_matric_especial_primaria',           
         ]
-
-        # Obtener el valor seleccionado para tvista
         tvistacomesp = request.POST.get('Vista')
-        print(relevamiento, tvistacomesp, sector)
-
-        # Validar que tvista esté en la lista de opciones válidas
         if tvistacomesp not in opciones_validas:
             return render(request, 'error.html', {'mensaje': 'Opción de vista no válida'})
 
-        # Asignar un valor descriptivo a la opción de tvista seleccionada
         opciones_descriptivas = {
             'visor_matric_adulto_fp': 'Adulto Formación Profesional',
             'visor_matric_adulto_primaria': 'Adulto Primaria',
@@ -270,112 +165,57 @@ def filter_data_comesp(request):
             'visor_matric_especial_primaria': 'Especial Primaria',
         }
         nvistacomesp = opciones_descriptivas.get(tvistacomesp, 'Especial Primaria')
-
-        # Asignar un valor descriptivo a la opción de relevamiento seleccionado
         opciones_relevamiento={            
-            'ra_carga2019':'Relevamiento 2019',
-            'ra_carga2020':'Relevamiento 2020',
-            'ra_carga2021':'Relevamiento 2021',
-            'ra_carga2022':'Relevamiento 2022',
-            'ra_carga2023':'Relevamiento 2023',
-            'ra_carga2024':'Relevamiento 2024',
+            'ra_carga2019':'Relevamiento 2019', 'ra_carga2020':'Relevamiento 2020',
+            'ra_carga2021':'Relevamiento 2021', 'ra_carga2022':'Relevamiento 2022',
+            'ra_carga2023':'Relevamiento 2023', 'ra_carga2024':'Relevamiento 2024',
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
-        # Conectarse a la base de datos
-        connection = conectar_bd(relevamiento)
+        connection = conectar_bd(request) 
         if not connection:
             return render(request, 'error_conexion.html')
 
         cursor = connection.cursor()
-
         query1 = f"""
             SELECT DISTINCT
-                turno,
-                grado,
-                SUM(CAST(total AS INT)) AS total,
-                SUM(CAST(total_var AS INT)) AS tot_var                               
+                turno, grado, SUM(CAST(total AS INT)) AS total, SUM(CAST(total_var AS INT)) AS tot_var                               
             FROM funcion.{tvistacomesp}('{relevamiento}')  
             LEFT JOIN (
                     SELECT * FROM dblink (
                         'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
                         'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
-                    ) AS padron (
-                        cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
-                        fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,
-                        calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar,
-                        telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar
-                    )
+                    ) AS padron (cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar, fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar, calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar, telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar)
                 ) AS p using (cueanexo)       
             WHERE 1=1           
         """
-
         parameters = []
-        if cueanexo:
-            query1 += "AND cueanexo = %s"
-            parameters.append(cueanexo)
-        if ambito:
-            query1 += " AND ambito = %s"
-            parameters.append(ambito)
-        if sector:
-            query1 += " AND sector = %s"
-            parameters.append(sector)
-        if region:
-            query1 += " AND region = %s"
-            parameters.append(region)
-        if departamento:
-            query1 += " AND departamento = %s"
-            parameters.append(departamento)
-        if localidad:
-            query1 += "AND localidad = %s"
-            parameters.append(localidad)
+        if cueanexo: query1 += " AND cueanexo = %s"; parameters.append(cueanexo)
+        if ambito: query1 += " AND ambito = %s"; parameters.append(ambito)
+        if sector: query1 += " AND sector = %s"; parameters.append(sector)
+        if region: query1 += " AND region = %s"; parameters.append(region)
+        if departamento: query1 += " AND departamento = %s"; parameters.append(departamento)
+        if localidad: query1 += " AND localidad = %s"; parameters.append(localidad)
 
         query1 += " GROUP BY grado, turno HAVING SUM(CAST(total AS INT)) <> 0"
-
         cursor.execute(query1, parameters)
         rows = cursor.fetchall()
-
-        # verifica si hay datos para la consulta
         datos_encontrados=len(rows)>0
 
-        # Convertir los resultados de la consulta a formato JSON
         datacomesp = []
         for row in rows:
             datacomesp.append({
-                'turno': row[0],
-                'grado': row[1],
-                'total': int(row[2]),
-                'tot_var': int(row[3])
+                'turno': row[0], 'grado': row[1],
+                'total': int(row[2]) if row[2] else 0,
+                'tot_var': int(row[3]) if row[3] else 0
             })
 
-        # Cerrar la conexión a la base de datos
         connection.close()
-        print(datacomesp)
-        print(nvistacomesp)
-
-        if not datos_encontrados:
-            return render(request, 'consulta_vacia.html')
-        
-        # Devolver los datos como contexto a la plantilla 'cargos.html'
+        if not datos_encontrados: return render(request, 'consulta_vacia.html')
         return render(request, 'reportes/comunespecial.html', {'datacomesp': datacomesp, 'nvistacomesp': nvistacomesp, 'nrelevamiento':nrelevamiento})
 
-#####################################################################
-#                     PARA REPORTE DE MATRICULA SNU                 #
-#####################################################################
-
-# Vista para procesar los datos del formulario de filtrado de matricula común y especial
 @csrf_exempt
 def filter_data_snu(request):
-    """
-    Procesa los datos del formulario de filtrado de matrícula SNU y devuelve los resultados.
-
-    Args:
-        request: El objeto de solicitud HTTP.
-
-    Returns:
-        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.
-    """
-    
     if request.method == 'POST':
         cueanexo = request.POST.get('Cueanexo')
         ambito = request.POST.get('Ambito')
@@ -385,112 +225,212 @@ def filter_data_snu(request):
         localidad = request.POST.get('Localidad')
         relevamiento = request.POST.get('Relevamiento')
 
-        # Validar que tvista esté en la lista de opciones válidas
-        opciones_validas_snu = [            
-            'visor_matric_comun_snu'            
-        ]
-
-        # Obtener el valor seleccionado para tvista
+        opciones_validas_snu = ['visor_matric_comun_snu']
         tvistasnu = request.POST.get('Vista')
-        print(relevamiento, tvistasnu, sector)
+        if tvistasnu not in opciones_validas_snu: return render(request, 'error.html', {'mensaje': 'Opción de vista no válida'})
 
-        # Validar que tvista esté en la lista de opciones válidas
-        if tvistasnu not in opciones_validas_snu:
-            return render(request, 'error.html', {'mensaje': 'Opción de vista no válida'})
-
-        # Asignar un valor descriptivo a la opción de tvista seleccionada
-        opciones_descriptivas_snu = {            
-            'visor_matric_comun_snu': 'Común SNU',
-        }
-        nvistasnu = opciones_descriptivas_snu.get(tvistasnu, 'Común SNU')
-
-        # Asignar un valor descriptivo a la opción de relevamiento seleccionado
+        nvistasnu = 'Común SNU'
         opciones_relevamiento={            
-            'ra_carga2019':'Relevamiento 2019',
-            'ra_carga2020':'Relevamiento 2020',
-            'ra_carga2021':'Relevamiento 2021',
-            'ra_carga2022':'Relevamiento 2022',
-            'ra_carga2023':'Relevamiento 2023',
-            'ra_carga2024':'Relevamiento 2024',
+            'ra_carga2019':'Relevamiento 2019', 'ra_carga2020':'Relevamiento 2020',
+            'ra_carga2021':'Relevamiento 2021', 'ra_carga2022':'Relevamiento 2022',
+            'ra_carga2023':'Relevamiento 2023', 'ra_carga2024':'Relevamiento 2024',
         }
         nrelevamiento=opciones_relevamiento.get(relevamiento,'Relevamiento 2022')
 
-        # Conectarse a la base de datos
         connection = conectar_bd(request) 
-        if not connection:
-            return render(request, 'error_conexion.html')
-
+        if not connection: return render(request, 'error_conexion.html')
         cursor = connection.cursor()
 
         query2 = f"""
-            SELECT
-                plan_est_titulo,
-                SUM(CAST(total AS INT)) AS total,
-                SUM(CAST(total_ingresante AS INT)) AS ingresantes,
-                SUM(CAST(total_pasantia_practicas AS INT)) AS pasantia,
-                SUM(CAST(total_residencia AS INT)) AS residencia
+            SELECT plan_est_titulo, SUM(CAST(total AS INT)) AS total, SUM(CAST(total_ingresante AS INT)) AS ingresantes, SUM(CAST(total_pasantia_practicas AS INT)) AS pasantia, SUM(CAST(total_residencia AS INT)) AS residencia
             FROM funcion.{tvistasnu}('{relevamiento}')         
             LEFT JOIN (
-                    SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
-                    ) AS padron (
-                        cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
-                        fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,
-                        calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar,
-                        telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar
-                    )
-                ) AS p using (cueanexo)       
-            WHERE 1=1           
-        """         
-
+                    SELECT * FROM dblink ('dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432', 'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron') AS padron (cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar, fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar, calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar, telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar)
+                ) AS p using (cueanexo) WHERE 1=1           
+        """        
         parameters = []
-        if cueanexo:
-            query2 += "AND p.cueanexo = %s"
-            parameters.append(cueanexo)
-        if ambito:
-            query2 += " AND p.ambito = %s"
-            parameters.append(ambito)
-        if sector:
-            query2 += " AND p.sector = %s"
-            parameters.append(sector)
-        if region:
-            query2 += " AND p.region = %s"
-            parameters.append(region)
-        if departamento:
-            query2 += " AND p.departamento = %s"
-            parameters.append(departamento)
-        if localidad:
-            query2 += "AND p.localidad = %s"
-            parameters.append(localidad)
+        if cueanexo: query2 += " AND p.cueanexo = %s"; parameters.append(cueanexo)
+        if ambito: query2 += " AND p.ambito = %s"; parameters.append(ambito)
+        if sector: query2 += " AND p.sector = %s"; parameters.append(sector)
+        if region: query2 += " AND p.region = %s"; parameters.append(region)
+        if departamento: query2 += " AND p.departamento = %s"; parameters.append(departamento)
+        if localidad: query2 += " AND p.localidad = %s"; parameters.append(localidad)
 
         query2 += " GROUP BY plan_est_titulo HAVING SUM(CAST(total AS INT)) <> 0"
-
         cursor.execute(query2, parameters)
         rows = cursor.fetchall()
-
-        # verificar si hay datos para la consulta
         datos_encontrados=len(rows)>0
 
-        # Convertir los resultados de la consulta a formato JSON
         datasnu = []
         for row in rows:
             datasnu.append({
-                'titulo': row[0],
-                'total': row[1],
+                'titulo': row[0], 'total': row[1],
                 'ingresantes': int(row[2]) if row[2] is not None else 0,
                 'pasantia': int(row[3]) if row[3] is not None else 0,
                 'residencia': int(row[4]) if row[4] is not None else 0,
             })
 
-        # Cerrar la conexión a la base de datos
         connection.close()
-        print(datasnu)
-        print(nvistasnu)
-
-        if not datos_encontrados:
-            return render(request, 'consulta_vacia.html')
-        
-        # Devolver los datos como contexto a la plantilla 'cargos.html'
+        if not datos_encontrados: return render(request, 'consulta_vacia.html')
         return render(request, 'reportes/snu.html', {'datasnu': datasnu, 'nvistasnu': nvistasnu, 'nrelevamiento':nrelevamiento})   
-     
+
+# ===================================================================== #
+#               ENDPOINTS AJAX PARA NUEVOS DASHBOARDS                   #
+# ===================================================================== #
+
+@csrf_exempt
+def aborigen_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    cueanexo     = request.POST.get('Cueanexo', '').strip()
+    ambito       = request.POST.get('Ambito', '').strip()
+    sector       = request.POST.get('Sector', '').strip()
+    region       = request.POST.get('Region', '').strip()
+    departamento = request.POST.get('Departamento', '').strip()
+    localidad    = request.POST.get('Localidad', '').strip()
+    relevamiento = request.POST.get('Relevamiento', '').strip()
+    tvista       = request.POST.get('Vista', '').strip()
+
+    opciones_validas = [
+        'visor_matric_aborigen_adulto_primaria', 'visor_matric_aborigen_adulto_secundaria',
+        'visor_matric_aborigen_comun_inicial', 'visor_matric_aborigen_comun_primaria',
+        'visor_matric_aborigen_comun_secundaria', 'visor_matric_aborigen_comun_snu',
+        'visor_matric_aborigen_educacion_especial'            
+    ]
+    
+    if tvista not in opciones_validas or not relevamiento:
+        return JsonResponse({'data': [], 'error': 'Parámetros inválidos'}, status=400)
+
+    try:
+        connection = conectar_bd(request)
+        if not connection: return JsonResponse({'data': [], 'error': 'Error de conexión'}, status=500)
+        cursor = connection.cursor()
+        dblink_inner_sql = "SELECT cueanexo, MAX(region), MAX(sector), MAX(ambito), MAX(localidad), MAX(departamento) FROM padron GROUP BY cueanexo"
+        query = f"""
+            SELECT SUM(CAST(total AS INT)) AS total, SUM(CAST(tot_var AS INT)) AS tot_var                               
+            FROM funcion.{tvista}('{relevamiento}')  
+            LEFT JOIN (
+                SELECT * FROM dblink ('dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432', '{dblink_inner_sql}') AS padron (cueanexo varchar, region varchar, sector varchar, ambito varchar, localidad varchar, departamento varchar)
+            ) AS p USING (cueanexo) WHERE 1=1
+        """
+        
+        parameters = []
+        if cueanexo: query += " AND p.cueanexo = %s"; parameters.append(cueanexo)
+        if ambito: query += " AND p.ambito = %s"; parameters.append(ambito)
+        if sector: query += " AND p.sector = %s"; parameters.append(sector)
+        if region: query += " AND p.region = %s"; parameters.append(region)
+        if departamento: query += " AND p.departamento = %s"; parameters.append(departamento)
+        if localidad: query += " AND p.localidad = %s"; parameters.append(localidad)
+        
+        cursor.execute(query, parameters)
+        row = cursor.fetchone()
+        connection.close()
+        
+        total = int(row[0]) if row and row[0] is not None else 0
+        varones = int(row[1]) if row and row[1] is not None else 0
+
+        data = [{'etiqueta': 'Matrícula General Aborigen', 'varones': varones, 'total': total}] if total > 0 else []
+        return JsonResponse({'data': data})
+    except Exception as e:
+        return JsonResponse({'data': [], 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def comunespecial_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    cueanexo     = request.POST.get('Cueanexo', '').strip()
+    ambito       = request.POST.get('Ambito', '').strip()
+    sector       = request.POST.get('Sector', '').strip()
+    region       = request.POST.get('Region', '').strip()
+    departamento = request.POST.get('Departamento', '').strip()
+    localidad    = request.POST.get('Localidad', '').strip()
+    relevamiento = request.POST.get('Relevamiento', '').strip()
+    tvista       = request.POST.get('Vista', '').strip()
+
+    opciones_validas = [
+        'visor_matric_adulto_fp', 'visor_matric_adulto_primaria', 'visor_matric_adulto_secundaria',
+        'visor_matric_comun_inicial', 'visor_matric_comun_primaria', 'visor_matric_comun_secundaria',            
+        'visor_matric_especial_ed_temprana', 'visor_matric_especial_inicial', 'visor_matric_especial_primaria'
+    ]
+    if tvista not in opciones_validas or not relevamiento:
+        return JsonResponse({'data': [], 'error': 'Parámetros inválidos'}, status=400)
+
+    try:
+        connection = conectar_bd(request)
+        if not connection: return JsonResponse({'data': [], 'error': 'Error de conexión'}, status=500)
+        cursor = connection.cursor()
+        dblink_inner_sql = "SELECT cueanexo, MAX(region), MAX(sector), MAX(ambito), MAX(localidad), MAX(departamento) FROM padron GROUP BY cueanexo"
+
+        query = f"""
+            SELECT turno, grado, SUM(CAST(total AS INT)) AS total, SUM(CAST(total_var AS INT)) AS tot_var                               
+            FROM funcion.{tvista}('{relevamiento}')  
+            LEFT JOIN (
+                SELECT * FROM dblink ('dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432', '{dblink_inner_sql}') AS padron (cueanexo varchar, region varchar, sector varchar, ambito varchar, localidad varchar, departamento varchar)
+            ) AS p USING (cueanexo) WHERE 1=1
+        """
+        
+        parameters = []
+        if cueanexo: query += " AND p.cueanexo = %s"; parameters.append(cueanexo)
+        if ambito: query += " AND p.ambito = %s"; parameters.append(ambito)
+        if sector: query += " AND p.sector = %s"; parameters.append(sector)
+        if region: query += " AND p.region = %s"; parameters.append(region)
+        if departamento: query += " AND p.departamento = %s"; parameters.append(departamento)
+        if localidad: query += " AND p.localidad = %s"; parameters.append(localidad)
+        
+        query += " GROUP BY turno, grado HAVING SUM(CAST(total AS INT)) <> 0 ORDER BY turno, grado"
+        cursor.execute(query, parameters)
+        rows = cursor.fetchall()
+        connection.close()
+        
+        data = [{'turno': r[0] or '-', 'grado': r[1] or '-', 'total': int(r[2]), 'varones': int(r[3])} for r in rows]
+        return JsonResponse({'data': data})
+    except Exception as e:
+        return JsonResponse({'data': [], 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def snu_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    relevamiento = request.POST.get('Relevamiento', '').strip()
+    tvista       = request.POST.get('Vista', '').strip()
+    cueanexo     = request.POST.get('Cueanexo', '').strip()
+    ambito       = request.POST.get('Ambito', '').strip()
+    sector       = request.POST.get('Sector', '').strip()
+    region       = request.POST.get('Region', '').strip()
+    departamento = request.POST.get('Departamento', '').strip()
+    localidad    = request.POST.get('Localidad', '').strip()
+
+    if not relevamiento or not tvista: return JsonResponse({'data': [], 'error': 'Faltan parámetros'}, status=400)
+
+    try:
+        connection = conectar_bd(request)
+        if not connection: return JsonResponse({'data': [], 'error': 'Error de conexión'}, status=500)
+        cursor = connection.cursor()
+        dblink_inner_sql = "SELECT cueanexo, MAX(region), MAX(sector), MAX(ambito), MAX(localidad), MAX(departamento) FROM padron GROUP BY cueanexo"
+
+        query = f"""
+            SELECT plan_est_titulo, SUM(CAST(total AS INT)) AS total, SUM(CAST(total_ingresante AS INT)) AS ingresantes, SUM(CAST(total_pasantia_practicas AS INT)) AS pasantia, SUM(CAST(total_residencia AS INT)) AS residencia
+            FROM funcion.{tvista}('{relevamiento}')
+            LEFT JOIN (
+                SELECT * FROM dblink ('dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432', '{dblink_inner_sql}') AS padron (cueanexo varchar, region varchar, sector varchar, ambito varchar, localidad varchar, departamento varchar)
+            ) AS p USING (cueanexo) WHERE 1=1
+        """
+        
+        params = []
+        if cueanexo: query += " AND p.cueanexo = %s"; params.append(cueanexo)
+        if ambito: query += " AND p.ambito = %s"; params.append(ambito)
+        if sector: query += " AND p.sector = %s"; params.append(sector)
+        if region: query += " AND p.region = %s"; params.append(region)
+        if departamento: query += " AND p.departamento = %s"; params.append(departamento)
+        if localidad: query += " AND p.localidad = %s"; params.append(localidad)
+
+        query += " GROUP BY plan_est_titulo HAVING SUM(CAST(total AS INT)) <> 0 ORDER BY plan_est_titulo"
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        connection.close()
+
+        data = [{'titulo': r[0] or 'SIN TÍTULO', 'total': int(r[1]) if r[1] else 0, 'ingresantes': int(r[2]) if r[2] else 0, 'pasantia': int(r[3]) if r[3] else 0, 'residencia': int(r[4]) if r[4] else 0} for r in rows]
+        return JsonResponse({'data': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
