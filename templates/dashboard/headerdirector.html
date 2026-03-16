@@ -125,7 +125,7 @@
             aria-haspopup="true"
             aria-expanded="false"
             class="nav-link dropdown-toggle"
-            ><i class="fas fa-archive" style="color: black"></i> Evaluación
+            ><i class="fas fa-archive" style="color: black"></i>
             Fluidez</a
           >
           <ul
@@ -150,7 +150,7 @@
                 >Cargar Aplicador</a
               >
             </li>
-            {% endcomment %} {% comment %}
+            {% endcomment %} 
             <li class="dropdown">
               <a
                 id="dropdownSubMenu2"
@@ -204,9 +204,16 @@
                     </li>
                   </ul>
                 </li>
+                <li class="dropdown-submenu">
+                  <a
+                    href="{% url 'evaluaciones_educativas:analisis_evaluacion' %}"
+                    class="dropdown-item"
+                    >Noviembre-2025</a
+                  >
               </ul>
             </li>
-            <li>
+
+            {% comment %} <li>
               <a
                 href="{% url 'operative:dashboard_fluidez' %}"
                 class="dropdown-item"
@@ -226,7 +233,7 @@
                 class="dropdown-item"
                 >Descarga Material</a
               >
-            </li>
+            </li> 
 
             <li>
               <a
@@ -248,13 +255,13 @@
               </a>
             </li>
             {% endcomment %}
-            <li>
+            {% comment %} <li>
               <a class="dropdown-item">🚧Estamos trabajando🚧</a>
               <a
                 >📊Los resultados estarán disponibles a partir del 15 de
                 marzo.📅</a
               >
-            </li>
+            </li> {% endcomment %}
           </ul>
         </li>
         {% endif %} {% if comun_secundaria %}
@@ -277,7 +284,7 @@
                             <li><a href="{% url 'oplectura:listaplicdir' %}" class="dropdown-item">Cargar Aplicador</a></li> -->
             <!-- Menú desplegable para "Resultados" -->
 
-            {% comment %}
+           
             <li>
               <a href="{% url 'operative:dashboard' %}" class="dropdown-item"
                 >Carga de Exámenes</a
@@ -290,14 +297,14 @@
                 >Carga Evaluaciones 2°</a
               >
             </li>
-            {% endcomment %}
-            <li>
+            
+            {% comment %} <li>
               <a class="dropdown-item">🚧Estamos trabajando🚧</a>
               <a
                 >📊Los resultados estarán disponibles a partir del 15 de
                 marzo.📅</a
               >
-            </li>
+            </li> {% endcomment %}
           </ul>
         </li>
         {% endif %}

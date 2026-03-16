@@ -16,6 +16,7 @@ urlpatterns = [
 	path('editar_asistencia/<uuid:alumno_public_id>/',views.editar_asistencia, name='editar_asistencia'),
     path('borrar_registro_alumno/<uuid:alumno_public_id>/',views.borrar_registro_alumno, name='borrar_registro_alumno'),
 	path('descargar_excel/<uuid:grado_public_id>/',views.descargar_excel, name='excel'),
+    path('analisis_evaluacion/',views.analisis_evaluaciones_noviembre_2025, name='analisis_evaluacion')
 	# path('monitoreo/',views.monitoreo, name='monitoreo'),
 	
 ]

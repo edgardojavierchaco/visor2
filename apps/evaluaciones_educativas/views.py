@@ -1,6 +1,10 @@
+from ast import alias
+from multiprocessing import context
+from pickle import TRUE
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.template import loader
+from apps import evaluaciones
 from apps.evaluaciones_educativas import *
 from apps.evaluaciones_educativas.forms.forms import *
 from django.db import transaction
@@ -8,6 +12,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from datetime import date, datetime
 from openpyxl import Workbook
+from django.db.models import Count,Q,Avg
+import psycopg2
+import os
 
 
 @login_required
@@ -381,6 +388,72 @@ def descargar_excel(request,grado_public_id):
 #     contexto={'grados':instancia_grado_cueanexo}
 #     return render(request,"monitoreo.html", contexto)
 
+#-----------------------LOGICA PARA VISUALIZAR DATOS ---------------------------
+@login_required
+def analisis_evaluaciones_noviembre_2025(request):
+    contexto = {
+        'alumnos_evaluados_segundo': [],
+        'alumnos_evaluados_tercero': [],
+        'grado': None,
+        'seccion': None
+    }
+    usuario = request.user
+    
+    if usuario.is_authenticated and len(usuario.username) == 9:
+        cueanexo = usuario.username
+        
+        # 1. Inicializamos variables de filtro
+        secciones = None
+        turno = None
+        
+        # 2. Inicializamos Form de Grado
+        form_grado = Grado_select_Form(request.POST or None)
+        form_seccion = None
+
+        if request.method == 'POST':
+            if form_grado.is_valid():
+                nombre_grado = form_grado.cleaned_data['grado_seleccion']
+                # Obtenemos el objeto Grado
+                if nombre_grado:    
+                    grado_obj = Grado.objects.get(nombre_grado=nombre_grado, cueanexo=cueanexo)
+                else:
+        # Si eligió la opción neutra, nos aseguramos de que no haya sección ni grado
+                    contexto['grado'] = None
+                    form_seccion = None
+                
+                # 3. Inicializamos Form de Sección con el ID del grado obtenido
+                form_seccion = SeccionTurnoForm(request.POST or None, grados=grado_obj.id)
+                
+                # 4. Si el formulario de sección es válido, extraemos filtros
+                if form_seccion.is_valid():
+                    seleccionado = form_seccion.cleaned_data['seleccion']
+                    if seleccionado != 'TODOS':
+                        secciones = seleccionado.seccion
+                        turno = seleccionado.turno
+                
+                # 5. CARGA DE DATOS (Fuera del is_valid de la sección)
+                # Esto permite que si solo filtran Grado, ya se vean los gráficos generales
+                if grado_obj.nombre_grado == '2do Año/Grado':
+                    datos = analisis_segundo_grado_grafico(grado_obj, cueanexo, secciones, turno)
+                    contexto.update(datos)
+                    contexto["grado"] = "segundo"
+                else:
+                    datos = analisis_tercer_grado_grafico(grado_obj, cueanexo, secciones, turno)
+                    contexto.update(datos)
+                    contexto["grado"] = "tercero"
+                
+                # Pasamos los filtros actuales al contexto para el HTML
+                contexto["seccion"] = secciones
+                contexto["turno"] = turno
+
+        # 6. Siempre pasamos los formularios al contexto
+        contexto["form_grado"] = form_grado
+        contexto["form_seccion"] = form_seccion
+
+    return render(request, "analisis_evaluaciones_noviembre_2025.html", contexto)
+
+#-----------------------FIN LOGICA PARA VISUALIZAR DATOS ---------------------------
+
 def ausentismo_evaluacion(instancia_evaluacion):
     evaluacion_campos=instancia_evaluacion._meta.fields
     for i in evaluacion_campos:
@@ -391,3 +464,209 @@ def ausentismo_evaluacion(instancia_evaluacion):
         if not i.primary_key and i.null:
             setattr(instancia_evaluacion, i.name, None)
     return instancia_evaluacion
+
+#---------LOGICA PARA ANALISIS DE LAS EVALUACIONES EDUCATIVAS--------------------------
+
+#VISTA INTERMEDIA PARA PODER USAR EL ANALISIS_GRAFIGO
+
+
+
+
+def analisis_segundo_grado_grafico(grado_seleccionado,cueanexo,secciones ,turno):
+#-----------------------LOGICA PARA SEGUNDO GRADO------------------------
+    #print('entre a analisis 2do')
+    if type(cueanexo) is str:
+        grado=Grado.objects.filter(nombre_grado__icontains=grado_seleccionado, cueanexo=cueanexo)
+    else:
+        #print('ENTREEE')
+        grado=Grado.objects.filter(nombre_grado__icontains=grado_seleccionado, cueanexo__in=cueanexo)
+    #print(grado)
+    if secciones and turno:
+        secciones=Seccion.objects.filter(grado__in=grado, seccion=secciones,turno=turno)
+    #print(seccion)
+    else:
+        secciones=Seccion.objects.filter(grado__in=grado)
+    alumnos=Alumno.objects.filter(seccion_id__in=secciones)
+    evaluaciones = EvaluacionFluidezLectora.objects.filter(alumno__in=alumnos)
+    #comprension lectora
+    #presentes=evaluaciones.filter(asistencia='PRESENTE')
+    evaluaciones_con_comprension,conteos=comprension_lectora(evaluaciones,grado_seleccionado)
+    datos = evaluaciones.aggregate(
+    # Asistencia
+    presentes=Count('alumno_id', filter=Q(asistencia='PRESENTE')),
+    ausentes=Count('alumno_id', filter=Q(asistencia='AUSENTE')),
+    
+    # Desempeño
+    promedio_general=Avg('cantidad_palabras_leidas',filter=Q(asistencia='PRESENTE')),
+    debajo_del_basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__lt=21)),
+    basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gte=21, cantidad_palabras_leidas__lte=46)),
+    satisfactorio=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=46, cantidad_palabras_leidas__lte=70)),
+    avanzado=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=70))
+    )
+    #print(datos['debajo_del_basico'])
+    alumnos_presentes=datos['presentes']
+    alumnos_ausentes=datos['ausentes']
+    #SOLUCIONAR LAS DIVISIONES POR 0
+    nivel_debajo_del_basico = round((datos['debajo_del_basico']/alumnos_presentes)*100,1)if alumnos_presentes else 0
+    nivel_basico = round((datos['basico']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_satisfactorio=round((datos['satisfactorio']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_avanzado=round((datos['avanzado']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    #INDICE DE PROMEDIO (ENTERO)
+    nivel_debajo_del_basico_comprension = round((conteos['debajo_del_basico']/alumnos_presentes)*100,1)if alumnos_presentes else 0
+    nivel_basico_comprension = round((conteos['basico']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_satisfactorio_comprension=round((conteos['satisfactorio']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_avanzado_comprension=round((conteos['avanzado']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    promedio = datos['promedio_general']#Modificar para trabajar mejor los decimales
+    #print(promedio)
+    #print(evaluacion)
+    contexto={
+    'CUEANEXO':cueanexo,
+    'nivel_educativo':'Primario',
+    'alumnos_evaluados_segundo': evaluaciones_con_comprension,
+    'asistencia_segundo': [f'Presentes {alumnos_presentes}', f'Ausentes {alumnos_ausentes}'],
+    'valores_asistencia_segundo': [alumnos_presentes, alumnos_ausentes],
+    'etiquetas_nivel_desempeno_segundo': [f'Debajo del Basico {nivel_debajo_del_basico}%', f'Básico {nivel_basico}%',f'Satisfactorio {nivel_satisfactorio}%',f'Avanzado {nivel_avanzado}%'],
+    'valores_desempeno_segundo': [nivel_debajo_del_basico, nivel_basico, nivel_satisfactorio, nivel_avanzado],
+    'etiquetas_nivel_desempeno_comprension_segundo': [f'Debajo del Basico {nivel_debajo_del_basico_comprension}%', f'Básico {nivel_basico_comprension}%',f'Satisfactorio {nivel_satisfactorio_comprension}%',f'Avanzado {nivel_avanzado_comprension}%'],
+    'valores_desempeno_comprension_segundo': [nivel_debajo_del_basico_comprension, nivel_basico_comprension, nivel_satisfactorio_comprension, nivel_avanzado_comprension],
+    'etiqueta_promedios_segundo': 'Promedio de Palabras Leídas Correctamente por Minuto',
+    'valor_promedio_segundo': [promedio],
+    }
+    return contexto
+
+        #----------------FIN LOGICA 2 GRADO ---------
+
+def analisis_tercer_grado_grafico(grado_seleccionado,cueanexo,secciones,turno):
+#-----------------------LOGICA PARA SEGUNDO GRADO------------------------
+    #PARTICIPACION
+    #print('entre a analisis 3ero')
+    
+        #cueanexo=['220000200','220009000']
+    if type(cueanexo) is str:
+        grado=Grado.objects.filter(nombre_grado__icontains=grado_seleccionado, cueanexo=cueanexo)
+    else:
+        #print('ENTREEE')
+        grado=Grado.objects.filter(nombre_grado__icontains=grado_seleccionado, cueanexo__in=cueanexo)
+    #print(grado)
+    if secciones and turno:
+        secciones=Seccion.objects.filter(grado__in=grado, seccion=secciones,turno=turno)
+    #print(seccion)
+    else:
+        secciones=Seccion.objects.filter(grado__in=grado)
+    alumnos=Alumno.objects.filter(seccion_id__in=secciones)
+
+    evaluaciones = EvaluacionFluidezLectora.objects.filter(alumno__in=alumnos)
+    #presentes=evaluaciones.filter(asistencia='PRESENTE')
+    evaluaciones_con_comprension,conteos=comprension_lectora(evaluaciones,grado_seleccionado)
+    datos = evaluaciones.aggregate(
+    # Asistencia
+    presentes=Count('alumno_id', filter=Q(asistencia='PRESENTE')),
+    ausentes=Count('alumno_id', filter=Q(asistencia='AUSENTE')),
+    
+    # Desempeño
+    promedio_general=Avg('cantidad_palabras_leidas',filter=Q(asistencia='PRESENTE')),
+    debajo_del_basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__lt=30)),
+    basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gte=30, cantidad_palabras_leidas__lte=60)),
+    satisfactorio=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=61, cantidad_palabras_leidas__lte=90)),
+    avanzado=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=90))
+    )
+    alumnos_presentes=datos['presentes']
+    alumnos_ausentes=datos['ausentes']
+    nivel_debajo_del_basico = round((datos['debajo_del_basico']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_basico = round((datos['basico']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_satisfactorio=round((datos['satisfactorio']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_avanzado=round((datos['avanzado']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    #grafico
+    nivel_debajo_del_basico_comprension = round((conteos['debajo_del_basico']/alumnos_presentes)*100,1)if alumnos_presentes else 0
+    nivel_basico_comprension = round((conteos['basico']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_satisfactorio_comprension=round((conteos['satisfactorio']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    nivel_avanzado_comprension=round((conteos['avanzado']/alumnos_presentes)*100, 1)if alumnos_presentes else 0
+    #INDICE DE PROMEDIO (ENTERO)
+    promedio = datos['promedio_general']#Modificar para trabajar mejor los decimales
+    #print(promedio)
+    #print(evaluacion)
+    contexto={
+    'CUEANEXO':cueanexo,
+    'nivel_educativo':'Primario',
+    'alumnos_evaluados_tercero': evaluaciones_con_comprension,
+    'asistencia_tercero': [f'Presentes {alumnos_presentes}', f'Ausentes {alumnos_ausentes}'],
+    'valores_asistencia_tercero': [alumnos_presentes, alumnos_ausentes],
+    'etiquetas_nivel_desempeno_tercero': [f'Debajo del Basico {nivel_debajo_del_basico}%', f'Básico {nivel_basico}%',f'Satisfactorio {nivel_satisfactorio}%',f'Avanzado {nivel_avanzado}%'],
+    'valores_desempeno_tercero': [nivel_debajo_del_basico, nivel_basico, nivel_satisfactorio, nivel_avanzado],
+    'etiquetas_nivel_desempeno_comprension_tercero': [f'Debajo del Basico {nivel_debajo_del_basico_comprension}%', f'Básico {nivel_basico_comprension}%',f'Satisfactorio {nivel_satisfactorio_comprension}%',f'Avanzado {nivel_avanzado_comprension}%'],
+    'valores_desempeno_comprension_tercero': [nivel_debajo_del_basico_comprension, nivel_basico_comprension, nivel_satisfactorio_comprension, nivel_avanzado_comprension],
+    'etiqueta_promedios_segundo': 'Promedio de Palabras Leídas Correctamente por Minuto',
+    'valor_promedio_tercero': [promedio],}
+    return contexto
+
+
+#Crear funcion para logica de COMPRENSION LECTORA, 
+def comprension_lectora(evaluaciones,grado_seleccionado):
+    #print(type(grado_seleccionado))
+    #print('en comprension')
+    #resultados = [] # Usamos una lista para guardar a todos
+    conteos = {'debajo_del_basico': 0, 'basico': 0, 'satisfactorio': 0, 'avanzado': 0}
+    if grado_seleccionado.nombre_grado == '2do Año/Grado':
+        #print('entre en 2 comprensio')
+        for i in evaluaciones:
+            # Reiniciamos los puntos para CADA alumno dentro del bucle
+            p1 = 1 if i.pregunta_1 == 'B' else 0
+            p2 = 1 if i.pregunta_2 == 'C' else 0
+            p3 = 1 if i.pregunta_3 == 'B' else 0
+            
+            # IMPORTANTE: Usamos punto para el decimal (1.5)
+            p4 = 1.50 if i.pregunta_4 == 'A' else 0
+            p5 = 1.50 if i.pregunta_5 == 'B' else 0
+            p6 = 1.50 if i.pregunta_6 == 'C' else 0
+            #print(f'{i.pregunta_1}{i.pregunta_2}{i.pregunta_3}{i.pregunta_4}{i.pregunta_5}{i.pregunta_6}')
+            puntaje_total = p1 + p2 + p3 + p4 + p5 + p6
+            i.puntaje_comprension = puntaje_total
+            if puntaje_total < 3.40:
+                conteos['debajo_del_basico'] += 1
+            elif puntaje_total <= 5.20:
+                conteos['basico'] += 1
+            elif puntaje_total <= 6.75:
+                conteos['satisfactorio'] += 1
+            else:
+                conteos['avanzado'] += 1
+
+            #print(f'{i.puntaje_comprension} alumno:{i.alumno.nombre}' )
+    else:
+        for i in evaluaciones:
+        # Reiniciamos los puntos para CADA alumno dentro del bucle
+            p1 = 1 if i.pregunta_1 == 'B' else 0
+            p2 = 1 if i.pregunta_2 == 'C' else 0
+            p3 = 1 if i.pregunta_3 == 'C' else 0
+            
+            # IMPORTANTE: Usamos punto para el decimal (1.5)
+            p4 = 1.50 if i.pregunta_4 == 'A' else 0
+            p5 = 1.50 if i.pregunta_5 == 'C' else 0
+            p6 = 1.50 if i.pregunta_6 == 'C' else 0
+            #print(f'{i.pregunta_1}{i.pregunta_2}{i.pregunta_3}{i.pregunta_4}{i.pregunta_5}{i.pregunta_6}')
+            puntaje_total = p1 + p2 + p3 + p4 + p5 + p6
+            if puntaje_total < 3.40:
+                conteos['debajo_del_basico'] += 1
+            elif puntaje_total <= 5.20:
+                conteos['basico'] += 1
+            elif puntaje_total <= 6.75:
+                conteos['satisfactorio'] += 1
+            else:
+                conteos['avanzado'] += 1
+            
+            # Guardamos un diccionario por cada alumno
+            i.puntaje_comprension = puntaje_total
+            #print(f'{i.puntaje_comprension} alumno:{i.alumno.nombre}' )
+    
+    return evaluaciones, conteos # Devolvemos la lista completa
+
+        
+
+
+
+
+#darle puntaje a las pregutnas P1 A=1 P2 B=2  ... ETC..
+#con ese puntaje corregir a alumno 
+#luego mostrarlo en su nivel de comprension lectora (LISTA)
+#EN grafico barra tendriamos que creo que hacer lo mismo 
+        #----------------FIN LOGICA 2 GRADO ---------
+
