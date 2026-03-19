@@ -22,7 +22,7 @@ urlpatterns = [
     path('lex/', include('apps.normativa.urls', namespace='lex')),
     path('mapapuntos/', mapapuntos, name='mapapuntos'),
     path('dibujararea/', obtenerdatos, name='dibujararea'),
-    path('login/', include('apps.login.urls', namespace='login')),
+    path('login/', include('apps.login.urls', namespace='logueo')),
     path('portada/', include('apps.dashboard.urls', namespace='portada')),
     path('escuelas/', establecimientos, name='escuelas'),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),    

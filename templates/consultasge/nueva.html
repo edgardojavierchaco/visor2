@@ -19,7 +19,33 @@
                 <div class="card-body bg-secondary bg-opacity-10">
                     <form method="post" enctype="multipart/form-data" id="form-consulta" novalidate>
                         {% csrf_token %}
+                        {# Establecimiento #}
 
+                        {% if form.cueanexo.field.choices|length > 1 %}
+                            <div class="mb-3">
+                                <label class="form-label">Establecimiento</label>
+                                <select name="cueanexo" class="form-select">
+                                    <option value="">Seleccione...</option>
+                                    {% for value, label in form.cueanexo.field.choices %}
+                                        <option value="{{ value }}" {% if form.cueanexo.value == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.cueanexo.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                        {% else %}
+                            {# Mostrar pero no editable #}
+                            <div class="mb-3">
+                                <label class="form-label">Establecimiento</label>
+                                <input type="text" class="form-control"
+                                    value="{{ form.cueanexo.field.choices.0.1 }}" readonly>
+                                <input type="hidden" name="cueanexo" value="{{ form.cueanexo.value }}">
+                            </div>
+                        {% endif %}
                         {# Asunto #}
                         <div class="mb-3">
                             <label class="form-label">Asunto</label>

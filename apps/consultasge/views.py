@@ -4,8 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count
-
+from django.db.models import Count, Q
 from .decorators import rol_requerido
 from .models import Consulta, Adjunto
 from .services import crear_consulta, notificaciones_usuario
@@ -17,34 +16,18 @@ from .utils import progreso_sla
 # --------------------------
 @login_required
 def dashboard(request):
-    consultas_agrupadas = Consulta.objects.filter(usuario=request.user) \
-        .values("estado") \
-        .annotate(total=Count("id"))
 
-    data = {
-        'pendientes': 0,
-        'en_proceso': 0,
-        'respondidas': 0,
-        'cerrada': 0,
-        'total': 0
-    }
+    consultas = Consulta.objects.filter(usuario=request.user)
 
-    total_general = 0
-    for item in consultas_agrupadas:
-        estado_db = item['estado'].lower()
-        cantidad = item['total']
-        total_general += cantidad
+    data = consultas.aggregate(
+        pendientes=Count('id', filter=Q(estado='pendiente')),
+        en_proceso=Count('id', filter=Q(estado='en_proceso')),
+        respondidas=Count('id', filter=Q(estado='respondida')),
+        cerrada=Count('id', filter=Q(estado='cerrada')),
+    )
 
-        if estado_db == 'pendiente':
-            data['pendientes'] = cantidad
-        elif estado_db == 'en_proceso':
-            data['en_proceso'] = cantidad
-        elif estado_db == 'respondida':
-            data['respondidas'] = cantidad
-        elif estado_db == 'cerrada':
-            data['cerrada'] = cantidad
+    data['total'] = sum(data.values())
 
-    data['total'] = total_general
     return render(request, "consultasge/dashboard.html", data)
 
 # --------------------------
@@ -53,10 +36,16 @@ def dashboard(request):
 @login_required
 @rol_requerido("Director/a")
 def nueva_consulta(request):
-    form = ConsultaForm(request.POST or None, request.FILES or None)
+    form = ConsultaForm(
+        request.POST or None,
+        request.FILES or None,
+        user=request.user  # 👈 CLAVE
+    )
+    
     if form.is_valid():
         consulta = crear_consulta(
             director=request.user,
+            cueanexo=form.cleaned_data["cueanexo"],  # 👈 NUEVO
             asunto=form.cleaned_data["asunto"],
             mensaje=form.cleaned_data["mensaje"],
             categoria=form.cleaned_data["categoria"],
@@ -93,10 +82,10 @@ def consulta_detalle(request, id):
     
     if request.method == "POST":
         if consulta.estado == Consulta.Estado.CERRADA:
-            messages.error(request, "La consulta está cerrada y no admite más mensajes.")
-            return redirect("consultasge:consulta_detalle", id=id)
+            return JsonResponse({"error": "Consulta cerrada"}, status=400)
 
         form = RespuestaForm(request.POST, request.FILES)
+        
         if form.is_valid():
             respuesta = form.save(commit=False)
             respuesta.consulta = consulta
@@ -111,6 +100,10 @@ def consulta_detalle(request, id):
             consulta.estado = Consulta.Estado.EN_PROCESO
             consulta.save(update_fields=['estado'])
             
+            # ✅ respuesta AJAX
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"ok": True})
+            
             messages.success(request, "Mensaje enviado al gestor.")
             return redirect("consultasge:consulta_detalle", id=id)
     else:
@@ -118,6 +111,7 @@ def consulta_detalle(request, id):
 
     # ✅ Aquí generamos los colores HSL para cada mensaje
     mensajes = list(consulta.respuestas.all().order_by('fecha'))
+    
     for msg in mensajes:
         hue = (msg.usuario.id * 137) % 360  # número pseudo-aleatorio
         msg.color_hsl = f"hsl({hue}, 70%, 45%)"
@@ -129,18 +123,49 @@ def consulta_detalle(request, id):
         "progreso": progreso_sla(consulta, request.user)
     })
     
+# ===============
+# Notificaciones
+# ===============
 @login_required
 def notificaciones_consultas(request):
     stats = notificaciones_usuario(request.user)
     return JsonResponse(stats)
 
+# ===============================================
+# MENSAJES AJAX (SEGURIDAD FIX PARA CARGA DE HILO)
+# ================================================
 @login_required
 def mensajes_ajax(request, id):
-    consulta = get_object_or_404(Consulta, id=id)
-    # Importante: prefetch para optimizar nombres y adjuntos
-    respuestas = consulta.respuestas.all().order_by('fecha').select_related('usuario').prefetch_related('adjuntos_respuesta')
-    
+
+    consulta = get_object_or_404(
+        Consulta,
+        id=id,
+        usuario=request.user  # ✅ IMPORTANTE (antes estaba mal)
+    )
+
+    respuestas = consulta.respuestas.all() \
+        .order_by('fecha') \
+        .select_related('usuario') \
+        .prefetch_related('adjuntos_respuesta')
+
     return render(request, 'consultasge/includes/lista_mensajes.html', {
         'respuestas': respuestas,
         'consulta': consulta
     })
+
+@login_required
+def dashboard_data(request):
+
+    consultas = Consulta.objects.filter(usuario=request.user)
+
+    data = {
+        "labels": ["Pendientes", "En proceso", "Respondidas", "Cerradas"],
+        "datos": [
+            consultas.filter(estado="pendiente").count(),
+            consultas.filter(estado="en_proceso").count(),
+            consultas.filter(estado="respondida").count(),
+            consultas.filter(estado="cerrada").count(),
+        ]
+    }
+
+    return JsonResponse(data)

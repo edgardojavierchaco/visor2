@@ -1,41 +1,40 @@
 {% for r in respuestas %}
-    <div class="mb-3 d-flex {% if r.usuario.nivelacceso_id == 'Gestor' %}justify-content-start{% else %}justify-content-end{% endif %}">
-        <div class="p-3 rounded-3 shadow-sm {% if r.usuario.nivelacceso_id == 'Gestor' %}bg-white border-start border-info border-4 text-dark{% else %}bg-success-subtle border-end border-success border-4 text-dark{% endif %}" style="max-width: 85%;">
-            
-            <small class="d-block fw-bold border-bottom mb-2 pb-1">
-                {% if r.usuario.nivelacceso_id == 'Gestor' %}
-                    {{ r.usuario.apellido }}, {{ r.usuario.nombres }}
-                {% else %}
-                    {{ r.usuario.apellido }}, {{ r.usuario.nombres }} - {{ r.usuario.username }}
-                {% endif %}
-                <span class="badge bg-opacity-25 {% if r.usuario.nivelacceso_id == 'Gestor' %}bg-info text-dark{% else %}bg-success text-dark{% endif %} ms-1" style="font-size: 0.6rem;">
-                    {{ r.usuario.nivelacceso_id }}
-                </span>
-            </small>
+<div class="mb-2 d-flex {% if r.usuario == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
 
-            <p class="mb-2" style="white-space: pre-wrap;">{{ r.mensaje }}</p>
-            
-            {% if r.adjuntos_respuesta.all %}
-                <div class="mt-2 pt-2 border-top border-dark border-opacity-10">
-                    {% for adj in r.adjuntos_respuesta.all %}
-                        <div class="small">
-                            <a href="{{ adj.archivo.url }}" target="_blank" class="text-decoration-none">
-                                <i class="bi bi-file-earmark-arrow-down"></i> 
-                                {{ adj.archivo.name|cut:"consultas/adjuntos/" }}
-                            </a>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+<div class="p-2 rounded shadow-sm
+{% if r.usuario == request.user %}
+bg-primary text-white
+{% else %}
+bg-white border
+{% endif %}
+" style="max-width:75%;">
 
-            <small class="text-muted d-block text-end mt-2" style="font-size: 0.7rem;">
-                <i class="bi bi-clock"></i> {{ r.fecha|date:"d/m/Y H:i" }}
-            </small>
-        </div>
-    </div>
+<small class="d-block">
+<strong>{{ r.usuario.get_full_name }}</strong>
+</small>
+
+<div style="white-space:pre-wrap;">
+{{ r.mensaje }}
+</div>
+
+{% if r.adjuntos_respuesta.all %}
+<div class="mt-1">
+{% for adj in r.adjuntos_respuesta.all %}
+<a href="{{ adj.archivo.url }}" target="_blank" class="badge bg-secondary">
+📎 Archivo
+</a>
+{% endfor %}
+</div>
+{% endif %}
+
+<small class="text-muted d-block text-end">
+{{ r.fecha|date:"d/m/Y H:i" }}
+</small>
+
+</div>
+</div>
 {% empty %}
-    <div class="text-center py-4 text-muted">
-        <i class="bi bi-chat-dots fs-2 d-block mb-2"></i>
-        Esperando mensajes...
-    </div>
+<div class="text-center text-muted py-4">
+Sin mensajes aún
+</div>
 {% endfor %}

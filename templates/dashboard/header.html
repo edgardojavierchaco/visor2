@@ -385,7 +385,7 @@
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user-edit me-2"></i>Editar Perfil</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <form method="POST" action="{% url 'login:logout' %}">
+                            <form method="POST" action="{% url 'logueo:logout' %}">
                                 {% csrf_token %}
                                 <button class="dropdown-item" type="submit"><i class="fas fa-power-off text-danger me-2"></i> Logout</button>
                             </form>

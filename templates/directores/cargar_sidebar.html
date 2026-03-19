@@ -1,0 +1,133 @@
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- SIDEBAR IZQUIERDO -->
+        <div class="col-md-3 bg-light p-3">
+            <h5 class="text-primary mb-3">Filtrar Matrícula</h5>
+
+            <!-- Select Grado -->
+            <div class="mb-3">
+                <label for="select_grado" class="form-label">Grado / Año</label>
+                <select class="form-select" id="select_grado">
+                    <option value="">Todos</option>
+                    {% for resultado in resultados_detalle %}
+                        {% for fila in resultado.valores %}
+                            {% if fila.2 %}
+                                <option value="{{ fila.2 }}">{{ fila.2 }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Select Turno -->
+            <div class="mb-3">
+                <label for="select_turno" class="form-label">Turno</label>
+                <select class="form-select" id="select_turno" disabled>
+                    <option value="">Seleccione grado primero</option>
+                </select>
+            </div>
+
+            <!-- Select Sección -->
+            <div class="mb-3">
+                <label for="select_seccion" class="form-label">Sección</label>
+                <select class="form-select" id="select_seccion" disabled>
+                    <option value="">Seleccione turno primero</option>
+                </select>
+            </div>
+
+            <!-- Guardamos el cueanexo actual en un hidden -->
+            <input type="hidden" id="cueanexo" value="{{ cueanexo }}">
+        </div>
+
+        <!-- CONTENEDOR DE MATRÍCULA -->
+        <div class="col-md-9" id="contenedor_matricula">
+            {% include 'directores/matricula_cards.html' %}
+        </div>
+
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+
+    function cargarMatricula(grado, turno, seccion) {
+        var cueanexo = $('#cueanexo').val();
+
+        $.ajax({
+            url: "{% url 'directores:ajax_filtrar_matricula' %}",
+            type: 'GET',
+            data: {
+                'cueanexo': cueanexo,
+                'grado': grado,
+                'turno': turno,
+                'seccion': seccion
+            },
+            dataType: 'json',
+            success: function(data) {
+                $('#contenedor_matricula').html(data.html);
+
+                // Llenar Turnos y Secciones para el select dependiente
+                llenarTurnos();
+            },
+            error: function(xhr, status, error) {
+                console.error(error);
+                alert('Error al cargar la matrícula.');
+            }
+        });
+    }
+
+    // Cuando cambia Grado
+    $('#select_grado').on('change', function() {
+        var grado = $(this).val();
+        cargarMatricula(grado, '', '');
+    });
+
+    // Cuando cambia Turno
+    $('#select_turno').on('change', function() {
+        var grado = $('#select_grado').val();
+        var turno = $(this).val();
+        cargarMatricula(grado, turno, '');
+    });
+
+    // Cuando cambia Sección
+    $('#select_seccion').on('change', function() {
+        var grado = $('#select_grado').val();
+        var turno = $('#select_turno').val();
+        var seccion = $(this).val();
+        cargarMatricula(grado, turno, seccion);
+    });
+
+    // Función para llenar Turnos y Secciones según los datos ya cargados
+    function llenarTurnos() {
+        var grado = $('#select_grado').val();
+        var turnos = new Set();
+        var secciones = new Set();
+
+        $('#contenedor_matricula table tbody tr').each(function() {
+            var filaGrado = $(this).find('td:eq(4)').text().trim(); // ajustar índice según columna Grado
+            var filaTurno = $(this).find('td:eq(1)').text().trim(); // columna Turno
+            var filaSeccion = $(this).find('td:eq(3)').text().trim(); // columna Sección
+
+            if (filaGrado === grado || grado === '') {
+                turnos.add(filaTurno);
+                secciones.add(filaSeccion);
+            }
+        });
+
+        // Llenar select Turno
+        var $selectTurno = $('#select_turno');
+        $selectTurno.empty().append('<option value="">Todos</option>');
+        turnos.forEach(function(t) { $selectTurno.append('<option value="'+t+'">'+t+'</option>'); });
+        $selectTurno.prop('disabled', turnos.size === 0);
+
+        // Llenar select Sección
+        var $selectSeccion = $('#select_seccion');
+        $selectSeccion.empty().append('<option value="">Todos</option>');
+        secciones.forEach(function(s) { $selectSeccion.append('<option value="'+s+'">'+s+'</option>'); });
+        $selectSeccion.prop('disabled', secciones.size === 0);
+    }
+
+});
+</script>

@@ -2,210 +2,101 @@
 {% block content %}
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>{{ consulta.asunto }}</h3>
-        <span class="badge {% if consulta.estado == 'cerrada' %}bg-secondary{% else %}bg-primary{% endif %}">
-            {{ consulta.get_estado_display }}
-        </span>
-    </div>
 
-    <!-- Chat -->
-    <div id="chat-container" class="chat-box mb-4 p-3 bg-light rounded" 
-         style="height:500px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
-        <div id="historial-mensajes">
-            {% for msg in mensajes %}
-                {% comment %}Color calculado en la vista y enviado como msg.color_hsl{% endcomment %}
-                <div class="d-flex {% if msg.usuario == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
-                    <div class="d-flex align-items-start gap-2">
-                        {% if msg.usuario != request.user %}
-                        <div class="rounded-circle text-white d-flex justify-content-center align-items-center"
-                             style="width:36px;height:36px;background-color:{{ msg.color_hsl }}; font-weight:bold;">
-                            {{ msg.usuario.apellido|slice:":1" }}{{ msg.usuario.nombres|slice:":1" }}
-                        </div>
-                        {% endif %}
-                        <div class="p-2 rounded shadow-sm" 
-                             style="background-color:{% if msg.usuario == request.user %}#0d6efd;color:white{% else %}#e9ecef;color:black{% endif %}; max-width:70%;">
-                            <small class="text-muted">{{ msg.usuario.get_full_name }} - {{ msg.created_at|date:"d/m/Y H:i" }}</small>
-                            <div>{{ msg.mensaje|linebreaks }}</div>
+<!-- HEADER -->
+<div class="card mb-3 shadow-sm">
+<div class="card-body d-flex justify-content-between flex-wrap">
 
-                            {% if msg.archivos.exists %}
-                            <div class="mt-1">
-                                {% for archivo in msg.archivos.all %}
-                                    <a href="{{ archivo.archivo.url }}" target="_blank" class="badge bg-secondary">{{ archivo.nombre }}</a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <p class="text-muted">No hay mensajes aún.</p>
-            {% endfor %}
-        </div>
-    </div>
+<div>
+<h4>{{ consulta.asunto }}</h4>
 
-    {% if consulta.estado != 'cerrada' %}
-    <div class="card shadow-sm border-0">
-        <div class="card-body bg-white rounded">
-            <h5 class="card-title">Responder al Gestor</h5>
-            <form id="form-respuesta-ajax" method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                
-                <!-- Mensaje -->
-                <div class="mb-3">
-                    <textarea name="mensaje" class="form-control" rows="4" placeholder="Escribí tu respuesta...">{{ form.mensaje.value }}</textarea>
-                    {% for error in form.mensaje.errors %}
-                        <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
-                </div>
-
-                <!-- Archivos -->
-                <div class="mb-3">
-                    <label class="form-label small fw-bold"><i class="bi bi-paperclip"></i> Adjuntos:</label>
-                    <input type="file" name="archivos" id="input-archivos" multiple
-                           class="form-control"
-                           accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
-                    <div id="preview-archivos" class="d-flex flex-wrap gap-2 mt-2"></div>
-                    <div id="drop-zone" class="border rounded p-3 text-center text-muted mt-2">
-                        Arrastrá imágenes aquí o pegá capturas con <strong>Ctrl + V</strong>
-                    </div>
-                </div>
-
-                <div class="text-end">
-                    <button type="submit" id="btn-enviar" class="btn btn-primary px-4">
-                        <i class="bi bi-send me-2"></i>Enviar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    {% endif %}
+<div>
+<strong>{{ consulta.cueanexo }}</strong> - {{ consulta.escuela }}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<small class="text-muted">
+Región: {{ consulta.region }}
+</small>
+</div>
+
+<span class="badge px-3 py-2
+{% if consulta.estado == 'pendiente' %}bg-danger
+{% elif consulta.estado == 'en_proceso' %}bg-warning text-dark
+{% elif consulta.estado == 'respondida' %}bg-success
+{% elif consulta.estado == 'cerrada' %}bg-secondary
+{% endif %}
+">
+{{ consulta.get_estado_display }}
+</span>
+
+</div>
+</div>
+
+<!-- CHAT -->
+<div id="chat-container" class="bg-light p-3 rounded mb-4"
+style="height:500px; overflow-y:auto;">
+
+<div id="historial-mensajes">
+{% include "consultasge/includes/lista_mensajes.html" with respuestas=mensajes %}
+</div>
+
+</div>
+
+{% if consulta.estado != 'cerrada' %}
+<form id="form-respuesta-ajax" method="post" enctype="multipart/form-data">
+{% csrf_token %}
+
+<textarea name="mensaje" class="form-control mb-2" rows="3"
+placeholder="Escribí tu respuesta..."></textarea>
+
+<input type="file" name="archivos" multiple class="form-control mb-2">
+
+<div class="text-end">
+<button class="btn btn-primary" id="btn-enviar">
+Enviar
+</button>
+</div>
+
+</form>
+{% endif %}
+
+</div>
 
 <script>
-const chatContainer = document.getElementById('chat-container');
-const historialDiv = document.getElementById('historial-mensajes');
-const formRespuesta = document.getElementById('form-respuesta-ajax');
-const btnEnviar = document.getElementById('btn-enviar');
+const chat = document.getElementById("chat-container");
+const historial = document.getElementById("historial-mensajes");
 
-let archivos = [];
-const inputArchivos = document.getElementById('input-archivos');
-const preview = document.getElementById('preview-archivos');
-const dropZone = document.getElementById('drop-zone');
-const MAX_SIZE = 5*1024*1024;
-
-// Scroll al final
-function scrollAlFinal() { chatContainer.scrollTop = chatContainer.scrollHeight; }
-window.onload = scrollAlFinal;
-
-// Refrescar chat cada 5s
-function refrescarChat() {
-    fetch("{% url 'consultasge:mensajes_ajax' consulta.id %}")
-        .then(r => r.text())
-        .then(html => { 
-            const atBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
-            historialDiv.innerHTML = html; 
-            if(atBottom) scrollAlFinal();
-        });
+function scrollBottom(){
+    chat.scrollTop = chat.scrollHeight;
 }
-setInterval(refrescarChat, 5000);
+scrollBottom();
 
-// AJAX enviar mensaje
-if(formRespuesta){
-    formRespuesta.addEventListener('submit', async function(e){
-        e.preventDefault();
-        btnEnviar.disabled = true;
-        btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
-        
-        const formData = new FormData(this);
-        archivos.forEach(f => formData.append('archivos', f));
-
-        await fetch(window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With':'XMLHttpRequest'}
-        });
-
-        formRespuesta.reset();
-        archivos = [];
-        renderPreview();
-        refrescarChat();
-        scrollAlFinal();
-
-        btnEnviar.disabled = false;
-        btnEnviar.innerHTML = '<i class="bi bi-send me-2"></i>Enviar';
-    });
+function refrescar(){
+fetch("{% url 'consultasge:mensajes_ajax' consulta.id %}")
+.then(r=>r.text())
+.then(html=>{
+    historial.innerHTML = html;
+    scrollBottom();
+});
 }
 
-// Manejo de archivos
-function actualizarInput(){
-    const dt = new DataTransfer();
-    archivos.forEach(f => dt.items.add(f));
-    inputArchivos.files = dt.files;
-}
+setInterval(refrescar, 5000);
 
-function eliminarArchivo(i){
-    archivos.splice(i,1);
-    renderPreview();
-}
+// AJAX enviar
+document.getElementById("form-respuesta-ajax")?.addEventListener("submit", async e=>{
+e.preventDefault();
 
-function renderPreview(){
-    preview.innerHTML = "";
-    archivos.forEach((file,i)=>{
-        const reader = new FileReader();
-        reader.onload = e=>{
-            const div = document.createElement('div');
-            div.className = "position-relative border rounded";
-            div.style.width="120px";
-            div.innerHTML = `
-                <img src="${e.target.result}" style="width:120px;height:90px;object-fit:cover;border-radius:4px;">
-                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" onclick="eliminarArchivo(${i})">✕</button>
-            `;
-            preview.appendChild(div);
-        };
-        reader.readAsDataURL(file);
-    });
-    actualizarInput();
-}
+let formData = new FormData(e.target);
 
-async function comprimirImagen(file){
-    return new Promise(resolve=>{
-        const reader = new FileReader();
-        reader.onload = e=>{
-            const img = new Image();
-            img.onload = function(){
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const MAX_WIDTH = 1600;
-                let w = img.width;
-                let h = img.height;
-                if(w>MAX_WIDTH){ h*=MAX_WIDTH/w; w=MAX_WIDTH; }
-                canvas.width = w; canvas.height = h;
-                ctx.drawImage(img,0,0,w,h);
-                canvas.toBlob(blob=>{
-                    resolve(new File([blob], file.name.replace(/\.[^/.]+$/,"")+".jpg",{type:'image/jpeg'}));
-                },'image/jpeg',0.75);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
+await fetch(window.location.href,{
+method:"POST",
+body:formData,
+headers:{'X-Requested-With':'XMLHttpRequest'}
+});
 
-async function procesarArchivo(file){
-    if(file.size>MAX_SIZE){ Swal.fire({icon:'error',title:'Archivo demasiado grande',text:'Máximo 5MB'}); return; }
-    if(file.type.startsWith('image/')) file = await comprimirImagen(file);
-    archivos.push(file);
-    renderPreview();
-}
-
-inputArchivos.addEventListener('change', async ()=>{ for(let f of inputArchivos.files) await procesarArchivo(f); });
-dropZone.addEventListener('dragover', e=>{e.preventDefault(); dropZone.classList.add('bg-light');});
-dropZone.addEventListener('dragleave', e=>{dropZone.classList.remove('bg-light');});
-dropZone.addEventListener('drop', async e=>{e.preventDefault(); dropZone.classList.remove('bg-light'); for(let f of e.dataTransfer.files) await procesarArchivo(f);});
-document.addEventListener('paste', async e=>{ const items=e.clipboardData.items; for(let i=0;i<items.length;i++){ if(items[i].type.indexOf('image')!==-1){ await procesarArchivo(items[i].getAsFile()); Swal.fire({icon:'success',title:'Captura pegada',timer:1200,showConfirmButton:false}); } }});
+e.target.reset();
+refrescar();
+});
 </script>
 
 {% endblock %}

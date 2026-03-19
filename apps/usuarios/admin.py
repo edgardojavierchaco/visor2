@@ -1,59 +1,98 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import UsuariosVisualizador, NivelAcceso
+from .models import UsuariosVisualizador, NivelAcceso, PerfilUsuario, Rol
+from .forms import AdminUserCreationForm
+from django import forms
+from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
 
+# --------------------------
+# Form para edición (necesario)
+# --------------------------
+class AdminUserChangeForm(forms.ModelForm):
+    password = ReadOnlyPasswordHashField(label="Contraseña")
 
+    class Meta:
+        model = UsuariosVisualizador
+        fields = '__all__'
+
+
+# --------------------------
+# Inline PerfilUsuario
+# --------------------------
+class PerfilUsuarioInline(admin.StackedInline):
+    model = PerfilUsuario
+    can_delete = False
+    fk_name = 'usuario'
+    extra = 0
+    verbose_name_plural = 'Perfil'
+
+
+# --------------------------
+# Admin UsuariosVisualizador
+# --------------------------
 class UsuariosVisualizadorAdmin(UserAdmin):
-    """
-    Administración de Usuarios Visualizadores.
+    add_form = AdminUserCreationForm
+    form = AdminUserChangeForm
+    model = UsuariosVisualizador
 
-    Configura la interfaz de administración para el modelo UsuariosVisualizador.
+    list_display = ('username','apellido','nombres','nivelacceso','get_rol','activo','is_staff','is_superuser')
+    list_filter = ('nivelacceso','perfil__rol','activo','is_staff','is_superuser')
+    search_fields = ('username','apellido','nombres','perfil__rol__nombre')
 
-    Atributos:
-        list_display: Campos a mostrar en la lista de usuarios.
-        list_filter: Filtros disponibles en la lista de usuarios.
-        search_fields: Campos por los cuales se puede buscar usuarios.
-        fieldsets: Estructura de campos en el formulario de edición.
-        add_fieldsets: Estructura de campos en el formulario de creación.
-        ordering: Ordenamiento de usuarios por apellido y nombres.
-        filter_horizontal: Campos que pueden ser seleccionados en múltiples relaciones.
-    """
-    
-    list_display = ('username', 'apellido', 'nombres', 'correo', 'telefono', 'nivelacceso', 'activo', 'is_staff', 'is_superuser')
-    list_filter = ('nivelacceso', 'activo', 'is_staff', 'is_superuser')
-    search_fields = ('username', 'apellido', 'nombres', 'correo', 'telefono')
+    #inlines = (PerfilUsuarioInline,)
+
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Información Personal', {'fields': ('apellido', 'nombres', 'correo', 'telefono', 'nivelacceso')}),
-        ('Permisos', {'fields': ('activo', 'is_staff', 'is_superuser','groups','user_permissions')}),
+        (None, {'fields': ('username','password')}),
+        ('Información', {'fields': ('apellido','nombres','correo','telefono','nivelacceso')}),
+        ('Permisos', {'fields': ('activo','is_staff','is_superuser','groups','user_permissions')}),
     )
+
+    # 🔥 IMPORTANTE: password1 y password2
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'password', 'apellido', 'nombres', 'correo', 'telefono', 'nivelacceso', 'activo', 'is_staff', 'is_superuser'),
+            'fields': (
+                'username',
+                'password1',
+                'password2',
+                'apellido',
+                'nombres',
+                'correo',
+                'telefono',
+                'nivelacceso',
+                'activo',
+                'is_staff',
+                'is_superuser',
+            ),
         }),
     )
-    ordering = ('apellido', 'nombres')
-    filter_horizontal = ('groups', 'user_permissions')
+
+    def get_rol(self, obj):
+        return obj.perfil.rol.nombre if hasattr(obj,'perfil') and obj.perfil.rol else '-'
+    get_rol.short_description = 'Rol'
 
 
+# --------------------------
+# Admin Rol
+# --------------------------
+class RolAdmin(admin.ModelAdmin):
+    list_display = ('nombre','categoria_acceso','descripcion')
+    search_fields = ('nombre',)
+
+
+# --------------------------
+# Admin NivelAcceso
+# --------------------------
 class NivelAccesoAdmin(admin.ModelAdmin):
-    """
-    Administración de Niveles de Acceso.
-
-    Configura la interfaz de administración para el modelo NivelAcceso.
-
-    Atributos:
-        list_display: Campos a mostrar en la lista de niveles de acceso.
-        search_fields: Campos por los cuales se puede buscar niveles de acceso.
-    """
-    
     list_display = ('tacceso',)
     search_fields = ('tacceso',)
 
 
+# --------------------------
+# Registro admin
+# --------------------------
 admin.site.register(UsuariosVisualizador, UsuariosVisualizadorAdmin)
+admin.site.register(PerfilUsuario)
+admin.site.register(Rol, RolAdmin)
 admin.site.register(NivelAcceso, NivelAccesoAdmin)
-
-

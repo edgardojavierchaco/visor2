@@ -49,6 +49,7 @@ class DatosEscuela(models.Model):
     dist_munic=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Distancia_Municipio')
     dist_tierra=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Distancia_Tierra')
     dist_pavim=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Distancia_Pavimento')
+    sup_terreno=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Sup_Terreno')
     
     class Meta:
         verbose_name='Dato_Escuela'
@@ -75,6 +76,7 @@ class DatosEscuela(models.Model):
         item=self.dist_munic
         item=self.dist_tierra
         item=self.dist_pavim
+        item=self.sup_terrreno
         return item
     
 
@@ -89,6 +91,7 @@ class DominioEscuela(models.Model):
     plan_ampl=models.CharField(max_length=255, verbose_name='Plan_Ampliación')
     sup_terreno=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Sup_Terreno')
     sup_cub=models.DecimalField(max_digits=6,decimal_places=2, verbose_name='Sup_Cubierta')
+    
     
     
     class Meta:
@@ -108,7 +111,7 @@ class DominioEscuela(models.Model):
         item=self.plan_const
         item=self.ampliacion
         item=self.plan_ampl
-        item=self.sup_terreno
+        item=self.sup_terrreno
         item=self.sup_cub
         return item
 

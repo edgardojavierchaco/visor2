@@ -86,8 +86,7 @@ class UsuariosForm(ModelForm):
         # Encriptar la contraseña usando SHA-256
         if 'password' in self.cleaned_data:
             raw_password = self.cleaned_data['password']
-            hashed_password = hashlib.sha256(raw_password.encode()).hexdigest()
-            instance.password = hashed_password
+            instance.set_password(raw_password)  # Utiliza el método set_password para encriptar la contraseña
         
         if commit:
             instance.save()
@@ -313,3 +312,29 @@ class UserForm(ModelForm):
         except Exception as e:
             data['error'] = str(e)
         return data 
+
+
+class AdminUserCreationForm(forms.ModelForm):
+    password1 = forms.CharField(label='Contraseña', widget=forms.PasswordInput)
+    password2 = forms.CharField(label='Confirmar contraseña', widget=forms.PasswordInput)
+
+    class Meta:
+        model = UsuariosVisualizador
+        fields = ('username','apellido','nombres','correo','telefono','nivelacceso')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get("password1")
+        p2 = cleaned_data.get("password2")
+
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError("Las contraseñas no coinciden")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password1"])
+        if commit:
+            user.save()
+        return user

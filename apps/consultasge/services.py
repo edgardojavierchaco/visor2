@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from .models import Consulta, Adjunto, SLA_HORAS_DEFAULT
 from .models_padron import CapaUnicaOfertas
 from apps.usuarios.models_regional import RegionalUsuariosAgentes
+from apps.usuarios.models import UsuarioCueanexo
 from .utils import horas_habiles_transcurridas, TURNOS, progreso_sla, estado_sla, validar_consulta_regional
 
 # --------------------------
@@ -20,18 +21,26 @@ def obtener_gestor_por_region(region):
 # --------------------------
 # Crear nueva consulta
 # --------------------------
-def crear_consulta(director, asunto, mensaje, categoria=None, archivos=None):
+def crear_consulta(director, cueanexo, asunto, mensaje, categoria=None, archivos=None):
+    # 🔒 Validar que el usuario tenga ese cueanexo
+    if not UsuarioCueanexo.objects.filter(
+        usuario=director,
+        cueanexo=cueanexo
+    ).exists():
+        raise PermissionDenied("No tiene acceso a ese establecimiento.")
+    
+    # 🔎 Escuela
     try:
-        escuela = CapaUnicaOfertas.objects.get(cueanexo=director.username)
+        escuela = CapaUnicaOfertas.objects.get(cueanexo=cueanexo)
     except CapaUnicaOfertas.DoesNotExist:
-        raise PermissionDenied("No se encontró escuela asociada al usuario.")
+        raise PermissionDenied("No se encontró la escuela asociada al cueanexo.")
 
     sla = categoria.sla_horas if categoria else SLA_HORAS_DEFAULT
     gestor_username = obtener_gestor_por_region(escuela.region_loc)
 
     consulta = Consulta.objects.create(
         usuario=director,
-        cueanexo=director.username,
+        cueanexo=cueanexo,
         escuela=escuela.nom_est,
         region=escuela.region_loc,
         asunto=asunto,

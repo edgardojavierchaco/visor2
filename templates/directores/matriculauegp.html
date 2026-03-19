@@ -1,160 +1,220 @@
-{% extends 'dashboard/bodydirectoruegp.html' %}
-
+{% extends 'dashboard/bodydirector.html' %}
 {% load static %}
 
 {% block content %}
+<div class="dashboard-wrapper">
 
-<head>
-    <meta charset="utf-8">
-    <title>Resultados de consulta</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.css">
-    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.5.1.js"></script>
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
-    <style>
-        .card {
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-    {% block content_header %}
-            <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <h1 class="m-0 text-dark">  <small></small></h1>
-                            </div>
-                            <div class="col-sm-6">
-                                <ol class="breadcrumb float-sm-right">
-                                    <li class="breadcrumb-item"><a href="{% url 'directores:institucional'%}">Regresar</a><li>                                    
-                                    <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-        {% endblock %}
-    
-    <h5 class="text-left" style="color:red">* Fuente: Relevamiento Anual 2.024</h5>
-    
-    {% if resultados_detalle%}
-        <div>
-            {% for resultado in resultados_detalle %}
-                <table id="tabla_{{ forloop.counter }}" class="display" style="width:100%">
-                    <thead>
-                        <tr>
-                            {% for encabezado in resultado.encabezados %}
-                            <th>{{ encabezado }}</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for fila in resultado.valores %}
-                        <tr>
-                            {% for valor in fila %}
-                            <td>{{ valor }}</td>
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                            <tr>
-                                <th>Total</th>
-                                <th id="totalTotales"></th>
-                                
-                            </tr>
-                        </tfoot>
-                </table>
-                <script>
-                    $(document).ready( function () {
-                        $('#tabla_{{ forloop.counter }}').DataTable({
-                            responsive: true,
-                            autoWidth: false,
-                            language: {
-                                url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
-                            },      
-                            dom: '<"top"lBf>rt<"bottom"ip>',
-                            buttons: [
-                                {
-                                    extend: 'excel',
-                                    text: '<i class="fas fa-file-excel"></i>',
-                                    className: 'btn btn-secondary',
-                                    exportOptions: {
-                                        columns: ':visible'
-                                    },
-                                    titleAttr: 'Exportar a Excel',
-                                    title: 'Nombre_del_archivo'
-                                },
-                                {
-                                    extend: 'csv',
-                                    text: '<i class="fas fa-file-csv"></i>',
-                                    className: 'btn btn-secondary',
-                                    exportOptions: {
-                                        columns: ':visible'
-                                    },
-                                    titleAttr: 'Exportar a CSV',
-                                    title: 'Nombre_del_archivo'
-                                },
-                                {
-                                    extend: 'pdf',
-                                    text: '<i class="fas fa-file-pdf"></i>',
-                                    className: 'btn btn-secondary',
-                                    exportOptions: {
-                                        columns: ':visible'
-                                    },
-                                    titleAttr: 'Exportar a PDF',
-                                    title: 'Nombre_del_archivo'
-                                },
-                                {
-                                    extend: 'print',
-                                    text: '<i class="fas fa-print"></i>',
-                                    className: 'btn btn-secondary',
-                                    exportOptions: {
-                                        columns: ':visible'
-                                    },
-                                    titleAttr: 'Imprimir',
-                                    title: 'Nombre_del_archivo'
-                                }
-                            ],
-                            footerCallback: function ( row, data, start, end, display ) {
-                                var api = this.api();
-                                
-                                // Total over all pages
-                                var totalTotales = api
-                                    .column( 5, { search: 'applied'} )
-                                    .data()
-                                    .reduce( function (a, b) {
-                                        return a + parseInt(b || 0);
-                                    }, 0 );
-                                // Update footer
-                                $('#totalTotales').html(totalTotales);
-                                
-                            }
-                        });
-                    });
-                </script>
-
-
-            {% endfor %}
-
+    <!-- SIDEBAR FILTROS DESKTOP -->
+    <aside class="filter-sidebar d-none d-lg-block">
+        <div class="sidebar-header">
+            <h5>Filtrar Matrícula</h5>
         </div>
-    {% else %}
-        <p class="text-center">No se encontraron resultados para el cueanexo proporcionado.</p>
-    {% endif %}
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Obtener el valor de cueanexo de la URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const cueanexo = urlParams.get('cueanexo');
-    
-        // Mostrar el número de cueanexo en el título
-        document.getElementById('cueanexo').textContent = cueanexo;
-    </script>
-    <script>        
-        console.log("Resultados_detalle:",{{ resultados_detalle}})
-    </script>
+        <div class="filter-group">
+            <label class="filter-label" for="select_grado"><i class="fas fa-school"></i> Grado / Año</label>
+            <select class="form-select select2" id="select_grado">
+                <option value="">Todos</option>
+            </select>
+        </div>
 
-</body>
+        <div class="filter-group">
+            <label class="filter-label" for="select_turno"><i class="fas fa-clock"></i> Turno</label>
+            <select class="form-select select2" id="select_turno" disabled>
+                <option value="">Seleccione grado primero</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="select_seccion"><i class="fas fa-th-large"></i> Sección</label>
+            <select class="form-select select2" id="select_seccion" disabled>
+                <option value="">Seleccione turno primero</option>
+            </select>
+        </div>
+
+        <input type="hidden" id="cueanexo" value="{{ cueanexo }}">
+
+        <div class="sidebar-actions">
+            <button class="btn-limpiar" id="btn-limpiar">Limpiar filtros</button>
+        </div>
+    </aside>
+
+    <!-- OFFCANVAS MÓVIL -->
+    <div class="d-lg-none mb-3">
+        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
+            Filtrar Matrícula
+        </button>
+
+        <div class="offcanvas offcanvas-start" id="offcanvasSidebar">
+            <div class="offcanvas-header">
+                <h5>Filtros</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+            </div>
+            <div class="offcanvas-body">
+                <div class="filter-group">
+                    <label class="filter-label" for="select_grado_m"><i class="fas fa-school"></i> Grado / Año</label>
+                    <select class="form-select select2" id="select_grado_m">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label" for="select_turno_m"><i class="fas fa-clock"></i> Turno</label>
+                    <select class="form-select select2" id="select_turno_m" disabled>
+                        <option value="">Seleccione grado primero</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label" for="select_seccion_m"><i class="fas fa-th-large"></i> Sección</label>
+                    <select class="form-select select2" id="select_seccion_m" disabled>
+                        <option value="">Seleccione turno primero</option>
+                    </select>
+                </div>
+
+                <button class="btn-limpiar" id="btn-limpiar-m">Limpiar filtros</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL DE CONTENIDO -->
+    <section class="content-panel">
+        <div class="content-header-bar">
+            <h4>Matrícula</h4>
+        </div>
+
+        <!-- FILTROS ACTIVOS -->
+        <div class="active-filters" id="active-filters"></div>
+
+        <!-- CONTENEDOR DE MATRÍCULA -->
+        <div class="table-section" id="contenedor_matricula">
+            {% include 'directores/matricula_cards.html' %}
+        </div>
+    </section>
+</div>
+
+<!-- JS y Select2 -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(function(){
+
+    // Inicializar Select2
+    $('.select2').select2({width:'100%', placeholder:'Seleccione una opción', allowClear:true});
+
+    // Obtener filtros seleccionados (desktop o móvil)
+    function getFiltros(){
+        return {
+            grado: $('#select_grado').val() || $('#select_grado_m').val(),
+            turno: $('#select_turno').val() || $('#select_turno_m').val(),
+            seccion: $('#select_seccion').val() || $('#select_seccion_m').val()
+        };
+    }
+
+    // Cargar matrícula según filtros
+    function cargarMatricula(){
+        var cueanexo = $('#cueanexo').val();
+        var f = getFiltros();
+
+        $.getJSON("{% url 'directores:ajax_filtrar_matricula' %}", {cueanexo, grado:f.grado, turno:f.turno, seccion:f.seccion}, function(data){
+            $('#contenedor_matricula').html(data.html);
+
+            // Actualizar selects con las opciones devueltas
+            ['#select_grado','#select_turno','#select_seccion','#select_grado_m','#select_turno_m','#select_seccion_m'].forEach(s=>{
+                var ops = s.includes('grado')? data.grados : s.includes('turno')? data.turnos : data.secciones;
+                var val = s.includes('grado')? f.grado : s.includes('turno')? f.turno : f.seccion;
+                actualizarSelect(s, ops, val);
+            });
+
+            // Actualizar filtros activos
+            actualizarFiltrosActivos(f.grado,f.turno,f.seccion);
+        });
+    }
+
+    // Actualizar un select con opciones
+    function actualizarSelect(selector, opciones, valor){
+        var $s=$(selector);
+        $s.prop('disabled', opciones.length===0).empty().append('<option value="">Todos</option>');
+        opciones.forEach(o=>$s.append(`<option value="${o}">${o}</option>`));
+        $s.val(valor).trigger('change.select2');
+    }
+
+    // Mostrar filtros activos
+    function actualizarFiltrosActivos(grado, turno, seccion){
+        var $c = $('#active-filters'); 
+        $c.empty();
+        if(grado) $c.append(`<div class="filter-chip">Grado: ${grado} <span class="remove-chip" data-target="select_grado">&times;</span></div>`);
+        if(turno) $c.append(`<div class="filter-chip">Turno: ${turno} <span class="remove-chip" data-target="select_turno">&times;</span></div>`);
+        if(seccion) $c.append(`<div class="filter-chip">Sección: ${seccion} <span class="remove-chip" data-target="select_seccion">&times;</span></div>`);
+    }
+
+    // Inicializar carga
+    cargarMatricula();
+
+    // Cambios en selects
+    $('#select_grado,#select_turno,#select_seccion,#select_grado_m,#select_turno_m,#select_seccion_m').on('change', cargarMatricula);
+
+    // Botón limpiar filtros
+    $('#btn-limpiar,#btn-limpiar-m').on('click',function(){
+        $('#select_grado,#select_turno,#select_seccion,#select_grado_m,#select_turno_m,#select_seccion_m').val('').trigger('change.select2');
+        cargarMatricula();
+    });
+
+    // Eliminar filtro activo
+    $(document).on('click','.remove-chip',function(){
+        var t=$(this).data('target'); 
+        // Limpiar tanto desktop como mobile
+        $('#'+t+',#'+t+'_m').val('').trigger('change.select2'); 
+        cargarMatricula();
+    });
+
+});
+</script>
+
+<style>
+:root{
+    --color-primary:#003366;
+    --color-accent:#0055a5;
+    --color-light:#f2f5f8;
+    --color-border:#c3d3e0;
+    --color-text:#1e2d3d;
+    --color-muted:#6b849e;
+    --card-bg:#ffffff;
+}
+
+body{font-family:'Segoe UI',sans-serif; background:var(--color-light); color:var(--color-text);}
+.dashboard-wrapper{display:flex; gap:0; min-height:500px; align-items:stretch; overflow:visible;}
+.filter-sidebar{width:240px; background:#fff; border-right:2px solid var(--color-border); border-radius:12px 0 0 12px; padding-bottom:12px; box-shadow:4px 0 16px rgba(0,0,0,0.05);}
+.sidebar-header{background:linear-gradient(135deg,var(--color-primary),var(--color-accent)); color:#fff; padding:16px 20px; border-radius:12px 0 0 0; font-weight:700; text-transform:uppercase; font-size:0.95rem;}
+.filter-group{padding:12px 16px; border-bottom:1px solid var(--color-border);}
+.filter-label{display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600; color:var(--color-primary);}
+.filter-control select{width:100%; padding:6px 10px; border:1.5px solid var(--color-border); border-radius:6px; font-size:0.82rem; background:var(--color-light);}
+.filter-control select:focus{outline:none; border-color:var(--color-accent); background:#fff;}
+.sidebar-actions{padding:12px 16px; display:flex; flex-direction:column; gap:6px; background:var(--color-light);}
+.btn-limpiar{background:#fff; color:var(--color-muted); border:1.5px solid var(--color-border); padding:6px 16px; border-radius:7px; font-size:0.8rem; cursor:pointer;}
+.btn-limpiar:hover{border-color:var(--color-accent); color:var(--color-accent);}
+
+/* PANEL */
+.content-panel{flex:1; background:#fff; border-radius:0 12px 12px 0; box-shadow:0 4px 20px rgba(0,0,0,0.05); padding:0; overflow:auto;}
+.content-header-bar{background:linear-gradient(135deg,var(--color-primary),var(--color-accent)); color:#fff; padding:16px 24px; font-weight:600;}
+.active-filters{padding:10px 24px; display:flex; flex-wrap:wrap; gap:6px; background:var(--color-light); border-bottom:1px solid var(--color-border);}
+.filter-chip{background:var(--color-accent); color:#fff; padding:4px 10px; border-radius:20px; font-size:0.72rem; font-weight:600; display:flex; align-items:center; gap:5px;}
+.filter-chip .remove-chip{cursor:pointer; opacity:0.8;}
+.filter-chip .remove-chip:hover{opacity:1;}
+
+/* TABLE / CARDS */
+.table-section{padding:20px; min-height:600px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px;}
+.table-section .card-matricula{background:var(--card-bg); border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); padding:14px; transition:transform 0.2s;}
+.table-section .card-matricula:hover{transform:translateY(-3px);}
+
+/* RESPONSIVE */
+@media(max-width:992px){
+    .dashboard-wrapper{flex-direction:column;}
+    .filter-sidebar{width:100%; border-radius:12px 12px 0 0;}
+    .content-panel{border-radius:0 0 12px 12px;}
+    .table-section{padding:12px 10px; grid-template-columns:1fr;}
+}
+</style>
 {% endblock %}

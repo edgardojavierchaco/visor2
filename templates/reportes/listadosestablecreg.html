@@ -93,7 +93,7 @@ $(function(){
         if(!region){ $('#resultado-container').hide(); return; }
 
         $.ajax({
-            url:"{% url 'reportes:consulta_ofertas' %}",
+            url:"{% url 'reportes:consulta_ofertas_reg' %}",
             data:{region:region},
             success:function(data){
                 actualizarDatos(data);

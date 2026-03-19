@@ -6,6 +6,7 @@ from .views_gestor import (
     gestor_consultas,
     gestor_responder,
     cerrar_consulta,
+    mensajes_ajax_gestor,
     #gestor_dashboard_interactivo_json,
     #gestor_dashboard_interactivo_template
 )
@@ -25,11 +26,13 @@ urlpatterns = [
     path("mis/",views.consultas_lista,name="consultas_lista"),
     path("<int:id>/",views.consulta_detalle,name="consulta_detalle"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("dashboard/data/", views.dashboard_data, name="dashboard_data"),
     path("gestor/", gestor_consultas, name="gestor_consultas"),
     path("gestor/<int:pk>/", gestor_responder, name="gestor_responder"),
     path("gestor/cerrar/<int:pk>/", cerrar_consulta, name="cerrar_consulta"),
     path("notificaciones/",views.notificaciones_consultas, name="notificaciones_consultas"),
     path("<int:id>/mensajes/", views.mensajes_ajax, name="mensajes_ajax"),
+    path('gestor/mensajes/<int:pk>/', mensajes_ajax_gestor, name='mensajes_ajax_gestor'),
     # Dashboard interactivo (template + datos JSON)
     #path("gestor/dashboard/barras/", gestor_dashboard_interactivo_template, name="gestor_dashboard_barras_template"),
     #path(     "gestor/dashboard/barras/json/",         gestor_dashboard_interactivo_json, name="gestor_dashboard_barras_json"),

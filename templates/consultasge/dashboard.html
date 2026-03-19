@@ -2,99 +2,106 @@
 {% block content %}
 
 <div class="container mt-4">
-    <h2>Dashboard de Consultas SGE - {{ user.username }}</h2>
-    <hr>
+    <h2 class="mb-3">Dashboard - {{ user.username }}</h2>
 
-    <div class="row mb-4">
+    <!-- CARDS -->
+    <div class="row g-3 mb-4 text-center">
         <div class="col-md-2">
-            <div class="card shadow-sm border-warning">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Pendientes</h6>
-                    <h2 class="text-warning fw-bold">{{ pendientes }}</h2>
+            <div class="card border-warning shadow-sm">
+                <div class="card-body">
+                    <small>Pendientes</small>
+                    <h3 class="text-warning" id="pendientes">{{ pendientes }}</h3>
                 </div>
             </div>
         </div>
 
         <div class="col-md-2">
-            <div class="card shadow-sm border-info">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">En proceso</h6>
-                    <h2 class="text-info fw-bold">{{ en_proceso }}</h2>
+            <div class="card border-info shadow-sm">
+                <div class="card-body">
+                    <small>En proceso</small>
+                    <h3 class="text-info" id="en_proceso">{{ en_proceso }}</h3>
                 </div>
             </div>
         </div>
 
         <div class="col-md-2">
-            <div class="card shadow-sm border-success">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Respondidas</h6>
-                    <h2 class="text-success fw-bold">{{ respondidas }}</h2>
+            <div class="card border-success shadow-sm">
+                <div class="card-body">
+                    <small>Respondidas</small>
+                    <h3 class="text-success" id="respondidas">{{ respondidas }}</h3>
                 </div>
             </div>
         </div>
 
         <div class="col-md-2">
-            <div class="card shadow-sm border-secondary">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Cerradas</h6>
-                    <h2 class="text-secondary fw-bold">{{ cerrada }}</h2>
+            <div class="card border-secondary shadow-sm">
+                <div class="card-body">
+                    <small>Cerradas</small>
+                    <h3 class="text-secondary" id="cerrada">{{ cerrada }}</h3>
                 </div>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm bg-light">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Total consultas</h6>
-                    <h2 class="fw-bold">{{ total }}</h2>
+            <div class="card bg-light shadow-sm">
+                <div class="card-body">
+                    <small>Total</small>
+                    <h3 id="total">{{ total }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm p-3">
-                <canvas id="chartConsultas"></canvas>
-            </div>
-        </div>
+    <!-- GRÁFICO -->
+    <div class="card p-3 shadow-sm">
+        <canvas id="chartConsultas"></canvas>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-    const ctx = document.getElementById('chartConsultas').getContext('2d');
-    
-    new Chart(ctx, {
+const ctx = document.getElementById('chartConsultas');
+let chart;
+
+function renderChart(data) {
+    if (chart) {
+        chart.data.datasets[0].data = data.datos;
+        chart.update();
+        return;
+    }
+
+    chart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Pendientes', 'En proceso', 'Respondidas', 'Cerradas'],
+            labels: data.labels,
             datasets: [{
-                label: 'Distribución de Consultas',
-                data: [
-                    {{ pendientes|default:0 }},
-                    {{ en_proceso|default:0 }},
-                    {{ respondidas|default:0 }},
-                    {{ cerrada|default:0 }}
-                ],
-                backgroundColor: [
-                    '#ffc107', // Warning
-                    '#0dcaf0', // Info
-                    '#198754', // Success
-                    '#6c757d'  // Secondary
-                ],
-                hoverOffset: 4
+                data: data.datos,
+                backgroundColor: ['#ffc107','#0dcaf0','#198754','#6c757d']
             }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                }
-            }
         }
     });
+}
+
+// 🔄 Actualización automática
+function actualizarDashboard() {
+    fetch("{% url 'consultasge:dashboard_data' %}")
+        .then(r => r.json())
+        .then(data => {
+            renderChart(data);
+
+            document.getElementById("pendientes").innerText = data.datos[0];
+            document.getElementById("en_proceso").innerText = data.datos[1];
+            document.getElementById("respondidas").innerText = data.datos[2];
+            document.getElementById("cerrada").innerText = data.datos[3];
+
+            document.getElementById("total").innerText =
+                data.datos.reduce((a,b)=>a+b,0);
+        });
+}
+
+actualizarDashboard();
+setInterval(actualizarDashboard, 15000);
 </script>
 
 {% endblock %}

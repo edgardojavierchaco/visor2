@@ -33,8 +33,8 @@ class OfertaEducativaService:
         """Lógica completa de filtrado para marcadores en el mapa interactivo."""
         query = """
             SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, 
-                   region_loc, calle, numero, localidad, cui_loc, cuof_loc, acronimo 
-            FROM v_capa_unica_ofertas_cui_cuof WHERE 1=1
+                   region_loc, calle, numero, localidad, acronimo 
+            FROM v_capa_unica_ofertas WHERE 1=1
         """
         sql_params = []
         

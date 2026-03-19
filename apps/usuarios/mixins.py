@@ -1,5 +1,7 @@
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
+from django.conf import settings
 
 class AdminRequiredMixin(UserPassesTestMixin):
     """
@@ -37,3 +39,45 @@ class AdminRequiredMixin(UserPassesTestMixin):
         
         # Si el usuario no pertenece a ninguno de los grupos permitidos, lanza una excepción de permiso denegado
         raise PermissionDenied("No tiene permisos para acceder a esta página")
+
+
+class RolRequiredMixin:
+    roles_permitidos = []
+
+    def dispatch(self, request, *args, **kwargs):
+
+        user = request.user
+
+        if not user.is_authenticated or not user.is_staff:
+            return redirect('login')
+
+        if not hasattr(user, 'perfil') or not user.perfil.rol:
+            return redirect(settings.LOGIN_REDIRECT_URL)
+
+        rol = user.perfil.rol.nombre
+
+        if self.roles_permitidos and rol not in self.roles_permitidos:
+            return redirect(settings.LOGIN_REDIRECT_URL)
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class CategoriaRequiredMixin:
+    categorias_permitidas = []
+
+    def dispatch(self, request, *args, **kwargs):
+
+        user = request.user
+
+        if not user.is_authenticated or not user.is_staff:
+            return redirect('login')
+
+        if not hasattr(user, 'perfil') or not user.perfil.rol:
+            return redirect(settings.LOGIN_REDIRECT_URL)
+
+        categoria = user.perfil.rol.categoria_acceso
+
+        if self.categorias_permitidas and categoria not in self.categorias_permitidas:
+            return redirect(settings.LOGIN_REDIRECT_URL)
+
+        return super().dispatch(request, *args, **kwargs)

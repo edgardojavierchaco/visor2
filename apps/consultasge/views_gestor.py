@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -28,9 +29,10 @@ def gestor_consultas(request):
     region = perfiles.first().region_loc
     ahora = timezone.now()
 
+    base_qs = Consulta.objects.filter(region=region)
+
     consultas = (
-        Consulta.objects
-        .filter(region=region)
+        base_qs
         .select_related("usuario")
         .annotate(total_respuestas=Count("respuestas"))
         .order_by("-fecha_creacion")
@@ -43,13 +45,13 @@ def gestor_consultas(request):
         consultas = consultas.filter(fecha_limite__lt=ahora, estado__in=["pendiente","en_proceso"])
 
     # Contar consultas por estado
-    resumen = consultas.aggregate(
-        pendientes=Count('id', filter=Q(estado='pendiente')),
-        en_proceso=Count('id', filter=Q(estado='en_proceso')),
-        respondidas=Count('id', filter=Q(estado='respondida')),
-        cerradas=Count('id', filter=Q(estado='cerrada')),
-        vencidas=Count('id', filter=Q(fecha_limite__lt=ahora, estado__in=['pendiente','en_proceso']))
-    )
+    resumen = base_qs.aggregate(
+    pendientes=Count('id', filter=Q(estado='pendiente')),
+    en_proceso=Count('id', filter=Q(estado='en_proceso')),
+    respondidas=Count('id', filter=Q(estado='respondida')),
+    cerradas=Count('id', filter=Q(estado='cerrada')),
+    vencidas=Count('id', filter=Q(fecha_limite__lt=ahora, estado__in=['pendiente','en_proceso']))
+)
 
     # Estados para el panel de métricas
     estados_panel = [
@@ -105,7 +107,6 @@ def gestor_responder(request, pk):
             respuesta.usuario = request.user
             respuesta.save()
 
-            # Guardar adjuntos múltiples
             for f in request.FILES.getlist("archivos"):
                 Adjunto.objects.create(
                     consulta=consulta,
@@ -114,18 +115,20 @@ def gestor_responder(request, pk):
                 )
 
             try:
-
-                # Intentar cambiar estado
                 consulta.pasar_a_respondida()
-
             except ValidationError as e:
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"error": e.messages[0]}, status=400)
 
                 messages.error(request, e.messages[0])
                 return redirect("consultasge:gestor_responder", pk=pk)
 
+            # ✅ RESPUESTA AJAX
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"ok": True})
+
             messages.success(request, "Respuesta enviada correctamente.")
             return redirect("consultasge:gestor_responder", pk=pk)
-
     else:
         form = RespuestaForm()
 
@@ -154,3 +157,25 @@ def cerrar_consulta(request, pk):
         messages.error(request, "No se puede cerrar una consulta sin responder.")
         
     return redirect("consultasge:gestor_consultas")
+
+
+# ============================================
+# MENSAJES AJAX GESTOR
+# ============================================
+@login_required
+@rol_requerido("Gestor")
+def mensajes_ajax_gestor(request, pk):
+
+    consulta = get_object_or_404(Consulta, pk=pk)
+
+    validar_consulta_regional(consulta, request.user)
+
+    respuestas = consulta.respuestas.all() \
+        .order_by('fecha') \
+        .select_related('usuario') \
+        .prefetch_related('adjuntos_respuesta')
+
+    return render(request, 'consultasge/includes/lista_mensajes.html', {
+        'respuestas': respuestas,
+        'consulta': consulta
+    })

@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="{% static 'lib/AdminLTE-3.0.4/plugins/fontawesome-free/css/all.min.css' %}">
+    
+    <!-- AdminLTE -->
+    <link rel="stylesheet" href="{% static 'lib/AdminLTE-3.0.4/dist/css/adminlte.min.css' %}">
+
+    <!-- Submenu -->
+    <style>
+    .dropdown-submenu {
+        position: relative;
+    }
+    .dropdown-submenu > .dropdown-menu {
+        top: 0;
+        left: 100%;
+        margin-left: .1rem;
+        display: none;
+    }
+    .dropdown-submenu:hover > .dropdown-menu {
+        display: block;
+    }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body class="hold-transition sidebar-mini">
+<div class="wrapper">
+
+    <!-- HEADER -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-widget="pushmenu" href="#">
+                    <i class="fas fa-bars"></i>
+                </a>
+            </li>
+        </ul>
+        <div class="ms-auto"></div>
+    </nav>
+
+    <!-- SIDEBAR -->
+    {% include "includes/sidebar.html" %}
+
+    <!-- CONTENIDO -->
+    <div class="content-wrapper">
+        <section class="content pt-3">
+            <div class="container-fluid">
+                {% block content %}{% endblock %}
+            </div>
+        </section>
+    </div>
+
+</div>
+
+<!-- ===================== SCRIPTS ===================== -->
+<script src="{% static 'lib/AdminLTE-3.0.4/plugins/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'lib/AdminLTE-3.0.4/plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'lib/AdminLTE-3.0.4/dist/js/adminlte.min.js' %}"></script>
+
+<!-- ===================== CHAT NOTIFICACIONES ===================== -->
+
+<!-- BOTÓN -->
+<button id="floatBtn"
+        class="btn btn-lg rounded-circle shadow bg-success position-fixed"
+        style="top: 20px; right: 20px; z-index: 9999;">
+    <i class="fas fa-comments"></i>
+    <span id="floatBadge"
+          class="badge badge-danger position-absolute"
+          style="top: -5px; right: -5px; display:none;">
+    </span>
+</button>
+
+<!-- PANEL -->
+<div id="chatPanel" class="card shadow"
+     style="width: 320px; position: fixed; bottom: 90px; right: 20px; display:none; z-index:9999;">
+
+    <div class="card-header bg-primary text-white d-flex justify-content-between">
+        <span>Notificaciones</span>
+        <button id="closeChat" class="btn btn-sm btn-light">&times;</button>
+    </div>
+
+    <div id="chatBody" class="card-body" style="height: 250px; overflow-y: auto;">
+        <p class="text-muted text-center">Sin notificaciones</p>
+    </div>
+
+    <div class="card-footer text-center">
+        <a href="/consultasge/" class="btn btn-sm btn-primary">Ver todas</a>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="position-fixed bottom-0 right-0 p-3" style="z-index: 9999;">
+    <div id="consultaToast" class="toast" role="alert">
+        <div class="toast-header">
+            <strong class="mr-auto">Notificaciones</strong>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast">&times;</button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            Nueva consulta
+        </div>
+    </div>
+</div>
+
+<!-- SONIDO -->
+<audio id="alertSound" src="{% static 'sounds/alert.mp3' %}" preload="auto"></audio>
+
+<!-- ===================== SCRIPT ===================== -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    let ultimoTotal = 0;
+
+    const btn = document.getElementById("floatBtn");
+    const badge = document.getElementById("floatBadge");
+    const chat = document.getElementById("chatPanel");
+    const closeChat = document.getElementById("closeChat");
+    const chatBody = document.getElementById("chatBody");
+
+    const toastEl = document.getElementById("consultaToast");
+    const toastMsg = document.getElementById("toastMessage");
+    const sound = document.getElementById("alertSound");
+
+    // abrir chat
+    btn.addEventListener("click", () => {
+        chat.style.display = "block";
+    });
+
+    // cerrar chat
+    closeChat.addEventListener("click", () => {
+        chat.style.display = "none";
+    });
+
+    function renderMensajes(data) {
+        chatBody.innerHTML = "";
+
+        if (data.activas === 0 && data.vencidas === 0) {
+            chatBody.innerHTML = '<p class="text-muted text-center">Sin notificaciones</p>';
+            return;
+        }
+
+        if (data.vencidas > 0) {
+            chatBody.innerHTML += `
+                <div class="alert alert-danger p-2">
+                    ${data.vencidas} consulta(s) vencida(s)
+                </div>`;
+        }
+
+        if (data.activas > 0) {
+            chatBody.innerHTML += `
+                <div class="alert alert-warning p-2">
+                    ${data.activas} consulta(s) activa(s)
+                </div>`;
+        }
+    }
+
+    function actualizarNotificaciones() {
+
+        fetch("{% url 'consultasge:notificaciones_consultas' %}")
+            .then(r => r.json())
+            .then(data => {
+
+                // badge
+                if (data.activas > 0) {
+                    badge.style.display = "inline-block";
+                    badge.innerText = data.activas;
+                } else {
+                    badge.style.display = "none";
+                }
+
+                // color botón
+                btn.classList.remove("bg-danger","bg-warning","bg-success");
+
+                if (data.vencidas > 0) {
+                    btn.classList.add("bg-danger");
+                } else if (data.activas > 0) {
+                    btn.classList.add("bg-warning");
+                } else {
+                    btn.classList.add("bg-success");
+                }
+
+                // render chat
+                renderMensajes(data);
+
+                // toast + sonido
+                if (data.activas > ultimoTotal) {
+                    toastMsg.innerText = "📩 Nueva consulta recibida";
+                    new bootstrap.Toast(toastEl).show();
+                    if (sound) sound.play();
+                }
+
+                ultimoTotal = data.activas;
+
+            })
+            .catch(err => console.error("Error:", err));
+    }
+
+    actualizarNotificaciones();
+    setInterval(actualizarNotificaciones, 30000);
+});
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,33 +1,16 @@
-from django.db import models
+from tabnanny import verbose
+from django.db import models, connection
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.forms import model_to_dict
-from .models_regional import RegionalUsuariosAgentes
+from typing import TYPE_CHECKING
 
-class CustomUserManager(BaseUserManager):
-    """
-    Administrador de usuarios personalizado para gestionar la creación de usuarios.
-
-    Métodos:
-        create_user: Crea y devuelve un usuario normal.
-        create_superuser: Crea y devuelve un superusuario.
-    """
+if TYPE_CHECKING:
+    from .models import PerfilUsuario
     
+# --------------------------
+# Manager personalizado
+# --------------------------
+class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
-        """
-        Crea y devuelve un usuario con un nombre de usuario y una contraseña.
-
-        Args:
-            username (str): El nombre de usuario para el nuevo usuario.
-            password (str, optional): La contraseña del nuevo usuario.
-            **extra_fields: Campos adicionales a añadir al usuario.
-
-        Raises:
-            ValueError: Si el campo de nombre de usuario no está definido.
-
-        Returns:
-            UsuariosVisualizador: El usuario creado.
-        """
-        
         if not username:
             raise ValueError('The Username field must be set')
         user = self.model(username=username, **extra_fields)
@@ -36,106 +19,163 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, password=None, **extra_fields):
-        """
-        Crea y devuelve un superusuario con un nombre de usuario y una contraseña.
-
-        Args:
-            username (str): El nombre de usuario para el superusuario.
-            password (str, optional): La contraseña del superusuario.
-            **extra_fields: Campos adicionales a añadir al superusuario.
-
-        Raises:
-            ValueError: Si el campo is_staff o is_superuser no está establecido a True.
-
-        Returns:
-            UsuariosVisualizador: El superusuario creado.
-        """
-        
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-        
         return self.create_user(username, password, **extra_fields)
 
-
+# --------------------------
+# Nivel de Acceso
+# --------------------------
 class NivelAcceso(models.Model):
-    """
-    Modelo que representa los niveles de acceso para los usuarios.
-
-    Atributos:
-        tacceso (str): El tipo de acceso, debe ser único.
-    """
-
     tacceso = models.CharField(unique=True, max_length=100, verbose_name='tipoacceso')
-    
+
+    class Meta:
+        db_table = 'usuarios_nivelacceso'
     def __str__(self):
         return self.tacceso
-    
-    class Meta:
-       verbose_name='Nivel_Acceso' 
-       verbose_name_plural='Niveles_Accesos'
-       ordering = ['tacceso']  
-       db_table = 'Nivel_Acceso'
 
-       
-       
+# --------------------------
+# Roles
+# --------------------------
+class Rol(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+
+    CATEGORIAS = (
+        ('all', 'Todo'),
+        ('regional', 'Regional'),
+        ('propio', 'Propio'),
+        ('nivel', 'Nivel'),
+    )
+    categoria_acceso = models.CharField(max_length=20, choices=CATEGORIAS, default='propio')
+
+    def __str__(self):
+        return self.nombre
+
+# --------------------------
+# Usuario
+# --------------------------
 class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
-    """
-    Modelo que representa a los usuarios visualizadores en el sistema.
-
-    Atributos:
-        username (str): Nombre de usuario único.
-        apellido (str): Apellido del usuario.
-        nombres (str): Nombres del usuario.
-        correo (str): Correo electrónico del usuario.
-        telefono (str): Teléfono del usuario.
-        nivelacceso (NivelAcceso): Nivel de acceso del usuario, con relación a NivelAcceso.
-        activo (bool): Indica si el usuario está activo.
-        is_staff (bool): Indica si el usuario es parte del personal.
-        is_superuser (bool): Indica si el usuario tiene privilegios de superusuario.
-
-    Métodos:
-        __str__: Retorna el nombre de usuario.
-    """
-    
-    username = models.CharField(unique=True, max_length=9, verbose_name='usuario')
-    apellido = models.CharField(max_length=150, verbose_name='apellido')
-    nombres = models.CharField(max_length=150, verbose_name='nombres')
-    correo = models.EmailField(verbose_name='correo')
-    telefono = models.CharField(max_length=20, verbose_name='telefono')
-    nivelacceso = models.ForeignKey(NivelAcceso, on_delete=models.CASCADE, to_field='tacceso', verbose_name='nivelacceso')
-    activo = models.BooleanField(default=True, verbose_name='activo')
-    is_staff = models.BooleanField(default=True, verbose_name='is_staff')
-    is_superuser = models.BooleanField(default=False, verbose_name='is_superuser')
-
-    REQUIRED_FIELDS = ['apellido', 'nombres', 'correo', 'telefono', 'nivelacceso']
+    username = models.CharField(unique=True, max_length=11)
+    apellido = models.CharField(max_length=150)
+    nombres = models.CharField(max_length=150)
+    correo = models.EmailField()
+    telefono = models.CharField(max_length=20)
+    nivelacceso = models.ForeignKey(
+        NivelAcceso,
+        on_delete=models.CASCADE,
+        to_field='tacceso'
+    )
+    activo = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=True)
+    is_superuser = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(blank=True, null=True)
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['apellido', 'nombres', 'correo', 'telefono', 'nivelacceso']
+
+    if TYPE_CHECKING:
+        perfil: "PerfilUsuario"
+        
+    class Meta:
+        managed = True
+        verbose_name = 'Usuario Visualizador'
+        verbose_name_plural = 'Usuarios Visualizadores'
+        db_table = 'Usuario_Visualizador'
 
     def __str__(self):
         return self.username
+
+    # Compatibilidad con Django login
+    @property
+    def is_active(self):
+        return self.activo
+
+    # --------------------------
+    # Obtener cueanexos según rol
+    # --------------------------
+    def obtener_cueanexos(self):
+        if not hasattr(self, 'perfil') or not self.perfil.rol:
+            return []
+
+        categoria = self.perfil.rol.categoria_acceso
+
+        with connection.cursor() as cursor:
+            if categoria == 'all':
+                cursor.execute("SELECT * FROM v_capa_unica_ofertas")
+            elif categoria == 'regional':
+                cursor.execute("""
+                    SELECT v.*
+                    FROM public.v_capa_unica_ofertas v
+                    JOIN public.usuarios_regionalusuarios r
+                        ON r.region_loc = v.region_loc
+                    WHERE r.usuario = %s
+                """, [self.username])
+            elif categoria == 'propio':
+                cursor.execute("""
+                    SELECT *
+                    FROM v_capa_unica_ofertas
+                    WHERE REGEXP_REPLACE(resploc_cuitcuil, '[^0-9]', '', 'g') =
+                          REGEXP_REPLACE(%s, '[^0-9]', '', 'g')
+                """, [self.username])
+            elif categoria == 'nivel':
+                cursor.execute("""
+                    SELECT v.*
+                    FROM public.v_capa_unica_ofertas v
+                    JOIN public.niveles_asignados n
+                        ON n.nivel = v.oferta
+                    WHERE n.cuil= %s
+                """, [self.username])
+            return cursor.fetchall()
     
-    def toJSON(self):
-        item = model_to_dict(self, exclude=['user_permissions','last_login', 'date_joined', 'activo', 'is_superuser', 'is_active', 'is_staff'])
-        item['nivelacceso']=self.nivelacceso.tacceso
-        item['groups'] = [group.name for group in self.groups.all()]
-        item['activo']=self.activo
-        item['is_staff']=self.is_staff
-        item['is_superuser']=self.is_superuser
-        print(item)
-        return item
+    def tiene_biblioteca(self):
+        """
+        Devuelve True si entre los cueanexos del usuario hay alguno con acrónimo 'Bi'
+        """
+        cueanexos = self.obtener_cueanexos()  # lista de tuplas de SQL
+        # Asumimos que la columna acronimo está en la posición correcta, por ejemplo columna 2
+        for fila in cueanexos:
+            # Ajusta el índice según la posición de 'acronimo' en tu SELECT *
+            if 'BI' in fila:
+                return True
+        return False
             
+        
+# --------------------------
+# PerfilUsuario
+# --------------------------
+class PerfilUsuario(models.Model):
+    usuario = models.OneToOneField(
+        UsuariosVisualizador,
+        on_delete=models.CASCADE,
+        related_name='perfil'
+    )
+    rol = models.ForeignKey(Rol, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.rol.nombre}"
+
+
+# ========================================
+#  MODELO INTERMEDIO CUEANEXO-USUARIOS
+# ========================================
+class UsuarioCueanexo(models.Model):
+    usuario = models.ForeignKey(
+        UsuariosVisualizador,
+        on_delete=models.CASCADE,
+        related_name="cueanexos"
+    )
+    cueanexo = models.CharField(
+        max_length=9,
+        unique=True  # 🔥 CLAVE: un cueanexo sólo puede pertenecer a un usuario
+    )
+
     class Meta:
-        verbose_name = 'Usuario_Visualizador'
-        verbose_name_plural = 'Usuarios_Visualizadores'
-        ordering = ['apellido', 'nombres']
-        db_table = 'Usuario_Visualizador'
-    
+        verbose_name = "Cueanexo del usuario"
+        verbose_name_plural = "Cueanexos de usuarios"
 
-
+    def __str__(self):
+        return f"{self.usuario.username} - {self.cueanexo}"
