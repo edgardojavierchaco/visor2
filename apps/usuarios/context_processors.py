@@ -6,9 +6,9 @@ menu_extra = [
     {
         "label": "Establecimiento",
         "icon": "fas fa-globe text-primary",
-        "children": [
-            {"label": "Matrícula", "url": "directores:matricula", "icon": "far fa-circle", "children": []},
-        ]
+        #"children": [
+          #  {"label": "Matrícula", "url": "directores:matricula", "icon": "far fa-circle", "children": []},
+        #]
     },
     {
         "label": "Fluidez",

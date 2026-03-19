@@ -13,10 +13,15 @@ from .utils import horas_habiles_transcurridas, TURNOS, progreso_sla, estado_sla
 # Obtener gestor activo para una región
 # --------------------------
 def obtener_gestor_por_region(region):
-    gestor = RegionalUsuariosAgentes.objects.filter(region_loc__iexact=str(region).strip(), activo=True).first()
+    gestor = RegionalUsuariosAgentes.objects.filter(region_loc=region).first()
     if not gestor:
-        raise PermissionDenied(f"No hay gestor activo para la región {region}.")
-    return gestor.usuario.username
+        return None
+
+    # ⚡ Si gestor.usuario ya es un string, devolverlo directamente
+    if isinstance(gestor.usuario, str):
+        return gestor.usuario
+    # ⚡ Si gestor.usuario es un objeto User, devolver su username
+    return getattr(gestor.usuario, 'username', None)
 
 # --------------------------
 # Crear nueva consulta

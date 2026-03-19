@@ -39,20 +39,39 @@ def nueva_consulta(request):
     form = ConsultaForm(
         request.POST or None,
         request.FILES or None,
-        user=request.user  # 👈 CLAVE
+        user=request.user
     )
-    
-    if form.is_valid():
-        consulta = crear_consulta(
-            director=request.user,
-            cueanexo=form.cleaned_data["cueanexo"],  # 👈 NUEVO
-            asunto=form.cleaned_data["asunto"],
-            mensaje=form.cleaned_data["mensaje"],
-            categoria=form.cleaned_data["categoria"],
-            archivos=request.FILES.getlist("archivos")
-        )
-        messages.success(request, "Consulta creada correctamente.")
-        return redirect("consultasge:consultas_lista")
+
+    if request.method == "POST":
+        if form.is_valid():
+            consulta = crear_consulta(
+                director=request.user,
+                cueanexo=form.cleaned_data["cueanexo"],
+                asunto=form.cleaned_data["asunto"],
+                mensaje=form.cleaned_data["mensaje"],
+                categoria=form.cleaned_data["categoria"],
+                archivos=request.FILES.getlist("archivos")
+            )
+
+            # Si la petición es AJAX devolvemos JSON
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({
+                    "ok": True,
+                    "mensaje": "Consulta creada correctamente",
+                    "id_consulta": consulta.id
+                })
+
+            # Petición normal (no AJAX)
+            messages.success(request, "Consulta creada correctamente.")
+            return redirect("consultasge:consultas_lista")
+        else:
+            # Errores del form
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({
+                    "ok": False,
+                    "errors": form.errors
+                }, status=400)
+
     return render(request, "consultasge/nueva.html", {"form": form})
 
 # --------------------------
