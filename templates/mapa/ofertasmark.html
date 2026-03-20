@@ -218,7 +218,7 @@ const bounds=L.latLngBounds();
 
 data.forEach(row=>{
 
-const [cue,lat,lng,esc,oferta,ambito,sector,region,calle,numero,localidad]=row;
+const [cue,lat,lng,esc,oferta,ambito,sector,region,calle,numero,localidad, acronimo, apellido_resp, nombre_resp, resploc_telefono, resploc_email]=row;
 
 if(lat && lng){
 
@@ -230,7 +230,12 @@ const popup=`<div class="popup-school">
 <b>Sector:</b> ${sector}<br>
 <b>Región:</b> ${region}<br>
 <b>Dirección:</b> ${calle} ${numero}<br>
-<b>Localidad:</b> ${localidad}
+<b>Localidad:</b> ${localidad}<br>
+<b>Directivo:</b> ${apellido_resp || ''}, ${nombre_resp || ''}<br>
+<b>Teléfono:</b> ${resploc_telefono}<br>
+<b>Correo:</b> ${resploc_email}<br>
+<b>Latitud:</b> ${lat}<br>
+<b>Longitud:</b> ${lng}<br>
 </div>`;
 
 const marker=L.marker([lat,lng],{icon:iconSchool}).bindPopup(popup);

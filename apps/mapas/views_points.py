@@ -33,6 +33,18 @@ def mapa_escuelas(request):
         if a
     ))
 
+    regional = sorted(set(
+        a.strip() for a in
+        CapaEscuelas.objects.values_list('region_loc', flat=True)
+        if a
+    ))
+    
+    localidad = sorted(set(
+        a.strip() for a in
+        CapaEscuelas.objects.values_list('localidad', flat=True)
+        if a
+    ))
+    
     palette_oferta = ["red","green","blue","orange","purple","darkred","darkgreen","darkblue","pink","cadetblue"]
     palette_sector = ["black","brown","gray","cadetblue","darkorange","darkpurple"]
 
@@ -44,7 +56,9 @@ def mapa_escuelas(request):
         "sectores": sectores,
         "ambitos": ambitos,
         "color_oferta": color_oferta,
-        "color_sector": color_sector
+        "color_sector": color_sector,
+        "regional": regional,
+        "localidad": localidad        
     }
 
     return render(request, 'mapa/escuelas/mapa_filtros_tabla.html', context)
@@ -113,6 +127,7 @@ def escuelas_cercanas(request):
                 "oferta": e.oferta,
                 "sector": e.sector,
                 "ambito": e.ambito,
+                "regional": e.region_loc,
                 "lat": e.lat,
                 "lon": e.long,
             }
@@ -129,51 +144,23 @@ def escuelas_cercanas(request):
 
 
 def exportar_escuelas(request):
+    cues = request.GET.getlist("cue[]")  # recibir solo los visibles
 
-    lat = float(request.GET.get("lat"))
-    lon = float(request.GET.get("lon"))
-    radio = float(request.GET.get("radio"))
+    qs = CapaEscuelas.objects.filter(cueanexo__in=cues)
 
-    ofertas = request.GET.getlist("oferta[]")
-    sector = request.GET.get("sector")
-    ambito = request.GET.get("ambito")
-
-    from django.contrib.gis.geos import Point
-    punto = Point(lon, lat, srid=4326)
-
-    qs = CapaEscuelas.objects.all()
-
-    # filtros simples (podés reutilizar tu lógica GIS si querés)
-    if ofertas:
-        for o in ofertas:
-            qs = qs.filter(oferta__icontains=o)
-
-    if sector and sector != "Todos":
-        qs = qs.filter(sector=sector)
-
-    if ambito and ambito != "Todos":
-        qs = qs.filter(ambito=ambito)
-
-    # 📊 Excel
+    # 📊 Generar Excel
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Escuelas"
+    ws.title = "Escuelas visibles en el mapa"
 
     ws.append(["CUEANEXO", "Nombre", "Sector", "Ámbito", "Oferta"])
 
     for e in qs:
-        ws.append([
-            e.cueanexo,
-            e.nom_est,
-            e.sector,
-            e.ambito,
-            e.oferta
-        ])
+        ws.append([e.cueanexo, e.nom_est, e.sector, e.ambito, e.oferta,e.region_loc,e.localidad])
 
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response['Content-Disposition'] = 'attachment; filename=escuelas.xlsx'
-
+    response['Content-Disposition'] = 'attachment; filename=escuelas_visibles_en_mapa.xlsx'
     wb.save(response)
     return response

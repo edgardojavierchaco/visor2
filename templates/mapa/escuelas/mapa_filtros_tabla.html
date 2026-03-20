@@ -11,81 +11,121 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"/>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
 
 <style>
 body { background:#f4f6f9; }
 .card-header { background:#0d6efd; color:white; }
-#map { height:450px; border-radius:10px; }
-.legend-box span { display:inline-block; width:15px; height:15px; margin-right:5px; }
+#map { height: 600px; border-radius: 10px; }
+@media (max-width:991px){ #map { height: 500px; } }
+@media (max-width:767px){ #map { height: 400px; } }
+
 .kpi-card { text-align:center; padding:15px; border-radius:10px; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+#legend { display:flex; flex-wrap:wrap; gap:10px; padding:10px; font-size:0.85rem; }
+.legend-box { display:flex; align-items:center; gap:4px; margin-bottom:4px; }
+.legend-box span { width:12px; height:12px; border:1px solid #ccc; border-radius:2px; }
+
+#seccionCharts { margin-top:10px; }
+#seccionCharts .col-md-6 { margin-bottom:10px; position: relative; height: 250px; }
+#chartSector { max-height: 250px; width: 80% !important; margin:auto; }
+
+.btn-activo { font-weight:bold; color:white !important; }
+
+@media (max-width:767px){
+    #seccionMapa { flex-direction:column; display:flex; }
+    #seccionMapa .col-md-3 { margin-top:10px; width:100%; }
+    #seccionMapa .col-md-9 { width:100%; }
+}
 </style>
 </head>
 
 <body>
+<div style="position:fixed; top:90px; right:15px; z-index:1100;">
+    <a href="{% url 'dash:portada' %}" class="btn btn-secondary btn-sm">⬅ Regresar</a>
+</div>
+
 <div class="container-fluid mt-3">
 
 <!-- KPIs y Filtros -->
 <div id="seccionFiltros">
-<div class="row mb-3">
-<div class="col-md-3"><div class="kpi-card">Total<br><b id="kpiTotal">0</b></div></div>
-<div class="col-md-3"><div class="kpi-card">Sectores<br><b id="kpiSectores">0</b></div></div>
-<div class="col-md-3"><div class="kpi-card">Ofertas<br><b id="kpiOfertas">0</b></div></div>
-<div class="col-md-3"><button class="btn btn-danger w-100" id="btnPDF">📥 Exportar PDF</button></div>
+    <div class="row mb-3 g-2">
+        <div class="col-md-3"><div class="kpi-card">Total<br><b id="kpiTotal">0</b></div></div>
+        <div class="col-md-3"><div class="kpi-card">Sectores<br><b id="kpiSectores">0</b></div></div>
+        <div class="col-md-3"><div class="kpi-card">Ofertas<br><b id="kpiOfertas">0</b></div></div>
+        <div class="col-md-3"><button class="btn btn-danger w-100" id="btnPDF">📥 Exportar PDF</button></div>
+        <div class="col-md-3"><button class="btn btn-success w-100" id="btnExcel">📥 Exportar Excel</button></div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">Filtros</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="range" id="radioSlider" class="form-range" min="100" max="200000" value="5000">
+                    <span id="radioValue">5000</span> m
+                </div>
+                <div class="col-md-3">
+                    <select id="ofertaSelect" class="form-select" multiple>
+                    {% for o in ofertas %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="sectorSelect" class="form-select">
+                        <option value="Todos">Todos</option>
+                        {% for s in sectores %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="ambitoSelect" class="form-select">
+                        <option value="Todos">Todos</option>
+                        {% for a in ambitos %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="card mb-3">
-<div class="card-header">Filtros</div>
-<div class="card-body">
-<div class="row g-3">
-<div class="col-md-3">
-<input type="range" id="radioSlider" class="form-range" min="100" max="200000" value="5000">
-<span id="radioValue">5000</span> m
-</div>
-<div class="col-md-3">
-<select id="ofertaSelect" class="form-select" multiple>
-{% for o in ofertas %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
-</select>
-</div>
-<div class="col-md-3">
-<select id="sectorSelect" class="form-select">
-<option value="Todos">Todos</option>
-{% for s in sectores %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-</select>
-</div>
-<div class="col-md-3">
-<select id="ambitoSelect" class="form-select">
-<option value="Todos">Todos</option>
-{% for a in ambitos %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
-</select>
-</div>
-</div>
-</div>
-</div>
-</div>
-
-<!-- MAPA + LEYENDA -->
+<!-- MAPA + BOTONES -->
 <div id="seccionMapa" class="row mb-3">
-<div class="col-md-9"><div id="map"></div></div>
-<div class="col-md-3">
-<div class="card">
-<div class="card-header">🎨 Leyenda</div>
-<div class="card-body" id="legend"></div>
-</div>
-</div>
+  <div class="col-md-9">
+    <div class="mb-2 d-flex gap-2">
+        <button id="btnCluster" class="btn btn-primary btn-sm btn-activo">🔹 Clustering</button>
+        <button id="btnHeatmap" class="btn btn-warning btn-sm">🔥 Heatmap</button>
+    </div>
+    <div id="map"></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header">🎨 Leyenda</div>
+      <div class="card-body" id="legend"></div>
+    </div>
+  </div>
 </div>
 
 <!-- CHARTS -->
-<div id="seccionCharts" class="row mb-3">
-<div class="col-md-6"><canvas id="chartOferta"></canvas></div>
-<div class="col-md-6"><canvas id="chartSector"></canvas></div>
+<div id="seccionCharts" class="row g-2">
+  <div class="col-md-6"><canvas id="chartOferta"></canvas></div>
+  <div class="col-md-6"><canvas id="chartSector"></canvas></div>
 </div>
 
 <!-- TABLA -->
-<div id="seccionTabla" class="card">
+<div id="seccionTabla" class="card mt-3">
 <div class="card-header">Resultados</div>
 <div class="card-body">
 <table id="tablaEscuelas" class="table table-striped">
-<thead><tr><th>CUE</th><th>Nombre</th><th>Sector</th><th>Ámbito</th><th>Oferta</th></tr></thead>
+<thead>
+    <tr>
+        <th>CUE</th>
+        <th>Nombre</th>
+        <th>Sector</th>
+        <th>Ámbito</th>
+        <th>Oferta</th>
+        <th>Regional</th>
+        <th>Localidad</th>
+    </tr>
+</thead>
 <tbody></tbody>
 </table>
 </div>
@@ -99,6 +139,8 @@ body { background:#f4f6f9; }
 <script src="https://cdn.jsdelivr.net/npm/html2canvas"></script>
 <script src="{% static 'js/jspdf.umd.min.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
@@ -106,26 +148,64 @@ body { background:#f4f6f9; }
 const colorOferta = {{ color_oferta|safe }};
 const colorSector = {{ color_sector|safe }};
 
+// Select2
 $('#ofertaSelect').select2({theme:'bootstrap-5'});
 $('#sectorSelect,#ambitoSelect').select2({theme:'bootstrap-5'});
 
-const map = L.map('map').setView([-27.47,-58.98],10);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+// Mapas base
+const osmClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' });
+const map = L.map('map', { layers:[osmClaro] }).setView([-27.47,-58.98],10);
+L.control.layers({"Claro":osmClaro}).addTo(map);
 
+// Marcadores base (siempre visibles)
 let markers = L.layerGroup().addTo(map);
-let tabla = $('#tablaEscuelas').DataTable();
-let chart1, chart2;
 
-function debounce(fn, delay){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args),delay); } }
+// Capas opcionales
+let markerCluster = L.markerClusterGroup();
+let heatLayer = L.heatLayer([], {radius:25, blur:15, maxZoom:17});
 
+// Estado toggle
+let clusterActivo = false;
+let heatmapActivo = false;
+
+// Botones toggle
+$('#btnCluster').click(()=>{
+    clusterActivo = !clusterActivo;
+    heatmapActivo = false;
+    map.removeLayer(heatLayer);
+    if(clusterActivo){ map.addLayer(markerCluster); map.removeLayer(markers); } 
+    else { map.removeLayer(markerCluster); map.addLayer(markers); }
+    actualizarBotones();
+});
+
+$('#btnHeatmap').click(()=>{
+    heatmapActivo = !heatmapActivo;
+    clusterActivo = false;
+    map.removeLayer(markerCluster);
+    if(heatmapActivo){ map.addLayer(heatLayer); map.removeLayer(markers); }
+    else { map.removeLayer(heatLayer); map.addLayer(markers); }
+    actualizarBotones();
+});
+
+function actualizarBotones(){
+    $('#btnCluster').toggleClass('btn-activo', clusterActivo);
+    $('#btnHeatmap').toggleClass('btn-activo', heatmapActivo);
+}
+
+// Datatable
+let tabla = $('#tablaEscuelas').DataTable({ language:{url:'https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json'} });
+
+// Leyenda
 function renderLegend(){
-    let html="<b>Oferta</b><br>";
+    let html="";
     Object.entries(colorOferta).forEach(([k,v])=> html+=`<div class="legend-box"><span style="background:${v}"></span>${k}</div>`);
-    html+="<hr><b>Sector</b><br>";
+    html+="<hr>";
     Object.entries(colorSector).forEach(([k,v])=> html+=`<div class="legend-box"><span style="background:${v}"></span>${k}</div>`);
     $('#legend').html(html);
 }
 
+// Charts
+let chart1=null, chart2=null;
 function renderCharts(data){
     let countOferta={}, countSector={};
     data.forEach(e=>{
@@ -135,75 +215,107 @@ function renderCharts(data){
     });
     if(chart1) chart1.destroy();
     if(chart2) chart2.destroy();
-    chart1=new Chart(document.getElementById('chartOferta'),{
+
+    chart1 = new Chart(document.getElementById('chartOferta'), {
         type:'bar',
-        data:{ labels:Object.keys(countOferta), datasets:[{ data:Object.values(countOferta), backgroundColor:Object.keys(countOferta).map(k=>colorOferta[k]) }] }
+        data:{ labels:Object.keys(countOferta), datasets:[{label:'Cantidad', data:Object.values(countOferta), backgroundColor:Object.keys(countOferta).map(k=>colorOferta[k])}]},
+        options:{responsive:true, plugins:{legend:{display:false}}}
     });
-    chart2=new Chart(document.getElementById('chartSector'),{
+
+    chart2 = new Chart(document.getElementById('chartSector'), {
         type:'pie',
-        data:{ labels:Object.keys(countSector), datasets:[{ data:Object.values(countSector), backgroundColor:Object.keys(countSector).map(k=>colorSector[k]) }] }
+        data:{ labels:Object.keys(countSector), datasets:[{ data:Object.values(countSector), backgroundColor:Object.keys(countSector).map(k=>colorSector[k])}]},
+        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
     });
 }
 
-const fetchEscuelas = debounce(function(){
-    const lat=-27.47, lon=-58.98;
-    const radio=$('#radioSlider').val();
-    const sector=$('#sectorSelect').val();
-    const ambito=$('#ambitoSelect').val();
-    const ofertas=$('#ofertaSelect').val()||[];
-
-    let body=`lat=${lat}&lon=${lon}&radio=${radio}&sector=${sector}&ambito=${ambito}`;
+// Fetch escuelas
+let lat=-27.47, lon=-58.98;
+const fetchEscuelas = function(){
+    const radio = $('#radioSlider').val();
+    const sector = $('#sectorSelect').val();
+    const ambito = $('#ambitoSelect').val();
+    const ofertas = $('#ofertaSelect').val()||[];
+    let body = `lat=${lat}&lon=${lon}&radio=${radio}&sector=${sector}&ambito=${ambito}`;
     ofertas.forEach(o=> body+=`&oferta[]=${encodeURIComponent(o)}`);
 
     fetch("{% url 'mapas:escuelas_cercanas' %}",{
         method:"POST",
-        headers:{ "Content-Type":"application/x-www-form-urlencoded","X-CSRFToken":"{{ csrf_token }}" },
+        headers:{"Content-Type":"application/x-www-form-urlencoded","X-CSRFToken":"{{ csrf_token }}"},
         body:body
-    })
-    .then(r=>r.json())
-    .then(res=>{
+    }).then(r=>r.json()).then(res=>{
+        // Limpiar capas
         markers.clearLayers();
+        markerCluster.clearLayers();
+        heatLayer.setLatLngs([]);
         tabla.clear().draw();
+
         $('#kpiTotal').text(res.count);
         let sectoresSet=new Set(), ofertasSet=new Set();
+        let heatPoints=[];
+
         res.escuelas.forEach(e=>{
             let o=e.oferta?.split(',')[0].trim();
             sectoresSet.add(e.sector);
             ofertasSet.add(o);
-            L.circleMarker([e.lat,e.lon],{
-                radius:6, color:colorSector[e.sector]||'#000', fillColor:colorOferta[o]||'#777', fillOpacity:0.8
-            }).addTo(markers);
-            tabla.row.add([e.cueanexo,e.nom_est,e.sector,e.ambito,e.oferta]);
+
+            let m = L.circleMarker([e.lat,e.lon], {radius:6, color:colorSector[e.sector]||'#000', fillColor:colorOferta[o]||'#777', fillOpacity:0.8});
+            markers.addLayer(m);
+            markerCluster.addLayer(m);
+            heatPoints.push([e.lat,e.lon,1]);
+            tabla.row.add([e.cueanexo,e.nom_est,e.sector,e.ambito,e.oferta,e.regional,e.localidad]);
         });
+        heatLayer.setLatLngs(heatPoints);
+
         tabla.draw();
         $('#kpiSectores').text(sectoresSet.size);
         $('#kpiOfertas').text(ofertasSet.size);
         renderCharts(res.escuelas);
+
+        // Mostrar la capa según toggle
+        if(clusterActivo){ map.addLayer(markerCluster); map.removeLayer(markers); map.removeLayer(heatLayer); }
+        else if(heatmapActivo){ map.addLayer(heatLayer); map.removeLayer(markers); map.removeLayer(markerCluster); }
+        else{ map.addLayer(markers); map.removeLayer(markerCluster); map.removeLayer(heatLayer); }
+
+        actualizarBotones();
     });
-},400);
+};
 
-$('#radioSlider,#sectorSelect,#ambitoSelect,#ofertaSelect').on('change input',fetchEscuelas);
+// Filtros y slider
+$('#sectorSelect,#ambitoSelect,#ofertaSelect').on('change', fetchEscuelas);
 
-// EXPORTAR PDF en páginas separadas
+const radioSlider = $('#radioSlider');
+const radioValue = $('#radioValue');
+radioSlider.on('input', function() { radioValue.text($(this).val()); });
+radioSlider.on('change', fetchEscuelas);
+
+// Actualizar ubicación al hacer click en el mapa
+map.on('click', e=> { lat=e.latlng.lat; lon=e.latlng.lng; fetchEscuelas(); });
+
+// Export PDF
 $('#btnPDF').click(async ()=>{
     const pdf = new window.jspdf.jsPDF('p','mm','a4');
     const width = pdf.internal.pageSize.getWidth();
-    const sections = [
-        {id:'seccionFiltros', title:'Filtros y KPIs'},
-        {id:'seccionMapa', title:'Mapa y Leyenda'},
-        {id:'seccionCharts', title:'Gráficos'},
-        {id:'seccionTabla', title:'Tabla de Resultados'}
-    ];
-
+    const sections=['seccionMapa','seccionCharts'];
     for(let i=0;i<sections.length;i++){
-        const sec=document.getElementById(sections[i].id);
+        const sec=document.getElementById(sections[i]);
         const canvas=await html2canvas(sec,{scale:2});
         const imgData=canvas.toDataURL('image/png');
         const pdfHeight=(canvas.height*width)/canvas.width;
         if(i>0) pdf.addPage();
         pdf.addImage(imgData,'PNG',0,0,width,pdfHeight);
     }
-    pdf.save('reporte.pdf');
+    pdf.save('reporte_mapas_por_puntos.pdf');
+});
+
+// Export Excel
+$('#btnExcel').click(()=>{
+    let cueVisible=[];
+    tabla.rows({search:'applied'}).every(function(){ cueVisible.push(this.data()[0]); });
+    if(cueVisible.length===0){ alert("No hay escuelas visibles para exportar."); return; }
+    let params = new URLSearchParams();
+    cueVisible.forEach(c=> params.append('cue[]', c));
+    window.open("{% url 'mapas:exportar_escuelas' %}?"+params.toString(),'_blank');
 });
 
 renderLegend();

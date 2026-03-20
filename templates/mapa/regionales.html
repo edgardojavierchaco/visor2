@@ -1,150 +1,141 @@
 {% extends 'dashboard/body.html' %}
-
 {% load static %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
 <style>
-  .red-icon {
-    color: red;
+  #map { height: 600px; margin-bottom: 20px; }
+  .red-icon { color: red; }
+  .legend {
+      background: white;
+      padding: 10px;
+      line-height: 18px;
+      color: #555;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  }
+  .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
   }
 </style>
+
 <div>
   <h5>
-    Haz click <i class="fa fa-hand-o-up red-icon" aria-hidden="true"></i> sobre una Regional para ver sus datos    
+    Haz click <i class="fa fa-hand-o-up red-icon" aria-hidden="true"></i> sobre una Regional para ver sus datos
   </h5>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<div id="map"></div>
 
-<div id="map" style="height: 600px;"></div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Inicializa el mapa
-    var map = L.map('map').setView([-25.388415775410138, -60.99025493373542], 8);
-    
+    var map = L.map('map').setView([-25.3884, -60.9902], 8);
 
-    // Capa de OpenStreetMap
-    var osmLayer =L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-      minZoom: 7, 
-      maxZoom: 18, 
+    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+        minZoom: 7,
+        maxZoom: 18
     }).addTo(map);
 
-   
-    //var satelliteLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    //    maxZoom: 19,
-    //    attribution: '© OpenStreetMap contributors'
-    //});
-
-
-    // Datos de geometrías en formato GeoJSON desde Django
     var geometries = {{ geometries|safe }};
 
-    // Función para asignar un color basado en la región
-    function getColor(region) {
-        switch (region) {
-            case 'R.E. 1': return 'red'; 
-            case 'SUB. R.E. 1-A': return 'orange';
-            case 'SUB. R.E. 1-B': return 'brown';
-            case 'R.E. 2': return 'green'; 
-            case 'SUB. R.E. 2': return 'olive';
-            case 'R.E. 3': return 'blue'; 
-            case 'SUB. R.E. 3': return 'black';
-            case 'R.E. 4-A': return 'fuchsia'; 
-            case 'R.E. 4-B': return 'yellow'; 
-            case 'R.E. 5': return 'aqua';
-            case 'SUB. R.E. 5': return 'purple';
-            case 'R.E. 6': return 'teal';
-            case 'R.E. 7': return 'navy';
-            case 'R.E. 8-A': return 'maroon';
-            case 'R.E. 8-B': return '#9BE40B';
-            case 'R.E. 9': return 'chocolate';
-            case 'R.E. 10-A': return '#5B0045';
-            case 'R.E. 10-B': return '#1E5128';
-            case 'R.E. 10-C': return 'red';            
-            default: return 'grey'; 
-        }
-    }
-     
+    var regionColors = {
+        'R.E. 1':'red','SUB. R.E. 1-A':'orange','SUB. R.E. 1-B':'brown',
+        'R.E. 2':'green','SUB. R.E. 2':'olive','R.E. 3':'blue',
+        'SUB. R.E. 3':'black','R.E. 4-A':'fuchsia','R.E. 4-B':'yellow',
+        'R.E. 5':'aqua','SUB. R.E. 5':'purple','R.E. 6':'teal',
+        'R.E. 7':'navy','R.E. 8-A':'maroon','R.E. 8-B':'#9BE40B',
+        'R.E. 9':'chocolate','R.E. 10-A':'#5B0045','R.E. 10-B':'#1E5128',
+        'R.E. 10-C':'red'
+    };
+    function getColor(region){ return regionColors[region] || 'grey'; }
 
-    // Añadir las geometrías al mapa utilizando el GeoJSON
-    L.geoJSON(geometries, {
-        style: function(feature) {
-            return { color: getColor(feature.properties.region_pad),weight:2, fillOpacity:0.5 };
-        },
-        onEachFeature: function(feature, layer) {
+    var geoLayer = L.geoJSON(geometries, {
+        style: f => ({ color: getColor(f.properties.region_pad), weight:2, fillOpacity:0.5 }),
+        onEachFeature: (feature, layer) => {
             var regionPad = feature.properties.region_pad || 'No disponible';
-            var titulo = feature.properties.TITULO || 'No disponible';
-
-            // Enlace con evento onclick que llama a una función
-            var link = `<a href="#" onclick="showRegionData('${regionPad}')">${regionPad}</a>`;
-            layer.bindPopup("Región: " + link);
+            layer.bindPopup(`<a href="#" onclick="showRegionData('${regionPad}')">${regionPad}</a>`);
         }
     }).addTo(map);
 
-    // Control de capas
-    //var baseLayers = {
-    //    "Mapa": osmLayer,
-    //    "Satélite": satelliteLayer
-    //};
-     
-    L.control.layers(baseLayers,{}).addTo(map);
+    map.fitBounds(geoLayer.getBounds());
 
-    function showRegionData(regionPad) {
-    // Realiza una solicitud AJAX al servidor
-    fetch(`/map/get-region-data/?region_pad=${regionPad}`)
-        .then(response => response.json())
-        .then(data => {
-            // Muestra los datos en el modal
-            showModal(data);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-}
+    // Leyenda dinámica
+    var legend = L.control({position: 'bottomright'});
+    legend.onAdd = function () {
+        var div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = "<b>Regiones</b><br>";
+        for (var key in regionColors) {
+            div.innerHTML += `<i style="background:${regionColors[key]}"></i>${key}<br>`;
+        }
+        return div;
+    };
+    legend.addTo(map);
 
-// Función para mostrar el modal con los datos
-function showModal(data) {
-    // Convertir la lista de localidades en una cadena con saltos de línea
-    var localidades = data.localidades.join('<br>');
+    function showRegionData(regionPad){
+        fetch(`/map/get-region-data/?region_pad=${regionPad}`)
+          .then(r => r.json())
+          .then(data => {
+              var localidades = data.localidades.join('<br>');
+              document.getElementById('modal-title').innerText = `Datos de la Región: ${data.region_pad}`;
+              document.getElementById('modal-body').innerHTML = `
+                  <p>Director(a) Regional: <strong>${data.director}</strong></p>
+                  <p>Teléfono: <strong>${data.telefono}</strong></p>
+                  <p>Email: <strong>${data.email}</strong></p>
+                  <p>Localidades:</p>
+                  <p><strong>${localidades}</strong></p>
+              `;
+              var modal = new bootstrap.Modal(document.getElementById('myModal'));
+              modal.show();
 
-    // Rellena el modal con los datos recibidos
-    document.getElementById('modal-title').innerText = `Datos de la Región: ${data.region_pad}`;
-    document.getElementById('modal-body').innerHTML = `
-        <p>Director(a) Regional: <strong>${data.director}</strong></p>
-        <p>Teléfono: <strong>${data.telefono}</strong></p>
-        <p>Email: <strong>${data.email}</strong></p>
-        <p>Localidades:</p>
-        <p><strong>${localidades}</strong></p>
-    `;
-    
-    // Abre el modal
-    $('#myModal').modal('show');
-}
+              // Zoom a la región seleccionada
+              geoLayer.eachLayer(layer => {
+                  if(layer.feature.properties.region_pad === regionPad){
+                      map.fitBounds(layer.getBounds());
+                  }
+              });
+          })
+          .catch(err => console.error(err));
+    }
+
+    // Filtrado de regiones
+    document.getElementById('regionFilter').addEventListener('change', function(){
+        var selected = this.value;
+        geoLayer.clearLayers();
+        var filtered = selected ? {
+            type: "FeatureCollection",
+            features: geometries.features.filter(f => f.properties.region_pad === selected)
+        } : geometries;
+
+        geoLayer.addData(filtered);
+        map.fitBounds(geoLayer.getBounds());
+    });
+
 </script>
 
-<!-- Modal -->
-<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
-  <div class="modal-dialog" role="document">
+<!-- Modal Bootstrap 5 -->
+<div class="modal fade" id="myModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modal-title">Datos de la Región</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
-      <div class="modal-body" id="modal-body">
-        <!-- Aquí se muestran los datos que se reciben desde el backend -->
-      </div>
+      <div class="modal-body" id="modal-body"></div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
       </div>
     </div>
   </div>
 </div>
 
-
 {% endblock %}
-
