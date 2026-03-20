@@ -92,7 +92,6 @@ body { background:#f4f6f9; }
   <div class="col-md-9">
     <div class="mb-2 d-flex gap-2">
         <button id="btnCluster" class="btn btn-primary btn-sm btn-activo">🔹 Clustering</button>
-        <button id="btnHeatmap" class="btn btn-warning btn-sm">🔥 Heatmap</button>
     </div>
     <div id="map"></div>
   </div>
@@ -140,7 +139,6 @@ body { background:#f4f6f9; }
 <script src="{% static 'js/jspdf.umd.min.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
@@ -154,42 +152,32 @@ $('#sectorSelect,#ambitoSelect').select2({theme:'bootstrap-5'});
 
 // Mapas base
 const osmClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' });
-const map = L.map('map', { layers:[osmClaro] }).setView([-27.47,-58.98],10);
-L.control.layers({"Claro":osmClaro}).addTo(map);
+const osmOscuro = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', { attribution: '&copy; Stadia Maps' });
+const osmSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { subdomains:['mt0','mt1','mt2','mt3'], attribution: '&copy; Google' });
+const osmMosaico = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap' });
 
-// Marcadores base (siempre visibles)
+const map = L.map('map', { layers:[osmClaro] }).setView([-27.47,-58.98],10);
+L.control.layers({"Claro":osmClaro, "Oscuro":osmOscuro, "Satelital":osmSat, "Mosaico":osmMosaico}).addTo(map);
+
+// Marcadores base
 let markers = L.layerGroup().addTo(map);
 
 // Capas opcionales
 let markerCluster = L.markerClusterGroup();
-let heatLayer = L.heatLayer([], {radius:25, blur:15, maxZoom:17});
 
 // Estado toggle
 let clusterActivo = false;
-let heatmapActivo = false;
 
-// Botones toggle
+// Botón toggle
 $('#btnCluster').click(()=>{
     clusterActivo = !clusterActivo;
-    heatmapActivo = false;
-    map.removeLayer(heatLayer);
     if(clusterActivo){ map.addLayer(markerCluster); map.removeLayer(markers); } 
     else { map.removeLayer(markerCluster); map.addLayer(markers); }
     actualizarBotones();
 });
 
-$('#btnHeatmap').click(()=>{
-    heatmapActivo = !heatmapActivo;
-    clusterActivo = false;
-    map.removeLayer(markerCluster);
-    if(heatmapActivo){ map.addLayer(heatLayer); map.removeLayer(markers); }
-    else { map.removeLayer(heatLayer); map.addLayer(markers); }
-    actualizarBotones();
-});
-
 function actualizarBotones(){
     $('#btnCluster').toggleClass('btn-activo', clusterActivo);
-    $('#btnHeatmap').toggleClass('btn-activo', heatmapActivo);
 }
 
 // Datatable
@@ -247,12 +235,10 @@ const fetchEscuelas = function(){
         // Limpiar capas
         markers.clearLayers();
         markerCluster.clearLayers();
-        heatLayer.setLatLngs([]);
         tabla.clear().draw();
 
         $('#kpiTotal').text(res.count);
         let sectoresSet=new Set(), ofertasSet=new Set();
-        let heatPoints=[];
 
         res.escuelas.forEach(e=>{
             let o=e.oferta?.split(',')[0].trim();
@@ -262,10 +248,8 @@ const fetchEscuelas = function(){
             let m = L.circleMarker([e.lat,e.lon], {radius:6, color:colorSector[e.sector]||'#000', fillColor:colorOferta[o]||'#777', fillOpacity:0.8});
             markers.addLayer(m);
             markerCluster.addLayer(m);
-            heatPoints.push([e.lat,e.lon,1]);
             tabla.row.add([e.cueanexo,e.nom_est,e.sector,e.ambito,e.oferta,e.regional,e.localidad]);
         });
-        heatLayer.setLatLngs(heatPoints);
 
         tabla.draw();
         $('#kpiSectores').text(sectoresSet.size);
@@ -273,9 +257,8 @@ const fetchEscuelas = function(){
         renderCharts(res.escuelas);
 
         // Mostrar la capa según toggle
-        if(clusterActivo){ map.addLayer(markerCluster); map.removeLayer(markers); map.removeLayer(heatLayer); }
-        else if(heatmapActivo){ map.addLayer(heatLayer); map.removeLayer(markers); map.removeLayer(markerCluster); }
-        else{ map.addLayer(markers); map.removeLayer(markerCluster); map.removeLayer(heatLayer); }
+        if(clusterActivo){ map.addLayer(markerCluster); map.removeLayer(markers); }
+        else{ map.addLayer(markers); map.removeLayer(markerCluster); }
 
         actualizarBotones();
     });
@@ -283,7 +266,6 @@ const fetchEscuelas = function(){
 
 // Filtros y slider
 $('#sectorSelect,#ambitoSelect,#ofertaSelect').on('change', fetchEscuelas);
-
 const radioSlider = $('#radioSlider');
 const radioValue = $('#radioValue');
 radioSlider.on('input', function() { radioValue.text($(this).val()); });
