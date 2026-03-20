@@ -8,6 +8,9 @@ from .models import AsistenciaUsuarios, GenerarInforme
 from .forms import AsistenciaUsuariosForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.consultasge.models_padron import CapaUnicaOfertas
+from django.db.models import F, Func, Value, CharField
+import re
 
 
 # Cargar
@@ -20,7 +23,27 @@ class AsistUsuarioCreateView(LoginRequiredMixin, CreateView):
     url_redirect = success_url
     
     def form_valid(self, form):
-        form.instance.cueanexo = self.request.user.username
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
+        form.instance.cueanexo = cueanexos[0] if cueanexos else None
         return super().form_valid(form)
 
     def dispatch(self, request, *args, **kwargs):
@@ -51,14 +74,33 @@ class AsistUsuarioCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
         context['title'] = 'Carga de Asistencia de Usuarios'
         context['entity'] = 'Asistencia'
         context['list_url'] = self.success_url
         context['action'] = 'add'
-        context['cueanexo'] = self.request.user.username
+        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
         # Obtener el último mes y año del usuario logueado
-        ultimo_informe = GenerarInforme.objects.filter(cueanexo=self.request.user.username).order_by('-annos', '-meses').first()
+        ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo_qs.first() if cueanexo_qs.exists() else None).order_by('-annos', '-meses').first()
 
         if ultimo_informe:
             context['mes'] = ultimo_informe.meses
@@ -76,7 +118,6 @@ class AsistUsuaUpdateView(LoginRequiredMixin, UpdateView):
     form_class = AsistenciaUsuariosForm
     template_name = 'biblioteca/pem/asistusua/create.html'
     success_url = reverse_lazy('bibliotecas:asistusua_list')
-    #permission_required = 'apps.change_client'
     url_redirect = success_url
 
     def dispatch(self, request, *args, **kwargs):
@@ -107,14 +148,33 @@ class AsistUsuaUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
         context['title'] = 'Edición de Asistencia de Usuarios'
         context['entity'] = 'Asistencia'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
-        context['cueanexo'] = self.request.user.username
+        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
         # Obtener el último mes y año del usuario logueado
-        ultimo_informe = GenerarInforme.objects.filter(cueanexo=self.request.user.username).order_by('-annos', '-meses').first()
+        ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo_qs.first() if cueanexo_qs.exists() else None).order_by('-annos', '-meses').first()
 
         if ultimo_informe:
             context['mes'] = ultimo_informe.meses
@@ -186,6 +246,25 @@ class AsistUsuaListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
         context['title'] = 'Listado de Asistencia de Usuarios'
         context['create_url'] = reverse_lazy('bibliotecas:asistusua_create')
         context['list_url'] = reverse_lazy('bibliotecas:asistusua_list')

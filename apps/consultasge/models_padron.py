@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps.alumnos.models import oferta
+
 
 class CapaUnicaOfertas(models.Model):
 
@@ -7,13 +9,19 @@ class CapaUnicaOfertas(models.Model):
 
     nom_est = models.CharField(max_length=255)
 
-    region_loc = models.IntegerField()
+    region_loc = models.CharField(max_length=255)
 
     ref_loc = models.CharField(max_length=255)
 
     localidad = models.CharField(max_length=255)
 
     departamento = models.CharField(max_length=255)
+    
+    oferta = models.CharField(max_length=255)
+    
+    acronimo = models.CharField(max_length=100)
+    
+    resploc_cuitcuil= models.CharField(max_length=20)
 
     class Meta:
         managed = False

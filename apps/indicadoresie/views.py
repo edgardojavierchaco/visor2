@@ -87,16 +87,10 @@ class InformeSGEListView(ListView):
     def get_queryset(self):
         # 1. Identificamos al usuario
         agente_user = self.request.user.username
-        usuarios_exentos = ['24024606', '26521492', '225685230', '28122730', '43146847']
-
-        # 2. Filtramos qué agentes puede ver según el modelo SIESegimiento
-        if agente_user in usuarios_exentos:
-            agentes_distintos = SIESegimiento.objects.values_list('agente', flat=True).distinct()
-        else:
-            agentes_distintos = SIESegimiento.objects.filter(dni_agente=agente_user).values_list('agente', flat=True).distinct()
-
-        # 3. Devolvemos SOLO las filas de InformeSGE que le corresponden a ese usuario
-        return InformeSGE.objects.filter(agente__in=agentes_distintos)
+        print(f"Usuario autenticado: {agente_user}")
+        
+        # 2. Devolvemos SOLO las filas de InformeSGE que le corresponden a ese usuario
+        return InformeSGE.objects.filter(agente=agente_user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

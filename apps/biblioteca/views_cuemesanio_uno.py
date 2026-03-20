@@ -25,11 +25,33 @@ from datetime import datetime
 from collections import defaultdict
 from django.contrib import messages
 from apps.usuarios.models import UsuariosVisualizador
+from apps.consultasge.models_padron import CapaUnicaOfertas
+from django.db.models import F, Func, Value, CharField
+import re
 
 
 @login_required
 def modal_generar_pdf_cuemesanio_uno(request):
-    cueanexo=request.user.username
+    usuario_logueado = request.user.username
+
+    # Limpiar caracteres no numéricos del CUIT/CUIL
+    usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+    # Obtener primer cueanexo del usuario
+    cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+        cuit_limpio=Func(
+            F('resploc_cuitcuil'),
+            Value('-'),
+            Value(''),
+            function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+    cueanexo=cueanexo_qs.first() if cueanexo_qs.exists() else None
     print(cueanexo)
     return render(request, 'biblioteca/consulta_cue_mes_anio_uno.html', {'cueanexo': cueanexo})
 

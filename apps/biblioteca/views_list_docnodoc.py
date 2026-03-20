@@ -8,6 +8,9 @@ from .models import DocentePonMensual, NoDocentesMensual
 from .forms import DocentePonMensualForm, NoDocentesMensualForm
 from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.consultasge.models import CapaUnicaOfertas
+from django.db.models import Func, F, Value
+import re
 
 
 
@@ -17,8 +20,29 @@ class DocentePonMensualListView(LoginRequiredMixin, ListView):
     template_name = 'biblioteca/pem/docentes/list_docentes.html'    
 
     def get_queryset(self):    
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
         # Obtenemos todos los docentes para el usuario actual
-        docentes = DocentePonMensual.objects.filter(cueanexo=self.request.user.username)
+        docentes = DocentePonMensual.objects.filter(cueanexo=cueanexos[0] if cueanexos else None)
         return docentes
 
     @method_decorator(csrf_exempt)
@@ -79,8 +103,29 @@ class NoDocentePonMensualListView(LoginRequiredMixin, ListView):
     template_name = 'biblioteca/pem/docentes/list_nodocentes.html'    
 
     def get_queryset(self):    
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
         # Filtra los docentes por 'cueanexo' del usuario logueado        
-        nodocentes= NoDocentesMensual.objects.filter(cueanexo=self.request.user.username).order_by('apellidos', 'nombres')
+        nodocentes= NoDocentesMensual.objects.filter(cueanexo=cueanexos[0] if cueanexos else None).order_by('apellidos', 'nombres')
         print('no docentes',nodocentes)
         return nodocentes
     

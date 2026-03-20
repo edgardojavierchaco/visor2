@@ -1,5 +1,8 @@
 from django.contrib import admin
+
+from apps.consultasge.models_padron import CapaUnicaOfertas
 from .models import *
+
 
 admin.site.register(Aguapey)
 admin.site.register(AsistenciaUsuarios)

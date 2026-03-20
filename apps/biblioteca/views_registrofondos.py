@@ -6,13 +6,35 @@ from django.views import View
 from .models import DestinoFondos, RegistroDestinoFondos, GenerarInforme
 from django.shortcuts import render, redirect
 from django.contrib import messages  # Para usar mensajes en Django
+from apps.consultasge.models import CapaUnicaOfertas
+from django.db.models import Func, F, Value 
+import re
 
 #Registro Destino Fondos
 class RegistroDestinoFondosView(View):
     template_name = 'biblioteca/pem/fondos/registro.html'
 
     def get(self, request, *args, **kwargs):
-        cueanexo = request.user.username
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)  
+             
+        cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
         ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo).order_by('-annos', '-meses').first()
         
         if ultimo_informe:
@@ -33,7 +55,26 @@ class RegistroDestinoFondosView(View):
 
     def post(self, request, *args, **kwargs):
         print('POST data:', request.POST)  # Verificar qué datos llegan
-        cueanexo = request.user.username
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)       
+       
+        cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
         ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo).order_by('-annos', '-meses').first()
 
@@ -91,8 +132,29 @@ class RegistroDestinoFondosListView(View):
     template_name = 'biblioteca/pem/fondos/registro_list.html'
 
     def get(self, request, *args, **kwargs):
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':  # Verifica si es una petición AJAX
-            cueanexo = request.user.username
+            cueanexo = cueanexos[0] if cueanexos else None
             ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo).order_by('-annos', '-meses').first()
 
             if not ultimo_informe:

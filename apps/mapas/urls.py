@@ -4,6 +4,8 @@ from . import viewscueradio
 from . import views2
 from . import viewscolectivos, viewscomiarias,viewscentrossalud
 from . views_ai import filter_data, filtrado, extraer_criterios, normalizar_region
+from .views_points import mapa_escuelas, escuelas_cercanas
+from apps.mapas import views_points
 
 app_name='mapas'
 
@@ -27,6 +29,9 @@ urlpatterns=[
     path('filter_salud/',viewscentrossalud.filtrado_cueradiosalud, name='filter_salud'),
     path('salud/',viewscentrossalud.filter_cueradiosalud, name='salud'), 
     path('filnat/', filtrado, name='filnat'),
-    path('ofertas/', filter_data, name='filter_data')    
+    path('ofertas/', filter_data, name='filter_data'),
+    path('mapa/', views_points.mapa_escuelas, name='mapa_escuelas'),
+    path('escuelas_cercanas/', views_points.escuelas_cercanas, name='escuelas_cercanas'),
+    path('exportar/', views_points.exportar_escuelas, name='exportar_escuelas'),
 ]
     

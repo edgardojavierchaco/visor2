@@ -4,9 +4,32 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from pyparsing import C
 from .models import GenerarInforme
+from apps.consultasge.models import CapaUnicaOfertas
+from django.db.models import Func, F, Value
+import re
 
 def generar_informe(request):
-    cue=request.user.username 
+    # 🔹 Obtener usuario logueado correctamente
+    usuario_logueado = request.user.username  
+    usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+    print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+    # 🔹 Obtener todos los cueanexos que cumplan la condición
+    cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+        cuit_limpio=Func(
+            F('resploc_cuitcuil'),
+            Value('-'),
+            Value(''),
+            function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+    cueanexos = list(cueanexos_qs)
+    cue=cueanexos[0] if cueanexos else None
     
     try:
         with connection.cursor() as cursor:

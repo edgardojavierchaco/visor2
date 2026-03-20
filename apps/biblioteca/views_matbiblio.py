@@ -8,7 +8,9 @@ from .models import MaterialBibliografico, GenerarInforme
 from .forms import MaterialBibliograficoForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
-
+from apps.consultasge.models import CapaUnicaOfertas
+from django.db.models import Func, F, Value
+import re
 
 # Cargar
 class MaterialBibliograficoCreateView(LoginRequiredMixin, CreateView):
@@ -20,7 +22,28 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, CreateView):
     url_redirect = success_url
     
     def form_valid(self, form):
-        form.instance.cueanexo = self.request.user.username
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
+        form.instance.cueanexo = cueanexos[0] if cueanexos else None
         return super().form_valid(form)
 
     def dispatch(self, request, *args, **kwargs):
@@ -44,14 +67,33 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)       
+        
         context['title'] = 'Carga Servicio Material Bibliográfico'
         context['entity'] = 'Material'
         context['list_url'] = self.success_url
         context['action'] = 'add'
-        context['cueanexo'] = self.request.user.username        
+        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None      
         
         # Obtener el último mes y año del usuario logueado
-        ultimo_informe = GenerarInforme.objects.filter(cueanexo=self.request.user.username).order_by('-annos', '-meses').first()
+        ultimo_informe = GenerarInforme.objects.filter(cueanexo=context['cueanexo']).order_by('-annos', '-meses').first()
 
         if ultimo_informe:
             context['mes'] = ultimo_informe.meses
@@ -93,14 +135,33 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        usuario_logueado = self.request.user.username
+
+        # Limpiar caracteres no numéricos del CUIT/CUIL
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        # Obtener primer cueanexo del usuario
+        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)       
+        
         context['title'] = 'Edición Servicio Material Bibliográfico'
         context['entity'] = 'Material'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
-        context['cueanexo'] = self.request.user.username
+        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
         # Obtener el último mes y año del usuario logueado
-        ultimo_informe = GenerarInforme.objects.filter(cueanexo=self.request.user.username).order_by('-annos', '-meses').first()
+        ultimo_informe = GenerarInforme.objects.filter(cueanexo=context['cueanexo']).order_by('-annos', '-meses').first()
 
         if ultimo_informe:
             context['mes'] = ultimo_informe.meses

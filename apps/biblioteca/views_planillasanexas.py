@@ -4,13 +4,37 @@ from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from .models import PlanillasAnexas, ServiciosMatBiblio, GenerarInforme
+from apps.consultasge.models import CapaUnicaOfertas
+from django.db.models import F, Func, Value
+import re
 
 #Cargar Planillas Anexas
 class PlanillasAnexasView(View):
     template_name = 'biblioteca/pem/anexas/planillas_anexas.html'
 
     def get(self, request, *args, **kwargs):
-        cueanexo = request.user.username
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
+        cueanexo = cueanexos[0] if cueanexos else None
         ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo).order_by('-annos', '-meses').first()
         
         if ultimo_informe:
@@ -30,7 +54,28 @@ class PlanillasAnexasView(View):
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
-        cueanexo = request.user.username
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
+        cueanexo = cueanexos[0] if cueanexos else None
         ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo).order_by('-annos', '-meses').first()
 
         if not ultimo_informe:
@@ -70,8 +115,29 @@ class PlanillasAnexasListView(View):
     template_name = 'biblioteca/pem/anexas/planillas_anexas_list.html'
 
     def get(self, request, *args, **kwargs):
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':  # Verifica si es una petición AJAX
-            cueanexo = request.user.username
+            cueanexo = cueanexos[0] if cueanexos else None
             ultimo_informe = GenerarInforme.objects.filter(cueanexo=cueanexo).order_by('-annos', '-meses').first()
 
             if not ultimo_informe:

@@ -2,7 +2,6 @@ from django.contrib import admin
 from .models_padron import CapaUnicaOfertas
 from .models import Categoria, Consulta, Respuesta, Adjunto, Auditoria
 
-
 @admin.register(CapaUnicaOfertas)
 class CapaUnicaOfertasAdmin(admin.ModelAdmin):
     list_display = (
@@ -11,11 +10,13 @@ class CapaUnicaOfertasAdmin(admin.ModelAdmin):
         "region_loc",
         "ref_loc",
         "localidad",
-        "departamento"
+        "departamento",
+        "oferta",
+        "acronimo",
+        "resploc_cuitcuil",
     )
     search_fields = ("cueanexo", "nom_est", "localidad")
     list_filter = ("region_loc", "departamento")
-
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):

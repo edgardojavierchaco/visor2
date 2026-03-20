@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mapa Ministerial - Chaco</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"/>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet"/>
+
+<style>
+body { background:#f4f6f9; }
+.card-header { background:#0d6efd; color:white; }
+#map { height:450px; border-radius:10px; }
+.legend-box span { display:inline-block; width:15px; height:15px; margin-right:5px; }
+.kpi-card { text-align:center; padding:15px; border-radius:10px; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+</style>
+</head>
+
+<body>
+<div class="container-fluid mt-3">
+
+<!-- KPIs y Filtros -->
+<div id="seccionFiltros">
+<div class="row mb-3">
+<div class="col-md-3"><div class="kpi-card">Total<br><b id="kpiTotal">0</b></div></div>
+<div class="col-md-3"><div class="kpi-card">Sectores<br><b id="kpiSectores">0</b></div></div>
+<div class="col-md-3"><div class="kpi-card">Ofertas<br><b id="kpiOfertas">0</b></div></div>
+<div class="col-md-3"><button class="btn btn-danger w-100" id="btnPDF">📥 Exportar PDF</button></div>
+</div>
+
+<div class="card mb-3">
+<div class="card-header">Filtros</div>
+<div class="card-body">
+<div class="row g-3">
+<div class="col-md-3">
+<input type="range" id="radioSlider" class="form-range" min="100" max="200000" value="5000">
+<span id="radioValue">5000</span> m
+</div>
+<div class="col-md-3">
+<select id="ofertaSelect" class="form-select" multiple>
+{% for o in ofertas %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+</select>
+</div>
+<div class="col-md-3">
+<select id="sectorSelect" class="form-select">
+<option value="Todos">Todos</option>
+{% for s in sectores %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+</select>
+</div>
+<div class="col-md-3">
+<select id="ambitoSelect" class="form-select">
+<option value="Todos">Todos</option>
+{% for a in ambitos %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- MAPA + LEYENDA -->
+<div id="seccionMapa" class="row mb-3">
+<div class="col-md-9"><div id="map"></div></div>
+<div class="col-md-3">
+<div class="card">
+<div class="card-header">🎨 Leyenda</div>
+<div class="card-body" id="legend"></div>
+</div>
+</div>
+</div>
+
+<!-- CHARTS -->
+<div id="seccionCharts" class="row mb-3">
+<div class="col-md-6"><canvas id="chartOferta"></canvas></div>
+<div class="col-md-6"><canvas id="chartSector"></canvas></div>
+</div>
+
+<!-- TABLA -->
+<div id="seccionTabla" class="card">
+<div class="card-header">Resultados</div>
+<div class="card-body">
+<table id="tablaEscuelas" class="table table-striped">
+<thead><tr><th>CUE</th><th>Nombre</th><th>Sector</th><th>Ámbito</th><th>Oferta</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas"></script>
+<script src="{% static 'js/jspdf.umd.min.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+const colorOferta = {{ color_oferta|safe }};
+const colorSector = {{ color_sector|safe }};
+
+$('#ofertaSelect').select2({theme:'bootstrap-5'});
+$('#sectorSelect,#ambitoSelect').select2({theme:'bootstrap-5'});
+
+const map = L.map('map').setView([-27.47,-58.98],10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let markers = L.layerGroup().addTo(map);
+let tabla = $('#tablaEscuelas').DataTable();
+let chart1, chart2;
+
+function debounce(fn, delay){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args),delay); } }
+
+function renderLegend(){
+    let html="<b>Oferta</b><br>";
+    Object.entries(colorOferta).forEach(([k,v])=> html+=`<div class="legend-box"><span style="background:${v}"></span>${k}</div>`);
+    html+="<hr><b>Sector</b><br>";
+    Object.entries(colorSector).forEach(([k,v])=> html+=`<div class="legend-box"><span style="background:${v}"></span>${k}</div>`);
+    $('#legend').html(html);
+}
+
+function renderCharts(data){
+    let countOferta={}, countSector={};
+    data.forEach(e=>{
+        let o=e.oferta?.split(',')[0].trim();
+        countOferta[o]=(countOferta[o]||0)+1;
+        countSector[e.sector]=(countSector[e.sector]||0)+1;
+    });
+    if(chart1) chart1.destroy();
+    if(chart2) chart2.destroy();
+    chart1=new Chart(document.getElementById('chartOferta'),{
+        type:'bar',
+        data:{ labels:Object.keys(countOferta), datasets:[{ data:Object.values(countOferta), backgroundColor:Object.keys(countOferta).map(k=>colorOferta[k]) }] }
+    });
+    chart2=new Chart(document.getElementById('chartSector'),{
+        type:'pie',
+        data:{ labels:Object.keys(countSector), datasets:[{ data:Object.values(countSector), backgroundColor:Object.keys(countSector).map(k=>colorSector[k]) }] }
+    });
+}
+
+const fetchEscuelas = debounce(function(){
+    const lat=-27.47, lon=-58.98;
+    const radio=$('#radioSlider').val();
+    const sector=$('#sectorSelect').val();
+    const ambito=$('#ambitoSelect').val();
+    const ofertas=$('#ofertaSelect').val()||[];
+
+    let body=`lat=${lat}&lon=${lon}&radio=${radio}&sector=${sector}&ambito=${ambito}`;
+    ofertas.forEach(o=> body+=`&oferta[]=${encodeURIComponent(o)}`);
+
+    fetch("{% url 'mapas:escuelas_cercanas' %}",{
+        method:"POST",
+        headers:{ "Content-Type":"application/x-www-form-urlencoded","X-CSRFToken":"{{ csrf_token }}" },
+        body:body
+    })
+    .then(r=>r.json())
+    .then(res=>{
+        markers.clearLayers();
+        tabla.clear().draw();
+        $('#kpiTotal').text(res.count);
+        let sectoresSet=new Set(), ofertasSet=new Set();
+        res.escuelas.forEach(e=>{
+            let o=e.oferta?.split(',')[0].trim();
+            sectoresSet.add(e.sector);
+            ofertasSet.add(o);
+            L.circleMarker([e.lat,e.lon],{
+                radius:6, color:colorSector[e.sector]||'#000', fillColor:colorOferta[o]||'#777', fillOpacity:0.8
+            }).addTo(markers);
+            tabla.row.add([e.cueanexo,e.nom_est,e.sector,e.ambito,e.oferta]);
+        });
+        tabla.draw();
+        $('#kpiSectores').text(sectoresSet.size);
+        $('#kpiOfertas').text(ofertasSet.size);
+        renderCharts(res.escuelas);
+    });
+},400);
+
+$('#radioSlider,#sectorSelect,#ambitoSelect,#ofertaSelect').on('change input',fetchEscuelas);
+
+// EXPORTAR PDF en páginas separadas
+$('#btnPDF').click(async ()=>{
+    const pdf = new window.jspdf.jsPDF('p','mm','a4');
+    const width = pdf.internal.pageSize.getWidth();
+    const sections = [
+        {id:'seccionFiltros', title:'Filtros y KPIs'},
+        {id:'seccionMapa', title:'Mapa y Leyenda'},
+        {id:'seccionCharts', title:'Gráficos'},
+        {id:'seccionTabla', title:'Tabla de Resultados'}
+    ];
+
+    for(let i=0;i<sections.length;i++){
+        const sec=document.getElementById(sections[i].id);
+        const canvas=await html2canvas(sec,{scale:2});
+        const imgData=canvas.toDataURL('image/png');
+        const pdfHeight=(canvas.height*width)/canvas.width;
+        if(i>0) pdf.addPage();
+        pdf.addImage(imgData,'PNG',0,0,width,pdfHeight);
+    }
+    pdf.save('reporte.pdf');
+});
+
+renderLegend();
+fetchEscuelas();
+</script>
+</body>
+</html>
