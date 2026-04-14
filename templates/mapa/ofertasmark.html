@@ -257,14 +257,7 @@ setTimeout(() => {
 }, 500);
 
 
-console.log("MAP READY");
-console.log("RADIOS:", radiosCensales.features.length);
-console.log("RADIOS LAYER:", radiosLayer.getLayers().length);
-console.log("LAYER:", radiosLayer);
-console.time("radios");
-console.timeEnd("radios");
-const provs = new Set(radiosCensales.features.map(f => f.properties.NOMPROV));
-console.log([...provs]);
+
 
 /* ICONO Y CLUSTER */
 const iconSchool=L.divIcon({className:"school-marker",html:"🎓",iconSize:[30,30],iconAnchor:[15,30]});

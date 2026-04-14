@@ -19,84 +19,82 @@ def filter_data(request):
     indec_geojson = {"type": "FeatureCollection", "features": []}
 
     try:
-        # ===============================
-        # 📥 1. Leer GeoJSON
-        # ===============================
-        path = os.path.join(settings.BASE_DIR, 'static/gis/radios-censales.geojson')
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT geojson
+                FROM public.v_radios_censales_chaco_geojson
+            """)
+            row = cursor.fetchone()
 
-        if os.path.exists(path):
-            with open(path, encoding='utf-8') as f:
-                data = json.load(f)
+        if row and row[0]:
+            geo = row[0]
 
-            # ===============================
-            # 🧠 2. Traer datos de la vista
-            # ===============================
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT 
-                        link,
-                        ofertas,
-                        poblacion_total,
-                        demanda_inicial,
-                        demanda_primaria,
-                        demanda_secundaria
-                    FROM public.v_radio_demanda_oferta
-                """)
+            # ============================
+            # 🔍 DEBUG 1: tipo de dato
+            # ============================
+            print("\n🧭 TYPE GEOJSON:", type(geo))
 
-                rows = cursor.fetchall()
+            # ============================
+            # 🔍 DEBUG 2: normalizar JSON
+            # ============================
+            if isinstance(geo, str):
+                geo = json.loads(geo)
 
-            # 👉 Convertir a dict para lookup rápido
-            data_db = {
-                row[0]: {
-                    "ofertas": row[1],
-                    "poblacion": row[2],
-                    "demanda_inicial": row[3],
-                    "demanda_primaria": row[4],
-                    "demanda_secundaria": row[5],
-                }
-                for row in rows
-            }
+            indec_geojson = geo
 
-            # ===============================
-            # 🔥 3. Filtrar + enriquecer
-            # ===============================
-            filtered_features = []
+            # ============================
+            # 🔍 DEBUG 3: resumen general
+            # ============================
+            features = geo.get("features", [])
+            print("\n📦 TOTAL FEATURES:", len(features))
 
-            for f in data.get("features", []):
+            # ============================
+            # 🔍 DEBUG 4: muestra primeros 3
+            # ============================
+            print("\n📍 SAMPLE FEATURES (primeros 3):")
+
+            for i, f in enumerate(features[:3]):
+                print(f"\n--- FEATURE {i} ---")
+
                 props = f.get("properties", {})
+                geom = f.get("geometry", {})
 
-                # FILTRO CHACO
-                if props.get("NOMPROV") != "CHACO":
-                    continue
+                print("properties:", props)
+                print("geometry_type:", geom.get("type") if geom else None)
+                print("has_coordinates:", "coordinates" in geom if geom else False)
 
-                link = props.get("link") or props.get("LINK")
+            # ============================
+            # 🔍 DEBUG 5: detectar errores
+            # ============================
+            invalid = []
 
-                # 👉 merge con datos de BD
-                if link in data_db:
-                    props.update(data_db[link])
-                else:
-                    props.update({
-                        "ofertas": 0,
-                        "poblacion": 0,
-                        "demanda_inicial": 0,
-                        "demanda_primaria": 0,
-                        "demanda_secundaria": 0,
-                    })
+            for i, f in enumerate(features):
+                geom = f.get("geometry")
 
-                f["properties"] = props
-                filtered_features.append(f)
+                if not geom:
+                    invalid.append((i, "NO_GEOMETRY"))
+                elif not geom.get("coordinates"):
+                    invalid.append((i, "NO_COORDINATES"))
 
-            indec_geojson = {
-                "type": "FeatureCollection",
-                "features": filtered_features
-            }
+            print("\n🚨 FEATURES INVALIDOS:", len(invalid))
+
+            if invalid[:10]:
+                print("\n❌ EJEMPLOS DE ERRORES:")
+                for i, reason in invalid[:10]:
+                    print(f" - Feature {i}: {reason}")
+
+            # ============================
+            # 🔍 DEBUG 6: bounds check rápido
+            # ============================
+            print("\n✔ GEOJSON LISTO PARA FRONTEND")
 
     except Exception as e:
-        print("⚠️ Error cargando INDEC:", e)
+        print("\n⚠️ ERROR CARGANDO RADIOS:", e)
 
     context['indec_geojson'] = indec_geojson
 
     return render(request, 'mapa/ofertasmark.html', context)
+    
 
 def filter_listado_map(request):
     params = request.POST if request.method == 'POST' else {}
