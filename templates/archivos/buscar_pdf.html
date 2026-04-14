@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscar PDF</title>
+</head>
+<body>
+    <h2>Buscar PDF</h2>
+    <form method="post">
+        {% csrf_token %}
+        <label for="cueanexo">Cueanexo:</label>
+        <input type="text" id="cueanexo" name="cueanexo">
+        <label for="asunto">Asunto:</label>
+        <input type="text" id="asunto" name="asunto">
+        <button type="submit">Buscar</button>
+    </form>
+</body>
+</html>

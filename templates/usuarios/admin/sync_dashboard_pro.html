@@ -1,0 +1,162 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+
+<h1>📊 Sync Usuarios</h1>
+
+<button id="btnSync" onclick="iniciarSync()"
+        style="padding:10px 15px;background:#007bff;color:white;border:none;cursor:pointer;">
+    🔄 Ejecutar Sync
+</button>
+
+<div id="spinner" style="display:none;margin-top:15px;">
+    ⏳ Procesando sincronización...
+</div>
+
+<div id="resultado" style="margin-top:20px;font-size:14px;"></div>
+
+<hr>
+
+<h3>Historial</h3>
+
+<table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Creados</th>
+            <th>Actualizados</th>
+            <th>Rechazados</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in logs %}
+        <tr>
+            <td>{{ l.fecha_inicio }}</td>
+            <td>{{ l.creados }}</td>
+            <td>{{ l.actualizados }}</td>
+            <td>{{ l.rechazados }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+
+let interval = null;
+
+function iniciarSync() {
+
+    fetch("{% url 'usuarios:iniciar_sync' %}")
+    .then(res => res.json())
+    .then(data => {
+
+        // 🟡 ya hay sync corriendo
+        if (data.status === "ya_en_ejecucion") {
+
+            document.getElementById("resultado").innerHTML =
+                "⚠ Ya hay una sincronización en ejecución";
+
+            console.log("Sync ya estaba en ejecución");
+            return;
+        }
+
+        // 🔵 iniciar UI loading
+        document.getElementById("spinner").style.display = "block";
+        document.getElementById("btnSync").disabled = true;
+        document.getElementById("resultado").innerHTML = "";
+
+        verificarEstado();
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error iniciando sync");
+    });
+}
+
+
+function verificarEstado() {
+
+    if (interval) clearInterval(interval);
+
+    interval = setInterval(() => {
+
+        fetch("{% url 'usuarios:estado_sync' %}")
+        .then(res => res.json())
+        .then(data => {
+
+            console.log("Estado sync:", data.estado);
+
+            // ✅ FINALIZADO
+            if (data.estado === "finalizado") {
+
+                clearInterval(interval);
+
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("btnSync").disabled = false;
+
+                document.getElementById("resultado").innerHTML =
+                    "✔ Sincronización finalizada<br><br>" +
+                    "👤 Creados: " + (data.resultado?.creados ?? 0) + "<br>" +
+                    "✏ Actualizados: " + (data.resultado?.actualizados ?? 0) + "<br>" +
+                    "❌ Rechazados: " + (data.resultado?.rechazados ?? 0);
+            }
+
+            // ❌ ERROR REAL
+            if (data.estado === "error") {
+
+                clearInterval(interval);
+
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("btnSync").disabled = false;
+
+                document.getElementById("resultado").innerHTML =
+                    "❌ Error: " + (data.error ?? "Error desconocido");
+
+                alert("Error en sincronización");
+            }
+
+            // 🟡 SKIPPED (YA EXISTE UNA EJECUCIÓN)
+            if (data.estado === "skipped") {
+
+                clearInterval(interval);
+
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("btnSync").disabled = false;
+
+                document.getElementById("resultado").innerHTML =
+                    "⚠ La sincronización fue ignorada (ya había una en ejecución)";
+            }
+
+            // 🔵 YA EN EJECUCIÓN
+            if (data.estado === "ya_en_ejecucion") {
+
+                clearInterval(interval);
+
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("btnSync").disabled = false;
+
+                document.getElementById("resultado").innerHTML =
+                    "🔵 Sincronización ya en ejecución";
+
+                console.log("Estado: ya_en_ejecucion");
+            }
+
+        })
+        .catch(err => {
+            console.error(err);
+            clearInterval(interval);
+
+            document.getElementById("spinner").style.display = "none";
+            document.getElementById("btnSync").disabled = false;
+
+            document.getElementById("resultado").innerHTML =
+                "❌ Error consultando estado";
+        });
+
+    }, 3000);
+}
+
+</script>
+
+{% endblock %}

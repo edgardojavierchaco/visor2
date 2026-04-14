@@ -1,0 +1,286 @@
+{% extends "consultasge/layout.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-pencil-square me-2"></i>Nueva Consulta</h2>
+        <a href="{% url 'consultasge:dashboard' %}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-header bg-light d-flex justify-content-between">
+                    <strong>Formulario de Consulta</strong>
+                </div>
+
+                <div class="card-body bg-secondary bg-opacity-10">
+                    <form method="post" enctype="multipart/form-data" id="form-consulta" novalidate>
+                        {% csrf_token %}
+                        {# --- Establecimiento --- #}
+                        {% if form.cueanexo.widget.input_type == "hidden" %}
+                            <div class="mb-3">
+                                <label class="form-label">Establecimiento</label>
+                                <input type="text" class="form-control" value="{{ form.cueanexo_display.value }}" readonly>
+                                {{ form.cueanexo }} {# HiddenInput que envía el valor real al servidor #}
+                                {% for error in form.cueanexo.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="mb-3">
+                                <label class="form-label">Establecimiento</label>
+                                <select name="{{ form.cueanexo.name }}" class="form-select">
+                                    <option value="">Seleccione...</option>
+                                    {% for value, label in form.cueanexo.field.choices %}
+                                        <option value="{{ value }}" {% if form.cueanexo.value == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.cueanexo.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                        {# --- Asunto --- #}
+                        <div class="mb-3">
+                            <label class="form-label">Asunto</label>
+                            <input type="text" name="asunto" value="{{ form.asunto.value|default_if_none:'' }}" class="form-control" placeholder="Ingrese el asunto">
+                            {% for error in form.asunto.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# --- Categoría --- #}
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <select name="categoria" class="form-select">
+                                <option value="">Seleccione...</option>
+                                {% for option in form.categoria.field.queryset %}
+                                    <option value="{{ option.id }}" {% if form.categoria.value|stringformat:"s" == option.id|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                            {% for error in form.categoria.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# --- Mensaje con CKEditor --- #}
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.mensaje.label }}</label>
+                            {{ form.mensaje }}
+                            {% for error in form.mensaje.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# --- Archivos --- #}
+                        <div class="mb-3">
+                            <label class="form-label">Adjuntar archivos</label>
+                            <input type="file" name="archivos" id="input-archivos" multiple class="form-control"
+                                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
+                            <div id="preview-archivos" class="d-flex flex-wrap gap-2 mt-2" style="max-height:300px; overflow-y:auto;"></div>
+                            <div id="drop-zone" class="border rounded p-3 text-center text-muted mt-2">
+                                Arrastrá imágenes aquí o pegá capturas con <strong>Ctrl + V</strong>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                <i class="bi bi-send me-1"></i> Enviar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= SweetAlert2 ================= -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- ================= CHAT FLOTANTE ================= -->
+<button id="floatBtn"
+        class="btn btn-lg rounded-circle shadow bg-success position-fixed"
+        style="bottom: 20px; right: 20px; z-index: 9999;">
+    <i class="bi bi-chat-dots-fill messaging-icon"></i>
+    <span id="floatBadge" class="badge badge-danger position-absolute" style="display:none;">0</span>
+</button>
+
+<div id="chatPanel" class="card shadow" style="width:320px; position:fixed; top:80px; right:20px; display:none; z-index:9999;">
+    <div class="card-header bg-primary text-white d-flex justify-content-between">
+        <span>Notificaciones</span>
+        <button id="closeChat" class="btn btn-sm btn-light">&times;</button>
+    </div>
+    <div id="chatBody" class="card-body">
+        <p class="text-muted text-center">Sin notificaciones</p>
+    </div>
+    <div class="card-footer text-center">
+        <a href="/consultas/" class="btn btn-sm btn-primary">Ver todas</a>
+    </div>
+</div>
+
+<div class="position-fixed bottom-0 right-0 p-3" style="z-index:9999;">
+    <div id="consultaToast" class="toast" role="alert">
+        <div class="toast-header">
+            <strong class="mr-auto">Notificaciones</strong>
+            <button type="button" class="ml-2 mb-1 close" data-bs-dismiss="toast">&times;</button>
+        </div>
+        <div class="toast-body" id="toastMessage">Nueva consulta</div>
+    </div>
+</div>
+
+<audio id="alertSound" src="{% static 'sounds/alert.mp3' %}" preload="auto"></audio>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    // ---------- Archivos Drag & Drop ----------
+    const inputArchivos = document.getElementById("input-archivos");
+    const preview = document.getElementById("preview-archivos");
+    const dropZone = document.getElementById("drop-zone");
+    let archivos = [];
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+    function actualizarInput(){
+        const dt = new DataTransfer();
+        archivos.forEach(f=>dt.items.add(f));
+        inputArchivos.files = dt.files;
+    }
+
+    function eliminarArchivo(idx){ archivos.splice(idx,1); renderPreview(); }
+
+    function renderPreview(){
+        preview.innerHTML = "";
+        archivos.forEach((file,index)=>{
+            const reader = new FileReader();
+            reader.onload = function(e){
+                const div = document.createElement("div");
+                div.className = "position-relative shadow-sm rounded border-start border-primary border-4 p-2";
+                div.style.width="120px";
+                div.innerHTML = `
+                    <img src="${e.target.result}" style="width:120px;height:90px;object-fit:cover;border-radius:4px;">
+                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" onclick="eliminarArchivo(${index})">✕</button>`;
+                preview.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+        actualizarInput();
+        preview.scrollTop = preview.scrollHeight;
+    }
+
+    async function comprimirImagen(file){
+        return new Promise(resolve=>{
+            const reader = new FileReader();
+            reader.onload = function(e){
+                const img = new Image();
+                img.onload = function(){
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    const MAX_WIDTH=1600;
+                    let width=img.width, height=img.height;
+                    if(width>MAX_WIDTH){ height*=MAX_WIDTH/width; width=MAX_WIDTH; }
+                    canvas.width=width; canvas.height=height;
+                    ctx.drawImage(img,0,0,width,height);
+                    canvas.toBlob(blob=>{
+                        const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/,"")+".jpg", {type:"image/jpeg"});
+                        resolve(compressedFile);
+                    },"image/jpeg",0.75);
+                };
+                img.src=e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function procesarArchivo(file){
+        if(file.size>MAX_SIZE){ Swal.fire({icon:"error",title:"Archivo demasiado grande",text:"Máximo 5MB"}); return; }
+        if(file.type.startsWith("image/")) file = await comprimirImagen(file);
+        archivos.push(file); renderPreview();
+    }
+
+    inputArchivos.addEventListener("change", async function(){ for(let f of this.files) await procesarArchivo(f); });
+    dropZone.addEventListener("dragover", e=>{ e.preventDefault(); dropZone.classList.add("bg-light"); });
+    dropZone.addEventListener("dragleave", e=>{ dropZone.classList.remove("bg-light"); });
+    dropZone.addEventListener("drop", async e=>{ e.preventDefault(); dropZone.classList.remove("bg-light"); for(let f of e.dataTransfer.files) await procesarArchivo(f); });
+    document.addEventListener("paste", async e=>{
+        const items = e.clipboardData.items;
+        for(let i=0;i<items.length;i++){ if(items[i].type.indexOf("image")!==-1){ const blob = items[i].getAsFile(); await procesarArchivo(blob); Swal.fire({icon:"success",title:"Captura pegada",timer:1200,showConfirmButton:false}); } }
+    });
+
+    // ---------- CHAT FLOTANTE ----------
+    let ultimoTotal=0;
+    const btn=document.getElementById("floatBtn");
+    const badge=document.getElementById("floatBadge");
+    const chat=document.getElementById("chatPanel");
+    const closeChat=document.getElementById("closeChat");
+    const chatBody=document.getElementById("chatBody");
+    const toastEl=document.getElementById("consultaToast");
+    const toastMsg=document.getElementById("toastMessage");
+    const sound=document.getElementById("alertSound");
+
+    btn.addEventListener("click", ()=>chat.style.display="block");
+    closeChat.addEventListener("click", ()=>chat.style.display="none");
+
+    function renderMensajes(data){
+        chatBody.innerHTML="";
+        if(data.activas===0 && data.vencidas===0){ chatBody.innerHTML='<p class="text-muted text-center">Sin notificaciones</p>'; return; }
+        if(data.vencidas>0) chatBody.innerHTML+=`<div class="alert alert-danger p-2">${data.vencidas} consulta(s) vencida(s)</div>`;
+        if(data.activas>0) chatBody.innerHTML+=`<div class="alert alert-warning p-2">${data.activas} consulta(s) activa(s)</div>`;
+    }
+
+    function actualizarNotificaciones(){
+        fetch("{% url 'consultasge:notificaciones_consultas' %}")
+        .then(r=>r.json())
+        .then(data=>{
+            if(data.activas>0){ badge.style.display="inline-block"; badge.innerText=data.activas; } else badge.style.display="none";
+            btn.classList.remove("bg-danger","bg-warning","bg-success");
+            if(data.vencidas>0) btn.classList.add("bg-danger");
+            else if(data.activas>0) btn.classList.add("bg-warning");
+            else btn.classList.add("bg-success");
+            renderMensajes(data);
+            if(data.activas>ultimoTotal){ toastMsg.innerText="📩 Nueva consulta recibida"; new bootstrap.Toast(toastEl).show(); if(sound) sound.play(); }
+            ultimoTotal=data.activas;
+        }).catch(err=>console.error(err));
+    }
+
+    actualizarNotificaciones();
+    setInterval(actualizarNotificaciones,30000);
+
+    // ---------- ENVÍO FORMULARIO AJAX ----------
+    const form = document.getElementById("form-consulta");
+    form.addEventListener("submit", async e=>{
+        e.preventDefault();
+        const formData = new FormData(form);
+        archivos.forEach(f=>formData.append("archivos",f));
+        fetch("{% url 'consultasge:consultas_nueva' %}",{
+            method:"POST",
+            body: formData,
+            headers:{"X-Requested-With":"XMLHttpRequest","X-CSRFToken":"{{ csrf_token }}"},
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if(data.ok){
+                Swal.fire({icon:"success",title:data.mensaje,timer:1500,showConfirmButton:false});
+                form.reset();
+                archivos=[];
+                renderPreview();
+                actualizarNotificaciones();
+            } else {
+                Swal.fire({icon:"error",title:"Error al enviar",html:JSON.stringify(data.errors)});
+            }
+        })
+        .catch(err=>console.error(err));
+    });
+
+});
+</script>
+{% endblock %}

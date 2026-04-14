@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.mapas.views2 &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.mapas.views2</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.mapas.views2</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">JsonResponse</span>
+
+<div class="viewcode-block" id="mapapuntos"><a class="viewcode-back" href="../../../mapas.html#apps.mapas.views2.mapapuntos">[documentos]</a><span class="k">def</span> <span class="nf">mapapuntos</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza la plantilla del mapa.</span>
+
+<span class="sd">    Esta vista simplemente carga la plantilla HTML &#39;mapa/mapa.html&#39;, donde se</span>
+<span class="sd">    mostrará el mapa interactivo que puede luego cargar puntos a través de</span>
+<span class="sd">    peticiones AJAX o a través de un contexto pasado desde otras vistas.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla &#39;mapa/mapa.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;mapa/mapa.html&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="obtenerdatos"><a class="viewcode-back" href="../../../mapas.html#apps.mapas.views2.obtenerdatos">[documentos]</a><span class="k">def</span> <span class="nf">obtenerdatos</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Obtiene puntos geográficos de la base de datos y los convierte a formato GeoJSON.</span>
+
+<span class="sd">    Realiza una consulta a la base de datos para obtener los datos de</span>
+<span class="sd">    las ofertas educativas, filtra las filas con coordenadas válidas,</span>
+<span class="sd">    convierte los datos a formato GeoJSON y los envía a la plantilla &#39;mapa/mapa.html&#39;.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla &#39;mapa/mapa.html&#39; con los datos GeoJSON.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># Realizar la consulta en la base de datos</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas&quot;</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+    <span class="c1"># Filtrar las filas con coordenadas válidas</span>
+    <span class="n">filtered_rows</span> <span class="o">=</span> <span class="p">[(</span><span class="n">cueanexo</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">long</span><span class="p">,</span> <span class="n">nom_est</span><span class="p">,</span> <span class="n">oferta</span><span class="p">,</span> <span class="n">ambito</span><span class="p">,</span> <span class="n">sector</span><span class="p">,</span> <span class="n">region_loc</span><span class="p">,</span> <span class="n">calle</span><span class="p">,</span> <span class="n">numero</span><span class="p">,</span> <span class="n">localidad</span><span class="p">)</span> 
+                     <span class="k">for</span> <span class="n">cueanexo</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">long</span><span class="p">,</span> <span class="n">nom_est</span><span class="p">,</span> <span class="n">oferta</span><span class="p">,</span> <span class="n">ambito</span><span class="p">,</span> <span class="n">sector</span><span class="p">,</span> <span class="n">region_loc</span><span class="p">,</span> <span class="n">calle</span><span class="p">,</span> <span class="n">numero</span><span class="p">,</span> <span class="n">localidad</span> <span class="ow">in</span> <span class="n">rows</span> 
+                     <span class="k">if</span> <span class="n">lat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">long</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="c1"># Convertir los datos a GeoJSON</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">filtered_rows</span><span class="p">)</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">filtered_rows</span><span class="p">:</span>
+        <span class="n">cueanexo</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">long</span><span class="p">,</span> <span class="n">nom_est</span><span class="p">,</span> <span class="n">oferta</span><span class="p">,</span> <span class="n">ambito</span><span class="p">,</span> <span class="n">sector</span><span class="p">,</span> <span class="n">region_loc</span><span class="p">,</span> <span class="n">calle</span><span class="p">,</span> <span class="n">numero</span><span class="p">,</span> <span class="n">localidad</span> <span class="o">=</span> <span class="n">row</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Feature&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Point&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;coordinates&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">long</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">)]</span>  <span class="c1"># Cambiar a longitud, latitud si la base de datos almacena longitud primero</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;cueanexo&quot;</span><span class="p">:</span> <span class="n">cueanexo</span><span class="p">,</span>
+                <span class="s2">&quot;nom_est&quot;</span><span class="p">:</span> <span class="n">nom_est</span><span class="p">,</span>
+                <span class="s2">&quot;oferta&quot;</span><span class="p">:</span> <span class="n">oferta</span><span class="p">,</span>
+                <span class="s2">&quot;ambito&quot;</span><span class="p">:</span> <span class="n">ambito</span><span class="p">,</span>
+                <span class="s2">&quot;sector&quot;</span><span class="p">:</span> <span class="n">sector</span><span class="p">,</span>
+                <span class="s2">&quot;region_loc&quot;</span><span class="p">:</span> <span class="n">region_loc</span><span class="p">,</span>
+                <span class="s2">&quot;calle&quot;</span><span class="p">:</span> <span class="n">calle</span><span class="p">,</span>
+                <span class="s2">&quot;numero&quot;</span><span class="p">:</span> <span class="n">numero</span><span class="p">,</span>
+                <span class="s2">&quot;localidad&quot;</span><span class="p">:</span> <span class="n">localidad</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+
+    <span class="n">geojson_data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;FeatureCollection&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="n">features</span>
+    <span class="p">}</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">geojson_data</span><span class="p">)</span>
+    <span class="c1"># Cerrar la conexión a la base de datos</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># Pasar el GeoJSON al template</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;mapa/mapa.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;geojson_data&#39;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">geojson_data</span><span class="p">)})</span></div>
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#          PARA MOSTRAR LISTADO DESDE ESTABLECIMIENTOS              #</span>
+<span class="c1">#####################################################################</span>
+<div class="viewcode-block" id="obtener_datos_ofertas"><a class="viewcode-back" href="../../../mapas.html#apps.mapas.views2.obtener_datos_ofertas">[documentos]</a><span class="k">def</span> <span class="nf">obtener_datos_ofertas</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Consulta y obtiene datos de ofertas educativas desde la base de datos.</span>
+
+<span class="sd">    Esta función realiza una consulta a la base de datos para obtener información</span>
+<span class="sd">    sobre los establecimientos educativos y las ofertas asociadas, incluyendo </span>
+<span class="sd">    nombre del establecimiento, tipo de oferta, ámbito, sector, y localidad. </span>
+<span class="sd">    Los datos se envían al template &#39;listadoestablecimientos.html&#39;.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto HttpRequest que contiene metadatos sobre la solicitud.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla &#39;mapa/listadoestablecimientos.html&#39; con los datos de las ofertas.</span>
+<span class="sd">        Si no se encuentran resultados, renderiza &#39;consulta_vacia.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT cueanexo, nom_est, oferta, ambito, sector, localidad </span>
+<span class="s2">            FROM v_capa_unica_ofertas</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;rows:&#39;</span><span class="p">,</span><span class="n">rows</span><span class="p">)</span>
+        <span class="n">datosofertas</span><span class="o">=</span><span class="p">[]</span>
+        <span class="n">datos_encontrados</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span>
+
+        <span class="c1"># Formateamos los datos en un diccionario</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+            <span class="n">datosofertas</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s1">&#39;cueanexo&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s1">&#39;nom_est&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="s1">&#39;oferta&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="s1">&#39;ambito&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+                <span class="s1">&#39;sector&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
+                <span class="s1">&#39;localidad&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span>
+            <span class="p">})</span>
+
+        <span class="c1"># Cerrar la conexión a la base de datos</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;datos de ofertas:&#39;</span><span class="p">,</span><span class="n">datosofertas</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">datos_encontrados</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_encontrados</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;consulta_vacia.html&#39;</span><span class="p">)</span>     
+
+        <span class="c1"># Devolver los datos como contexto a la plantilla &#39;listadoestablecimientos.html&#39;</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;mapa/listadoestablecimientos.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;datosofertas&#39;</span><span class="p">:</span> <span class="n">datosofertas</span><span class="p">})</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

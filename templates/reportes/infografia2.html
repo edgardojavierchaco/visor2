@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infografía</title>
+    <style>
+        /* Estilos generales para la infografía */
+        
+        body {
+            text-align: center; /* Alinear texto al centro */
+            background-color: #f4f4f4;
+        }
+        h1 {
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: inline-block; /* Evitar que el recuadro tome todo el ancho disponible */
+        }
+        #infografia-title {
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .infografias-container {
+            display: flex;
+            justify-content: space-between; /* Alinea los anotadores al principio y al final del contenedor */
+            align-items: center;
+            flex-wrap: nowrap; /* Evita que los anotadores se envuelvan a la siguiente línea */
+        }
+
+        /* Estilos para cada nivel educativo */
+        .infografia {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 10px;
+            width: 300px; /* Ancho fijo para cada infografía */
+        }
+
+        .nivel-inicial{
+            background-color: hsl(298, 75%, 40%); /* Color de fondo para nivel-inicial */
+            color: #000; /* Color de texto */
+            justify-content: flex-start; /* Alinear contenido al inicio (izquierda) */
+            text-align: center; /* Alinear texto a la izquierda */
+        }
+
+        .nivel-secundario {
+            background-color: rgb(69, 72, 247); /* Color de fondo para nivel-inicial */
+            color: #000; /* Color de texto */
+            justify-content: flex-start; /* Alinear contenido al inicio (izquierda) */
+            text-align: center; /* Alinear texto a la izquierda */
+        }
+        
+        .nivel-primario {
+            background-color: rgb(245, 169, 166); /* Color de fondo para nivel-primario */
+            color: #000; /* Color de texto */
+            justify-content: flex-end; /* Alinear contenido al final (derecha) */
+            text-align: center; /* Alinear texto a la derecha */
+        }
+
+        .nivel-superior {
+            background-color: #87CEEB; /* Color de fondo para nivel-primario */
+            color: #000; /* Color de texto */
+            justify-content: flex-end; /* Alinear contenido al final (derecha) */
+            text-align: center; /* Alinear texto a la derecha */
+        }
+
+        .titinicial, .titprimario, .titsecundario, .titsuperior {
+            background-color: rgba(255, 255, 255, 0.9); /* Color de fondo más intenso con opacidad */
+            padding: 10px; /* Espaciado interno */
+            border-radius: 5px; /* Bordes redondos */
+            margin: 10px 0; /* Espacio entre el texto y otros elementos */
+            box-shadow: 5px 10px 20px rgba(0, 0, 0, 0.8); /* Sombreado */
+        }
+        .imagen-representativa img {
+            width: 70%; /* Reducir el tamaño de la imagen al 50% */
+            height: auto; /* Mantener la proporción de la imagen */
+            border-radius: 50%; /* Aplicar bordes redondos */
+            margin: 10px 0; /* Espacio entre la imagen y el contenido de texto */
+        }
+
+        .datos {
+            flex: 1;
+        }
+        
+        .datos p {
+            font-weight: normal; /* Reestablecer la negrita */
+        }
+        
+        .pinche {
+            font-size: 1.5em;
+            margin-bottom: 10px; /* Espacio debajo del pinche */
+        }
+
+    </style>
+
+</head>
+<body>
+    <h1>INFOGRAFÍA 2.023</h1>
+    <div class="infografias-container">
+        <div class="infografia nivel-inicial">
+            <span class="pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/escuela.png' %}" alt="Nivel Inicial"></div>
+            <div class="datos">
+                <h2 class="titinicial">Establecimientos</h2>
+                <p>Total: 2.332</p>
+                <p>Primera: 681</p>
+                <p>Segunda: 458</p>
+                <p>Tercera: 1.136</p>
+                <p>Estatales: 1.928</p>
+                <p>Privadas: 345</p>
+                <p>Sociales-Comunitarias: 59</p>
+            </div>
+        </div>
+
+        <div class="infografia nivel-primario">
+            <span class="pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/secciones.jpg' %}" alt="Nivel Primario"></div>
+            <div class="datos">
+                <h2 class="titprimario">Secciones Independientes</h2>
+                <p>Adultos Primaria: 277</p>
+                <p>Adultos Secundaria: 270</p>
+                <p>Inicial: 2.442</p>
+                <p>Primaria: 7.256</p>
+                <p>Secundaria: 4.596</p>  
+                <p>Estatales: 12.453</p>     
+                <p>Privadas: 2.094</p>     
+                <p>Sociales-Comunitarias: 294</p>    
+            </div>
+        </div>
+
+        <div class="infografia nivel-secundario">
+            <span class "pinche">📌</span>
+            <div class="imagen-representativa"><img src="{% static 'img/secciones2.jpg' %}" alt="Nivel Secundario"></div>
+            <div class="datos">
+                <h2 class="titsecundario">Secciones Múltiples</h2>
+                <p>Adultos Primaria: 458</p>
+                <p>Adultos Secundaria: 0</p>
+                <p>Inicial: 499</p>
+                <p>Primaria: 1.144</p>
+                <p>Secundaria: 35</p>
+                <p>Estatales: 2.078</p>
+                <p>Privadas: 46</p>
+                <p>Sociales-Comunitarias: 12</p>
+            </div>
+        </div>
+        
+    </div>
+    <script>
+        // Aplica negrita solo a los números dentro de <p>
+        var datosParrafos = document.querySelectorAll('.datos p');
+        datosParrafos.forEach(function (parrafo) {
+            parrafo.innerHTML = parrafo.textContent.replace(/\d+/g, '<strong>$&</strong>');
+        });
+    </script>
+</body>
+</html>

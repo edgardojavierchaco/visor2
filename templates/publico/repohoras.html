@@ -1,0 +1,234 @@
+{% extends 'publico/body.html' %}
+
+{% load static %}
+
+{% block content %}
+   <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{nvista}}</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
+        <link rel="stylesheet" href="{% static 'css/horas.css' %}">    
+
+    </head>
+    <body>    
+       {% block content_header %}
+            <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">  <small></small></h1>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+                                <li class="breadcrumb-item"><a href="#" id="enlace-regresar">Regresar</a></li>
+                                
+                                <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endblock %} 
+        <div class="container mt-4">
+            <div class="row">
+                <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12">
+                    <div class="caption">
+                        <caption>
+                            Reporte de horas en {{nvista}} - {{nrelevamiento}}
+                        </caption>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table id="datatable-cargos" class="table">                        
+                            <thead>
+                                <tr class="header-row">
+                                    <th class="centered">HORAS</th>
+                                    <th class="centered">TOTAL</th>
+                                    <th class="centered">TITULAR</th>  
+                                    <th class="centered">INTERINOS</th>   
+                                    <th class="centered">SIN CUBRIR</th>                                                      
+                                </tr>
+                                
+                            </thead>
+                            <tbody>
+                                {% for item in data2 %}
+                                    <tr>
+                                        <td>{{ item.horas }}</td>
+                                        <td>{{ item.total }}</td>
+                                        <td>{{ item.titular }}</td>    
+                                        <td>{{ item.interinos }}</td>
+                                        <td>{{ item.sin_cubrir }}</td>                                           
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                        <button id="export-pdf-btn" class="btn btn-primary">Exportar a PDF</button>
+                        <button id="export-excel-btn" class="btn btn-success">Exportar a Excel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+        <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>    
+        <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+        
+        <script>
+            $(document).ready(function() {
+                // Inicializar la DataTable usando las opciones definidas en dataTableOptions
+                var dataTableOptions = {
+                    columnDefs: [        
+                        { className: "centered", targets: [0, 1, 2] },
+                        { orderable: true, targets: [0,1,2] },
+                        { searchable: true, targets: [0,1] },  
+                    ],
+                    language: {
+                        url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json}" // Ruta al archivo de traducción en español
+                    },
+                    pageLength: 4,
+                    destroy: true
+                };
+        
+                $("#datatable-cargos").DataTable(dataTableOptions);
+        
+                // Función para exportar a PDF
+                $("#export-pdf-btn").on("click", function() {
+                    // Obtener la fecha y hora actual
+                    var today = new Date();
+                    var date = today.toLocaleDateString();
+                    var time = today.toLocaleTimeString();
+
+                    // Obtener los datos de la tabla
+                    var data = [];
+                    $("#datatable-cargos").DataTable().rows().every(function() {
+                        var rowData = this.data();
+                        data.push(rowData);
+                    });
+
+                    // Definir la URL de la imagen del logotipo
+                    var logoUrl = "{% static 'img/logoEstMini.png'%}";
+
+                    // Leer la imagen como archivo y convertirla a formato de URL de datos
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("GET", logoUrl, true);
+                    xhr.responseType = "blob";
+                    xhr.onload = function(event) {
+                        var blob = xhr.response;
+                        var reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = function() {
+                            // Definir el logotipo como una URL de datos
+                            var logoDataUrl = reader.result;
+
+                            // Definir la estructura del documento PDF
+                            var docDefinition = {
+                                pageOrientation: 'landscape',
+                                header: {
+                                    columns: [
+                                        // Columna izquierda con el logotipo
+                                        {
+                                            image: logoDataUrl,
+                                            width: 50,
+                                            height: 50
+                                        },
+                                        // Columna derecha con el nombre del Departamento y la fecha y hora
+                                        {
+                                            text: [
+                                                { text: 'Departamento de Estadísticas Educativas\n', style: 'department' },
+                                                { text: 'Fecha de generación: ' + date + '\n', style: 'datetime' },
+                                                { text: 'Hora de generación: ' + time + '\n', style: 'datetime' }
+                                            ],
+                                            alignment: 'left'
+                                        }
+                                    ],
+                                    margin: [40, 20]
+                                },
+                                content: [
+                                    { text: "Reporte de horas en {{nvista}} - {{nrelevamiento}}", style: 'header' },
+                                    {
+                                        table: {
+                                            headerRows: 1,
+                                            widths: ['auto', 'auto', 'auto','*','auto'],
+                                            body: [
+                                                ['HORAS', 'TOTALES', 'TITULARES', 'INTERINAS', 'SIN CUBRIR'],
+                                                ...data.map(item => [item[0], item[1], item[2], item[3],item[4]])
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        text: [
+                                            { text: 'Fecha de generación: ' + date + '\n', style: 'datetime' },
+                                            { text: 'Hora de generación: ' + time + '\n', style: 'datetime' }
+                                        ],
+                                        alignment: 'right',
+                                        margin: [0, 10, 0, 0]
+                                    }
+                                ],
+                                styles: {
+                                    header: {
+                                        fontSize: 16,
+                                        bold: true,
+                                        alignment: 'center',
+                                        margin: [0, 0, 0, 10]
+                                    },
+                                    department: {
+                                        fontSize: 12,
+                                        bold: true,
+                                        margin: [0, 5, 0, 0]
+                                    },
+                                    datetime: {
+                                        fontSize: 10,
+                                        margin: [0, 2, 0, 0]
+                                    }
+                                }
+                            };
+
+                            // Generar el PDF
+                            pdfMake.createPdf(docDefinition).download("reporte_horas_en_{{nvista}}_{{nrelevamiento}}.pdf");
+                        };
+                    };
+                    xhr.send();
+                });
+            });
+            // Función para exportar a Excel
+                $("#export-excel-btn").on("click", function() {
+                    exportToExcel();
+                function exportToExcel() {
+                    // Obtener los datos de la tabla
+                    var data = [];
+                    $("#datatable-cargos").DataTable().rows().every(function() {
+                        var rowData = this.data();
+                        data.push(rowData);
+                    });
+
+                    // Definir la estructura del libro de Excel
+                    var workbook = XLSX.utils.book_new();
+                    var worksheet = XLSX.utils.aoa_to_sheet([
+                        ['CARGOS', 'TOTALES', 'TITULARES', 'INTERINOS', 'SIN CUBRIR'],
+                        ...data.map(item => [item[0], item[1], item[2], item[3], item[4]])
+                    ]);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte de Cargos');
+
+                    // Guardar el libro de Excel como archivo
+                    XLSX.writeFile(workbook, 'reporte_cargos.xlsx');
+                }
+            }); 
+        </script>
+        <script>
+            document.getElementById("enlace-regresar").addEventListener("click", function(event) {
+                event.preventDefault(); // Evita el comportamiento predeterminado del enlace
+                window.history.go(-2); // Regresa a la página anterior en el historial del navegador
+            });
+        </script>
+    </body>
+    </html> 
+{% endblock %}

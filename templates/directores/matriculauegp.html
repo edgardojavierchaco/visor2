@@ -1,0 +1,292 @@
+{% extends 'dashboard/home_logueado.html' %}
+{% load static %}
+
+{% block head %}
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<style>
+:root{
+    --color-primary:#003366;
+    --color-accent:#0055a5;
+    --color-light:#f2f5f8;
+    --color-border:#c3d3e0;
+    --color-text:#1e2d3d;
+    --color-muted:#6b849e;
+    --card-bg:#ffffff;
+}
+
+body{font-family:'Segoe UI',sans-serif; background:var(--color-light); color:var(--color-text);}
+.dashboard-wrapper{display:flex; gap:0; min-height:500px; align-items:stretch; overflow:visible;}
+.filter-sidebar{width:240px; background:#fff; border-right:2px solid var(--color-border); border-radius:12px 0 0 12px; padding-bottom:12px; box-shadow:4px 0 16px rgba(0,0,0,0.05);}
+.sidebar-header{background:linear-gradient(135deg,var(--color-primary),var(--color-accent)); color:#fff; padding:16px 20px; border-radius:12px 0 0 0; font-weight:700; text-transform:uppercase; font-size:0.95rem;}
+.filter-group{padding:12px 16px; border-bottom:1px solid var(--color-border);}
+.filter-label{display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600; color:var(--color-primary);}
+.filter-control select{width:100%; padding:6px 10px; border:1.5px solid var(--color-border); border-radius:6px; font-size:0.82rem; background:var(--color-light);}
+.filter-control select:focus{outline:none; border-color:var(--color-accent); background:#fff;}
+.sidebar-actions{padding:12px 16px; display:flex; flex-direction:column; gap:6px; background:var(--color-light);}
+.btn-limpiar{background:#fff; color:var(--color-muted); border:1.5px solid var(--color-border); padding:6px 16px; border-radius:7px; font-size:0.8rem; cursor:pointer;}
+.btn-limpiar:hover{border-color:var(--color-accent); color:var(--color-accent);}
+
+/* PANEL */
+.content-panel{flex:1; background:#fff; border-radius:0 12px 12px 0; box-shadow:0 4px 20px rgba(0,0,0,0.05); padding:0; overflow:auto;}
+.content-header-bar{background:linear-gradient(135deg,var(--color-primary),var(--color-accent)); color:#fff; padding:16px 24px; font-weight:600;}
+.active-filters{padding:10px 24px; display:flex; flex-wrap:wrap; gap:6px; background:var(--color-light); border-bottom:1px solid var(--color-border);}
+.filter-chip{background:var(--color-accent); color:#fff; padding:4px 10px; border-radius:20px; font-size:0.72rem; font-weight:600; display:flex; align-items:center; gap:5px;}
+.filter-chip .remove-chip{cursor:pointer; opacity:0.8;}
+.filter-chip .remove-chip:hover{opacity:1;}
+
+/* TABLE / CARDS */
+.table-section{padding:20px; min-height:600px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px;}
+.table-section .card-matricula{background:var(--card-bg); border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); padding:14px; transition:transform 0.2s;}
+.table-section .card-matricula:hover{transform:translateY(-3px);}
+
+/* RESPONSIVE */
+@media(max-width:992px){
+    .dashboard-wrapper{flex-direction:column;}
+    .filter-sidebar{width:100%; border-radius:12px 12px 0 0;}
+    .content-panel{border-radius:0 0 12px 12px;}
+    .table-section{padding:12px 10px; grid-template-columns:1fr;}
+}
+
+/* NOTIFICACIONES FLOTANTES */
+.messaging-container {
+    position: fixed;
+    top: 80px;
+    right: 25px;
+    z-index: 9999;
+}
+
+.messaging-float {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    color: white;
+    cursor: pointer;
+}
+
+.messaging-float:hover {
+    transform: scale(1.08);
+}
+
+.messaging-icon {
+    font-size: 24px;
+}
+
+.messaging-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: white;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 50px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+    box-shadow: 0 0 0 2px white;
+}
+
+@keyframes pulse-alert {
+    0% { box-shadow: 0 0 0 0 rgba(220,53,69, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(220,53,69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,53,69, 0); }
+}
+
+.pulse-danger {
+    animation: pulse-alert 1.8s infinite;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+
+    <!-- SIDEBAR -->
+    <aside class="filter-sidebar">
+        {% include 'directores/cargar_sidebar.html' %}
+    </aside>
+
+    <!-- PANEL DE CONTENIDO -->
+    <section class="content-panel">
+        <div class="content-header-bar">
+            <h4>Matrícula</h4>
+        </div>
+
+        <!-- FILTROS ACTIVOS -->
+        <div class="active-filters" id="active-filters"></div>
+
+        <!-- CONTENEDOR DE MATRÍCULA -->
+        <div class="table-section" id="contenedor_matricula">
+            {% include 'directores/matricula_cards.html' %}
+        </div>
+    </section>
+</div>
+
+<!-- MENÚ FLOTANTE DE NOTIFICACIONES -->
+<div class="messaging-container">
+    <div class="dropdown">
+        <button id="floatBtn"
+                class="messaging-float bg-success"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                title="Sin consultas pendientes">
+            <i class="bi bi-chat-dots-fill messaging-icon"></i>
+            <span id="floatBadge" class="messaging-badge" style="display:none;">0</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow p-3" style="width:260px;">
+            <li><strong>Resumen de consultas</strong></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>Pendientes: <span id="resPend">0</span></li>
+            <li>En proceso: <span id="resProceso">0</span></li>
+            <li>Vencidas: <span id="resVencidas" class="text-danger">0</span></li>
+            <li><hr class="dropdown-divider"></li>
+            <li class="text-center">
+                <a href="{% url 'consultasge:consultas_lista' %}" class="btn btn-sm btn-primary w-100">Ver todas</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- TOAST PARA NUEVAS CONSULTAS -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 11000">
+    <div id="consultaToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage">Nueva consulta recibida</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<audio id="alertSound">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+</audio>
+{% endblock %}
+
+{% block scripts %}
+<!-- jQuery y Bootstrap -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(function(){
+
+    // Inicializar Select2
+    $('.select2').select2({width:'100%', placeholder:'Seleccione una opción', allowClear:true});
+
+    function getFiltros(){
+        return {
+            grado: $('#select_grado').val(),
+            turno: $('#select_turno').val(),
+            seccion: $('#select_seccion').val()
+        };
+    }
+
+    function actualizarSelect(selector, opciones, valor){
+        var $s = $(selector);
+        $s.prop('disabled', opciones.length === 0).empty().append('<option value="">Todos</option>');
+        opciones.forEach(o => $s.append(`<option value="${o}">${o}</option>`));
+        $s.val(valor).trigger('change.select2');
+    }
+
+    function actualizarFiltrosActivos(grado, turno, seccion){
+        var $c = $('#active-filters'); 
+        $c.empty();
+        if(grado) $c.append(`<div class="filter-chip">Grado: ${grado} <span class="remove-chip" data-target="select_grado">&times;</span></div>`);
+        if(turno) $c.append(`<div class="filter-chip">Turno: ${turno} <span class="remove-chip" data-target="select_turno">&times;</span></div>`);
+        if(seccion) $c.append(`<div class="filter-chip">Sección: ${seccion} <span class="remove-chip" data-target="select_seccion">&times;</span></div>`);
+    }
+
+    function cargarMatricula(){
+        var cueanexo = $('#cueanexo').val();
+        var f = getFiltros();
+        $.getJSON("{% url 'directores:ajax_filtrar_matricula' %}", {
+            cueanexo: cueanexo,
+            grado: f.grado,
+            turno: f.turno,
+            seccion: f.seccion
+        }, function(data){
+            $('#contenedor_matricula').html(data.html);
+            actualizarSelect('#select_grado', data.grados, f.grado);
+            actualizarSelect('#select_turno', data.turnos, f.turno);
+            actualizarSelect('#select_seccion', data.secciones, f.seccion);
+            actualizarFiltrosActivos(f.grado, f.turno, f.seccion);
+        });
+    }
+
+    cargarMatricula();
+
+    $('#select_grado,#select_turno,#select_seccion').on('change', cargarMatricula);
+
+    $(document).on('click','.remove-chip', function(){
+        var t=$(this).data('target'); 
+        $('#'+t).val('').trigger('change.select2'); 
+        cargarMatricula();
+    });
+
+    $(document).on('click','#btn-limpiar',function(){
+        $('#select_grado,#select_turno,#select_seccion').val('').trigger('change.select2');
+        cargarMatricula();
+    });
+
+    // 🔹 NOTIFICACIONES FLOTANTES
+    let ultimoTotal = 0;
+
+    function actualizarNotificaciones() {
+        fetch("{% url 'consultasge:notificaciones_consultas' %}")
+            .then(r=>r.json())
+            .then(data=>{
+                const btn = document.getElementById("floatBtn");
+                const badge = document.getElementById("floatBadge");
+                const toastEl = document.getElementById("consultaToast");
+                const toastMsg = document.getElementById("toastMessage");
+                const sound = document.getElementById("alertSound");
+
+                badge.style.display = data.activas>0?'inline-block':'none';
+                badge.innerText = data.activas;
+
+                btn.classList.remove("bg-danger","bg-warning","bg-success","pulse-danger");
+                if(data.vencidas>0){
+                    btn.classList.add("bg-danger","pulse-danger");
+                    if(data.activas>ultimoTotal) sound.play();
+                } else if(data.activas>0){
+                    btn.classList.add("bg-warning");
+                } else {
+                    btn.classList.add("bg-success");
+                }
+
+                document.getElementById("resPend").innerText = data.pendientes;
+                document.getElementById("resProceso").innerText = data.en_proceso;
+                document.getElementById("resVencidas").innerText = data.vencidas;
+
+                let mensaje = data.vencidas>0?`${data.vencidas} consulta(s) vencida(s)`:
+                              data.activas>0?`${data.activas} consulta(s) activa(s)`:"Sin consultas pendientes";
+                btn.setAttribute("title", mensaje);
+
+                if(data.activas>ultimoTotal){
+                    toastMsg.innerText = "📩 Nueva consulta recibida";
+                    new bootstrap.Toast(toastEl).show();
+                }
+
+                ultimoTotal = data.activas;
+            });
+    }
+
+    actualizarNotificaciones();
+    setInterval(actualizarNotificaciones,30000);
+
+});
+</script>
+{% endblock %}

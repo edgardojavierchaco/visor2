@@ -1,0 +1,236 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>🏢 Panel Regional PRO</h3>
+
+<!-- CARDS -->
+<div class="row mb-4 text-center">
+    <div class="col"><div class="card bg-secondary text-white"><div class="card-body"><h5>Borrador</h5><h3 id="c-borrador">0</h3></div></div></div>
+    <div class="col"><div class="card bg-primary text-white"><div class="card-body"><h5>Enviado</h5><h3 id="c-enviado">0</h3></div></div></div>
+    <div class="col"><div class="card bg-danger text-white"><div class="card-body"><h5>Rechazado</h5><h3 id="c-rechazado">0</h3></div></div></div>
+    <div class="col"><div class="card bg-success text-white"><div class="card-body"><h5>Aprobado</h5><h3 id="c-aprobado">0</h3></div></div></div>
+</div>
+
+<!-- FILTROS -->
+<div class="mb-3">
+    <button class="btn btn-outline-dark filtro" data-estado="ALL">Todos</button>
+    <button class="btn btn-outline-secondary filtro" data-estado="BORRADOR">Borrador</button>
+    <button class="btn btn-outline-primary filtro" data-estado="ENVIADO">Enviado</button>
+    <button class="btn btn-outline-danger filtro" data-estado="RECHAZADO">Rechazado</button>
+    <button class="btn btn-outline-success filtro" data-estado="APROBADO">Aprobado</button>
+</div>
+
+<table id="tabla" class="table table-bordered table-striped">
+
+<thead class="table-dark">
+<tr>
+    <th>ID</th>
+    <th>Escuela</th>
+    <th>Supervisor</th>
+    <th>Región</th>
+    <th>Estado</th>
+    <th>Observación</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for a in asignaciones %}
+<tr>
+    <td>{{ a.id }}</td>
+    <td>{{ a.nom_est }}</td>
+    <td>{{ a.supervisor.usuario }}</td>
+    <td>{{ a.region_loc }}</td>
+
+    <td data-estado="{{ a.estado }}">
+        <span class="badge 
+        {% if a.estado == "BORRADOR" %}bg-secondary
+        {% elif a.estado == "ENVIADO" %}bg-primary
+        {% elif a.estado == "RECHAZADO" %}bg-danger
+        {% elif a.estado == "APROBADO" %}bg-success
+        {% endif %}">
+        {{ a.estado }}
+        </span>
+    </td>
+
+    <td class="obs">
+        {{ a.observacion|default:"-" }}
+    </td>
+
+    <td>
+        {% if a.estado == "ENVIADO" %}
+            <button class="btn btn-success btn-sm aprobar" data-id="{{ a.id }}">✔</button>
+            <button class="btn btn-danger btn-sm rechazar" data-id="{{ a.id }}">✖</button>
+        {% endif %}
+    </td>
+
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="modalRechazo">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5>Motivo de rechazo</h5></div>
+      <div class="modal-body">
+        <textarea id="obs" class="form-control"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="confirmarRechazo">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIBS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+
+let table;
+let filtroEstado = "ALL";
+let idRechazo = null;
+
+const urlAprobar = "{% url 'asignacionesuperv:aprobar_asignacion' %}";
+const urlRechazar = "{% url 'asignacionesuperv:rechazar_asignacion' %}";
+
+// INIT
+$(document).ready(function () {
+
+    table = $("#tabla").DataTable({
+        language: {
+            url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        }
+    });
+
+    initFiltro();
+    actualizarContadores();
+});
+
+// FILTRO
+function initFiltro() {
+
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+
+        let row = table.row(dataIndex).node();
+        let estado = $(row).find("td:eq(4)").data("estado");
+
+        if (filtroEstado === "ALL") return true;
+
+        return estado === filtroEstado;
+    });
+
+    $(".filtro").click(function () {
+        filtroEstado = $(this).data("estado");
+        table.draw();
+    });
+}
+
+// CONTADORES
+function actualizarContadores() {
+
+    let c = {BORRADOR:0, ENVIADO:0, RECHAZADO:0, APROBADO:0};
+
+    table.rows().every(function () {
+
+        let row = this.node();
+        let estado = $(row).find("td:eq(4)").data("estado");
+
+        if (c[estado] !== undefined) c[estado]++;
+
+    });
+
+    $("#c-borrador").text(c.BORRADOR);
+    $("#c-enviado").text(c.ENVIADO);
+    $("#c-rechazado").text(c.RECHAZADO);
+    $("#c-aprobado").text(c.APROBADO);
+}
+
+// BADGE
+function badge(e) {
+    let c = "bg-secondary";
+    if (e==="ENVIADO") c="bg-primary";
+    if (e==="RECHAZADO") c="bg-danger";
+    if (e==="APROBADO") c="bg-success";
+    return `<span class="badge ${c}">${e}</span>`;
+}
+
+// APROBAR
+$(document).on("click", ".aprobar", function () {
+
+    let row = $(this).closest("tr");
+    let id = $(this).data("id");
+
+    $.post(urlAprobar, {
+        id: id,
+        csrfmiddlewaretoken: "{{ csrf_token }}"
+    }, function () {
+
+        let td = row.find("td:eq(4)");
+
+        td.attr("data-estado", "APROBADO")
+          .html(badge("APROBADO"));
+
+        row.find(".obs").text("-");
+        row.find("td:eq(6)").html("");
+
+        table.row(row).invalidate().draw(false);
+        actualizarContadores();
+
+    });
+
+});
+
+// RECHAZAR
+$(document).on("click", ".rechazar", function () {
+    idRechazo = $(this).data("id");
+    new bootstrap.Modal("#modalRechazo").show();
+});
+
+$("#confirmarRechazo").click(function () {
+
+    let obs = $("#obs").val();
+
+    $.post(urlRechazar, {
+        id: idRechazo,
+        observacion: obs,
+        csrfmiddlewaretoken: "{{ csrf_token }}"
+    }, function () {
+
+        let row = $(`button[data-id='${idRechazo}']`).closest("tr");
+
+        let td = row.find("td:eq(4)");
+
+        td.attr("data-estado", "RECHAZADO")
+          .html(badge("RECHAZADO"));
+
+        row.find(".obs").text(obs);
+        row.find("td:eq(6)").html("");
+
+        table.row(row).invalidate().draw(false);
+        actualizarContadores();
+
+        $("#modalRechazo").modal("hide");
+        $("#obs").val("");
+
+    });
+
+});
+
+</script>
+
+{% endblock %}

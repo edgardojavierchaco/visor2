@@ -1,0 +1,109 @@
+{% extends "consultasge/layout.html" %}
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+<div class="container mt-4">
+    <h2 class="mb-3">Dashboard - {{ user.username }}</h2>
+
+    <!-- CARDS -->
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-md-2">
+            <div class="card border-warning shadow-sm">
+                <div class="card-body">
+                    <small>Pendientes</small>
+                    <h3 class="text-warning" id="pendientes">{{ pendientes }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card border-info shadow-sm">
+                <div class="card-body">
+                    <small>En proceso</small>
+                    <h3 class="text-info" id="en_proceso">{{ en_proceso }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card border-success shadow-sm">
+                <div class="card-body">
+                    <small>Respondidas</small>
+                    <h3 class="text-success" id="respondidas">{{ respondidas }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card border-secondary shadow-sm">
+                <div class="card-body">
+                    <small>Cerradas</small>
+                    <h3 class="text-secondary" id="cerrada">{{ cerrada }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light shadow-sm">
+                <div class="card-body">
+                    <small>Total</small>
+                    <h3 id="total">{{ total }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRÁFICO -->
+    <div class="card p-3 shadow-sm">
+        <canvas id="chartConsultas"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById('chartConsultas');
+let chart;
+
+function renderChart(data) {
+    if (chart) {
+        chart.data.datasets[0].data = data.datos;
+        chart.update();
+        return;
+    }
+
+    chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.datos,
+                backgroundColor: ['#ffc107','#0dcaf0','#198754','#6c757d']
+            }]
+        }
+    });
+}
+
+// 🔄 Actualización automática
+function actualizarDashboard() {
+    fetch("{% url 'consultasge:dashboard_data' %}")
+        .then(r => r.json())
+        .then(data => {
+            renderChart(data);
+
+            document.getElementById("pendientes").innerText = data.datos[0];
+            document.getElementById("en_proceso").innerText = data.datos[1];
+            document.getElementById("respondidas").innerText = data.datos[2];
+            document.getElementById("cerrada").innerText = data.datos[3];
+
+            document.getElementById("total").innerText =
+                data.datos.reduce((a,b)=>a+b,0);
+        });
+}
+
+actualizarDashboard();
+setInterval(actualizarDashboard, 15000);
+</script>
+
+{% endblock %}

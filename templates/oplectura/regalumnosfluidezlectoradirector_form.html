@@ -1,0 +1,15 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% load static %}
+
+{% block content %}
+    <body>
+        <h1>Registrar Alumnos para Evaluación de Fluidez Lectora</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit" class='btn btn-danger'>Guardar</button>
+        </form>
+    </body>
+
+{% endblock %}

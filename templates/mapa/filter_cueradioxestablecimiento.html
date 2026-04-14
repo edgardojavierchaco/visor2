@@ -1,0 +1,213 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <title>Filtro de Búsqueda</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        .is-invalid {
+            border-color: red;
+        }
+
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.js"></script>     
+    <script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+</head>
+
+<body onload="openModal()">
+    <div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="model-title" id="myModalLabel">Mapa</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h5 class="modal-title" id="myModalLabel">Seleccionar Criterios de Búsqueda</h5>
+                    <form action="{% url 'mapas:filter_cueradio' %}" method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="nivelSelect">Nivel</label>
+                            <select class="form-select" id="nivelSelect" name="Nivel">
+                                <option value="">Seleccione un nivel</option>
+                                <!-- Opciones se cargarán dinámicamente -->
+                            </select>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label for="localidadSelect">Localidad</label>
+                            <select class="form-select" id="localidadSelect" name="Localidad" disabled>
+                                <option value="">Seleccione una localidad</option>
+                                <!-- Opciones se cargarán dinámicamente -->
+                            </select>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label for="establecimientoSelect">Establecimiento</label>
+                            <select class="form-select" id="establecimientoSelect" name="Establecimiento" disabled>
+                                <option value="">Seleccione un establecimiento</option>
+                                <!-- Opciones se cargarán dinámicamente -->
+                            </select>
+                        </div>
+
+                        <div class="form-check form-switch mt-3">
+                            <input class="form-check-input" type="checkbox" id="SwitchCheckRadio" onchange="toggleDropdown('Radio')">
+                            <label class="form-check-label" for="SwitchCheckRadio">Radio</label>
+                            <div class="form-floating">
+                                <select class="form-select hidden" id="RadioDropdown" name="Radio" disabled>
+                                    <option selected>Seleccione un radio</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                    <option value="1500">1500</option>
+                                    <option value="2000">2000</option>
+                                    <option value="2500">2500</option>
+                                    <option value="3000">3000</option>
+                                    <option value="4000">4000</option>
+                                    <option value="5000">5000</option>
+                                    <option value="6000">6000</option>
+                                </select>
+                            </div>
+                        </div>
+                      
+                        <div class="modal-footer mt-4">                            
+                            <button type="submit" class="btn btn-success">Enviar</button>
+                            <button type="button" class="btn btn-warning" onclick="resetForm()">Limpiar</button>
+                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="cerrarBtn">Cerrar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            const myModal = new bootstrap.Modal(document.getElementById('myModal'));
+            myModal.show();
+        }
+
+        // Inicializar Select2
+        $('#nivelSelect').select2();
+        $('#localidadSelect').select2();
+        $('#establecimientoSelect').select2();
+
+        // Cargar opciones de nivel
+        $(document).ready(function() {
+            $.ajax({
+                url: '{% url "mapas:get_niveles" %}',  // Asegúrate de que esta URL esté correcta
+                method: 'GET',
+                success: function(data) {
+                    console.log("Niveles cargados:", data.niveles);  // Verificar que los datos están llegando
+                    $('#nivelSelect').empty().append('<option value="">Seleccione un nivel</option>');
+                    
+                    // Iterar sobre los niveles y agregarlos al select
+                    $.each(data.niveles, function(index, value) {
+                        $('#nivelSelect').append('<option value="' + value + '">' + value + '</option>');
+                    });
+                    
+                    // Refrescar Select2 después de agregar los nuevos elementos
+                    $('#nivelSelect').trigger('change');
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar niveles:", error);  // Capturar errores
+                }
+            });  // Este es el cierre de la función $.ajax
+
+            // Cuando se selecciona un nivel
+            $('#nivelSelect').on('change', function() {
+                var nivel = $(this).val();
+                if (nivel) {
+                    $.ajax({
+                        url: '{% url "mapas:get_localidades" %}',  // URL para obtener las localidades filtradas por nivel
+                        method: 'GET',
+                        data: {
+                            'nivel': nivel
+                        },
+                        success: function(data) {
+                            $('#localidadSelect').prop('disabled', false).empty().append('<option value="">Seleccione una localidad</option>');
+                            $.each(data.localidades, function(index, value) {
+                                $('#localidadSelect').append('<option value="' + value + '">' + value + '</option>');
+                            });
+                        }
+                    });
+                } else {
+                    $('#localidadSelect').prop('disabled', true).empty().append('<option value="">Seleccione una localidad</option>');
+                    $('#establecimientoSelect').prop('disabled', true).empty().append('<option value="">Seleccione un establecimiento</option>');
+                }
+            });
+
+            // Cuando se selecciona una localidad
+            $('#localidadSelect').on('change', function() {
+                var nivel = $('#nivelSelect').val();
+                var localidad = $(this).val();
+                if (nivel && localidad) {
+                    $.ajax({
+                        url: '{% url "mapas:get_establecimientos" %}',  // URL para obtener establecimientos filtrados por nivel y localidad
+                        method: 'GET',
+                        data: {
+                            'nivel': nivel,
+                            'localidad': localidad
+                        },
+                        success: function(data) {
+                            $('#establecimientoSelect').prop('disabled', false).empty().append('<option value="">Seleccione un establecimiento</option>');
+                            $.each(data.establecimientos, function(index, value) {
+                                $('#establecimientoSelect').append('<option value="' + value + '">' + value + '</option>');
+                            });
+                        }
+                    });
+                } else {
+                    $('#establecimientoSelect').prop('disabled', true).empty().append('<option value="">Seleccione un establecimiento</option>');
+                }
+            });
+        });
+
+        function toggleDropdown(elementId) {
+            const dropdown = document.getElementById(elementId + 'Dropdown');
+            const checkbox = document.getElementById('SwitchCheck' + elementId);
+
+            if (checkbox.checked) {
+                dropdown.classList.remove('hidden');
+                dropdown.disabled = false;
+            } else {
+                dropdown.classList.add('hidden');
+                dropdown.disabled = true;
+            }
+        }
+
+        function resetForm() {
+            const form = document.querySelector('form');
+            form.reset();
+
+            $('#nivelSelect').val(null).trigger('change');
+            $('#localidadSelect').val(null).trigger('change').prop('disabled', true);
+            $('#establecimientoSelect').val(null).trigger('change').prop('disabled', true);
+
+            const dropdowns = document.querySelectorAll('.form-select');
+            dropdowns.forEach((dropdown) => {
+                dropdown.classList.add('hidden');
+                dropdown.disabled = true;
+            });
+        }
+
+        document.getElementById("cerrarBtn").addEventListener("click", function(event) {
+            event.preventDefault();
+            window.history.go(-1);
+        });
+    </script>
+</body>
+</html>

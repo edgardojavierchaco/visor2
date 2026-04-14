@@ -1,0 +1,41 @@
+<div class="sidebar-header">Filtros de Matrícula</div>
+
+<div class="filter-group">
+    <label class="filter-label" for="select_grado">Grado / Año</label>
+    <div class="filter-control">
+        <select id="select_grado" class="select2">
+            <option value="">Todos</option>
+            {% for resultado in resultados_detalle %}
+                {% for fila in resultado.valores %}
+                    {% if fila.2 %}
+                        <option value="{{ fila.2 }}">{{ fila.2 }}</option>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="filter-group">
+    <label class="filter-label" for="select_turno">Turno</label>
+    <div class="filter-control">
+        <select id="select_turno" class="select2" disabled>
+            <option value="">Seleccione grado primero</option>
+        </select>
+    </div>
+</div>
+
+<div class="filter-group">
+    <label class="filter-label" for="select_seccion">Sección</label>
+    <div class="filter-control">
+        <select id="select_seccion" class="select2" disabled>
+            <option value="">Seleccione turno primero</option>
+        </select>
+    </div>
+</div>
+
+<div class="sidebar-actions">
+    <button id="btn-limpiar" class="btn-limpiar">Limpiar filtros</button>
+</div>
+
+<input type="hidden" id="cueanexo" value="{{ cueanexo }}">

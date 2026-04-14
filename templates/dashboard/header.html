@@ -1,0 +1,446 @@
+{% load static %}
+
+<!-- Estilos -->
+<style>
+/* Navbar general */
+.navbar-custom {
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    font-family: 'Roboto', sans-serif;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.navbar-custom .nav-link {
+    color: #343a40;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.navbar-custom .nav-link:hover {
+    color: #007bff;
+}
+
+/* Mega menu */
+.dropdown-menu.mega-menu {
+    width: 100%;
+    max-width: 1300px;
+    padding: 25px;
+    border-radius: 14px;
+    border: none;
+    display: flex; 
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 16px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background: #fff;
+    z-index: 1050;
+}
+
+/* Cuando se activa (Bootstrap .show) */
+.dropdown-menu.mega-menu.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Tarjetas principales */
+.mega-card {
+    background: #f8f9fa;
+    border-radius: 14px;
+    padding: 20px;
+    flex: 1 1 240px;
+    min-width: 240px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+}
+
+.mega-card::after {
+    content: '';
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    top: -110%;
+    left: -10%;
+    background: rgba(0,123,255,0.05);
+    transform: rotate(25deg);
+    transition: all 0.5s ease;
+    z-index: 0;
+}
+
+.mega-card * {
+    position: relative;
+    z-index: 1;
+}
+
+.mega-card:hover::after {
+    top: -10%;
+}
+
+.mega-card:hover {
+    background: #e9ecef;
+    transform: translateY(-6px);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.18);
+}
+
+/* Iconos */
+.mega-card i {
+    font-size: 36px;
+    margin-bottom: 8px;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.mega-card:hover i {
+    transform: scale(1.2);
+}
+
+/* Categorías */
+.mega-card.mapas i { color: #0d6efd; }
+.mega-card.reportes i { color: #6f42c1; }
+.mega-card.repositorio i { color: #343a40; }
+.mega-card.consultas i { color: #17a2b8; }
+.mega-card.equipo i { color: #28a745; }
+.mega-card.ayuda i { color: #ffc107; }
+
+.mega-card h6 {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.mega-card p {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Subcards */
+.subcard {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 12px;
+    margin: 6px 0;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.subcard:hover {
+    background: #e9ecef;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
+.subcard i {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+/* Perfil usuario */
+.navbar-tools .dropdown-menu {
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Animaciones generales */
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-menu.mega-menu > .mega-card {
+    animation: fadeIn 0.4s ease forwards;
+}
+
+/* Moviles: forzar mega-menu en vertical */
+@media (max-width: 992px) {
+    .dropdown-menu.mega-menu {
+        position: static;
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block;
+        width: 100%;
+        max-width: none;
+        box-shadow: none;
+        padding: 10px 0;
+    }
+    .mega-card {
+        flex: 1 1 100%;
+        margin: 4px 0;
+    }
+    .navbar-toggler-icon {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 0, 0, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+    }
+
+    .navbar-toggler:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Resplandor azul al tocarlo */
+    }
+}
+</style>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="#">
+            <img src="{% static 'img/logoEstMini.png' %}" alt="Logo" class="me-2" style="width:35px; opacity:.9;">
+            <span class="fw-bold">Estadística Educativa</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu"
+            aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navigation"
+            style="border-color: rgba(0,0,0,0.2); padding: 4px 8px;">
+        <span class="navbar-toggler-icon" style="filter: invert(0); border-radius: 2px;"></span>
+    </button>
+
+        <div class="collapse navbar-collapse" id="navbarMenu">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                <!-- Home -->
+                <li class="nav-item">
+                    <a href="{% url 'home' %}" class="nav-link"><i class="fas fa-home text-warning"></i> Home</a>
+                </li>
+
+                <!-- Mapas -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuMapas" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-globe"></i> Mapas
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuMapas">
+                        <a class="mega-card mapas" href="{% url 'mapas:filtrado' %}">
+                            <i class="fas fa-filter"></i>
+                            <h6>Filtrado por Criterios</h6>
+                            <p>Selecciona filtros según tus criterios educativos.</p>
+                        </a>
+                        <a class="mega-card mapas" href="{% url 'mapas:mapadibujo' %}">
+                            <i class="fas fa-draw-polygon"></i>
+                            <h6>Área Dibujada</h6>
+                            <p>Dibuja un área para filtrar unidades dentro de ella.</p>
+                        </a>
+                        <div class="mega-card mapas">
+                            <i class="fas fa-radar"></i>
+                            <h6>Filtrado por Radio</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'mapas:cueradio' %}"><i class="fas fa-school"></i> Cueanexos cercanos</a>
+                                <a class="subcard" href="{% url 'mapas:filter_colectivos' %}"><i class="fas fa-bus"></i> Líneas de Colectivos</a>
+                                <a class="subcard" href="{% url 'mapas:comisarias' %}"><i class="fas fa-shield-alt"></i> Comisarías</a>
+                                <a class="subcard" href="{% url 'mapas:salud' %}"><i class="fas fa-hospital"></i> Centros Asistenciales</a>
+                                <a class="subcard" href="{% url 'mapas:mapa_escuelas' %}"><i class="fas fa-hospital"></i> Cueanexos cercanos a un punto</a>
+                            </div>
+                        </div>
+                        <a class="mega-card mapas" href="{% url 'mapas:obtener_geometria' %}">
+                            <i class="fas fa-map"></i>
+                            <h6>Regiones Educativas</h6>
+                        </a>
+                        <a class="mega-card mapas" href="#" id="abrirModalIA">
+                            <i class="fas fa-magic"></i>
+                            <h6>Búsqueda con IA</h6>
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Reportes -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuReportes" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-file"></i> Reportes
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuReportes">
+                        <!-- Docentes -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                            <h6>Docentes</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'reportes:filtrado_cargos' %}">Cargos</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_docentes' %}">Docentes en actividad</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_docentes_pasiva' %}">Docentes en Tareas Pasivas</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_horas' %}">Horas Cátedras</a>
+                            </div>
+                        </div>
+
+                        <!-- Matrícula -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-user-graduate"></i>
+                            <h6>Matrícula</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'reportes:filtrado_aborigen' %}">Aborigen</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_comesp' %}">Común y Especial</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_snu' %}">SNU</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matricueanexo' %}">Detalle Cueanexo</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matri_disc_ini_cueanexo' %}">Inicial - Detalle Discapacidad</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matri_disc_prim_cueanexo' %}">Primaria - Detalle Discapacidad</a>
+                                <a class="subcard" href="{% url 'reportes:filtrado_matri_disc_sec_cueanexo' %}">Secundaria - Detalle Discapacidad</a>
+                            </div>
+                        </div>
+
+                        <!-- Ofertas Educativas -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-book-open"></i>
+                            <h6>Ofertas Educativas</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'reportes:consulta_ofertas_reg' %}">Región</a>
+                                <a class="subcard" href="{% url 'reportes:consulta_ofertas' %}">Departamento</a>
+                                <a class="subcard" href="{% url 'reportes:carreras' %}">Carreras - Títulos</a>
+                            </div>
+                        </div>
+
+                        <!-- Indicadores -->
+                        <div class="mega-card reportes">
+                            <i class="fas fa-chart-line"></i>
+                            <h6>Indicadores</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'indicadores:efectivaprimtotal' %}">Primaria</a>
+                                <a class="subcard" href="{% url 'indicadores:efectivasectotal' %}">Secundaria</a>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Repositorio -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuRepositorio" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-archive"></i> Repositorio
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuRepositorio">
+                        <a class="mega-card repositorio" href="{% url 'mapoteca:mapas' %}">
+                            <i class="fas fa-map"></i>
+                            <h6>Mapoteca</h6>
+                        </a>
+                        <a class="mega-card repositorio" href="{% url 'videoteca:videos' %}">
+                            <i class="fas fa-video"></i>
+                            <h6>Videoteca</h6>
+                        </a>
+                        <div class="mega-card repositorio">
+                            <i class="fas fa-file-alt"></i>
+                            <h6>Normativa</h6>
+                            <div class="mt-2">
+                                <a class="subcard" href="{% url 'digesto:norma' %}">Normativa</a>
+                                <a class="subcard" href="https://dirdocumentacion.chaco.gob.ar/documentos/buscar" target="_blank">Búsqueda Resoluciones</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/calendario-2025/" target="_blank">Calendario Escolar</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/directorio_2024/" target="_blank">Directorio MECCyT</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/dossier_educativos/" target="_blank">Dossier Digital</a>
+                                <a class="subcard" href="https://dirdocumentacion.educacion.chaco.gob.ar/formularios-planillas/" target="_blank">Formularios Docentes</a>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Consultas -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuConsultas" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-search"></i> Consultas
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuConsultas">
+                        <a class="mega-card consultas" href="{% url 'consultas_api:consulta_form' %}">
+                            <i class="fas fa-search-plus"></i>
+                            <h6>Consultas SGE</h6>
+                        </a>
+                        <a class="mega-card consultas" href="{% url 'consultas_api:consulta_docente_renpe' %}">
+                            <i class="fas fa-user-check"></i>
+                            <h6>ReNPE - Etapa2</h6>
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Equipo -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuEquipo" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-users"></i> Equipo
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuEquipo">
+                        <a class="mega-card equipo" href="{% url 'reportes:equipo' %}">
+                            <i class="fas fa-building"></i>
+                            <h6>Departamento Estadísticas</h6>
+                        </a>
+                    </div>
+                </li>
+
+                <!-- Ayuda -->
+                <li class="nav-item dropdown position-static">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuAyuda" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-question-circle"></i> Ayuda
+                    </a>
+                    <div class="dropdown-menu mega-menu" aria-labelledby="menuAyuda">
+                        <a class="mega-card ayuda" href="{% url 'ayudarenpe:index' %}">
+                            <i class="fas fa-info-circle"></i>
+                            <h6>Preguntas Frecuentes</h6>
+                        </a>
+                    </div>
+                </li>
+
+            </ul>
+
+            <!-- Perfil usuario -->
+            <ul class="navbar-nav ms-auto navbar-tools">
+                <li class="nav-item dropdown">
+                    <a class="nav-link" href="#" data-bs-toggle="dropdown">
+                        <i class="far fa-user-circle fs-3 text-danger"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="dropdown-header">Opciones de usuario</li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% if user.is_authenticated %}
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-edit me-2"></i>Editar Perfil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{% url 'logueo:logout' %}">
+                                {% csrf_token %}
+                                <button class="dropdown-item" type="submit"><i class="fas fa-power-off text-danger me-2"></i> Logout</button>
+                            </form>
+                        </li>
+                        {% else %}
+                        <li><a class="dropdown-item" href="{% url 'usuarios:registro' %}"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- JS Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Script hover desktop + click mobile + Modal IA -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const dropdowns = document.querySelectorAll('.nav-item.dropdown');
+
+    dropdowns.forEach(dropdown => {
+        const toggle = dropdown.querySelector('.dropdown-toggle');
+        let bsDropdown = bootstrap.Dropdown.getOrCreateInstance(toggle);
+        const isTouch = 'ontouchstart' in document.documentElement;
+
+        if(!isTouch){
+            dropdown.addEventListener('mouseenter', () => bsDropdown.show());
+            dropdown.addEventListener('mouseleave', () => bsDropdown.hide());
+        } else {
+            toggle.addEventListener('click', e => {
+                e.preventDefault();
+                bsDropdown.toggle();
+            });
+        }
+    });
+
+    // Modal IA
+    const botonIA = document.getElementById("abrirModalIA");
+    if(botonIA){
+        botonIA.addEventListener("click", function(e){
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById("buscarModal"));
+            modal.show();
+        });
+    }
+});
+</script>

@@ -1,0 +1,148 @@
+{% extends 'dashboard/bodyevaluacion.html' %}
+{% load static %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            display: flex;
+            gap: 20px; /* Espacio entre los elementos principales */
+            padding: 20px;
+        }
+
+        .filter-card {
+            flex: 0 0 250px; /* Fijar el ancho de la tarjeta de filtros */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .content {
+            flex: 1; /* Ocupa el espacio restante en el centro */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .stats-card {
+            flex: 0 0 250px; /* Fijar el ancho de la tarjeta de estadísticas */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .chart-container {
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            width: 100%;
+        }
+
+        .chart-container iframe {
+            max-width: 100%;
+            border-radius: 15px;
+        }
+
+        .radio-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .radio-grid label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .custom-dashboard h3 {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
+
+    <div class="custom-dashboard">
+        <!-- Card de filtros (Izquierda) -->
+        <div class="filter-card">
+            <form id="filtro-form" method="GET" action="{% url 'lectocomprension:grafico_loc' %}">
+                <h3>Selecciona una Localidad</h3>
+                <div class="radio-grid">
+                    <select id="localidad" name="localidad" style="width: 200px;" onchange="enviarFormulario()">
+                        {% for localidad in localidades %}
+                            <option value="{{ localidad }}" {% if localidad == localidad_seleccionada %}selected{% endif %}>
+                                {{ localidad }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- Gráfico y estadísticas (Centro) -->
+        <div class="content">
+            {% if datos_disponibles %}
+            <div id="contenido">
+                <h3>Estado de Situación Censo de Fluidez y Comprensión Lectora de los alumnos de 3er grado - Mayo 2024 - {{ localidad }}</h3>
+                <div class="chart-container">
+                    <h4>Gráfico de Desempeño - Corte 1</h4>
+                    {{ grafico|safe }}
+                </div>
+
+                <div class="chart-container">
+                    <h4>Gráfico de Desempeño - Corte 3</h4>
+                    {{ grafico3|safe }}
+                </div>
+            </div>
+            {% else %}
+                <p>No hay datos disponibles para la localidad seleccionada.</p>
+            {% endif %}
+        </div>
+
+        <!-- Card de estadísticas (Derecha) -->
+        {% if datos_disponibles %}
+        <div class="stats-card">
+            <h3>Estadísticas</h3>
+            <p class="stats">Promedio de Puntaje: {{ promedio_puntaje }}</p>
+            <p class="stats">Total de Alumnos: {{ total_alumnos }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Función para enviar el formulario cuando se selecciona una localidad
+        function enviarFormulario() {
+            var selectedValue = document.getElementById("localidad").value;
+            console.log("Localidad seleccionada:", selectedValue);
+            console.log("Formulario enviado.");
+            document.getElementById("filtro-form").submit();
+        }
+
+        // Asegurarse de que el DOM esté cargado y el script se ejecute correctamente
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log("DOM completamente cargado y listo.");
+            var localidadSelect = document.getElementById("localidad");
+            if (localidadSelect) {
+                localidadSelect.addEventListener("change", function () {
+                    console.log("Cambio detectado en el select de localidades:", localidadSelect.value);
+                });
+            } else {
+                console.error("No se encontró el elemento select con ID 'localidad'.");
+            }
+        });
+    </script>
+{% endblock %}

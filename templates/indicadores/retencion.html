@@ -1,0 +1,49 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% block title %}Tasas de Retención{% endblock %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        .stats-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .stats-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        .chart-container {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .chart-container img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+    </style>
+
+    <div class="custom-dashboard">
+        <div class="stats-card">
+            <h3>Estadísticas de {{ nom_est }}</h3>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        {{ grafico | safe }}
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}

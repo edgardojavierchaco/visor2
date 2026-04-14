@@ -1,0 +1,25 @@
+{% extends 'dashboard/home.html' %}
+{% block body %}
+    <body class="hold-transition layout-top-nav">
+    <div class="wrapper">
+        <!-- Header -->
+        {% include 'dashboard/headersupervisor.html' %}
+        <!-- Content -->
+        <div class="content-wrapper">                                   
+            <div class="content">
+                <div class="container-fluid">
+                    {% block content %}
+    
+                    {% endblock %}
+                </div>
+            </div>
+        </div>            
+
+        <!-- Footer -->
+        {% include 'dashboard/footer.html' %}
+    </div>
+    {% block javascript %}
+
+    {% endblock %}
+    </body>
+{% endblock %}

@@ -1,0 +1,260 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+<!-- =========================================================
+🧠 KPIs MINISTERIALES
+========================================================= -->
+<div class="row mb-3">
+
+    <div class="col-md-2">
+        <div class="card p-3 text-center shadow-sm">
+            <h6>Total Asignaciones</h6>
+            <h3 id="kpi_asignaciones">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 text-center shadow-sm">
+            <h6>Supervisores Activos</h6>
+            <h3 id="kpi_supervisores">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 text-center shadow-sm">
+            <h6>Activas</h6>
+            <h3 id="kpi_activas">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 text-center shadow-sm">
+            <h6>Inactivas</h6>
+            <h3 id="kpi_inactivas">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 text-center shadow-sm">
+            <h6>Sin Supervisor</h6>
+            <h3 id="kpi_sin">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 text-center shadow-sm">
+            <h6>Duplicadas</h6>
+            <h3 id="kpi_dup">0</h3>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================================================
+📊 CONTENIDO PRINCIPAL
+========================================================= -->
+<div class="row">
+
+<!-- ================= FILTROS ================= -->
+<div class="col-md-3">
+
+<div class="card p-3 shadow-sm">
+
+    <h5 class="mb-3">Filtros Ministeriales</h5>
+
+    <label>Supervisor</label>
+    <input type="text" id="f_supervisor" class="form-control mb-2">
+
+    <label>Región</label>
+    <input type="text" id="f_region" class="form-control mb-2">
+
+    <label>Localidad</label>
+    <input type="text" id="f_localidad" class="form-control mb-2">
+
+    <label>Departamento</label>
+    <input type="text" id="f_departamento" class="form-control mb-2">
+
+    <label>Nivel</label>
+    <input type="text" id="f_nivel" class="form-control mb-2">
+
+    <label>Gestión</label>
+    <input type="text" id="f_gestion" class="form-control mb-2">
+
+    <label>Estado</label>
+    <select id="f_activo" class="form-select mb-2">
+        <option value="">Todos</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+    </select>
+
+    <button id="btnFiltrar" class="btn btn-primary w-100 mt-2">
+        Aplicar filtros
+    </button>
+
+    <button id="btnLimpiar" class="btn btn-secondary w-100 mt-2">
+        Limpiar
+    </button>
+
+</div>
+
+</div>
+
+<!-- ================= TABLA ================= -->
+<div class="col-md-9">
+
+<div class="card p-3 shadow-sm">
+
+    <div class="table-responsive">
+
+        <table id="tabla" class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Supervisor</th>
+                    <th>Escuela</th>
+                    <th>Región</th>
+                    <th>Localidad</th>
+                    <th>Departamento</th>
+                    <th>Oferta</th>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+        </table>
+
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(function () {
+
+    console.log("🔥 DASHBOARD INIT OK");
+
+    // =========================================================
+    // DATATABLE
+    // =========================================================
+    let table = null;
+
+    try {
+        table = $('#tabla').DataTable({
+            processing: true,
+            serverSide: true,
+            pageLength: 10,
+
+            ajax: {
+                url: "/asignacionesuperv/ministerio/datatable/",
+                data: function (d) {
+                    d.supervisor = $('#f_supervisor').val();
+                    d.region = $('#f_region').val();
+                    d.localidad = $('#f_localidad').val();
+                    d.departamento = $('#f_departamento').val();
+                    d.nivel = $('#f_nivel').val();
+                    d.gestion = $('#f_gestion').val();
+                    d.activo = $('#f_activo').val();
+                }
+            },
+
+            // =====================================================
+            // 🔥 ESTO ES LO QUE TE FALTABA
+            // =====================================================
+            columns: [
+                { data: "supervisor" },
+                { data: "escuela" },
+                { data: "region" },
+                { data: "localidad" },
+                { data: "departamento" },
+                { data: "oferta" },
+                { data: "desde" },
+                { data: "hasta" },
+                {
+                    data: "activo",
+                    render: function (data) {
+                        return data
+                            ? '<span class="badge bg-success">Activo</span>'
+                            : '<span class="badge bg-danger">Inactivo</span>';
+                    }
+                }
+            ],
+
+            language: {
+                url: "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json"
+            }
+        });
+    } catch (e) {
+        console.error("❌ ERROR DATATABLE:", e);
+    }
+
+    // =========================================================
+    // KPIs
+    // =========================================================
+    function loadKPIs() {
+
+        $.get("/asignacionesuperv/ministerio/kpis/")
+            .done(function (data) {
+
+                $('#kpi_asignaciones').text(data.total_asignaciones || 0);
+                $('#kpi_supervisores').text(data.supervisores_activos || 0);
+                $('#kpi_activas').text(data.asignaciones_activas || 0);
+                $('#kpi_inactivas').text(data.asignaciones_inactivas || 0);
+                $('#kpi_sin').text(data.escuelas_sin_supervisor || 0);
+                $('#kpi_dup').text(data.duplicadas || 0);
+
+            })
+            .fail(function (xhr) {
+                console.error("❌ ERROR KPIs:", xhr.status, xhr.responseText);
+            });
+    }
+
+    // =========================================================
+    // FILTROS
+    // =========================================================
+    $('#btnFiltrar').click(function () {
+        if (table) table.ajax.reload();
+        loadKPIs();
+    });
+
+    $('#btnLimpiar').click(function () {
+
+        $('#f_supervisor').val('');
+        $('#f_region').val('');
+        $('#f_localidad').val('');
+        $('#f_departamento').val('');
+        $('#f_nivel').val('');
+        $('#f_gestion').val('');
+        $('#f_activo').val('');
+
+        if (table) table.ajax.reload();
+        loadKPIs();
+    });
+
+    // =========================================================
+    // INIT
+    // =========================================================
+    loadKPIs();
+
+});
+</script>
+
+{% endblock %}

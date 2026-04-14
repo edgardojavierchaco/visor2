@@ -1,0 +1,286 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" /> 
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+        <!-- Font Awesome CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+        <!-- DataTables Bootstrap 5 CSS -->
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+        
+        <!-- Leaflet Control Geocoder CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+        
+        <style>
+            #map-container {
+                position: relative;
+            }
+
+            #map {
+                height: 450px;
+            }
+
+        </style>
+    </head>
+    <body>
+        {% block content_header %}
+            <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">  <small></small></h1>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+                                <li class="breadcrumb-item"><a href="{% url 'dash:portada'%}">Regresar</a><li>                                    
+                                
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endblock %}
+        <h2>Ubicación Geográfica de CUE N°: {{cueanexo}} y los cercanos en un radio de: {{radio}} metros</h2>
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div id="marker-table-container">
+            <table id="marker-table" class="display">
+                <thead>
+                    <tr>
+                        <th>Cueanexo</th>
+                        <th>Establecimiento</th>
+                        <th>Ofertas</th>
+                        <th>Ámbito</th>
+                        <th>Sector</th>
+                        <th>Región Educativa</th>
+                        <th>Calle</th>
+                        <th>Número</th>
+                        <th>Localidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- tabla dinámica con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+        <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js"
+        integrity="sha512-myckXhaJsP7Q7MZva03Tfme/MSF5a6HC2xryjAM4FxPLHGqlh5VALCbywHnzs2uPoF/4G/QVXyYDDSkp5nPfig=="
+        crossorigin=""></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+        <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+        <!-- Leaflet.Draw -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+        <!-- JavaScript de DataTables -->
+        <script src='https://code.jquery.com/jquery-3.7.0.js'></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js'></script>
+        <script src='https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js'></script>
+        <script src='https://cdn.datatables.net/buttons/2.0.0/js/dataTables.buttons.min.js'></script>
+        <script src='https://cdn.datatables.net/buttons/2.0.0/js/buttons.print.min.js'></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
+        <!-- Lenguaje para los botones -->
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.colVis.min.js"></script>
+        <script>
+            var cueanexo = '{{ cueanexo }}';
+            var markers = JSON.parse('{{ data_json|escapejs }}');
+            var drawnItems = new L.FeatureGroup();
+            var map = L.map('map');
+            var bounds = L.latLngBounds();
+            var blueMarkers = L.layerGroup(); 
+            var greenMarkers = L.layerGroup(); 
+
+            var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            }).addTo(map);
+            
+            for (var i = 0; i < markers.length; i++) {
+                var lat = markers[i][1];
+                var lng = markers[i][2];
+                var cueanexoMarker = markers[i][0];
+                var nom_est = markers[i][3];
+                var oferta = markers[i][4];
+                var ambito = markers[i][5];
+                var sector = markers[i][6];
+                var region_loc = markers[i][7];
+                var calle = markers[i][8];
+                var numero = markers[i][9];
+                var localidad = markers[i][10];
+                var markerColor = markers[i][11];            
+                console.log(markerColor)
+
+                if (lat !== 0 && lng !== '') {
+                    // Definir la URL del icono en función del color del marcador
+                    var iconUrl = '';
+                    if (markerColor === 'blue') {
+                        iconUrl = "{% static 'img/iconblue.png' %}";
+                    } else if (markerColor === 'green') {
+                        iconUrl = "{% static 'img/icongreen.png' %}";
+                    } else {
+                        // Puedes agregar más colores o un icono por defecto
+                        iconUrl = "{% static 'img/marker-icon-2x-default.png' %}";
+                    }
+
+                    var markerIcon = L.icon({
+                        iconUrl: iconUrl,
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        tooltipAnchor: [16, -28]
+                    }); 
+                    console.log("URL del icono:", "{% static 'img/' %}" + markerColor + ".png");
+                    var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexoMarker + '\')">' + cueanexoMarker + '</a>';
+                    var marker = L.marker([lat, lng], { icon: markerIcon });
+                    marker.bindPopup('<strong>Cueanexo:</strong> ' + filterLink + '<br>' +
+                        '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
+                        '<strong>Ofertas:</strong> ' + oferta + '<br>' +
+                        '<strong>Ámbito:</strong> ' + ambito + '<br>' +
+                        '<strong>Sector:</strong> ' + sector + '<br>' +
+                        '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
+                        '<strong>Calle:</strong> ' + calle + ' ' +
+                        '<strong>Nro:</strong> ' + numero + ' - ' + localidad + '<br>');
+
+                    if (markerColor === 'blue') {
+                        blueMarkers.addLayer(marker);
+                    } else {
+                        greenMarkers.addLayer(marker);
+                    }
+                    bounds.extend(marker.getLatLng());
+                }
+            }
+
+            map.addLayer(blueMarkers); // Agregar la capa de marcadores "blue" al mapa
+            map.addLayer(greenMarkers); // Agregar la capa de marcadores "green"         
+            map.fitBounds(bounds);
+
+            var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            });
+
+            var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 18
+            });
+
+            var baseLayers = {
+                "Mosaico": openStreetMap,
+                "Satélite": esriSatellite
+            };
+
+            L.control.layers(baseLayers, {
+                "Cue cercanos": greenMarkers,
+                "Cue buscado": blueMarkers
+            }, {
+                collapsed: true,
+                icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
+            }).addTo(map);
+
+            L.control.scale({
+                position: 'bottomleft',
+                imperial: false,
+                metric: true
+           }).addTo(map);
+
+            var center_lat = '{{ center_lat }}'.replace(',', '.');
+            var center_lng = '{{ center_lng }}'.replace(',', '.');
+            var radio = parseInt('{{ radio }}');
+
+            var circle = L.circle([center_lat, center_lng], {
+                color: 'red',
+                fillColor: 'red',
+                fillOpacity: 0.2,
+                radius: radio
+            }).addTo(map);
+
+            // Agregar marcadores al DataTable
+            var markerTable = $('#marker-table').DataTable({
+                responsive: true,
+                autoWidth: false,
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" // Ruta al archivo de traducción en español
+                },      
+                dom: '<"top"lBf>rt<"bottom"ip>',
+                buttons: [
+                    {
+                        extend: 'excel',
+                        text: '<i class="fas fa-file-excel"></i>',
+                        className: 'btn btn-secondary',
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        titleAttr: 'Exportar a Excel',
+                        title: 'Nombre_del_archivo'
+                    },
+                    {
+                        extend: 'csv',
+                        text: '<i class="fas fa-file-csv"></i>',
+                        className: 'btn btn-secondary',
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        titleAttr: 'Exportar a CSV',
+                        title: 'Nombre_del_archivo'
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="fas fa-file-pdf"></i>',
+                        className: 'btn btn-secondary',
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        titleAttr: 'Exportar a PDF',
+                        title: 'Nombre_del_archivo'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print"></i>',
+                        className: 'btn btn-secondary',
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        titleAttr: 'Imprimir',
+                        title: 'Nombre_del_archivo'
+                    }
+                ],
+                data: markers,
+                columns: [
+                    { data: 0 }, // Cueanexo
+                    { data: 3 }, // Establecimiento
+                    { data: 4 }, // Ofertas
+                    { data: 5 }, // Ámbito
+                    { data: 6 }, // Sector
+                    { data: 7 }, // Región Educativa
+                    { data: 8 }, // Calle
+                    { data: 9 }, // Número
+                    { data: 10 } // Localidad
+                ],
+                columnDefs: [
+                    {
+                        targets: 0, // Cueanexo
+                        render: function(data, type, row, meta) {
+                            return '<a href="#" onclick="filterTable(\'' + data + '\')">' + data + '</a>';
+                        }
+                    }
+                ]
+            });
+
+            function filterTable(cueanexoMarker) {
+                window.location.href = '/map/listados/?cueanexo=' + cueanexoMarker;
+            }
+        </script>
+    </body>
+{% endblock %}

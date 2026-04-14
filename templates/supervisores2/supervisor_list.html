@@ -1,0 +1,197 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- =========================================================
+         HEADER
+    ========================================================= -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h3 class="mb-0">Supervisores</h3>
+
+        {% if user.perfil.rol.nombre|default:''|upper == "SUPERVISOR" %}
+            <a href="{% url 'supervisores2:create' %}"
+               class="btn btn-primary">
+                + Nuevo Supervisor
+            </a>
+        {% endif %}
+
+    </div>
+
+    <!-- =========================================================
+         TABLA
+    ========================================================= -->
+    <div class="table-responsive">
+
+        <table class="table table-hover table-bordered align-middle">
+
+            <thead class="table-light">
+                <tr>
+                    <th>Apellido</th>
+                    <th>Nombres</th>
+                    <th>CUIL</th>
+                    <th>Teléfono</th>
+
+                    <!-- 🔥 NUEVOS -->
+                    <th>Nivel modalidad</th>
+                    <th>Regiones</th>
+
+                    <th>Estado</th>
+                    <th>Activo</th>
+                    <th width="220">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for s in supervisores %}
+
+                <tr>
+
+                    <!-- PERSONA -->
+                    <td>{{ s.usuario.apellido }}</td>
+                    <td>{{ s.usuario.nombres }}</td>
+                    <td>{{ s.usuario.username }}</td>
+                    <td>{{ s.telefono }}</td>
+
+                    <!-- =====================================================
+                         NIVEL MODALIDAD
+                    ====================================================== -->
+                    <td>
+                        {% with niveles=s.niveles_modalidad.all %}
+
+                            {% if niveles %}
+
+                                {% for n in niveles %}
+                                    <span class="badge bg-primary">
+                                        {{ n.nombre }}
+                                    </span>
+                                {% endfor %}
+
+                            {% else %}
+                                <span class="text-muted">Sin nivel</span>
+                            {% endif %}
+
+                        {% endwith %}
+                    </td>
+
+                    <!-- =====================================================
+                         REGIONES
+                    ====================================================== -->
+                    <td>
+
+                        {% with regiones=s.supervisor_regiones.all %}
+
+                            {% if regiones %}
+
+                                {% for r in regiones %}
+                                    <span class="badge bg-info text-dark">
+                                        {{ r.region_loc }}
+                                    </span>
+                                {% endfor %}
+
+                            {% else %}
+                                <span class="text-muted">Sin regiones</span>
+                            {% endif %}
+
+                        {% endwith %}
+
+                    </td>
+
+                    <!-- =====================================================
+                         ESTADO DE VALIDACIÓN
+                    ====================================================== -->
+                    <td>
+                        {% if s.estado_validacion == "EN_REVISION" %}
+                            <span class="badge bg-warning text-dark">En revisión</span>
+
+                        {% elif s.estado_validacion == "APROBADO" %}
+                            <span class="badge bg-success">Aprobado</span>
+
+                        {% elif s.estado_validacion == "RECHAZADO" %}
+                            <span class="badge bg-danger">Rechazado</span>
+
+                        {% else %}
+                            <span class="badge bg-secondary">Borrador</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ACTIVO -->
+                    <td>
+                        {% if s.activo %}
+                            <span class="badge bg-success">Sí</span>
+                        {% else %}
+                            <span class="badge bg-secondary">No</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- =====================================================
+                         ACCIONES
+                    ====================================================== -->
+                    <td>
+
+                        {% if user.perfil.rol.nombre|default:''|upper == "SUPERVISOR" %}
+
+                            {% if s.estado_validacion == "BORRADOR" or s.estado_validacion == "RECHAZADO" %}
+
+                                <a href="{% url 'supervisores2:update' s.id %}"
+                                   class="btn btn-sm btn-warning">
+                                    Editar
+                                </a>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                        {% if s.estado_validacion == "BORRADOR" %}
+
+                            <a href="{% url 'supervisores2:delete' s.id %}"
+                               class="btn btn-sm btn-danger">
+                                Eliminar
+                            </a>
+
+                        {% endif %}
+
+                        {% if user.perfil.rol.nombre|default:''|upper == "REGIONAL" %}
+
+                            {% if s.estado_validacion == "EN_REVISION" %}
+
+                                <a href="{% url 'supervisores2:approve' s.id %}"
+                                   class="btn btn-sm btn-success">
+                                    Aprobar
+                                </a>
+
+                                <a href="{% url 'supervisores2:reject' s.id %}"
+                                   class="btn btn-sm btn-danger">
+                                    Rechazar
+                                </a>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% empty %}
+
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        No hay supervisores cargados
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,751 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Observatorio de Carreras y Títulos</title>
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body {
+    background:#f4f6f9;
+    font-family:Segoe UI,Roboto,Arial;
+}
+
+.header {
+    background:#1f4e79;
+    color:white;
+    padding:18px;
+    border-radius:8px;
+    margin-bottom:20px;
+}
+
+.card {
+    border:none;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.07);
+}
+
+.kpi {
+    text-align:center;
+    padding:20px;
+}
+
+.kpi-number {
+    font-size:28px;
+    font-weight:700;
+    color:#1f4e79;
+}
+
+.kpi-label {
+    font-size:13px;
+    color:#777;
+}
+
+.select2-container {
+    width:100%!important;
+}
+
+.dataTables_wrapper .dt-buttons {
+    margin-bottom:10px;
+}
+
+.chart-container {
+    height:320px;
+}
+
+/* POPUP */
+
+.popup-overlay {
+
+    display:none;
+    position:fixed;
+
+    top:0;
+    left:0;
+
+    width:100%;
+    height:100%;
+
+    background:rgba(0,0,0,0.4);
+    z-index:9998;
+
+}
+
+.popup-info {
+
+    display:none;
+    position:fixed;
+
+    top:50%;
+    left:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:420px;
+
+    background:white;
+
+    border-radius:10px;
+
+    box-shadow:0 10px 40px rgba(0,0,0,0.25);
+
+    padding:20px;
+
+    z-index:9999;
+
+}
+
+.popup-header {
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    font-weight:600;
+    margin-bottom:12px;
+
+}
+
+.popup-header button {
+
+    border:none;
+    background:none;
+    font-size:22px;
+    cursor:pointer;
+
+}
+
+.popup-body {
+
+    font-size:14px;
+    line-height:1.5;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container-fluid mt-3">
+
+<!-- HEADER -->
+<div class="header d-flex justify-content-between">
+
+<div>
+<h4><i class="bi bi-bar-chart"></i> Observatorio de Carreras y Títulos</h4>
+<div style="font-size:14px;opacity:.9">
+Sistema de Información Educativa
+</div>
+</div>
+
+<div>
+<i class="bi bi-building"></i> MECCyT Chaco
+</div>
+
+</div>
+
+
+<!-- KPI -->
+<div class="row mb-4">
+
+<div class="col-md-3">
+
+<div class="card">
+
+<div class="kpi">
+<div id="total_carreras" class="kpi-number">0</div>
+<div class="kpi-label">Carreras</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- FILTROS -->
+<div class="card mb-4">
+
+<div class="card-body">
+
+<h6 class="mb-3">
+<i class="bi bi-funnel"></i> Filtros
+</h6>
+
+<form id="filter-form" class="row g-3">
+
+<div class="col-md-4">
+
+<label>Localidad</label>
+
+<select id="localidad" name="localidad[]" multiple class="form-select">
+
+{% for loc in localidades %}
+<option value="{{loc}}">{{loc}}</option>
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div class="col-md-3">
+
+<label>Nivel</label>
+
+<select id="nivel" name="nivel" class="form-select">
+
+<option value=""></option>
+
+{% for n in niveles %}
+<option value="{{n}}">{{n}}</option>
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div class="col-md-3">
+
+<label>Título</label>
+<select id="titulo" name="titulo" class="form-select"></select>
+
+</div>
+
+
+<div class="col-md-2 d-flex align-items-end">
+
+<button class="btn btn-primary w-100 me-2">
+<i class="bi bi-search"></i>
+</button>
+
+<button type="button" id="clear-button" class="btn btn-outline-secondary w-100">
+<i class="bi bi-x"></i>
+</button>
+
+</div>
+
+</form>
+
+</div>
+</div>
+
+
+<!-- GRÁFICOS -->
+
+<div class="row mb-4">
+
+<div class="col-md-4">
+
+<div class="card">
+<div class="card-body">
+
+<h6>Por Sector</h6>
+
+<div class="chart-container">
+<canvas id="chartSector"></canvas>
+</div>
+
+</div>
+</div>
+
+</div>
+
+
+<div class="col-md-4">
+
+<div class="card">
+<div class="card-body">
+
+<h6>Por Nivel</h6>
+
+<div class="chart-container">
+<canvas id="chartNivel"></canvas>
+</div>
+
+</div>
+</div>
+
+</div>
+
+
+<div class="col-md-4">
+
+<div class="card">
+<div class="card-body">
+
+<h6>Por Localidad</h6>
+
+<div class="chart-container">
+<canvas id="chartLocalidad"></canvas>
+</div>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+
+<!-- TABLA -->
+
+<div class="card">
+
+<div class="card-body">
+
+<h6 class="mb-3">
+<i class="bi bi-table"></i> Resultados
+</h6>
+
+<table id="results-table" class="table table-striped table-hover">
+
+<thead>
+
+<tr>
+<th>CUEANEXO</th>
+<th>Establecimiento</th>
+<th>Sector</th>
+<th>Localidad</th>
+<th>Nivel</th>
+</tr>
+
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- POPUP -->
+
+<div id="popupOverlay" class="popup-overlay"></div>
+
+<div id="popupInfo" class="popup-info">
+
+<div class="popup-header">
+<span>Ficha del Establecimiento</span>
+<button id="cerrarPopup">×</button>
+</div>
+
+<div id="popupContenido" class="popup-body"></div>
+
+</div>
+
+
+
+<script>
+
+let chartSector
+let chartNivel
+let chartLocalidad
+
+
+/* ===============================
+PALETAS DE COLORES PROFESIONALES
+================================= */
+
+const paletteSector = [
+"#1f77b4","#4e79a7","#59a14f","#76b7b2",
+"#f28e2c","#edc949","#e15759","#af7aa1"
+]
+
+const paletteNivel = [
+"#0d6efd","#198754","#20c997",
+"#6610f2","#6f42c1","#d63384","#fd7e14"
+]
+
+const paletteLocalidad = [
+"#2c7be5","#6f42c1","#17a2b8",
+"#20c997","#ffc107","#fd7e14",
+"#e83e8c","#dc3545","#6c757d"
+]
+
+
+/* ===============================
+PLUGIN VALORES ARRIBA DE BARRAS
+================================= */
+
+const valueLabelPlugin = {
+id:'valueLabel',
+
+afterDatasetsDraw(chart){
+
+const {ctx} = chart
+
+chart.data.datasets.forEach((dataset,i)=>{
+
+const meta = chart.getDatasetMeta(i)
+
+meta.data.forEach((bar,index)=>{
+
+let value = dataset.data[index]
+
+ctx.save()
+
+ctx.font="bold 12px Segoe UI"
+ctx.fillStyle="#333"
+ctx.textAlign="center"
+
+ctx.fillText(
+value,
+bar.x,
+bar.y - 8
+)
+
+})
+
+})
+
+}
+}
+
+Chart.register(valueLabelPlugin)
+
+
+
+/* ===============================
+FUNCIÓN GENERAR COLORES
+================================= */
+
+function generateColors(count,palette){
+
+let colors=[]
+
+for(let i=0;i<count;i++){
+colors.push(palette[i % palette.length])
+}
+
+return colors
+}
+
+
+
+/* ===============================
+FUNCIÓN CREAR GRÁFICO
+================================= */
+
+function drawChart(canvas,data,palette){
+
+const labels = Object.keys(data)
+const values = Object.values(data)
+
+const total = values.reduce((a,b)=>a+b,0)
+
+return new Chart(canvas,{
+
+type:'bar',
+
+data:{
+labels:labels,
+
+datasets:[{
+
+data:values,
+
+backgroundColor:generateColors(values.length,palette),
+
+borderRadius:8,
+borderSkipped:false,
+
+}]
+},
+
+options:{
+
+responsive:true,
+maintainAspectRatio:false,
+
+animation:{
+duration:900,
+easing:'easeOutQuart'
+},
+
+plugins:{
+
+legend:{display:false},
+
+tooltip:{
+callbacks:{
+label:function(ctx){
+
+let value = ctx.raw
+let percent = ((value/total)*100).toFixed(1)
+
+return value + " ("+percent+"%)"
+}
+}
+}
+
+},
+
+scales:{
+
+x:{
+grid:{display:false}
+},
+
+y:{
+beginAtZero:true,
+ticks:{
+precision:0
+}
+}
+
+}
+
+}
+
+})
+
+}
+
+
+
+/* ===============================
+DOCUMENT READY
+================================= */
+
+$(document).ready(function(){
+
+$('#localidad,#nivel,#titulo').select2({
+placeholder:"Seleccione",
+allowClear:true
+})
+
+
+/* ===============================
+DATATABLE
+================================= */
+
+let table=$('#results-table').DataTable({
+
+language:{url:"https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json"},
+
+dom:'Bfrtip',
+
+buttons:[
+'excel',
+'pdf',
+'print'
+],
+
+data:[],
+
+columns:[
+
+{ 
+data:'cueanexo',
+
+render:function(d){
+return `<a href="#" class="ver-datos" data-cue="${d}">${d}</a>`
+}
+
+},
+
+{data:'nom_est'},
+{data:'sector'},
+{data:'localidad'},
+{data:'nivel'}
+
+]
+
+})
+
+
+
+/* ===============================
+ACTUALIZAR TITULOS
+================================= */
+
+function updateTitles(){
+
+$.get("{% url 'reportes:carreras' %}",{
+
+'localidad[]':$('#localidad').val(),
+'nivel':$('#nivel').val()
+
+},function(resp){
+
+$('#titulo').empty()
+
+resp.titulos.forEach(function(t){
+$('#titulo').append(new Option(t,t))
+})
+
+})
+
+}
+
+$('#localidad,#nivel').change(updateTitles)
+
+
+
+/* ===============================
+APLICAR FILTROS
+================================= */
+
+$('#filter-form').submit(function(e){
+
+e.preventDefault()
+
+$.get("{% url 'reportes:carreras' %}",{
+
+'localidad[]':$('#localidad').val(),
+'nivel':$('#nivel').val(),
+'titulo':$('#titulo').val()
+
+},function(resp){
+
+table.clear().rows.add(resp.data).draw()
+
+$('#total_carreras').text(resp.data.length)
+
+
+
+/* destruir gráficos previos */
+
+if(chartSector) chartSector.destroy()
+if(chartNivel) chartNivel.destroy()
+if(chartLocalidad) chartLocalidad.destroy()
+
+
+
+/* crear gráficos */
+
+chartSector = drawChart(
+document.getElementById('chartSector'),
+resp.resumen.por_sector,
+paletteSector
+)
+
+chartNivel = drawChart(
+document.getElementById('chartNivel'),
+resp.resumen.por_nivel,
+paletteNivel
+)
+
+chartLocalidad = drawChart(
+document.getElementById('chartLocalidad'),
+resp.resumen.por_localidad,
+paletteLocalidad
+)
+
+})
+
+})
+
+
+
+/* ===============================
+LIMPIAR FILTROS
+================================= */
+
+$('#clear-button').click(function(){
+
+$('#localidad,#nivel,#titulo').val(null).trigger('change')
+
+table.clear().draw()
+
+$('#total_carreras').text(0)
+
+})
+
+
+
+/* ===============================
+POPUP ESTABLECIMIENTO
+================================= */
+
+$(document).on('click','.ver-datos',function(e){
+
+e.preventDefault()
+
+let cue=$(this).data('cue')
+
+$.get("{% url 'reportes:datoscarreras' %}",{cueanexo:cue},function(data){
+
+let html=`
+
+<b>Establecimiento:</b> ${data.nom_est}<br>
+<b>Sector:</b> ${data.sector}<br>
+<b>Localidad:</b> ${data.localidad}<br>
+<b>Carrera:</b> ${data.carrera}<br>
+<b>Título:</b> ${data.titulo}<br>
+<b>Nivel:</b> ${data.nivel}<br>
+<b>Dirección:</b> ${data.calle} ${data.numero}<br>
+<b>Teléfono:</b> ${data.telefono}<br>
+<b>Email:</b> ${data.email}
+
+`
+
+$('#popupContenido').html(html)
+
+$('#popupOverlay').fadeIn()
+$('#popupInfo').fadeIn()
+
+})
+
+})
+
+
+$('#cerrarPopup,#popupOverlay').click(function(){
+
+$('#popupOverlay').fadeOut()
+$('#popupInfo').fadeOut()
+
+})
+
+})
+
+</script>
+
+</body>
+</html>

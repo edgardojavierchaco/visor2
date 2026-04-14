@@ -1,0 +1,42 @@
+{% comment %}
+matricula_cards.html
+Recibe:
+- resultados_detalle: lista de diccionarios con 'oferta', 'encabezados' y 'valores'
+- cueanexo: string del CUEANEXO
+{% endcomment %}
+
+{% if resultados_detalle %}
+    {% for bloque in resultados_detalle %}
+        <div class="card-matricula">
+            <h5 style="font-weight:600; margin-bottom:8px;">{{ bloque.oferta }}</h5>
+            <div style="font-size:0.8rem; color:#555; margin-bottom:6px;">
+                CUEANEXO: {{ cueanexo }}
+            </div>
+
+            {% if bloque.valores %}
+                <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                    <thead>
+                        <tr>
+                            {% for col in bloque.encabezados %}
+                                <th style="text-align:left; padding:4px 6px; border-bottom:1px solid #ddd;">{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in bloque.valores %}
+                            <tr>
+                                {% for celda in fila %}
+                                    <td style="padding:4px 6px; border-bottom:1px solid #f0f0f0;">{{ celda }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div style="font-size:0.75rem; color:#999; margin-top:6px;">No hay datos para este filtro.</div>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% else %}
+    <div style="padding:20px; font-size:0.9rem; color:#555;">No se encontraron registros de matrícula para este CUEANEXO.</div>
+{% endif %}

@@ -1,0 +1,371 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.cenpe.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cenpe.html">Documentación de la app Renpe</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.cenpe.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.cenpe.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span>
+<span class="kn">from</span> <span class="nn">django.views.generic</span> <span class="kn">import</span> <span class="n">CreateView</span><span class="p">,</span> <span class="n">ListView</span><span class="p">,</span> <span class="n">View</span>
+<span class="kn">from</span> <span class="nn">django.views.generic.edit</span> <span class="kn">import</span> <span class="n">UpdateView</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Datos_Personal_Cenpe</span><span class="p">,</span> <span class="n">Academica_Cenpe</span><span class="p">,</span> <span class="n">CargosHoras_Cenpe</span><span class="p">,</span> <span class="n">CeicPuntos</span>
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="n">DatosPersonalCenpeForm</span><span class="p">,</span> <span class="n">DatosAcademicosCenpeForm</span><span class="p">,</span> <span class="n">CargosHorasCenpeForm</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">LoginRequiredMixin</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">JsonResponse</span><span class="p">,</span> <span class="n">HttpResponseBadRequest</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">get_object_or_404</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">localidad_tipo</span><span class="p">,</span> <span class="n">provincia_tipo</span>
+
+<div class="viewcode-block" id="IndexCenpe"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.IndexCenpe">[documentos]</a><span class="k">def</span> <span class="nf">IndexCenpe</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza la página principal del módulo RENPEE para el usuario.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP que contiene la información del usuario.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza el template &#39;cenpe/indexcenpe.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;cenpe/indexcenpe.html&#39;</span><span class="p">)</span></div>
+
+<span class="c1">######################################################</span>
+<span class="c1"># Cargar Datos Personales del Docente para el RENPEE #</span>
+<span class="c1">######################################################</span>
+<div class="viewcode-block" id="DatosPersonalCenpeCreateView"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeCreateView">[documentos]</a><span class="k">class</span> <span class="nc">DatosPersonalCenpeCreateView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista basada en clases para gestionar la creación de datos personales de los docentes para el RENPEE.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model (Model): El modelo relacionado con los datos personales (Datos_Personal_Cenpe).</span>
+<span class="sd">        form_class (Form): El formulario que se utiliza para gestionar la creación de los datos personales.</span>
+<span class="sd">        template_name (str): El template que se renderiza para la creación de datos personales.</span>
+<span class="sd">        success_url (str): La URL de redirección después de la creación exitosa de los datos.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_initial: Inicializa el campo &#39;usuario&#39; con el nombre de usuario del usuario autenticado.</span>
+<span class="sd">        form_valid: Asigna el nombre de usuario al campo &#39;usuario&#39; antes de guardar los datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Datos_Personal_Cenpe</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">DatosPersonalCenpeForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;cenpe/crear_datos_personales.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cenpe:academico&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="DatosPersonalCenpeCreateView.get_initial"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeCreateView.get_initial">[documentos]</a>    <span class="k">def</span> <span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
+        <span class="n">initial</span><span class="p">[</span><span class="s1">&#39;usuario&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span> 
+        <span class="k">return</span> <span class="n">initial</span></div>
+
+<div class="viewcode-block" id="DatosPersonalCenpeCreateView.form_valid"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeCreateView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">usuario</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+
+<span class="c1">##################################</span>
+<span class="c1"># Carga el Ajax para localidades #</span>
+<span class="c1">##################################</span>
+<div class="viewcode-block" id="cargar_localidades"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.cargar_localidades">[documentos]</a><span class="k">def</span> <span class="nf">cargar_localidades</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Carga las localidades en función de la provincia seleccionada a través de una solicitud AJAX.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP que contiene el parámetro &#39;provincia_id&#39;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        JsonResponse: Retorna un JSON con las localidades filtradas por la provincia seleccionada.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># Obtener el id de la provincia seleccionada desde la solicitud AJAX</span>
+    <span class="n">provincia_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;provincia_id&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Obtener las localidades que corresponden a la provincia seleccionada</span>
+    <span class="n">localidades</span> <span class="o">=</span> <span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_provincia</span><span class="o">=</span><span class="n">provincia_id</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;descripcion_loc&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Preparar la lista de localidades como JSON</span>
+    <span class="n">localidades_json</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">loc</span><span class="o">.</span><span class="n">c_localidad</span><span class="p">,</span> <span class="s2">&quot;descripcion&quot;</span><span class="p">:</span> <span class="n">loc</span><span class="o">.</span><span class="n">descripcion_loc</span><span class="p">}</span> <span class="k">for</span> <span class="n">loc</span> <span class="ow">in</span> <span class="n">localidades</span><span class="p">]</span>
+    
+    <span class="c1"># Devolver la lista en formato JSON</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">localidades_json</span><span class="p">)</span>  <span class="c1"># Depuración</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">localidades_json</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<span class="c1">##########################################################</span>
+<span class="c1"># Cargar los Datos Académicos del Docente para el RENPEE #</span>
+<span class="c1">##########################################################</span>
+<div class="viewcode-block" id="DatosAcademicosCenpeCreateView"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosAcademicosCenpeCreateView">[documentos]</a><span class="k">class</span> <span class="nc">DatosAcademicosCenpeCreateView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista basada en clases para gestionar la creación de datos académicos del docente para el RENPEE.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model (Model): El modelo relacionado con los datos académicos (Academica_Cenpe).</span>
+<span class="sd">        form_class (Form): El formulario que se utiliza para gestionar la creación de los datos académicos.</span>
+<span class="sd">        template_name (str): El template que se renderiza para la creación de datos académicos.</span>
+<span class="sd">        success_url (str): La URL de redirección después de la creación exitosa de los datos académicos.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_initial: Inicializa el campo &#39;usuario&#39; con el nombre de usuario del usuario autenticado.</span>
+<span class="sd">        form_valid: Asigna el nombre de usuario al campo &#39;usuario&#39; antes de guardar los datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Academica_Cenpe</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">DatosAcademicosCenpeForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;cenpe/crear_datos_academicos.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cenpe:listado&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="DatosAcademicosCenpeCreateView.get_initial"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosAcademicosCenpeCreateView.get_initial">[documentos]</a>    <span class="k">def</span> <span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
+        <span class="n">initial</span><span class="p">[</span><span class="s1">&#39;usuario&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>  
+        <span class="k">return</span> <span class="n">initial</span></div>
+
+<div class="viewcode-block" id="DatosAcademicosCenpeCreateView.form_valid"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosAcademicosCenpeCreateView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">usuario</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+    
+
+<span class="c1">#########################################################</span>
+<span class="c1"># Cargar los Datos Laborales del docente para el RENPEE #</span>
+<span class="c1">#########################################################</span>
+<div class="viewcode-block" id="CargosHorasCenpeCreateView"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeCreateView">[documentos]</a><span class="k">class</span> <span class="nc">CargosHorasCenpeCreateView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista basada en clases para gestionar la creación de los datos laborales del docente para el RENPEE.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model (Model): El modelo relacionado con los datos laborales (CargosHoras_Cenpe).</span>
+<span class="sd">        form_class (Form): El formulario que se utiliza para gestionar la creación de los datos laborales.</span>
+<span class="sd">        template_name (str): El template que se renderiza para la creación de datos laborales.</span>
+<span class="sd">        success_url (str): La URL de redirección después de la creación exitosa de los datos laborales.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_initial: Inicializa el campo &#39;usuario&#39; con el nombre de usuario del usuario autenticado.</span>
+<span class="sd">        form_valid: Asigna el nombre de usuario al campo &#39;usuario&#39; antes de guardar los datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">CargosHoras_Cenpe</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">CargosHorasCenpeForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;cenpe/cargar_cargoshoras.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cenpe:listado&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="CargosHorasCenpeCreateView.get_initial"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeCreateView.get_initial">[documentos]</a>    <span class="k">def</span> <span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_initial</span><span class="p">()</span>
+        <span class="n">initial</span><span class="p">[</span><span class="s1">&#39;usuario&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>  
+        <span class="k">return</span> <span class="n">initial</span></div>
+
+<div class="viewcode-block" id="CargosHorasCenpeCreateView.form_valid"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeCreateView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">usuario</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+    
+    
+
+<span class="c1">##########################################################</span>
+<span class="c1"># Filtrar los cargos de CEIC según el nivel seleccionado #</span>
+<span class="c1">########################################################## </span>
+<div class="viewcode-block" id="obtener_cargos_por_nivel"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.obtener_cargos_por_nivel">[documentos]</a><span class="k">def</span> <span class="nf">obtener_cargos_por_nivel</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filtra los cargos disponibles según el nivel educativo seleccionado.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP que contiene el parámetro &#39;nivel&#39;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        JsonResponse: Un JSON con los cargos disponibles filtrados por el nivel seleccionado.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">n_nivel</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nivel&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;1&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;INICIAL&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;2&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;PRIMARIO&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;3&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;SECUNDARIO&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;5&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;ADULTO&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;6&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;TÉCNICA&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;7&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;SUPERIOR&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;8&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;ARTÍSTICA&#39;</span>    
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;9&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;BIBLIOTECAS&#39;</span>   
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;10&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;SERVICIOS TÉCNICOS&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;11&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;EDUCACIÓN FÍSICA&#39;</span>
+    <span class="k">elif</span> <span class="n">n_nivel</span><span class="o">==</span><span class="s1">&#39;12&#39;</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;JUNTA Y TRIBUNAL&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">nivel</span><span class="o">=</span><span class="s1">&#39;DIRECTOR GENERAL&#39;</span>           
+        
+    <span class="n">cargos</span> <span class="o">=</span> <span class="n">CeicPuntos</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nivel</span><span class="o">=</span><span class="n">nivel</span><span class="p">,</span> <span class="n">estado</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  
+    <span class="n">cargos_data</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">cargo</span><span class="o">.</span><span class="n">ceic_id</span><span class="p">,</span> <span class="s1">&#39;descripcion&#39;</span><span class="p">:</span> <span class="n">cargo</span><span class="o">.</span><span class="n">descripcion_ceic</span><span class="p">}</span> <span class="k">for</span> <span class="n">cargo</span> <span class="ow">in</span> <span class="n">cargos</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">cargos_data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">cargos_data</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+<span class="c1">##################################################</span>
+<span class="c1"># Listado Cargos - Horas Docentes para el RENPEE #</span>
+<span class="c1">##################################################</span>
+<div class="viewcode-block" id="CargosHorasCenpeListView"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeListView">[documentos]</a><span class="k">class</span> <span class="nc">CargosHorasCenpeListView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista basada en clases para mostrar una lista de los cargos y horas del docente en el RENPEE.</span>
+
+<span class="sd">    Atributos:</span>
+<span class="sd">        model (Model): El modelo relacionado con los cargos y horas (CargosHoras_Cenpe).</span>
+<span class="sd">        template_name (str): El template que se renderiza para mostrar la lista de cargos y horas.</span>
+<span class="sd">        context_object_name (str): El nombre de la variable de contexto para acceder a los datos en la plantilla.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get_queryset: Filtra la lista de cargos y horas para mostrar solo los relacionados con el usuario autenticado.</span>
+<span class="sd">        get_context_data: Añade el título al contexto de la plantilla.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span><span class="o">=</span><span class="n">CargosHoras_Cenpe</span>
+    <span class="n">template_name</span><span class="o">=</span><span class="s1">&#39;cenpe/listadocargoshorascenpe.html&#39;</span> 
+    <span class="n">context_object_name</span><span class="o">=</span><span class="s1">&#39;Cargos_Horas&#39;</span>   
+    <span class="nb">print</span><span class="p">(</span><span class="n">context_object_name</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="CargosHorasCenpeListView.get_queryset"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeListView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>     
+        <span class="n">queryset</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>   
+        <span class="n">usuario</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span>
+
+        <span class="k">if</span> <span class="n">usuario</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">usuario</span><span class="o">=</span><span class="n">usuario</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">queryset</span></div>
+    
+<div class="viewcode-block" id="CargosHorasCenpeListView.get_context_data"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeListView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Cargos y/u horas&#39;</span>        
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<div class="viewcode-block" id="EliminarDocentesView"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.EliminarDocentesView">[documentos]</a><span class="k">class</span> <span class="nc">EliminarDocentesView</span><span class="p">(</span><span class="n">View</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista basada en funciones para eliminar los cargos y horas del docente en el RENPEE.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        get: Captura el ID del docente y lo elimina de la base de datos si existe.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EliminarDocentesView.get"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.EliminarDocentesView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        
+        <span class="c1"># Captura el parámetro &#39;id&#39; de la URL</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Verifica que user_id no sea None o esté vacío</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">user_id</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: No se recibió el ID del usuario&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">HttpResponseBadRequest</span><span class="p">(</span><span class="s2">&quot;ID de usuario no proporcionado.&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;user_id&#39;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span> 
+
+        <span class="c1"># Elimina el objeto correspondiente si existe</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">CargosHoras_Cenpe</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;cenpe:listado&#39;</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

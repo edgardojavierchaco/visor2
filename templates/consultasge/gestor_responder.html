@@ -1,0 +1,250 @@
+{% extends "consultasge/layout_gestor.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-headset me-2"></i>Atender Consulta #{{ consulta.id }}</h2>
+        <a href="{% url 'consultasge:gestor_consultas' %}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Panel de detalles -->
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm border-0">
+                <div class="card-header bg-dark text-white">Detalles del Solicitante</div>
+                <div class="card-body small">
+                    <p class="mb-1"><strong>Director:</strong> {{ consulta.usuario.apellido }}, {{ consulta.usuario.nombres }} ({{ consulta.usuario.username }})</p>
+                    <p class="mb-1"><strong>Escuela:</strong> {{ consulta.escuela }}</p>
+                    <p class="mb-1"><strong>CUE-Anexo:</strong> {{ consulta.cueanexo }}</p>
+                    <p class="mb-1"><strong>Región:</strong> {{ consulta.region }}</p>
+                    <hr>
+                    <p class="mb-0"><strong>Estado Actual:</strong> 
+                        <span class="badge {% if consulta.estado == 'pendiente' %}bg-danger{% elif consulta.estado == 'en_proceso' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                            {{ consulta.get_estado_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de mensajes -->
+        <div class="col-md-8">
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-header bg-light d-flex justify-content-between">
+                    <strong>Asunto: {{ consulta.asunto }}</strong>
+                    <small class="text-muted">{{ consulta.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                </div>
+                
+                <div id="chat-mensajes" class="card-body bg-secondary bg-opacity-10" style="height: 500px; overflow-y: auto;">
+                    <!-- Mensaje inicial -->
+                    <div class="d-flex justify-content-start mb-4">
+                        <div class="bg-white p-3 rounded-3 shadow-sm border-start border-primary border-4" style="max-width: 85%;">
+                            <small class="text-primary fw-bold d-block border-bottom mb-2">
+                                CONSULTA INICIAL - {{ consulta.usuario.username }}
+                            </small>
+                            <p class="mb-2">{{ consulta.mensaje|safe }}</p>
+                            {% for adj in consulta.adjuntos.all %}
+                                {% if not adj.respuesta %}
+                                    <a href="{{ adj.archivo.url }}" target="_blank" class="badge bg-light text-dark border text-decoration-none py-2">
+                                        <i class="bi bi-paperclip"></i> {{ adj.archivo.name|cut:"consultas/adjuntos/" }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Respuestas -->
+                    {% for r in respuestas %}
+                    <div class="d-flex {% if r.usuario.nivelacceso_id == 'Gestor' %}justify-content-end{% else %}justify-content-start{% endif %} mb-3">
+                        <div class="p-3 rounded-3 shadow-sm {% if r.usuario.nivelacceso_id == 'Gestor' %}bg-info text-white border-end border-primary border-4{% else %}bg-white border-start border-secondary border-4{% endif %}" style="max-width: 85%;">
+                            <small class="d-block fw-bold mb-1" style="font-size: 0.75rem;">
+                                {{ r.usuario.apellido }}, {{ r.usuario.nombres }}{% if r.usuario.nivelacceso_id != 'Gestor' %} - {{ r.usuario.username }}{% endif %}
+                            </small>
+                            <p class="mb-1" style="white-space: pre-wrap;">{{ r.mensaje|safe }}</p>
+                            {% for adj in r.adjuntos_respuesta.all %}
+                                <div class="mt-2 pt-1 border-top border-white border-opacity-25">
+                                    <a href="{{ adj.archivo.url }}" class="{% if r.usuario.nivelacceso_id == 'Gestor' %}text-white{% else %}text-primary{% endif %} small text-decoration-none" target="_blank">
+                                        <i class="bi bi-file-earmark-arrow-down"></i> {{ adj.archivo.name|cut:"consultas/adjuntos/" }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                            <small class="d-block text-end mt-2 opacity-75" style="font-size: 0.65rem;">
+                                {{ r.fecha|date:"d/m H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if consulta.estado != 'cerrada' %}
+            <div class="card shadow-sm border-0 border-top border-primary border-3">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            {{ form.mensaje.label_tag }}
+                            {{ form.mensaje }}
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="file" name="archivos" id="input-archivos" multiple class="form-control" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
+                            <div id="preview-archivos" class="d-flex flex-wrap gap-2 mt-2"></div>
+                            <div id="drop-zone" class="border rounded p-3 text-center text-muted mt-2">
+                                Arrastrá imágenes aquí o pegá capturas con <strong>Ctrl + V</strong>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                    <i class="bi bi-send me-1"></i> Enviar Respuesta
+                                </button>
+                                <button type="button" class="btn btn-outline-danger ms-2 btn-cerrar-consulta">
+                                    <i class="bi bi-lock"></i> Finalizar Caso
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <form id="form-cerrar-definitivo" method="post" action="{% url 'consultasge:cerrar_consulta' consulta.id %}" style="display:none;">
+                        {% csrf_token %}
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-dark text-center shadow-sm">
+                <i class="bi bi-archive me-2"></i> Esta consulta está finalizada. No se pueden añadir más mensajes.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.querySelector(".btn-cerrar-consulta")?.addEventListener("click", function() {
+    Swal.fire({
+        title: "¿Confirmar Cierre Definitivo?",
+        text: "Al cerrar el caso, el Director ya no podrá enviar más mensajes en este hilo.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Sí, cerrar caso",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById("form-cerrar-definitivo").submit();
+        }
+    });
+});
+
+// ------------------ Archivos y capturas ------------------
+const inputArchivos = document.getElementById("input-archivos");
+const preview = document.getElementById("preview-archivos");
+const dropZone = document.getElementById("drop-zone");
+let archivos = [];
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+function actualizarInput(){
+    const dt = new DataTransfer();
+    archivos.forEach(file => dt.items.add(file));
+    inputArchivos.files = dt.files;
+}
+
+function eliminarArchivo(index){
+    archivos.splice(index,1);
+    renderPreview();
+}
+
+function renderPreview(){
+    preview.innerHTML = "";
+    archivos.forEach((file,index)=>{
+        const reader = new FileReader();
+        reader.onload = function(e){
+            const div = document.createElement("div");
+            div.className = "position-relative border rounded";
+            div.style.width = "120px";
+            div.innerHTML = `
+                <img src="${e.target.result}" style="width:120px;height:90px;object-fit:cover;border-radius:4px;">
+                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" onclick="eliminarArchivo(${index})">✕</button>
+            `;
+            preview.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+    });
+    actualizarInput();
+}
+
+async function comprimirImagen(file){
+    return new Promise(resolve=>{
+        const reader = new FileReader();
+        reader.onload = function(e){
+            const img = new Image();
+            img.onload = function(){
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                const MAX_WIDTH = 1600;
+                let width = img.width;
+                let height = img.height;
+                if(width>MAX_WIDTH){ height*=MAX_WIDTH/width; width=MAX_WIDTH; }
+                canvas.width = width; canvas.height = height;
+                ctx.drawImage(img,0,0,width,height);
+                canvas.toBlob(function(blob){
+                    const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/,"")+".jpg", {type:"image/jpeg"});
+                    resolve(compressedFile);
+                },"image/jpeg",0.75);
+            };
+            img.src=e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function procesarArchivo(file){
+    if(file.size>MAX_SIZE){
+        Swal.fire({icon:"error",title:"Archivo demasiado grande",text:"Máximo 5MB"});
+        return;
+    }
+    if(file.type.startsWith("image/")){
+        file = await comprimirImagen(file);
+    }
+    archivos.push(file);
+    renderPreview();
+}
+
+inputArchivos.addEventListener("change", async function(){
+    for(let f of this.files){ await procesarArchivo(f); }
+});
+
+dropZone.addEventListener("dragover",e=>{e.preventDefault(); dropZone.classList.add("bg-light");});
+dropZone.addEventListener("dragleave",e=>{dropZone.classList.remove("bg-light");});
+dropZone.addEventListener("drop",async e=>{
+    e.preventDefault(); dropZone.classList.remove("bg-light");
+    for(let f of e.dataTransfer.files){ await procesarArchivo(f); }
+});
+
+document.addEventListener("paste", async function(event){
+    const items = event.clipboardData.items;
+    for(let i=0;i<items.length;i++){
+        if(items[i].type.indexOf("image")!==-1){
+            const blob = items[i].getAsFile();
+            await procesarArchivo(blob);
+            Swal.fire({icon:"success",title:"Captura pegada",timer:1200,showConfirmButton:false});
+        }
+    }
+});
+
+// Scroll automático al último mensaje
+window.addEventListener("load", function(){
+    const chat = document.getElementById("chat-mensajes");
+    if(chat){ chat.scrollTop = chat.scrollHeight; }
+});
+
+</script>
+
+{% endblock %}

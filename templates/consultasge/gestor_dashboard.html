@@ -1,0 +1,84 @@
+{% extends "consultasge/layout_gestor.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">Dashboard Regional</h2>
+
+<div class="row text-center mb-4">
+
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h4>{{ total }}</h4>
+                <p>Total</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h4>{{ pendientes }}</h4>
+                <p>Pendientes</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning">
+            <div class="card-body">
+                <h4>{{ en_proceso }}</h4>
+                <p>En Proceso</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h4>{{ respondidas }}</h4>
+                <p>Respondidas</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        Consultas Vencidas
+    </div>
+    <div class="card-body">
+        <h4>{{ vencidas }}</h4>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <canvas id="graficoEstados"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById('graficoEstados');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Pendientes', 'En Proceso', 'Respondidas', 'Vencidas'],
+        datasets: [{
+            label: 'Cantidad',
+            data: [
+                {{ datos_grafico.pendientes }},
+                {{ datos_grafico.en_proceso }},
+                {{ datos_grafico.respondidas }},
+                {{ datos_grafico.vencidas }}
+            ]
+        }]
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'biblioteca/list.html' %}
+{% load static %}
+
+{% block head_list %}
+    <script src="{% static 'biblioteca/pem/instituciones/js/list.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+   <thead>
+        <tr>
+            <th scope="col" style="width: 15%;">CUEANEXO</th>
+            <th scope="col" style="width: 15%;">MES</th>
+            <th scope="col" style="width: 10%;">AÑO</th>
+            <th scope="col" style="width: 15%;">INSTITUCION</th>            
+            <th scope="col" style="width: 20%;">MATRICULA</th>
+            <th scope="col" style="width: 20%;">DOCENTES</th>
+            <th scope="col" style="width: 20%;">MATRIC C DISC</th>
+            <th scope="col" style="width: 20%;">ETNIA</th>
+            <th scope="col" style="width: 20%;">Botones</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Se cargan los datos vía AJAX -->
+    </tbody>
+    <tfoot>
+        
+    </tfoot> 
+{% endblock %}
+
+{% block javascript %}
+
+{% endblock %}

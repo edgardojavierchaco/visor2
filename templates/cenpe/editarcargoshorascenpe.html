@@ -1,0 +1,114 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Datos Laborales</title>
+</head>
+<body>
+    <h1>Editar Datos Laborales ReNPEE</h1>
+    <form method="post">
+        {% csrf_token %}
+        <table>
+            <tr>
+                <td>{{ form.usuario }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cueanexo.label_tag }}</td>
+                <td>{{ form.cueanexo }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.categoria.label_tag }}</td>
+                <td>{{ form.categoria }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.jornada.label_tag }}</td>
+                <td>{{ form.jornada }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.zona.label_tag }}</td>
+                <td>{{ form.zona }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.nivel_cargohora.label_tag }}</td>
+                <td>{{ form.nivel_cargohora }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cargos_horas.label_tag }}</td>
+                <td>{{ form.cargos_horas }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cant_horas.label_tag }}</td>
+                <td>{{ form.cant_horas }}</td>
+            </tr>
+            <!-- Continúa con los demás campos -->
+        </table>
+
+        <fieldset class="dias-container">
+            <legend>Días</legend>
+            <div class="dias-checks">
+                <div class="form-check">
+                    {{ form.lunes.label_tag }}
+                    {{ form.lunes }}
+                </div>
+                <div class="form-check">
+                    {{ form.martes.label_tag }}
+                    {{ form.martes }}
+                </div>
+                <div class="form-check">
+                    {{ form.miercoles.label_tag }}
+                    {{ form.miercoles }}
+                </div>
+                <div class="form-check">
+                    {{ form.jueves.label_tag }}
+                    {{ form.jueves }}
+                </div>
+                <div class="form-check">
+                    {{ form.viernes.label_tag }}
+                    {{ form.viernes }}
+                </div>
+            </div>
+        </fieldset>
+
+        <table>
+            <tr>
+                <td>{{ form.situacion_revista.label_tag }}</td>
+                <td>{{ form.situacion_revista }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.funciones.label_tag }}</td>
+                <td>{{ form.funciones }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.condicion_actividad.label_tag }}</td>
+                <td>{{ form.condicion_actividad }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.fecha_desde.label_tag }}</td>
+                <td>{{ form.fecha_desde }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.fecha_hasta.label_tag }}</td>
+                <td>{{ form.fecha_hasta }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cuof.label_tag }}</td>
+                <td>{{ form.cuof }}</td>
+            </tr>
+            <tr>
+                <td>{{ form.cuof_anexo.label_tag }}</td>
+                <td>{{ form.cuof_anexo }}</td>
+            </tr>
+        </table>
+
+        {% if form.errors %}
+            <div class="errors">
+                {{ form.errors }}
+            </div>
+        {% endif %}
+        <button type="submit">Guardar Cambios</button>
+    </form>
+</body>
+{% endblock %}

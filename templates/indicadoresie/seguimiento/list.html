@@ -1,0 +1,1578 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+
+<style>
+    /* ===== LAYOUT BASE ===== */
+    .sge-wrapper {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 1.1rem 0.9rem 2.5rem;
+    }
+
+    /* ===== ENCABEZADO ===== */
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: .5rem;
+        margin-bottom: 1.2rem;
+        padding-bottom: .9rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .page-header-left h2 {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #111827;
+        margin: 0 0 .15rem;
+        letter-spacing: -.02em;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .page-header-left p { font-size: .85rem; color: #4b5563; margin: 0; font-weight: 500; }
+
+    /* Badge de fecha mejorado */
+    .fecha-badge {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 40px;
+        padding: 0.2rem 0.9rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #1e293b;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .fecha-badge i {
+        font-size: 0.85rem;
+        color: #3b82f6;
+    }
+    .fecha-badge .edit-icon {
+        cursor: pointer;
+        transition: transform 0.2s, color 0.2s;
+        margin-left: 4px;
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+    .fecha-badge .edit-icon:hover {
+        color: #2563eb;
+        transform: scale(1.1);
+    }
+
+    /* resto de estilos (se mantienen igual que antes) */
+    /* ===== PANEL DE CONTROL SUPERIOR (HORIZONTAL) ===== */
+    .control-panel {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        margin-bottom: 1.2rem;
+        overflow: visible;
+        box-shadow: 0 2px 6px rgba(0,0,0,.04);
+        position: relative;
+    }
+    .control-panel-inner {
+        display: grid;
+        grid-template-columns: 42% 58%;
+        min-width: 0;
+    }
+
+    /* Separador vertical entre bloques */
+    .control-block-columns {
+        padding: 1.2rem;
+        border-right: 1px solid #e9ecef;
+        overflow: visible;
+    }
+    .control-block-filters {
+        padding: 1.2rem;
+        overflow: visible;
+        position: relative;
+        min-width: 0;
+    }
+
+    /* Títulos de los bloques */
+    .control-block-title {
+        font-size: .88rem;
+        font-weight: 800;
+        color: #111827;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+    .control-block-title i { color: #0d6efd; }
+
+    /* === BLOQUE IZQUIERDO: Visibilidad de Columnas === */
+    .col-action-btns {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+        padding-bottom: .8rem;
+        border-bottom: 1px dashed #cbd5e1; 
+    }
+    .col-action-btns button {
+        font-size: .78rem;
+        padding: .35rem .7rem;
+        border-radius: .35rem;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #475569;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+        transition: all .15s ease-in-out;
+    }
+    .col-action-btns button:hover { background: #f1f5f9; border-color: #94a3b8; color: #0f172a; }
+    .col-action-btns button i { color: #64748b; }
+
+    .col-groups { display: flex; flex-direction: column; gap: .55rem; }
+    .col-group   { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+    .col-group-label {
+        font-size: .75rem; 
+        font-weight: 800;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        min-width: 90px;
+    }
+
+    .col-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .3rem .7rem; 
+        border-radius: .35rem;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #334155;
+        font-size: .8rem; 
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+        transition: all .15s;
+        white-space: nowrap;
+    }
+    .col-badge::before {
+        content: '';
+        display: inline-block;
+        width: 13px;
+        height: 13px;
+        border: 1.5px solid #94a3b8;
+        border-radius: 3px;
+        background: #fff;
+        transition: all .15s;
+    }
+    .col-badge.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .col-badge.active::before { background: #2563eb; border-color: #2563eb; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 8 8'%3E%3Cpath fill='%23fff' d='M6.5 1.5L3 5 1.5 3.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; }
+
+    /* === BLOQUE DERECHO: Filtros === */
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .7rem .9rem;
+        min-width: 0;
+    }
+    .filter-item {
+        display: flex;
+        flex-direction: column;
+        gap: .3rem;
+        min-width: 0;      /* CLAVE: evita que el item rompa su celda de grid */
+        overflow: visible; /* el dropdown nativo sí debe poder salir */
+    }
+    .filter-item label {
+        font-size: .74rem; 
+        font-weight: 800;
+        color: #111827;
+        text-transform: uppercase;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        white-space: normal;   /* antes era nowrap → causaba overflow del label */
+        word-break: break-word;
+        letter-spacing: -0.2px;
+        line-height: 1.3;
+    }
+    .filter-item label i {
+        color: #3b82f6;
+        width: 16px;
+        min-width: 16px;
+        text-align: center;
+        margin-right: 6px;
+        font-size: 0.85rem;
+    }
+    .filter-item select,
+    .filter-item input[type="text"] {
+        border: 1px solid #cbd5e1;
+        border-radius: .35rem;
+        padding: .45rem .6rem;
+        font-size: .88rem; 
+        color: #1e293b;
+        font-weight: 500;
+        height: 2.3rem;
+        width: 100%;           /* ocupa exactamente su celda */
+        max-width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+        transition: border-color .15s, background-color .15s, opacity .15s;
+    }
+    .filter-item select:focus,
+    .filter-item input[type="text"]:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, .2); }
+    .filter-item select.has-value,
+    .filter-item input[type="text"].has-value {
+        border-color: #3b82f6;
+        background: #f0fdf4;
+    }
+
+    /* Switch personalizado */
+    .filter-header-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    .switch-custom {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 20px;
+        margin: 0;
+    }
+    .switch-custom input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider-custom {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: .3s;
+        border-radius: 34px;
+    }
+    .slider-custom:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+    .switch-custom input:checked + .slider-custom {
+        background-color: #3b82f6;
+    }
+    .switch-custom input:checked + .slider-custom:before {
+        transform: translateX(16px);
+    }
+    .alert-warning-custom {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        background: #fff8e1;
+        border-left: 3px solid #f59e0b;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        color: #7c5a00;
+    }
+
+    /* ===== FILTROS ACTIVOS (CHIPS) ===== */
+    .active-filters-wrap {
+        margin-top: 1rem;
+        padding-top: .8rem;
+        border-top: 1px dashed #cbd5e1;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .active-filters-label {
+        font-size: .78rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .filter-chip {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #93c5fd;
+        padding: .2rem .65rem;
+        border-radius: 20px;
+        font-size: .75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .filter-chip .remove-chip {
+        cursor: pointer;
+        opacity: 0.6;
+        font-size: .85rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.15s;
+    }
+    .filter-chip .remove-chip:hover { opacity: 1; color: #dc2626; }
+
+    .filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: .4rem;
+        margin-top: 1rem;
+        padding-top: .8rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .btn-clear-filters { font-size: .85rem; padding: .4rem 1.2rem; border-radius: .35rem; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; font-weight: 600; transition: all .15s; }
+    .btn-clear-filters:hover { background: #e2e8f0; color: #0f172a; }
+
+    /* ===== BARRA DE HERRAMIENTAS Y BOTONES EXPORT ===== */
+    .table-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: .9rem;
+    }
+    .toolbar-left { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    #dtLengthWrap { display: flex; align-items: center; gap: .4rem; font-size: .88rem; font-weight: 600; color: #334155; }
+    #dtLengthWrap select { border: 1px solid #cbd5e1; border-radius: .35rem; padding: .3rem .5rem; font-weight: 600;}
+    #customSearch { padding: .4rem .9rem; border: 1px solid #cbd5e1; border-radius: .35rem; font-size: .88rem; width: 240px; transition: border-color .15s; }
+    #customSearch:focus { outline: none; border-color: #3b82f6; }
+
+    div.dt-buttons { display: flex; gap: 0.5rem; }
+    div.dt-buttons .btn { border-radius: 0.35rem !important; border: 1px solid #cbd5e1; font-weight: 600; font-size: .8rem; padding: .35rem .8rem; }
+
+    /* ===== MINI TOTALES ===== */
+    .mini-totals-wrap {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+    .mini-total {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: .35rem;
+        padding: .3rem .8rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 85px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .mini-total.t-25 { border-bottom: 3px solid #94a3b8; } /* Gris */
+    .mini-total.t-26 { border-bottom: 3px solid #2563eb; } /* Azul */
+    .mini-total .lbl { font-size: .65rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;}
+    .mini-total .val { font-size: 1.05rem; font-weight: 800; color: #0f172a; line-height: 1; }
+
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate { display: none !important; }
+
+    /* ===== SPINNER DE CARGA ===== */
+    #loadingWrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 5rem;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+    }
+
+    /* ===== TARJETA DE TABLA ===== */
+    .table-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: .5rem;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0,0,0,.04);
+    }
+    
+    .table-card .table-responsive { 
+        overflow-x: auto; 
+        overflow-y: hidden; 
+        margin: 0; 
+        width: 100%; 
+    }
+
+    /* ESTILOS DE LA TABLA Y BORDES */
+    #sgeTable { 
+        font-size: .9rem; 
+        width: 100% !important; 
+        border-collapse: collapse; 
+    }
+    
+    #sgeTable th, #sgeTable td {
+        border: 1px solid #cbd5e1 !important; 
+    }
+
+    #sgeTable thead th { background: #111827; color: #f8fafc; font-size: .82rem; font-weight: 800; text-transform: uppercase; padding: .8rem .9rem !important; white-space: nowrap; text-align: center; } 
+    #sgeTable tbody td { padding: .65rem .9rem !important; vertical-align: middle; white-space: nowrap; text-align: center; color: #334155;}
+    #sgeTable thead th.th-nombre, #sgeTable tbody td.td-nombre { text-align: left !important; min-width: 200px; }
+    #sgeTable thead th.th-agente, #sgeTable tbody td.td-agente { text-align: left !important; min-width: 140px; }
+    #sgeTable tbody tr:hover td { background-color: #f1f5f9 !important; }
+    
+    .td-sge26, .td-insc26, .td-sge25, .td-insc25 { font-size: .95rem; }
+    .sin-dato { color: #ef4444 !important; font-weight: 800; background-color: #fef2f2; }
+    .dato-numerico { color: #0f172a !important; font-weight: 800; }
+
+    /* PIE DE TABLA */
+    .table-foot { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1.2rem; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+    #dtInfo { font-size: .85rem; color: #4b5563; font-weight: 600; }
+    #dtPaginate .pagination { margin: 0; }
+    #dtPaginate .page-link { font-size: .85rem; padding: .35rem .7rem; font-weight: 600; color: #1e293b; }
+    #dtPaginate .page-item.active .page-link { background-color: #3b82f6; border-color: #3b82f6; color: #fff; }
+
+    /* ════════════════════ RESPONSIVIDAD ════════════════════ */
+    @media (max-width: 1024px) {
+        .control-panel-inner { grid-template-columns: 1fr; }
+        .control-block-columns { border-right: none; border-bottom: 1px solid #e9ecef; }
+        .filter-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+        .sge-wrapper { padding: 0.8rem 0.5rem 2rem; }
+        .page-header { flex-direction: column; align-items: flex-start; }
+        .filter-grid { grid-template-columns: 1fr; }
+        
+        .table-toolbar { flex-direction: column; align-items: stretch; gap: 1.2rem; }
+        .toolbar-left { flex-direction: column; align-items: stretch; gap: 1rem; }
+        #dtLengthWrap { justify-content: center; }
+        
+        div.dt-buttons { justify-content: center; width: 100%; flex-wrap: wrap; }
+        div.dt-buttons .btn { flex: 1; text-align: center; }
+        
+        .mini-totals-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; width: 100%; }
+        .mini-total { width: 100%; min-width: auto; padding: 0.5rem; }
+        
+        .toolbar-right, .search-wrap, #customSearch { width: 100%; }
+        
+        .col-action-btns { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+        .col-action-btns button { width: 100%; text-align: center; padding: 0.6rem; }
+        
+        .filter-actions { flex-direction: column; align-items: stretch; }
+        .btn-clear-filters { width: 100%; text-align: center; padding: 0.6rem; }
+        
+        .col-group { flex-direction: column; align-items: flex-start; background: #f8fafc; padding: 0.6rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;}
+        .col-group-label { margin-bottom: 0.3rem; border-bottom: 1px solid #cbd5e1; width: 100%; padding-bottom: 0.2rem; }
+        .col-badge { width: 100%; justify-content: flex-start; padding: 0.5rem 0.8rem; font-size: 0.85rem;}
+        
+        .table-foot { flex-direction: column; gap: 1rem; text-align: center; }
+    }
+</style>
+
+<div class="sge-wrapper">
+
+    <div class="page-header">
+        <div class="page-header-left">
+          <h2>
+    <i class="fas fa-school me-2 text-primary"></i>Seguimiento SGE 2026
+  {% if ultima_fecha %}
+        <span class="fecha-badge">
+            <i class="fas fa-calendar-alt"></i> Datos al: {{ ultima_fecha|date:'d/m/Y H:i' }}
+            {% if is_admin %}
+                <i class="fas fa-edit edit-icon" id="editFechaBtn" title="Editar fecha de actualización" style="cursor:pointer; margin-left:8px;"></i>
+            {% endif %}
+        </span>
+    {% endif %}
+        </span>
+    {% endif %}
+</h2>
+            <p>Sistema de Gestión Escolar </p>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-panel-inner">
+
+            <div class="control-block-columns">
+                <div class="control-block-title">
+                    <i class="fas fa-columns"></i> Columnas Visibles
+                </div>
+                <div class="col-action-btns">
+                    <button id="btnShowAll"><i class="fas fa-check-double me-1"></i>Mostrar todas</button>
+                    <button id="btnHideAll"><i class="fas fa-eye-slash me-1"></i>Ocultar Columnas</button>
+                    <button id="btnDefault"><i class="fas fa-undo-alt me-1"></i>Por defecto</button>
+                </div>
+                <div class="col-groups">
+                    <div class="col-group">
+                        <span class="col-group-label">Identific.</span>
+                        <span class="col-badge active" data-cols="0">CUE-Anexo</span>
+                        <span class="col-badge"        data-cols="1">Agente</span>
+                        <span class="col-badge active" data-cols="2">Nombre Escuela</span>
+                        <span class="col-badge"        data-cols="3">Oferta</span>
+                        <span class="col-badge"        data-cols="7">CUE</span>
+                        <span class="col-badge"        data-cols="8">Anexo</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Ubicación</span>
+                        <span class="col-badge"        data-cols="4">Sector</span>
+                        <span class="col-badge"        data-cols="5">Ámbito</span>
+                        <span class="col-badge active" data-cols="6">Regional</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Contacto</span>
+                        <span class="col-badge"        data-cols="9,10">Teléfono</span>
+                        <span class="col-badge"        data-cols="11">Email</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Responsable</span>
+                        <span class="col-badge"        data-cols="12,13">Responsable</span>
+                        <span class="col-badge"        data-cols="14">Tel. Resp.</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">SGE / Inscr.</span>
+                        <span class="col-badge"        data-cols="15">SGE 2025</span>
+                        <span class="col-badge"        data-cols="16">Insc. 2025</span>
+                        <span class="col-badge active" data-cols="17">SGE 2026</span>
+                        <span class="col-badge active" data-cols="18">Insc. 2026</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-block-filters">
+                <div class="control-block-title">
+                    <i class="fas fa-filter"></i> Filtros
+                </div>
+                
+                <div class="filter-grid">
+                    
+                    <div class="filter-item">
+                        <label for="fAudit2025" class="text-primary">Estado Carga (SGE 2025 - Insc 2025)</label>
+                        <select id="fAudit2025" style="border-color: #3b82f6; font-weight: 600;">
+                            <option value="">-- Todas --</option>
+                            <option value="ok">✅ Carga Coincidente</option>
+                            <option value="vacio">⚪ Sin Carga</option>
+                            <option value="diff">⚠️ Carga con Discrepancias</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fAudit2026" class="text-primary">Estado Carga (SGE 2026 - Insc 2026)</label>
+                        <select id="fAudit2026" style="border-color: #3b82f6; font-weight: 600;">
+                            <option value="">-- Todas --</option>
+                            <option value="ok">✅ Carga Coincidente</option>
+                            <option value="vacio">⚪ Sin Carga</option>
+                            <option value="diff">⚠️ Carga con Discrepancias</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fOferta"><i class="fas fa-graduation-cap"></i>Según Oferta</label>
+                        <select id="fOferta">
+                            <option value="">-- Todas --</option>
+                            <option value="Inicial - Común">Común - Inicial</option>
+                            <option value="Primario - Común">Común - Primario</option>
+                            <option value="Secundario - Común">Común - Secundario</option>
+                            <option value="Primario - Adultos">Adultos - Primario</option>
+                            <option value="Secundario - Adultos">Adultos - Secundario</option>
+                            <option value="Inicial - Especial">Especial - Inicial</option>
+                            <option value="Primario - Especial">Especial - Primario</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <div class="filter-header-flex">
+                            <label for="fRegion"><i class="fas fa-map-marked-alt"></i> Región</label>
+                            <label class="switch-custom">
+                                <input type="checkbox" id="toggleRegionActivo">
+                                <span class="slider-custom"></span>
+                            </label>
+                        </div>
+                        <select id="fRegion" disabled>
+                            <option value="">-- Todas --</option>
+                            {% for region in regiones %}
+                                <option value="{{ region }}">{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fAmbito"><i class="fas fa-map"></i>Ámbito</label>
+                        <select id="fAmbito">
+                            <option value="">-- Todos --</option>
+                            <option>Urbano</option>
+                            <option>Rural Disperso</option>
+                            <option>Rural Aglomerado</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fSector"><i class="fas fa-building"></i>Sector</label>
+                        <select id="fSector">
+                            <option value="">-- Todos --</option>
+                            <option>Estatal</option>
+                            <option>Privado</option>
+                            <option>Gestion social/cooperativa</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fCUE"><i class="fas fa-hashtag"></i>CUE</label>
+                        <input type="text" id="fCUE" placeholder="Ej: 220012300">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fCueanexo"><i class="fas fa-school"></i>CUE-Anexo</label>
+                        <input type="text" id="fCueanexo" placeholder="Ej: 22001230000">
+                    </div>
+
+                </div>
+
+                <!-- Advertencia de región (ubicada al final de los filtros) -->
+                <div id="advertencia-region" class="alert-warning-custom">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Advertencia:</strong> Al filtrar por Región, se recomienda no aplicar filtros de Departamento o Localidad. Esto se debe a que existen CUE-Anexos (Localizaciones) que pertenecen a una Región Educativa específica, pero se encuentran geográficamente en una ubicación distinta.
+                </div>
+
+                <div class="active-filters-wrap" id="activeFiltersWrap" style="display:none;">
+                    <span class="active-filters-label"><i class="fas fa-tags me-1"></i>Filtros Activos:</span>
+                    <div id="chips-container" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                </div>
+
+                <div class="filter-actions">
+                    <button class="btn-clear-filters" id="btnClearFilters">
+                        <i class="fas fa-sync-alt me-1"></i>Limpiar Todos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-toolbar">
+        <div class="toolbar-left">
+            <div id="dtLengthWrap">
+                <span>Mostrar</span>
+                <select id="dtLengthSelect">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span>entradas</span>
+            </div>
+            
+            <div id="exportButtonsContainer"></div>
+            
+            <div class="mini-totals-wrap" id="mini-totals" style="display:none;">
+                <div class="mini-total t-25">
+                    <span class="lbl">SGE 25</span>
+                    <span class="val" id="tot-sge25">0</span>
+                </div>
+                <div class="mini-total t-25">
+                    <span class="lbl">Insc 25</span>
+                    <span class="val" id="tot-insc25">0</span>
+                </div>
+                <div class="mini-total t-26">
+                    <span class="lbl">SGE 26</span>
+                    <span class="val" id="tot-sge26">0</span>
+                </div>
+                <div class="mini-total t-26">
+                    <span class="lbl">Insc 26</span>
+                    <span class="val" id="tot-insc26">0</span>
+                </div>
+            </div>
+            
+        </div>
+        <div class="toolbar-right">
+            <div class="search-wrap">
+                <input type="text" id="customSearch" placeholder="🔍 Buscar escuela o dato...">
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingWrapper">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h6 class="mt-3 text-muted">Organizando registros, por favor espere...</h6>
+    </div>
+
+    <div class="table-card" id="mainTableContainer" style="display: none;">
+        <div class="table-responsive">
+            <table id="sgeTable" class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>CUE-Anexo</th>           
+                        <th class="th-agente">Agente</th> 
+                        <th class="th-nombre">Nombre Escuela</th> 
+                        <th>Oferta</th>             
+                        <th>Sector</th>             
+                        <th>Ámbito</th>             
+                        <th>Regional</th>           
+                        <th>CUE</th>                
+                        <th>Anexo</th>              
+                        <th>Cód.Tel</th>            
+                        <th>Teléfono</th>           
+                        <th>Email</th>              
+                        <th>R. Apellido</th>        
+                        <th>R. Nombre</th>          
+                        <th>Tel. Resp.</th>         
+                        <th>SGE 25</th>             
+                        <th>Insc 25</th>            
+                        <th>SGE 26</th>             
+                        <th>Insc 26</th>            
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in object_list %}
+                    <tr>
+                        <td>{{ item.cueanexo|default:"-" }}</td>
+                        <td class="td-agente">{{ item.agente|default:"-" }}</td>
+                        <td class="td-nombre">{{ item.nombre|default:"-" }}</td>
+                        <td>{{ item.tipo_oferta|default:"-" }}</td>
+                        <td>{{ item.sector|default:"-" }}</td>
+                        <td>{{ item.ambito|default:"-" }}</td>
+                        <td>{{ item.regional|default:"-" }}</td>
+                        <td>{{ item.cue|default:"-" }}</td>
+                        <td>{{ item.anexo|default:"-" }}</td>
+                        <td>{{ item.escuela_cod_tel|default:"-" }}</td>
+                        <td>{{ item.escuela_tel|default:"-" }}</td>
+                        <td>{{ item.escuela_email|default:"-" }}</td>
+                        <td>{{ item.responsable_apellido|default:"-" }}</td>
+                        <td>{{ item.responsable_nombre|default:"-" }}</td>
+                        <td>{{ item.telefono_responsable|default:"-" }}</td>
+
+                        <td class="td-sge25 {% if not item.sge_2025 or item.sge_2025 == 'Sin Carga 2025' or item.sge_2025 == '0' or item.sge_2025 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">
+                            {{ item.sge_2025|default:"-" }}
+                        </td>
+                        <td class="td-insc25 {% if not item.inscriptos_2025 or item.inscriptos_2025 == 'Sin Inscripciones 2025' or item.inscriptos_2025 == '0' or item.inscriptos_2025 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">
+                            {{ item.inscriptos_2025|default:"-" }}
+                        </td>
+                        <td class="td-sge26 {% if not item.sge_2026 or item.sge_2026 == 'Sin Carga 2026' or item.sge_2026 == '0' or item.sge_2026 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">
+                            {{ item.sge_2026|default:"Sin Carga 2026" }}
+                        </td>
+                        <td class="td-insc26 {% if not item.inscriptos_2026 or item.inscriptos_2026 == 'Sin Inscripciones 2026' or item.inscriptos_2026 == '0' or item.inscriptos_2026 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">
+                            {{ item.inscriptos_2026|default:"Sin Inscripciones 2026" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="table-foot">
+            <div id="dtInfo"></div>
+            <nav><ul class="pagination pagination-sm mb-0" id="dtPaginate"></ul></nav>
+        </div>
+    </div>
+
+</div>
+
+{% if user.is_staff %}
+<!-- Modal para editar fecha (solo admin) -->
+<div class="modal fade" id="fechaModal" tabindex="-1" aria-labelledby="fechaModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
+            <!-- Header con gradiente -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none; padding: 1.4rem 1.6rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas fa-calendar-alt" style="color: #fff; font-size: 1rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="fechaModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem; letter-spacing: -0.01em;">
+                            Actualizar fecha de los datos
+                        </h5>
+                        <p style="color: rgba(255,255,255,0.7); font-size: 0.78rem; margin: 0; font-weight: 500;">Solo visible para administradores</p>
+                    </div>
+                </div>
+                <button type="button" id="fechaModalCloseBtn" class="ms-auto" aria-label="Cerrar"
+                    style="background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; flex-shrink: 0;">
+                    <i class="fas fa-times" style="color: #fff; font-size: 0.85rem;"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="modal-body" style="padding: 1.6rem;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 1rem 1.2rem; margin-bottom: 1.2rem;">
+                    <p style="font-size: 0.78rem; color: #64748b; margin: 0; display: flex; align-items: flex-start; gap: 0.5rem;">
+                        <i class="fas fa-info-circle" style="color: #3b82f6; margin-top: 2px; flex-shrink: 0;"></i>
+                        Esta fecha indica cuándo fueron extraídos los datos del SGE. Se muestra en el encabezado de la página.
+                    </p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="nuevaFecha" style="font-size: 0.82rem; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="fas fa-clock me-1" style="color: #3b82f6;"></i>Nueva fecha y hora
+                    </label>
+                    <input type="datetime-local" id="nuevaFecha" required
+                        style="border: 1.5px solid #cbd5e1; border-radius: 0.5rem; padding: 0.65rem 0.9rem; font-size: 0.95rem; color: #1e293b; font-weight: 600; width: 100%; transition: border-color 0.15s, box-shadow 0.15s; outline: none;"
+                        onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.15)'"
+                        onblur="this.style.borderColor='#cbd5e1';this.style.boxShadow='none'">
+                    <span style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Hora local del servidor (DD/MM/AAAA HH:MM)</span>
+                </div>
+                <div id="modalError" class="mt-3" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.7rem 1rem; font-size: 0.85rem; color: #b91c1c; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="modalErrorText"></span>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; gap: 0.6rem; background: #f8fafc;">
+                <button type="button" id="fechaModalCancelBtn"
+                    style="background: #fff; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 0.5rem; padding: 0.55rem 1.4rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.15s;"
+                    onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">
+                    Cancelar
+                </button>
+                <button type="button" id="guardarFechaBtn"
+                    style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none; border-radius: 0.5rem; padding: 0.55rem 1.6rem; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;"
+                    onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-save"></i> Guardar cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+<script>
+$(document).ready(function () {
+
+    const PROTECTED_COLS = [0, 2];
+    const DEFAULT_VISIBLE = [0, 2, 6, 17, 18];
+    const ALL_COLS = Array.from({length: 19}, (_, i) => i);
+
+    // Mapeo para los nombres de los Chips
+    const filterLabels = {
+        'fAudit2025': '(SGE 2025 - Insc 2025)',
+        'fAudit2026': '(SGE 2026 - Insc 2026)',
+        'fOferta': 'Oferta',
+        'fRegion': 'Región',
+        'fAmbito': 'Ámbito',
+        'fSector': 'Sector',
+        'fCUE': 'CUE',
+        'fCueanexo': 'CUE-Anexo'
+    };
+
+    // Función auxiliar para quitar emojis de los textos de filtros
+    function limpiarEmojis(texto) {
+        return texto.replace(/[✅⚪⚠️]/g, '').trim();
+    }
+
+    // ========== FUNCIONES PARA NOMBRE DE ARCHIVO (con fecha, hora y filtros) ==========
+    function getTextoFiltrosParaNombre() {
+        var parts = [];
+        if ($('#fAudit2025').val()) {
+            var text = $('#fAudit2025 option:selected').text();
+            parts.push('Est.Carga25: ' + limpiarEmojis(text));
+        }
+        if ($('#fAudit2026').val()) {
+            var text = $('#fAudit2026 option:selected').text();
+            parts.push('Est.Carga26: ' + limpiarEmojis(text));
+        }
+        if ($('#fOferta').val())        parts.push('Oferta: ' + $('#fOferta option:selected').text());
+        if ($('#fRegion').val() && !$('#fRegion').prop('disabled')) parts.push('Región: ' + $('#fRegion').val());
+        if ($('#fAmbito').val())        parts.push('Ámbito: ' + $('#fAmbito').val());
+        if ($('#fSector').val())        parts.push('Sector: ' + $('#fSector').val());
+        if ($('#fCUE').val())           parts.push('CUE: ' + $('#fCUE').val());
+        if ($('#fCueanexo').val())      parts.push('CUE-Anexo: ' + $('#fCueanexo').val());
+        
+        if (parts.length === 0) return '';
+        
+        var lineas = [];
+        for (var i = 0; i < parts.length; i += 3) {
+            lineas.push(parts.slice(i, i + 3).join(' | '));
+        }
+        return 'Filtros aplicados: ' + lineas.join(' | ');
+    }
+
+    function buildExportSubtitle() {
+        var parts = [];
+        if ($('#fAudit2025').val()) {
+            var text = $('#fAudit2025 option:selected').text();
+            parts.push('Est. Carga 25: ' + limpiarEmojis(text));
+        }
+        if ($('#fAudit2026').val()) {
+            var text = $('#fAudit2026 option:selected').text();
+            parts.push('Est. Carga 26: ' + limpiarEmojis(text));
+        }
+        if ($('#fOferta').val())        parts.push('Oferta: ' + $('#fOferta option:selected').text());
+        if ($('#fRegion').val() && !$('#fRegion').prop('disabled')) parts.push('Región: ' + $('#fRegion').val());
+        if ($('#fAmbito').val())        parts.push('Ámbito: ' + $('#fAmbito').val());
+        if ($('#fSector').val())        parts.push('Sector: ' + $('#fSector').val());
+        if ($('#fCUE').val())           parts.push('CUE: ' + $('#fCUE').val());
+        if ($('#fCueanexo').val())      parts.push('CUE-Anexo: ' + $('#fCueanexo').val());
+        
+        if (parts.length === 0) return 'Sin filtros aplicados';
+        return parts.join(' | ');
+    }
+
+    function getNombreArchivoExportacion() {
+        var ahora = new Date();
+        var dia = String(ahora.getDate()).padStart(2, '0');
+        var mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        var anio = ahora.getFullYear();
+        var horas = String(ahora.getHours()).padStart(2, '0');
+        var min = String(ahora.getMinutes()).padStart(2, '0');
+        var seg = String(ahora.getSeconds()).padStart(2, '0');
+        var ampm = ahora.getHours() >= 12 ? 'p. m' : 'a. m';
+        return 'Informe_SGE_' + dia + '-' + mes + '-' + anio + '_' + horas + min + seg + ' ' + ampm;
+    }
+
+    function getNombreArchivoConFiltros() {
+        var base = getNombreArchivoExportacion();
+        var baseLimpia = base.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ');
+        var textoFiltros = getTextoFiltrosParaNombre();
+        if (textoFiltros && textoFiltros !== '') {
+            var filtrosLimpios = textoFiltros.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ');
+            return baseLimpia + ' - ' + filtrosLimpios;
+        } else {
+            return baseLimpia;
+        }
+    }
+
+    // ========== CONTROL DEL SWITCH DE REGIÓN Y ADVERTENCIA ==========
+    $('#toggleRegionActivo').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#fRegion').prop('disabled', false);
+            $('#advertencia-region').slideDown('fast');
+            $('#fRegion').trigger('change');
+        } else {
+            $('#fRegion').prop('disabled', true).val('').removeClass('has-value');
+            $('#advertencia-region').slideUp('fast');
+            $('#fRegion').val('');
+            actualizarChips();
+            applyAllFilters();
+        }
+    });
+
+    try {
+        var table = $('#sgeTable').DataTable({
+            language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
+            pageLength: 10,
+            dom: 'Brt',
+            buttons: [
+                {
+                    extend: 'excelHtml5',
+                    text: '<i class="fas fa-file-excel me-1 text-success"></i>Excel',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    messageTop: function() { return buildExportSubtitle(); },
+                    exportOptions: { columns: ':visible' },
+                    customize: function(xlsx) {
+                        var sheet = xlsx.xl.worksheets['sheet1.xml'];
+                        var ahora = new Date();
+                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' a las ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                        var textoCompleto = 'Documento generado el: ' + fechaStr + '\r\n\r' + ' ' + 'Filtros aplicados: ' + buildExportSubtitle();
+                        var $celda = $('row:nth-child(2) c', sheet);
+                        var $texto = $celda.find('t');
+                        $texto.text(textoCompleto);
+                        $texto.attr('xml:space', 'preserve');
+                        $celda.attr('s', '51');
+                        var numLineas = textoCompleto.split('\n').length;
+                        var alturaFila = numLineas * 15; 
+                        $('row:nth-child(2)', sheet).attr('ht', alturaFila).attr('customHeight', '1');
+                    }
+                },
+                {
+                    extend: 'csvHtml5',
+                    text: '<i class="fas fa-file-csv me-1 text-primary"></i>CSV',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2025-2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    exportOptions: { columns: ':visible' }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    text: '<i class="fas fa-file-pdf me-1 text-danger"></i>PDF',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2025-2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    messageTop: function() { return 'Filtros aplicados: ' + buildExportSubtitle(); },
+                    orientation: 'landscape',
+                    pageSize: 'A4',
+                    exportOptions: { columns: ':visible' },
+                    customize: function(doc) {
+                        doc.styles.title = { color: '#1a3a5c', fontSize: '14', alignment: 'center', bold: true };
+                        doc.styles.message = { fontSize: 10, italics: true, margin: [0, 0, 0, 10], color: '#444' };
+                        doc.content[2].layout = {
+                            hLineWidth: function(i, node) { return (i === 0 || i === node.table.body.length) ? 1 : 0.5; },
+                            vLineWidth: function(i, node) { return 0.5; },
+                            hLineColor: function(i) { return '#aaa'; },
+                            vLineColor: function(i) { return '#aaa'; },
+                            fillColor: function(rowIndex) { return (rowIndex === 0) ? '#1a3a5c' : null; }
+                        };
+                        doc.content[2].table.body[0].forEach(function(h) { h.color = 'white'; });
+                        var ahora = new Date();
+                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' a las ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                        doc.content.splice(0, 0, {
+                            text: ' ' + fechaStr,
+                            alignment: 'right',
+                            fontSize: 8,
+                            color: '#6b7280',
+                            margin: [0, -10, 0, 10]
+                        });
+                        doc.footer = function(page, pages) {
+                            return {
+                                columns: [
+                                    { text: '', alignment: 'left' },
+                                    { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 10, 20, 0] }
+                                ]
+                            };
+                        };
+                    }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fas fa-print me-1 text-dark"></i>Imprimir',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2025-2026',
+                    messageTop: function() { return 'Filtros aplicados: ' + buildExportSubtitle(); },
+                    exportOptions: { columns: ':visible' },
+                    customize: function (win) {
+                        var tituloConFiltros = getNombreArchivoConFiltros();
+                        $(win.document).prop('title', tituloConFiltros);
+
+                        var $table = $(win.document.body).find('table');
+                        $table.removeClass('table table-bordered table-striped table-hover');
+                        var style = `<style>
+                            @media print {
+                                body { font-family: Arial, sans-serif !important; font-size: 9pt !important; -webkit-print-color-adjust: exact !important; }
+                                table { border-collapse: collapse !important; width: 100% !important; table-layout: fixed !important; border: 1pt solid #000 !important; }
+                                th, td { border: 0.5pt solid #000 !important; padding: 5px !important; word-wrap: break-word !important; text-align: center !important; vertical-align: middle !important; }
+                                thead th { background-color: #1a3a5c !important; color: #fff !important; font-weight: bold !important; text-transform: uppercase !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                                td:nth-child(2) { text-align: left !important; }
+                            }
+                        </style>`;
+                        $(win.document.head).append(style);
+                        $table.find('th, td').css('border', ''); 
+                        $(win.document.body).find('h1').css({ 'text-align': 'center', 'font-size': '16pt', 'margin-bottom': '10px' });
+                    }
+                }
+            ],
+            columnDefs: [
+                { targets: ALL_COLS.filter(i => !DEFAULT_VISIBLE.includes(i)), visible: false },
+                { targets: '_all', searchable: true }
+            ],
+            scrollX: false,
+            autoWidth: false,
+            initComplete: function() {
+                try { $('#exportButtonsContainer').append(table.buttons().container()); } catch(e) {}
+                $('#loadingWrapper').hide();
+                $('#mainTableContainer').fadeIn('fast', function() { table.columns.adjust(); });
+                $('#mini-totals').fadeIn('fast');
+            }
+        });
+    } catch (err) {
+        console.error("DataTables Error:", err);
+        $('#loadingWrapper').hide();
+        $('#mainTableContainer').show();
+        $('#mini-totals').show();
+    }
+
+    // ─── ACTUALIZACIÓN DE TARJETAS DE TOTALES ───
+    function updateTotals() {
+        var getNum = function(val) {
+            var v = String(val).replace(/<[^>]*>?/gm, '');
+            v = $.trim(v).toLowerCase();
+            if (v === '' || v === '-' || v === '0' || v.indexOf('sin') !== -1) return 0;
+            v = v.replace(/[\.,\s]/g, '');
+            var parsed = parseInt(v, 10);
+            return isNaN(parsed) ? 0 : parsed;
+        };
+
+        var tSge25 = 0, tInsc25 = 0, tSge26 = 0, tInsc26 = 0;
+
+        table.rows({ search: 'applied' }).every(function() {
+            var data = this.data();
+            tSge25 += getNum(data[15]);
+            tInsc25 += getNum(data[16]);
+            tSge26 += getNum(data[17]);
+            tInsc26 += getNum(data[18]);
+        });
+
+        $('#tot-sge25').text(tSge25.toLocaleString('es-AR'));
+        $('#tot-insc25').text(tInsc25.toLocaleString('es-AR'));
+        $('#tot-sge26').text(tSge26.toLocaleString('es-AR'));
+        $('#tot-insc26').text(tInsc26.toLocaleString('es-AR'));
+    }
+
+    // ─── Paginación ───
+    function updateFooter() {
+        var info = table.page.info();
+        var from = info.recordsDisplay === 0 ? 0 : info.start + 1;
+        var extra = info.recordsTotal !== info.recordsDisplay ? ' (filtrado de ' + info.recordsTotal + ' totales)' : '';
+        $('#dtInfo').text('Mostrando ' + from + '–' + info.end + ' de ' + info.recordsDisplay + ' registros' + extra);
+
+        var totalPages = info.pages, current = info.page, html = '';
+        html += '<li class="page-item' + (current === 0 ? ' disabled' : '') + '"><a class="page-link dt-page" data-page="' + (current - 1) + '" href="#">‹</a></li>';
+        for (var p = 0; p < totalPages; p++) {
+            if (totalPages > 7 && Math.abs(p - current) > 2 && p !== 0 && p !== totalPages - 1) {
+                if (p === 1 || p === totalPages - 2) html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+                continue;
+            }
+            html += '<li class="page-item' + (p === current ? ' active' : '') + '"><a class="page-link dt-page" data-page="' + p + '" href="#">' + (p + 1) + '</a></li>';
+        }
+        html += '<li class="page-item' + (current >= totalPages - 1 ? ' disabled' : '') + '"><a class="page-link dt-page" data-page="' + (current + 1) + '" href="#">›</a></li>';
+        $('#dtPaginate').html(html);
+    }
+    
+    table.on('draw', function() {
+        updateFooter();
+        updateTotals(); 
+    });
+    
+    updateFooter();
+    
+    $(document).on('click', '.dt-page', function (e) {
+        e.preventDefault();
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+        var p = parseInt($(this).data('page'));
+        var info = table.page.info();
+        if (p >= 0 && p < info.pages) table.page(p).draw('page');
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    $('#dtLengthSelect').on('change', function () { 
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+        table.page.len(parseInt(this.value)).draw(); 
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    $('#customSearch').on('keyup', function () { 
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+
+        if (this.value.trim() !== '') {
+            if (!table.column(0).visible()) { table.column(0).visible(true); makeBadgeActive(0); }
+            if (!table.column(2).visible()) { table.column(2).visible(true); makeBadgeActive(2); }
+        }
+
+        table.search(this.value, false, true).draw(); 
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    // ─── Visibilidad de Columnas ───
+    function parseCols(badge) { return $(badge).data('cols').toString().split(',').map(Number); }
+    function syncBadges() {
+        $('.col-badge').each(function () {
+            var cols = parseCols(this);
+            var allVisible = cols.every(c => table.column(c).visible());
+            $(this).toggleClass('active', allVisible);
+        });
+    }
+    function makeBadgeActive(colIdx) {
+        $('.col-badge').each(function () {
+            var cols = parseCols(this);
+            if (cols.includes(colIdx)) { $(this).addClass('active'); }
+        });
+    }
+    
+    $('.col-badge').on('click', function () {
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+
+        var cols = parseCols(this);
+        var allVisible = cols.every(c => table.column(c).visible());
+
+        var isProtected = cols.some(c => PROTECTED_COLS.includes(c));
+        var hasFilters = $('#fAudit2025').val() || $('#fAudit2026').val() || 
+                         $('#fOferta').val() || $('#fSector').val() || 
+                         $('#fAmbito').val() || ($('#fRegion').val() && !$('#fRegion').prop('disabled')) || 
+                         $('#fCUE').val() || $('#fCueanexo').val();
+
+        if (allVisible && isProtected && hasFilters) {
+            alert("⚠️ No puedes ocultar los datos de identificación mientras tengas filtros de búsqueda activos.");
+            return; 
+        }
+
+        var newState = !allVisible;
+        cols.forEach(c => table.column(c).visible(newState));
+        $(this).toggleClass('active', newState);
+        updateFooter();
+
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    $('#btnShowAll').on('click', function () { 
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+        table.columns().visible(true); syncBadges(); updateFooter(); 
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    $('#btnHideAll').on('click', function () { 
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+        
+        ALL_COLS.forEach(i => {
+            if (!PROTECTED_COLS.includes(i)) {
+                table.column(i).visible(false); 
+                $(`.col-badge[data-cols*="${i}"]`).removeClass('active');
+            } else {
+                table.column(i).visible(true); 
+                $(`.col-badge[data-cols*="${i}"]`).addClass('active');
+            }
+        });
+        
+        updateFooter(); 
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    $('#btnDefault').on('click', function () {
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+        ALL_COLS.forEach(i => table.column(i).visible(DEFAULT_VISIBLE.includes(i)));
+        syncBadges(); updateFooter();
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+
+    // ─── RENDER DE LOS CHIPS ───
+    function actualizarChips() {
+        const container = $('#chips-container');
+        container.empty();
+        let hasActive = false;
+
+        $.each(filterLabels, function(id, label) {
+            const $el = $('#' + id);
+            let val = $el.val();
+            if (id === 'fRegion' && $el.prop('disabled')) val = '';
+            
+            if (val && val.trim() !== '') {
+                hasActive = true;
+                let displayVal = val;
+                
+                if ($el.is('select')) {
+                    displayVal = $el.find('option:selected').text();
+                }
+
+                container.append(`
+                    <span class="filter-chip">
+                        <b>${label}:</b> ${displayVal}
+                        <span class="remove-chip" onclick="quitarFiltro('${id}')"><i class="fas fa-times"></i></span>
+                    </span>
+                `);
+            }
+        });
+
+        if (hasActive) {
+            $('#activeFiltersWrap').slideDown('fast');
+        } else {
+            $('#activeFiltersWrap').slideUp('fast');
+        }
+    }
+
+    // ─── ELIMINAR FILTRO INDIVIDUAL ───
+    window.quitarFiltro = function(id) {
+        const $el = $('#' + id);
+        if (id === 'fRegion') {
+            if ($('#toggleRegionActivo').is(':checked')) {
+                $el.val('').removeClass('has-value').trigger('change');
+            }
+        } else {
+            $el.val('').removeClass('has-value');
+            if ($el.is('select')) {
+                $el.trigger('change');
+            } else {
+                $el.trigger('input');
+            }
+        }
+    };
+
+
+    // ─── MOTOR CENTRAL DE FILTROS (BLINDADO) ───
+    function applyAllFilters() {
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+
+        table.search('').columns().search('');
+        $.fn.dataTable.ext.search.length = 0; 
+
+        var audit2025 = $('#fAudit2025').val();
+        var audit2026 = $('#fAudit2026').val();
+        var regionVal = ($('#toggleRegionActivo').is(':checked') && $('#fRegion').prop('disabled') === false) ? $('#fRegion').val() : '';
+        
+        var hasFilters = audit2025 || audit2026 || 
+                         $('#fOferta').val() || $('#fSector').val() || 
+                         $('#fAmbito').val() || regionVal || 
+                         $('#fCUE').val() || $('#fCueanexo').val();
+
+        if (hasFilters) {
+            if (!table.column(0).visible()) { table.column(0).visible(true); makeBadgeActive(0); }
+            if (!table.column(2).visible()) { table.column(2).visible(true); makeBadgeActive(2); }
+        }
+
+        if (audit2025) {
+            if (!table.column(15).visible()) { table.column(15).visible(true); makeBadgeActive(15); }
+            if (!table.column(16).visible()) { table.column(16).visible(true); makeBadgeActive(16); }
+        }
+        if (audit2026) {
+            if (!table.column(17).visible()) { table.column(17).visible(true); makeBadgeActive(17); }
+            if (!table.column(18).visible()) { table.column(18).visible(true); makeBadgeActive(18); }
+        }
+
+        if (audit2025 || audit2026) {
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                
+                var getNum = function(val) {
+                    var v = String(val).replace(/<[^>]*>?/gm, '');
+                    v = $.trim(v).toLowerCase();
+                    if (v === '' || v === '-' || v === '0' || v.indexOf('sin') !== -1) return 0;
+                    v = v.replace(/[\.,\s]/g, ''); 
+                    var parsed = parseInt(v, 10);
+                    return isNaN(parsed) ? 0 : parsed;
+                };
+
+                var sge25 = getNum(data[15]), insc25 = getNum(data[16]);
+                var sge26 = getNum(data[17]), insc26 = getNum(data[18]);
+
+                var check25 = true, check26 = true;
+
+                if (audit2025 === 'ok') {
+                    check25 = (sge25 > 0 && sge25 === insc25);
+                } else if (audit2025 === 'diff') {
+                    check25 = ((sge25 > 0 || insc25 > 0) && sge25 !== insc25);
+                } else if (audit2025 === 'vacio') {
+                    check25 = (sge25 === 0 && insc25 === 0);
+                }
+
+                if (audit2026 === 'ok') {
+                    check26 = (sge26 > 0 && sge26 === insc26);
+                } else if (audit2026 === 'diff') {
+                    check26 = ((sge26 > 0 || insc26 > 0) && sge26 !== insc26);
+                } else if (audit2026 === 'vacio') {
+                    check26 = (sge26 === 0 && insc26 === 0);
+                }
+
+                return check25 && check26; 
+            });
+        }
+
+        var directFilters = {
+            3:  $('#fOferta').val(),
+            4:  $('#fSector').val(),
+            5:  $('#fAmbito').val(),
+            6:  regionVal,
+            7:  $('#fCUE').val(),
+            0:  $('#fCueanexo').val()
+        };
+
+        $.each(directFilters, function (colIdx, val) {
+            if (val && val.trim() !== '') {
+                var safeVal = $.fn.dataTable.util.escapeRegex(val.trim());
+                
+                if (colIdx == 7 || colIdx == 0) {
+                    table.column(colIdx).search(safeVal, true, false);
+                } else {
+                    table.column(colIdx).search('^' + safeVal + '$', true, false);
+                }
+
+                if (!table.column(colIdx).visible()) {
+                    table.column(colIdx).visible(true); makeBadgeActive(colIdx);
+                }
+            }
+        });
+
+        table.draw();
+        updateFooter();
+
+        $scrollWrap.scrollLeft(scrollPos);
+    }
+
+    // ─── EVENTOS EN VIVO (Auto-Filtro) ───
+    function toggleHasValue($el) { $el.toggleClass('has-value', $el.val() !== '' && $el.val() !== null); }
+    
+    $('#fAudit2025, #fAudit2026, #fOferta, #fAmbito, #fSector').on('change', function () { 
+        toggleHasValue($(this)); 
+        actualizarChips(); 
+        applyAllFilters();
+    });
+
+    $('#fRegion').on('change', function () {
+        if (!$('#toggleRegionActivo').is(':checked')) return;
+        toggleHasValue($(this)); 
+        actualizarChips(); 
+        applyAllFilters();
+    });
+
+    let typingTimer;
+    $('#fCUE, #fCueanexo').on('input', function () { 
+        toggleHasValue($(this)); 
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() {
+            actualizarChips(); 
+            applyAllFilters();
+        }, 400); 
+    });
+
+    // ─── LIMPIAR FILTROS MASIVO ───
+    $('#btnClearFilters').on('click', function () {
+        var $scrollWrap = $('.table-responsive');
+        var scrollPos = $scrollWrap.scrollLeft();
+
+        $('#fAudit2025, #fAudit2026, #fOferta, #fAmbito, #fSector, #fCUE, #fCueanexo')
+            .val('').removeClass('has-value');
+        $('#toggleRegionActivo').prop('checked', false).trigger('change');
+            
+        actualizarChips(); 
+        $.fn.dataTable.ext.search.length = 0;
+        table.search('').columns().search('').draw();
+        updateFooter();
+
+        $scrollWrap.scrollLeft(scrollPos);
+    });
+
+    // ========== LÓGICA DEL MODAL DE FECHA (SOLO PARA STAFF) ==========
+    {% if user.is_staff %}
+
+    // Función para obtener el token CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const modalElement = document.getElementById('fechaModal');
+    if (modalElement) {
+        // Instancia única del modal Bootstrap
+        const fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+
+        // Función para mostrar/ocultar error
+        function mostrarErrorModal(msg) {
+            const errDiv = document.getElementById('modalError');
+            const errText = document.getElementById('modalErrorText');
+            if (msg) {
+                errText.textContent = msg;
+                errDiv.style.display = 'flex';
+            } else {
+                errDiv.style.display = 'none';
+                errText.textContent = '';
+            }
+        }
+
+        // Función para cerrar el modal limpiamente
+        function cerrarModal() {
+            mostrarErrorModal('');
+            fechaModalBS.hide();
+        }
+
+        // Botón abrir (lapicito)
+        const editBtn = document.getElementById('editFechaBtn');
+        if (editBtn) {
+            editBtn.addEventListener('click', function () {
+                mostrarErrorModal('');
+                {% if ultima_fecha %}
+                    try {
+                        let fechaActual = new Date('{{ ultima_fecha|date:"Y-m-d H:i:s" }}');
+                        let year = fechaActual.getFullYear();
+                        let month = String(fechaActual.getMonth() + 1).padStart(2, '0');
+                        let day = String(fechaActual.getDate()).padStart(2, '0');
+                        let hours = String(fechaActual.getHours()).padStart(2, '0');
+                        let minutes = String(fechaActual.getMinutes()).padStart(2, '0');
+                        document.getElementById('nuevaFecha').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    } catch(e) {}
+                {% endif %}
+                fechaModalBS.show();
+            });
+        }
+
+        // Botón X (cerrar header)
+        const closeBtn = document.getElementById('fechaModalCloseBtn');
+        if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
+
+        // Botón Cancelar
+        const cancelBtn = document.getElementById('fechaModalCancelBtn');
+        if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
+
+        // Botón Guardar
+        const guardarBtn = document.getElementById('guardarFechaBtn');
+        if (guardarBtn) {
+            guardarBtn.addEventListener('click', function () {
+                const nuevaFecha = document.getElementById('nuevaFecha').value;
+                if (!nuevaFecha) {
+                    mostrarErrorModal('Debes seleccionar una fecha y hora.');
+                    return;
+                }
+
+                // Estado de carga en el botón
+                guardarBtn.disabled = true;
+                guardarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+                // Reemplaza la parte del fetch dentro del bloque if is_admin
+                fetch('{% url "indicsie:actualizar_fecha_sge" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}' // Usamos el tag directo de Django para evitar error de largo
+                    },
+                    body: JSON.stringify({ fecha: nuevaFecha })
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.status === 'success') {
+                        cerrarModal();
+                        location.reload();
+                    } else {
+                        mostrarErrorModal(data.message || 'Error al actualizar la fecha.');
+                        guardarBtn.disabled = false;
+                        guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    mostrarErrorModal('Error de conexión. Verificá tu red e intentá de nuevo.');
+                    guardarBtn.disabled = false;
+                    guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios';
+                });
+            });
+        }
+
+        // Limpiar estado al cerrar el modal por cualquier vía
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            mostrarErrorModal('');
+            const guardarBtn = document.getElementById('guardarFechaBtn');
+            if (guardarBtn) {
+                guardarBtn.disabled = false;
+                guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios';
+            }
+        });
+    }
+
+    {% endif %}
+
+});
+</script>
+{% endblock %}

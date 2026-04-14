@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Reporte Gestores</title>
+    <style>
+        table{width:100%;border-collapse:collapse;}
+        th,td{border:1px solid #000;padding:5px;text-align:center;}
+        th{background:#ccc;}
+    </style>
+</head>
+<body>
+<h2>Reporte Gestores</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Gestor</th>
+            <th>Pendiente</th>
+            <th>En Proceso</th>
+            <th>Respondida</th>
+            <th>Cerrada</th>
+            <th>Vencidas</th>
+            <th>SLA Promedio (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for gestor, stats in stats.items %}
+        <tr>
+            <td>{{ gestor }}</td>
+            <td>{{ stats.pendiente }}</td>
+            <td>{{ stats.en_proceso }}</td>
+            <td>{{ stats.respondida }}</td>
+            <td>{{ stats.cerrada }}</td>
+            <td>{{ stats.vencidas }}</td>
+            <td>{{ stats.SLA_promedio }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>

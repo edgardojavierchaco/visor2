@@ -1,0 +1,142 @@
+{% extends "consultasge/layout_admin.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Consultas de mi Regional</h2>
+    <a href="{% url 'archivos:portada_gestor' %}" class="btn btn-danger">
+        <i class="bi bi-folder2-open me-1"></i> Inicio
+    </a>
+</div>
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">Dashboard Administrador</h2>
+
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body bg-light">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Desde:</label>
+                    <input type="date" id="fecha_inicio" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Hasta:</label>
+                    <input type="date" id="fecha_fin" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Región:</label>
+                    <select id="filtro_region" class="form-select form-select-sm">
+                        <option value="">Todas las regiones</option>
+                        {% for reg in regiones %}
+                            <option value="{{ reg }}">{{ reg }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary btn-sm w-100" id="btnActualizar">Actualizar</button>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a id="btnExcel" href="#" class="btn btn-outline-success btn-sm">Excel</a>
+                    <a id="btnPDF" href="#" class="btn btn-outline-danger btn-sm">PDF</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-0 shadow-sm bg-white p-3">
+                <h6 class="text-muted">Total Consultas</h6>
+                <h3 id="kpi_total" class="mb-0 text-primary">-</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-0 shadow-sm bg-white p-3">
+                <h6 class="text-muted">Pendientes</h6>
+                <h3 id="kpi_pendientes" class="mb-0 text-danger">-</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-0 shadow-sm bg-white p-3">
+                <h6 class="text-muted">En Proceso</h6>
+                <h3 id="kpi_proceso" class="mb-0 text-warning">-</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-0 shadow-sm bg-white p-3">
+                <h6 class="text-muted">Vencidas</h6>
+                <h3 id="kpi_vencidas" class="mb-0 text-dark">-</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <canvas id="graficoGestores" style="max-height: 450px;"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+let chart;
+
+function cargarDashboard() {
+    const params = {
+        inicio: $('#fecha_inicio').val(),
+        fin: $('#fecha_fin').val(),
+        region: $('#filtro_region').val()
+    };
+
+    $.get("{% url 'consultasge:admin_dashboard_datos' %}", params, function(res) {
+        // Actualizar KPIs
+        $('#kpi_total').text(res.kpis.total_consultas);
+        $('#kpi_pendientes').text(res.kpis.total_pendientes);
+        $('#kpi_proceso').text(res.kpis.total_en_proceso);
+        $('#kpi_vencidas').text(res.kpis.total_vencidas);
+
+        // Gráfico
+        const ctx = document.getElementById('graficoGestores').getContext('2d');
+        if(chart) chart.destroy();
+        
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: res.labels,
+                datasets: [
+                    { label: 'Pendientes', data: res.datasets.pendiente, backgroundColor: '#dc3545', stack: 'A' },
+                    { label: 'En Proceso', data: res.datasets.en_proceso, backgroundColor: '#ffc107', stack: 'A' },
+                    { label: 'Respondidas/Cerradas', data: res.datasets.respondida, backgroundColor: '#28a745', stack: 'A' },
+                    { 
+                        label: 'Efectividad %', 
+                        data: res.datasets.SLA, 
+                        type: 'line', 
+                        borderColor: '#000', 
+                        yAxisID: 'y1',
+                        pointStyle: 'circle',
+                        pointRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { stacked: true, beginAtZero: true, title: {display: true, text: 'Consultas'} },
+                    y1: { position: 'right', min: 0, max: 100, title: {display: true, text: 'Efectividad %'}, grid: {drawOnChartArea: false} }
+                }
+            }
+        });
+
+        // Actualizar botones exportación
+        const query = $.param(params);
+        $('#btnExcel').attr('href', "{% url 'consultasge:admin_dashboard_exportar_excel' %}?" + query);
+        $('#btnPDF').attr('href', "{% url 'consultasge:admin_dashboard_exportar_pdf' %}?" + query);
+    });
+}
+
+$('#btnActualizar').click(cargarDashboard);
+$(document).ready(cargarDashboard);
+</script>
+{% endblock %}

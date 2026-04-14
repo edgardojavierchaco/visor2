@@ -1,0 +1,1388 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+
+    
+
+    /* ==================================================================== */
+    /* ===== PARCHE ANTI-DESBORDE (RESPONSIVE & SCROLL HORIZONTAL) ===== */
+    /* ==================================================================== */
+
+    /* 1. Seguro global de prevención */
+    html, body {
+        max-width: 100vw !important;
+        overflow-x: hidden !important; /* Corta de raíz cualquier fuga de píxeles */
+    }
+
+    /* 2. Permitir que los botones de exportación bajen de línea sin romper la caja */
+    div.dt-buttons {
+        flex-wrap: wrap !important;
+        justify-content: flex-start;
+    }
+
+    /* 3. Evitar que Select2 o inputs rompan los filtros */
+    .filter-item * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 4. Arreglos vitales específicos para Tablets y Celulares (< 768px) */
+    @media (max-width: 768px) {
+        .sge-wrapper {
+            padding: 1rem 0.5rem 2.5rem !important; /* Reduce márgenes laterales en celu */
+        }
+
+        .table-toolbar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 1.2rem !important;
+        }
+
+        .toolbar-left {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            width: 100% !important;
+        }
+
+        #dtLengthWrap {
+            justify-content: center !important;
+            margin-bottom: 0.5rem;
+        }
+
+        div.dt-buttons {
+            justify-content: center !important;
+            width: 100% !important;
+        }
+
+        div.dt-buttons .btn {
+            flex: 1 1 auto !important; /* Botones elásticos */
+            min-width: 80px; 
+            text-align: center;
+        }
+
+        .col-action-btns {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 0.5rem;
+        }
+
+        .col-action-btns button {
+            width: 100% !important;
+        }
+    }
+
+    /* ===== SOLUCIÓN DEFINITIVA: BUSCADOR FLUIDO CON ALTURA Y FUENTE ORIGINAL ===== */
+    @media (min-width: 992px) {
+        .table-toolbar {
+            flex-wrap: nowrap !important; 
+            gap: 0.5rem !important;       
+        }
+        .toolbar-left {
+            flex-wrap: nowrap !important; 
+            flex-shrink: 0 !important;    
+        }
+        .toolbar-right, .search-wrap {
+            flex: 1 1 auto !important;    
+            min-width: 190px !important;  
+            display: flex;
+            justify-content: flex-end;
+            margin-left: 0.5rem !important;
+        }
+        .custom-search-group {
+            width: 100% !important;       
+            max-width: 350px !important;  
+        }
+        
+        /* === COMPRESIÓN SOLO HORIZONTAL (TAMAÑO DE LETRA INTACTO) === */
+        .custom-search-group select {
+            max-width: 95px !important;   
+            /* Mantenemos el 0.4rem vertical y achicamos solo los costados */
+            padding: 0.4rem 0.2rem 0.4rem 0.6rem !important; 
+            font-size: 0.82rem !important; /* TAMAÑO DE FUENTE ORIGINAL */
+        }
+        .custom-search-group input {
+            padding: 0.4rem 0.5rem !important; 
+            font-size: 0.88rem !important; /* TAMAÑO DE FUENTE ORIGINAL */
+        }
+        .custom-search-group input::placeholder {
+            font-size: 0.88rem !important;
+        }
+    }
+
+    /* ===== BOTÓN DE AYUDA (AZUL SUTIL INTEGRADO A LA PÁGINA) ===== */
+    #btnAyudaFiltros {
+        color: #3b82f6 !important; /* El mismo azul de los íconos de tus filtros */
+        border: 1px solid #93c5fd !important; /* Borde celeste suave, igual al de los chips */
+        background-color: #ffffff !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    #btnAyudaFiltros:hover {
+        background-color: #eff6ff !important; /* Fondo celestito muy claro, igual a tus botones activos */
+        color: #1d4ed8 !important; /* Letra levemente más oscura para leer bien */
+        border-color: #93c5fd !important;
+        box-shadow: none !important; /* Sin sombra fuerte para que no resalte de más */
+    }
+
+#btnAyudaFiltros i {
+    color: inherit !important;
+}
+    #btnResetSmartSearch:hover {
+        color: #ef4444 !important;
+    }
+
+    /* ===== BUSCADOR ESTILIZADO (CÁPSULA) ===== */
+    .custom-search-group {
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem; 
+        overflow: hidden; 
+        display: flex;
+        background-color: #fff;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    
+    .custom-search-group:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .custom-search-group select {
+        border: none !important;
+        background-color: #f8fafc; 
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 0.4rem 0.5rem 0.4rem 0.9rem;
+        border-right: 1px solid #e2e8f0 !important; 
+        border-radius: 0;
+        cursor: pointer;
+        box-shadow: none !important;
+        outline: none !important;
+        max-width: 145px;
+    }
+    
+    .custom-search-group select:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .custom-search-group input {
+        border: none !important;
+        font-size: 0.88rem;
+        color: #1e293b;
+        padding: 0.4rem 0.9rem;
+        box-shadow: none !important;
+        outline: none !important;
+        background-color: transparent;
+        width: 100%;
+    }
+
+    .custom-search-group input::placeholder {
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    body, .sge-wrapper, .table-card, .control-panel {
+        color: #111827 !important;
+    }
+
+    /* ===== LAYOUT BASE ===== */
+    .sge-wrapper { max-width: 100%; margin: 0 auto; padding: 1.1rem 0.9rem 2.5rem; }
+
+    /* ===== ENCABEZADO ===== */
+    .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.2rem; padding-bottom: .9rem; border-bottom: 2px solid #e9ecef; }
+    .page-header-left h2 { font-size: 1.35rem; font-weight: 800; color: #111827; margin: 0 0 .15rem; letter-spacing: -.02em; display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+    .page-header-left p { font-size: .85rem; color: #4b5563; margin: 0; font-weight: 500; }
+
+    /* Badge de fecha mejorado */
+    .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; }
+    .fecha-badge i { font-size: 0.85rem; color: #3b82f6; }
+    .fecha-badge .edit-icon { cursor: pointer; transition: transform 0.2s, color 0.2s; margin-left: 4px; font-size: 0.8rem; color: #64748b; }
+    .fecha-badge .edit-icon:hover { color: #2563eb; transform: scale(1.1); }
+
+    /* ===== PANEL DE CONTROL SUPERIOR (HORIZONTAL) ===== */
+    .control-panel { background: #fff; border: 1px solid #dee2e6; border-radius: .5rem; margin-bottom: 1.2rem; overflow: visible; box-shadow: 0 2px 6px rgba(0,0,0,.04); position: relative; }
+    .control-panel-inner { display: grid; grid-template-columns: 42% 58%; min-width: 0; }
+    .control-block-columns { padding: 1.2rem; border-right: 1px solid #e9ecef; overflow: visible; }
+    .control-block-filters { padding: 1.2rem; overflow: visible; position: relative; min-width: 0; }
+    .control-block-title { font-size: .88rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; display: flex; align-items: center; gap: .4rem; }
+    .control-block-title i { color: #0d6efd; }
+
+    /* === BLOQUE IZQUIERDO: Visibilidad de Columnas === */
+    .col-action-btns { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: .8rem; border-bottom: 1px dashed #cbd5e1; }
+    .col-action-btns button { font-size: .78rem; padding: .35rem .7rem; border-radius: .35rem; border: 1px solid #cbd5e1; background: #fff; color: #475569; cursor: pointer; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all .15s ease-in-out; }
+    .col-action-btns button:hover { background: #f1f5f9; border-color: #94a3b8; color: #0f172a; }
+    .col-action-btns button i { color: #64748b; }
+    .col-groups { display: flex; flex-direction: column; gap: .55rem; }
+    .col-group   { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+    .col-group-label { font-size: .75rem; font-weight: 800; color: #4b5563; text-transform: uppercase; letter-spacing: .05em; min-width: 90px; }
+
+    .col-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .7rem; border-radius: .35rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: .8rem; font-weight: 600; cursor: pointer; user-select: none; transition: all .15s; white-space: nowrap; }
+    .col-badge::before { content: ''; display: inline-block; width: 13px; height: 13px; border: 1.5px solid #94a3b8; border-radius: 3px; background: #fff; transition: all .15s; }
+    .col-badge.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .col-badge.active::before { background: #2563eb; border-color: #2563eb; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 8 8'%3E%3Cpath fill='%23fff' d='M6.5 1.5L3 5 1.5 3.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; }
+
+    /* === BLOQUE DERECHO: Filtros === */
+    .filter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem .9rem; min-width: 0; }
+    .filter-item { display: flex; flex-direction: column; gap: .3rem; min-width: 0; overflow: visible; }
+    .filter-item label { font-size: .74rem; font-weight: 800; color: #111827; text-transform: uppercase; margin: 0; display: flex; align-items: center; white-space: normal; word-break: break-word; letter-spacing: -0.2px; line-height: 1.3; }
+    .filter-item label i { color: #3b82f6; width: 16px; min-width: 16px; text-align: center; margin-right: 6px; font-size: 0.85rem; }
+    .filter-item select, .filter-item input[type="text"] { border: 1px solid #cbd5e1; border-radius: .35rem; padding: .45rem .6rem; font-size: .88rem; color: #1e293b; font-weight: 500; height: 2.3rem; width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0; transition: border-color .15s, background-color .15s, opacity .15s; }
+    .filter-item select:focus, .filter-item input[type="text"]:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, .2); }
+    .filter-item select.has-value, .filter-item input[type="text"].has-value { border-color: #3b82f6; background: #f0fdf4; }
+
+    /* Switch personalizado */
+    .filter-header-flex { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .switch-custom { position: relative; display: inline-block; width: 36px; height: 20px; margin: 0; }
+    .switch-custom input { opacity: 0; width: 0; height: 0; }
+    .slider-custom { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
+    .slider-custom:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    .switch-custom input:checked + .slider-custom { background-color: #3b82f6; }
+    .switch-custom input:checked + .slider-custom:before { transform: translateX(16px); }
+    .alert-warning-custom { display: none; margin-top: 10px; padding: 10px; background: #fff8e1; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.75rem; color: #7c5a00; }
+
+    /* ===== FILTROS ACTIVOS (CHIPS) ===== */
+    .active-filters-wrap { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed #cbd5e1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .active-filters-label { font-size: .78rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .filter-chip { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; padding: .2rem .65rem; border-radius: 20px; font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .filter-chip .remove-chip { cursor: pointer; opacity: 0.6; font-size: .85rem; line-height: 1; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s; }
+    .filter-chip .remove-chip:hover { opacity: 1; color: #dc2626; }
+    .filter-actions { display: flex; justify-content: flex-end; gap: .4rem; margin-top: 1rem; padding-top: .8rem; border-top: 1px solid #e2e8f0; }
+    .btn-clear-filters { font-size: .85rem; padding: .4rem 1.2rem; border-radius: .35rem; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; font-weight: 600; transition: all .15s; }
+    .btn-clear-filters:hover { background: #e2e8f0; color: #0f172a; }
+
+    /* ===== BARRA DE HERRAMIENTAS Y BOTONES EXPORT ===== */
+    .table-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: .9rem; }
+    .toolbar-left { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    #dtLengthWrap { display: flex; align-items: center; gap: .4rem; font-size: .88rem; font-weight: 600; color: #334155; }
+    #dtLengthWrap select { border: 1px solid #cbd5e1; border-radius: .35rem; padding: .3rem .5rem; font-weight: 600;}
+    
+    div.dt-buttons { display: flex; gap: 0.5rem; align-items: center; }
+    div.dt-buttons .btn { border-radius: 0.35rem !important; border: 1px solid #cbd5e1 !important; background-color: #ffffff !important; color: #334155 !important; font-weight: 600; font-size: .8rem; padding: .35rem .8rem; display: inline-flex !important; align-items: center; justify-content: center; height: 31px; transition: all 0.2s ease-in-out; }
+    div.dt-buttons .btn:hover { background-color: #f8fafc !important; border-color: #94a3b8 !important; color: #0f172a !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+    /* ===== MINI TOTALES ===== */
+    .mini-totals-wrap { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .mini-total { background: #fff; border: 1px solid #cbd5e1; border-radius: .35rem; padding: .3rem .8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 85px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .mini-total.t-25 { border-bottom: 3px solid #94a3b8; }
+    .mini-total.t-26 { border-bottom: 3px solid #2563eb; }
+    .mini-total .lbl { font-size: .65rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;}
+    .mini-total .val { font-size: 1.05rem; font-weight: 800; color: #0f172a; line-height: 1; }
+
+    .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { display: none !important; }
+
+    /* ===== SPINNER DE CARGA ===== */
+    #loadingWrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem; background: #fff; border: 1px solid #dee2e6; border-radius: .5rem; }
+
+    /* ===== TARJETA DE TABLA ===== */
+    .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+    .table-card .table-responsive { overflow-x: auto; overflow-y: hidden; margin: 0; width: 100%; }
+
+    #sgeTable { font-size: .9rem; width: 100% !important; border-collapse: collapse; }
+    #sgeTable th, #sgeTable td { border: 1px solid #cbd5e1 !important; }
+    #sgeTable thead th { background: #111827; color: #f8fafc; font-size: .82rem; font-weight: 800; text-transform: uppercase; padding: .8rem .9rem !important; white-space: nowrap; text-align: center; } 
+    #sgeTable tbody td { padding: .65rem .9rem !important; vertical-align: middle; white-space: nowrap; text-align: center; color: #111827;}
+    #sgeTable thead th.th-nombre, #sgeTable tbody td.td-nombre { text-align: left !important; min-width: 200px; }
+    #sgeTable thead th.th-agente, #sgeTable tbody td.td-agente { text-align: left !important; min-width: 140px; }
+    #sgeTable tbody tr:hover td { background-color: #f1f5f9 !important; }
+    
+    .td-sge26, .td-insc26, .td-sge25, .td-insc25 { font-size: .95rem; }
+    .sin-dato { color: #ef4444 !important; font-weight: 800; background-color: #fef2f2; }
+    .dato-numerico { color: #0f172a !important; font-weight: 800; }
+
+    /* PIE DE TABLA */
+    .table-foot { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1.2rem; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+    #dtInfo { font-size: .85rem; color: #4b5563; font-weight: 600; }
+    #dtPaginate .pagination { margin: 0; }
+    #dtPaginate .page-link { font-size: .85rem; padding: .35rem .7rem; font-weight: 600; color: #1e293b; }
+    #dtPaginate .page-item.active .page-link { background-color: #3b82f6; border-color: #3b82f6; color: #fff; }
+
+    /* ========================================================
+       REGLAS DEFINITIVAS DE IMPRESIÓN (NATIVAS DEL NAVEGADOR) 
+       ======================================================== */
+    @media print {
+        @page {
+            size: LEGAL landscape; /* Cambiado a Oficio */
+            margin: 10mm;
+        }
+        body { background: #fff; }
+        #sgeTable { width: 100% !important; table-layout: fixed !important; font-size: 8px !important; }
+        #sgeTable th, #sgeTable td { word-break: break-word !important; white-space: normal !important; padding: 3px !important; }
+        .control-panel, .table-toolbar, .page-header, .filter-grid, .modal, .dt-buttons { display: none !important; }
+        
+        #sgeTable th:nth-child(3),
+        #sgeTable td:nth-child(3) {
+            width: 180px; /* Nombre Escuela */
+        }
+        #sgeTable th:nth-child(10),
+        #sgeTable td:nth-child(10) {
+            width: 150px; /* Ejemplo de columna ancha */
+        }
+        tr { page-break-inside: avoid !important; }
+        .table-responsive { overflow: visible !important; }
+    }
+
+    /* RESPONSIVIDAD PANTALLA */
+    @media (max-width: 1024px) {
+        .control-panel-inner { grid-template-columns: 1fr; }
+        .control-block-columns { border-right: none; border-bottom: 1px solid #e9ecef; }
+        .filter-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+        .sge-wrapper { padding: 0.8rem 0.5rem 2rem; }
+        .page-header { flex-direction: column; align-items: flex-start; }
+        .filter-grid { grid-template-columns: 1fr; }
+        .table-toolbar { flex-direction: column; align-items: stretch; gap: 1.2rem; }
+        .toolbar-left { flex-direction: column; align-items: stretch; gap: 1rem; }
+        #dtLengthWrap { justify-content: center; }
+        div.dt-buttons { justify-content: center; width: 100%; flex-wrap: wrap; }
+        div.dt-buttons .btn { flex: 1; text-align: center; }
+        .mini-totals-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; width: 100%; }
+        .mini-total { width: 100%; min-width: auto; padding: 0.5rem; }
+        .toolbar-right, .search-wrap, #customSearch { width: 100%; }
+        .col-action-btns { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+        .col-action-btns button { width: 100%; text-align: center; padding: 0.6rem; }
+        .filter-actions { flex-direction: column; align-items: stretch; }
+        .btn-clear-filters { width: 100%; text-align: center; padding: 0.6rem; }
+        .col-group { flex-direction: column; align-items: flex-start; background: #f8fafc; padding: 0.6rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;}
+        .col-group-label { margin-bottom: 0.3rem; border-bottom: 1px solid #cbd5e1; width: 100%; padding-bottom: 0.2rem; }
+        .col-badge { width: 100%; justify-content: flex-start; padding: 0.5rem 0.8rem; font-size: 0.85rem;}
+        .table-foot { flex-direction: column; gap: 1rem; text-align: center; }
+    }
+</style>
+
+<div class="modal fade" id="ayudaFiltrosModal" tabindex="-1" aria-labelledby="ayudaFiltrosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 1rem; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none;">
+                <h5 class="modal-title" id="ayudaFiltrosModalLabel" style="color: white;">
+                    <i class="fas fa-question-circle me-2"></i> Guía de uso
+                </h5>
+                <button type="button" class="btn-close btn-close-white opacity-75" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                
+                <h6 class="mb-3 fw-bold"><i class="fas fa-chart-line text-primary me-2"></i>Filtro: Estado Carga (SGE 2025 - Insc. 2025) y Estado Carga (SGE 2026 - Insc. 2026)</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="p-3 rounded-3 h-100" style="background-color: #f0fdf4; border-left: 4px solid #22c55e;">
+                            <strong class="text-success">Carga Coincidente</strong>
+                            <p class="mb-0 small text-muted mt-1">Los valores cargados de SGE y los alumnos inscriptos coinciden.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded-3 h-100" style="background-color: #fef9e3; border-left: 4px solid #eab308;">
+                            <strong class="text-warning">Con Discrepancias</strong>
+                            <p class="mb-0 small text-muted mt-1">Hay valores cargados (mayores a cero), pero no coinciden entre la Carga SGE y las Inscripciones.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                       <div class="p-3 rounded-3 h-100" style="background-color: #f1f5f9; border-left: 4px solid #64748b;">
+                            <strong class="text-secondary">Sin Carga</strong>
+                            <p class="mb-0 small text-muted mt-1">Ambos valores (SGE e Inscripciones) prensentan la leyenda "Sin carga", "Sin Inscripciones" o el número 0. Es decir, no presenta carga.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-filter text-primary me-2"></i>Otros Filtros</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6"><div class="p-3 border rounded-3 bg-light h-100"><i class="fas fa-graduation-cap text-primary me-2"></i><strong>Oferta</strong><p class="small text-muted mb-0 mt-1">Filtra por el tipo de oferta educativa.</p></div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded-3 bg-light h-100"><i class="fas fa-map-marked-alt text-primary me-2"></i><strong>Región</strong><p class="small text-muted mb-0 mt-1">Permite filtrar por región.</p></div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded-3 bg-light h-100"><i class="fas fa-map text-primary me-2"></i><strong>Ámbito</strong><p class="small text-muted mb-0 mt-1">Permite filtrar por ámbito (Urbano, Rural Disperso o Rural Aglomerado).</p></div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded-3 bg-light h-100"><i class="fas fa-building text-primary me-2"></i><strong>Sector</strong><p class="small text-muted mb-0 mt-1">Permite filtrar por sector (Estatal, Privado o Gestión Social/Cooperativa).</p></div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded-3 bg-light h-100"><i class="fas fa-hashtag text-primary me-2"></i><strong>CUE</strong><p class="small text-muted mb-0 mt-1">Búsqueda de código único de establecimiento (sin anexo).</p></div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded-3 bg-light h-100"><i class="fas fa-school text-primary me-2"></i><strong>CUE‑Anexo</strong><p class="small text-muted mb-0 mt-1">Búsqueda por unidad de servicio (9 dígitos).</p></div></div>
+                </div>
+
+                <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem; font-size: 0.9rem;">
+                    <li class="mb-3"><strong>Limpiar Filtros: </strong> Quita todos los filtros aplicados. </li>
+                    <li><strong>Buscador Inteligente (Arriba a la derecha): </strong> Consta de dos partes para mayor precisión:
+                        <ul class="mt-1 mb-0" style="padding-left: 1.2rem; list-style-type: circle;">
+                            <li class="mb-1"><strong>Selector desplegable:</strong> Permite elegir exactamente en qué columna buscar (ej. "Nombre Escuela", "Agente", "Teléfono", etc) para tener mas presición. Si dejas la opción "🔍 Todas", buscará en toda la tabla.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-columns text-primary me-2"></i> Columnas Visibles (Personalizar la tabla)</h6>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
+                            <p class="mb-2">Permite mostrar u ocultar libremente las columnas de manera individual haciendo click en los botones de la sección izquierda llamada <strong>“Columnas Visibles”</strong>.</p>
+                            
+                            <p class="mb-2">Además, los tres botones te permiten:</p>
+                            
+                            <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
+                                <li class="mb-1"><strong>Mostrar todas:</strong> Permite hacer visibles todas las columnas al mismo tiempo</li>
+                                <li class="mb-1"><strong>Ocultar Columnas:</strong> Quedan visibles solo las columnas de identificación (CUE‑Anexo, Nombre Escuela).</li>
+                                <li><strong>Por defecto:</strong> Se restaura la selección inicial de columnas.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-download text-primary me-2"></i> Exportar e Imprimir</h6>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
+                            <p class="mb-2">Utiliza los botones ubicados en la barra superior de la tabla para descargar o imprimir el informe. <strong>Importante:</strong> Los reportes generados respetarán exactamente los filtros y las columnas que tengas visibles en ese momento. Al utilizar el botón PDF o Imprimir el archivo generado utiliza tamaño <strong>Oficio</strong>  y en posición <strong>horizontal</strong>  para asegurar que quepan todas las columnas en el documento.</p>
+                            
+                            <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
+                                <li class="mb-2"><strong><i class="fas fa-file-excel text-success me-1"></i> Excel:</strong> Descarga la tabla en formato <code>.xlsx</code>, ideal si necesitas realizar cálculos, gráficos o cruces de datos en tu computadora.</li>
+                                <li class="mb-2"><strong><i class="fas fa-file-csv text-primary me-1"></i> CSV:</strong> Exporta los datos en formato de texto plano (<code>.csv</code>).</li>
+                                <li class="mb-2"><strong><i class="fas fa-file-pdf text-danger me-1"></i> PDF:</strong> Genera y descarga en tu dispositivo un documento formal en formato vertical (A4). Incluye encabezados y detalla qué filtros se aplicaron al momento de su creación.</li>
+                                <li><strong><i class="fas fa-print text-dark me-1"></i> Imprimir:</strong> Genera el reporte con el mismo diseño formal del PDF y lo <strong>abre en una pestaña nueva</strong> del navegador.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer" style="background-color: #f8fafc;">
+                <button type="button" class="btn btn-primary fw-bold rounded-3 px-4" data-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="sge-wrapper">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>
+                <i class="fas fa-school text-primary"></i>SGE 2026
+                {% if ultima_fecha %}
+                    <span class="fecha-badge">
+                        <i class="fas fa-calendar-alt"></i> Ultima Actualización: {{ ultima_fecha|date:'d/m/Y H:i' }}
+                        {% if is_admin %} <i class="fas fa-edit edit-icon" id="editFechaBtn" title="Editar fecha"></i> {% endif %}
+                    </span>
+                {% endif %}
+            </h2>
+            <p>Sistema de Gestión Escolar - <strong>Cargo: {{ cargo_usuario|default:"Usuario" }}</strong></p>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-panel-inner">
+            <div class="control-block-columns">
+                <div class="control-block-title">
+                    <i class="fas fa-columns"></i> Columnas Visibles
+                </div>
+                <div class="col-action-btns">
+                    <button id="btnShowAll"><i class="fas fa-check-double me-1"></i>Mostrar todas</button>
+                    <button id="btnHideAll"><i class="fas fa-eye-slash me-1"></i>Ocultar Columnas</button>
+                    <button id="btnDefault"><i class="fas fa-undo-alt me-1"></i>Por defecto</button>
+                </div>
+                <div class="col-groups">
+                    <div class="col-group">
+                        <span class="col-group-label">Identific.</span>
+                        <span class="col-badge active" data-cols="0">CUE-Anexo</span>
+                        <span class="col-badge"        data-cols="1">Agente</span>
+                        <span class="col-badge active" data-cols="2">Nombre Escuela</span>
+                        <span class="col-badge"        data-cols="3">Oferta</span>
+                        <span class="col-badge"        data-cols="7">CUE</span>
+                        <span class="col-badge"        data-cols="8">Anexo</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Ubicación</span>
+                        <span class="col-badge"        data-cols="4">Sector</span>
+                        <span class="col-badge"        data-cols="5">Ámbito</span>
+                        <span class="col-badge active" data-cols="6">Regional</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Contacto</span>
+                        <span class="col-badge"        data-cols="9,10">Teléfono</span>
+                        <span class="col-badge"        data-cols="11">Email</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Responsable</span>
+                        <span class="col-badge"        data-cols="12,13">Responsable</span>
+                        <span class="col-badge"        data-cols="14">Tel. Resp.</span>
+                    </div>
+                    <div class="col-group">
+                        <span class="col-group-label">Carga SGE / Inscriptos</span>
+                        <span class="col-badge"        data-cols="15">SGE 2025</span>
+                        <span class="col-badge"        data-cols="16">Insc. 2025</span>
+                        <span class="col-badge active" data-cols="17">SGE 2026</span>
+                        <span class="col-badge active" data-cols="18">Insc. 2026</span>
+                    </div>
+                </div>
+            </div> 
+            
+            <div class="control-block-filters">
+                <div class="control-block-title" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div><i class="fas fa-filter"></i> Filtros</div>
+      <button type="button" class="btn btn-sm btn-outline-info rounded-pill" 
+    id="btnAyudaFiltros"
+    style="font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.7rem;">
+    <i class="fas fa-question-circle me-1"></i> Ayuda
+</button>
+                </div>
+                
+                <div class="filter-grid">
+                    <div class="filter-item">
+                        <label for="fAudit2025" class="text-primary" >Estado Carga (SGE 25 - Ins. 25)</label>
+                        <select id="fAudit2025" style="border-color: #3b82f6; font-weight: 600;">
+                            <option value="">-- Todas --</option>
+                            <option value="ok">✅ Carga Coincidente</option>
+                            <option value="vacio">⚪ Sin Carga</option>
+                            <option value="diff">⚠️ Con Discrepancias</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fAudit2026" class="text-primary">Estado Carga (SGE 26 - Ins. 26)</label>
+                        <select id="fAudit2026" style="border-color: #3b82f6; font-weight: 600;">
+                            <option value="">-- Todas --</option>
+                            <option value="ok">✅ Carga Coincidente</option>
+                            <option value="vacio">⚪ Sin Carga</option>
+                            <option value="diff">⚠️ Con Discrepancias</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fOferta"><i class="fas fa-graduation-cap"></i>Según Oferta</label>
+                        <select id="fOferta">
+                            <option value="">-- Todas --</option>
+                            {% if cargo_usuario == "Director de Nivel Inicial" %}
+                                <option value="Inicial - Común">Común - Inicial</option>
+                            {% elif cargo_usuario == "Director de Nivel Primario" %}
+                                <option value="Primario - Común">Común - Primario</option>
+                            {% elif cargo_usuario == "Director de Nivel Secundario" %}
+                                <option value="Secundario - Común">Común - Secundario</option>
+                            {% elif cargo_usuario == "Director de Modalidad Adultos" %}
+                                <option value="Primario - Adultos">Adultos - Primario</option>
+                                <option value="Secundario - Adultos">Adultos - Secundario</option>
+                            {% elif cargo_usuario == "Director de Modalidad Especial" %}
+                                <option value="Inicial - Especial">Especial - Inicial</option>
+                                <option value="Primario - Especial">Especial - Primario</option>
+                            {% else %}
+                                <option value="Inicial - Común">Común - Inicial</option>
+                                <option value="Primario - Común">Común - Primario</option>
+                                <option value="Secundario - Común">Común - Secundario</option>
+                                <option value="Primario - Adultos">Adultos - Primario</option>
+                                <option value="Secundario - Adultos">Adultos - Secundario</option>
+                                <option value="Inicial - Especial">Especial - Inicial</option>
+                                <option value="Primario - Especial">Especial - Primario</option>
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <div class="filter-header-flex">
+                            <label for="fRegion"><i class="fas fa-map-marked-alt"></i> Región</label>
+                            <label class="switch-custom">
+                                <input type="checkbox" id="toggleRegionActivo" {% if regiones|length == 1 %}checked{% endif %}>
+                                <span class="slider-custom"></span>
+                            </label>
+                        </div>
+                        <select id="fRegion" {% if regiones|length == 1 %} class="has-value" {% else %} disabled {% endif %}>
+                            <option value="">-- Todas --</option>
+                            {% for region in regiones %}
+                                <option value="{{ region }}" {% if regiones|length == 1 %}selected{% endif %}>{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fAmbito"><i class="fas fa-map"></i>Ámbito</label>
+                        <select id="fAmbito"><option value="">-- Todos --</option><option>Urbano</option><option>Rural Disperso</option><option>Rural Aglomerado</option></select>
+                    </div>
+
+                   <div class="filter-item">
+                        <label for="fSector"><i class="fas fa-building"></i>Sector</label>
+                        <select id="fSector">
+                            <option value="">-- Todos --</option>
+                            <option value="Estatal">Estatal</option>
+                            <option value="Privado">Privado</option>
+                            <option value="Gestión Social/Cooperativa">Gestión Social/Cooperativa</option> 
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fCUE"><i class="fas fa-hashtag"></i>CUE</label>
+                        <input type="text" id="fCUE" placeholder="Ej: 220012300">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fCueanexo"><i class="fas fa-school"></i>CUE-Anexo</label>
+                        <input type="text" id="fCueanexo" placeholder="Ej: 22001230000">
+                    </div>
+                </div>
+
+                <div id="advertencia-region" class="alert-warning-custom">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Advertencia:</strong> Al filtrar por Región, se recomienda no aplicar filtros de Departamento o Localidad. Esto se debe a que existen CUE-Anexos (Localizaciones) que pertenecen a una Región Educativa específica, pero se encuentran geográficamente en una ubicación distinta.
+                </div>
+
+                <div class="active-filters-wrap" id="activeFiltersWrap" style="display:none;">
+                    <span class="active-filters-label"><i class="fas fa-tags me-1"></i>Filtros Activos:</span>
+                    <div id="chips-container" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                </div>
+
+                <div class="filter-actions text-end">
+                    <button class="btn-clear-filters" id="btnClearFilters">
+                        <i class="fas fa-sync-alt me-1"></i> Limpiar Filtros
+                    </button>
+                </div>
+            </div> 
+        </div> 
+    </div>
+
+    <div class="table-toolbar">
+        <div class="toolbar-left">
+            <div id="dtLengthWrap">
+                <span>Mostrar</span>
+                <select id="dtLengthSelect">
+                    <option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option>
+                </select>
+                <span>entradas</span>
+            </div>
+            <div id="exportButtonsContainer"></div>
+            <div class="mini-totals-wrap" id="mini-totals" style="display:none;">
+                <div class="mini-total t-25"><span class="lbl">SGE 25</span><span class="val" id="tot-sge25">0</span></div>
+                <div class="mini-total t-25"><span class="lbl">Insc 25</span><span class="val" id="tot-insc25">0</span></div>
+                <div class="mini-total t-26"><span class="lbl">SGE 26</span><span class="val" id="tot-sge26">0</span></div>
+                <div class="mini-total t-26"><span class="lbl">Insc 26</span><span class="val" id="tot-insc26">0</span></div>
+            </div>
+        </div>
+         <div class="toolbar-right">
+            <div class="search-wrap">
+                <div class="custom-search-group" style="width: 350px;">
+                    <select id="searchScope">
+                        <option value="all" selected>🔍 Todas</option>
+                    </select>
+                    <input type="text" id="customSearch" placeholder="Buscar dato...">
+                    <i class="fas fa-times-circle" id="btnResetSmartSearch" title="Limpiar búsqueda" 
+                       style="display: none; cursor: pointer; color: #94a3b8; padding: 0.6rem; align-self: center; transition: color 0.2s;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingWrapper">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h6 class="mt-3 text-muted">Organizando registros, por favor espere...</h6>
+    </div>
+
+    <div class="table-card" id="mainTableContainer" style="display: none;">
+        <div class="table-responsive">
+            <table id="sgeTable" class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>CUE-Anexo</th><th class="th-agente">Agente</th><th class="th-nombre">Nombre Escuela</th>             
+                        <th>Oferta</th><th>Sector</th><th>Ámbito</th><th>Regional</th><th>CUE</th><th>Anexo</th>              
+                        <th>Cód.Tel</th><th>Teléfono</th><th>Email</th><th>R. Apellido</th><th>R. Nombre</th>          
+                        <th>Tel. Resp.</th><th>SGE 25</th><th>Insc 25</th><th>SGE 26</th><th>Insc 26</th>            
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in object_list %}
+                    <tr>
+                        <td>{{ item.cueanexo|default:"-" }}</td>
+                        <td class="td-agente">{{ item.agente|default:"-" }}</td>
+                        <td class="td-nombre">{{ item.nombre|default:"-" }}</td>
+                        <td>{{ item.tipo_oferta|default:"-" }}</td>
+                        <td>
+                            {% if "ESTATAL" in item.sector|upper %}Estatal
+                            {% elif "PRIVAD" in item.sector|upper %}Privado
+                            {% else %}Gestión Social/Cooperativa{% endif %}
+                        </td>
+                        <td>{{ item.ambito|default:"-" }}</td>
+                        <td>{{ item.regional|default:"-" }}</td>
+                        <td>{{ item.cue|default:"-" }}</td>
+                        <td>{{ item.anexo|default:"-" }}</td>
+                        <td>{{ item.escuela_cod_tel|default:"-" }}</td>
+                        <td>{{ item.escuela_tel|default:"-" }}</td>
+                        <td>{{ item.escuela_email|default:"-" }}</td>
+                        <td>{{ item.responsable_apellido|default:"-" }}</td>
+                        <td>{{ item.responsable_nombre|default:"-" }}</td>
+                        <td>{{ item.telefono_responsable|default:"-" }}</td>
+
+                        <td class="td-sge25 {% if not item.sge_2025 or item.sge_2025 == 'Sin Carga 2025' or item.sge_2025 == '0' or item.sge_2025 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">{{ item.sge_2025|default:"-" }}</td>
+                        <td class="td-insc25 {% if not item.inscriptos_2025 or item.inscriptos_2025 == 'Sin Inscripciones 2025' or item.inscriptos_2025 == '0' or item.inscriptos_2025 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">{{ item.inscriptos_2025|default:"-" }}</td>
+                        <td class="td-sge26 {% if not item.sge_2026 or item.sge_2026 == 'Sin Carga 2026' or item.sge_2026 == '0' or item.sge_2026 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">{{ item.sge_2026|default:"Sin Carga 2026" }}</td>
+                        <td class="td-insc26 {% if not item.inscriptos_2026 or item.inscriptos_2026 == 'Sin Inscripciones 2026' or item.inscriptos_2026 == '0' or item.inscriptos_2026 == '-' %}sin-dato{% else %}dato-numerico{% endif %}">{{ item.inscriptos_2026|default:"Sin Inscripciones 2026" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="table-foot">
+            <div id="dtInfo"></div>
+            <nav><ul class="pagination pagination-sm mb-0" id="dtPaginate"></ul></nav>
+        </div>
+    </div>
+</div>
+
+{% if is_admin %}
+<div class="modal fade" id="fechaModal" tabindex="-1" aria-labelledby="fechaModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none; padding: 1.4rem 1.6rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-calendar-alt" style="color: #fff; font-size: 1rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="fechaModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem;">Actualizar fecha</h5>
+                        <p style="color: rgba(255,255,255,0.7); font-size: 0.78rem; margin: 0; font-weight: 500;">Solo visible para administradores</p>
+                    </div>
+                </div>
+                <button type="button" id="fechaModalCloseBtn" class="ms-auto" aria-label="Cerrar" style="background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 32px; height: 32px; color: #fff; cursor: pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="modal-body" style="padding: 1.6rem;">
+                {% csrf_token %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 1rem 1.2rem; margin-bottom: 1.2rem;">
+                    <p style="font-size: 0.78rem; color: #64748b; margin: 0; display: flex; align-items: flex-start; gap: 0.5rem;"><i class="fas fa-info-circle" style="color: #3b82f6; margin-top: 2px; flex-shrink: 0;"></i>Esta fecha indica cuándo fueron extraídos los datos del SGE. Se muestra en el encabezado.</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="nuevaFecha" style="font-size: 0.82rem; font-weight: 700; color: #111827; text-transform: uppercase;"><i class="fas fa-clock me-1 text-primary"></i>Nueva fecha y hora</label>
+                    <input type="datetime-local" id="nuevaFecha" required style="border: 1.5px solid #cbd5e1; border-radius: 0.5rem; padding: 0.65rem 0.9rem; font-size: 0.95rem; width: 100%;">
+                </div>
+                <div id="modalError" class="mt-3" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.7rem 1rem; font-size: 0.85rem; color: #b91c1c;">
+                    <i class="fas fa-exclamation-circle me-2"></i><span id="modalErrorText"></span>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; background: #f8fafc;">
+                <button type="button" id="fechaModalCancelBtn" class="btn btn-light" style="border: 1.5px solid #cbd5e1; font-weight: 600;">Cancelar</button>
+                <button type="button" id="guardarFechaBtn" class="btn btn-primary" style="font-weight: 700;"><i class="fas fa-save me-1"></i> Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+<script>
+document.getElementById('btnAyudaFiltros').addEventListener('click', function () {
+    var modal = new bootstrap.Modal(document.getElementById('ayudaFiltrosModal'));
+    modal.show();
+});
+
+$(document).ready(function () {
+    const DEFAULT_VISIBLE = [0, 2, 6, 17, 18];
+    const ALL_COLS = Array.from({length: 19}, (_, i) => i);
+
+    const filterLabels = {
+        'fAudit2025': '(SGE 2025 - Insc 2025)', 'fAudit2026': '(SGE 2026 - Insc 2026)',
+        'fOferta': 'Oferta', 'fRegion': 'Región', 'fAmbito': 'Ámbito',
+        'fSector': 'Sector', 'fCUE': 'CUE', 'fCueanexo': 'CUE-Anexo'
+    };
+    
+    function limpiarEmojis(texto) { return texto.replace(/[✅⚪⚠️]/g, '').trim(); }
+
+    // ==========================================
+    // 1. BUSCADOR INTELIGENTE
+    // ==========================================
+    function cargarSelectorBusquedaCompleto() {
+        const selector = $('#searchScope');
+        selector.empty().append('<option value="all" selected>🔍 Todas</option>');
+        const cruciales = [1, 2, 9, 10, 11, 12, 13, 14];
+
+        table.columns().every(function () {
+            const column = this;
+            const idx = column.index();
+            if (cruciales.includes(idx)) {
+                const headerText = $(column.header()).text().trim();
+                if (headerText !== "") { selector.append(`<option value="${idx}">${headerText}</option>`); }
+            }
+        });
+    }
+
+    $('#searchScope').on('change', function() {
+        $('#customSearch').val('');
+        $('#btnResetSmartSearch').hide();
+        applyAllFilters();
+    });
+
+    $('#customSearch').on('input', function() {
+        $(this).val().length > 0 ? $('#btnResetSmartSearch').fadeIn('fast') : $('#btnResetSmartSearch').fadeOut('fast');
+    });
+
+    $('#btnResetSmartSearch').on('click', function() {
+        $('#customSearch').val('');
+        $(this).hide();
+        applyAllFilters(); 
+        $('#customSearch').focus();
+    });
+
+    // ========== NOMBRES DE ARCHIVO ==========
+    function getTextoFiltrosParaNombre() {
+        var parts = [];
+        if ($('#fAudit2025').val()) parts.push('Est.Carga25: ' + limpiarEmojis($('#fAudit2025 option:selected').text()));
+        if ($('#fAudit2026').val()) parts.push('Est.Carga26: ' + limpiarEmojis($('#fAudit2026 option:selected').text()));
+        if ($('#fOferta').val()) parts.push('Oferta: ' + $('#fOferta option:selected').text());
+        if ($('#fRegion').val() && !$('#fRegion').prop('disabled')) parts.push('Región: ' + $('#fRegion').val());
+        if ($('#fAmbito').val()) parts.push('Ámbito: ' + $('#fAmbito').val());
+        if ($('#fSector').val()) parts.push('Sector: ' + $('#fSector').val());
+        if ($('#fCUE').val()) parts.push('CUE: ' + $('#fCUE').val());
+        if ($('#fCueanexo').val()) parts.push('CUE-Anexo: ' + $('#fCueanexo').val());
+        
+        if (parts.length === 0) return '';
+        var lineas = [];
+        for (var i = 0; i < parts.length; i += 3) { lineas.push(parts.slice(i, i + 3).join(' | ')); }
+        return 'Filtros aplicados: ' + lineas.join(' | ');
+    }
+
+    function buildExportSubtitle() {
+        var parts = [];
+        if ($('#fAudit2025').val()) parts.push('Est. Carga 25: ' + limpiarEmojis($('#fAudit2025 option:selected').text()));
+        if ($('#fAudit2026').val()) parts.push('Est. Carga 26: ' + limpiarEmojis($('#fAudit2026 option:selected').text()));
+        if ($('#fOferta').val()) parts.push('Oferta: ' + $('#fOferta option:selected').text());
+        if ($('#fRegion').val() && !$('#fRegion').prop('disabled')) parts.push('Región: ' + $('#fRegion').val());
+        if ($('#fAmbito').val()) parts.push('Ámbito: ' + $('#fAmbito').val());
+        if ($('#fSector').val()) parts.push('Sector: ' + $('#fSector').val());
+        if ($('#fCUE').val()) parts.push('CUE: ' + $('#fCUE').val());
+        if ($('#fCueanexo').val()) parts.push('CUE-Anexo: ' + $('#fCueanexo').val());
+        
+        return parts.length === 0 ? 'Sin filtros aplicados' : parts.join(' | ');
+    }
+
+    function getNombreArchivoExportacion() {
+        var ahora = new Date();
+        var dia = String(ahora.getDate()).padStart(2, '0');
+        var mes = String(ahora.getMonth() + 1).padStart(2, '0');
+        var anio = ahora.getFullYear();
+        var horas = String(ahora.getHours()).padStart(2, '0');
+        var min = String(ahora.getMinutes()).padStart(2, '0');
+        var seg = String(ahora.getSeconds()).padStart(2, '0');
+        var ampm = ahora.getHours() >= 12 ? 'p. m.' : 'a. m.';
+        return 'Informe_SGE_' + dia + '-' + mes + '-' + anio + '_' + horas + min + seg + ' ' + ampm;
+    }
+
+    function getNombreArchivoConFiltros() {
+        var base = getNombreArchivoExportacion();
+        var baseLimpia = base.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ');
+        var textoFiltros = getTextoFiltrosParaNombre();
+        if (textoFiltros && textoFiltros !== '') {
+            return baseLimpia + ' - ' + textoFiltros.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ');
+        }
+        return baseLimpia;
+    }
+
+    $('#toggleRegionActivo').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#fRegion').prop('disabled', false);
+            $('#advertencia-region').slideDown('fast');
+            $('#fRegion').trigger('change');
+        } else {
+            $('#fRegion').prop('disabled', true).val('').removeClass('has-value');
+            $('#advertencia-region').slideUp('fast');
+            actualizarChips(); applyAllFilters();
+        }
+    });
+
+    try {
+        var table = $('#sgeTable').DataTable({
+            language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
+            pageLength: 10,
+            dom: 'Brt',
+           buttons: [
+                {
+                    extend: 'excelHtml5',
+                    text: '<i class="fas fa-file-excel me-1 text-success"></i>Excel',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    messageTop: function() { return buildExportSubtitle(); },
+                    exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                    customize: function(xlsx) {
+                        var sheet = xlsx.xl.worksheets['sheet1.xml'];
+                        var ahora = new Date();
+                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' a las ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                        var textoCompleto = 'Informe generado el: ' + fechaStr + '\r\n\r' + ' ' + 'Filtros aplicados: ' + buildExportSubtitle();
+                        var $celda = $('row:nth-child(2) c', sheet);
+                        var $texto = $celda.find('t');
+                        $texto.text(textoCompleto).attr('xml:space', 'preserve');
+                        $celda.attr('s', '51');
+                        var alturaFila = textoCompleto.split('\n').length * 15; 
+                        $('row:nth-child(2)', sheet).attr('ht', alturaFila).attr('customHeight', '1');
+                    }
+                },
+                {
+                    extend: 'csvHtml5',
+                    text: '<i class="fas fa-file-csv me-1 text-primary"></i>CSV',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    exportOptions: { columns: ':visible', modifier: { page: 'all' } }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    text: '<i class="fas fa-file-pdf me-1 text-danger"></i>PDF',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL', // <--- OFICIO
+                    exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                    customize: function(doc) {
+                        // Aumentamos el margen TOP de 15 a 40 para que entre la fecha sin chocar
+                        doc.pageMargins = [10, 40, 10, 35];
+                        
+                        // --- INYECCIÓN DE LA FECHA EN EL ENCABEZADO ---
+                        doc.header = function() {
+                            var ahora = new Date();
+                            var fechaStr = ahora.toLocaleDateString('es-AR') + ' - ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                            return {
+                                text: 'Informe generado el: ' + fechaStr,
+                                alignment: 'right',
+                                fontSize: 8,
+                                color: '#6b7280',
+                                margin: [0, 15, 10, 0] // Alineado con el margen derecho de 10
+                            };
+                        };
+
+                        var tableNode = doc.content.find(n => n.table);
+                        if (tableNode) {
+                            tableNode.table.dontBreakRows = true;
+                            tableNode.table.widths = tableNode.table.body[0].map(cell => {
+                                var h = (cell.text || '').toLowerCase().trim();
+                                if (h === 'nombre escuela') return '*'; 
+                                if (h.includes('email')) return 65;
+                                if (h.includes('oferta')) return 50;
+                                if (h.includes('agente')) return 45;
+                                if (h.includes('apellido')) return 50;
+                                if (h.includes('nombre')) return 45;
+                                if (h.includes('sector') || h.includes('ámbito') || h.includes('ambito')) return 40;
+                                return 'auto';
+                            });
+                            
+                            tableNode.layout = {
+                                hLineWidth: function(){ return 0.4; },
+                                vLineWidth: function(){ return 0.4; },
+                                hLineColor: function(){ return '#bbb'; },
+                                vLineColor: function(){ return '#bbb'; },
+                                paddingLeft: function() { return 2; },
+                                paddingRight: function() { return 2; },
+                                paddingTop: function() { return 2; },
+                                paddingBottom: function() { return 2; },
+                                fillColor: function(i){ return i === 0 ? '#1a3a5c' : null; }
+                            };
+
+                            tableNode.table.body.forEach((row, i) => {
+                                row.forEach(cell => {
+                                    cell.fontSize = (i === 0) ? 8.5 : 7.5;
+                                    cell.margin = [1, 2, 1, 2];
+                                    if (i === 0) { 
+                                        cell.color = 'white'; 
+                                        cell.bold = true; 
+                                        cell.alignment = 'center';
+                                    } else if (typeof cell.text === 'string') {
+                                        cell.text = cell.text.replace(/([@\.\-_/])/g, '$1\u200B');
+                                    }
+                                });
+                            });
+                        }
+                        doc.footer = function(page, pages) {
+                            return {
+                                columns: [
+                                    { text: 'Informe SGE', alignment: 'left', fontSize: 8, color: '#6b7280', margin: [10, 0] },
+                                    { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 0, 10, 0] }
+                                ]
+                            };
+                        };
+                    }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    text: '<i class="fas fa-print me-1 text-dark"></i>Imprimir',
+                    className: 'btn-sm bg-white',
+                    title: 'Informe SGE 2026',
+                    filename: function() { return getNombreArchivoConFiltros(); },
+                    messageTop: function() { return 'Filtros aplicados: ' + buildExportSubtitle(); },
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL', // <--- OFICIO
+                    download: 'open',
+                    exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                    customize: function(doc) {
+                        // Aumentamos el margen TOP de 15 a 40 para que entre la fecha sin chocar
+                        doc.pageMargins = [10, 40, 10, 35];
+                        
+                        // --- INYECCIÓN DE LA FECHA EN EL ENCABEZADO ---
+                        doc.header = function() {
+                            var ahora = new Date();
+                            var fechaStr = ahora.toLocaleDateString('es-AR') + ' - ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                            return {
+                                text: 'Informe generado el: ' + fechaStr,
+                                alignment: 'right',
+                                fontSize: 8,
+                                color: '#6b7280',
+                                margin: [0, 15, 10, 0] // Alineado con el margen derecho de 10
+                            };
+                        };
+
+                        var tableNode = doc.content.find(n => n.table);
+                        if (tableNode) {
+                            tableNode.table.dontBreakRows = true;
+                            tableNode.table.widths = tableNode.table.body[0].map(cell => {
+                                var h = (cell.text || '').toLowerCase().trim();
+                                if (h === 'nombre escuela') return '*'; 
+                                if (h.includes('email')) return 65;
+                                if (h.includes('oferta')) return 50;
+                                if (h.includes('agente')) return 45;
+                                if (h.includes('apellido')) return 50;
+                                if (h.includes('nombre')) return 45;
+                                if (h.includes('sector') || h.includes('ámbito') || h.includes('ambito')) return 40;
+                                return 'auto';
+                            });
+                            
+                            tableNode.layout = {
+                                hLineWidth: function(){ return 0.4; },
+                                vLineWidth: function(){ return 0.4; },
+                                hLineColor: function(){ return '#bbb'; },
+                                vLineColor: function(){ return '#bbb'; },
+                                paddingLeft: function() { return 2; },
+                                paddingRight: function() { return 2; },
+                                paddingTop: function() { return 2; },
+                                paddingBottom: function() { return 2; },
+                                fillColor: function(i){ return i === 0 ? '#1a3a5c' : null; }
+                            };
+
+                            tableNode.table.body.forEach((row, i) => {
+                                row.forEach(cell => {
+                                    cell.fontSize = (i === 0) ? 8.5 : 7.5;
+                                    cell.margin = [1, 2, 1, 2];
+                                    if (i === 0) { 
+                                        cell.color = 'white'; 
+                                        cell.bold = true; 
+                                        cell.alignment = 'center';
+                                    } else if (typeof cell.text === 'string') {
+                                        cell.text = cell.text.replace(/([@\.\-_/])/g, '$1\u200B');
+                                    }
+                                });
+                            });
+                        }
+                        doc.footer = function(page, pages) {
+                            return {
+                                columns: [
+                                    { text: 'Informe SGE', alignment: 'left', fontSize: 8, color: '#6b7280', margin: [10, 0] },
+                                    { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 0, 10, 0] }
+                                ]
+                            };
+                        };
+                    }
+                }
+            ],
+            columnDefs: [ { targets: ALL_COLS.filter(i => !DEFAULT_VISIBLE.includes(i)), visible: false } ],
+            scrollX: false,
+            autoWidth: false,
+            initComplete: function() {
+                try { $('#exportButtonsContainer').append(table.buttons().container()); } catch(e) {}
+                $('#loadingWrapper').hide();
+                $('#mainTableContainer').fadeIn('fast', function() { table.columns.adjust(); });
+                $('#mini-totals').fadeIn('fast');
+                cargarSelectorBusquedaCompleto(); 
+            }
+        });
+    } catch (err) {
+        console.error("DataTables Error:", err);
+        $('#loadingWrapper').hide(); $('#mainTableContainer').show(); $('#mini-totals').show();
+    }
+
+    // ─── ACTUALIZACIÓN DE TARJETAS DE TOTALES ───
+    function updateTotals() {
+        var getNum = function(val) {
+            var v = String(val).replace(/<[^>]*>?/gm, '').trim().toLowerCase();
+            if (v === '' || v === '-' || v === '0' || v.indexOf('sin') !== -1) return 0;
+            var parsed = parseInt(v.replace(/[\.,\s]/g, ''), 10);
+            return isNaN(parsed) ? 0 : parsed;
+        };
+
+        var tSge25 = 0, tInsc25 = 0, tSge26 = 0, tInsc26 = 0;
+        table.rows({ search: 'applied' }).every(function() {
+            var data = this.data();
+            tSge25 += getNum(data[15]); tInsc25 += getNum(data[16]);
+            tSge26 += getNum(data[17]); tInsc26 += getNum(data[18]);
+        });
+
+        $('#tot-sge25').text(tSge25.toLocaleString('es-AR'));
+        $('#tot-insc25').text(tInsc25.toLocaleString('es-AR'));
+        $('#tot-sge26').text(tSge26.toLocaleString('es-AR'));
+        $('#tot-insc26').text(tInsc26.toLocaleString('es-AR'));
+    }
+
+    // ─── PAGINACIÓN ───
+    function updateFooter() {
+        var info = table.page.info();
+        var from = info.recordsDisplay === 0 ? 0 : info.start + 1;
+        var extra = info.recordsTotal !== info.recordsDisplay ? ' (filtrado de ' + info.recordsTotal + ' totales)' : '';
+        $('#dtInfo').text('Mostrando ' + from + '–' + info.end + ' de ' + info.recordsDisplay + ' registros' + extra);
+
+        var totalPages = info.pages, current = info.page, html = '';
+        html += '<li class="page-item' + (current === 0 ? ' disabled' : '') + '"><a class="page-link dt-page" data-page="' + (current - 1) + '" href="#">‹</a></li>';
+        for (var p = 0; p < totalPages; p++) {
+            if (totalPages > 7 && Math.abs(p - current) > 2 && p !== 0 && p !== totalPages - 1) {
+                if (p === 1 || p === totalPages - 2) html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+                continue;
+            }
+            html += '<li class="page-item' + (p === current ? ' active' : '') + '"><a class="page-link dt-page" data-page="' + p + '" href="#">' + (p + 1) + '</a></li>';
+        }
+        html += '<li class="page-item' + (current >= totalPages - 1 ? ' disabled' : '') + '"><a class="page-link dt-page" data-page="' + (current + 1) + '" href="#">›</a></li>';
+        $('#dtPaginate').html(html);
+    }
+    
+    table.on('draw', function() { updateFooter(); updateTotals(); });
+    updateFooter();
+    
+    $(document).on('click', '.dt-page', function (e) {
+        e.preventDefault();
+        var p = parseInt($(this).data('page'));
+        var info = table.page.info();
+        if (p >= 0 && p < info.pages) table.page(p).draw('page');
+    });
+
+    $('#dtLengthSelect').on('change', function () { table.page.len(parseInt(this.value)).draw(); });
+
+    // ─── SINCRONIZACIÓN DE BADGES DE COLUMNA ───
+    function syncBadges() {
+        $('.col-badge').each(function () {
+            var cols = $(this).data('cols').toString().split(',').map(Number);
+            var allVisible = cols.every(c => table.column(c).visible());
+            $(this).toggleClass('active', allVisible);
+        });
+    }
+    
+    $('.col-badge').on('click', function () {
+        var cols = $(this).data('cols').toString().split(',').map(Number);
+        var allVisible = cols.every(c => table.column(c).visible());
+
+        cols.forEach(c => table.column(c).visible(!allVisible));
+        syncBadges(); updateFooter();
+    });
+
+    $('#btnShowAll').on('click', function () { table.columns().visible(true); syncBadges(); updateFooter(); });
+    $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(i === 0 || i === 2)); syncBadges(); updateFooter(); });
+    $('#btnDefault').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(DEFAULT_VISIBLE.includes(i))); syncBadges(); updateFooter(); });
+
+    // ─── RENDER DE LOS CHIPS ───
+    function actualizarChips() {
+        const container = $('#chips-container');
+        container.empty();
+        let hasActive = false;
+
+        $.each(filterLabels, function(id, label) {
+            const $el = $('#' + id);
+            let val = $el.val();
+            if (id === 'fRegion' && $el.prop('disabled')) val = '';
+            if (val && val.trim() !== '') {
+                hasActive = true;
+                container.append(`<span class="filter-chip"><b>${label}:</b> ${$el.is('select') ? $el.find('option:selected').text() : val} <span class="remove-chip" onclick="quitarFiltro('${id}')"><i class="fas fa-times"></i></span></span>`);
+            }
+        });
+        hasActive ? $('#activeFiltersWrap').slideDown('fast') : $('#activeFiltersWrap').slideUp('fast');
+    }
+
+    window.quitarFiltro = function(id) {
+        const $el = $('#' + id);
+        if (id === 'fRegion') { if ($('#toggleRegionActivo').is(':checked')) $el.val('').removeClass('has-value').trigger('change'); } 
+        else { $el.val('').removeClass('has-value').trigger($el.is('select') ? 'change' : 'input'); }
+    };
+
+    // ─── MOTOR CENTRAL DE FILTROS ───
+    function applyAllFilters() {
+        table.search('').columns().search('');
+        $.fn.dataTable.ext.search.length = 0; 
+
+        var audit2025 = $('#fAudit2025').val();
+        var audit2026 = $('#fAudit2026').val();
+        var fOferta   = $('#fOferta').val();
+        var fSector   = $('#fSector').val();
+        var fAmbito   = $('#fAmbito').val();
+        var regionVal = ($('#toggleRegionActivo').is(':checked') && !$('#fRegion').prop('disabled')) ? $('#fRegion').val() : '';
+        var valCUE = $('#fCUE').val().trim();
+        // Si pegan 7, 9 u 11 dígitos, siempre nos quedamos con los primeros 7
+        var fCUE = (valCUE.length >= 7) ? valCUE.substring(0, 7) : valCUE;
+        var fCueanexo = $('#fCueanexo').val().trim();
+        var smartQuery = $('#customSearch').val().trim().replace(/\s+/g, ' ');
+
+        if (audit2025 || audit2026) {
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                var getNum = function(val) {
+                    var v = String(val).replace(/<[^>]*>?/gm, '').trim().toLowerCase();
+                    if (v === '' || v === '-' || v === '0' || v.indexOf('sin') !== -1) return 0;
+                    return parseInt(v.replace(/[\.,\s]/g, ''), 10) || 0;
+                };
+
+                var sge25 = getNum(data[15]), insc25 = getNum(data[16]);
+                var sge26 = getNum(data[17]), insc26 = getNum(data[18]);
+                
+                if (audit2025 === 'ok' && !(sge25 > 0 && sge25 === insc25)) return false;
+                if (audit2025 === 'diff' && !((sge25 > 0 || insc25 > 0) && sge25 !== insc25)) return false;
+                if (audit2025 === 'vacio' && !(sge25 === 0 && insc25 === 0)) return false;
+                
+                if (audit2026 === 'ok' && !(sge26 > 0 && sge26 === insc26)) return false;
+                if (audit2026 === 'diff' && !((sge26 > 0 || insc26 > 0) && sge26 !== insc26)) return false;
+                if (audit2026 === 'vacio' && !(sge26 === 0 && insc26 === 0)) return false;
+                return true;
+            });
+            if (audit2025) { table.column(15).visible(true); table.column(16).visible(true); }
+            if (audit2026) { table.column(17).visible(true); table.column(18).visible(true); }
+        }
+
+        if (fOferta)   table.column(3).search($.fn.dataTable.util.escapeRegex(fOferta), true, false).visible(true);
+        if (fSector)   table.column(4).search('^\\s*' + $.fn.dataTable.util.escapeRegex(fSector) + '\\s*$', true, false).visible(true);
+        if (fAmbito)   table.column(5).search('^\\s*' + $.fn.dataTable.util.escapeRegex(fAmbito) + '\\s*$', true, false).visible(true);
+        if (regionVal) table.column(6).search('^\\s*' + $.fn.dataTable.util.escapeRegex(regionVal) + '\\s*$', true, false).visible(true);
+        if (fCUE)      table.column(7).search('^' + $.fn.dataTable.util.escapeRegex(fCUE), true, false).visible(true);
+        if (fCueanexo) table.column(0).search(fCueanexo).visible(true);
+
+        if (smartQuery !== '') {
+            var scope = $('#searchScope').val();
+            if (scope === 'all') {
+                table.search(smartQuery, false, false, true);
+                table.column(0).visible(true); table.column(2).visible(true);
+            } else {
+                var smartColIdx = parseInt(scope);
+                table.column(smartColIdx).search(smartQuery, false, false, true).visible(true);
+                $('.col-badge').each(function () {
+                    var cols = $(this).data('cols').toString().split(',').map(Number);
+                    if (cols.includes(smartColIdx)) cols.forEach(c => table.column(c).visible(true));
+                });
+            }
+        }
+
+        table.draw();
+        syncBadges();
+        updateFooter();
+        if (typeof updateTotals === "function") updateTotals(); 
+    }
+
+    function toggleHasValue($el) { $el.toggleClass('has-value', $el.val() !== '' && $el.val() !== null); }
+
+    $('#fAudit2025, #fAudit2026, #fOferta, #fAmbito, #fSector').on('change', function () { 
+        toggleHasValue($(this)); actualizarChips(); applyAllFilters();
+    });
+
+    $('#fRegion').on('change', function () {
+        if (!$('#toggleRegionActivo').is(':checked')) return;
+        toggleHasValue($(this)); actualizarChips(); applyAllFilters();
+    });
+
+    let typingTimer;
+    $('#fCUE, #fCueanexo').on('input', function () { 
+        toggleHasValue($(this)); clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() { actualizarChips(); applyAllFilters(); }, 400); 
+    });
+
+    var smartSearchTimer;
+    $('#customSearch').on('keyup', function () {
+        clearTimeout(smartSearchTimer);
+        smartSearchTimer = setTimeout(applyAllFilters, 250);
+    });
+
+// === BOTÓN LIMPIAR FILTROS (RESET INTELIGENTE) ===
+// === BOTÓN LIMPIAR FILTROS (RESETEO INTELIGENTE) ===
+    $('#btnClearFilters').on('click', function () {
+        // 1. Limpiamos todos los valores de carga y búsqueda (incluyendo selector de oferta si existiera)
+        $('#fAudit2025, #fAudit2026, #fOferta, #fAmbito, #fSector, #fCUE, #fCueanexo, #customSearch').val('').removeClass('has-value');
+        $('#btnResetSmartSearch').hide();
+
+        // 2. RESPETA LA DECISIÓN DEL USUARIO CON EL SWITCH DE REGIÓN
+        // Verificamos si está prendido o apagado y actuamos en consecuencia
+        if ($('#toggleRegionActivo').is(':checked')) {
+            $('#fRegion').prop('disabled', false).val('').removeClass('has-value');
+            $('#advertencia-region').slideDown('fast');
+        } else {
+            $('#fRegion').prop('disabled', true).val('').removeClass('has-value');
+            $('#advertencia-region').slideUp('fast');
+        }
+        
+        // 3. Refrescamos la tabla y la visual de los chips
+        actualizarChips(); 
+        applyAllFilters();
+    });
+
+    if ($('#toggleRegionActivo').is(':checked')) { applyAllFilters(); actualizarChips(); }
+
+    {% if is_admin %}
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; }
+            }
+        }
+        return cookieValue;
+    }
+
+    const modalElement = document.getElementById('fechaModal');
+    if (modalElement) {
+        const fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+
+        function mostrarErrorModal(msg) {
+            const errDiv = document.getElementById('modalError');
+            const errText = document.getElementById('modalErrorText');
+            if (msg) { errText.textContent = msg; errDiv.style.display = 'flex'; } else { errDiv.style.display = 'none'; errText.textContent = ''; }
+        }
+
+        function cerrarModal() { mostrarErrorModal(''); fechaModalBS.hide(); }
+
+        const editBtn = document.getElementById('editFechaBtn');
+        if (editBtn) {
+            editBtn.addEventListener('click', function () {
+                mostrarErrorModal('');
+                {% if ultima_fecha %}
+                    try {
+                        let fechaActual = new Date('{{ ultima_fecha|date:"Y-m-d H:i:s" }}');
+                        document.getElementById('nuevaFecha').value = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}T${String(fechaActual.getHours()).padStart(2, '0')}:${String(fechaActual.getMinutes()).padStart(2, '0')}`;
+                    } catch(e) {}
+                {% endif %}
+                fechaModalBS.show();
+            });
+        }
+
+        const closeBtn = document.getElementById('fechaModalCloseBtn');
+        if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
+
+        const cancelBtn = document.getElementById('fechaModalCancelBtn');
+        if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
+
+        const guardarBtn = document.getElementById('guardarFechaBtn');
+        if (guardarBtn) {
+            guardarBtn.addEventListener('click', function () {
+                const nuevaFecha = document.getElementById('nuevaFecha').value;
+                if (!nuevaFecha) { mostrarErrorModal('Debes seleccionar una fecha y hora.'); return; }
+                guardarBtn.disabled = true; guardarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+               fetch('{% url "indicsie:actualizar_fecha_sge" %}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                    body: JSON.stringify({ fecha: nuevaFecha })
+                })
+                .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
+                .then(function(data) {
+                    if (data.status === 'success') { cerrarModal(); location.reload(); } 
+                    else { mostrarErrorModal(data.message || 'Error al actualizar la fecha.'); guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; }
+                })
+                .catch(function(error) { console.error('Error:', error); mostrarErrorModal('Error de conexión. Verificá tu red e intentá de nuevo.'); guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; });
+            });
+        }
+
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            mostrarErrorModal('');
+            if (guardarBtn) { guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% load static %}
+<aside class="main-sidebar sidebar-light-primary elevation-4">
+    <a href="{% url 'bibliotecas:dashboard_dir' %}" class="brand-link">
+        <img src="{% static 'img/logoEstMini.png' %}"
+             alt="Estadística Educativa"
+             class="brand-image img-circle elevation-3"
+             style="opacity: .8">
+        <span class="brand-text font-weight-light">Estadística Educativa</span>
+    </a>
+    <div class="sidebar">
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="image">
+                <img src="{{ request.user.get_image }}" class="img-circle" alt="Usuario">
+            </div>
+            <div class="info">
+                <a href="#" class="d-block">{{ request.user.username }}</a>
+            </div>
+        </div>
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                <li class="nav-header">Mantenimientos</li>
+                
+                <li class="nav-item">
+                    <a href="{% url 'funcionario:portada_func' %}" class="nav-link">
+                        <i class="nav-icon fas fa-home" style="color:orange;"></i>
+                        <p>
+                            Inicio
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'bibliotecas:generar_informe_list' %}" class="nav-link">
+                        <i class="nav-icon fas fa-unlock" style="color:green;"></i>
+                        <p>
+                            Monitoreo Carga Planillas
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'bibliotecas:modal_generar_pdf_cue' %}" class="nav-link">
+                        <i class="nav-icon fas fa-file" style="color:red;"></i>
+                        <p>
+                            Generar PDF - Cueanexo
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item has-treeview">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-archive" style="color:blue;"></i>
+                        <p>
+                            Resultados
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:servicio_matbiblio' %}" class="nav-link">
+                                <i class="fas fa-book-open" style="color:gray;"></i>
+                                <p>Material Bibliográfico</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:servicio_referencia' %}" class="nav-link">
+                                <i class="far fa-hand-point-right" style="color:blue"></i>
+                                <p>Servicio Referencia</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:servicio_refvirtual' %}" class="nav-link">
+                                <i class="fas fa-wifi" style="color:brown;"></i>
+                                <p>Servicio Referencia Virtual</p>
+                            </a>
+                        </li>                        
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:infopedagres' %}" class="nav-link">
+                                <i class="fab fa-readme" style="color:lightgreen"></i>
+                                <p>Informe Pedagógico</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:asist_usua' %}" class="nav-link">
+                                <i class="fas fa-user-tie" style="color:black;"></i>
+                                <p>Asistencia Usuarios</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:proctecres' %}" class="nav-link">
+                                <i class="fas fa-cogs" style="color:red;"></i>
+                                <p>Procesos Técnicos</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:destinofondos' %}" class="nav-link">
+                                <i class="fas fa-donate" style="color:green;"></i>
+                                <p>Destino de Fondos</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'bibliotecas:servicio_prestamo' %}" class="nav-link">
+                                <i class="fa fa-users" style="color:cyan"></i>
+                                <p>Personal Biblioteca</p>
+                            </a>
+                        </li>
+                        {% comment %} <li class="nav-item">
+                            <a href="{% url 'bibliotecas:plan_anex' %}" class="nav-link">
+                                <i class="fas fa-file-alt" style="color:violet;"></i>
+                                <p>Planillas Anexas</p>
+                            </a>
+                        </li> {% endcomment %}
+                    </ul>
+                </li> 
+            </ul>
+        </nav>
+    </div>
+</aside>

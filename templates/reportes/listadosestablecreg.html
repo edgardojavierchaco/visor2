@@ -1,0 +1,112 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<style>
+body { font-family: "Segoe UI", Roboto, Helvetica, sans-serif; background-color: #f4f5f7; color: #333; }
+.card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; background-color: #fff; }
+.card-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 15px; }
+.data-box { flex: 1; padding: 15px; border-radius: 8px; text-align: center; color: #fff; font-weight: 600; }
+.data-box p { margin:0; font-size:0.9rem; }
+.data-box span { display:block; font-size:1.4rem; margin-top:5px; }
+.bg-primary{background:#0d6efd;} .bg-success{background:#198754;} .bg-warning{background:#ffc107;color:#212529;} 
+.bg-danger{background:#dc3545;} .bg-info{background:#0dcaf0;color:#212529;} .bg-dark{background:#343a40;} 
+.container-flex{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;}
+.region-img{max-width:400px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+.select-region{margin:20px 0; max-width:400px;}
+canvas{background:#fff; border-radius:12px; padding:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+</style>
+
+<div class="select-region">
+    <label for="region" class="form-label fw-bold">Selecciona una Regional Educativa:</label>
+    <select id="region" class="form-select">
+        <option value="">--Seleccione--</option>
+        {% for region in regionales %}
+            <option value="{{ region }}">{{ region }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div id="resultado-container" style="display:none;">
+    <div class="container-flex">
+        <div class="card flex-fill">
+            <h2 class="card-title">Regional: <span id="nombre-departamento"></span></h2>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <div class="data-box bg-success"><p>Inicial</p><span id="total_inicial"></span></div>
+                <div class="data-box bg-warning"><p>Primario</p><span id="total_primario"></span></div>
+                <div class="data-box bg-danger"><p>Secundario</p><span id="total_secundaria"></span></div>
+                <div class="data-box bg-info"><p>Adulto Primario</p><span id="total_adultoprim"></span></div>
+                <div class="data-box bg-info"><p>Adulto Secundario</p><span id="total_adultosec"></span></div>
+                <div class="data-box bg-info"><p>Adulto Form. Prof.</p><span id="total_adultofp"></span></div>
+                <div class="data-box bg-dark"><p>Biblioteca</p><span id="total_biblio"></span></div>
+                <div class="data-box bg-dark"><p>CEF</p><span id="total_cef"></span></div>
+                <div class="data-box bg-dark"><p>Especial</p><span id="total_especial"></span></div>
+            </div>
+        </div>
+
+        <div class="card flex-fill">
+            <canvas id="ambitoChart" height="200"></canvas>
+            <canvas id="sectorChart" height="200" style="margin-top:20px;"></canvas>
+        </div>
+
+        <img id="imagen-departamento" class="region-img" src="{% static 'img/regioneschaco.png' %}" alt="Imagen Regional">
+    </div>
+</div>
+
+<script>
+$(function(){
+    let ambitoChart, sectorChart;
+
+    function actualizarCharts(datos){
+        const ambitoData = [datos.total_urbanos, datos.total_rurales_dispersos, datos.total_rurales_aglomerados];
+        const sectorData = [datos.total_estatales, datos.total_privados, datos.total_soccom];
+
+        if(ambitoChart) ambitoChart.destroy();
+        if(sectorChart) sectorChart.destroy();
+
+        ambitoChart = new Chart($('#ambitoChart'), {
+            type:'pie',
+            data:{labels:['Urbano','Rural Disperso','Rural Aglomerado'], datasets:[{data:ambitoData, backgroundColor:['#0d6efd','#ffc107','#ffc107']}]},
+            options:{plugins:{title:{display:true,text:'Ámbito Educativo'}}}
+        });
+
+        sectorChart = new Chart($('#sectorChart'), {
+            type:'bar',
+            data:{labels:['Estatal','Privado','Gestión Social'], datasets:[{label:'Cantidad', data:sectorData, backgroundColor:['#6c757d','#dc3545','#0dcaf0']}]},
+            options:{plugins:{title:{display:true,text:'Sector'}}}
+        });
+    }
+
+    function actualizarDatos(data){
+        for(const key in data){
+            $('#'+key).text(data[key]);
+        }
+        actualizarCharts(data);
+    }
+
+    $('#region').change(function(){
+        const region = $(this).val();
+        if(!region){ $('#resultado-container').hide(); return; }
+
+        $.ajax({
+            url:"{% url 'reportes:consulta_ofertas_reg' %}",
+            data:{region:region},
+            success:function(data){
+                actualizarDatos(data);
+                $('#nombre-departamento').text(region);
+                let imgPath='/static/img/'+region.toLowerCase().replace(/\s+/g,'')+'.png';
+                $('#imagen-departamento').attr('src',imgPath).on('error',function(){ $(this).attr('src','/static/img/regioneschaco.png'); });
+                $('#resultado-container').fadeIn();
+            }
+        });
+    });
+
+    // Carga inicial
+    $.ajax({url:"{% url 'reportes:consulta_ofertas' %}", success:function(data){ actualizarDatos(data); }});
+});
+</script>
+{% endblock %}

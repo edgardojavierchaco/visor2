@@ -1,0 +1,15 @@
+# Archivos temporales
+*.pyc
+__pycache__/
+
+# Base de datos local
+db.sqlite3
+
+# Carpeta de archivos subidos por usuarios
+media/
+
+# Carpeta de archivos estáticos compilados
+staticfiles/
+
+.ipython/
+

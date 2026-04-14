@@ -1,0 +1,78 @@
+{% extends "consultasge/layout_gestor.html" %}
+{% load consultas_extras %}
+
+{% block content %}
+<h2 class="mb-4">Dashboard Regional Interactivo</h2>
+
+<canvas id="graficoEstados" style="max-height:400px;"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+const ctx = document.getElementById('graficoEstados');
+let chart;
+
+// Render del gráfico
+function renderChart(data) {
+    if(chart) {
+        chart.data.labels = data.labels;
+        chart.data.datasets[0].data = data.datos;
+        chart.data.datasets[0].backgroundColor = data.colores;
+        chart.update();
+        return;
+    }
+
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Cantidad de consultas',
+                data: data.datos,
+                backgroundColor: data.colores,
+                borderColor: '#000000',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const estado = context.label.toLowerCase();
+                            let texto = context.dataset.data[context.dataIndex] + ' consultas';
+                            if (estado !== 'vencidas') {
+                                const progreso = data.progreso_por_estado[estado];
+                                texto += ', SLA: ' + progreso + '%';
+                            }
+                            return texto;
+                        }
+                    }
+                },
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+// 🔹 Función para traer datos desde el endpoint
+function actualizarDashboard() {
+    axios.get("{{ json_endpoint }}")
+        .then(response => renderChart(response.data))
+        .catch(error => console.error(error));
+}
+
+// Inicial
+actualizarDashboard();
+
+// Refrescar cada 15 segundos
+setInterval(actualizarDashboard, 15000);
+</script>
+{% endblock %}

@@ -1,0 +1,315 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+
+<!-- ================= LIBRERÍAS ================= -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css"/>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- ================= LOADER ================= -->
+<div id="loader"><div class="spinner"></div></div>
+
+<style>
+
+/* ===== LOADER ===== */
+#loader{
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
+.spinner{
+    width:60px; height:60px;
+    border:6px solid #ccc;
+    border-top:6px solid #22c55e;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+}
+@keyframes spin{100%{transform:rotate(360deg);}}
+
+/* ===== LAYOUT ===== */
+#map-container{ display:flex; height:85vh; }
+
+/* ===== SIDEBAR ===== */
+#sidebar{
+    width:320px;
+    background:#1e293b;
+    color:white;
+    padding:15px;
+}
+#sidebar .form-control,
+#sidebar select{
+    background:#0f172a;
+    border:1px solid #334155;
+    color:white;
+}
+.kpi{
+    background:#0f172a;
+    padding:10px;
+    margin-top:10px;
+    border-radius:8px;
+}
+
+/* MAP */
+#map{ flex:1; }
+
+/* HIGHLIGHT */
+.highlight-marker{
+    animation:pulse 1s infinite;
+}
+@keyframes pulse{
+    50%{transform:scale(1.4);}
+}
+
+</style>
+
+<div id="map-container">
+
+<div id="sidebar">
+    <h5>🎓 Ofertas Educativas</h5>
+
+    <input id="cue" class="form-control mb-2" placeholder="Cueanexo">
+
+    <select id="radio" class="form-control mb-2">
+        <option value="1000">1 km</option>
+        <option value="2000">2 km</option>
+        <option value="5000">5 km</option>
+        <option value="10000">10 km</option>
+    </select>
+
+    <select id="oferta" class="form-control mb-2"></select>
+    <select id="sector" class="form-control mb-2"></select>
+    <select id="ambito" class="form-control mb-2"></select>
+
+    <hr>
+
+    <div class="kpi"><b>Total:</b> <span id="total">0</span></div>
+    <div class="kpi"><b>Sector:</b><div id="kpi_sector"></div></div>
+    <div class="kpi"><b>Oferta:</b><div id="kpi_oferta"></div></div>
+</div>
+
+<div id="map"></div>
+</div>
+
+<table id="tabla" class="display" style="width:100%">
+<thead>
+<tr>
+<th>Cueanexo</th><th>Establecimiento</th><th>Oferta</th><th>Sector</th><th>Ámbito</th><th>ID</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+
+// ================= MAPA =================
+let map = L.map('map',{ maxZoom:19 }).setView([-27.45,-58.98],10);
+
+let claro = L.tileLayer(
+ 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+ { maxZoom:19 }
+);
+
+let satelite = L.tileLayer(
+ 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+ { maxZoom:19 }
+);
+
+claro.addTo(map);
+
+L.control.layers({
+ "Claro": claro,
+ "Satélite": satelite
+}).addTo(map);
+
+// FIX resize
+setTimeout(()=>map.invalidateSize(),300);
+
+// ================= VARIABLES =================
+let cluster = L.markerClusterGroup().addTo(map);
+let markersMap = {};
+let lastMarker = null;
+let circleRadio = null;
+let cacheBusqueda = {};
+let debounceTimer;
+
+// ================= TABLA =================
+let tabla = $('#tabla').DataTable({
+ dom:'Bfrtip',
+ buttons:['excel'],
+ pageLength:10,
+ columnDefs:[{targets:5,visible:false}],
+ language:{ url:"https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-AR.json" }
+});
+
+// ================= COLORES =================
+function getColor(oferta){
+ if(!oferta) return "#64748b";
+ oferta = oferta.toLowerCase();
+ if(oferta.includes("inicial")) return "#f59e0b";
+ if(oferta.includes("primaria")) return "#22c55e";
+ if(oferta.includes("secundaria")) return "#3b82f6";
+ if(oferta.includes("superior")) return "#a855f7";
+ if(oferta.includes("especial")) return "#ef4444";
+ return "#14b8a6";
+}
+
+// ================= FILTROS =================
+function cargarFiltros(){
+ fetch('/map/api/filtros/')
+ .then(r=>r.json())
+ .then(data=>{
+  ['oferta','sector','ambito'].forEach(id=>{
+   $('#'+id).empty().append('<option value="">'+id+'</option>');
+  });
+
+  data.ofertas.forEach(v=>$('#oferta').append(new Option(v,v)));
+  data.sectores.forEach(v=>$('#sector').append(new Option(v,v)));
+  data.ambitos.forEach(v=>$('#ambito').append(new Option(v,v)));
+
+  $('#oferta,#sector,#ambito').select2({width:'100%'});
+ });
+}
+
+// ================= BUSCAR =================
+function buscar(){
+
+ let cue = $('#cue').val();
+ if(!cue) return;
+
+ let params = new URLSearchParams();
+ params.set('cueanexo', cue);
+ params.set('radio', $('#radio').val());
+
+ ['oferta','sector','ambito'].forEach(id=>{
+  let v = $('#'+id).val();
+  if(v) params.set(id,v);
+ });
+
+ let url = `/map/api/cueradio/?${params}`;
+
+ if(cacheBusqueda[url]){
+  renderResultado(cacheBusqueda[url]);
+  return;
+ }
+
+ $("#loader").fadeIn(200);
+
+ fetch(url)
+ .then(r=>r.json())
+ .then(res=>{
+  cacheBusqueda[url] = res;
+  renderResultado(res);
+ })
+ .finally(()=> $("#loader").fadeOut(200));
+}
+
+// ================= RENDER =================
+function renderResultado(res){
+
+ cluster.clearLayers();
+ tabla.clear();
+ markersMap={};
+
+ if(circleRadio) map.removeLayer(circleRadio);
+
+ res.data.forEach(d=>{
+
+  let id = d.cue+"_"+d.lat+"_"+d.lng;
+  let color = getColor(d.oferta);
+
+  let popup = `
+  <b>${d.nom_est}</b><br>
+  Cue: ${d.cue}<br>
+  ${d.oferta}<br><br>
+  <a href="https://earth.google.com/web/@${d.lat},${d.lng},150a" target="_blank">🌍 Google Earth</a><br>
+  <a href="https://www.google.com/maps?q=&layer=c&cbll=${d.lat},${d.lng}" target="_blank">🌐 Street View</a><br>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}" target="_blank">📍 Cómo llegar</a>
+  `;
+
+  let marker = L.circleMarker([d.lat,d.lng],{
+   radius:7,
+   color:color
+  }).bindPopup(popup);
+
+  cluster.addLayer(marker);
+  markersMap[id]=marker;
+
+  tabla.row.add([d.cue,d.nom_est,d.oferta,d.sector,d.ambito,id]);
+ });
+
+ tabla.draw();
+
+ let centro = res.data.find(x=>x.color==='red');
+ if(centro){
+  circleRadio = L.circle([centro.lat,centro.lng],{
+   radius: parseInt($('#radio').val()),
+   color:'#2563eb',
+   fill:false
+  }).addTo(map);
+ }
+
+ if(res.data.length){
+  map.fitBounds(res.data.map(d=>[d.lat,d.lng]));
+ }
+
+ $('#total').text(res.kpis.total);
+ renderKPI('kpi_sector',res.kpis.sector);
+ renderKPI('kpi_oferta',res.kpis.oferta);
+}
+
+// ================= KPI =================
+function renderKPI(id,data){
+ let html="";
+ for(let k in data) html+=`<div>${k}: ${data[k]}</div>`;
+ $('#'+id).html(html);
+}
+
+// ================= CLICK TABLA =================
+$('#tabla tbody').on('click','tr',function(){
+ let data = tabla.row(this).data();
+ let marker = markersMap[data[5]];
+
+ if(marker){
+  map.flyTo(marker.getLatLng(),16);
+  marker.openPopup();
+
+  if(lastMarker) lastMarker._path?.classList.remove('highlight-marker');
+  if(marker._path) marker._path.classList.add('highlight-marker');
+
+  lastMarker = marker;
+ }
+});
+
+// ================= DEBOUNCE =================
+['cue','radio','oferta','sector','ambito'].forEach(id=>{
+ $('#'+id).on('keyup change',function(){
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(buscar, 400);
+ });
+});
+
+// ================= INIT =================
+cargarFiltros();
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,557 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+<h4 class="mb-3 fw-semibold">
+<i class="fas fa-map-marked-alt me-2 text-primary"></i>
+Ubicación Geográfica de Unidades de Servicio
+</h4>
+
+<div id="map"></div>
+
+<div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+
+<div class="badge bg-primary fs-6">
+Escuelas dentro del área:
+<span id="count-schools">0</span>
+</div>
+
+<div>
+<button id="btn-undo-filter" class="btn btn-warning btn-sm me-2">
+<i class="fas fa-undo"></i> Deshacer filtro
+</button>
+
+<button id="btn-clear-filter" class="btn btn-secondary btn-sm">
+<i class="fas fa-eraser"></i> Limpiar filtros
+</button>
+</div>
+
+</div>
+
+
+<div class="row g-3 mb-4">
+
+<div class="col-md-4">
+<div class="card chart-card">
+<div class="card-body">
+<canvas id="chartOfertas"></canvas>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card chart-card">
+<div class="card-body">
+<canvas id="chartSector"></canvas>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card chart-card">
+<div class="card-body">
+<canvas id="chartRegion"></canvas>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="card shadow-sm">
+
+<div class="card-header bg-white">
+<div id="datatable-filters" class="row g-3 align-items-end"></div>
+</div>
+
+<div class="card-body">
+
+<table id="marker-table"
+class="table table-striped table-hover table-bordered align-middle"
+style="width:100%">
+
+<thead class="table-light">
+<tr>
+<th>Cueanexo</th>
+<th>Establecimiento</th>
+<th>Ofertas</th>
+<th>Ámbito</th>
+<th>Sector</th>
+<th>Región</th>
+<th>Calle</th>
+<th>Número</th>
+<th>Localidad</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+</div>
+
+</div>
+
+<style>
+
+#map{
+height:520px;
+border-radius:12px;
+box-shadow:0 8px 25px rgba(0,0,0,0.15);
+border:1px solid #dee2e6;
+margin-bottom:10px;
+}
+
+.chart-card{
+border-radius:12px;
+box-shadow:0 6px 16px rgba(0,0,0,0.08);
+border:1px solid #e9ecef;
+}
+
+.school-marker{
+background:#0d6efd;
+border-radius:50%;
+width:30px;
+height:30px;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:14px;
+border:2px solid white;
+box-shadow:0 3px 8px rgba(0,0,0,0.35);
+}
+
+.popup-school{
+font-size:13px;
+min-width:230px;
+}
+
+#datatable-filters{
+background:#f8f9fa;
+padding:12px;
+border-radius:8px;
+border:1px solid #e9ecef;
+margin-bottom:10px;
+}
+
+</style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css"/>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+{{ indec_geojson|json_script:"radios-data" }}
+
+<script>
+
+document.addEventListener('DOMContentLoaded',function(){
+
+const data = JSON.parse('{{ data_json|escapejs }}');
+
+const radiosCensales = JSON.parse(
+    document.getElementById("radios-data").textContent
+);
+
+const map = L.map('map').setView([-27.45,-59.0],7);
+
+/* CAPAS */
+const baseLight=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
+const baseDark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+const baseSat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+const baseMosaic=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png');
+
+/* ============================
+   RADIOS CENSALES INDEC
+============================ */
+
+const radiosLayer = L.geoJSON(radiosCensales, {
+
+    style: function (feature) {
+        const p = feature.properties || {};
+
+        const demanda = p.demanda_primaria || 0;
+        const ofertas = p.ofertas || 0;
+
+        // 🚦 SEMÁFORO EDUCATIVO
+        let color = "#6c757d"; // gris default
+
+        if (demanda > 200 && ofertas === 0) {
+            color = "#dc3545"; // 🔴 crítico
+        } else if (demanda > 100 && ofertas < 2) {
+            color = "#ffc107"; // 🟡 alerta
+        } else if (ofertas > 0) {
+            color = "#198754"; // 🟢 cobertura
+        }
+
+        return {
+            color: "#333",
+            weight: 1,
+            fillColor: color,
+            fillOpacity: 0.5
+        };
+    },
+
+    onEachFeature: function (feature, layer) {
+        const p = feature.properties || {};
+
+        layer.bindPopup(`
+            <div style="font-size:13px">
+                <b>📍 Radio censal</b><br><br>
+
+                <b>Depto:</b> ${p.NOMDEPTO || "N/A"}<br>
+                <b>Radio:</b> ${p.RADIO || "N/A"}<br>
+
+                <hr style="margin:6px 0;">
+
+                <b>🎓 Ofertas:</b> ${p.ofertas || 0}<br>
+                <b>👥 Población:</b> ${p.poblacion || 0}<br>
+
+                <hr style="margin:6px 0;">
+
+                <b>👶 Inicial (0-4):</b> ${p.demanda_inicial || 0}<br>
+                <b>🧒 Primaria:</b> ${p.demanda_primaria || 0}<br>
+                <b>🎓 Secundaria:</b> ${p.demanda_secundaria || 0}
+            </div>
+        `);
+    }
+});
+
+baseLight.addTo(map);
+
+
+L.control.layers({
+"Mapa claro":baseLight,
+"Mapa oscuro":baseDark,
+"Satélite":baseSat,
+"Mosaico":baseMosaic
+}, {
+"Radios censales INDEC": radiosLayer
+}).addTo(map);
+
+radiosLayer.addTo(map);
+
+// IMPORTANTE: zoom después de render
+setTimeout(() => {
+    map.fitBounds(radiosLayer.getBounds());
+}, 500);
+
+
+console.log("MAP READY");
+console.log("RADIOS:", radiosCensales.features.length);
+console.log("RADIOS LAYER:", radiosLayer.getLayers().length);
+console.log("LAYER:", radiosLayer);
+console.time("radios");
+console.timeEnd("radios");
+const provs = new Set(radiosCensales.features.map(f => f.properties.NOMPROV));
+console.log([...provs]);
+
+/* ICONO Y CLUSTER */
+const iconSchool=L.divIcon({className:"school-marker",html:"🎓",iconSize:[30,30],iconAnchor:[15,30]});
+const cluster=L.markerClusterGroup();
+const allMarkers=[];
+const markersIndex={};
+const bounds=L.latLngBounds();
+
+/* ============================
+   FUNCIONES GLOBALES PARA POPUPS
+============================ */
+window.abrirGoogleEarth = function(lat, lon){
+    const url = `https://earth.google.com/web/@${lat},${lon},200a,60d,35y`;
+    window.open(url,'_blank');
+};
+window.abrirStreetView = function(lat, lon){
+    const url = `https://www.google.com/maps?q=&layer=c&cbll=${lat},${lon}`;
+    window.open(url,'_blank');
+};
+window.abrirGoogleMapsRuta = function(lat, lon){
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+    window.open(url,'_blank');
+};
+
+/* ============================
+   CREAR POPUP INTELIGENTE
+============================ */
+function crearPopupInteligente(row){
+    const [cue,lat,lng,esc,oferta,ambito,sector,region,calle,numero,localidad, acronimo, apellido_resp, nombre_resp, resploc_telefono, resploc_email] = row;
+
+    let popupHTML = `<div class="popup-school">
+        <b>🏫 ${esc}</b><br><br>
+        <b>CUE:</b> ${cue}<br>
+        <b>Oferta:</b> ${oferta}<br>
+        <b>Ámbito:</b> ${ambito}<br>
+        <b>Sector:</b> ${sector}<br>
+        <b>Región:</b> ${region}<br>
+        <b>Dirección:</b> ${calle} ${numero}<br>
+        <b>Localidad:</b> ${localidad}<br>
+        <b>Directivo:</b> ${apellido_resp || ''}, ${nombre_resp || ''}<br>
+        <b>Teléfono:</b> ${resploc_telefono}<br>
+        <b>Correo:</b> ${resploc_email}<br>
+        <hr style="margin:5px 0;">`;
+
+    if(lat && lng){
+        popupHTML += `
+        <button class="btn btn-sm btn-primary w-100 mb-1 btn-google-earth" data-lat="${lat}" data-lng="${lng}">🌍 Ver en 3D</button>`;
+        if(ambito==='Urbano'){
+            popupHTML += `<button class="btn btn-sm btn-info w-100 mb-1 btn-street-view" data-lat="${lat}" data-lng="${lng}">🚶 Street View</button>`;
+        }
+        popupHTML += `<button class="btn btn-sm btn-success w-100 btn-maps-ruta" data-lat="${lat}" data-lng="${lng}">🗺️ Cómo llegar</button>`;
+    }
+
+    popupHTML += `</div>`;
+    return popupHTML;
+}
+
+/* ============================
+   CREAR MARCADORES
+============================ */
+data.forEach(row=>{
+    const [cue,lat,lng] = row;
+    if(lat && lng){
+        const marker = L.marker([lat,lng],{icon:iconSchool})
+            .bindPopup(crearPopupInteligente(row));
+        marker.dataRow = [row[0], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]]; // SOLO columnas de DataTable
+        cluster.addLayer(marker);
+        allMarkers.push(marker);
+        markersIndex[cue] = marker;
+        bounds.extend(marker.getLatLng());
+    }
+});
+map.addLayer(cluster);
+map.fitBounds(bounds);
+
+/* ============================
+   EVENTOS POPUP PARA BOTONES
+============================ */
+map.on('popupopen', function(e){
+    const popupNode = e.popup.getElement();
+
+    $(popupNode).find('.btn-google-earth').off('click').on('click', function(){
+        const lat = $(this).data('lat');
+        const lng = $(this).data('lng');
+        abrirGoogleEarth(lat,lng);
+    });
+
+    $(popupNode).find('.btn-street-view').off('click').on('click', function(){
+        const lat = $(this).data('lat');
+        const lng = $(this).data('lng');
+        abrirStreetView(lat,lng);
+    });
+
+    $(popupNode).find('.btn-maps-ruta').off('click').on('click', function(){
+        const lat = $(this).data('lat');
+        const lng = $(this).data('lng');
+        abrirGoogleMapsRuta(lat,lng);
+    });
+});
+
+/* ============================
+   CAPA ZONAS AISLADAS
+============================ */
+const ruralLayer = L.layerGroup().addTo(map);
+data.forEach(row=>{
+    const ambito = row[5];
+    const lat = row[1];
+    const lng = row[2];
+    if(ambito==='Rural Disperso' && lat && lng){
+        const circle = L.circle([lat,lng],{
+            radius: 1200,
+            color: '#dc3545',
+            fillColor: '#dc3545',
+            fillOpacity: 0.2,
+            weight:1
+        }).bindTooltip('Zona rural dispersa', {permanent:false});
+        ruralLayer.addLayer(circle);
+    }
+});
+L.control.layers(null, {"Zonas aisladas": ruralLayer}, {collapsed:false}).addTo(map);
+
+/* ============================
+   FILTRO ESPACIAL
+============================ */
+const drawnItems=new L.FeatureGroup();
+map.addLayer(drawnItems);
+const history=[];
+
+map.addControl(new L.Control.Draw({
+draw:{polygon:true,rectangle:true,circle:false,polyline:false,marker:false},
+edit:{featureGroup:drawnItems}
+}));
+
+map.on(L.Draw.Event.CREATED,function(e){
+drawnItems.clearLayers();
+const layer=e.layer;
+drawnItems.addLayer(layer);
+const selected=[];
+allMarkers.forEach(marker=>{
+if(layer.getBounds().contains(marker.getLatLng())){
+selected.push(marker);
+}
+});
+history.push(selected);
+applyFilter(selected);
+});
+
+document.getElementById("btn-clear-filter").onclick=function(){
+drawnItems.clearLayers();
+history.length=0;
+applyFilter(allMarkers);
+};
+document.getElementById("btn-undo-filter").onclick=function(){
+history.pop();
+const prev=history.length?history[history.length-1]:allMarkers;
+applyFilter(prev);
+};
+
+/* ============================
+   DATATABLE
+============================ */
+const table=$('#marker-table').DataTable({
+data:data.map(m=>[m[0],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10]]),
+columns:[
+{data:0,render:d=>`<a href="#" onclick="zoomToSchool('${d}')">${d}</a>`},
+{data:1},{data:2},{data:3},{data:4},{data:5},{data:6},{data:7},{data:8}
+],
+pageLength:10,
+dom:"<'row mb-3'<'col-md-6'B><'col-md-6'f>>"+"<'row'<'col-12'tr>>"+"<'row mt-2'<'col-md-5'i><'col-md-7'p>>",
+buttons:[{extend:'excel',text:'Exportar Excel',className:'btn btn-success btn-sm'}],
+language:{
+decimal:"",emptyTable:"No hay datos disponibles",
+info:"Mostrando _START_ a _END_ de _TOTAL_ registros",
+infoEmpty:"Mostrando 0 a 0 de 0 registros",
+infoFiltered:"(filtrado de _MAX_ registros totales)",
+lengthMenu:"Mostrar _MENU_ registros",
+loadingRecords:"Cargando...",
+processing:"Procesando...",
+search:"Buscar:",
+zeroRecords:"No se encontraron resultados",
+paginate:{first:"Primero",last:"Último",next:"Siguiente",previous:"Anterior"}
+},
+initComplete: function() {
+    const api = this.api();
+    [2,3,4].forEach(function(i){
+        let column = api.column(i);
+        let title = $(column.header()).text();
+        let col = $('<div class="col-md-3 col-sm-6 mb-2"></div>').appendTo('#datatable-filters');
+        $('<label class="form-label small fw-semibold">'+title+'</label>').appendTo(col);
+        let select = $('<select class="form-select form-select-sm"><option value="">Todos</option></select>')
+            .appendTo(col)
+            .on('change', function(){
+                let val = $.fn.dataTable.util.escapeRegex($(this).val());
+                column.search(val ? '^'+val+'$' : '', true, false).draw();
+            });
+        column.data().unique().sort().each(function(d){if(d) select.append('<option value="'+d+'">'+d+'</option>');});
+        select.select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Seleccione...',
+            allowClear: true,
+            minimumResultsForSearch: 5,
+            dropdownParent: $('#datatable-filters')
+        });
+    });
+}
+});
+
+window.zoomToSchool=function(cue){
+const m=markersIndex[cue];
+map.setView(m.getLatLng(),14);
+m.openPopup();
+};
+
+/* ============================
+   GRAFICOS
+============================ */
+let chartOfertas, chartAmbito, chartSector;
+const colorPalettes = {
+    ofertas: {
+        "Adultos - Formación Profesional": "#0d6efd",
+        "Adultos - Primaria": "#198754",
+        "Adultos - Secundaria Completa": "#ffc107",
+        "Común - Domiciliaria": "#dc3545",
+        "Común - Jardín de infantes": "#6610f2",
+        "Común - Jardín maternal": "#6610f2",
+        "Común - Primaria de 7 años": "#fd7e14",
+        "Común - Secundaria Completa req. 7 años": "#20c997",
+        "Común - Servicios Complementarios": "#6f42c1",
+        "Común - SNU": "#0dcaf0",
+        "Común - Ciclos de Eseñanza Artística": "#adb5bd",
+        "Común - Cursos de Capacitación de SNU": "#fd7e14",
+        "Común - Cursos y Talleres de Artística": "#198754",
+        "Especial - Primaria de 7 años ": "#ffc107",
+        "Especial - Jardín de infantes ": "#0d6efd",
+        "Especial - Jardín maternal ": "#dc3545",
+        "Especial - Cursos/Talleres de la Escuela Especial": "#6610f2",
+        "Especial - Educacion integral para adolescentes y jovenes": "#20c997",
+        "Especial - Integración": "#6f42c1"
+    },
+    ambito: {"Urbano": "#0d6efd","Rural Disperso": "#198754","Rural Aglomerado": "#ffc107"},
+    sector: {"Estatal": "#0d6efd","Privado": "#198754","Gestión social/cooperativa": "#ffc107"}
+};
+
+function normalizeKey(k){return k?k.trim():'';}
+function getColors(data,palette){
+    return Object.keys(data).map(k=>{
+        for(let p in palette){if(normalizeKey(p)===normalizeKey(k)) return palette[p];}
+        return '#6c757d';
+    });
+}
+function count(markers,index){
+    const c={};
+    markers.forEach(m=>{const k=m.dataRow[index];c[k]=(c[k]||0)+1;});
+    return c;
+}
+function createChart(id,data,title,palette){
+    return new Chart(document.getElementById(id),{
+        type:'bar',
+        data:{labels:Object.keys(data),datasets:[{data:Object.values(data),backgroundColor:getColors(data,palette),borderRadius:6}]},
+        options:{plugins:{legend:{display:false},title:{display:true,text:title}},responsive:true,scales:{y:{beginAtZero:true}}}
+    });
+}
+function updateCharts(markers){
+    if(chartOfertas) chartOfertas.destroy();
+    if(chartAmbito) chartAmbito.destroy();
+    if(chartSector) chartSector.destroy();
+    chartOfertas = createChart('chartOfertas',count(markers,2),'Ofertas',colorPalettes.ofertas);
+    chartAmbito  = createChart('chartRegion',count(markers,3),'Ámbito',colorPalettes.ambito);
+    chartSector  = createChart('chartSector',count(markers,4),'Sector',colorPalettes.sector);
+}
+
+/* ============================
+   APLICAR FILTRO
+============================ */
+function applyFilter(markers){
+cluster.clearLayers();
+table.clear();
+markers.forEach(m=>{cluster.addLayer(m);table.row.add(m.dataRow);});
+table.draw();
+document.getElementById("count-schools").innerText=markers.length;
+updateCharts(markers);
+}
+
+applyFilter(allMarkers);
+
+});
+</script>
+
+{% endblock %}

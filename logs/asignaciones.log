@@ -1,0 +1,8 @@
+{"level":"INFO","time":"2026-04-01 20:23:37,470","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'update', 'detalle': 'Asig actualizada ID 2', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-01 20:27:13,051","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'delete', 'detalle': 'Asig eliminada ID 2', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-01 22:26:09,515","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'update', 'detalle': 'Asig actualizada ID 35', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-01 22:41:48,432","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'update', 'detalle': 'Asig actualizada ID 33', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-01 22:48:23,728","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'delete', 'detalle': 'Asig eliminada ID 35', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-02 01:03:05,121","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'delete', 'detalle': 'Asig eliminada ID 37', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-02 01:12:10,738","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'update', 'detalle': 'Asig actualizada ID 41', 'supervisor': None}}
+{"level":"INFO","time":"2026-04-02 01:21:16,615","logger":"asignaciones","message":{'user': '20225685232', 'accion': 'delete', 'detalle': 'Asig eliminada ID 43', 'supervisor': None}}

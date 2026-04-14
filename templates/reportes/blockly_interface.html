@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Builder con Blockly</title>
+   
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="{% static 'js/blockly.js' %}"></script>    
+    <style>
+        /* Ajustes de diseño */
+        #blocklyDiv {
+            height: 480px;
+            width: 600px;
+            border: 1px solid black;
+        }
+        #generatedSql {
+            width: 600px;
+            height: 100px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Generador de SQL con Blockly</h2>
+
+    <div id="blocklyDiv"></div>
+
+    <button id="generateSqlBtn">Generar SQL</button>
+
+    <h3>Código SQL generado:</h3>
+    <textarea id="generatedSql" readonly></textarea>
+
+    
+
+</body>
+</html>

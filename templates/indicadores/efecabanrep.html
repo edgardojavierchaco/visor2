@@ -1,0 +1,92 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% block title %}Tasas de Retención{% endblock %}
+
+{% block content %}
+    <style>
+        .custom-dashboard {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            position: relative;
+        }
+        .stats-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .stats-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        .chart-container {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .chart-container img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        /* Estilos para el glosario */
+        .glosario {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+        }
+        .glosario-contenido {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 10px;
+            z-index: 1;
+            right: 0;
+            top: 40px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+
+    <div class="custom-dashboard">
+        <div class="stats-card">
+            <h3>Estadísticas de Cueanexo: {{ cueanexo }}</h3>
+        </div>
+        <!-- Botón del glosario -->
+        <div class="glosario">
+            <button class="btn btn-primary" onclick="mostrarGlosario()">Glosario</button>
+            <!-- Contenido del glosario -->
+            <div class="glosario-contenido">
+                <!-- Aquí va el texto del glosario mejorado -->
+                
+                <p><strong>Tasa de Retención Anual:</strong> Esta métrica representa el porcentaje de alumnos matriculados que permanecen en el sistema educativo hasta finalizar el año escolar. Se calcula como el porcentaje de alumnos matriculados al inicio del año 2022 que han completado el año escolar como alumnos. Aunque se basa en datos recolectados durante el relevamiento anual 2023, hace referencia al año 2022. A nivel provincial, en el NIVEL PRIMARIO, la tasa de retención anual alcanza el 99%. Esto indica que de cada 100 alumnos matriculados al inicio del año 2016, aproximadamente 99 continúan matriculados hasta el último día de clases en el NIVEL PRIMARIO.</p>
+                <p><strong>Tasa de Promoción Efectiva:</strong> Esta medida evalúa el porcentaje de alumnos que se matriculan en el año lectivo siguiente. Se utiliza para medir la capacidad del sistema educativo de retener alumnos matriculados en el año 2017 como nuevos alumnos en el año de estudio siguiente. La promoción efectiva por nivel se calcula considerando el comportamiento promedio de cada año de estudio, lo que significa que no se basa en el seguimiento de una cohorte real. En el caso del NIVEL PRIMARIO, la TASA DE PROMOCIÓN EFECTIVA es del 95%. Esto implica que, de cada 100 alumnos matriculados en el nivel en el año 2017, aproximadamente 95 se vuelven a matricular como alumnos nuevos en el año 2018, en el siguiente año de estudio.</p>
+                <p><strong>Tasa de Repitencia:</strong> Este indicador de eficiencia mide el porcentaje de alumnos que se matriculan como repitientes en el año lectivo siguiente. Representa la cantidad de alumnos que, estando matriculados en un año de estudio en el año 2017, no logran completar los contenidos básicos para promover al siguiente grado y vuelven a matricularse en el mismo año de estudio como repitientes. A nivel provincial, para el NIVEL PRIMARIO, esta tasa es del 3%, lo que significa que de cada 100 alumnos matriculados en el año 2017, aproximadamente 3 se inscriben como repitientes en el sistema en el año 2018.</p>
+                <p><strong>Tasa de Abandono Interanual:</strong> Este indicador muestra el porcentaje de alumnos que no se matriculan en el año lectivo siguiente. Completa el análisis del movimiento de alumnos en un sistema de flujo cerrado, donde un alumno, después de un año lectivo, puede aprobar el año de estudio y re-matricularse como alumno nuevo, repetir el año de estudio o abandonar el sistema educativo. A nivel provincial, en el NIVEL PRIMARIO, esta tasa es del 2%, lo que significa que de cada 100 alumnos matriculados en el año 2017, al menos 2 abandonan el sistema en el año 2017 o entre el Ciclo Lectivo 2017 y el Inicio del Ciclo Lectivo 2018.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        {{ grafico | safe }}
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        function mostrarGlosario() {
+            var contenido = document.querySelector('.glosario-contenido');
+            contenido.style.display = contenido.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
+{% endblock %}

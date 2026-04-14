@@ -1,0 +1,40 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+
+    <div class="login-box">
+        <div class="login-logo">
+            <a href="{% static 'img/logoEstMini.png' %}"></a>
+        </div>
+        <div class="card">
+            <div class="card-body login-card-body">
+                <p class="login-box-msg">Reseteo de contraseña</p>
+                <form action="{% url 'usuarios:reset_password' %}" method="post">
+                    <input type="hidden" name="next" value="{{ next }}">
+                    {% csrf_token %}
+                    <div class="input-group mb-3">
+                        {{ form.username }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-restroom"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-envelope-square"></i> Enviar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="application/javascript">            
+
+        </script>
+
+{% endblock %}

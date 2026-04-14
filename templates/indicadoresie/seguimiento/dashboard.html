@@ -1,0 +1,470 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    /* ==================================================================== */
+    /* ===== PARCHE DEFINITIVO: GRID + CHART.JS (ANTI-DESBORDE) ===== */
+    /* ==================================================================== */
+
+    /* 1. Seguro global y reseteo de la caja */
+    html, body {
+        max-width: 100vw !important;
+        overflow-x: hidden !important; 
+    }
+
+    * {
+        box-sizing: border-box !important;
+    }
+
+    /* 2. EL SECRETO TÉCNICO: 
+       Forzamos a las tarjetas de la grilla a que permitan encogerse. 
+       Sin esto, los gráficos de Chart.js rompen el ancho de la pantalla. */
+    .db-kpi, .db-chart-card, .db-region-card {
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* 3. Contenedores de canvas estrictamente delimitados */
+    .db-chart-card > div[style], .db-region-card > div[style] {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* 4. Reglas móviles estructurales */
+    @media (max-width: 768px) {
+        .db-wrapper {
+            padding: 1rem 0.6rem 2.5rem !important; /* Padding ajustado al milímetro */
+        }
+
+        /* Pasamos de Grid a Flexbox (columna) para control absoluto del ancho */
+        .db-kpi-row, .db-charts-grid, .db-region-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1.2rem !important;
+            width: 100% !important;
+        }
+
+        .db-kpi, .db-chart-card, .db-region-card {
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        /* Apilado fluido de la navegación */
+        .db-tabs { flex-wrap: wrap !important; }
+        .db-tab { flex: 1 1 100% !important; text-align: center !important; }
+        
+        .db-select-wrap {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+        }
+        .select-icon-box { 
+            width: 100% !important; 
+            height: auto !important; 
+            padding: 0.4rem 0 !important; 
+        }
+        #regionSelect { 
+            width: 100% !important; 
+            max-width: 100% !important; 
+        }
+    }
+    :root {
+        --db-bg: #f4f6f9;           
+        --db-surface: #ffffff;      
+        --db-border: #e2e8f0;       
+        --db-text: #1e293b;         
+        --db-text-muted: #64748b;   
+        --db-accent: #2563eb;       
+        
+        /* CONTRASTE MÁXIMO DEFINIDO - COLORES NUEVOS */
+        --db-2025: #cbd5e1;         /* Gris Plata Claro (Fondo/Meta) */
+        --db-2026: #2563eb;         /* Azul vibrante y notorio (Actual/Carga) */
+        --db-pending: #f1f5f9;      /* Gris casi blanco para la brecha */
+        
+        --db-radius: 12px;
+        --db-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+    }
+
+    .db-wrapper {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--db-bg);
+        min-height: 100vh;
+        padding: 1.5rem 2rem 3rem;
+        color: var(--db-text);
+    }
+
+    .db-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--db-border);
+    }
+    .db-header h1 { font-size: 1.65rem; font-weight: 700; margin: 0; }
+
+    .db-tabs { display: flex; gap: .5rem; margin-bottom: 1.75rem; }
+    .db-tab {
+        padding: .55rem 1.25rem;
+        border-radius: 8px;
+        border: 1px solid var(--db-border);
+        background: var(--db-surface);
+        color: var(--db-text-muted);
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .db-tab.active { background: var(--db-accent); color: #fff; border-color: var(--db-accent); }
+
+    /* Selector de Regional */
+    .db-select-wrap {
+        display: none;
+        padding: 1.25rem;
+        background: var(--db-surface);
+        border-radius: var(--db-radius);
+        margin-bottom: 1.5rem;
+        box-shadow: var(--db-shadow);
+        border: 1px solid var(--db-border);
+        align-items: center; 
+        gap: 15px;
+    }
+    .db-select-wrap.visible { display: flex; }
+
+    .select-icon-box {
+        width: 40px; height: 40px;
+        background: #eff6ff;
+        color: var(--db-accent);
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 10px; font-size: 1.2rem;
+    }
+
+    #regionSelect {
+        width: 100%; max-width: 380px;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        border: 1.5px solid var(--db-border);
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--db-text);
+        outline: none;
+    }
+
+    /* KPIs (Escalados para mejor lectura) */
+    .db-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .db-kpi {
+        background: var(--db-surface);
+        padding: 1.5rem 1.25rem;
+        border-radius: var(--db-radius);
+        box-shadow: var(--db-shadow);
+        border-top: 5px solid var(--db-border);
+    }
+    .db-kpi-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--db-text-muted); letter-spacing: 0.5px; }
+    .db-kpi-value { font-size: 2rem; font-weight: 800; margin-top: 10px; }
+
+    /* Gráficos con espaciado corregido */
+    .db-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .db-chart-card { background: var(--db-surface); padding: 1.5rem 1.25rem; border-radius: var(--db-radius); box-shadow: var(--db-shadow); }
+    
+    .db-chart-title { 
+        font-size: 1.05rem; font-weight: 700; 
+        border-bottom: 1px solid var(--db-border); 
+        padding-bottom: 14px; margin-bottom: 20px;
+        display: flex; align-items: center;
+    }
+    .db-chart-title i { margin-right: 15px; }
+
+    /* Tarjetas de Regionales (Escaladas) */
+    .db-region-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.5rem; }
+    .db-region-card { background: var(--db-surface); padding: 1.5rem; border-radius: var(--db-radius); box-shadow: var(--db-shadow); }
+    .db-card-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem; display: block; color: var(--db-text); }
+    
+    /* Cajas de estadísticas (Escaladas "lo justo") */
+    .db-stat-box { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        background: #f8f9fa; 
+        padding: 12px 15px; 
+        border-radius: 8px; 
+        margin-top: 10px; 
+        border: 1px solid #e2e8f0; 
+    }
+    .db-stat-box span { font-size: 0.95rem; font-weight: 600; opacity: 0.85; }
+    .db-stat-box b { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.3px; }
+
+    .db-loading { text-align: center; padding: 4rem; }
+
+    @media (max-width: 768px) { .db-charts-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="db-wrapper">
+    <div class="db-header">
+        <h1><i class="fas fa-chart-line me-2 text-primary"></i> Dashboard SGE 2026</h1>
+        <p class="text-muted" style="font-size: 1.05rem; margin-top: 5px;">
+            Estado de carga comparativo frente al ciclo histórico anterior - 
+            <strong>Cargo: {{ cargo_usuario|default:"Usuario" }}</strong>
+        </p>
+    </div>
+
+    <div class="db-tabs">
+        <button class="db-tab active" id="tabRegional"><i class="fas fa-globe me-2"></i> Por Regional</button>
+        <button class="db-tab" id="tabNivel"><i class="fas fa-layer-group me-2"></i> Nivel</button>
+    </div>
+
+    <div class="db-select-wrap" id="nivelSelectWrap">
+        <div class="select-icon-box"><i class="fas fa-map-marked-alt"></i></div>
+        <div>
+        <select id="regionSelect">
+            <option value="" disabled selected>Seleccione una regional...</option>
+            {% for region in regions %}
+                <option value="{{ region }}">{{ region }}</option>
+            {% endfor %}
+        </select>
+        </div>
+    </div>
+
+    <div class="db-kpi-row" id="kpiRow"></div>
+
+    <div class="db-charts-grid" id="mainChartsRow">
+        <div class="db-chart-card">
+            <div class="db-chart-title"><i class="fas fa-chart-column text-primary"></i> Comparativa de Volúmenes (Inscripciones)</div>
+            <div style="height:280px;"><canvas id="mainBarChart"></canvas></div>
+        </div>
+        <div class="db-chart-card">
+            <div class="db-chart-title"><i class="fas fa-percent text-success"></i> Estado de Avance respecto a 2025</div>
+            <div style="height:280px;"><canvas id="mainStackedChart"></canvas></div>
+        </div>
+    </div>
+
+    <div id="detailSection"></div>
+
+    <div id="loadingState" class="db-loading" style="display:none;">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 fw-bold text-muted" style="font-size: 1.1rem;">Sincronizando datos con el servidor...</p>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const tabRegional = document.getElementById("tabRegional");
+    const tabNivel = document.getElementById("tabNivel");
+    const regionSelect = document.getElementById("regionSelect");
+    const detailSection = document.getElementById("detailSection");
+    const loadingState = document.getElementById("loadingState");
+    const kpiRow = document.getElementById("kpiRow");
+    const mainChartsRow = document.getElementById("mainChartsRow");
+    
+    let currentTab = "regional";
+    let chartInstances = [];
+
+    // COLORES DE ALTO CONTRASTE
+    const color25 = '#cbd5e1'; // Gris Plata
+    const color26 = '#2563eb'; // Azul Vibrante / Azul Rey
+
+    function format(n) { return n.toLocaleString("es-AR"); }
+
+    function destroyCharts() {
+        chartInstances.forEach(c => c.destroy());
+        chartInstances = [];
+    }
+
+    function renderKPIs(items) {
+        let meta = 0, actual = 0;
+        items.forEach(i => { meta += i.total_ant; actual += i.total_act; });
+        const pct = meta > 0 ? ((actual / meta) * 100).toFixed(1) : 0;
+
+        kpiRow.innerHTML = `
+            <div class="db-kpi" style="border-top-color: ${color25}">
+                <div class="db-kpi-label">Inscripciones 2025 (SGE)</div>
+                <div class="db-kpi-value">${format(meta)}</div>
+            </div>
+            <div class="db-kpi" style="border-top-color: ${color26}">
+                <div class="db-kpi-label">Inscripciones 2026 (SGE)</div>
+                <div class="db-kpi-value" style="color:${color26}">${format(actual)}</div>
+            </div>
+            <div class="db-kpi" style="border-top-color: var(--db-accent)">
+                <div class="db-kpi-label">Avance de Carga respecto a 2025</div>
+                <div class="db-kpi-value" style="color:var(--db-accent)">${pct}%</div>
+            </div>
+        `;
+        kpiRow.style.display = "grid";
+    }
+
+    function renderCharts(items, labelKey) {
+        destroyCharts();
+        const labels = items.map(i => i[labelKey]);
+
+        // Gráfico 1: Barras Comparativas Principales
+        const ctx1 = document.getElementById("mainBarChart").getContext("2d");
+        chartInstances.push(new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Inscripciones 2025', data: items.map(i => i.total_ant), backgroundColor: color25, borderRadius: 4 },
+                    { label: 'Inscripciones 2026', data: items.map(i => i.total_act), backgroundColor: color26, borderRadius: 4 }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { position: 'bottom', labels: { font: { size: 13, family: "'DM Sans', sans-serif" } } },
+                    tooltip: {
+                        bodyFont: { size: 14, family: "'DM Sans', sans-serif" },
+                        callbacks: {
+                            label: function(ctx) {
+                                return " " + ctx.dataset.label + ": " + format(ctx.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 12, family: "'DM Sans', sans-serif", weight: '600' } } },
+                    y: { ticks: { font: { size: 12, family: "'DM Sans', sans-serif" } } }
+                }
+            }
+        }));
+
+        // Gráfico 2: Avance %
+        const ctx2 = document.getElementById("mainStackedChart").getContext("2d");
+        chartInstances.push(new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: '% Cargado', data: items.map(i => i.regulares), backgroundColor: color26, borderRadius: 2 },
+                    { label: '% Pendiente', data: items.map(i => i.preinscriptos), backgroundColor: '#f1f5f9', borderRadius: 2 }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    x: { stacked: true, ticks: { font: { size: 12, family: "'DM Sans', sans-serif", weight: '600' } } }, 
+                    y: { stacked: true, max: 100, ticks: { font: { size: 12, family: "'DM Sans', sans-serif" } } } 
+                },
+                plugins: { 
+                    legend: { position: 'bottom', labels: { font: { size: 13, family: "'DM Sans', sans-serif" } } },
+                    tooltip: {
+                        bodyFont: { size: 14, family: "'DM Sans', sans-serif" },
+                        callbacks: {
+                            label: function(ctx) {
+                                return " " + ctx.dataset.label + ": " + ctx.raw.toFixed(1) + "%";
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        mainChartsRow.style.display = "grid";
+
+        // Tarjetas individuales de cada Regional (Mini-Gráficos)
+        detailSection.innerHTML = '<div class="db-region-grid"></div>';
+        const grid = detailSection.querySelector('.db-region-grid');
+        
+        items.forEach((item, idx) => {
+            const canvasId = `card_chart_${idx}`;
+            const card = document.createElement('div');
+            card.className = 'db-region-card';
+            
+            card.innerHTML = `
+                <span class="db-card-title">${item[labelKey]}</span>
+                <div style="height:150px; margin-bottom: 10px;"><canvas id="${canvasId}"></canvas></div>
+                <div class="db-stat-box"><span>Inscripciones 2025:</span> <b>${format(item.total_ant)}</b></div>
+                <div class="db-stat-box" style="color:${color26}; border-color:#bfdbfe; background:#eff6ff;">
+                    <span>Inscripciones 2026:</span> <b>${format(item.total_act)}</b>
+                </div>
+            `;
+            grid.appendChild(card);
+            
+            const ctxCard = document.getElementById(canvasId).getContext("2d");
+            chartInstances.push(new Chart(ctxCard, {
+                type: 'bar',
+                data: {
+                    labels: ['2025', '2026'],
+                    datasets: [{ 
+                        data: [item.total_ant, item.total_act], 
+                        backgroundColor: [color25, color26], 
+                        borderRadius: 4 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: {
+                        x: { ticks: { font: { size: 13, family: "'DM Sans', sans-serif", weight: '700' } } },
+                        y: { display: false } // Ocultamos el eje Y para que quede más limpio
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            bodyFont: { size: 14, family: "'DM Sans', sans-serif" },
+                            callbacks: {
+                                label: function(ctx) {
+                                    return " Inscripciones " + ctx.label + ": " + format(ctx.raw);
+                                }
+                            }
+                        }
+                    } 
+                }
+            }));
+        });
+    }
+
+    function loadData() {
+       loadingState.style.display = "block";
+        
+        // Si no hay selección (y no es 'all'), no hacemos nada
+        if (currentTab === "nivel" && !regionSelect.value) {
+            loadingState.style.display = "none";
+            return;
+        }
+
+        let url = currentTab === "regional" 
+            ? "{% url 'indicsie:seguimiento_sie_json' %}" 
+            : "{% url 'indicsie:seguimiento_sie_niveles_json' %}?region=" + encodeURIComponent(regionSelect.value);
+        
+        fetch(url).then(r => r.json()).then(resp => {
+            const data = currentTab === "regional" ? resp.data : resp.niveles;
+            loadingState.style.display = "none";
+            if (!data || data.length === 0) return;
+            renderKPIs(data);
+            renderCharts(data, currentTab === "regional" ? "region" : "nivel");
+        });
+    }
+
+    tabRegional.onclick = () => { 
+        currentTab = "regional"; 
+        tabRegional.classList.add("active"); 
+        tabNivel.classList.remove("active"); 
+        document.getElementById("nivelSelectWrap").classList.remove("visible"); 
+        loadData(); 
+    };
+
+    // CLIC EN LA PESTAÑA NIVEL (MODO MANUAL)
+// CLIC EN LA PESTAÑA NIVEL
+// CLIC EN LA PESTAÑA NIVEL
+    tabNivel.onclick = () => { 
+        currentTab = "nivel"; 
+        tabNivel.classList.add("active"); 
+        tabRegional.classList.remove("active"); 
+        document.getElementById("nivelSelectWrap").classList.add("visible"); 
+        
+        // 1. Reseteamos el selector para que apunte a tu opción "disabled selected" (value="")
+        regionSelect.value = ""; 
+
+        // 2. Opcional pero recomendado: Limpiamos los datos de pantalla 
+        // hasta que el usuario elija efectivamente una regional.
+        document.getElementById("kpiRow").style.display = "none";
+        document.getElementById("mainChartsRow").style.display = "none";
+        document.getElementById("detailSection").innerHTML = "";
+    };
+
+    regionSelect.onchange = loadData;
+    loadData(); // Carga inicial (Regional)
+});
+</script>
+{% endblock %}

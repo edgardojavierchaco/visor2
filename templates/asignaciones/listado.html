@@ -1,0 +1,62 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>Listado de Asignaciones</h3>
+
+<table class="table table-bordered table-striped">
+
+    <thead class="table-dark">
+        <tr>
+            <th>Cueanexo</th>
+            <th>Escuela</th>
+            <th>Región</th>
+            <th>Oferta</th>
+            <th>Fecha desde</th>
+            <th>Fecha hasta</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for a in asignaciones %}
+
+        <tr>
+            <td>{{ a.cueanexo }}</td>
+            <td>{{ a.nom_est }}</td>
+            <td>{{ a.region_loc }}</td>
+            <td>{{ a.oferta }}</td>
+            <td>{{ a.fecha_desde }}</td>
+            <td>{{ a.fecha_hasta }}</td>
+
+            <td>
+                {% if a.estado == "APROBADO" %}
+                    <span class="badge bg-success">APROBADO</span>
+                {% elif a.estado == "RECHAZADO" %}
+                    <span class="badge bg-danger">RECHAZADO</span>
+                {% elif a.estado == "ENVIADO" %}
+                    <span class="badge bg-primary">ENVIADO</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ a.estado }}</span>
+                {% endif %}
+            </td>
+        </tr>
+
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center">
+                No hay asignaciones
+            </td>
+        </tr>
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

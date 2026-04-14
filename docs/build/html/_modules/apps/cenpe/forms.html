@@ -1,0 +1,617 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.cenpe.forms &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cenpe.html">Documentación de la app Renpe</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.cenpe.forms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.cenpe.forms</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">PlaceHolder</span>
+<span class="kn">from</span> <span class="nn">attr</span> <span class="kn">import</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">django</span> <span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CeicPuntos</span><span class="p">,</span> <span class="n">Datos_Personal_Cenpe</span><span class="p">,</span> <span class="n">Estado_Civil_Cenpe</span><span class="p">,</span> <span class="n">Gestion_Institucion_Cenpe</span><span class="p">,</span> <span class="n">Nivel_Formacion_Cenpe</span><span class="p">,</span> <span class="n">Nivel_Sistema</span><span class="p">,</span> <span class="n">PadronCenpe</span><span class="p">,</span> <span class="n">SituacionRevista</span><span class="p">,</span> <span class="n">Tipo_Formacion_Cenpe</span><span class="p">,</span> <span class="n">Tipo_Institucion_Cenpe</span><span class="p">,</span> <span class="n">documento_tipo</span><span class="p">,</span> <span class="n">nacionalidad</span><span class="p">,</span> <span class="n">provincia_tipo</span><span class="p">,</span> <span class="n">localidad_tipo</span><span class="p">,</span> <span class="n">pais</span><span class="p">,</span> <span class="n">Academica_Cenpe</span><span class="p">,</span> <span class="n">sexo_tipo</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CargosHoras_Cenpe</span><span class="p">,</span> <span class="n">TipoJornada_Cueanexo</span><span class="p">,</span> <span class="n">Zona_Cueanexo</span><span class="p">,</span> <span class="n">Categoria_Cueanexo</span><span class="p">,</span> <span class="n">funciones</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">condicionactividad</span><span class="p">,</span> <span class="n">PadronCenpe</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<div class="viewcode-block" id="DatosPersonalCenpeForm"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeForm">[documentos]</a><span class="k">class</span> <span class="nc">DatosPersonalCenpeForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>   
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para capturar los datos personales del usuario del sistema CENPE.</span>
+
+<span class="sd">    Campos:</span>
+<span class="sd">        apellidos (CharField): Campo de texto para el apellido.</span>
+<span class="sd">        nombres (CharField): Campo de texto para el nombre en mayúsculas.</span>
+<span class="sd">        dni (CharField): Campo de texto para ingresar el DNI.</span>
+<span class="sd">        cuil (CharField): Campo de texto para ingresar el CUIL.</span>
+<span class="sd">        telfijo (CharField): Campo de texto para ingresar el teléfono fijo.</span>
+<span class="sd">        celular (CharField): Campo de texto para ingresar el número de celular.</span>
+<span class="sd">        f_nac (DateField): Campo para ingresar la fecha de nacimiento.</span>
+<span class="sd">        calle (CharField): Campo de texto para la calle de la dirección.</span>
+<span class="sd">        nro (CharField): Campo de texto para el número de la dirección.</span>
+<span class="sd">        mz (CharField): Campo de texto para el bloque o manzana.</span>
+<span class="sd">        pc (CharField): Campo de texto para el código postal.</span>
+<span class="sd">        casa (CharField): Campo de texto para el número de casa.</span>
+<span class="sd">        piso (CharField): Campo de texto para el piso de la dirección.</span>
+<span class="sd">        uf (CharField): Campo de texto para la unidad funcional.</span>
+<span class="sd">        barrio (CharField): Campo de texto para el barrio.</span>
+<span class="sd">        pais_nac (ModelChoiceField): Campo de selección para el país de nacimiento.</span>
+<span class="sd">        nacionalidad (ModelChoiceField): Campo de selección para la nacionalidad.</span>
+<span class="sd">        t_doc (ModelChoiceField): Campo de selección para el tipo de documento.</span>
+<span class="sd">        sexo (ModelChoiceField): Campo de selección para el sexo.</span>
+<span class="sd">        estado_civil (ModelChoiceField): Campo de selección para el estado civil.</span>
+<span class="sd">        nivel_form (ModelChoiceField): Campo de selección para el nivel de formación alcanzado.</span>
+<span class="sd">        prov_nac (ModelChoiceField): Campo de selección para la provincia de nacimiento.</span>
+<span class="sd">        prov_resid (ModelChoiceField): Campo de selección para la provincia de residencia.</span>
+<span class="sd">        loc_nac (ModelChoiceField): Campo de selección para la localidad de nacimiento.</span>
+<span class="sd">        loc_resid (ModelChoiceField): Campo de selección para la localidad de residencia.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        clean_apellidos(): Limpia y valida el campo de apellidos.</span>
+<span class="sd">        clean_nombres(): Limpia y valida el campo de nombres.</span>
+<span class="sd">        __init__(): Inicializa el formulario y carga dinámicamente las localidades según la provincia seleccionada.</span>
+<span class="sd">    &quot;&quot;&quot;</span> 
+    
+    <span class="n">apellidos</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span> 
+    
+    <span class="n">nombres</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span> <span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin abreviaturas, todo en mayúsculas&#39;</span><span class="p">})</span>
+    <span class="p">)</span>
+    
+    <span class="n">dni</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span><span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin puntos. Ej: 22345678&#39;</span><span class="p">}),</span>
+        
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DNI N°&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">cuil</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span><span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin puntos ni guiones medios. Ej: 27223456782&#39;</span><span class="p">}),</span>
+        
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;CUIL N°&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">telfijo</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span> <span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin el 0 del código de área. Ej: 3624123456&#39;</span><span class="p">}),</span>
+        
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Teléfono Fijo&#39;</span>
+    <span class="p">)</span>    
+    
+    
+    <span class="n">celular</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span> <span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin el 0 del código de área ni el 15. Ej: 3734123456&#39;</span><span class="p">}),</span>
+        
+    <span class="p">)</span>
+    
+    <span class="n">f_nac</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control date&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span><span class="s1">&#39;date&#39;</span><span class="p">}),</span>
+        
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Fecha Nacimiento&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">calle</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span> <span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin abreviaturas, todo en mayúsculas&#39;</span><span class="p">})</span>
+    <span class="p">)</span>   
+    
+    <span class="n">nro</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span>   
+    
+    <span class="n">mz</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span> 
+    
+    <span class="n">pc</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span>     
+    
+    <span class="n">casa</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span>  
+    
+    <span class="n">piso</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span>     
+    
+    <span class="n">uf</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">})</span>
+    <span class="p">)</span>   
+    
+    <span class="n">barrio</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span> <span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Si desconoce/ no tiene, consignar &quot;SIN DATOS&quot;&#39;</span><span class="p">}),</span>
+        
+    <span class="p">)</span>   
+    
+    <span class="n">pais_nac</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">pais</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;País Nacimiento&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">nacionalidad</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">nacionalidad</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">})</span>
+    <span class="p">)</span>
+    
+    <span class="n">t_doc</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">documento_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Tipo Documento&#39;</span>
+    <span class="p">)</span>      
+    
+    <span class="n">sexo</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">sexo_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">})</span>
+    <span class="p">)</span>
+    
+    <span class="n">estado_civil</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Estado_Civil_Cenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">})</span>
+    <span class="p">)</span>
+    
+    <span class="n">nivel_form</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Nivel_Formacion_Cenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">help_text</span><span class="o">=</span><span class="s1">&#39;Seleccionar máximo Nivel de Formación Alcanzado&#39;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Nivel Formación&#39;</span>
+    <span class="p">)</span>   
+    
+    
+    <span class="n">prov_nac</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">provincia_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Provincia Nacimiento&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">prov_resid</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">provincia_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Provincia Residencia&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">loc_nac</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">none</span><span class="p">(),</span>  
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span> 
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Localidad Nacimiento&#39;</span>
+    <span class="p">)</span>    
+    
+    
+    <span class="n">loc_resid</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">none</span><span class="p">(),</span>  
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span> 
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Localidad Resisdencia&#39;</span>
+    <span class="p">)</span>   
+    
+
+<div class="viewcode-block" id="DatosPersonalCenpeForm.Meta"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Datos_Personal_Cenpe</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;usuario&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>  
+        <span class="p">}</span></div>
+        
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;apellidos&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;autofocus&#39;</span><span class="p">]</span><span class="o">=</span><span class="kc">True</span>
+        
+        <span class="c1"># Si hay una provincia de nacimiento seleccionada, carga las localidades correspondientes</span>
+        <span class="k">if</span> <span class="s1">&#39;prov_nac&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">provincia_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prov_nac&#39;</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;provincia_id&#39;</span><span class="p">,</span> <span class="n">provincia_id</span><span class="p">)</span>  
+                <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;loc_nac&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_provincia_id</span><span class="o">=</span><span class="n">provincia_id</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;descripcion_loc&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                <span class="k">pass</span>  
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">:</span>
+            
+            <span class="c1"># Si hay una instancia existente, muestra las localidades correspondientes a la provincia guardada</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;loc_nac&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_provincia</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">prov_nac</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;descripcion_loc&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Si hay una provincia de residencia seleccionada, carga las localidades correspondientes</span>
+        <span class="k">if</span> <span class="s1">&#39;prov_resid&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">provincia2_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prov_resid&#39;</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;provincia2_id&#39;</span><span class="p">,</span> <span class="n">provincia2_id</span><span class="p">)</span>  
+                <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;loc_resid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_provincia_id</span><span class="o">=</span><span class="n">provincia2_id</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;descripcion_loc&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                <span class="k">pass</span>  
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">pk</span><span class="p">:</span>
+            <span class="c1"># Si hay una instancia existente, muestra las localidades correspondientes a la provincia guardada</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;loc_resid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="n">localidad_tipo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_provincia</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">prov_resid</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;descripcion_loc&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DatosPersonalCenpeForm.clean_apellidos"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeForm.clean_apellidos">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_apellidos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asegura que el campo de apellidos esté en mayúsculas y solo contenga caracteres válidos.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Apellido validado y convertido a mayúsculas.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Asegura que apellidos esté en mayúsculas y solo contenga caracteres válidos</span>
+        <span class="n">apellidos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;apellidos&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">allowed_chars</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39; ]+$&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">allowed_chars</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">apellidos</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s1">&#39;Solo se permiten letras mayúsculas, espacios, tildes y apóstrofes.&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">apellidos</span></div>
+
+<div class="viewcode-block" id="DatosPersonalCenpeForm.clean_nombres"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosPersonalCenpeForm.clean_nombres">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_nombres</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asegura que el campo de nombres esté en mayúsculas y solo contenga caracteres válidos.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Nombre validado y convertido a mayúsculas.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Asegura que nombres esté en mayúsculas y solo contenga caracteres válidos</span>
+        <span class="n">nombres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;nombres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">allowed_chars</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39; ]+$&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">allowed_chars</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">nombres</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s1">&#39;Solo se permiten letras mayúsculas, espacios, tildes y apóstrofes.&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">nombres</span></div></div>
+
+
+<div class="viewcode-block" id="DatosAcademicosCenpeForm"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosAcademicosCenpeForm">[documentos]</a><span class="k">class</span> <span class="nc">DatosAcademicosCenpeForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para capturar los datos académicos del usuario en el sistema CENPE.</span>
+
+<span class="sd">    Campos:</span>
+<span class="sd">        titulo (CharField): Campo de texto para el título académico.</span>
+<span class="sd">        tipo_form (ModelChoiceField): Campo de selección para el tipo de formación.</span>
+<span class="sd">        nivel_form (ModelChoiceField): Campo de selección para el nivel de formación alcanzado.</span>
+<span class="sd">        tipo_inst (ModelChoiceField): Campo de selección para el tipo de institución.</span>
+<span class="sd">        gestion_inst (ModelChoiceField): Campo de selección para la gestión de la institución.</span>
+<span class="sd">        reg_nro (CharField): Campo de texto para el número de registro del título.</span>
+<span class="sd">        f_egreso (DateField): Campo de fecha para la fecha de egreso.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        clean_titulo(): Limpia y valida el campo de título.</span>
+<span class="sd">        __init__(): Inicializa el formulario y establece el foco en el campo título.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">titulo</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span> <span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>
+        <span class="n">min_length</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>        
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span> <span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span><span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Sin abreviaturas, todo mayúsculas&#39;</span><span class="p">}),</span>
+        <span class="n">error_messages</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;max_length&#39;</span><span class="p">:</span> <span class="s1">&#39;El título no puede tener más de 255 caracteres.&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;min_length&#39;</span><span class="p">:</span> <span class="s1">&#39;El título debe tener al menos 1 caracter.&#39;</span>
+    <span class="p">}</span>
+    <span class="p">)</span>
+    
+    <span class="n">tipo_form</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Tipo_Formacion_Cenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Tipo Formación&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">nivel_form</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Nivel_Formacion_Cenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Nivel Formación&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">tipo_inst</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Tipo_Institucion_Cenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Tipo Institución&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">gestion_inst</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Gestion_Institucion_Cenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Tipo Gestión&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">reg_nro</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control textinput&#39;</span><span class="p">,</span><span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Otorgado por la Dirección de Títulos y Equivalencias de la provincia del Chaco&#39;</span><span class="p">}),</span>
+        <span class="n">help_text</span><span class="o">=</span><span class="s1">&#39;Otorgado por la Dirección de Títulos y Equivalencias de la provincia del Chaco&#39;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Registro N°&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">f_egreso</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span>
+    <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control date&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;date&#39;</span><span class="p">}),</span>
+    <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Fecha egreso&#39;</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="DatosAcademicosCenpeForm.Meta"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosAcademicosCenpeForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Academica_Cenpe</span> 
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;usuario&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>  
+        <span class="p">}</span></div>
+        
+<div class="viewcode-block" id="DatosAcademicosCenpeForm.clean_titulo"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.DatosAcademicosCenpeForm.clean_titulo">[documentos]</a>    <span class="k">def</span> <span class="nf">clean_titulo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Asegura que el campo de título esté en mayúsculas y solo contenga caracteres válidos.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Título validado y convertido a mayúsculas.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># Asegura que el titulo esté en mayúsculas y solo contenga caracteres válidos</span>
+        <span class="n">titulo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;titulo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">allowed_chars</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-ZÁÉÍÓÚÑ&#39; ]+$&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">allowed_chars</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">titulo</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">((</span><span class="s1">&#39;Solo se permiten letras mayúsculas, espacios, tildes y apóstrofes.&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">titulo</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;titulo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;autofocus&#39;</span><span class="p">]</span><span class="o">=</span><span class="kc">True</span></div>
+        
+
+<div class="viewcode-block" id="CargosHorasCenpeForm"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeForm">[documentos]</a><span class="k">class</span> <span class="nc">CargosHorasCenpeForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para capturar los datos de cargos y horas en el sistema CENPE.</span>
+
+<span class="sd">    Campos:</span>
+<span class="sd">        cueanexo (ModelChoiceField): Campo de selección para el Cueanexo.</span>
+<span class="sd">        categoria (ModelChoiceField): Campo de selección para la categoría de la escuela.</span>
+<span class="sd">        jornada (ModelChoiceField): Campo de selección para el tipo de jornada.</span>
+<span class="sd">        zona (ModelChoiceField): Campo de selección para la zona.</span>
+<span class="sd">        nivel_cargohora (ModelChoiceField): Campo de selección para el nivel del cargo o la hora cátedra.</span>
+<span class="sd">        cargos_horas (ModelChoiceField): Campo de selección para los cargos u horas cátedra.</span>
+<span class="sd">        cant_horas (DecimalField): Campo numérico para ingresar la cantidad de horas.</span>
+<span class="sd">        lunes, martes, miercoles, jueves, viernes (BooleanField): Checkboxes para indicar los días de trabajo.</span>
+<span class="sd">        situacion_revista (ModelChoiceField): Campo de selección para la situación de revista.</span>
+<span class="sd">        funciones (ModelChoiceField): Campo de selección para las funciones.</span>
+<span class="sd">        condicion_actividad (ModelChoiceField): Campo de selección para la condición de actividad.</span>
+<span class="sd">        fecha_desde, fecha_hasta (DateField): Campos de fecha para indicar el período.</span>
+<span class="sd">        cuof, cuof_anexo (IntegerField): Campos numéricos para ingresar el CUOF y CUOF anexo.</span>
+
+<span class="sd">    Métodos:</span>
+<span class="sd">        __init__(): Inicializa el formulario, estableciendo el foco y personalizando las etiquetas.</span>
+<span class="sd">        label_from_instance_cueanexo(): Método personalizado para mostrar el Cueanexo y el nombre de la institución.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">cueanexo</span><span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">PadronCenpe</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Cueanexo&#39;</span>
+    <span class="p">)</span>
+    
+    
+    <span class="n">categoria</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Categoria_Cueanexo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Categoría Escuela&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">jornada</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">TipoJornada_Cueanexo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Tipo Jornada&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">zona</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Zona_Cueanexo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Zona&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">nivel_cargohora</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Nivel_Sistema</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Nivel Cargo/ Hora Cátedra&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">cargos_horas</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">CeicPuntos</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Cargos/ Hora Cátedra&#39;</span>        
+    <span class="p">)</span>
+    
+    <span class="n">cant_horas</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DecimalField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">NumberInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control decimal&#39;</span><span class="p">,</span> <span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Cargos = Hs. reloj (ej. 36.30), Otros = Hs. Cát. (ej. 12.00)&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Cantidad Horas&#39;</span><span class="p">,</span>
+        <span class="n">max_digits</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+        <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span>    
+    <span class="p">)</span>
+    
+    <span class="n">lunes</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control checkbox&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Lunes&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    
+    <span class="n">martes</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control checkbox&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Martes&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    
+    <span class="n">miercoles</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control checkbox&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Miércoles&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    
+    <span class="n">jueves</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control checkbox&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Jueves&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    
+    <span class="n">viernes</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control checkbox&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Viernes&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    
+    <span class="n">situacion_revista</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">SituacionRevista</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Situación Revista&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">funciones</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">funciones</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Funciones&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">condicion_actividad</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">condicionactividad</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control select2&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Condición Actividad&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">fecha_desde</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span>
+    <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control date&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;date&#39;</span><span class="p">}),</span>
+    <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Fecha desde&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">fecha_hasta</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span>
+        <span class="n">initial</span><span class="o">=</span><span class="s1">&#39;2060-12-31&#39;</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;form-control date&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;date&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Fecha hasta&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">cuof</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">NumberInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control integer&#39;</span><span class="p">,</span><span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Lo puede encontrar en su Recibo de Haberes.&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;CUOF&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="n">cuof_anexo</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">NumberInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span><span class="s1">&#39;form-control integer&#39;</span><span class="p">,</span><span class="s1">&#39;placeholder&#39;</span><span class="p">:</span><span class="s1">&#39;Lo puede encontrar en su Recibo de Haberes.&#39;</span><span class="p">}),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;CUOF_Anexo&#39;</span>
+    <span class="p">)</span>
+    
+<div class="viewcode-block" id="CargosHorasCenpeForm.Meta"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">CargosHoras_Cenpe</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;usuario&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">(),</span>  
+        <span class="p">}</span>         </div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;autofocus&#39;</span><span class="p">]</span><span class="o">=</span><span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">label_from_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_from_instance_cueanexo</span>
+        
+    <span class="c1"># Método personalizado del select</span>
+<div class="viewcode-block" id="CargosHorasCenpeForm.label_from_instance_cueanexo"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views.CargosHorasCenpeForm.label_from_instance_cueanexo">[documentos]</a>    <span class="k">def</span> <span class="nf">label_from_instance_cueanexo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Devuelve la etiqueta personalizada para el campo `cueanexo` mostrando el Cueanexo y el nombre de la institución.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            obj: Instancia de PadronCenpe.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Texto formateado que muestra el Cueanexo y el nombre de la institución.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">obj</span><span class="o">.</span><span class="n">cueanexo</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">obj</span><span class="o">.</span><span class="n">nom_est</span><span class="si">}</span><span class="s2">&quot;</span></div></div>
+    
+
+           
+    
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

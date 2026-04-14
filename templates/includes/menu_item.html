@@ -1,0 +1,20 @@
+<li class="nav-item {% if item.children %}has-treeview{% endif %}">
+    {% if item.url %}
+        <a href="{% url item.url %}" class="nav-link">
+            <i class="{{ item.icon }}"></i>
+            <p>{{ item.label }} {% if item.children %}<i class="right fas fa-angle-left"></i>{% endif %}</p>
+        </a>
+    {% else %}
+        <a href="#" class="nav-link">
+            <i class="{{ item.icon }}"></i>
+            <p>{{ item.label }} {% if item.children %}<i class="right fas fa-angle-left"></i>{% endif %}</p>
+        </a>
+    {% endif %}
+    {% if item.children %}
+        <ul class="nav nav-treeview">
+            {% for child in item.children %}
+                {% include "includes/menu_item.html" with item=child %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+</li>

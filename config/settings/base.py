@@ -1,0 +1,319 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Directorios base y raíz del proyecto
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ROOT_DIR = BASE_DIR
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Cargar variables de entorno
+load_dotenv(BASE_DIR / '.env')
+
+# Directorio de aplicaciones
+APPS_DIR = ROOT_DIR / 'apps'
+
+# Configuración de aplicaciones
+BASE_APPS = [
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.admin',
+    'widget_tweaks',
+    'django_select2',
+    'django.forms',
+    'django.contrib.gis',  
+    'rest_framework',
+    'ckeditor',
+    'ckeditor_uploader',
+    'django_celery_beat',
+    'guardian',
+]
+
+LOCAL_APPS = [
+    'apps.mapas',
+    'apps.reportes',
+    'apps.core',
+    'apps.videoteca',
+    'apps.usuarios',
+    'apps.login',
+    'apps.establecimientos',
+    'apps.dashboard',
+    'apps.archivar',
+    'apps.mapoteca',
+    'apps.normativa',
+    'apps.docentes',
+    'apps.alumnos',
+    'apps.directores',
+    'apps.regacceso',
+    'apps.lectocomp',
+    'apps.indicadores',
+    'apps.asistendoc',
+    'apps.cenpe',
+    'apps.oplectura',
+    'apps.supervisores',
+    'apps.cuenta_regresiva',
+    'apps.superescuela',
+    'apps.pof',
+    'apps.evaluaciones',
+    'apps.unidadgestion',
+    'apps.uegp',
+    'apps.funcionarios',
+    'apps.represlegales',
+    'apps.intercultural',
+    'apps.biblioteca',
+    'apps.especial',
+    'apps.infraestructura',
+    'apps.indicadoresie',
+    'apps.operativoschaco',
+    'apps.operativchaco',
+    'apps.consultas',
+    'apps.ayudarenpe',
+    'apps.evaluaciones_educativas',
+    'apps.consultasge',
+    'apps.tickets',
+    'apps.menus.apps.MenusConfig',
+    'apps.supervisa2',
+    'apps.asignaciones',
+]
+
+
+INSTALLED_APPS = BASE_APPS + LOCAL_APPS
+
+# Middleware
+BASE_MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.regacceso.middleware.RegistroAccesoMiddleware',
+    'apps.usuarios.middleware.AuditoriaMiddleware',
+]
+
+THIRD_MIDDLEWARE = [    
+    'corsheaders.middleware.CorsMiddleware',
+]
+
+MIDDLEWARE = BASE_MIDDLEWARE + THIRD_MIDDLEWARE
+
+# Autenticación
+AUTH_USER_MODEL = 'usuarios.UsuariosVisualizador'
+AUTHENTICATION_BACKENDS = [
+    'apps.usuarios.backends.CustomAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+]
+
+ANONYMOUS_USER_NAME = None
+
+# Configuración de plantillas
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+                "apps.consultasge.context_processors.consultas_notificaciones",
+                "apps.core.context_processors.user_roles",                            
+                "apps.menus.context_processors.menu_context",
+            ],
+        },
+    },
+]
+
+# Base de datos
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ.get('POSTGRES_DB'),
+        'USER': os.environ.get('POSTGRES_USER'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+        'HOST': os.environ.get('POSTGRES_HOST'),
+        'PORT': os.environ.get('POSTGRES_PORT'),
+        'OPTIONS': {
+            'options': '-c search_path=public,evaluacion,cenpe,operativoschaco,indicadores,pem,pof'
+        }
+    },
+    'Evaluacion': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ.get('POSTGRES_DB_EVALUACION'),
+        'USER': os.environ.get('POSTGRES_USER_EVALUACION'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD_EVALUACION'),
+        'HOST': os.environ.get('POSTGRES_HOST_EVALUACION'),
+        'PORT': os.environ.get('POSTGRES_PORT_EVALUACION'),
+        'OPTIONS': {
+            'options': '-c search_path=evaluacion,public',
+        }
+    }
+}
+
+DATABASE_ROUTERS = ['apps.evaluaciones_educativas.routers.SecondaryDBRouter']
+
+# Configuración de archivos estáticos
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'productionfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
+
+# Ruta para guardar imágenes pegadas desde CKEditor
+CKEDITOR_UPLOAD_PATH = "ckeditor/"  # Dentro de MEDIA_ROOT
+CKEDITOR_IMAGE_BACKEND = "pillow"
+
+# Configuración de archivos de medios (para producción)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+#MEDIA_ROOT = ROOT_DIR / 'apps/media'
+
+# Configuración de tiempo y formato
+LANGUAGE_CODE = 'es-ar'
+TIME_ZONE = 'America/Argentina/Buenos_Aires'
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+DATE_INPUT_FORMATS = ['%d/%m/%Y']
+
+LOGIN_REDIRECT_URL='dash:portada'
+
+# Configuración de CORS y REST Framework
+CORS_URLS_REGEX = r'^/api/.*'
+CORS_ORIGIN_ALLOW_ALL = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
+}
+
+ROOT_URLCONF='config.urls'
+
+# Configuración de Leaflet
+LEAFLET_CONFIG = {
+    "DEFAULT_CENTER": (-26.270826, -60.604297),
+    "DEFAULT_ZOOM": 6,
+}
+
+# Configuración de seguridad
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+
+# URL de Django Admin
+ADMIN_URL = 'admin/'
+
+# Configuración de log
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(name)s %(message)s'
+        },
+        'json': {  # 🔥 listo para ELK
+            'format': '{"level":"%(levelname)s","time":"%(asctime)s","logger":"%(name)s","message":%(message)s}'
+        }
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+
+        # 🔥 archivo exclusivo asignaciones
+        'asignaciones_file': {
+            "level": "INFO",
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'asignaciones.log'),
+            'formatter': 'json',
+        },
+    },
+
+    'loggers': {
+        'asignaciones': {
+            'handlers': ['console', 'asignaciones_file'],
+            'level': 'INFO',
+            'propagate': False,
+        }
+    },
+
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+
+
+# ===============================
+# 📩 EMAIL CONFIG (CORREGIDO)
+# ===============================
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+)
+
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+
+# 🔑 Cuenta principal (usa USER1 del .env)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER1')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD1')
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# 🔁 Cuenta alternativa (opcional)
+EMAIL_HOST_USER_ALT = os.environ.get('EMAIL_HOST_USER2')
+EMAIL_HOST_PASSWORD_ALT = os.environ.get('EMAIL_HOST_PASSWORD2')
+
+# 📩 Opcional: enviar mail cuando sync OK
+SYNC_SEND_SUCCESS_EMAIL = False
+
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+WHITENOISE_MAX_AGE = 31536000
+
+
+# ===============================
+# 🚀 CELERY + REDIS CONFIG (FIX)
+# ===============================
+
+REDIS_URL = os.environ.get("REDIS_URL")
+
+if not REDIS_URL:
+    # fallback SOLO para desarrollo
+    REDIS_URL = "redis://localhost:6379/1"
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Argentina/Buenos_Aires'
+
+# 🔥 estabilidad producción
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_TRACK_STARTED = True

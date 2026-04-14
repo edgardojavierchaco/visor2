@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Directores Regionales</title>
+</head>
+<body>
+    <h1>Directores Regionales</h1>
+
+    <ul>
+        {% for director in directores %}
+            <li>
+                <a href="{% url 'supervis:editar_director_regional' director.pk %}">{{ director.apellido_reg }} {{ director.nombres_reg }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'supervis:crear_director_regional' %}">Crear Nuevo Director Regional</a>
+</body>
+</html>

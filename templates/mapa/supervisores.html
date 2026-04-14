@@ -1,0 +1,103 @@
+{% extends "dashboard/home.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<div class="container-fluid mt-3">
+
+    <h3>🗺️ Control Territorial de Supervisores</h3>
+
+    <!-- FILTRO -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label>Supervisor</label>
+            <select id="filtro_supervisor" class="form-select">
+                <option value="">Seleccione...</option>
+                {% for s in supervisores %}
+                    <option value="{{ s.id }}">
+                        {{ s.apellido }} {{ s.nombres }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- MAPA -->
+    <div id="map" style="height: 600px; border-radius:10px;"></div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+
+let map = L.map('map').setView([-27.45, -58.98], 7); // Chaco
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+let markersLayer = L.layerGroup().addTo(map);
+
+// 🎨 colores por región
+function getColor(region) {
+    const colores = {
+        "1": "red",
+        "2": "blue",
+        "3": "green",
+        "4": "orange"
+    };
+    return colores[region] || "gray";
+}
+
+// 📍 cargar datos
+function cargarMapa(supervisor_id) {
+
+    markersLayer.clearLayers();
+
+    $.ajax({
+        url: "/sup2/ajax/mapa-supervisor/",
+        data: { supervisor: supervisor_id },
+        success: function (response) {
+
+            let bounds = [];
+
+            response.data.forEach(function (e) {
+
+                let marker = L.circleMarker([e.lat, e.lng], {
+                    radius: 8,
+                    color: getColor(e.region),
+                    fillOpacity: 0.8
+                });
+
+                marker.bindPopup(`
+                    <b>${e.nombre}</b><br>
+                    CUE: ${e.cueanexo}<br>
+                    Oferta: ${e.oferta}<br>
+                    Región: ${e.region}
+                `);
+
+                markersLayer.addLayer(marker);
+                bounds.push([e.lat, e.lng]);
+            });
+
+            if (bounds.length > 0) {
+                map.fitBounds(bounds);
+            }
+        }
+    });
+}
+
+// 🎯 evento filtro
+$('#filtro_supervisor').change(function () {
+    let id = $(this).val();
+    if (id) {
+        cargarMapa(id);
+    }
+});
+
+</script>
+
+{% endblock %}

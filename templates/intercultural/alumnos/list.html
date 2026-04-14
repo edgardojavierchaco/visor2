@@ -1,0 +1,32 @@
+{% extends 'intercultural/list.html' %}
+{% load static %}
+{% block head_list %}
+    <script src="{% static 'intercultural/alumnos/js/list.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+   <thead>
+        <tr>
+            <th scope="col" style="width: 15%;">CUEANEXO</th>
+            <th scope="col" style="width: 15%;">NIVEL</th>
+            <th scope="col" style="width: 10%;">CURSO</th>
+            <th scope="col" style="width: 15%;">SECCION</th>
+            <th scope="col" style="width: 15%;">LENGUA</th>
+            <th scope="col" style="width: 20%;">VARONES</th>
+            <th scope="col" style="width: 20%;">MUJERES</th>
+            <th scope="col" style="width: 20%;">Botones</th>
+        </tr>
+    </thead>
+    <tfoot>
+        <tr>
+            <th colspan="5" class="text-right">Total:</th>
+            <th id="totalVarones">0</th>
+            <th id="totalMujeres">0</th>
+            <th></th>
+        </tr>
+    </tfoot> 
+{% endblock %}
+
+{% block javascript %}
+
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"/>
+
+<div id="map-container">
+    <div id="map"></div>
+    <div id="legend-toggle">Leyenda ▼</div>
+    <div id="legend"></div>
+</div>
+
+<div style="margin-top: 10px;">
+    <table id="markers-table" class="display nowrap" style="width:100%">
+        <thead>
+            <tr>
+                <th>CUE</th>
+                <th>Establecimiento</th>
+                <th>Oferta</th>
+                <th>Ámbito</th>
+                <th>Sector</th>
+                <th>Localidad</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<style>
+#map-container { position: relative; height: 70vh; }
+#map { height: 100%; }
+
+/* Toggle y leyenda en esquina inferior derecha */
+#legend-toggle {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 1100;
+    background: #1f2937;
+    color: white;
+    padding: 6px 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#legend {
+    position: absolute;
+    bottom: 50px;
+    right: 10px;
+    z-index: 1050;
+    background: rgba(30, 41, 59, 0.9);
+    color: #f9fafb;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    cursor: default;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+</style>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<script>
+const API_URL = "{% url 'mapas:api_mapa' %}";
+
+const map = L.map('map').setView([-25.38, -60.99], 8);
+
+const osm = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.carto.com/">CARTO</a> &copy; OpenStreetMap',
+    maxZoom: 20
+}).addTo(map);
+
+const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri'
+});
+
+L.control.layers({ "Mosaico": osm, "Satélite": sat }).addTo(map);
+L.control.scale({ metric: true }).addTo(map);
+
+const ofertaColors = {};
+const colorPalette = ['#2563eb','#16a34a','#dc2626','#d97706','#9333ea','#0ea5e9','#14b8a6','#f43f5e','#eab308','#8b5cf6'];
+
+let markers = [];
+let visibleAreaMarkers = [];
+const markerGroup = L.layerGroup().addTo(map);
+const drawnItems = new L.FeatureGroup().addTo(map);
+
+const legendDiv = document.getElementById('legend');
+const legendToggle = document.getElementById('legend-toggle');
+legendToggle.onclick = () => {
+    if(legendDiv.style.display==='none'){
+        legendDiv.style.display = 'block';
+        legendToggle.innerHTML = 'Leyenda ▲';
+    } else {
+        legendDiv.style.display = 'none';
+        legendToggle.innerHTML = 'Leyenda ▼';
+    }
+}
+
+let table = $('#markers-table').DataTable({
+    columns: [
+        { data: 'cueanexo' },
+        { data: 'nom_est' },
+        { data: 'oferta' },
+        { data: 'ambito' },
+        { data: 'sector' },
+        { data: 'localidad' }
+    ],
+    dom: 'Bfrtip',
+    buttons: ['excelHtml5'],
+    scrollX: true,
+    language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-AR.json' }
+});
+
+// Cargar datos
+fetch(API_URL)
+.then(r=>r.json())
+.then(data=>{
+    let colorIndex = 0;
+    data.features.forEach(f=>{
+        if(!ofertaColors[f.properties.oferta]){
+            ofertaColors[f.properties.oferta] = colorPalette[colorIndex % colorPalette.length];
+            colorIndex++;
+        }
+        const marker = L.circleMarker([f.geometry.coordinates[1], f.geometry.coordinates[0]], {
+            radius: 6,
+            color: ofertaColors[f.properties.oferta],
+            fillColor: ofertaColors[f.properties.oferta],
+            fillOpacity: 0.8,
+            weight: 1
+        });
+        marker.properties = f.properties;
+        marker.bindPopup(`
+            <div style="font-size:13px; line-height:1.3;">
+                <b>CUE:</b> ${f.properties.cueanexo}<br>
+                <b>Establecimiento:</b> ${f.properties.nom_est}<br>                
+                <b>Oferta:</b> ${f.properties.oferta}<br>
+                <b>Ámbito:</b> ${f.properties.ambito}<br>
+                <b>Sector:</b> ${f.properties.sector}<br>
+                <b>Localidad:</b> ${f.properties.localidad}
+            </div>
+        `);
+        markers.push(marker);
+    });
+});
+
+// Leyenda general (todos los tipos de oferta)
+function actualizarLeyendaGeneral(){
+    let html = '';
+    for(const [oferta, color] of Object.entries(ofertaColors)){
+        html += `<div class="legend-item" onclick="filtrarPorOferta('${oferta}')">
+                    <div class="legend-color" style="background:${color}"></div>
+                    <div>${oferta}</div>
+                 </div>`;
+    }
+    legendDiv.innerHTML = html;
+}
+
+// Filtrar marcadores dentro del área dibujada
+function filtrarPorOferta(oferta){
+    const visibles = visibleAreaMarkers.filter(m => m.properties.oferta === oferta);
+    markerGroup.clearLayers();
+    visibles.forEach(m => markerGroup.addLayer(m));
+    table.clear();
+    visibles.forEach(m => table.row.add(m.properties));
+    table.draw();
+}
+
+function insidePolygon(marker, polygon){
+    const x = marker.getLatLng().lat;
+    const y = marker.getLatLng().lng;
+    let inside=false;
+    const vs = polygon.getLatLngs()[0];
+    for(let i=0,j=vs.length-1;i<vs.length;j=i++){
+        const xi=vs[i].lat, yi=vs[i].lng;
+        const xj=vs[j].lat, yj=vs[j].lng;
+        const intersect=((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi);
+        if(intersect) inside=!inside;
+    }
+    return inside;
+}
+
+// DRAW
+const drawControl = new L.Control.Draw({
+    draw:{
+        polygon:{ shapeOptions:{ color:'#2563eb', weight:3, opacity:0.7, fillOpacity:0.2 } },
+        rectangle:{ shapeOptions:{ color:'#16a34a', weight:3, opacity:0.7, fillOpacity:0.2 } },
+        circle:{ shapeOptions:{ color:'#dc2626', weight:3, opacity:0.7, fillOpacity:0.2 } },
+        polyline:false, marker:false, circlemarker:false
+    },
+    edit:{ featureGroup:drawnItems }
+});
+map.addControl(drawControl);
+
+map.on('draw:created', function(e){
+    drawnItems.clearLayers();
+    table.clear().draw();
+    markerGroup.clearLayers();
+
+    const layer = e.layer;
+    drawnItems.addLayer(layer);
+
+    // Detectar marcadores dentro del área dibujada
+    visibleAreaMarkers = [];
+    if(layer instanceof L.Circle){
+        markers.forEach(m=>{
+            if(m.getLatLng().distanceTo(layer.getLatLng()) <= layer.getRadius()){
+                visibleAreaMarkers.push(m);
+            }
+        });
+    } else {
+        markers.forEach(m=>{
+            if(insidePolygon(m,layer)){
+                visibleAreaMarkers.push(m);
+            }
+        });
+    }
+
+    visibleAreaMarkers.forEach(m => markerGroup.addLayer(m));
+    visibleAreaMarkers.forEach(m => table.row.add(m.properties));
+    table.draw();
+
+    actualizarLeyendaGeneral();
+});
+
+// Reset control
+const ResetControl = L.Control.extend({
+    onAdd:function(map){
+        const div=L.DomUtil.create('div','leaflet-bar leaflet-control');
+        div.style.background='#1f2937';
+        div.style.color='white';
+        div.style.padding='6px 10px';
+        div.style.cursor='pointer';
+        div.style.fontWeight='bold';
+        div.style.borderRadius='4px';
+        div.innerHTML='Resetear Mapa';
+        div.onclick=()=>{
+            drawnItems.clearLayers();
+            markerGroup.clearLayers();
+            table.clear().draw();
+            visibleAreaMarkers = [];
+        }
+        return div;
+    },
+    onRemove:function(map){}
+});
+new ResetControl({position:'topright'}).addTo(map);
+
+</script>
+
+{% endblock %}

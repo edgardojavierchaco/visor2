@@ -1,0 +1,22 @@
+{% extends 'archivos/base/list_fluidez.html' %}
+{% load static %}
+{% block head_list %}
+    <script src="{% static 'archivos/js/list_fluidez.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+    <tr>
+        <th scope="col" style="width: 10%;">Nro</th>        
+        <th scope="col" style="width: 15%;">ASUNTO</th>
+        <th scope="col" style="width: 10%;">NIVEL</th>
+        <th scope="col" style="width: 15%;">TIPO</th>
+        <th scope="col" style="width: 15%;">MES</th>
+        <th scope="col" style="width: 20%;">AÑO</th>
+        <th scope="col" style="width: 20%;">DESCRIPCION</th>        
+        <th scope="col" style="width: 20%;">BOTONES</th>
+    </tr>
+{% endblock %}
+
+{% block javascript %}
+
+{% endblock %}

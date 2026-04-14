@@ -1,0 +1,62 @@
+{% extends "consultasge/layout.html" %}
+
+{% block content %}
+
+<h2>Consultas de la región</h2>
+
+<table class="table">
+
+<tr>
+
+<th>Escuela</th>
+
+<th>Asunto</th>
+
+<th>Estado</th>
+
+<th></th>
+
+</tr>
+
+{% for c in consultas %}
+
+<tr>
+
+<td>
+
+{{ c.escuela }}
+
+</td>
+
+<td>
+
+{{ c.asunto }}
+
+</td>
+
+<td>
+
+{{ c.estado }}
+
+</td>
+
+<td>
+
+<a
+href="/consultas/{{c.id}}/"
+class="btn btn-primary btn-sm"
+>
+
+Abrir
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

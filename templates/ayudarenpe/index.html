@@ -1,0 +1,32 @@
+{% extends "dashboard/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <!-- Título centrado -->
+    <h2 class="text-center mb-4">📘 Centro de Ayuda sobre ReNPE 2025</h2>
+
+    <div class="row mt-3">
+        <!-- Preguntas Frecuentes -->
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <h4 class="card-title mb-3 fw-bold">❓ Preguntas Frecuentes</h4>
+                    <p class="card-text">Accedé a las dudas más comunes sobre el ReNPE.</p>
+                    <a href="{% url 'ayudarenpe:faq_list' %}" class="btn btn-outline-primary">Ver Preguntas</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Glosario / Respuestas -->
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <h4 class="card-title mb-3 fw-bold">💡 Respuestas (Glosario)</h4>
+                    <p class="card-text">Definiciones de términos clave usados en el ReNPE.</p>
+                    <a href="{% url 'ayudarenpe:glosario_list' %}" class="btn btn-outline-success">Ver Glosario</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,141 @@
+{% extends 'dashboard/body.html' %}
+
+{% load static %}
+
+{% block content %}
+    <title>Docentes por Actividad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1200px; 
+            margin-top: 60px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px; 
+            background-color: #f9f9f9;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+        }
+        .card-function {
+            background-color: violet; 
+        }
+        .card-sector {
+            background-color: blue; 
+        }
+        .card-ambito {
+            background-color: white;
+        }
+        .card-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .card-body {
+            margin-bottom: 5px;
+        }
+        .card-item {
+            margin-bottom: 5px;
+        }
+        .card-item span {
+            font-weight: bold;
+        }
+        .total-circle {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: black;
+            color: white;
+            text-align: center;
+            line-height: 60px; /* Centrar verticalmente el texto */
+            font-size: 1.5em; /* Tamaño más grande del texto */
+            font-weight: bold;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 20px; 
+        }
+        .total-rectangle {
+            display: inline-block;
+            width: 120px;
+            height: 40px;
+            border-radius: 5px;
+            background-color: black;
+            color: white;
+            text-align: center;
+            line-height: 40px; /* Centrar verticalmente el texto */
+            font-size: 1.2em; /* Tamaño más grande del texto */
+            font-weight: bold;
+        }
+    </style>
+    <div class="container">
+        <h1>Docentes en Actividad por Departamento</h1>
+
+        <!-- Filtro por departamento -->
+        <form method="GET" action="">
+            <div class="form-group">
+                <label for="departamento">Seleccione un Departamento:</label>
+                <select name="departamento" id="departamento" onchange="this.form.submit()">
+                    <option value="Chaco">-- Todos los departamentos --</option>
+                    {% for departamento in departamentos %}
+                        <option value="{{ departamento }}" {% if departamento == request.GET.departamento %}selected{% endif %}>
+                            {{ departamento }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <!-- Resultados de la consulta -->
+        {% if resultados %}
+            <div class="result-header">
+                <h2><span>Departamento: <strong>{{ request.GET.departamento }}</strong></span></h2>
+                <h2>Total:<div class="total-rectangle">{{ total_general }}</div></h2>
+            </div>
+            
+            <div class="grid-container">
+                {% for funcion, items in resultados.items %}
+                    <div class="card card-function">
+                        <div class="card-header">Nivel/Modalidad: {{ funcion }}</div>
+                        <div class="card-body">
+                            {% regroup items by sector as sectores %}
+                            {% for sector_group in sectores %}
+                                <div class="card card-sector">
+                                    <div class="card-header">Sector: {{ sector_group.grouper }}</div>
+                                    <div class="card-body">
+                                        {% regroup sector_group.list by ambito as ambitos %}
+                                        {% for ambito_group in ambitos %}
+                                            <div class="card card-ambito">
+                                                <div class="card-header">Ámbito: {{ ambito_group.grouper }}</div>
+                                                <div class="card-body">
+                                                    {% for item in ambito_group.list %}
+                                                        <div class="card-item">                                                            
+                                                            <span>Total:</span>
+                                                            <div class="total-circle">{{ item.total }}</div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+        {% else %}
+            <p>No hay resultados para el departamento seleccionado.</p>
+        {% endif %}
+    </div>
+{% endblock %}

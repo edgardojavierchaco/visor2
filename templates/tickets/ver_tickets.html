@@ -1,0 +1,44 @@
+<h2>Ticket {{ticket.id}}</h2>
+
+<p>
+Asunto: {{ticket.asunto}}
+</p>
+
+<hr>
+
+{% for m in mensajes %}
+
+<div style="margin-bottom:20px">
+
+<strong>
+{{m.autor.apellido}} {{m.autor.nombres}}
+</strong>
+
+<br>
+
+{{m.mensaje}}
+
+<br>
+
+<small>
+{{m.fecha}}
+</small>
+
+</div>
+
+<hr>
+
+{% endfor %}
+
+<h3>Responder</h3>
+
+<form method="post">
+{% csrf_token %}
+
+<textarea name="mensaje"></textarea>
+
+<button type="submit">
+Enviar
+</button>
+
+</form>

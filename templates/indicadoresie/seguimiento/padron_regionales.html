@@ -1,0 +1,1252 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+
+    /* ===== ARMONIZACIÓN MILIMÉTRICA DEL BUSCADOR INTELIGENTE ===== */
+    .custom-search-group {
+        height: 31px !important; /* Iguala la altura exacta de los botones de exportación */
+        align-items: stretch !important; /* Obliga a los elementos internos a respetar esta altura */
+    }
+    
+    .custom-search-group select,
+    .custom-search-group input {
+        height: 100% !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        line-height: 29px !important; /* Garantiza el centrado vertical perfecto del texto */
+    }
+
+        /* ===== BOTÓN DE AYUDA (AZUL SUTIL INTEGRADO A LA PÁGINA) ===== */
+    #btnAyudaFiltros {
+        color: #3b82f6 !important; 
+        border: 1px solid #93c5fd !important; 
+        background-color: #ffffff !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    #btnAyudaFiltros:hover {
+        background-color: #eff6ff !important; 
+        color: #1d4ed8 !important; 
+        border-color: #93c5fd !important;
+        box-shadow: none !important; 
+    }
+
+    #btnAyudaFiltros i {
+        color: inherit !important;
+    }
+
+        /* ===== BOTÓN DE AYUDA (AZUL SUTIL INTEGRADO A LA PÁGINA) ===== */
+    #btnAyudaFiltros {
+        color: #3b82f6 !important; /* El mismo azul de los íconos de tus filtros */
+        border: 1px solid #93c5fd !important; /* Borde celeste suave, igual al de los chips */
+        background-color: #ffffff !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    #btnAyudaFiltros:hover {
+        background-color: #eff6ff !important; /* Fondo celestito muy claro, igual a tus botones activos */
+        color: #1d4ed8 !important; /* Letra levemente más oscura para leer bien */
+        border-color: #93c5fd !important;
+        box-shadow: none !important; /* Sin sombra fuerte para que no resalte de más */
+    }
+
+    #btnAyudaFiltros i {
+        color: inherit !important;
+    }
+    /* ===== BUSCADOR ESTILIZADO (CÁPSULA) ===== */
+    #btnResetSmartSearch:hover { color: #ef4444 !important; }
+
+    .custom-search-group {
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        overflow: hidden; 
+        display: flex;
+        background-color: #fff;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    
+    .custom-search-group:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .custom-search-group select {
+        border: none !important;
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 0.4rem 0.5rem 0.4rem 0.9rem;
+        border-right: 1px solid #e2e8f0 !important;
+        border-radius: 0;
+        cursor: pointer;
+        box-shadow: none !important;
+        outline: none !important;
+        max-width: 145px;
+    }
+    
+    .custom-search-group select:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .custom-search-group input {
+        border: none !important;
+        font-size: 0.88rem;
+        color: #111827;
+        padding: 0.4rem 0.9rem;
+        box-shadow: none !important;
+        outline: none !important;
+        background-color: transparent;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .custom-search-group input::placeholder {
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    /* Alineación total y milimétrica de los botones de exportación */
+    div.dt-buttons { 
+        display: flex !important; 
+        align-items: center !important; 
+        gap: 0.5rem; 
+    }
+
+    div.dt-buttons .btn { 
+        display: inline-flex !important; 
+        flex-direction: row !important;    
+        align-items: center !important;    
+        justify-content: center !important;
+        white-space: nowrap !important;    
+        height: 31px !important;           
+        padding: 0 12px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important; 
+        border-radius: 0.35rem !important; 
+        font-weight: 600 !important; 
+        font-size: .8rem !important; 
+        color: #334155 !important;
+        transition: all 0.2s ease-in-out;
+    }
+
+    div.dt-buttons .btn i { margin-right: 6px !important; }
+    div.dt-buttons .btn:hover { 
+        background-color: #f8fafc !important; 
+        border-color: #94a3b8 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* ===== MAGIA PARA EL BUSCADOR DE SELECT2 (CENTRADO) ===== */
+    .select2-container--default .select2-selection--multiple .select2-search--inline { width: 100% !important; display: flex !important; align-items: center !important; height: 100% !important; }
+    .select2-container--default .select2-selection--multiple .select2-search__field { width: 100% !important; margin-top: 0 !important; height: 2rem !important; line-height: 2rem !important; padding: 0 !important; margin: 0 !important; font-family: inherit; cursor: pointer; background: transparent !important; }
+    .select2-search__field::placeholder { line-height: 2rem !important; vertical-align: middle !important; color: #111827; opacity: 1; }
+    .select2-search__field.empty-placeholder::placeholder { color: #6b7280; }
+    .select2-search__field.multi-placeholder::placeholder { color: #3b82f6; font-weight: 600; }
+     
+      /* AJUSTE FINAL: SUBIR MEDIO MILÍMETRO EXTRA */
+.select2-container--default .select2-selection--multiple .select2-selection__clear {
+    margin-right: 1.4rem !important; 
+    position: absolute !important;
+    right: 0.8rem !important;
+    top: 34% !important; /* Subido de 36% a 34% para ese medio milímetro extra */
+    transform: translateY(-50%) !important; 
+    cursor: pointer !important;
+    transition: color 0.2s ease !important;
+    color: #94a3b8 !important; 
+    font-size: 0 !important; 
+}
+
+/* El ícono circular */
+.select2-container--default .select2-selection--multiple .select2-selection__clear::before {
+    content: '\f057' !important; 
+    font-family: 'Font Awesome 5 Free', 'FontAwesome' !important;
+    font-weight: 900 !important;
+    font-size: 1rem !important; 
+    display: block !important;
+}
+
+/* Efecto Hover */
+.select2-container--default .select2-selection--multiple .select2-selection__clear:hover {
+    color: #ef4444 !important; 
+}
+
+    /* ===== SELECT2 – ESTILO COMPACTO, LEGIBLE Y PROFESIONAL ===== */
+    .select2-container { width: 100% !important; }
+    .select2-container--default .select2-selection--multiple { min-height: 2.3rem !important; border: 1px solid #cbd5e1 !important; border-radius: 0.5rem !important; background-color: #fff; transition: all 0.2s ease; padding: 0.2rem 0.5rem; }
+    .select2-container--default.select2-container--focus .select2-selection--multiple { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice { display: none !important; }
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered { font-size: 0.88rem; font-weight: 500; line-height: 1.5; color: #1e293b; padding: 0; margin: 0; }
+    .select2-container--default .select2-selection--multiple .select2-selection__placeholder { color: #6b7280; font-size: 0.88rem; font-weight: 500; }
+
+    /* DROPDOWN – compacto */
+    .select2-dropdown { border: 1px solid #e2e8f0; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); background: #fff; font-size: 0.8rem; overflow: hidden; }
+    .select2-container--default .select2-search--dropdown { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+    .select2-container--default .select2-search--dropdown .select2-search__field { border: 1px solid #e2e8f0; border-radius: 0.4rem; padding: 0.4rem 0.7rem; font-size: 0.8rem; width: 100%; background: #fff; }
+    .select2-container--default .select2-search--dropdown .select2-search__field:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+    .select2-container--default .select2-results__option { padding: 0.45rem 0.6rem 0.45rem 1.8rem; font-size: 0.8rem; position: relative; transition: background 0.1s; color: #111827 !important; cursor: pointer; }
+    .select2-container--default .select2-results__option--highlighted { background-color: #f1f5f9 !important; color: #111827 !important; }
+    .select2-container--default .select2-results__option[aria-selected=true] { background-color: #eef2ff !important; color: #1e40af !important; font-weight: 500; }
+    .select2-container--default .select2-results__option[aria-selected=true]:before { content: '✓'; position: absolute; left: 0.6rem; font-weight: bold; font-size: 0.85rem; color: #3b82f6; }
+    .select2-container--default .select2-results__group { padding: 0.4rem 0.6rem; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+
+    /* ===== FLECHITA INDICADORA EN LA CAJA ===== */
+    .select2-container--default .select2-selection--multiple { padding-right: 2rem !important; }
+    .select2-container--default .select2-selection--multiple::before { content: '\f0d7'; font-family: 'Font Awesome 5 Free', 'FontAwesome'; font-weight: 900; position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+    .select2-container--open .select2-selection--multiple::before { content: '\f0d8'; color: #3b82f6; }
+
+    /* ===== BOTÓN CERRAR DENTRO DEL DROPDOWN ===== */
+    .close-select2-btn { padding: 0.5rem; text-align: center; background-color: #f8fafc; color: #3b82f6; font-weight: 700; font-size: 0.8rem; cursor: pointer; border-top: 1px solid #e2e8f0; transition: background-color 0.2s; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+    .close-select2-btn:hover { background-color: #eff6ff; }
+
+    /* Resto del layout */
+    body, .sge-wrapper, .table-card, .control-panel { color: #111827; }
+    .filter-item small { font-size: 0.75rem; font-weight: 600 !important; color: #1f2937 !important; line-height: 1.4; margin-top: 6px; }
+    #padronTable tbody td { color: #111827; }
+    #padronTable tbody td.text-muted { color: #4b5563 !important; }
+
+    .sge-wrapper { max-width: 100%; margin: 0 auto; padding: 1.1rem 0.9rem 2.5rem; overflow-x: hidden; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.2rem; padding-bottom: .9rem; border-bottom: 2px solid #e9ecef; }
+    .page-header-left h2 { font-size: 1.35rem; font-weight: 800; color: #111827; margin: 0 0 .15rem; }
+    .page-header-left p { font-size: .85rem; color: #4b5563; margin: 0; font-weight: 500; }
+
+    .control-panel { background: #fff; border: 1px solid #dee2e6; border-radius: .5rem; margin-bottom: 1.2rem; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+    .control-panel-inner { display: grid; grid-template-columns: 42% 58%; }
+    .control-block-columns, .control-block-filters { padding: 1.2rem; min-width: 0; }
+    .control-block-columns { border-right: 1px solid #e9ecef; }
+    .control-block-title { font-size: .88rem; font-weight: 800; color: #111827; text-transform: uppercase; margin-bottom: 1rem; }
+
+    .col-action-btns { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: .8rem; border-bottom: 1px dashed #cbd5e1; }
+    .col-action-btns button { font-size: .78rem; padding: .35rem .7rem; border-radius: .35rem; border: 1px solid #cbd5e1; background: #fff; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .col-action-btns button:hover { background: #f1f5f9; }
+    .col-groups { display: flex; flex-direction: column; gap: .55rem; }
+    .col-group { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+    .col-group-label { font-size: .75rem; font-weight: 800; color: #4b5563; text-transform: uppercase; min-width: 90px; }
+    .col-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .7rem; border-radius: .35rem; border: 1px solid #cbd5e1; background: #f8fafc; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .col-badge.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+
+    .filter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem .9rem; width: 100%; }
+    .filter-item { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+    .filter-item:last-child { grid-column: span 3; }
+    .filter-item label { font-size: .74rem; font-weight: 800; color: #111827; text-transform: uppercase; margin: 0; display: flex; align-items: center; white-space: normal; word-break: break-word; letter-spacing: -0.2px; line-height: 1.3; }
+    .filter-item label i { color: #3b82f6; width: 16px; min-width: 16px; text-align: center; margin-right: 6px; font-size: 0.85rem; }
+    .filter-item select, .filter-item input { border: 1px solid #cbd5e1; border-radius: .35rem; padding: .45rem .6rem; font-size: .88rem; height: 2.3rem; width: 100%; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; transition: all 0.2s; }
+    .filter-item select:focus, .filter-item input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+    .filter-item select.has-value, .filter-item input.has-value { border-color: #3b82f6; background: #f0fdf4; }
+
+    .filter-header-flex { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .switch-custom { position: relative; display: inline-block; width: 36px; height: 20px; margin: 0; }
+    .switch-custom input { opacity: 0; width: 0; height: 0; }
+    .slider-custom { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
+    .slider-custom:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    .switch-custom input:checked + .slider-custom { background-color: #3b82f6; }
+    .switch-custom input:checked + .slider-custom:before { transform: translateX(16px); }
+
+    .alert-warning-custom { display: none; margin-top: 10px; padding: 10px; background: #fff8e1; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.75rem; color: #7c5a00; }
+    .active-filters-wrap { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed #cbd5e1; display: none; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .filter-chip { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; padding: .2rem .65rem; border-radius: 20px; font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+    .filter-chip .remove-chip { cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+    .filter-chip .remove-chip:hover { opacity: 1; }
+    .filter-actions { display: flex; justify-content: flex-end; margin-top: 1rem; padding-top: .8rem; border-top: 1px solid #e2e8f0; }
+    .btn-clear-filters { font-size: .85rem; padding: .4rem 1.2rem; border-radius: .35rem; background: #f8fafc; border: 1px solid #cbd5e1; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-clear-filters:hover { background: #f1f5f9; }
+
+    .table-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: .9rem; }
+    .toolbar-left { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    #loadingWrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem; background: #fff; border-radius: .5rem; }
+    .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; overflow: hidden; }
+    .table-responsive { width: 100%; overflow-x: auto; }
+    #padronTable { font-size: .9rem; width: 100% !important; border-collapse: collapse; }
+    #padronTable th, #padronTable td { border: 1px solid #cbd5e1 !important; }
+    #padronTable thead th { background: #111827; color: #fff; font-size: .82rem; padding: .8rem .9rem !important; text-align: center; } 
+    #padronTable tbody td { padding: .65rem .9rem !important; vertical-align: middle; text-align: center; color: #111827; }
+    #padronTable thead th.th-left, #padronTable tbody td.td-left { text-align: left !important; }
+    .table-foot { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1.2rem; background: #f8fafc; }
+    .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { display: none !important; }
+
+    @media (max-width: 1024px) { 
+        .control-panel-inner { grid-template-columns: 1fr; } 
+        .control-block-columns { border-right: none; border-bottom: 1px solid #e9ecef; } 
+        .filter-grid { grid-template-columns: repeat(2, 1fr); }
+        .filter-item:last-child { grid-column: span 2; }
+    }
+    @media (max-width: 768px) {
+        .filter-grid { grid-template-columns: 1fr; }
+        .filter-item:last-child { grid-column: span 1; }
+    }
+</style>
+
+<div class="modal fade" id="ayudaFiltrosModal" tabindex="-1" aria-labelledby="ayudaFiltrosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 1rem; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none;">
+                <h5 class="modal-title" id="ayudaFiltrosModalLabel" style="color: white;">
+                    <i class="fas fa-question-circle me-2"></i> Guía de uso
+                </h5>
+                <button type="button" class="btn-close btn-close-white opacity-75" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <h6 class="mb-3 fw-bold"><i class="fas fa-filter text-primary me-2"></i>¿Para qué sirve cada filtro?</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light h-100">
+                            <i class="fas fa-map-marked-alt text-primary me-2"></i>
+                            <strong>Región</strong>
+                            <p class="small text-muted mb-0 mt-1">Permite filtrar por región.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light h-100">
+                            <i class="fas fa-city text-primary me-2"></i>
+                            <strong>Departamento y Localidad</strong>
+                            <p class="small text-muted mb-0 mt-1">Permite seleccionar un departamento o localidad específicos.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light h-100">
+                            <i class="fas fa-graduation-cap text-primary me-2"></i>
+                            <strong>Oferta Educativa</strong>
+                            <p class="small text-muted mb-0 mt-1">Permite filtrar por el tipo de oferta educativa, se pueden combinar opciones. Solo se requiere hacer click y agregar o quitar opciones en el selector. Las ofertas seleccionadas figuran en la etiqueta de fitros aplicados.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light h-100">
+                            <i class="fas fa-building text-primary me-2"></i>
+                            <strong>Sector y Ámbito</strong>
+                            <p class="small text-muted mb-0 mt-1">Permiten filtrar por Sector (Estatal, Privado o Gestión Social/Cooperativa) y Ámbito (Urbano, Rural, Rural Disperso o Rural Aglomerado).</p>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="p-3 border rounded-3 bg-light mt-3">
+                            <i class="fas fa-hashtag text-primary me-2"></i>
+                            <strong>CUE-Anexo</strong>
+                            <p class="small text-muted mb-0 mt-1">Ingresa el código numérico para ir directo a un establecimiento exacto.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <ul class="text-muted" style="font-size: 0.9rem; line-height: 1.6; padding-left: 1.5rem;">
+                    <li class="mb-2"><strong>Limpiar Filtros: </strong> Quita todos los filtros aplicados.</li>
+                    <li><strong>Buscador Inteligente: </strong> Consta de dos partes para mayor precisión:
+                        <ul class="mt-1 mb-0" style="padding-left: 1.2rem; list-style-type: circle;">
+                            <li class="mb-1"><strong>Selector:</strong> Permite elegir exactamente en qué columna buscar (ej. "Establecimiento"). Si dejas la opción "🔍 Todas", buscará en toda la tabla.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-columns text-primary me-2"></i> Columnas Visibles (Personalizar la tabla)</h6>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
+                            <p class="mb-2">Para que la tabla sea más fácil de leer, puedes elegir qué datos ver. <strong>Haz clic en los botones del panel izquierdo de manera individual para mostrar u ocultar las columnas.</strong></p>
+                            <p class="mb-2">También tienes 2 botones rápidos:</p>
+                            <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
+                                <li class="mb-1"><strong>Mostrar todas:</strong> Despliega absolutamente toda la información en la tabla.</li>
+                                <li><strong>Ocultar:</strong> Limpia la tabla y deja solo la identificación básica (CUE-Anexo y Nombre).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+                
+                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-download text-primary me-2"></i> Exportar e Imprimir</h6>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
+                            <p class="mb-2">Utiliza los botones ubicados en la barra superior de la tabla para descargar o imprimir el el informe de padrón. <strong>Importante:</strong> Los reportes generados respetarán exactamente los filtros y las columnas que tengas visibles en ese momento. El documento generado con el botón PDF e Imprimir tiene formato de hoja A4 y orientación vertical.</p>
+                            <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
+                                <li class="mb-2"><strong><i class="fas fa-file-excel text-success me-1"></i> Excel:</strong> Descarga la tabla en formato <code>.xlsx</code>, ideal si necesitas realizar cálculos, gráficos o cruces de datos en tu computadora.</li>
+                                <li class="mb-2"><strong><i class="fas fa-file-pdf text-danger me-1"></i> PDF:</strong> Genera y descarga en tu dispositivo un documento formal en formato vertical (A4). Incluye encabezados y detalla qué filtros se aplicaron al momento de su creación.</li>
+                                <li><strong><i class="fas fa-print text-dark me-1"></i> Imprimir:</strong> Genera el reporte con el mismo diseño formal del PDF y lo <strong>abre en una pestaña nueva</strong> del navegador.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="background-color: #f8fafc;">
+                <button type="button" class="btn btn-primary fw-bold rounded-3 px-4" data-dismiss="modal" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="sge-wrapper">
+<div class="page-header">
+    <div class="page-header-left">
+        <h2><i class="fas fa-school me-2 text-primary"></i> Datos de Padrón</h2>
+    </div>
+</div>
+
+    <div class="control-panel">
+        <div class="control-panel-inner">
+            <div class="control-block-columns">
+                <div class="control-block-title"><i class="fas fa-columns"></i> Columnas Visibles</div>
+                <div class="col-action-btns">
+                    <button id="btnShowAll"><i class="fas fa-check-double me-1"></i>Mostrar todas</button>
+                    <button id="btnHideAll"><i class="fas fa-eye-slash me-1"></i>Ocultar</button>
+                </div>
+                <div class="col-groups">
+                    <div class="col-group"><span class="col-group-label">Identific.</span><span class="col-badge active" data-cols="0">CUE-Anexo</span><span class="col-badge active" data-cols="1">Establecimiento</span></div>
+                    <div class="col-group"><span class="col-group-label">Académico</span><span class="col-badge active" data-cols="2">Oferta / Niveles</span></div>
+                    <div class="col-group"><span class="col-group-label">Ubicación</span><span class="col-badge active" data-cols="3">Regional</span><span class="col-badge active" data-cols="4">Departamento</span><span class="col-badge active" data-cols="5">Localidad</span></div>
+                    <div class="col-group"><span class="col-group-label">Gestión</span><span class="col-badge active" data-cols="6">Sector</span><span class="col-badge active" data-cols="7">Ámbito</span></div>
+                </div>
+            </div>
+
+            <div class="control-block-filters">
+                
+                <div class="control-block-title" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <i class="fas fa-filter"></i> Filtros
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill" 
+                        id="btnAyudaFiltros"
+                        data-toggle="modal" data-target="#ayudaFiltrosModal" 
+                        data-bs-toggle="modal" data-bs-target="#ayudaFiltrosModal"
+                        style="font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.7rem;">
+                        <i class="fas fa-question-circle me-1"></i> Ayuda
+                    </button>
+                </div>
+               <div class="filter-grid">
+                    
+                    <div class="filter-item">
+                        <div class="filter-header-flex">
+                            <label><i class="fas fa-map-marked-alt"></i> Región</label>
+                            <label class="switch-custom">
+                                <input type="checkbox" id="toggleRegionActivo">
+                                <span class="slider-custom"></span>
+                            </label>
+                        </div>
+                        <select id="fRegion" disabled><option value="">-- Todas --</option></select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label><i class="fas fa-city"></i> Departamento</label>
+                        <select id="fDepartamento"><option value="">-- Todos --</option></select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label><i class="fas fa-map-pin"></i> Localidad</label>
+                        <select id="fLocalidad"><option value="">-- Todas --</option></select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-building"></i> Sector</label>
+                        <select id="fSector">
+                            <option value="">-- Todos --</option>
+                            <option value="Estatal">Estatal</option>
+                            <option value="Privado">Privado</option>
+                            <option value="Gestión Social/Cooperativa">Gestión Social/Cooperativa</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label><i class="fas fa-map"></i> Ámbito</label>
+                        <select id="fAmbito">
+                            <option value="">-- Todos --</option>
+                            <option value="Urbano">Urbano</option>
+                            <option value="Rural">Rural</option>
+                            <option value="Rural Aglomerado">Rural Aglomerado</option>
+                            <option value="Rural Disperso">Rural Disperso</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label><i class="fas fa-hashtag"></i> CUE-Anexo</label>
+                        <input type="text" id="fCueanexo" placeholder="Ej: 220012300">
+                    </div>
+
+                    <div class="filter-item">
+                        <label><i class="fas fa-graduation-cap"></i> Oferta Educativa</label>
+                        <select id="fOferta" multiple="multiple" style="width: 100%;">
+                            {% for oferta in lista_ofertas %}
+                                <option value="{{ oferta }}">{{ oferta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                </div>
+
+                <div id="advertencia-region" class="alert-warning-custom">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Advertencia:</strong>  Al filtrar por Región, se recomienda no aplicar filtros de Departamento o Localidad. Esto se debe a que existen CUE-Anexos (Localizaciones) que pertenecen a una Región Educativa específica, pero se encuentran geográficamente en una ubicación distinta.
+                </div>
+
+                <div class="active-filters-wrap" id="activeFiltersWrap">
+                    <span class="active-filters-label"><i class="fas fa-tags me-1"></i>Activos:</span>
+                    <div id="chips-container" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                </div>
+
+                <div class="filter-actions"><button class="btn-clear-filters" id="btnClearFilters"><i class="fas fa-sync-alt me-1"></i> Limpiar Filtros</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-toolbar">
+        <div class="toolbar-left">
+            <div id="dtLengthWrap">Mostrar <select id="dtLengthSelect" style="margin: 0 5px;"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select> entradas</div>
+            <div id="exportButtonsContainer"></div>
+        </div>
+        <div class="search-wrap">
+            <div class="custom-search-group" style="width: 350px;">
+                <select id="searchScope">
+                    <option value="all" selected>🔍 Todas</option>
+                </select>
+                <input type="text" id="customSearch" placeholder="Buscar dato...">
+                <i class="fas fa-times-circle" id="btnResetSmartSearch" title="Limpiar búsqueda" 
+                   style="display: none; cursor: pointer; color: #94a3b8; padding: 0 0.8rem; align-self: center; font-size: 1rem; transition: color 0.2s;"></i>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingWrapper">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+        <h6 class="mt-3 text-muted">Cargando el padrón regional...</h6>
+    </div>
+
+    <div class="table-card" id="mainTableContainer" style="display: none;">
+        <div class="table-responsive">
+            <table id="padronTable" class="table table-bordered table-hover">
+                <thead> 
+                    <tr>
+                        <th>CUE-Anexo</th>           
+                        <th class="th-left">Establecimiento</th>
+                        <th class="th-left">Oferta Educativa</th>             
+                        <th>Regional</th>           
+                        <th>Departamento</th>                
+                        <th>Localidad</th>              
+                        <th>Sector</th>             
+                        <th>Ámbito</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in escuelas %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ item.cueanexo|default:"-" }}</td>
+                        <td class="td-left"><strong>{{ item.nom_est|default:"-" }}</strong></td>
+                        <td class="td-left text-muted">{{ item.oferta|default:"-" }}</td>
+                        <td>{{ item.region_loc|default:"-" }}</td>
+                        <td>{{ item.departamento|default:"-" }}</td>
+                        <td>{{ item.localidad|default:"-" }}</td>
+                        <td>
+                            {% if "ESTATAL" in item.sector|upper %}<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1">Estatal</span>
+                            {% elif "PRIVAD" in item.sector|upper %}<span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2 py-1">Privado</span>
+                            {% else %}<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">Gestión Social/Cooperativa</span>{% endif %}
+                        </td>
+                        <td>{{ item.ambito|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="table-foot">
+            <div id="dtInfo"></div>
+            <nav><ul class="pagination pagination-sm mb-0" id="dtPaginate"></ul></nav>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+// ─── VARIABLES GEOGRÁFICAS (CON FALLBACK SEGURO) ───
+let jerarquiaGeografica = null;
+const userRegionStr = "{{ region_actual }}"; 
+const userRegions = userRegionStr === "Todas las Regiones" ? "TODAS" : userRegionStr.split(", ");
+
+const REGION_NAME_MAP_FALLBACK = {
+    'REGION 1': 'R.E. 1', 'REGION 2': 'R.E. 2', 'REGION 3': 'R.E. 3', 'REGION 4-A': 'R.E. 4-A',
+    'REGION 4-B': 'R.E. 4-B', 'REGION 5': 'R.E. 5', 'REGION 6': 'R.E. 6', 'REGION 7': 'R.E. 7',
+    'REGION 8-A': 'R.E. 8-A', 'REGION 8-B': 'R.E. 8-B', 'REGION 9': 'R.E. 9', 'REGION 10-A': 'R.E. 10-A',
+    'REGION 10-B': 'R.E. 10-B', 'REGION 10-C': 'R.E. 10-C', 'SUBSEDE 1 A': 'SUB. R.E. 1-A',
+    'SUBSEDE 1 B': 'SUB. R.E. 1-B', 'SUBSEDE 2': 'SUB. R.E. 2', 'SUBSEDE 3': 'SUB. R.E. 3', 'SUBSEDE 5': 'SUB. R.E. 5'
+};
+const REGION_NAME_MAP_INVERSE_FALLBACK = {};
+for (const [k, v] of Object.entries(REGION_NAME_MAP_FALLBACK)) { REGION_NAME_MAP_INVERSE_FALLBACK[v] = k; }
+
+let REGION_NAME_MAP = {{ mapa_regiones|safe|default:"null" }};
+if (!REGION_NAME_MAP) REGION_NAME_MAP = REGION_NAME_MAP_FALLBACK;
+
+let REGION_NAME_MAP_INVERSE = {{ mapa_regiones_inverso|safe|default:"null" }};
+if (!REGION_NAME_MAP_INVERSE) REGION_NAME_MAP_INVERSE = REGION_NAME_MAP_INVERSE_FALLBACK;
+
+const DEPT_NAME_MAP = {{ mapa_deptos|safe|default:"{}" }};
+const LOC_NAME_MAP = {{ mapa_locs|safe|default:"{}" }};
+
+const VISUAL_DEPT_MAP = {{ visual_dept_map|safe|default:"{}" }};
+const VISUAL_LOC_MAP = {{ visual_loc_map|safe|default:"{}" }};
+
+function normalizarNombreRegion(n) { return REGION_NAME_MAP_INVERSE[n] || n; }
+function desnormalizarNombreRegion(n) { return REGION_NAME_MAP[n] || n; }
+function normalizarNombreDepartamento(n) { const norm = n.toUpperCase().trim(); return DEPT_NAME_MAP[norm] || norm; }
+function normalizarNombreLocalidad(n) { const norm = n.toUpperCase().trim(); return LOC_NAME_MAP[norm] || norm; }
+function getDisplayDepto(dbName) { return VISUAL_DEPT_MAP[dbName] || dbName; }
+function getDisplayLoc(dbName) { return VISUAL_LOC_MAP[dbName] || dbName; }
+
+async function cargarJerarquiaGeografica() {
+    try {
+        const response = await fetch("{% url 'indicsie:get_jerarquia_oficial' %}");
+        const data = await response.json();
+        jerarquiaGeografica = data.region_depto_localidad;
+        actualizarFiltrosJerarquicos();
+    } catch (error) {
+        console.error('Error al cargar la jerarquía oficial:', error);
+    }
+}
+
+function rellenarSelect(selectId, opcionesPermitidas, defaultText, isRegion = false) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const valorActual = select.value;
+    select.innerHTML = `<option value="">-- ${defaultText} --</option>`;
+    
+    if (opcionesPermitidas && opcionesPermitidas.length > 0) {
+        opcionesPermitidas.forEach(opt => {
+            const el = document.createElement('option'); 
+            el.value = opt; 
+            
+            if (isRegion) {
+                el.text = opt; 
+            } else if (selectId === 'fDepartamento') {
+                el.text = getDisplayDepto(opt);
+            } else if (selectId === 'fLocalidad') {
+                el.text = getDisplayLoc(opt);
+            }
+            
+            select.appendChild(el);
+        });
+        if (valorActual && opcionesPermitidas.includes(valorActual)) select.value = valorActual;
+    }
+}
+
+function actualizarFiltrosJerarquicos() {
+    if (!jerarquiaGeografica) return;
+    const isRegionActiva = $('#toggleRegionActivo').is(':checked');
+    
+    const regionSeleccionada = isRegionActiva ? ($('#fRegion').val() || '') : '';
+    const regionNorm = normalizarNombreRegion(regionSeleccionada).trim().toUpperCase();
+
+    const departamentoActual = ($('#fDepartamento').val() || '').toUpperCase().trim();
+    const localidadActual = ($('#fLocalidad').val() || '').toUpperCase().trim();
+    
+    let regionesValidas = new Set(), deptosValidos = new Set(), locsValidas = new Set();
+
+    for (const [regionKey, deptos] of Object.entries(jerarquiaGeografica)) {
+        const regionKeyNorm = regionKey.trim().toUpperCase();
+        const regionDisp = desnormalizarNombreRegion(regionKey);
+        
+        const matchRegion = !regionNorm || regionNorm === regionKeyNorm;
+
+        for (const [deptoKey, localidades] of Object.entries(deptos)) {
+            const deptoKeyNorm = deptoKey.trim().toUpperCase();
+            const deptoDisp = normalizarNombreDepartamento(deptoKey);
+            const matchDepto = !departamentoActual || normalizarNombreDepartamento(departamentoActual) === deptoDisp;
+
+            for (const loc of localidades) {
+                const locDisp = normalizarNombreLocalidad(loc);
+                const matchLoc = !localidadActual || normalizarNombreLocalidad(localidadActual) === locDisp;
+
+                if (matchDepto && matchLoc) regionesValidas.add(regionDisp);
+                if (matchRegion && matchLoc) deptosValidos.add(deptoDisp);
+                if (matchRegion && matchDepto) locsValidas.add(locDisp);
+            }
+        }
+    }
+    rellenarSelect('fRegion', Array.from(regionesValidas).sort(), "Todas", true);
+    rellenarSelect('fDepartamento', Array.from(deptosValidos).sort(), "Todos", false);
+    rellenarSelect('fLocalidad', Array.from(locsValidas).sort(), "Todas", false);
+}
+
+$(document).ready(async function () {
+
+    $('#fOferta option').each(function() {
+        let textoLimpio = $(this).text().replace(/[()]/g, '').trim();
+        $(this).text(textoLimpio).val(textoLimpio);
+    });
+
+    $('#padronTable tbody tr').each(function() {
+        var $td = $(this).find('td').eq(2);
+        var text = $td.text();
+        if (text && text !== '-') {
+            $td.text(text.replace(/[()]/g, '').trim());
+        }
+    });
+
+    $('#fOferta').select2({
+        placeholder: "",
+        allowClear: true,
+        closeOnSelect: false,
+        width: '100%',
+        dropdownPosition: 'below',
+        language: { searching: function() { return "Buscando..."; }, noResults: function() { return "No se encontraron resultados"; } }
+    });
+
+    function actualizarTextoOferta() {
+        const seleccionados = $('#fOferta').val();
+        const $searchInput = $('#fOferta').next().find('.select2-search__field');
+        $searchInput.removeClass('empty-placeholder multi-placeholder');
+        
+        if (!seleccionados || seleccionados.length === 0) {
+            $searchInput.attr('placeholder', '-- Seleccionar --').addClass('empty-placeholder');
+        } else if (seleccionados.length === 1) {
+            $searchInput.attr('placeholder', seleccionados[0]);
+        } else {
+            $searchInput.attr('placeholder', seleccionados.length + " Ofertas Seleccionadas").addClass('multi-placeholder');
+        }
+    }
+
+    $('#fOferta').on('change', function() { actualizarTextoOferta(); });
+    actualizarTextoOferta();
+
+    $('#fOferta').on('select2:opening', function (e) {
+        if ($(this).data('preventOpen')) { e.preventDefault(); $(this).removeData('preventOpen'); }
+    });
+
+// 1. Capturamos el momento en que se toca la "X" para bloquear la apertura
+    $('#fOferta').on('select2:clearing', function() {
+        $(this).data('preventOpen', true);
+    });
+
+    // 2. Control de apertura (Ya lo tenías, mantenelo así)
+    $('#fOferta').on('select2:opening', function (e) {
+        if ($(this).data('preventOpen')) { 
+            e.preventDefault(); 
+            $(this).removeData('preventOpen'); 
+        }
+    });
+
+    // 3. Control de clic en el contenedor (Cerrar si está abierto, pero ignorar si es la X)
+    $('#fOferta').next('.select2-container').on('mousedown', '.select2-selection', function (e) {
+        // Si el clic es en la "X", no hacemos nada aquí, lo maneja el 'clearing' de arriba
+        if ($(e.target).closest('.select2-selection__clear').length) return;
+
+        var $select = $('#fOferta');
+        var select2Instance = $select.data('select2');
+        if (select2Instance && select2Instance.isOpen()) {
+            $select.data('preventOpen', true); 
+            $select.select2('close');
+        }
+    });
+
+    $('#fOferta').on('select2:open', function () {
+        var $dropdown = $('.select2-dropdown');
+        if ($dropdown.find('.close-select2-btn').length === 0) {
+            $dropdown.append('<div class="close-select2-btn"><i class="fas fa-chevron-up me-1"></i> Ocultar opciones</div>');
+            $dropdown.find('.close-select2-btn').on('click', function() { $('#fOferta').select2('close'); });
+        }
+    });
+
+    const ALL_COLS = [0, 1, 2, 3, 4, 5, 6, 7];
+    const filterLabels = { 
+        'fRegion': 'Región', 'fDepartamento': 'Depto.', 'fLocalidad': 'Localidad', 
+        'fSector': 'Sector', 'fAmbito': 'Ámbito', 'fCueanexo': 'CUE', 'fOferta': 'Oferta'
+    };
+
+    function getTextoFiltrosExportacion() {
+        let filtrosActivos = [];
+        
+        $.each(filterLabels, function(id, label) {
+            const $el = $('#' + id);
+            if (!$el.prop('disabled')) {
+                let val = $el.val();
+                if (val && (Array.isArray(val) ? val.length > 0 : val.trim() !== '')) {
+                    let textDisplay = '';
+                    if (id === 'fOferta' && Array.isArray(val)) {
+                        textDisplay = val.join(', ');
+                    } else if ($el.is('select')) {
+                        textDisplay = $el.find('option:selected').text();
+                    } else {
+                        textDisplay = val;
+                    }
+                    filtrosActivos.push(label + ': ' + textDisplay);
+                }
+            }
+        });
+        
+        var queryBuscador = $('#customSearch').val().trim();
+        var scopeBuscador = $('#searchScope').find('option:selected').text();
+        if (queryBuscador !== '') {
+            filtrosActivos.push('Búsqueda (' + scopeBuscador + '): ' + queryBuscador);
+        }
+        
+        if (filtrosActivos.length === 0) return " Filtros aplicados: Ninguno";
+        
+        let lineas = [];
+        for (let i = 0; i < filtrosActivos.length; i += 3) {
+            lineas.push(filtrosActivos.slice(i, i + 3).join('  |  '));
+        }
+        
+        return " Filtros aplicados: \r\n" + lineas.join('\r\n');
+    }
+
+    function getNombreArchivoConFiltros() {
+        var ahora = new Date();
+        var fechaStr = String(ahora.getDate()).padStart(2, '0') + '-' + String(ahora.getMonth() + 1).padStart(2, '0') + '-' + ahora.getFullYear();
+        var base = 'Informe_Padron_' + fechaStr;
+        return base; 
+    }
+
+    var table = $('#padronTable').DataTable({
+        language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
+        pageLength: 10,
+        dom: 'Brt',
+       buttons: [
+            { 
+                extend: 'excelHtml5', 
+                text: '<i class="fas fa-file-excel me-1 text-success"></i>Excel',
+                className: 'btn-sm bg-white',
+                titleAttr: 'Exportar a Excel',
+                title: 'Informe Padrón', 
+                filename: function() { return getNombreArchivoConFiltros(); },
+                messageTop: function() { return getTextoFiltrosExportacion(); },
+                exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                customize: function(xlsx) {
+                    var sheet = xlsx.xl.worksheets['sheet1.xml'];
+                    var ahora = new Date();
+                    var fechaStr = ahora.toLocaleDateString('es-AR') + ' a las ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                    
+                    var textoCompleto = 'Informe generado el: ' + fechaStr + '\r\n' + getTextoFiltrosExportacion();
+                    
+                    var $celda = $('row:nth-child(2) c', sheet);
+                    var $texto = $celda.find('t');
+                    
+                    $texto.text(textoCompleto).attr('xml:space', 'preserve');
+                    $celda.attr('s', '51');
+                    
+                    var numLineas = textoCompleto.split('\n').length;
+                    var alturaFila = numLineas * 16; 
+                    $('row:nth-child(2)', sheet).attr('ht', alturaFila).attr('customHeight', '1');
+                }
+            },
+            { 
+                extend: 'pdfHtml5', 
+                text: '<i class="fas fa-file-pdf me-1 text-danger"></i>PDF',
+                className: 'btn-sm bg-white',
+                titleAttr: 'Exportar a PDF',
+                title: 'Informe Padrón', 
+                filename: function() { return getNombreArchivoConFiltros(); },
+                messageTop: function() { return getTextoFiltrosExportacion(); },
+                orientation: 'portrait',
+                pageSize: 'A4',
+                exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                customize: function(doc) {
+                    doc.info = { title: 'Informe Padrón' }; 
+                    doc.pageMargins = [30, 50, 30, 40]; // Aumentamos el margen superior a 50 para que entre la fecha
+                    doc.styles.title = { color: '#1a3a5c', fontSize: '14', alignment: 'center', bold: true };
+                    doc.styles.message = { fontSize: 10, italics: true, margin: [0, 0, 0, 10], color: '#444' };
+                    
+                    // --- NUEVO: ENCABEZADO CON FECHA ---
+                    doc.header = function() {
+                        var ahora = new Date();
+                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' - ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                        return {
+                            text: 'Informe generado el: ' + fechaStr,
+                            alignment: 'right',
+                            fontSize: 8,
+                            color: '#6b7280',
+                            margin: [0, 20, 30, 0] // [left, top, right, bottom]
+                        };
+                    };
+                    
+                    var tableNode = doc.content.find(n => n.table);
+                    if (tableNode) {
+                        tableNode.table.dontBreakRows = true;
+                        var colCount = tableNode.table.body[0].length;
+                        var anchos = [];
+                        for (var i = 0; i < colCount; i++) {
+                            var headerText = tableNode.table.body[0][i].text;
+                            if (headerText.includes('Escuela') || headerText.includes('Establecimiento') || headerText.includes('Oferta')) {
+                                anchos.push('*');
+                            } else {
+                                anchos.push('auto');
+                            }
+                        }
+                        tableNode.table.widths = anchos;
+                        
+                        tableNode.layout = {
+                            hLineWidth: function(i) { return 0.5; }, vLineWidth: function(i) { return 0.5; },
+                            hLineColor: function() { return '#aaa'; }, vLineColor: function() { return '#aaa'; },
+                            fillColor: function(rowIndex) { return (rowIndex === 0) ? '#1a3a5c' : null; }
+                        };
+
+                        tableNode.table.body.forEach(function(row, i) {
+                            row.forEach(function(cell) {
+                                cell.fontSize = 8; 
+                                if (i === 0) { cell.color = 'white'; cell.alignment = 'center'; cell.fontSize = 9; cell.bold = true; }
+                            });
+                        });
+                    }
+
+                    doc.footer = function(page, pages) {
+                        return {
+                            columns: [
+                                { text: 'Informe Padrón', alignment: 'left', fontSize: 8, color: '#6b7280', margin: [30, 10] },
+                                { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 10, 30, 0] }
+                            ]
+                        };
+                    };
+                }
+            },
+            {
+                extend: 'pdfHtml5',
+                text: '<i class="fas fa-print me-1 text-dark"></i>Imprimir',
+                className: 'btn-sm bg-white',
+                titleAttr: 'Imprimir informe',
+                title: 'Informe Padrón', 
+                filename: function() { return getNombreArchivoConFiltros(); },
+                messageTop: function() { return getTextoFiltrosExportacion(); },
+                orientation: 'portrait', 
+                pageSize: 'A4',
+                download: 'open', 
+                exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                customize: function(doc) {
+                    doc.info = { title: 'Informe Padrón' }; 
+                    doc.pageMargins = [30, 50, 30, 40]; // Aumentamos el margen superior a 50 para que entre la fecha
+                    doc.styles.title = { color: '#1a3a5c', fontSize: '14', alignment: 'center', bold: true };
+                    doc.styles.message = { fontSize: 10, italics: true, margin: [0, 0, 0, 10], color: '#444' };
+                    
+                    // --- NUEVO: ENCABEZADO CON FECHA ---
+                    doc.header = function() {
+                        var ahora = new Date();
+                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' - ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+                        return {
+                            text: 'Informe generado el: ' + fechaStr,
+                            alignment: 'right',
+                            fontSize: 8,
+                            color: '#6b7280',
+                            margin: [0, 20, 30, 0] // [left, top, right, bottom]
+                        };
+                    };
+                    
+                    var tableNode = doc.content.find(n => n.table);
+                    if (tableNode) {
+                        tableNode.table.dontBreakRows = true;
+                        var colCount = tableNode.table.body[0].length;
+                        var anchos = [];
+                        for (var i = 0; i < colCount; i++) {
+                            var headerText = tableNode.table.body[0][i].text;
+                            if (headerText.includes('Escuela') || headerText.includes('Establecimiento') || headerText.includes('Oferta')) {
+                                anchos.push('*');
+                            } else {
+                                anchos.push('auto');
+                            }
+                        }
+                        tableNode.table.widths = anchos;
+                        
+                        tableNode.layout = {
+                            hLineWidth: function(i) { return 0.5; }, vLineWidth: function(i) { return 0.5; },
+                            hLineColor: function() { return '#aaa'; }, vLineColor: function() { return '#aaa'; },
+                            fillColor: function(rowIndex) { return (rowIndex === 0) ? '#1a3a5c' : null; }
+                        };
+
+                        tableNode.table.body.forEach(function(row, i) {
+                            row.forEach(function(cell) {
+                                cell.fontSize = 8; 
+                                if (i === 0) { cell.color = 'white'; cell.alignment = 'center'; cell.fontSize = 9; cell.bold = true; }
+                            });
+                        });
+                    }
+
+                    doc.footer = function(page, pages) {
+                        return {
+                            columns: [
+                                { text: 'Informe Padrón', alignment: 'left', fontSize: 8, color: '#6b7280', margin: [30, 10] },
+                                { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 10, 30, 0] }
+                            ]
+                        };
+                    };
+                }
+            }
+        ],
+        initComplete: function() {
+            try { $('#exportButtonsContainer').empty().append(table.buttons().container()); } catch(e) {}
+            $('#loadingWrapper').hide();
+            $('#mainTableContainer').fadeIn('fast', function() { table.columns.adjust(); });
+            cargarSelectorBusquedaCompleto();
+        }
+    });
+
+    function updateFooter() {
+        var info = table.page.info();
+        $('#dtInfo').text('Mostrando ' + (info.recordsDisplay === 0 ? 0 : info.start + 1) + '–' + info.end + ' de ' + info.recordsDisplay);
+        var html = '<li class="page-item' + (info.page === 0 ? ' disabled' : '') + '"><a class="page-link dt-page" data-page="' + (info.page - 1) + '" href="#">‹</a></li>';
+        for (var p = 0; p < info.pages; p++) {
+            if (info.pages > 7 && Math.abs(p - info.page) > 2 && p !== 0 && p !== info.pages - 1) {
+                if (p === 1 || p === info.pages - 2) html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+                continue;
+            }
+            html += '<li class="page-item' + (p === info.page ? ' active' : '') + '"><a class="page-link dt-page" data-page="' + p + '" href="#">' + (p + 1) + '</a></li>';
+        }
+        html += '<li class="page-item' + (info.page >= info.pages - 1 ? ' disabled' : '') + '"><a class="page-link dt-page" data-page="' + (info.page + 1) + '" href="#">›</a></li>';
+        $('#dtPaginate').html(html);
+    }
+    
+    table.on('draw', function() { updateFooter(); });
+    $(document).on('click', '.dt-page', function (e) { e.preventDefault(); table.page(parseInt($(this).data('page'))).draw('page'); });
+    $('#dtLengthSelect').on('change', function () { table.page.len(parseInt(this.value)).draw(); });
+
+    $('.col-badge').on('click', function () {
+        var colIdx = parseInt($(this).data('cols'));
+        var isVisible = table.column(colIdx).visible();
+        table.column(colIdx).visible(!isVisible);
+        $(this).toggleClass('active', !isVisible);
+        updateFooter();
+    });
+    $('#btnShowAll').on('click', function () { table.columns().visible(true); $('.col-badge').addClass('active'); updateFooter(); });
+    $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => { if (i>1) { table.column(i).visible(false); $(`.col-badge[data-cols="${i}"]`).removeClass('active'); }}); updateFooter(); });
+
+    function actualizarChips() {
+        $('#chips-container').empty();
+        let hasActive = false;
+        $.each(filterLabels, function(id, label) {
+            const $el = $('#' + id);
+            if (!$el.prop('disabled')) {
+                let val = $el.val();
+                if (val && (Array.isArray(val) ? val.length > 0 : val.trim() !== '')) {
+                    hasActive = true;
+                    let textDisplay = '';
+                    
+                    if (id === 'fOferta' && Array.isArray(val)) {
+                        textDisplay = val.length > 1 ? val.length + " Ofertas (" + val.join(', &nbsp;') + ")" : val[0];
+                    } else if (id === 'fDepartamento') {
+                        textDisplay = getDisplayDepto(val);
+                    } else if (id === 'fLocalidad') {
+                        textDisplay = getDisplayLoc(val);
+                    } else if ($el.is('select')) {
+                        textDisplay = $el.find('option:selected').text();
+                    } else {
+                        textDisplay = val;
+                    }
+
+                    $('#chips-container').append(`
+                        <span class="filter-chip">
+                            <b>${label}:</b>&nbsp;${textDisplay}
+                            <span class="remove-chip" onclick="quitarFiltro('${id}')"><i class="fas fa-times"></i></span>
+                        </span>
+                    `);
+                }
+            }
+        });
+        hasActive ? $('#activeFiltersWrap').css('display','flex') : $('#activeFiltersWrap').hide();
+    }
+
+    window.quitarFiltro = function(id) { 
+        const $el = $('#' + id); 
+        if (id === 'fOferta') {
+            $el.val(null).trigger('change');
+        } else {
+            $el.val('').removeClass('has-value');
+            $el.trigger($el.is('select') ? 'change' : 'input');
+        }
+    };
+
+    let filterTimeout;
+    function applyAllFilters() {
+        if (filterTimeout) clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => {
+            table.search('').columns().search('');
+            
+            // Filtro Regional (Columna 3)
+            var rVal = $('#toggleRegionActivo').is(':checked') ? $('#fRegion').val() : '';
+            if (rVal) {
+                table.column(3).search('^\\s*' + $.fn.dataTable.util.escapeRegex(rVal) + '\\s*$', true, false);
+                if (!table.column(3).visible()) { 
+                    table.column(3).visible(true); 
+                    $(`.col-badge[data-cols="3"]`).addClass('active'); 
+                }
+            }
+            
+            // Filtro Departamento (Columna 4)
+            var dVal = $('#fDepartamento').val(); 
+            if (dVal) {
+                table.column(4).search('^\\s*' + $.fn.dataTable.util.escapeRegex(dVal) + '\\s*$', true, false);
+                if (!table.column(4).visible()) { 
+                    table.column(4).visible(true); 
+                    $(`.col-badge[data-cols="4"]`).addClass('active'); 
+                }
+            }
+            
+            // Filtro Localidad (Columna 5)
+            var lVal = $('#fLocalidad').val(); 
+            if (lVal) {
+                table.column(5).search('^\\s*' + $.fn.dataTable.util.escapeRegex(lVal) + '\\s*$', true, false);
+                if (!table.column(5).visible()) { 
+                    table.column(5).visible(true); 
+                    $(`.col-badge[data-cols="5"]`).addClass('active'); 
+                }
+            }
+            
+            // Filtro Sector (Columna 6)
+            var sVal = $('#fSector').val(); 
+            if (sVal) {
+                table.column(6).search($.fn.dataTable.util.escapeRegex(sVal), true, false);
+                if (!table.column(6).visible()) { 
+                    table.column(6).visible(true); 
+                    $(`.col-badge[data-cols="6"]`).addClass('active'); 
+                }
+            }
+
+            // Filtro Ámbito (Columna 7)
+            var aVal = $('#fAmbito').val(); 
+            if (aVal) {
+                table.column(7).search('^\\s*' + $.fn.dataTable.util.escapeRegex(aVal) + '\\s*$', true, false);
+                if (!table.column(7).visible()) { 
+                    table.column(7).visible(true); 
+                    $(`.col-badge[data-cols="7"]`).addClass('active'); 
+                }
+            }
+            
+            // Filtro CUE-Anexo (Columna 0)
+            var cVal = $('#fCueanexo').val(); 
+            if (cVal) {
+                table.column(0).search($.fn.dataTable.util.escapeRegex(cVal), true, false);
+                if (!table.column(0).visible()) { 
+                    table.column(0).visible(true); 
+                    $(`.col-badge[data-cols="0"]`).addClass('active'); 
+                }
+            }
+
+            // Filtro Oferta Educativa (Columna 2)
+            var oVal = $('#fOferta').val();
+            if (oVal && oVal.length > 0) {
+                var regexOferta = '^\\s*(' + oVal.map($.fn.dataTable.util.escapeRegex).join('|') + ')\\s*$';
+                table.column(2).search(regexOferta, true, false);
+                if (!table.column(2).visible()) { 
+                    table.column(2).visible(true); 
+                    $(`.col-badge[data-cols="2"]`).addClass('active'); 
+                }
+            } else {
+                table.column(2).search('', true, false);
+            }
+
+            // Buscador Especializado Inteligente
+            var query = $('#customSearch').val().trim().replace(/\s+/g, ' ');
+            var scope = $('#searchScope').val() || 'all';
+
+            if (query !== '') {
+                if (scope === 'all') {
+                    if (!table.column(0).visible()) { table.column(0).visible(true); $(`.col-badge[data-cols="0"]`).addClass('active'); }
+                    if (!table.column(1).visible()) { table.column(1).visible(true); $(`.col-badge[data-cols="1"]`).addClass('active'); }
+                    table.search(query, false, false, true);
+                } else {
+                    table.column(parseInt(scope)).search(query, false, false, true);
+                    if (!table.column(parseInt(scope)).visible()) { 
+                        table.column(parseInt(scope)).visible(true); 
+                        $(`.col-badge[data-cols="${scope}"]`).addClass('active'); 
+                    }
+                }
+            }
+            
+            table.draw();
+            updateFooter();
+        }, 150);
+    }
+
+    // Lógica UI Buscador Especializado
+    function cargarSelectorBusquedaCompleto() {
+        const selector = $('#searchScope');
+        selector.empty().append('<option value="all" selected>🔍 Todas</option>');
+        const colIdx = 1; // Establecimiento
+        const headerText = $(table.column(colIdx).header()).text().trim();
+        selector.append(`<option value="${colIdx}">${headerText}</option>`);
+    }
+
+    $('#customSearch').on('input', function() {
+        $('#btnResetSmartSearch').toggle($(this).val().length > 0);
+    });
+
+    $('#btnResetSmartSearch').on('click', function() {
+        $('#customSearch').val('');
+        $(this).hide();
+        applyAllFilters();
+        $('#customSearch').focus();
+    });
+
+    $('#searchScope').on('change', function() {
+        if ($('#customSearch').val().trim() !== '') {
+            applyAllFilters();
+        }
+    });
+
+    function toggleHasValue($el) { $el.toggleClass('has-value', $el.val() !== '' && $el.val() !== null); }
+    
+    $('#toggleRegionActivo').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#fRegion').prop('disabled', false); $('#advertencia-region').slideDown('fast');
+        } else {
+            $('#fRegion').prop('disabled', true).val('').removeClass('has-value'); $('#advertencia-region').slideUp('fast');
+            actualizarFiltrosJerarquicos(); actualizarChips(); applyAllFilters();
+        }
+    });
+
+    $('#fRegion, #fDepartamento, #fLocalidad, #fSector, #fAmbito').on('change', function () { 
+        toggleHasValue($(this)); actualizarFiltrosJerarquicos(); actualizarChips(); applyAllFilters();
+    });
+    
+    $('#fOferta').on('select2:select select2:unselect', function () {
+        toggleHasValue($(this)); actualizarChips(); applyAllFilters();
+    }).on('change', function () {
+        toggleHasValue($(this)); actualizarChips(); applyAllFilters();
+    });
+
+    let typingTimer;
+    $('#fCueanexo').on('input', function () { 
+        toggleHasValue($(this)); clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() { actualizarChips(); applyAllFilters(); }, 400); 
+    });
+
+    $('#customSearch').on('keyup', function () {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() { applyAllFilters(); }, 400);
+    });
+
+// === BOTÓN LIMPIAR FILTROS (RESETEO INTELIGENTE Y JERÁRQUICO) ===
+    $('#btnClearFilters').on('click', function () {
+        // 1. Limpiamos todos los campos de texto y combos
+        $('#fRegion, #fDepartamento, #fLocalidad, #fSector, #fAmbito, #fCueanexo, #customSearch').val('').removeClass('has-value');
+        
+        // Limpiamos el selector múltiple de Oferta
+        $('#fOferta').val(null).trigger('change');
+        $('#btnResetSmartSearch').hide();
+
+        // 2. RESPETA LA DECISIÓN DEL USUARIO CON EL SWITCH DE REGIÓN
+        // Si estaba prendido, lo deja prendido. Si estaba apagado, lo deja apagado.
+        if ($('#toggleRegionActivo').is(':checked')) {
+            $('#fRegion').prop('disabled', false);
+            $('#advertencia-region').slideDown('fast');
+        } else {
+            $('#fRegion').prop('disabled', true);
+            $('#advertencia-region').slideUp('fast');
+        }
+
+        // 3. RECONSTRUCCIÓN CRUCIAL:
+        // Llamamos a la jerarquía con los campos ya vacíos para que libere las opciones
+        actualizarFiltrosJerarquicos(); 
+
+        // 4. Actualizamos la visual y la tabla
+        actualizarChips();
+        applyAllFilters();
+    });
+
+    await cargarJerarquiaGeografica();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'uegp/layout.html' %}
+{% load widget_tweaks %}
+
+{% block head %}
+    {% block head_form %}
+    {% endblock %}
+{% endblock %}
+
+{% block content %}
+    <form method="post" action="{% if action == 'add' %}{% url 'privada:uegp_create_admin' %}{% else %}{% url 'privada:uegp_update_admin' pk=object.pk %}{% endif %}" enctype="multipart/form-data">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    {% if action == 'add' %}
+                        <i class="fas fa-plus"></i>
+                    {% else %}
+                        <i class="fas fa-edit"></i>
+                    {% endif %}
+                    {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action }}">
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                {% for field in form.visible_fields %}
+                   {% if field.name == "subvencionado" %}
+                        <div class="form-group form-check">
+                            <input type="hidden" name="{{ field.name }}" value="False">
+                            <input type="checkbox" name="{{ field.name }}" id="{{ field.id_for_label }}" 
+                                   class="form-check-input" {% if field.value %}checked{% endif %}>
+                            <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        </div>
+                    {% else %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                            {{ field|add_class:'form-control'|attr:'autocomplete:off' }}
+                        </div>
+                    {% endif %}  
+                {% endfor %}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Guardar registro
+                </button>
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        {% if form.errors %}
+            var errors = '';
+            {% for field in form %}
+                {% for error in field.errors %}
+                    errors += '{{ field.label }}: {{ error }}\n';
+                {% endfor %}
+            {% endfor %}
+            Swal.fire({
+                title: 'Error!',
+                text: errors,
+                icon: 'error'
+            });
+        {% endif %}
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function cargarCargos(autoCargar = false) {
+                const nivelmod = document.getElementById('id_nivelmod').value;
+                if (nivelmod || autoCargar) {
+                    fetch("{% url 'privada:cargar_cargos' %}?nivelmod=" + nivelmod)
+                        .then(response => response.json())
+                        .then(data => {
+                            const cargoSelect = document.getElementById('id_cargo');
+                            cargoSelect.innerHTML = '<option value="">Seleccione un cargo</option>';
+                            data.forEach(item => {
+                                cargoSelect.innerHTML += `<option value="${item.id}">${item.nombre}</option>`;
+                            });
+                            cargoSelect.disabled = false;
+                        })
+                        .catch(error => console.error('Error en la solicitud:', error));
+                }
+            }
+
+            document.getElementById('id_nivelmod').addEventListener('change', () => cargarCargos());
+
+            if (document.getElementById('id_nivelmod').value) {
+                cargarCargos(true);
+            }
+        });
+    </script> 
+{% endblock %}

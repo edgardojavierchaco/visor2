@@ -1,0 +1,186 @@
+{% extends "archivos/base/dashboard.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- ===================== -->
+    <!-- 🧠 HEADER -->
+    <!-- ===================== -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">📊 Dashboard de Auditoría</h3>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 📊 KPIs -->
+    <!-- ===================== -->
+    <div class="row mb-4">
+
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6>Total Accesos</h6>
+                    <h3 id="kpiTotal">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6>Logins</h6>
+                    <h3 id="kpiLogin">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6>Modificaciones</h6>
+                    <h3 id="kpiUpdate">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6>Bajas</h6>
+                    <h3 id="kpiDelete">0</h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===================== -->
+    <!-- 📈 GRÁFICOS -->
+    <!-- ===================== -->
+    <div class="row">
+
+        <!-- ACCESOS -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    📈 Accesos por día
+                </div>
+                <div class="card-body">
+                    <canvas id="chartAccesos"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACCIONES -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    📊 Distribución de acciones
+                </div>
+                <div class="card-body">
+                    <canvas id="chartAcciones"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOP USUARIOS -->
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    🏆 Top usuarios
+                </div>
+                <div class="card-body">
+                    <canvas id="chartUsuarios"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<!-- ========================= -->
+<!-- 📦 CHART JS -->
+<!-- ========================= -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+$(document).ready(function(){
+
+    console.log("🔥 DASHBOARD AUDITORÍA");
+
+    $.get("/usua/dashboard_trace/data/", function(resp){
+        console.log("DATA OK:", resp);
+        // =========================
+        // 📊 KPIs
+        // =========================
+        let total = resp.accesos.data.reduce((a,b) => a+b, 0);
+
+        let login = 0;
+        let update = 0;
+        let deleteCount = 0;
+
+        resp.acciones.labels.forEach((accion, i) => {
+            if(accion === 'login') login = resp.acciones.data[i];
+            if(accion === 'update') update = resp.acciones.data[i];
+            if(accion === 'delete') deleteCount = resp.acciones.data[i];
+        });
+
+        $('#kpiTotal').text(total);
+        $('#kpiLogin').text(login);
+        $('#kpiUpdate').text(update);
+        $('#kpiDelete').text(deleteCount);
+
+        // =========================
+        // 📈 ACCESOS POR DÍA
+        // =========================
+        new Chart(document.getElementById('chartAccesos'), {
+            type: 'line',
+            data: {
+                labels: resp.accesos.labels,
+                datasets: [{
+                    label: 'Accesos',
+                    data: resp.accesos.data,
+                    tension: 0.3
+                }]
+            }
+        });
+
+        // =========================
+        // 📊 ACCIONES
+        // =========================
+        new Chart(document.getElementById('chartAcciones'), {
+            type: 'bar',
+            data: {
+                labels: resp.acciones.labels,
+                datasets: [{
+                    label: 'Cantidad',
+                    data: resp.acciones.data
+                }]
+            }
+        });
+
+        // =========================
+        // 🏆 TOP USUARIOS
+        // =========================
+        new Chart(document.getElementById('chartUsuarios'), {
+            type: 'bar',
+            data: {
+                labels: resp.top.labels,
+                datasets: [{
+                    label: 'Actividad',
+                    data: resp.top.data
+                }]
+            }
+        });
+
+    });
+
+});
+</script>
+
+{% endblock %}

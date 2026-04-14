@@ -1,0 +1,43 @@
+from config.urls import path
+from . import views
+from . import viewscueradio
+from . import views2
+from . import viewscolectivos, viewscomiarias,viewscentrossalud
+from . views_ai import filter_data, filtrado, extraer_criterios, normalizar_region
+from .views_points import mapa_escuelas, escuelas_cercanas
+from apps.mapas import views_points
+
+app_name='mapas'
+
+urlpatterns=[
+    path('filtrado/',views.filtrado,name='filtrado'),
+    #path('filtrado_list/',views.filtrado_list,name='filtrado_list'),
+    path('filter/',views.filter_data,name='filter'),
+    path('listados/',views.filtrar_tablas_view,name='listados'),    
+    path('filcueradio/',viewscueradio.filtrado_cueradio,name='filcueradio'),
+    path('filter_cueradio/',viewscueradio.filter_cueradio,name='filter_cueradio'),    
+    path('listadomap/',views.filter_listado_map,name='filter_listado_map'),
+    #path('puntos/',views.filtrado_list,name='puntos'),
+    path('datos_ofertas/', views2.obtener_datos_ofertas, name='datos_ofertas'),
+    path('geometria/', viewscueradio.obtener_geometria, name='obtener_geometria'),
+    path('get-region-data/', viewscueradio.get_region_data, name='get_region_data'),
+    path('geometria2/', viewscueradio.obtener_geometria2, name='obtener_geometrias'),
+    path('colectivos/',viewscolectivos.mapa_cueradiocolectivo, name='filter_colectivos'),
+    path('api/colectivos/',viewscolectivos.filter_cueradiocolectivo, name='colectivos'),
+    path('api/comisarias/', viewscomiarias.filter_cueradiocomisarias, name='api_comisarias'),
+    path('comisarias/',viewscomiarias.mapa_cueradiocomisarias, name='comisarias'),   
+    path('salud/', viewscentrossalud.mapa_salud, name='salud'),
+    path('api/salud/', viewscentrossalud.api_salud, name='api_salud'), 
+    path('filnat/', filtrado, name='filnat'),
+    path('ofertas/', filter_data, name='filter_data'),
+    path('mapa/', views_points.mapa_escuelas, name='mapa_escuelas'),
+    path('escuelas_cercanas/', views_points.escuelas_cercanas, name='escuelas_cercanas'),
+    path('exportar/', views_points.exportar_escuelas, name='exportar_escuelas'),
+    path('cueradio/', viewscueradio.cueradio_view, name='cueradio'),
+
+    path('api/filtros/', viewscueradio.api_filtros),
+    path('api/cueradio/', viewscueradio.api_cueradio),
+    path('mapadibujo/', views2.mapa_view, name='mapadibujo'),
+    path('mapa/obtenerdatos/', views2.obtenerdatos, name='api_mapa'),
+]
+    

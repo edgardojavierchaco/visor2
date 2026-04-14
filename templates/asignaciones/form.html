@@ -1,0 +1,254 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>
+    {% if modo == "editar" %}
+        Editar asignaciones
+    {% else %}
+        Asignación tipo Excel
+    {% endif %}
+</h3>
+
+<label>Buscar escuelas</label>
+<select id="escuelas" style="width:100%"></select>
+
+<br><br>
+
+<table class="table table-bordered table-striped" id="tabla">
+    <thead class="table-dark">
+        <tr>
+            <th>Cueanexo</th>
+            <th>Nombre</th>
+            <th>Fecha desde</th>
+            <th>Fecha hasta</th>
+            <th>Estado</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<button id="btnGuardar" class="btn btn-success">
+    {% if modo == "editar" %}
+        Actualizar asignaciones
+    {% else %}
+        Guardar asignaciones
+    {% endif %}
+</button>
+
+</div>
+
+<!-- TOAST -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+    <div id="toast" class="toast align-items-center text-white bg-success border-0">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+        </div>
+    </div>
+</div>
+
+{{ data_inicial|json_script:"data-inicial" }}
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+
+const ajaxUrl = "{% url 'asignacionesuperv:ajax_escuelas' %}";
+const saveUrl = "{% url 'asignacionesuperv:ajax_asignar' %}";
+const panelUrl = "{% url 'asignacionesuperv:panel' %}";
+const modo = "{{ modo }}";
+
+const dataInicial = JSON.parse(
+    document.getElementById("data-inicial").textContent || "[]"
+);
+
+// =========================
+// TOAST
+// =========================
+function showToast(msg, ok=true) {
+    let toastEl = document.getElementById("toast");
+    let msgEl = document.getElementById("toastMsg");
+
+    toastEl.classList.remove("bg-success", "bg-danger");
+
+    toastEl.classList.add(ok ? "bg-success" : "bg-danger");
+    msgEl.innerHTML = msg;
+
+    new bootstrap.Toast(toastEl).show();
+}
+
+// =========================
+// SELECT2
+// =========================
+$("#escuelas").select2({
+    ajax: {
+        url: ajaxUrl,
+        dataType: "json",
+        delay: 250,
+        data: params => ({ q: params.term }),
+        processResults: data => ({ results: data.results })
+    },
+    minimumInputLength: 2,
+    placeholder: "Buscar escuela..."
+});
+
+// =========================
+// INIT
+// =========================
+$(document).ready(function () {
+    if (modo === "editar") cargarDatos();
+});
+
+// =========================
+// FECHA
+// =========================
+function formatDate(d) {
+    if (!d) return "";
+    return new Date(d).toISOString().split("T")[0];
+}
+
+// =========================
+// CARGAR EDIT
+// =========================
+function cargarDatos() {
+
+    $("#tabla tbody").empty();
+
+    dataInicial.forEach(item => {
+
+        $("#tabla tbody").append(`
+        <tr data-id="${item.cueanexo}">
+            <td>${item.cueanexo}</td>
+            <td>${item.nom_est || ""}</td>
+            <td><input type="date" class="fd form-control" value="${formatDate(item.fecha_desde)}"></td>
+            <td><input type="date" class="fh form-control" value="${formatDate(item.fecha_hasta)}"></td>
+            <td><span class="badge ${colorEstado(item.estado)}">${item.estado}</span></td>
+            <td><button class="btn btn-danger btn-sm eliminar">X</button></td>
+        </tr>
+        `);
+    });
+}
+
+// =========================
+// AGREGAR FILA
+// =========================
+$("#escuelas").on("select2:select", function (e) {
+
+    let d = e.params.data;
+
+    if ($(`#tabla tbody tr[data-id='${d.id}']`).length) return;
+
+    $("#tabla tbody").append(`
+    <tr data-id="${d.id}">
+        <td>${d.id}</td>
+        <td>${d.text}</td>
+        <td><input type="date" class="fd form-control"></td>
+        <td><input type="date" class="fh form-control"></td>
+        <td><span class="badge bg-secondary">BORRADOR</span></td>
+        <td><button class="btn btn-danger btn-sm eliminar">X</button></td>
+    </tr>
+    `);
+
+    $("#escuelas").val(null).trigger("change");
+});
+
+// =========================
+// ELIMINAR
+// =========================
+$(document).on("click", ".eliminar", function () {
+    $(this).closest("tr").remove();
+});
+
+// =========================
+// GUARDAR PRO
+// =========================
+$("#btnGuardar").click(function () {
+
+    let btn = $(this);
+    btn.prop("disabled", true).text("Guardando...");
+
+    let data = [];
+    let error = false;
+
+    $("#tabla tbody tr").each(function () {
+
+        let fd = $(this).find(".fd").val();
+        let fh = $(this).find(".fh").val();
+
+        if (!fd || !fh) {
+            error = true;
+            return false;
+        }
+
+        data.push({
+            cueanexo: $(this).data("id"),
+            fecha_desde: fd,
+            fecha_hasta: fh
+        });
+    });
+
+    if (error) {
+        showToast("Completá todas las fechas", false);
+        btn.prop("disabled", false).text("Guardar asignaciones");
+        return;
+    }
+
+    $.ajax({
+        url: saveUrl,
+        type: "POST",
+        data: {
+            data: JSON.stringify(data),
+            csrfmiddlewaretoken: "{{ csrf_token }}"
+        },
+        success: function (res) {
+
+            if (!res.ok) {
+                showToast(res.error || "Error", false);
+                btn.prop("disabled", false).text("Guardar asignaciones");
+                return;
+            }
+
+            let total = (res.creadas || 0) + (res.actualizadas || 0);
+
+            if (res.errores && res.errores.length > 0) {
+                showToast(`Procesadas: ${total} (con errores)`, false);
+                btn.prop("disabled", false).text("Guardar asignaciones");
+                return;
+            }
+
+            showToast(`✔ ${total} asignaciones guardadas`);
+
+            // 🔥 REDIRECCIÓN LIMPIA
+            setTimeout(() => {
+                window.location.href = panelUrl + "?ok=1";
+            }, 800);
+        },
+
+        error: function () {
+            showToast("Error del servidor", false);
+            btn.prop("disabled", false).text("Guardar asignaciones");
+        }
+    });
+});
+
+// =========================
+// ESTADOS
+// =========================
+function colorEstado(e) {
+    if (e === "APROBADO") return "bg-success";
+    if (e === "RECHAZADO") return "bg-danger";
+    if (e === "ENVIADO") return "bg-primary";
+    return "bg-secondary";
+}
+
+</script>
+
+{% endblock %}

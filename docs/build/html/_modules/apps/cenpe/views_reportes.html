@@ -1,0 +1,275 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.cenpe.views_reportes &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cenpe.html">Documentación de la app Renpe</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.cenpe.views_reportes</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.cenpe.views_reportes</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span>
+<span class="kn">from</span> <span class="nn">reportlab.lib.pagesizes</span> <span class="kn">import</span> <span class="n">A4</span><span class="p">,</span> <span class="n">landscape</span>  
+<span class="kn">from</span> <span class="nn">reportlab.pdfgen</span> <span class="kn">import</span> <span class="n">canvas</span>
+<span class="kn">from</span> <span class="nn">reportlab.lib.units</span> <span class="kn">import</span> <span class="n">cm</span>
+<span class="kn">from</span> <span class="nn">reportlab.lib.utils</span> <span class="kn">import</span> <span class="n">ImageReader</span>
+<span class="kn">import</span> <span class="nn">qrcode</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+
+<div class="viewcode-block" id="GenerarCertificado"><a class="viewcode-back" href="../../../cenpe.html#apps.cenpe.views_reportes.GenerarCertificado">[documentos]</a><span class="k">def</span> <span class="nf">GenerarCertificado</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Genera un certificado en formato PDF para un usuario autenticado, mostrando sus datos personales y cargos docentes.</span>
+
+<span class="sd">    Este certificado incluye:</span>
+<span class="sd">    - Encabezado con información institucional.</span>
+<span class="sd">    - Detalles de los datos personales del usuario, obtenidos de la base de datos.</span>
+<span class="sd">    - Una tabla con los cargos y horas trabajadas.</span>
+<span class="sd">    - Un código QR que contiene los datos completos del certificado.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): Objeto de la solicitud HTTP que contiene información del usuario autenticado.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Un archivo PDF con el certificado generado.</span>
+
+<span class="sd">    Funcionalidad:</span>
+<span class="sd">    1. Obtiene los datos personales y los cargos del usuario autenticado a partir de una consulta SQL a la base de datos.</span>
+<span class="sd">    2. Genera un PDF con el módulo `reportlab`, incluyendo los datos personales y una tabla de cargos.</span>
+<span class="sd">    3. Genera un código QR que contiene la información del certificado.</span>
+<span class="sd">    4. Envía el archivo PDF generado como respuesta HTTP.</span>
+<span class="sd">    </span>
+<span class="sd">    Ejemplo:</span>
+<span class="sd">        - El usuario autenticado accede a la vista, y se genera un PDF con su certificado.</span>
+<span class="sd">        - El código QR incrustado contiene información clave del certificado, como nombre, DNI, título, cargos y fechas.</span>
+
+<span class="sd">    Uso:</span>
+<span class="sd">        Esta vista se puede integrar como parte de un sistema que genere certificados para docentes o personal administrativo.</span>
+
+<span class="sd">    Notas:</span>
+<span class="sd">        - La consulta SQL es específica a la base de datos `cenpe.certificado_cenpe`, asegurando que los datos se obtengan según el `dni` del usuario.</span>
+<span class="sd">        - Se utiliza el módulo `qrcode` para generar un código QR y `reportlab` para generar el PDF.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+    
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="c1"># obtener los datos del certificado</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT apellidos, nombres, dni, titulo, cueanexo, cargos_horas, cant_horas, situacion_revista, fecha_desde, fecha_hasta </span>
+<span class="s2">        FROM cenpe.certificado_cenpe</span>
+<span class="s2">        WHERE dni = &#39;</span><span class="si">{</span><span class="n">username</span><span class="si">}</span><span class="s2">&#39;</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">certificado</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>  
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;certificado:&#39;</span><span class="p">,</span> <span class="n">certificado</span><span class="p">)</span>
+
+    <span class="c1"># buffer para el PDF</span>
+    <span class="n">buffer</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">canvas</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">pagesize</span><span class="o">=</span><span class="n">landscape</span><span class="p">(</span><span class="n">A4</span><span class="p">))</span> 
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">landscape</span><span class="p">(</span><span class="n">A4</span><span class="p">)</span>  
+    <span class="n">y</span> <span class="o">=</span> <span class="n">height</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span>  
+    
+    <span class="c1"># recuadro del encabezado</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setStrokeColorRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  
+    <span class="n">c</span><span class="o">.</span><span class="n">setFillColorRGB</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">)</span> 
+    <span class="n">c</span><span class="o">.</span><span class="n">rect</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">height</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">width</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  
+    
+    <span class="c1"># texto del encabezado</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica-Bold&quot;</span><span class="p">,</span> <span class="mi">14</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setFillColorRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawCentredString</span><span class="p">(</span><span class="n">width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">height</span> <span class="o">-</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="s2">&quot;Departamento Estadística Educativa - MECCyT Chaco&quot;</span><span class="p">)</span>  
+    <span class="n">c</span><span class="o">.</span><span class="n">drawCentredString</span><span class="p">(</span><span class="n">width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">height</span> <span class="o">-</span> <span class="mf">2.5</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="s2">&quot;Relevamiento de Docentes y no Docentes - RePEE Chaco 2024&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Ajustar la posición del encabezado</span>
+    <span class="n">y</span> <span class="o">-=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span>
+    
+    <span class="c1"># Títulos</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica-Bold&quot;</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Datos Personales&quot;</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">-=</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">cm</span>
+
+    <span class="c1"># datos personales una sola vez</span>
+    <span class="k">if</span> <span class="n">certificado</span><span class="p">:</span>
+        <span class="n">dato</span> <span class="o">=</span> <span class="n">certificado</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  
+        <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Apellidos y Nombres: </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">cm</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;DNI: </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">cm</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Título: </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">-=</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">cm</span>
+
+    <span class="c1"># datos detallados en forma de tabla</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica-Bold&quot;</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Detalle de Cargos&quot;</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">-=</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">cm</span>
+    
+    <span class="c1"># encabezados de la tabla</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica-Bold&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Cueanexo&quot;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Cargo/Horas&quot;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">17</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Cant. Horas&quot;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">19</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Situación Revista&quot;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">22</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Fecha Desde&quot;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">25</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Fecha Hasta&quot;</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">cm</span>
+
+    <span class="c1"># filas de la tabla</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">row_height</span> <span class="o">=</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="n">cm</span>  
+
+    <span class="k">for</span> <span class="n">dato</span> <span class="ow">in</span> <span class="n">certificado</span><span class="p">:</span>
+        <span class="c1"># margen inferior de la página</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">:</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">showPage</span><span class="p">()</span>  
+            <span class="n">y</span> <span class="o">=</span> <span class="n">height</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span> 
+            <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica-Bold&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+            <span class="c1"># Reimpresión de encabezado en una nueva página</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Cueanexo&quot;</span><span class="p">)</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Cargo/Horas&quot;</span><span class="p">)</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">17</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Cant. Horas&quot;</span><span class="p">)</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">19</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Situación Revista&quot;</span><span class="p">)</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">22</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Fecha Desde&quot;</span><span class="p">)</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">27</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s2">&quot;Fecha Hasta&quot;</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">cm</span>
+        
+        <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="s2">&quot;Helvetica&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dato</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span>  <span class="c1"># Cueanexo</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dato</span><span class="p">[</span><span class="mi">5</span><span class="p">]))</span>  <span class="c1"># Cargo/Horas</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">17</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dato</span><span class="p">[</span><span class="mi">6</span><span class="p">]))</span>  <span class="c1"># Cant. Horas</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">19</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dato</span><span class="p">[</span><span class="mi">7</span><span class="p">]))</span>  <span class="c1"># Situación Revista</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">22</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dato</span><span class="p">[</span><span class="mi">8</span><span class="p">]))</span>  <span class="c1"># Fecha Desde</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">25</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dato</span><span class="p">[</span><span class="mi">9</span><span class="p">]))</span>  <span class="c1"># Fecha Hasta</span>
+        <span class="n">y</span> <span class="o">-=</span> <span class="n">row_height</span>  
+
+    <span class="c1"># Generar el código QR </span>
+    <span class="n">qr_data</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">dato</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">dato</span> <span class="ow">in</span> <span class="n">certificado</span><span class="p">])</span>
+    <span class="n">qr</span> <span class="o">=</span> <span class="n">qrcode</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">qr_data</span><span class="p">)</span>
+    <span class="n">qr_buffer</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">()</span>
+    <span class="n">qr</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">qr_buffer</span><span class="p">)</span>
+    <span class="n">qr_buffer</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c1"># ImageReader para interpretar el contenido del buffer como una imagen</span>
+    <span class="n">qr_image</span> <span class="o">=</span> <span class="n">ImageReader</span><span class="p">(</span><span class="n">qr_buffer</span><span class="p">)</span>
+    
+    <span class="c1"># Dibujar el QR en el PDF</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">drawImage</span><span class="p">(</span><span class="n">qr_image</span><span class="p">,</span> <span class="n">width</span> <span class="o">-</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">cm</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">cm</span><span class="p">)</span>
+
+    <span class="c1"># Terminar el PDF</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">showPage</span><span class="p">()</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    
+    <span class="c1"># Enviar el PDF como respuesta</span>
+    <span class="n">buffer</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;application/pdf&#39;</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

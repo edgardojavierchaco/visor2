@@ -1,0 +1,116 @@
+from django.contrib import admin
+from .models import (
+    AlumnosSecundariaDiagnostico, 
+    ConceptosLengua, 
+    ExamenLenguaAlumno, 
+    RegistroAsistenciaLengua,
+    ConceptosMatematica,
+    ExamenMatematicaAlumno,
+    RegistroAsistenciaMatematica,
+    EscuelasSecundarias,
+    CorteGeneralLengua,
+    CorteGeneralMatematica,
+    CorteEvaluarLengua,
+    CorteExtraerLengua,
+    CorteEscrituraLengua,
+    CorteInterpretarLengua,
+    CorteComunicacionMatematica,
+    CorteReconocimientoMatematica,
+    CorteResolucionMatematica,
+    VistaEscrituraLengua,
+    VistaEvaluarLengua,
+    VistaExtraerLengua,
+    VistaInterpretarLengua,
+    VistaGeneralLengua,
+    VistaGeneralMatematica,
+    VistaReconocimientoMatematica,
+    VistaResolucionMatematica,
+    VistaComunicacionMatematica,
+    AlumnosPrimariaFluidez,
+    ExamenFluidezSegundo,
+    EscuelasPrimarias,
+    TotalPrimarias,
+    RegistroAsistenciaFluidezSegundo,
+    ExamenFluidezTercero,
+    RegistroAsistenciaFluidezTercero,
+    VistaVelocidadSegundo,
+    VistaPrecisionSegundo,
+    VistaProsodiaSegundo,
+    VistaComprensionSegundo,
+    VistaVelocidadTercero,
+    VistaPrecisionTercero,
+    VistaProsodiaTercero,
+    VistaComprensionTercero,
+    EscuelasPrimariasMatematica,
+    ExamenMatematicaQuintoGrado,
+    RegistroAsistenciaMatematicaQuinto,
+    RespuestaCorrectaMatematicaQuinto,
+    AlumnosPrimariaQuinto,
+    VistaResultadoMatematicaQuinto,
+    VistaMatematicaQuinto,
+    ExamenMatematicaSegundoAnio,
+    AlumnosSegundoSecundaria,
+    RegistroAsistenciaMatematicaSegundoAnio,
+    RespuestaCorrectaMatematicaSegundoAnio,
+    VistaResultadoMatematicaSegundoAnio,
+    VistaMatematicaSegundoAnio,
+    VistaMatematicaQuintoRegional,
+    VistaMatematicaSegundoAnioRegional,
+)
+
+admin.site.register(AlumnosSecundariaDiagnostico)
+admin.site.register(ConceptosLengua)
+admin.site.register(ExamenLenguaAlumno)
+admin.site.register(RegistroAsistenciaLengua)
+admin.site.register(ConceptosMatematica)
+admin.site.register(ExamenMatematicaAlumno)
+admin.site.register(RegistroAsistenciaMatematica)
+admin.site.register(EscuelasSecundarias)
+admin.site.register(CorteGeneralLengua)
+admin.site.register(CorteGeneralMatematica)
+admin.site.register(CorteEvaluarLengua)
+admin.site.register(CorteExtraerLengua)
+admin.site.register(CorteEscrituraLengua)
+admin.site.register(CorteInterpretarLengua)
+admin.site.register(CorteComunicacionMatematica)
+admin.site.register(CorteReconocimientoMatematica)
+admin.site.register(CorteResolucionMatematica)
+admin.site.register(VistaEscrituraLengua)
+admin.site.register(VistaEvaluarLengua)
+admin.site.register(VistaExtraerLengua)
+admin.site.register(VistaInterpretarLengua)
+admin.site.register(VistaGeneralLengua)
+admin.site.register(VistaGeneralMatematica)
+admin.site.register(VistaReconocimientoMatematica)
+admin.site.register(VistaResolucionMatematica)
+admin.site.register(VistaComunicacionMatematica)
+admin.site.register(AlumnosPrimariaFluidez)
+admin.site.register(ExamenFluidezSegundo)
+admin.site.register(EscuelasPrimarias)
+admin.site.register(TotalPrimarias)
+admin.site.register(RegistroAsistenciaFluidezSegundo)
+admin.site.register(ExamenFluidezTercero)
+admin.site.register(RegistroAsistenciaFluidezTercero)
+admin.site.register(VistaVelocidadSegundo)
+admin.site.register(VistaPrecisionSegundo)
+admin.site.register(VistaProsodiaSegundo)
+admin.site.register(VistaComprensionSegundo)
+admin.site.register(VistaVelocidadTercero)
+admin.site.register(VistaPrecisionTercero)
+admin.site.register(VistaProsodiaTercero)
+admin.site.register(VistaComprensionTercero)
+admin.site.register(EscuelasPrimariasMatematica)
+admin.site.register(ExamenMatematicaQuintoGrado)
+admin.site.register(RegistroAsistenciaMatematicaQuinto)
+admin.site.register(RespuestaCorrectaMatematicaQuinto)
+admin.site.register(AlumnosPrimariaQuinto)
+admin.site.register(VistaResultadoMatematicaQuinto)
+admin.site.register(VistaMatematicaQuinto)
+admin.site.register(ExamenMatematicaSegundoAnio)
+admin.site.register(AlumnosSegundoSecundaria)
+admin.site.register(RegistroAsistenciaMatematicaSegundoAnio)
+admin.site.register(RespuestaCorrectaMatematicaSegundoAnio)
+admin.site.register(VistaResultadoMatematicaSegundoAnio)
+admin.site.register(VistaMatematicaSegundoAnio)
+admin.site.register(VistaMatematicaQuintoRegional)
+admin.site.register(VistaMatematicaSegundoAnioRegional)

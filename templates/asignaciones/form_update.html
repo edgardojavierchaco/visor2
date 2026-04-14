@@ -1,0 +1,109 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h3 class="mb-4">{{ title }}</h3>
+
+    <form id="updateForm" method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            {{ form.cueanexo.label_tag }}
+            {{ form.cueanexo }}
+        </div>
+
+        <div class="mb-3">
+            {{ form.oferta.label_tag }}
+            {{ form.oferta }}
+        </div>
+
+        <div class="row g-3">
+
+            <div class="col-md-6">
+                {{ form.fecha_desde.label_tag }}
+                {{ form.fecha_desde }}
+            </div>
+
+            <div class="col-md-6">
+                {{ form.fecha_hasta.label_tag }}
+                {{ form.fecha_hasta }}
+            </div>
+
+        </div>
+
+        <div class="form-check mt-3">
+            {{ form.activo }}
+            <label class="form-check-label">Activo</label>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+
+            <button class="btn btn-primary" type="submit">
+                Guardar
+            </button>
+
+            <a href="{% url 'asignacionesuperv:list' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+
+function getCSRF() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+document.getElementById("updateForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    try {
+
+        const res = await fetch(window.location.href, {
+            method: "POST",
+            body: new FormData(this),
+            headers: {
+                "X-CSRFToken": getCSRF(),
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) throw new Error(data.message);
+
+        await Swal.fire({
+            icon: "success",
+            title: "OK",
+            text: data.message
+        });
+
+        window.location.href = "/asignacionesuperv/list/";
+
+    } catch (err) {
+
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: err.message
+        });
+
+    }
+
+});
+
+</script>
+
+{% endblock %}

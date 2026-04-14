@@ -1,0 +1,148 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.archivar.forms &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.archivar.forms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.archivar.forms</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django</span> <span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">ArchRegister</span>
+
+<div class="viewcode-block" id="ArchRegisterForm"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.ArchRegisterForm">[documentos]</a><span class="k">class</span> <span class="nc">ArchRegisterForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<div class="viewcode-block" id="ArchRegisterForm.Meta"><a class="viewcode-back" href="../../../archivar.html#apps.archivar.views.ArchRegisterForm.Meta">[documentos]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">ArchRegister</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cueanexo&#39;</span><span class="p">,</span> <span class="s1">&#39;asunto&#39;</span><span class="p">,</span> <span class="s1">&#39;nivel&#39;</span><span class="p">,</span> <span class="s1">&#39;t_norma&#39;</span><span class="p">,</span><span class="s1">&#39;nro_normativa&#39;</span><span class="p">,</span> <span class="s1">&#39;año&#39;</span><span class="p">,</span> <span class="s1">&#39;descripcion&#39;</span><span class="p">,</span> <span class="s1">&#39;archivo&#39;</span><span class="p">]</span>
+        <span class="n">widgets</span><span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;descripcion&#39;</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;rows&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span>
+                <span class="s1">&#39;cols&#39;</span><span class="p">:</span><span class="mi">30</span><span class="p">,</span>
+                <span class="s1">&#39;style&#39;</span><span class="p">:</span><span class="s1">&#39;resize:both;&#39;</span><span class="p">,</span>
+            <span class="p">}),</span>
+        <span class="p">}</span></div></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Formulario para la creación y edición de registros de archivos.</span>
+
+<span class="sd">    Esta clase hereda de `forms.ModelForm` y se utiliza para gestionar</span>
+<span class="sd">    el registro de documentos asociados a un anexo específico. El formulario</span>
+<span class="sd">    permite a los usuarios ingresar información relevante sobre el archivo,</span>
+<span class="sd">    incluyendo datos obligatorios y opcionales, utilizando los campos del</span>
+<span class="sd">    modelo `ArchRegister`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        cueanexo (CharField): Código único del anexo al que se asocia el registro.</span>
+<span class="sd">        asunto (CharField): Asunto relacionado con el registro del archivo.</span>
+<span class="sd">        nivel (CharField): Nivel de relevancia o clasificación del archivo.</span>
+<span class="sd">        t_norma (CharField): Tipo de normativa que se aplica.</span>
+<span class="sd">        nro_normativa (CharField): Número de la normativa correspondiente.</span>
+<span class="sd">        año (IntegerField): Año asociado con la normativa.</span>
+<span class="sd">        descripcion (TextField): Descripción del archivo o su contenido.</span>
+<span class="sd">        archivo (FileField): Archivo a ser subido y asociado al registro.</span>
+
+<span class="sd">    Meta:</span>
+<span class="sd">        model (ArchRegister): Modelo que se utiliza para crear y validar el formulario.</span>
+<span class="sd">        fields (list): Lista de campos que se incluirán en el formulario.</span>
+<span class="sd">        widgets (dict): Personalización de widgets para campos específicos, </span>
+<span class="sd">                        incluyendo el campo &#39;descripcion&#39; como un área de texto</span>
+<span class="sd">                        redimensionable.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        - Instancia el formulario en vistas para manejar el registro de archivos.</span>
+<span class="sd">        - Valida y guarda la información utilizando los métodos integrados de Django.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

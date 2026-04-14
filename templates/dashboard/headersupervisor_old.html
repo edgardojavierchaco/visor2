@@ -1,0 +1,150 @@
+{% load static %}
+
+<style>
+/* CSS para que los submenús funcionen correctamente */
+.dropdown-menu .dropdown-menu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: .1rem;
+    margin-right: .1rem;
+    display: none; /* Oculto por defecto */
+}
+
+.dropdown-menu .dropdown-item.dropdown-toggle:hover + .dropdown-menu,
+.dropdown-menu .dropdown-menu:hover {
+    display: block; /* Mostrar submenú al pasar el ratón */
+}
+
+.dropdown-submenu {
+    position: relative;
+}
+</style>
+
+<!-- Navbar -->
+<nav class="main-header navbar navbar-expand-md navbar-light navbar-white">
+    <div class="container">
+        <a href="#" class="navbar-brand">
+            <img src="{% static 'img/logoEstMini.png' %}" alt="Estadística Educativa"
+                 class="brand-image"
+                 style="opacity: .8">
+            <span class="brand-text font-weight-light">Estadística Educativa</span>
+        </a>
+        <button class="navbar-toggler order-1" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse order-3" id="navbarCollapse">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a href="{% url 'home' %}" class="nav-link"><i class="fas fa-home" style="color:orange"></i> Home</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                       class="nav-link dropdown-toggle"><i class="fas fa-globe" style="color:blue"></i>Escuelas</a>
+                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                        <li><a href="{% url 'superescuela:super_list_propio' %}" class="dropdown-item"><img src="{% static 'img/mapadatos.png' %}">Nómina</a></li>                      
+                    </ul>
+                </li>                    
+                <li class="nav-item dropdown">
+                    <a id="dropdownSubMenu1" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                        class="nav-link dropdown-toggle">
+                        {% comment %} {% if user.is_authenticated %}
+                            <i class="fas fa-lock-open" style="color:green"></i>
+                        {% else %}
+                            <i class="fas fa-lock" style="color:red"></i>
+                        {% endif %} {% endcomment %}
+                        Equipo
+                    </a>
+                    <ul aria-labelledby="dropdownSubMenu1" class="dropdown-menu border-0 shadow">
+                        <li><a href="{% url 'reportes:equipo' %}" class="dropdown-item">Departamento Estadísticas</a></li>
+                        {% comment %} <script type="text/javascript">
+                            var nivelAcceso = "{{ nivelAcceso }}";
+                            console.log("Nivel de acceso del usuario:", nivelAcceso);
+                        </script>
+                        {% if user.is_authenticated %}                            
+                            <li><a href="{% url 'archivos:crear' %}" class="dropdown-item">Agregar</a></li>
+                            <li><a href="{% url 'archivos:listar' %}" class="dropdown-item">Listado</a></li>
+                        {% else %}
+                            <li><a href="#" class="dropdown-item disabled">Agregar</a></li>
+                            <li><a href="#" class="dropdown-item disabled">Listado</a></li>                                                 
+                        {% endif %} {% endcomment %}
+                    </ul>
+                </li>                
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <span class="nav-link">Usuario: {{ user.nombres }}</span>
+                </li>
+                
+                {% else %}
+                <li class="nav-item">
+                    <span class="nav-link">Usuario: Público</span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'usuarios:registro' %}" >
+                        <i class="fas fa-power-off" aria-hidden="true" style="color:green"></i> Login
+                    </a>
+                </li>
+                {% endif %}
+                
+            </ul>
+        </div>
+        <div class="order-1 order-md-3 navbar-tools text-md-right">
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link" data-toggle="dropdown" title="User Menu">
+                        <i class="far fa-user-circle" style="font-size: 30px; color: green;"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                        <span class="dropdown-item dropdown-header">Opciones de usuario</span>
+                        <div class="dropdown-divider"></div>
+                        {% if user.is_authenticated %}
+                            <a href="#" class="dropdown-item">
+                                <i class="fas fa-user-edit mr-2"></i> Editar Perfil
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <form method="POST" action="{% url 'login:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-power-off mr-2" style="color:red"></i> Logout
+                                </button>
+                            </form>
+                        {% else %}
+                            <a href="{% url 'login:login' %}" class="dropdown-item">
+                                <i class="fas fa-sign-in-alt mr-2"></i> Login
+                            </a>
+                        {% endif %}
+                    </div>
+                </li>
+            </ul>
+        </div> 
+        {% comment %} <ul class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#">
+                    <i class="far fa-bell"></i>
+                    <span class="badge badge-warning navbar-badge">15</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                    <span class="dropdown-header">15 Notifications</span>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <i class="fas fa-envelope mr-2"></i> 4 new messages
+                        <span class="float-right text-muted text-sm">3 mins</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <i class="fas fa-users mr-2"></i> 8 friend requests
+                        <span class="float-right text-muted text-sm">12 hours</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <i class="fas fa-file mr-2"></i> 3 new reports
+                        <span class="float-right text-muted text-sm">2 days</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
+                </div>
+            </li>
+        </ul> {% endcomment %}
+    </div>
+</nav>

@@ -1,0 +1,107 @@
+{% extends "dashboard/bodydirector.html" %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+
+<head>
+    <!-- Bootstrap CSS desde tu proyecto -->
+    <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- Font Awesome CSS desde CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Bootstrap JS desde tu proyecto -->
+    <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+</head>
+<style>
+    .info-icon {
+        background-color: red; 
+        color: white; 
+        border-radius: 50%; 
+        padding: 2px; 
+        margin-left: 5px; 
+        font-size: 14px; 
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<form method="post">    
+    <div class="card card-default">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-edit" style="color:green;"></i>
+                {{ title }}
+            </h3>
+        </div>
+        <div class="card-body">
+            {% csrf_token %}
+            
+            {% for field in form %}
+                {% if field.is_hidden %}
+                    {{ field }}
+                {% else %}
+                    <div class="form-group">  
+                        {% if field.name == 'velocidad' %}
+                            {{ field.label_tag }}     
+                            <i class="fa-solid fa-circle-info info-icon"
+                                title="Escala velocidad: Entre 0 y 80"></i>
+                        {% elif field.name == 'precision' %}
+                            {{ field.label_tag }}     
+                            <i class="fa-solid fa-circle-info info-icon"
+                                title="Escala precisión: Entre 0 y 80"></i>                 
+                        {% elif field.name == 'prosodia' %}
+                            {{ field.label_tag }}
+                            <i class="fa-solid fa-circle-info info-icon" 
+                               title="Escala Prosodia:
+                               - 1 = No lee o lee en forma monótona sin utilizar signos de puntuación.
+                               - 2 = Lee pausado utilizando puntos, con poca expresividad. Reconoce párrafos.
+                               - 3 = Lee de forma discontínua. Reconoce comas y puntos. Realiza pocos cambios en la entonación al final de las frases.
+                               - 4 = Utiliza los signos de puntuación(comas, puntos seguidos y puntos aportes). La entonación es variada, intenta marcar oraciones exclamativas o interrogativas. Ritmo fluido con algunas irregularidades.
+                               - 5 = Lee de forma continua y con buena entonación, respetando todos los signos de puntuación. Mantiene un ritmo adecuado. Realiza pausas que ayudan a la comprensión.
+                               - 6 = Lee de forma continua. Usa entonación expresiva adecuada. Respeta los singos de puntuación. Ritmo fluido y natural adecuado a la lectura. Realiza pausa precisas y efectivas que enriquecen la comprensión e interpretación de texto.">
+                            </i>
+                        {% elif field.name == 'comprension' %}
+                            {{ field.label_tag }}
+                            <i class="fa-solid fa-circle-info info-icon" 
+                               title="Escala Comprensión:                               
+                               - 1 = Ninguna respuesta correcta.
+                               - 2 = Responde correctamente una de las tres preguntas.
+                               - 3 = Responde correctamente dos de las tres preguntas.
+                               - 4 = Responde correctamente las tres preguntas.
+                               ">
+                            </i>
+                        {% else %}                        
+                            {{ field.label_tag }}
+                        {% endif %}
+                        {% if field.errors %}
+                            {{ field|add_class:"form-control is-invalid" }}
+                            <div class="invalid-feedback">{{ field.errors }}</div>
+                        {% else %}
+                            {{ field|add_class:"form-control" }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary btn-flat">
+                <i class="fas fa-edit"></i>Guardar edición
+            </button>
+        </div>
+    </div>
+</form>    
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Inicializa los tooltips en todos los elementos con data-bs-toggle="tooltip"
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+
+{% endblock %}

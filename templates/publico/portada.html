@@ -1,0 +1,46 @@
+{% extends 'publico/body.html' %}
+{% load static %}
+
+{% block head %}
+    <style>
+        .content-container {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .video-container {
+            position: relative;
+            margin-top:10px;
+            margin-left:150px;
+            width: 800px;
+            height: 500px;
+            overflow: hidden;
+            border: 20px solid #333; /* color del marco */
+            border-radius: 20px; /* bordes redondeados */
+            
+        }
+
+        .video-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* ajusta el video al tamaño del contenedor sin distorsión */
+        }
+    </style>
+{% endblock %}
+
+<div class="content-container">
+    {% block content %}
+        <div class="video-container">
+            <video class="video-frame" controls autoplay>
+                    <!-- Video de presentación Estadísticas Educativas -->
+                    <source src="{% static 'media/presentacionestedu.mp4' %}" type="video/mp4">
+                    Tu navegador no soporta el elemento de video.
+                </video>
+        </div>
+    {% endblock %}
+    </div>

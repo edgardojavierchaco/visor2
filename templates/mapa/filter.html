@@ -1,0 +1,572 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.css">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.js"></script>
+
+<script src="https://kit.fontawesome.com/41bcea2ae3.js" crossorigin="anonymous"></script>
+
+<title>Filtro de Búsqueda</title>
+
+<style>
+
+body{
+background:#f5f6fa;
+}
+
+/* modal */
+
+.modal-content{
+border-radius:14px;
+border:none;
+box-shadow:0 25px 60px rgba(0,0,0,.25);
+}
+
+.modal-header{
+background:linear-gradient(135deg,#0d6efd,#0a58ca);
+color:white;
+border-radius:14px 14px 0 0;
+}
+
+/* grid filtros */
+
+.filtros-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:18px;
+margin-top:15px;
+}
+
+/* cards */
+
+.filtro-card{
+background:#fafafa;
+border:1px solid #e6e6e6;
+border-radius:10px;
+padding:14px;
+transition:.2s;
+}
+
+.filtro-card:hover{
+background:white;
+box-shadow:0 6px 18px rgba(0,0,0,.08);
+}
+
+.hidden{
+display:none;
+}
+
+.is-invalid{
+border-color:red;
+}
+
+.contador{
+font-size:14px;
+color:#555;
+margin-bottom:10px;
+}
+
+</style>
+
+</head>
+
+<body onload="openModal()">
+
+<div class="modal fade" id="myModal" tabindex="-1">
+
+<div class="modal-dialog modal-xl modal-dialog-centered">
+
+<div class="modal-content">
+
+<div class="modal-header">
+
+<h5 class="modal-title">
+<i class="fas fa-filter"></i> Panel de filtros del mapa
+</h5>
+
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
+</div>
+
+<div class="modal-body">
+
+<form action="{% url 'mapas:filter' %}" method="POST">
+
+{% csrf_token %}
+
+<div class="contador">
+Filtros activos: <b id="contadorFiltros">0</b>
+</div>
+
+<div class="filtros-grid">
+
+<!-- Cueanexo -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckCueanexo" onchange="toggleDropdown('Cueanexo')">
+
+<label class="form-check-label">Cueanexo</label>
+
+</div>
+
+<input class="form-control hidden mt-2" type="text" id="CueanexoDropdown" name="Cueanexo"
+onblur="validateCueanexo(this)"
+onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+disabled>
+
+</div>
+
+<!-- CUI -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckCui" onchange="toggleDropdown('Cui')">
+
+<label class="form-check-label">Cui</label>
+
+</div>
+
+<input class="form-control hidden mt-2" type="text" id="CuiDropdown" name="Cui"
+onblur="validateCui(this)"
+onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+disabled>
+
+</div>
+
+<!-- Nombre -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchChecknomest" onchange="toggleDropdown('nomest')">
+
+<label class="form-check-label">Nombre Establecimiento</label>
+
+</div>
+
+<input class="form-control hidden mt-2" type="text" id="nomestDropdown" name="nomest" disabled>
+
+</div>
+
+<!-- Ámbito -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckAmbito" onchange="toggleDropdown('Ambito')">
+
+<label class="form-check-label">Ámbito</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="AmbitoDropdown" name="Ambito" disabled>
+
+<option selected>Seleccione un ámbito</option>
+<option value="Urbano">Urbano</option>
+<option value="Rural Disperso">Rural Disperso</option>
+<option value="Rural Aglomerado">Rural Aglomerado</option>
+
+</select>
+
+</div>
+
+<!-- Sector -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckSector" onchange="toggleDropdown('Sector')">
+
+<label class="form-check-label">Sector</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="SectorDropdown" name="Sector" disabled>
+
+<option selected>Seleccione Sector</option>
+<option value="Estatal">Estatal</option>
+<option value="Privado">Privado</option>
+<option value="Gestión social/cooperativa">Gestión Social/cooperativa</option>
+
+</select>
+
+</div>
+
+<!-- Región -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckRegion" onchange="toggleDropdown('Region')">
+
+<label class="form-check-label">Región</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="RegionDropdown" name="Region" disabled>
+
+<option selected>Seleccione una Regional Educativa</option>
+
+<option value="R.E. 1">R.E. 1</option>
+<option value="R.E. 2">R.E. 2</option>
+<option value="R.E. 3">R.E. 3</option>
+<option value="R.E. 4-A">R.E. 4-A</option>
+<option value="R.E. 4-B">R.E. 4-B</option>
+<option value="R.E. 5">R.E. 5</option>
+<option value="R.E. 6">R.E. 6</option>
+<option value="R.E. 7">R.E. 7</option>
+<option value="R.E. 8-A">R.E. 8-A</option>
+<option value="R.E. 8-B">R.E. 8-B</option>
+<option value="R.E. 9">R.E. 9</option>
+<option value="R.E. 10-A">R.E. 10-A</option>
+<option value="R.E. 10-B">R.E. 10-B</option>
+<option value="R.E. 10-C">R.E. 10-C</option>
+<option value="SUB. R.E. 1-A">SUB R.E. 1-A</option>
+<option value="SUB. R.E. 1-B">SUB R.E. 1-B</option>
+<option value="SUB. R.E. 2">SUB R.E. 2</option>
+<option value="SUB. R.E. 3">SUB R.E. 3</option>
+<option value="SUB. R.E. 5">SUB R.E. 5</option>
+
+</select>
+
+</div>
+
+<!-- Departamento -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckDepartamento" onchange="toggleDropdown('Departamento')">
+
+<label class="form-check-label">Departamento</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="DepartamentoDropdown" name="Departamento" disabled>
+
+<option selected>Seleccione departamento</option>
+
+<option value="12 DE OCTUBRE">12 DE OCTUBRE</option>
+<option value="1 DE MAYO">1° DE MAYO</option>
+<option value="25 DE MAYO">25 DE MAYO</option>
+<option value="2 DE ABRIL">2 DE ABRIL</option>
+<option value="9 DE JULIO">9 DE JULIO</option>
+<option value="ALMIRANTE BROWN">ALMIRANTE BROWN</option>
+<option value="BERMEJO">BERMEJO</option>
+<option value="CHACABUCO">CHACABUCO</option>
+<option value="COMANDANTE FERNANDEZ">COMANDANTE FERNANDEZ</option>
+<option value="FRAY JUSTO SANTA MARIA DE ORO">FRAY JUSTO SANTA MARIA DE ORO</option>
+<option value="GENERAL BELGRANO">GENERAL BELGRANO</option>
+<option value="GENERAL DONOVAN">GENERAL DONOVAN</option>
+<option value="GENERAL GUEMES">GENERAL GUEMES</option>
+<option value="INDEPENDENCIA">INDEPENDENCIA</option>
+<option value="LIBERTAD">LIBERTAD</option>
+<option value="LIBERTADOR GENERAL SAN MARTIN">LIBERTADOR GENERAL SAN MARTIN</option>
+<option value="MAIPU">MAIPU</option>
+<option value="MAYOR LUIS J. FONTANA">MAYOR LUIS J. FONTANA</option>
+<option value="O'HIGGINS">O'HIGGINS</option>
+<option value="PRESIDENCIA DE LA PLAZA">PRESIDENCIA DE LA PLAZA</option>
+<option value="SAN FERNANDO">SAN FERNANDO</option>
+<option value="SAN LORENZO">SAN LORENZO</option>
+<option value="SARGENTO CABRAL">SARGENTO CABRAL</option>
+<option value="TAPENAGA">TAPENAGA</option>
+
+</select>
+
+</div>
+
+<!-- Localidad -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckLocalidad" onchange="toggleDropdown('Localidad')">
+
+<label class="form-check-label">Localidad</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="LocalidadDropdown" name="Localidad" disabled>
+
+<option selected>Seleccione localidad</option>
+
+<option value="AVIA TERAI">AVIA TERAI</option>
+<option value="BARRANQUERAS">BARRANQUERAS</option>
+<option value="BASAIL">BASAIL</option>
+<option value="CAMPO LARGO">CAMPO LARGO</option>
+<option value="CAPITAN SOLARI">CAPITAN SOLARI</option>
+<option value="CHARADAI">CHARADAI</option>
+<option value="CHARATA">CHARATA</option>
+<option value="CHOROTIS">CHOROTIS</option>
+<option value="CIERVO PETISO">CIERVO PETISO</option>
+<option value="COLONIA BARANDA">COLONIA BARANDA</option>
+<option value="COLONIA BENITEZ">COLONIA BENITEZ</option>
+<option value="COLONIA ELISA">COLONIA ELISA</option>
+<option value="COLONIA POPULAR">COLONIA POPULAR</option>
+<option value="COLONIAS UNIDAS">COLONIAS UNIDAS</option>
+<option value="CONCEPCION DEL BERMEJO">CONCEPCION DEL BERMEJO</option>
+<option value="CORONEL DU GRATY">CORONEL DU GRATY</option>
+<option value="CORZUELA">CORZUELA</option>
+<option value="COTE LAI">COTE LAI</option>
+<option value="EL ESPINILLO">EL ESPINILLO</option>
+<option value="EL SAUZALITO">EL SAUZALITO</option>
+<option value="EL VIZCACHERAL">EL VIZCACHERAL</option>
+<option value="ENRIQUE URIEN">ENRIQUE URIEN</option>
+<option value="FONTANA">FONTANA</option>
+<option value="FUERTE ESPERANZA">FUERTE ESPERANZA</option>
+<option value="GANCEDO">GANCEDO</option>
+<option value="GENERAL CAPDEVILLA">GENERAL CAPDEVILLA</option>
+<option value="GENERAL JOSE DE SAN MARTIN">GENERAL JOSE DE SAN MARTIN</option>
+<option value="GENERAL PINEDO">GENERAL PINEDO</option>
+<option value="GENERAL VEDIA">GENERAL VEDIA</option>
+<option value="HAUMONIA">HAUMONIA</option>
+<option value="HERMOSO CAMPO">HERMOSO CAMPO</option>
+<option value="HORQUILLA">HORQUILLA</option>
+<option value="ISLA DEL CERRITO">ISLA DEL CERRITO</option>
+<option value="JUAN JOSE CASTELLI">JUAN JOSE CASTELLI</option>
+<option value="LA CLOTILDE">LA CLOTILDE</option>
+<option value="LA EDUVIGIS">LA EDUVIGIS</option>
+<option value="LA ESCONDIDA">LA ESCONDIDA</option>
+<option value="LAGUNA BLANCA">LAGUNA BLANCA</option>
+<option value="LAGUNA LIMPIA">LAGUNA LIMPIA</option>
+<option value="LA LEONESA">LA LEONESA</option>
+<option value="LAPACHITO">LAPACHITO</option>
+<option value="LA SABANA">LA SABANA</option>
+<option value="LAS BREÑAS">LAS BREÑAS</option>
+<option value="LAS GARCITAS">LAS GARCITAS</option>
+<option value="LAS PALMAS">LAS PALMAS</option>
+<option value="LA TIGRA">LA TIGRA</option>
+<option value="LA VERDE">LA VERDE</option>
+<option value="LOS FRENTONES">LOS FRENTONES</option>
+<option value="MACHAGAI">MACHAGAI</option>
+<option value="MAKALLE">MAKALLE</option>
+<option value="MARGARITA BELEN">MARGARITA BELEN</option>
+<option value="MIRAFLORES">MIRAFLORES</option>
+<option value="MISION NUEVA POMPEYA">MISION NUEVA POMPEYA</option>
+<option value="NAPENAY">NAPENAY</option>
+<option value="PAMPA ALMIRON">PAMPA ALMIRON</option>
+<option value="PAMPA DEL INDIO">PAMPA DEL INDIO</option>
+<option value="PAMPA DEL INFIERNO">PAMPA DEL INFIERNO</option>
+<option value="PRESIDENCIA DE LA PLAZA">PRESIDENCIA DE LA PLAZA</option>
+<option value="PRESIDENCIA ROCA">PRESIDENCIA ROCA</option>
+<option value="PRESIDENCIA ROQUE SAENZ PEÑA">PRESIDENCIA ROQUE SAENZ PEÑA</option>
+<option value="PUERTO BERMEJO NUEVO">PUERTO BERMEJO NUEVO</option>
+<option value="PUERTO BERMEJO VIEJO">PUERTO BERMEJO VIEJO</option>
+<option value="PUERTO EVA PERON">PUERTO EVA PERON</option>
+<option value="PUERTO TIROL">PUERTO TIROL</option>
+<option value="PUERTO VILELAS">PUERTO VILELAS</option>
+<option value="QUITILIPI">QUITILIPI</option>
+<option value="RESISTENCIA">RESISTENCIA</option>
+<option value="RIO MUERTO">RIO MUERTO</option>
+<option value="SAMUHU">SAMUHU</option>
+<option value="SAN BERNARDO">SAN BERNARDO</option>
+<option value="SANTA SYLVINA">SANTA SYLVINA</option>
+<option value="TACO POZO">TACO POZO</option>
+<option value="TRES ISLETAS">TRES ISLETAS</option>
+<option value="VENADOS GRANDES">VENADOS GRANDES</option>
+<option value="VILLA ANGELA">VILLA ANGELA</option>
+<option value="VILLA BERTHET">VILLA BERTHET</option>
+<option value="VILLA RIO BERMEJITO">VILLA RIO BERMEJITO</option>
+<option value="ZAPARINQUI">ZAPARINQUI</option>
+
+</select>
+
+</div>
+
+<!-- Oferta -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckOferta" onchange="toggleDropdown('Oferta')">
+
+<label class="form-check-label">Ofertas</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="OfertaDropdown" name="Oferta" disabled>
+
+<option selected>Seleccione Oferta</option>
+
+<option value="Adultos - Formación">ADULTOS - FORMACIÓN PROFESIONAL</option>
+<option value="Adultos - Primaria">ADULTOS - PRIMARIA</option>
+<option value="Adultos - Secundaria">ADULTOS - SECUNDARIA</option>
+<option value="Común - Domiciliaria">COMÚN - DOMICILIARIA/HOSPITALARIA</option>
+<option value="Común - Jardín">COMÚN JARDINES DE INFANTES/MATERNALES</option>
+<option value="Común - Primaria">COMÚN - PRIMARIA</option>
+<option value="Común - Secundaria">COMÚN SECUNDARIA</option>
+<option value="Común - Servicios">COMÚN - SERVICIOS COMPLEMENTARIOS</option>
+<option value="Común - SNU">COMÚN - SNU</option>
+<option value="Común - Ciclos">COMÚN - CICLOS DE ENSEÑANZA ARTÍSTICA</option>
+<option value="Común - Cursos de">COMÚN - CURSOS DE CAPACITACIÓN DE SNU</option>
+<option value="Común - Cursos y Talleres">COMÚN - CURSOS Y TALLERES DE ARTÍSTICA</option>
+<option value="Especial - Jardín">ESPECIAL JARDINES DE INFANTES/MATERNALES</option>
+<option value="Especial - Primaria">ESPECIAL - PRIMARIA</option>
+<option value="Especial - Domiciliaria">ESPECIAL - DOMICILIARIA/HOSPITALARIA</option>
+<option value="Especial - Cursos">ESPECIAL - CURSOS/TALLERES</option>
+<option value="Especial - Educación Integral">ESPECIAL - EDUCACIÓN INTEGRAL PARA ADOLESCENTES Y JÓVENES</option>
+<option value="Especial - Integración">ESPECIAL - INTEGRACIÓN</option>
+
+</select>
+
+</div>
+
+<!-- Modalidad -->
+
+<div class="filtro-card">
+
+<div class="form-check form-switch">
+
+<input class="form-check-input" type="checkbox" id="SwitchCheckModalidad" onchange="toggleDropdown('Modalidad')">
+
+<label class="form-check-label">Modalidad</label>
+
+</div>
+
+<select class="form-select hidden mt-2" id="ModalidadDropdown" name="Modalidad" disabled>
+
+<option selected>Seleccione Modalidad</option>
+<option value="BII">BILINGÜE INTERCULTURAL</option>
+
+</select>
+
+</div>
+
+</div>
+
+<div class="modal-footer">
+
+<button type="submit" class="btn btn-success">Enviar</button>
+
+<button type="button" class="btn btn-warning" onclick="resetForm()">Limpiar</button>
+
+<button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="cerrarBtn">Cerrar</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="{% static 'js/funciones.js' %}"></script>
+
+<script>
+
+function openModal(){
+const modal=new bootstrap.Modal(document.getElementById('myModal'));
+modal.show();
+}
+
+function toggleDropdown(id){
+
+const input=document.getElementById(id+'Dropdown');
+const checkbox=document.getElementById('SwitchCheck'+id);
+
+if(checkbox.checked){
+
+input.classList.remove('hidden');
+input.disabled=false;
+
+if(id==='Region'){
+avisoregion();
+}
+
+}else{
+
+input.classList.add('hidden');
+input.disabled=true;
+
+}
+
+actualizarContador();
+
+}
+
+function actualizarContador(){
+
+const activos=document.querySelectorAll('.form-check-input:checked').length;
+
+document.getElementById('contadorFiltros').innerText=activos;
+
+}
+
+function resetForm(){
+
+const form=document.querySelector('form');
+
+form.reset();
+
+document.querySelectorAll('.form-select,.form-control').forEach(el=>{
+el.classList.add('hidden');
+el.disabled=true;
+});
+
+actualizarContador();
+
+}
+
+function validateCueanexo(input){
+
+const cueanexo=input.value.trim();
+
+const isValid=/^22\d{7}$/.test(cueanexo);
+
+if(!isValid){
+
+alert_jqueryvalidacion();
+
+}else{
+
+input.classList.remove('is-invalid');
+input.setCustomValidity('');
+
+}
+
+}
+
+document.getElementById("cerrarBtn").addEventListener("click",function(event){
+
+event.preventDefault();
+
+window.history.go(-1);
+
+});
+
+</script>
+
+</body>
+
+</html>

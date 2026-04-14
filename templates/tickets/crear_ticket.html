@@ -1,0 +1,16 @@
+<h2>Nueva consulta</h2>
+
+<form method="post">
+{% csrf_token %}
+
+<label>Asunto</label>
+<input type="text" name="asunto" required>
+
+<label>Consulta</label>
+<textarea name="mensaje"></textarea>
+
+<button type="submit">
+Enviar
+</button>
+
+</form>

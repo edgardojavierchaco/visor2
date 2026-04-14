@@ -1,0 +1,84 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h3>{{ title }}</h3>
+
+    <form id="asignacionForm">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label>Escuelas</label>
+            {{ form.escuelas }}
+            <div class="text-danger" id="error-escuelas"></div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                {{ form.fecha_desde }}
+            </div>
+            <div class="col">
+                {{ form.fecha_hasta }}
+            </div>
+        </div>
+
+        <button class="btn btn-primary mt-3 w-100">
+            Crear
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
+
+<script>
+function getCSRF() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+$('#id_escuelas').select2({
+    width: '100%',
+    placeholder: 'Buscar escuelas...',
+    minimumInputLength: 1,
+    ajax: {
+        url: "/asignacionesuperv/api/escuelas/",
+        dataType: "json",
+        delay: 250,
+        data: params => ({ q: params.term || "" }),
+        processResults: data => ({ results: data.results })
+    }
+});
+
+document.getElementById("asignacionForm").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    const res = await fetch(window.location.href, {
+        method: "POST",
+        body: new FormData(this),
+        headers: { "X-CSRFToken": getCSRF() }
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+        alert(data.message);
+        console.log(data.errors);
+        return;
+    }
+
+    alert("OK");
+});
+</script>
+
+{% endblock %}

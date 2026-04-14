@@ -1,0 +1,39 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>Asignaciones regionales</h3>
+
+<table class="table">
+
+<thead>
+<tr>
+  <th>Escuela</th>
+  <th>Región</th>
+  <th>Modalidad</th>
+  <th>Supervisor</th>
+  <th>Estado</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for a in asignaciones %}
+<tr>
+  <td>{{ a.nom_est }}</td>
+  <td>{{ a.region_loc }}</td>
+  <td>{{ a.nivel_modalidad }}</td>
+  <td>{{ a.supervisor }}</td>
+  <td>{{ a.estado }}</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

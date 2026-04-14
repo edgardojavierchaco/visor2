@@ -1,0 +1,180 @@
+{% extends 'publico/body.html' %}
+{% load static %}
+
+{% block content %}
+    <!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
+        #map-container {
+            position: relative;
+        }
+
+        #map {
+            height: 550px;
+        }
+
+        
+    </style>
+</head>
+<body>
+    {% block content_header %}
+        <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">  <small></small></h1>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+                                <li class="breadcrumb-item"><a href="{% url 'publico:publico'%}">Restablecer</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'mapas:filtrado_list'%}">Listado</a></li>
+                                <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    {% endblock %}
+    <h1>Ubicación Geográfica de Unidades de Servicio</h1>
+    <div id="map-container">
+        <div id="map"></div>
+        
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.2/dist/esri-leaflet.js"
+    integrity="sha512-myckXhaJsP7Q7MZva03Tfme/MSF5a6HC2xryjAM4FxPLHGqlh5VALCbywHnzs2uPoF/4G/QVXyYDDSkp5nPfig=="
+    crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>    
+    <!-- Incluir Leaflet.Draw -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <script>
+        var markers = JSON.parse('{{ data_json|escapejs }}');
+        var drawnItems = new L.FeatureGroup();
+        
+        var map = L.map('map');
+        var bounds = L.latLngBounds();
+        var selectedMarkers = []; // Almacena los marcadores seleccionados para medir distancias
+
+        var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+
+        var regionColors = {
+            'R.E. 1': 'orange',
+            'R.E. 2': 'blue',
+            'R.E. 3': 'violet',
+            'R.E. 4-B': 'red',
+            'R.E. 4-A':'green',
+            'R.E. 5': 'orange',
+            'R.E. 6': 'blue',
+            'R.E. 7': 'violet',
+            'R.E. 8-A': 'red',
+            'R.E. 8-B':'green',
+            'R.E. 9': 'orange',
+            'R.E. 10-A': 'red',
+            'R.E. 10-B': 'blue',
+            'R.E. 10-C': 'green',
+            'SUB. R.E. 1-B':'green',
+            'SUB. R.E. 1-A':'blue',
+            'SUB. R.E. 3':'green',
+            'SUB. R.E. 2':'red',
+            'SUB. R.E. 5':'violet',
+            // Agrega más regiones y colores según sea necesario
+        };
+
+        function getMarkerColor(region) {
+            return regionColors[region] || 'gray';
+        }
+        
+        var markerClusterGroup = L.markerClusterGroup();
+
+        for (var i = 0; i < markers.length; i++) {
+            var lat = markers[i][1];
+            var lng = markers[i][2];
+            var cueanexo = markers[i][0];
+            var nom_est = markers[i][3];
+            var oferta = markers[i][4];
+            var ambito = markers[i][5];
+            var sector = markers[i][6];
+            var region_loc = markers[i][7];
+            var calle = markers[i][8];
+            var numero = markers[i][9];
+            var localidad=markers[i][10];
+
+            if (lat !== 0 && lng !== '') {
+                var regionColor = getMarkerColor(region_loc);
+                var markerIcon = L.icon({
+                    iconUrl: '/static/img/marker-icon-2x-' + regionColor + '.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                });
+                var filterLink = '<a href="#" onclick="filterTable(\'' + cueanexo + '\')">' + cueanexo + '</a>';
+                var marker = L.marker([lat, lng], { icon: markerIcon });
+                marker.bindPopup('<strong>Cueanexo:</strong> ' + filterLink + '<br>' +
+                                 '<strong>Establecimiento:</strong> ' + nom_est + '<br>' +
+                                 '<strong>Ofertas:</strong> ' + oferta + '<br>' +
+                                 '<strong>Ámbito:</strong> ' + ambito + '<br>' +
+                                 '<strong>Sector:</strong> ' + sector + '<br>' +
+                                 '<strong>Región Educativa:</strong> ' + region_loc + '<br>' +
+                                 '<strong>Calle:</strong> ' + calle + ' ' +
+                                 '<strong>Nro:</strong> ' + numero + ' - '+ localidad + '<br>');
+
+                markerClusterGroup.addLayer(marker);
+                bounds.extend(marker.getLatLng());
+
+                
+            }
+        }
+
+        map.addLayer(markerClusterGroup);
+        map.fitBounds(bounds);
+
+        var openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        });
+
+        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 18
+        });
+
+        var baseLayers = {
+            "Mosaico": openStreetMap,
+            "Satélite": esriSatellite
+        };
+
+        L.control.layers(baseLayers, null, {
+            collapsed: true,
+            icon: '<img src="/static/img/satelital.png" alt="Satélite" style="width:20px;height:20px;">'
+        }).addTo(map);
+
+        
+
+        
+
+        function filterTable(cueanexo) {
+            // Redireccionar a la nueva página y pasar el parámetro 'cueanexo' en la URL
+            window.location.href = '/map/listados/?cueanexo=' + cueanexo;
+        }
+    </script>
+</body>
+</html>
+
+
+
+{% endblock %}

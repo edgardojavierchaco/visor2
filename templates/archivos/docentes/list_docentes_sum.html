@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Informe Docentes y Licencias</title>
+  <!-- Cargar Bootstrap desde CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Modal -->
+  <div class="modal fade" id="informeModal" tabindex="-1" aria-labelledby="informeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="informeModalLabel">Informe Docentes y Licencias</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="goBack()"></button>
+        </div>
+        <div class="modal-body">
+          {% if docentes %}
+            <h5>Docentes carga horaria:</h5>
+            <table class="table table-bordered">
+              <thead class="table-dark">
+                <tr>
+                  <th>CUIL</th>
+                  <th>Denominación Cargo</th>
+                  <th>Horas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for docente in docentes %}
+                  <tr>
+                    <td>{{ docente.cuil }}</td>
+                    <td>{{ docente.denom_cargo }}</td>
+                    <td>{{ docente.total_horas }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p><strong>Total carga horaria general:</strong> {{ total_general }}</p>
+          {% else %}
+            <p class="text-muted">No se encontraron docentes para el CUIL proporcionado.</p>
+          {% endif %}
+
+          {% if afectaciones_agrupadas %}
+            <h5>Focalizadas / Reubicaciones:</h5>
+            <table class="table table-bordered">
+              <thead class="table-dark">
+                <tr>
+                  <th>Descripción</th>
+                  <th>Horas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for afectacion in afectaciones_agrupadas %}
+                  <tr>
+                    <td>{{ afectacion.ptatipo|default:"Sin Tipo" }}</td>
+                    <td>{{ afectacion.total_afectaciones }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p><strong>Total:</strong> {{ total_afectaciones_general }}</p>
+          {% endif %}
+          {% if licencias_agrupadas %}
+            <h5>Licencias:</h5>
+            <table class="table table-bordered">
+              <thead class="table-dark">
+                <tr>
+                  <th>Descripción</th>
+                  <th>Horas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for licencia in licencias_agrupadas %}
+                  <tr>
+                    <td>{{ licencia.desc_lic|default:"Sin Tipo" }}</td>
+                    <td>{{ licencia.total_licencias }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p><strong>Total:</strong> {{ total_licencias_general }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cargar Bootstrap JS desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Abrir el modal al cargar la página -->
+  <script type="text/javascript">
+    window.onload = function() {
+      var myModal = new bootstrap.Modal(document.getElementById('informeModal'));
+      myModal.show();
+    }
+
+    // Función para ir a la página anterior al cerrar el modal
+    function goBack() {
+      window.history.back();
+    }
+  </script>
+</body>
+</html>

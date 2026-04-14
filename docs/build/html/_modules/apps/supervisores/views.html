@@ -1,0 +1,368 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.supervisores.views &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reportes.html">Documentación de la app Reportes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervisores.html">Documentación de la app Supervisores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usuarios.html">Documentación de la app Usuarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../videoteca.html">Documentación de la app Videoteca</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.supervisores.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.supervisores.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">get_object_or_404</span><span class="p">,</span> <span class="n">redirect</span>
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span>
+<span class="kn">from</span> <span class="nn">django.views.generic</span> <span class="kn">import</span> <span class="n">ListView</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">,</span> <span class="n">DeleteView</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Supervisor</span><span class="p">,</span> <span class="n">EscuelaSupervisor</span><span class="p">,</span> <span class="n">DirectoresRegionales</span>
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="n">FiltroRegionalForm</span><span class="p">,</span> <span class="n">SupervisorForm</span><span class="p">,</span> <span class="n">EscuelaForm</span>
+
+<span class="c1">#################################</span>
+<span class="c1">#    Vistas para Supervisor     #</span>
+<span class="c1">#################################</span>
+<div class="viewcode-block" id="SupervisorListView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorListView">[documentos]</a><span class="k">class</span> <span class="nc">SupervisorListView</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para listar todos los Supervisores.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - supervisores: Lista de Supervisores filtrados por región.</span>
+<span class="sd">        - form: Formulario de filtro por región.</span>
+<span class="sd">        - title: Título de la vista.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Supervisor</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/lista_supervisores.html&#39;</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores&#39;</span>   
+    
+<div class="viewcode-block" id="SupervisorListView.get_queryset"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorListView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">queryset</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>
+        <span class="n">regional</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">)</span>     
+
+        <span class="k">if</span> <span class="n">regional</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">region__iexact</span><span class="o">=</span><span class="n">regional</span><span class="p">)</span>        
+        <span class="k">return</span> <span class="n">queryset</span></div>
+    
+<div class="viewcode-block" id="SupervisorListView.get_context_data"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorListView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">FiltroRegionalForm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;form&#39;</span><span class="p">]</span><span class="o">=</span> <span class="n">form</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Listado de Supervisores&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+
+<div class="viewcode-block" id="SupervisorCreateView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorCreateView">[documentos]</a><span class="k">class</span> <span class="nc">SupervisorCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para crear un nuevo Supervisor.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - form: Formulario para crear un Supervisor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Supervisor</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">SupervisorForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/crear_supervisor.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;supervis:lista_supervisores&#39;</span><span class="p">)</span></div>
+    
+
+<div class="viewcode-block" id="SupervisorUpdateView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorUpdateView">[documentos]</a><span class="k">class</span> <span class="nc">SupervisorUpdateView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar un Supervisor existente.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - form: Formulario para editar un Supervisor.</span>
+<span class="sd">        - title: Título de la vista.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Supervisor</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">SupervisorForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/crear_supervisor.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;supervis:lista_supervisores&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="SupervisorUpdateView.get_object"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorUpdateView.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Supervisor</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SupervisorUpdateView.get_context_data"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorUpdateView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Supervisor&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="SupervisorUpdateView.form_valid"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorUpdateView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="c1"># Simplemente llamamos al form_valid de la superclase</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SupervisorDeleteView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorDeleteView">[documentos]</a><span class="k">class</span> <span class="nc">SupervisorDeleteView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar un Supervisor.</span>
+
+<span class="sd">    Redirige a la lista de Supervisores tras la eliminación.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="SupervisorDeleteView.get"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.SupervisorDeleteView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Elimina el Supervisor basado en el ID proporcionado y redirige a la lista.&quot;&quot;&quot;</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Supervisor</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;supervis:lista_supervisores&#39;</span><span class="p">)</span></div></div>
+    
+
+<span class="c1">##############################################</span>
+<span class="c1">#    Vistas para Escuelas por Supervisor     #</span>
+<span class="c1">##############################################</span>
+<div class="viewcode-block" id="EscuelaListView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaListView">[documentos]</a><span class="k">class</span> <span class="nc">EscuelaListView</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para listar todas las Escuelas Supervisadas.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - escuelas: Lista de Escuelas filtradas por región.</span>
+<span class="sd">        - form: Formulario de filtro por región.</span>
+<span class="sd">        - title: Título de la vista.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">EscuelaSupervisor</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/lista_escuelas.html&#39;</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;escuelas&#39;</span>
+    
+<div class="viewcode-block" id="EscuelaListView.get_queryset"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaListView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retorna un queryset filtrado por región si se proporciona.&quot;&quot;&quot;</span>
+        
+        <span class="n">queryset</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>
+        <span class="n">regional</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">)</span>     
+
+        <span class="k">if</span> <span class="n">regional</span><span class="p">:</span>
+            <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">region_esc__iexact</span><span class="o">=</span><span class="n">regional</span><span class="p">)</span>        
+        <span class="k">return</span> <span class="n">queryset</span></div>
+    
+<div class="viewcode-block" id="EscuelaListView.get_context_data"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaListView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Añade el formulario de filtro y el título al contexto.&quot;&quot;&quot;</span>
+        
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>        
+        <span class="n">form</span> <span class="o">=</span> <span class="n">FiltroRegionalForm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;form&#39;</span><span class="p">]</span><span class="o">=</span> <span class="n">form</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Listado de Escuelas&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+    
+
+<div class="viewcode-block" id="EscuelaCreateView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaCreateView">[documentos]</a><span class="k">class</span> <span class="nc">EscuelaCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para crear una nueva Escuela Supervisada.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - form: Formulario para crear una Escuela.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">EscuelaSupervisor</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">EscuelaForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/crear_escuela.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;supervis:lista_escuelas&#39;</span><span class="p">)</span>   </div>
+    
+   
+
+<div class="viewcode-block" id="EscuelaUpdateView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaUpdateView">[documentos]</a><span class="k">class</span> <span class="nc">EscuelaUpdateView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>    
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar una Escuela Supervisada existente.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - form: Formulario para editar una Escuela.</span>
+<span class="sd">        - title: Título de la vista.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">EscuelaSupervisor</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">EscuelaForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/crear_escuela.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;supervis:lista_escuelas&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="EscuelaUpdateView.get_object"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaUpdateView.get_object">[documentos]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">EscuelaSupervisor</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EscuelaUpdateView.get_context_data"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaUpdateView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Editar Escuela&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div>
+
+<div class="viewcode-block" id="EscuelaUpdateView.form_valid"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelaUpdateView.form_valid">[documentos]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="c1"># Simplemente llamamos al form_valid de la superclase</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div></div>
+    
+    
+
+<div class="viewcode-block" id="EscuelasDeleteView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelasDeleteView">[documentos]</a><span class="k">class</span> <span class="nc">EscuelasDeleteView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar una Escuela Supervisada.</span>
+
+<span class="sd">    Redirige a la lista de Escuelas tras la eliminación.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EscuelasDeleteView.get"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.EscuelasDeleteView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">EscuelaSupervisor</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;supervis:lista_escuelas&#39;</span><span class="p">)</span></div></div>
+    
+
+<span class="c1">#################################</span>
+<span class="c1">#    Vistas para Regionales     #</span>
+<span class="c1">#################################</span>
+<div class="viewcode-block" id="DirectorRegionalListView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalListView">[documentos]</a><span class="k">class</span> <span class="nc">DirectorRegionalListView</span><span class="p">(</span><span class="n">ListView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para listar todos los Directores Regionales.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - directores: Lista de Directores Regionales.</span>
+<span class="sd">        - title: Título de la vista.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">DirectoresRegionales</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/lista_directores_regionales.html&#39;</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;directores&#39;</span>
+    
+<div class="viewcode-block" id="DirectorRegionalListView.get_queryset"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalListView.get_queryset">[documentos]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DirectoresRegionales</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span></div>
+    
+<div class="viewcode-block" id="DirectorRegionalListView.get_context_data"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalListView.get_context_data">[documentos]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span><span class="o">=</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;Listado de Directores Regionales&#39;</span>
+        <span class="k">return</span> <span class="n">context</span></div></div>
+
+<div class="viewcode-block" id="DirectorRegionalCreateView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalCreateView">[documentos]</a><span class="k">class</span> <span class="nc">DirectorRegionalCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para crear un nuevo Director Regional.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - form: Formulario para crear un Director Regional.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">DirectoresRegionales</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/crear_director_regional.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;supervis:lista_directores_regionales&#39;</span><span class="p">)</span></div>
+    
+
+<div class="viewcode-block" id="DirectorRegionalUpdateView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalUpdateView">[documentos]</a><span class="k">class</span> <span class="nc">DirectorRegionalUpdateView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para editar un Director Regional existente.</span>
+
+<span class="sd">    Contexto:</span>
+<span class="sd">        - form: Formulario para editar un Director Regional.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">model</span> <span class="o">=</span> <span class="n">DirectoresRegionales</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;__all__&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;supervisores/crear_director_regional.html&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;supervis:lista_directores_regionales&#39;</span><span class="p">)</span></div>
+    
+
+<div class="viewcode-block" id="DirectorRegionalDeleteView"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalDeleteView">[documentos]</a><span class="k">class</span> <span class="nc">DirectorRegionalDeleteView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para eliminar un Director Regional.</span>
+
+<span class="sd">    Redirige a la lista de Directores Regionales tras la eliminación.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="DirectorRegionalDeleteView.get"><a class="viewcode-back" href="../../../supervisores.html#apps.supervisores.views.DirectorRegionalDeleteView.get">[documentos]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">DirectoresRegionales</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;supervis:eliminar_director_regional&#39;</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

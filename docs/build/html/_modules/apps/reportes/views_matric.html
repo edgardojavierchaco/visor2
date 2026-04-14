@@ -1,0 +1,593 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.reportes.views_matric &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.reportes.views_matric</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.reportes.views_matric</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.views.decorators.csrf</span> <span class="kn">import</span> <span class="n">csrf_exempt</span>
+
+<span class="c1"># Función para conectar a la base de datos</span>
+<div class="viewcode-block" id="conectar_bd"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.conectar_bd">[documentos]</a><span class="k">def</span> <span class="nf">conectar_bd</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Establece una conexión a la base de datos PostgreSQL.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        connection: Un objeto de conexión a la base de datos si la conexión es exitosa, de lo contrario None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="s1">&#39;visoreducativochaco.com.ar&#39;</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="s1">&#39;visualizador&#39;</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="s1">&#39;Estadisticas24&#39;</span><span class="p">,</span>
+            <span class="n">database</span><span class="o">=</span><span class="s1">&#39;visualizador&#39;</span><span class="p">,</span> 
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">connection</span>
+    <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Manejar el error de conexión</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<span class="c1"># Vista para mostrar el formulario de filtrado de matricula aborigen</span>
+<div class="viewcode-block" id="filtrado_aborigen"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.filtrado_aborigen">[documentos]</a><span class="k">def</span> <span class="nf">filtrado_aborigen</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza el formulario de filtrado de matrícula aborigen.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Renderizado de la plantilla &#39;reportes/filter_aborigen.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/filter_aborigen.html&#39;</span><span class="p">)</span></div>
+
+<span class="c1"># Vista para mostrar el formulario de filtrado de matricula común y especial</span>
+<div class="viewcode-block" id="filtrado_comesp"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.filtrado_comesp">[documentos]</a><span class="k">def</span> <span class="nf">filtrado_comesp</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza el formulario de filtrado de matrícula común y especial.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Renderizado de la plantilla &#39;reportes/filter_comesp.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/filter_comesp.html&#39;</span><span class="p">)</span></div>
+
+<span class="c1"># Vista para mostrar el formulario de filtrado de matricula SNU</span>
+<div class="viewcode-block" id="filtrado_snu"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.filtrado_snu">[documentos]</a><span class="k">def</span> <span class="nf">filtrado_snu</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renderiza el formulario de filtrado de matrícula SNU.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Renderizado de la plantilla &#39;reportes/filter_snu.html&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/filter_snu.html&#39;</span><span class="p">)</span></div>
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#               PARA REPORTE DE MATRICULA ABORIGEN                  #</span>
+<span class="c1">#####################################################################</span>
+
+<span class="c1"># Vista para procesar los datos del formulario de filtrado de matricula aborigen</span>
+<div class="viewcode-block" id="filter_data_aborigen"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.filter_data_aborigen">[documentos]</a><span class="nd">@csrf_exempt</span>
+<span class="k">def</span> <span class="nf">filter_data_aborigen</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Procesa los datos del formulario de filtrado de matrícula aborigen y devuelve los resultados.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Cueanexo&#39;</span><span class="p">)</span>
+        <span class="n">ambito</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Ambito&#39;</span><span class="p">)</span>
+        <span class="n">sector</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Sector&#39;</span><span class="p">)</span>
+        <span class="n">region</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Region&#39;</span><span class="p">)</span>
+        <span class="n">departamento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Departamento&#39;</span><span class="p">)</span>
+        <span class="n">localidad</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Localidad&#39;</span><span class="p">)</span>
+        <span class="n">relevamiento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Relevamiento&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Validar que tvista esté en la lista de opciones válidas</span>
+        <span class="n">opciones_validas</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;visor_matric_aborigen_adulto_primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_adulto_secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_inicial&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_snu&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_educacion_especial&#39;</span>            
+        <span class="p">]</span>
+
+        <span class="c1"># Obtener el valor seleccionado para tvista</span>
+        <span class="n">tvistaaborigen</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Vista&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">,</span> <span class="s1">&#39;vista:&#39;</span><span class="o">+</span><span class="n">tvistaaborigen</span><span class="p">,</span> <span class="n">sector</span><span class="p">)</span>
+
+        <span class="c1"># Validar que tvista esté en la lista de opciones válidas</span>
+        <span class="k">if</span> <span class="n">tvistaaborigen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">opciones_validas</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Opción de vista no válida&#39;</span><span class="p">})</span>
+
+        <span class="c1"># Asignar un valor descriptivo a la opción de tvista seleccionada</span>
+        <span class="n">opciones_descriptivas</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;visor_matric_aborigen_adulto_primaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Adulto Primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_adulto_secundaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Adulto Secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_inicial&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Común Inicial&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_primaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Común Primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_secundaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Común Secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_comun_snu&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Común SNU&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_aborigen_educacion_especial&#39;</span><span class="p">:</span> <span class="s1">&#39;Aborigen Educación Especial&#39;</span><span class="p">,</span>            
+        <span class="p">}</span>
+        <span class="n">nvistaaborigen</span> <span class="o">=</span> <span class="n">opciones_descriptivas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tvistaaborigen</span><span class="p">,</span> <span class="s1">&#39;Aborigen Educación Especial&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Asignar un valor descriptivo a la opción de relevamiento seleccionado</span>
+        <span class="n">opciones_relevamiento</span><span class="o">=</span><span class="p">{</span>      
+            <span class="s1">&#39;ra_carga2019&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2019&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2020&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2020&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2021&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2021&#39;</span><span class="p">,</span>                  
+            <span class="s1">&#39;ra_carga2022&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2022&#39;</span><span class="p">,</span>  
+            <span class="s1">&#39;ra_carga2023&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2023&#39;</span><span class="p">,</span>  
+            <span class="s1">&#39;ra_carga2024&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2024&#39;</span><span class="p">,</span>           
+        <span class="p">}</span>
+        <span class="n">nrelevamiento</span><span class="o">=</span><span class="n">opciones_relevamiento</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">,</span><span class="s1">&#39;Relevamiento 2022&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Conectarse a la base de datos</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">conectar_bd</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">connection</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error_conexion.html&#39;</span><span class="p">)</span>
+
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT                </span>
+<span class="s2">                SUM(CAST(total AS INT)) AS total,</span>
+<span class="s2">                SUM(CAST(tot_var AS INT)) AS tot_var                               </span>
+<span class="s2">            FROM funcion.</span><span class="si">{</span><span class="n">tvistaaborigen</span><span class="si">}</span><span class="s2">(&#39;</span><span class="si">{</span><span class="n">relevamiento</span><span class="si">}</span><span class="s2">&#39;)  </span>
+<span class="s2">            LEFT JOIN (</span>
+<span class="s2">                    SELECT * FROM dblink (</span>
+<span class="s2">                        &#39;dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432&#39;,</span>
+<span class="s2">                        &#39;SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron&#39;</span>
+<span class="s2">                    ) AS padron (</span>
+<span class="s2">                        cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,</span>
+<span class="s2">                        fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,</span>
+<span class="s2">                        calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar,</span>
+<span class="s2">                        telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar</span>
+<span class="s2">                    )</span>
+<span class="s2">                ) AS p using (cueanexo)       </span>
+<span class="s2">            WHERE 1=1           </span>
+<span class="s2">        &quot;&quot;&quot;</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot;AND p.cueanexo = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cueanexo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ambito</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND p.ambito = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ambito</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sector</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND p.sector = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sector</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">region</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND p.region = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">departamento</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND p.departamento = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">departamento</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">localidad</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot;AND p.localidad = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">localidad</span><span class="p">)</span>
+        
+
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="c1"># verificar si hay datos en rows </span>
+        <span class="n">datos_encontrados</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span>
+
+        <span class="c1"># Convertir los resultados de la consulta a formato JSON</span>
+        <span class="n">dataaborigen</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+            <span class="n">dataaborigen</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                
+                <span class="s1">&#39;total&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="s1">&#39;tot_var&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="p">})</span>
+
+        <span class="c1"># Cerrar la conexión a la base de datos</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">dataaborigen</span><span class="p">)</span>
+
+        <span class="c1"># Si no hay datos para la consulta</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_encontrados</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;consulta_vacia.html&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Devolver los datos como contexto a la plantilla &#39;cargos.html&#39;</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/aborigenes.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;dataaborigen&#39;</span><span class="p">:</span> <span class="n">dataaborigen</span><span class="p">,</span> <span class="s1">&#39;nvistaaborigen&#39;</span><span class="p">:</span> <span class="n">nvistaaborigen</span><span class="p">,</span> <span class="s1">&#39;nrelevamiento&#39;</span><span class="p">:</span><span class="n">nrelevamiento</span><span class="p">})</span></div>
+    
+<span class="c1">#####################################################################</span>
+<span class="c1">#           PARA REPORTE DE MATRICULA COMÚN Y ESPECIAL              #</span>
+<span class="c1">#####################################################################</span>
+
+<span class="c1"># Vista para procesar los datos del formulario de filtrado de matricula común y especial</span>
+<div class="viewcode-block" id="filter_data_comesp"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.filter_data_comesp">[documentos]</a><span class="nd">@csrf_exempt</span>
+<span class="k">def</span> <span class="nf">filter_data_comesp</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Procesa los datos del formulario de filtrado de matrícula común y especial y devuelve los resultados.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Cueanexo&#39;</span><span class="p">)</span>
+        <span class="n">ambito</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Ambito&#39;</span><span class="p">)</span>
+        <span class="n">sector</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Sector&#39;</span><span class="p">)</span>
+        <span class="n">region</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Region&#39;</span><span class="p">)</span>
+        <span class="n">departamento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Departamento&#39;</span><span class="p">)</span>
+        <span class="n">localidad</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Localidad&#39;</span><span class="p">)</span>
+        <span class="n">relevamiento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Relevamiento&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Validar que tvista esté en la lista de opciones válidas</span>
+        <span class="n">opciones_validas</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;visor_matric_adulto_fp&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_adulto_primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_adulto_secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_comun_inicial&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_comun_primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_comun_secundaria&#39;</span><span class="p">,</span>            
+            <span class="s1">&#39;visor_matric_especial_ed_temprana&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_especial_inicial&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_especial_primaria&#39;</span><span class="p">,</span>           
+        <span class="p">]</span>
+
+        <span class="c1"># Obtener el valor seleccionado para tvista</span>
+        <span class="n">tvistacomesp</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Vista&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">,</span> <span class="n">tvistacomesp</span><span class="p">,</span> <span class="n">sector</span><span class="p">)</span>
+
+        <span class="c1"># Validar que tvista esté en la lista de opciones válidas</span>
+        <span class="k">if</span> <span class="n">tvistacomesp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">opciones_validas</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Opción de vista no válida&#39;</span><span class="p">})</span>
+
+        <span class="c1"># Asignar un valor descriptivo a la opción de tvista seleccionada</span>
+        <span class="n">opciones_descriptivas</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;visor_matric_adulto_fp&#39;</span><span class="p">:</span> <span class="s1">&#39;Adulto Formación Profesional&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_adulto_primaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Adulto Primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_adulto_secundaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Adulto Secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_comun_inicial&#39;</span><span class="p">:</span> <span class="s1">&#39;Común Inicial&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_comun_primaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Común Primaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_comun_secundaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Común Secundaria&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_especial_ed_temprana&#39;</span><span class="p">:</span> <span class="s1">&#39;Especial Temprana&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_especial_inicial&#39;</span><span class="p">:</span> <span class="s1">&#39;Especial Inicial&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;visor_matric_especial_primaria&#39;</span><span class="p">:</span> <span class="s1">&#39;Especial Primaria&#39;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">nvistacomesp</span> <span class="o">=</span> <span class="n">opciones_descriptivas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tvistacomesp</span><span class="p">,</span> <span class="s1">&#39;Especial Primaria&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Asignar un valor descriptivo a la opción de relevamiento seleccionado</span>
+        <span class="n">opciones_relevamiento</span><span class="o">=</span><span class="p">{</span>            
+            <span class="s1">&#39;ra_carga2019&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2019&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2020&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2020&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2021&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2021&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2022&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2022&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2023&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2023&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2024&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2024&#39;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">nrelevamiento</span><span class="o">=</span><span class="n">opciones_relevamiento</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">,</span><span class="s1">&#39;Relevamiento 2022&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Conectarse a la base de datos</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">conectar_bd</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">connection</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error_conexion.html&#39;</span><span class="p">)</span>
+
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+        <span class="n">query1</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT DISTINCT</span>
+<span class="s2">                turno,</span>
+<span class="s2">                grado,</span>
+<span class="s2">                SUM(CAST(total AS INT)) AS total,</span>
+<span class="s2">                SUM(CAST(total_var AS INT)) AS tot_var                               </span>
+<span class="s2">            FROM funcion.</span><span class="si">{</span><span class="n">tvistacomesp</span><span class="si">}</span><span class="s2">(&#39;</span><span class="si">{</span><span class="n">relevamiento</span><span class="si">}</span><span class="s2">&#39;)  </span>
+<span class="s2">            LEFT JOIN (</span>
+<span class="s2">                    SELECT * FROM dblink (</span>
+<span class="s2">                        &#39;dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432&#39;,</span>
+<span class="s2">                        &#39;SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron&#39;</span>
+<span class="s2">                    ) AS padron (</span>
+<span class="s2">                        cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,</span>
+<span class="s2">                        fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,</span>
+<span class="s2">                        calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar,</span>
+<span class="s2">                        telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar</span>
+<span class="s2">                    )</span>
+<span class="s2">                ) AS p using (cueanexo)       </span>
+<span class="s2">            WHERE 1=1           </span>
+<span class="s2">        &quot;&quot;&quot;</span>
+
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+            <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot;AND cueanexo = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cueanexo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ambito</span><span class="p">:</span>
+            <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot; AND ambito = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ambito</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sector</span><span class="p">:</span>
+            <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot; AND sector = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sector</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">region</span><span class="p">:</span>
+            <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot; AND region = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">departamento</span><span class="p">:</span>
+            <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot; AND departamento = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">departamento</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">localidad</span><span class="p">:</span>
+            <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot;AND localidad = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">localidad</span><span class="p">)</span>
+
+        <span class="n">query1</span> <span class="o">+=</span> <span class="s2">&quot; GROUP BY grado, turno HAVING SUM(CAST(total AS INT)) &lt;&gt; 0&quot;</span>
+
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query1</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="c1"># verifica si hay datos para la consulta</span>
+        <span class="n">datos_encontrados</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span>
+
+        <span class="c1"># Convertir los resultados de la consulta a formato JSON</span>
+        <span class="n">datacomesp</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+            <span class="n">datacomesp</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s1">&#39;turno&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s1">&#39;grado&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="s1">&#39;total&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                <span class="s1">&#39;tot_var&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="p">})</span>
+
+        <span class="c1"># Cerrar la conexión a la base de datos</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">datacomesp</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">nvistacomesp</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_encontrados</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;consulta_vacia.html&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Devolver los datos como contexto a la plantilla &#39;cargos.html&#39;</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/comunespecial.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;datacomesp&#39;</span><span class="p">:</span> <span class="n">datacomesp</span><span class="p">,</span> <span class="s1">&#39;nvistacomesp&#39;</span><span class="p">:</span> <span class="n">nvistacomesp</span><span class="p">,</span> <span class="s1">&#39;nrelevamiento&#39;</span><span class="p">:</span><span class="n">nrelevamiento</span><span class="p">})</span></div>
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#                     PARA REPORTE DE MATRICULA SNU                 #</span>
+<span class="c1">#####################################################################</span>
+
+<span class="c1"># Vista para procesar los datos del formulario de filtrado de matricula común y especial</span>
+<div class="viewcode-block" id="filter_data_snu"><a class="viewcode-back" href="../../../reportes.html#apps.reportes.views_matric.filter_data_snu">[documentos]</a><span class="nd">@csrf_exempt</span>
+<span class="k">def</span> <span class="nf">filter_data_snu</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Procesa los datos del formulario de filtrado de matrícula SNU y devuelve los resultados.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request: El objeto de solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Renderizado de la plantilla correspondiente con los datos obtenidos o un error si no hay datos.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">cueanexo</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Cueanexo&#39;</span><span class="p">)</span>
+        <span class="n">ambito</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Ambito&#39;</span><span class="p">)</span>
+        <span class="n">sector</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Sector&#39;</span><span class="p">)</span>
+        <span class="n">region</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Region&#39;</span><span class="p">)</span>
+        <span class="n">departamento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Departamento&#39;</span><span class="p">)</span>
+        <span class="n">localidad</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Localidad&#39;</span><span class="p">)</span>
+        <span class="n">relevamiento</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Relevamiento&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Validar que tvista esté en la lista de opciones válidas</span>
+        <span class="n">opciones_validas_snu</span> <span class="o">=</span> <span class="p">[</span>            
+            <span class="s1">&#39;visor_matric_comun_snu&#39;</span>            
+        <span class="p">]</span>
+
+        <span class="c1"># Obtener el valor seleccionado para tvista</span>
+        <span class="n">tvistasnu</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Vista&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">,</span> <span class="n">tvistasnu</span><span class="p">,</span> <span class="n">sector</span><span class="p">)</span>
+
+        <span class="c1"># Validar que tvista esté en la lista de opciones válidas</span>
+        <span class="k">if</span> <span class="n">tvistasnu</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">opciones_validas_snu</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mensaje&#39;</span><span class="p">:</span> <span class="s1">&#39;Opción de vista no válida&#39;</span><span class="p">})</span>
+
+        <span class="c1"># Asignar un valor descriptivo a la opción de tvista seleccionada</span>
+        <span class="n">opciones_descriptivas_snu</span> <span class="o">=</span> <span class="p">{</span>            
+            <span class="s1">&#39;visor_matric_comun_snu&#39;</span><span class="p">:</span> <span class="s1">&#39;Común SNU&#39;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">nvistasnu</span> <span class="o">=</span> <span class="n">opciones_descriptivas_snu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tvistasnu</span><span class="p">,</span> <span class="s1">&#39;Común SNU&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Asignar un valor descriptivo a la opción de relevamiento seleccionado</span>
+        <span class="n">opciones_relevamiento</span><span class="o">=</span><span class="p">{</span>            
+            <span class="s1">&#39;ra_carga2019&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2019&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2020&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2020&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2021&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2021&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2022&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2022&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2023&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2023&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ra_carga2024&#39;</span><span class="p">:</span><span class="s1">&#39;Relevamiento 2024&#39;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">nrelevamiento</span><span class="o">=</span><span class="n">opciones_relevamiento</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relevamiento</span><span class="p">,</span><span class="s1">&#39;Relevamiento 2022&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Conectarse a la base de datos</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">conectar_bd</span><span class="p">(</span><span class="n">request</span><span class="p">)</span> 
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">connection</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;error_conexion.html&#39;</span><span class="p">)</span>
+
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+        <span class="n">query2</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT</span>
+<span class="s2">                plan_est_titulo,</span>
+<span class="s2">                SUM(CAST(total AS INT)) AS total,</span>
+<span class="s2">                SUM(CAST(total_ingresante AS INT)) AS ingresantes,</span>
+<span class="s2">                SUM(CAST(total_pasantia_practicas AS INT)) AS pasantia,</span>
+<span class="s2">                SUM(CAST(total_residencia AS INT)) AS residencia</span>
+<span class="s2">            FROM funcion.</span><span class="si">{</span><span class="n">tvistasnu</span><span class="si">}</span><span class="s2">(&#39;</span><span class="si">{</span><span class="n">relevamiento</span><span class="si">}</span><span class="s2">&#39;)         </span>
+<span class="s2">            LEFT JOIN (</span>
+<span class="s2">                    SELECT * FROM dblink (</span>
+<span class="s2">                        &#39;dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432&#39;,</span>
+<span class="s2">                        &#39;SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron&#39;</span>
+<span class="s2">                    ) AS padron (</span>
+<span class="s2">                        cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,</span>
+<span class="s2">                        fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,</span>
+<span class="s2">                        calle varchar, numero varchar, localidad varchar, departamento varchar, cod_postal varchar, categoria varchar, estado_est varchar, estado_loc varchar,</span>
+<span class="s2">                        telefono_cod_area varchar, telefono_nro varchar, per_funcionamiento varchar, email_loc varchar</span>
+<span class="s2">                    )</span>
+<span class="s2">                ) AS p using (cueanexo)       </span>
+<span class="s2">            WHERE 1=1           </span>
+<span class="s2">        &quot;&quot;&quot;</span>         
+
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">cueanexo</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot;AND p.cueanexo = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cueanexo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ambito</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot; AND p.ambito = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ambito</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sector</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot; AND p.sector = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sector</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">region</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot; AND p.region = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">departamento</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot; AND p.departamento = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">departamento</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">localidad</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot;AND p.localidad = </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">localidad</span><span class="p">)</span>
+
+        <span class="n">query2</span> <span class="o">+=</span> <span class="s2">&quot; GROUP BY plan_est_titulo HAVING SUM(CAST(total AS INT)) &lt;&gt; 0&quot;</span>
+
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query2</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="c1"># verificar si hay datos para la consulta</span>
+        <span class="n">datos_encontrados</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span>
+
+        <span class="c1"># Convertir los resultados de la consulta a formato JSON</span>
+        <span class="n">datasnu</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+            <span class="n">datasnu</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s1">&#39;titulo&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s1">&#39;total&#39;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="s1">&#39;ingresantes&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;pasantia&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;residencia&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="p">})</span>
+
+        <span class="c1"># Cerrar la conexión a la base de datos</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">datasnu</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">nvistasnu</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_encontrados</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;consulta_vacia.html&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Devolver los datos como contexto a la plantilla &#39;cargos.html&#39;</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;reportes/snu.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;datasnu&#39;</span><span class="p">:</span> <span class="n">datasnu</span><span class="p">,</span> <span class="s1">&#39;nvistasnu&#39;</span><span class="p">:</span> <span class="n">nvistasnu</span><span class="p">,</span> <span class="s1">&#39;nrelevamiento&#39;</span><span class="p">:</span><span class="n">nrelevamiento</span><span class="p">})</span>   </div>
+     
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

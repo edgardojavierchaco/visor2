@@ -1,0 +1,40 @@
+{% for r in respuestas %}
+<div class="mb-2 d-flex {% if r.usuario == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+
+<div class="p-2 rounded shadow-sm
+{% if r.usuario == request.user %}
+bg-primary text-white
+{% else %}
+bg-white border
+{% endif %}
+" style="max-width:75%;">
+
+<small class="d-block">
+<strong>{{ r.usuario.get_full_name }}</strong>
+</small>
+
+<div style="white-space:pre-wrap;">
+{{ r.mensaje }}
+</div>
+
+{% if r.adjuntos_respuesta.all %}
+<div class="mt-1">
+{% for adj in r.adjuntos_respuesta.all %}
+<a href="{{ adj.archivo.url }}" target="_blank" class="badge bg-secondary">
+📎 Archivo
+</a>
+{% endfor %}
+</div>
+{% endif %}
+
+<small class="text-muted d-block text-end">
+{{ r.fecha|date:"d/m/Y H:i" }}
+</small>
+
+</div>
+</div>
+{% empty %}
+<div class="text-center text-muted py-4">
+Sin mensajes aún
+</div>
+{% endfor %}

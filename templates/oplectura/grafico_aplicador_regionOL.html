@@ -1,0 +1,62 @@
+{% extends 'dashboard/bodyevaluacion.html' %}
+{% load static %}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolución Aplicadores por Región</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script> <!-- Plugin -->
+</head>
+<body>
+    <h1>Evolución Carga Aplicadores</h1>
+    <canvas id="barChart" width="400" height="200"></canvas>
+
+    <script>
+        // Datos enviados desde la vista
+        const regions = {{ regions|safe }};
+        const counts = {{ counts|safe }};
+
+        // Configuración del gráfico
+        const ctx = document.getElementById('barChart').getContext('2d');
+        const barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: regions,  // Ejes X (nombres de las regiones)
+                datasets: [
+                    {
+                        label: 'Aplicadores faltantes',
+                        data: counts,
+                        backgroundColor: 'rgba(54, 162, 235, 1)', // Azul
+                        borderColor: 'rgba(54, 162, 235, 1)', // Azul sólido
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        anchor: 'end',        // Posición de la etiqueta
+                        align: 'top',         // Alinear en la parte superior
+                        color: 'black',       // Color del texto
+                        font: {
+                            weight: 'bold',   // Negrita
+                            size: 12          // Tamaño de fuente
+                        },
+                        formatter: function (value) {
+                            return value;    // Mostrar el valor directamente
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            },
+            plugins: [ChartDataLabels] // Registrar el plugin
+        });
+    </script>
+</body>
+{% endblock %}

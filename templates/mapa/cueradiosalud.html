@@ -1,0 +1,240 @@
+{% extends 'dashboard/body.html' %}
+{% load static %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+<style>
+#map-container { display:flex; height:85vh; }
+
+#sidebar{
+    width:320px;
+    background:#0f172a;
+    color:white;
+    padding:15px;
+}
+
+#map{ flex:1; }
+
+.legend{
+    background:white;
+    padding:10px;
+    border-radius:6px;
+    max-height:250px;
+    overflow:auto;
+    font-size:13px;
+}
+
+.legend-item{
+    cursor:pointer;
+    margin-bottom:5px;
+}
+</style>
+
+<div id="map-container">
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+
+    <h5>🏥 Salud - Nivel Ministerio</h5>
+
+    <label>Cueanexo</label>
+    <input id="cue" class="form-control" placeholder="Ej: 220123400">
+
+    <label class="mt-2">Radio: <span id="rval">1000</span> m</label>
+    <input type="range" id="radio" min="100" max="6000" step="100" value="1000">
+
+    <button id="btnBuscar" class="btn btn-success w-100 mt-3">Aplicar</button>
+    <button type="button" onclick="resetMap()" class="btn btn-warning w-100 mt-2">Limpiar</button>
+
+</div>
+
+<div id="map"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+<script>
+let map = L.map('map').setView([-27.45,-58.98],13);
+let markersLayer = L.layerGroup().addTo(map);
+let typeLayers = {};
+let active = {};
+let legend;
+
+/* CAPAS */
+L.control.layers({
+    "Claro": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map),
+    "Oscuro": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
+    "Satélite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
+}).addTo(map);
+
+/* COLORES MINISTERIO */
+const colors={
+    "HOSPITAL":"red",
+    "CS":"green",
+    "CENTRO DE SALUD":"green"
+};
+
+/* ICON */
+function icon(color){
+    return L.divIcon({
+        html:`<i class="fas fa-hospital" style="color:${color};font-size:18px;"></i>`,
+        className:''
+    });
+}
+
+/* SLIDER CORRECTO */
+const radioInput = document.getElementById("radio");
+const radioText = document.getElementById("rval");
+
+radioInput.addEventListener("input", () => {
+    radioText.innerText = radioInput.value;
+});
+
+/* BOTÓN (SIN SUBMIT) */
+document.getElementById("btnBuscar").addEventListener("click", ()=>{
+
+    const cue = document.getElementById("cue").value;
+    const radio = radioInput.value;
+
+    if(!cue){
+        alert("Ingrese CUE");
+        return;
+    }
+
+    fetch("{% url 'mapas:api_salud' %}",{
+        method:"POST",
+        headers:{ "X-CSRFToken": getCSRF() },
+        body:new URLSearchParams({
+            Cueanexo: cue,
+            Radio: radio
+        })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        if(data.error){
+            alert(data.error);
+            return;
+        }
+        draw(data);
+    });
+});
+
+/* CSRF */
+function getCSRF(){
+    return document.cookie.split('; ')
+        .find(r=>r.startsWith('csrftoken'))
+        ?.split('=')[1];
+}
+
+/* DRAW */
+function draw(data){
+
+    markersLayer.clearLayers();
+    Object.values(typeLayers).forEach(l=>map.removeLayer(l));
+
+    typeLayers={};
+    active={};
+
+    data.markers.forEach(m=>{
+
+        if(m.tipo==="establecimiento"){
+
+            L.marker([m.lat,m.lng])
+            .bindPopup(`<b>${m.nombre}</b>`)
+            .addTo(markersLayer);
+
+        }else{
+
+            let tipo = (m.tipo || "CS").toUpperCase();
+
+            if(tipo.includes("CENTRO")) tipo = "CENTRO DE SALUD";
+            if(tipo.includes("HOSPITAL")) tipo = "HOSPITAL";
+
+            let color = colors[tipo] || "green";
+
+            if(!typeLayers[tipo]){
+                typeLayers[tipo]=L.layerGroup().addTo(map);
+                active[tipo]=true;
+            }
+
+            let mk=L.marker([m.lat,m.lng],{icon:icon(color)});
+
+            mk.bindPopup(`
+                <b>${tipo}</b><br>
+                Tel: ${m.telefono||'N/D'}<br>
+                <a href="${m.enlace}" target="_blank">Ver</a>
+            `);
+
+            typeLayers[tipo].addLayer(mk);
+        }
+    });
+
+    map.setView([data.center.lat,data.center.lng],14);
+
+    legendUI();
+}
+
+/* LEYENDA SIMPLE */
+function legendUI(){
+
+    if(legend) map.removeControl(legend);
+
+    legend=L.control({position:"topright"});
+
+    legend.onAdd=()=>{
+        let d=L.DomUtil.create("div","legend");
+
+        d.innerHTML="<b>Referencias</b><br>";
+
+        ["HOSPITAL","CENTRO DE SALUD"].forEach(t=>{
+            let el=document.createElement("div");
+            el.className="legend-item";
+
+            el.innerHTML=`<span style="color:${colors[t]}">●</span> ${t}`;
+            el.onclick=()=>toggle(t,el);
+
+            d.appendChild(el);
+        });
+
+        return d;
+    };
+
+    legend.addTo(map);
+}
+
+/* TOGGLE */
+function toggle(t,el){
+
+    if(active[t]){
+        map.removeLayer(typeLayers[t]);
+        el.style.opacity=0.3;
+    }else{
+        map.addLayer(typeLayers[t]);
+        el.style.opacity=1;
+    }
+
+    active[t]=!active[t];
+}
+
+/* RESET */
+function resetMap(){
+
+    document.getElementById("cue").value = "";
+    radioInput.value = 1000;
+    radioText.innerText = "1000";
+
+    markersLayer.clearLayers();
+
+    Object.values(typeLayers).forEach(l=>map.removeLayer(l));
+
+    if(legend) map.removeControl(legend);
+
+    map.setView([-27.45,-58.98],13);
+}
+</script>
+
+{% endblock %}

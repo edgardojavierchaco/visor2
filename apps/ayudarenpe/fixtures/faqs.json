@@ -1,0 +1,128 @@
+[
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 1,
+    "fields": {
+      "pregunta": "¿Cuál es el universo de Etapa 1?",
+      "respuesta": "El universo se compone por todo el personal educativo que ha sido designado o cumple funciones en establecimientos educativos y/o en unidades de gestión (Regionales Educativas), sean del ámbito urbano o rural, del sector de gestión estatal, privado, comunitario o social. Se considera para la nómina de personal educativo, que haya sido migrado por su jurisdicción al 18 de agosto, en cualquier condición de actividad.",
+      "orden": 1
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 2,
+    "fields": {
+      "pregunta": "¿Cómo se compone la nómina del personal educativo?",
+      "respuesta": "La nómina del personal educativo se encuentra disponible en la plataforma web de la Etapa 1 del ReNPE e incluye a cada una de las personas con sus datos personales, inserción institucional y detalles de designación/función. Una misma persona puede estar en varios registros de la nómina si tiene más de una designación o función.",
+      "orden": 2
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 3,
+    "fields": {
+      "pregunta": "¿Quiénes son los responsables de la actualización de la nómina del personal educativo?",
+      "respuesta": "Las Unidades de Estadística Educativa (UEE) dispondrán de la nómina de su jurisdicción. Cada Unidad de Servicio (US) o Unidad de Gestión Central (Regionales) deberá revisar, cargar, corregir y confirmar los datos, prestando atención a la condición de actividad de cada registro.",
+      "orden": 3
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 4,
+    "fields": {
+      "pregunta": "¿Cuál es el universo de Etapa 2?",
+      "respuesta": "Se encuentra integrado por el personal educativo migrado por cada jurisdicción que se encuentra en funciones durante el mes de agosto. Sólo considera las designaciones y funciones del personal en actividad (al menos un día trabajado en el mes de agosto de 2025).",
+      "orden": 4
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 5,
+    "fields": {
+      "pregunta": "¿Cómo se articulan la Etapa 1 y la Etapa 2?",
+      "respuesta": "Con la nómina completa y la condición de actividad actualizada, la Dirección Nacional habilita la Etapa 2 del ReNPE: un cuestionario autoadministrado para el personal que trabajó al menos un día en el mes de agosto.",
+      "orden": 5
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 6,
+    "fields": {
+      "pregunta": "Si faltaran casos en la nómina, ¿deberá dar de alta registros?",
+      "respuesta": "Sí. El director podrá dar de alta nuevos registros (designaciones o funciones), cargando datos personales, designación/función, modalidad, nivel, fecha y condición de actividad.",
+      "orden": 6
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 7,
+    "fields": {
+      "pregunta": "¿Cómo dar de alta un nuevo registro en la nómina?",
+      "respuesta": "Debe seleccionarse 'Agregar nuevo registro', luego los datos del establecimiento, modalidad y nivel, cargar los datos personales y de actividad: designación/función, tipo, nombre, fecha, condición de actividad, situación de revista y carga horaria semanal.",
+      "orden": 7
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 8,
+    "fields": {
+      "pregunta": "Si un registro tiene datos desactualizados, ¿podrá modificarlos?",
+      "respuesta": "Sí. El director deberá modificar los registros en caso de falta de información, errores o actualizaciones necesarias.",
+      "orden": 8
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 9,
+    "fields": {
+      "pregunta": "En el caso en que la nómina incluya personal/designaciones que ya no se encuentren asignados a la escuela, ¿deberá dar de baja registros?",
+      "respuesta": "Sí. El director deberá dar de baja únicamente aquellos registros de personal desvinculado de manera permanente (fallecimiento, contrato finalizado, jubilación o renuncia).",
+      "orden": 9
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 10,
+    "fields": {
+      "pregunta": "Designación/Función: si el personal cumple funciones en una Unidad de Servicio (A), pero está designado en otra (B), ¿cómo debo registrarlo?",
+      "respuesta": "En la US A debe registrarse como 'función' y en la US B como 'designación'.",
+      "orden": 10
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 11,
+    "fields": {
+      "pregunta": "Una vez terminada la edición, ¿cómo se finaliza la tarea?",
+      "respuesta": "Primero se debe confirmar cada designación o función. Luego, en la sección 'Datos y confirmación', el director o referente deberá validar la nómina total con el botón 'Confirmar'.",
+      "orden": 11
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 12,
+    "fields": {
+      "pregunta": "Condición de actividad: si una persona percibió haberes por una designación/función en el mes de referencia, ¿debe ser registrada como 'en actividad'?",
+      "respuesta": "No necesariamente. Sólo si trabajó efectivamente al menos un día en el mes de agosto. Particularidades: si recién comenzó en agosto, si está en trámite de retiro pero sigue trabajando, o si realiza tareas pasivas.",
+      "orden": 12
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 13,
+    "fields": {
+      "pregunta": "Si el personal tomó una 'licencia' en su designación/función, ¿cómo debo registrarlo?",
+      "respuesta": "Si no trabajó ningún día y cobró haberes → licencia con goce. Si no trabajó ningún día y no cobró → licencia sin goce. Si trabajó al menos un día → en actividad.",
+      "orden": 13
+    }
+  },
+  {
+    "model": "ayudarenpe.faq",
+    "pk": 14,
+    "fields": {
+      "pregunta": "Si en su planta hubiera personal en 'comisión de servicio' (léase afectación) por su designación en una escuela (A) y trabajando en otra escuela/institución (B), ¿cómo debo registrarlo?",
+      "respuesta": "En A → comisión de servicio (en otro establecimiento educativo) o (en otras instituciones). En B → en actividad. Si trabajó al menos un día en A, se registra como en actividad.",
+      "orden": 14
+    }
+  }
+]

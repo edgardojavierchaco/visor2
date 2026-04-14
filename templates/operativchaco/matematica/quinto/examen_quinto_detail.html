@@ -1,0 +1,21 @@
+<h2>📝 Detalle del Examen</h2>
+
+<p><strong>DNI:</strong> {{ examen.dni }}</p>
+<p><strong>Apellidos:</strong> {{ examen.apellidos }}</p>
+<p><strong>Nombres:</strong> {{ examen.nombres }}</p>
+<p><strong>CUE:</strong> {{ examen.cueanexo }}</p>
+<p><strong>Región:</strong> {{ examen.region }}</p>
+<p><strong>Año:</strong> {{ examen.grado }}</p>
+<p><strong>División:</strong> {{ examen.division }}</p>
+<p><strong>Discapacidad:</strong> {{ examen.discapacidad }}</p>
+<p><strong>Etnia:</strong> {{ examen.etnia }}</p>
+
+<h3>🧩 Ítems</h3>
+<ul>
+    <li>Item 1: {{ examen.velocidad }}</li>
+    <li>Item 2: {{ examen.precision }}</li>
+    <li>Item 3: {{ examen.prosodia }}</li>   
+    
+</ul>
+
+<a href="{% url 'operativ:examen_matematica_segundo_listado' %}">⬅ Volver al listado</a>

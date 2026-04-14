@@ -1,0 +1,293 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Seguro</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="{% static 'lib/sweetalert2/sweetalert2.all.min.js' %}"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto}
+
+body{
+    background:url("{% static 'img/bg4.jpg' %}") no-repeat center center fixed;
+    background-size:cover;
+}
+
+main{margin-top:100px}
+
+.contenedor{max-width:400px;margin:auto}
+
+form{
+    background:white;
+    padding:40px;
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
+
+h2{text-align:center;margin-bottom:20px}
+
+input{
+    width:100%;
+    margin-top:10px;
+    padding:12px;
+    background:#f2f2f2;
+    border:none;
+    border-radius:8px;
+}
+
+button{
+    width:100%;
+    margin-top:15px;
+    padding:12px;
+    background:#2d89ef;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:500;
+}
+
+button:hover{background:#1b5fbf}
+
+.link{
+    text-align:center;
+    margin-top:10px;
+    cursor:pointer;
+    color:#2d89ef;
+}
+
+.modal{
+    display:none;
+    position:fixed;
+    top:0;left:0;
+    width:100%;height:100%;
+    background:#000000aa;
+}
+
+.modal-box{
+    background:white;
+    padding:30px;
+    max-width:420px;
+    margin:80px auto;
+    border-radius:15px;
+}
+
+.strength{
+    height:6px;
+    border-radius:5px;
+    margin-top:5px;
+}
+
+.weak{background:red;width:33%}
+.medium{background:orange;width:66%}
+.strong{background:green;width:100%}
+
+.eye{
+    position:absolute;
+    right:15px;
+    top:38px;
+    cursor:pointer;
+}
+.relative{position:relative}
+
+.timer{
+    font-size:12px;
+    color:gray;
+    margin-top:5px;
+    text-align:right;
+}
+</style>
+</head>
+
+<body>
+
+<main>
+
+<div class="contenedor">
+
+<form id="login-form" method="post">
+{% csrf_token %}
+<h2>Login</h2>
+
+{{ form.username|add_class:"input" }}
+{{ form.password|add_class:"input" }}
+
+<button type="submit">Ingresar</button>
+<button type="button" onclick="irPortada()" style="background:#6c757d;">
+    Volver a portada
+</button>
+
+<div class="link" onclick="abrirReset()">¿Olvidaste tu contraseña?</div>
+
+</form>
+
+</div>
+
+</main>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+
+<div class="modal-box">
+
+<h3>Recuperar contraseña</h3>
+
+<!-- PASO 1 -->
+<div id="step1">
+<input type="text" id="cuil" placeholder="CUIL">
+<button onclick="enviarCodigo()">Enviar código</button>
+</div>
+
+<!-- PASO 2 -->
+<div id="step2" style="display:none;">
+
+<div class="timer" id="timer"></div>
+
+<input type="text" id="codigo" placeholder="Código">
+
+<div class="relative">
+<input type="password" id="pass" placeholder="Nueva contraseña">
+<span class="eye" onclick="toggle('pass')">👁</span>
+<div id="strength" class="strength"></div>
+</div>
+
+<div class="relative">
+<input type="password" id="pass2" placeholder="Confirmar contraseña">
+<span class="eye" onclick="toggle('pass2')">👁</span>
+</div>
+
+<button onclick="confirmar()">Cambiar contraseña</button>
+
+</div>
+
+<button onclick="cerrar()" style="background:#ccc;color:black;">Cerrar</button>
+
+</div>
+</div>
+
+<script>
+
+// LOGIN
+document.getElementById('login-form').addEventListener('submit', function(e){
+    e.preventDefault();
+
+    fetch("{% url 'logueo:login' %}",{
+        method:"POST",
+        body:new FormData(this),
+        headers:{
+            'X-Requested-With':'XMLHttpRequest',
+            'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.success) location.href=d.redirect_url;
+        else Swal.fire('Error',d.message,'error');
+    });
+});
+
+// MODAL
+function abrirReset(){document.getElementById('modal').style.display='block'}
+function cerrar(){
+    document.getElementById('modal').style.display='none'
+    step1.style.display='block'
+    step2.style.display='none'
+}
+
+// PASSWORD TOGGLE
+function toggle(id){
+    const i=document.getElementById(id)
+    i.type = i.type==='password' ? 'text' : 'password'
+}
+
+// PASSWORD STRENGTH
+document.getElementById('pass').addEventListener('input',function(){
+    const v=this.value
+    const bar=document.getElementById('strength')
+
+    if(v.length<6){bar.className='strength weak'}
+    else if(v.match(/[A-Z]/)&&v.match(/[0-9]/)){bar.className='strength strong'}
+    else{bar.className='strength medium'}
+})
+
+// ENVIAR CODIGO
+function enviarCodigo(){
+
+    const cuil=document.getElementById('cuil').value
+    if(!cuil) return Swal.fire('Error','Ingresá CUIL','error')
+
+    fetch("{% url 'logueo:reset_cuil' %}",{
+        method:'POST',
+        headers:{
+            'X-Requested-With':'XMLHttpRequest',
+            'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body:new URLSearchParams({cuil})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        Swal.fire('Info',d.message,'info')
+        step1.style.display='none'
+        step2.style.display='block'
+        iniciarTimer()
+    })
+}
+
+// TIMER 5 MIN
+let tiempo=300
+function iniciarTimer(){
+    const t=document.getElementById('timer')
+    const i=setInterval(()=>{
+        tiempo--
+        t.innerText="Expira en: "+tiempo+"s"
+        if(tiempo<=0) clearInterval(i)
+    },1000)
+}
+
+// CONFIRMAR
+function confirmar(){
+
+    const pass=document.getElementById('pass').value
+    const pass2=document.getElementById('pass2').value
+
+    if(pass!==pass2){
+        return Swal.fire('Error','Las contraseñas no coinciden','error')
+    }
+
+    fetch("{% url 'logueo:confirm_reset_cuil' %}",{
+        method:'POST',
+        headers:{
+            'X-Requested-With':'XMLHttpRequest',
+            'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body:new URLSearchParams({
+            cuil:document.getElementById('cuil').value,
+            codigo:document.getElementById('codigo').value,
+            password:pass,
+            password2:pass2
+        })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.success){
+            Swal.fire('OK',d.message,'success')
+            cerrar()
+        }else{
+            Swal.fire('Error',d.message,'error')
+        }
+    })
+}
+
+function irPortada(){
+    window.location.href = "{% url 'dash:portada' %}";
+}
+
+</script>
+
+</body>
+</html>

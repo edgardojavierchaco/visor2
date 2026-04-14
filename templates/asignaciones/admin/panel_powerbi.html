@@ -1,0 +1,266 @@
+{% extends "archivos/base/layout.html" %}
+{% block content %}
+
+<div class="container-fluid mt-3">
+
+<h2>🚨 Sala de Monitoreo Ministerial (LIVE CONTROL)</h2>
+
+<!-- ================= FILTROS ================= -->
+<div class="row mb-3">
+
+    <div class="col">
+        <select id="region" class="form-control">
+            <option value="">Todas las regiones</option>
+        </select>
+    </div>
+
+    <div class="col">
+        <select id="supervisor" class="form-control">
+            <option value="">Todos los supervisores</option>
+        </select>
+    </div>
+
+    <div class="col">
+        <select id="oferta" class="form-control">
+            <option value="">Todas las ofertas</option>
+        </select>
+    </div>
+
+    <!-- 🔥 BOTÓN EXPORT PDF -->
+    <div class="col d-flex align-items-center">
+        <button class="btn btn-danger w-100" onclick="exportPDF()">
+            📄 Exportar PDF
+        </button>
+    </div>
+
+</div>
+
+<!-- ================= MAP TOGGLE ================= -->
+<div class="mb-2">
+    <button class="btn btn-dark btn-sm" onclick="setSatellite()">🛰 Satélite</button>
+    <button class="btn btn-light btn-sm" onclick="setCarto()">🗺 Carto</button>
+</div>
+
+<!-- ================= KPI ================= -->
+<div class="row text-center mb-3">
+
+    <div class="col card p-3">🟦 BORRADOR <h2 id="b">0</h2></div>
+    <div class="col card p-3">🟡 ENVIADO <h2 id="e">0</h2></div>
+    <div class="col card p-3">🔴 RECHAZADO <h2 id="r">0</h2></div>
+    <div class="col card p-3">🟢 APROBADO <h2 id="a">0</h2></div>
+
+</div>
+
+<!-- ================= MAPA ================= -->
+<div class="card p-3 mb-3">
+    <h5>🛰 Mapa en tiempo real</h5>
+    <div id="map" style="height:520px;"></div>
+</div>
+
+<!-- ================= LOGS ================= -->
+<div class="card p-3">
+    <h5>📜 Auditoría en vivo</h5>
+    <table class="table table-striped">
+        <tbody id="logs"></tbody>
+    </table>
+</div>
+
+</div>
+
+<!-- ================= LEAFLET ================= -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<script>
+
+let map;
+let cluster = L.markerClusterGroup();
+
+let baseSatellite;
+let baseCarto;
+
+let filtersInitialized = false;
+
+// ================= INIT MAP =================
+function initMap() {
+
+    map = L.map('map').setView([-27.45, -58.98], 7);
+
+    baseSatellite = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: "Esri Satellite" }
+    );
+
+    baseCarto = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        { attribution: "CARTO" }
+    );
+
+    baseSatellite.addTo(map);
+}
+
+// ================= EXPORT PDF 🔥 =================
+function exportPDF() {
+
+    const f = getFilters();
+
+    const url = `/asignacionesuperv/admin/export/pdf/` +
+        `?supervisor=${encodeURIComponent(f.supervisor || "")}` +
+        `&region=${encodeURIComponent(f.region || "")}` +
+        `&oferta=${encodeURIComponent(f.oferta || "")}`;
+
+    window.open(url, "_blank");
+}
+
+// ================= CAMBIO CAPAS =================
+function setSatellite() {
+    if (map.hasLayer(baseCarto)) map.removeLayer(baseCarto);
+    map.addLayer(baseSatellite);
+}
+
+function setCarto() {
+    if (map.hasLayer(baseSatellite)) map.removeLayer(baseSatellite);
+    map.addLayer(baseCarto);
+}
+
+// ================= ICONOS =================
+function getIcon(estado) {
+
+    let color = "gray";
+
+    if (estado === "RECHAZADO") color = "red";
+    else if (estado === "ENVIADO") color = "orange";
+    else if (estado === "APROBADO") color = "green";
+    else if (estado === "BORRADOR") color = "blue";
+
+    return L.divIcon({
+        className: "",
+        html: `<div style="
+            width:12px;
+            height:12px;
+            border-radius:50%;
+            background:${color};
+            box-shadow:0 0 8px ${color};
+        "></div>`
+    });
+}
+
+// ================= FILTROS =================
+function getFilters() {
+    return {
+        region: document.getElementById("region").value,
+        supervisor: document.getElementById("supervisor").value,
+        oferta: document.getElementById("oferta").value
+    };
+}
+
+// ================= MAPA =================
+function drawMap(escuelas) {
+
+    cluster.clearLayers();
+
+    escuelas.forEach(e => {
+
+        if (!e.lat || !e.long) return;
+
+        const marker = L.marker(
+            [e.lat, e.long],
+            { icon: getIcon(e.estado) }
+        ).bindPopup(`
+            <b>${e.nom_est || ""}</b><br>
+            Estado: ${e.estado || ""}<br>
+            Región: ${e.region_loc || ""}<br>
+            Oferta: ${e.oferta || ""}
+        `);
+
+        cluster.addLayer(marker);
+    });
+
+    map.addLayer(cluster);
+}
+
+// ================= LOAD DATA =================
+async function load() {
+
+    const f = getFilters();
+
+    const url = `/asignacionesuperv/admin/realtime/?region=${f.region}&supervisor=${f.supervisor}&oferta=${f.oferta}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    document.getElementById("b").innerText = data.resumen?.BORRADOR || 0;
+    document.getElementById("e").innerText = data.resumen?.ENVIADO || 0;
+    document.getElementById("r").innerText = data.resumen?.RECHAZADO || 0;
+    document.getElementById("a").innerText = data.resumen?.APROBADO || 0;
+
+    document.getElementById("logs").innerHTML =
+        (data.logs || []).map(l => `
+            <tr>
+                <td>${l.usuario || ""}</td>
+                <td>${l.accion || ""}</td>
+                <td>${l.objeto || ""}</td>
+                <td>${l.timestamp || ""}</td>
+            </tr>
+        `).join("");
+
+    drawMap(data.escuelas || []);
+    fillFilters(data);
+}
+
+// ================= FILTROS =================
+function fillFilters(data) {
+
+    const s = document.getElementById("supervisor");
+    const r = document.getElementById("region");
+    const o = document.getElementById("oferta");
+
+    const current = {
+        supervisor: s.value,
+        region: r.value,
+        oferta: o.value
+    };
+
+    if (!filtersInitialized) {
+
+        s.innerHTML = `<option value="">Todos los supervisores</option>`;
+        r.innerHTML = `<option value="">Todas las regiones</option>`;
+        o.innerHTML = `<option value="">Todas las ofertas</option>`;
+
+        (data.supervisores || []).forEach(x => {
+            s.innerHTML += `<option value="${x.supervisor_id}">${x.label}</option>`;
+        });
+
+        (data.regiones || []).forEach(x => {
+            r.innerHTML += `<option value="${x}">${x}</option>`;
+        });
+
+        (data.ofertas || []).forEach(x => {
+            o.innerHTML += `<option value="${x}">${x}</option>`;
+        });
+
+        filtersInitialized = true;
+    }
+
+    s.value = current.supervisor;
+    r.value = current.region;
+    o.value = current.oferta;
+}
+
+// ================= EVENTS =================
+document.querySelectorAll("select").forEach(el => {
+    el.addEventListener("change", load);
+});
+
+// ================= INIT =================
+initMap();
+load();
+setInterval(load, 8000);
+
+</script>
+
+{% endblock %}

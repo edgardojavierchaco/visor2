@@ -1,0 +1,108 @@
+{% extends 'operativoschaco/layout.html' %}
+{% load static %}
+
+{% block title %}
+    Resultados Examen Matemática
+{% endblock %}
+
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados Examen Matemática</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-legend-canvas"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-legend-canvas@1.0.0/dist/chartjs-plugin-legend-canvas.min.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Gráfico de Puntajes por Categoría (Matemática)</h2>
+
+<canvas id="graficoMatematica" width="500" height="200"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchChartData();
+
+        function fetchChartData() {
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    // Si data es un array, reestructuramos los datos
+                    const categorias = ["Aritmética", "Geometría", "Estadística"];
+                    let totales = { Aritmética: 0, Geometría: 0, Estadística: 0 };
+
+                    data.forEach(item => {
+                        if (categorias.includes(item.categoria)) {
+                            totales[item.categoria] += Number(item.puntaje_total) || 0;
+                        }
+                    });
+
+                    data = { datos: data, totales: totales };
+                }
+
+                if (!data.totales) {
+                    console.error("No se encontraron totales en la respuesta:", data);
+                    return;
+                }
+
+                const labels = ["Aritmética", "Geometría", "Estadística"];
+                const valores = [
+                    data.totales.Aritmética || 0,
+                    data.totales.Geometría || 0,
+                    data.totales.Estadística || 0
+                ];
+
+                const colores = ['#4caf50', '#2196f3', '#ff9800'];
+                const iconos = ['📘', '📏', '📊'];
+
+                new Chart(document.getElementById('graficoMatematica'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: valores,
+                            backgroundColor: colores
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    generateLabels: function(chart) {
+                                        return labels.map((label, index) => ({
+                                            text: `${iconos[index]} ${label}: ${valores[index].toFixed(2)}`,
+                                            fillStyle: colores[index],
+                                            hidden: false
+                                        }));
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error al cargar el gráfico:', error));
+        }
+    });
+</script>
+{% endblock %}
+

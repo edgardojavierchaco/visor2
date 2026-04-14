@@ -1,0 +1,102 @@
+{% extends "consultasge/layout.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+<!-- HEADER -->
+<div class="card mb-3 shadow-sm">
+<div class="card-body d-flex justify-content-between flex-wrap">
+
+<div>
+<h4>{{ consulta.asunto }}</h4>
+
+<div>
+<strong>{{ consulta.cueanexo }}</strong> - {{ consulta.escuela }}
+</div>
+
+<small class="text-muted">
+Región: {{ consulta.region }}
+</small>
+</div>
+
+<span class="badge px-3 py-2
+{% if consulta.estado == 'pendiente' %}bg-danger
+{% elif consulta.estado == 'en_proceso' %}bg-warning text-dark
+{% elif consulta.estado == 'respondida' %}bg-success
+{% elif consulta.estado == 'cerrada' %}bg-secondary
+{% endif %}
+">
+{{ consulta.get_estado_display }}
+</span>
+
+</div>
+</div>
+
+<!-- CHAT -->
+<div id="chat-container" class="bg-light p-3 rounded mb-4"
+style="height:500px; overflow-y:auto;">
+
+<div id="historial-mensajes">
+{% include "consultasge/includes/lista_mensajes.html" with respuestas=mensajes %}
+</div>
+
+</div>
+
+{% if consulta.estado != 'cerrada' %}
+<form id="form-respuesta-ajax" method="post" enctype="multipart/form-data">
+{% csrf_token %}
+
+<textarea name="mensaje" class="form-control mb-2" rows="3"
+placeholder="Escribí tu respuesta..."></textarea>
+
+<input type="file" name="archivos" multiple class="form-control mb-2">
+
+<div class="text-end">
+<button class="btn btn-primary" id="btn-enviar">
+Enviar
+</button>
+</div>
+
+</form>
+{% endif %}
+
+</div>
+
+<script>
+const chat = document.getElementById("chat-container");
+const historial = document.getElementById("historial-mensajes");
+
+function scrollBottom(){
+    chat.scrollTop = chat.scrollHeight;
+}
+scrollBottom();
+
+function refrescar(){
+fetch("{% url 'consultasge:mensajes_ajax' consulta.id %}")
+.then(r=>r.text())
+.then(html=>{
+    historial.innerHTML = html;
+    scrollBottom();
+});
+}
+
+setInterval(refrescar, 5000);
+
+// AJAX enviar
+document.getElementById("form-respuesta-ajax")?.addEventListener("submit", async e=>{
+e.preventDefault();
+
+let formData = new FormData(e.target);
+
+await fetch(window.location.href,{
+method:"POST",
+body:formData,
+headers:{'X-Requested-With':'XMLHttpRequest'}
+});
+
+e.target.reset();
+refrescar();
+});
+</script>
+
+{% endblock %}

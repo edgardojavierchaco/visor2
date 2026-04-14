@@ -1,0 +1,451 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>apps.oplectura.views_resultados &mdash; documentación de visoreducativochaco - 1.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=8e0ebba5"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../../../_static/translations.js?v=efdbd0b9"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            visoreducativochaco
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contenido:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../archivar.html">Documentación de la app Archivar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dashboard.html">Documentación de la app Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../directores.html">Documentación de la app Directores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../establecimientos.html">Documentación de la app Establecimientos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lectocomp.html">Documentación de la app Lectocomprensión</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../login.html">Documentación de la app Login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapas.html">Documentación de la app Mapas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mapoteca.html">Documentación de la app Mapoteca</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../normativa.html">Documentación de la app Normativa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../oplectura.html">Documentación de la app Mapas</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">visoreducativochaco</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">apps.oplectura.views_resultados</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para apps.oplectura.views_resultados</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objs</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span><span class="p">,</span> <span class="n">JsonResponse</span>
+
+
+<div class="viewcode-block" id="calcular_estadisticas_por_cueanexo"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views_resultados.calcular_estadisticas_por_cueanexo">[documentos]</a><span class="k">def</span> <span class="nf">calcular_estadisticas_por_cueanexo</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calcula estadísticas sobre los alumnos por cueanexo.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        username (str): El nombre de usuario para filtrar los datos.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Una tupla que contiene:</span>
+<span class="sd">            - resultados_total_dni: Lista de estadísticas por cueanexo y desempeño.</span>
+<span class="sd">            - total_dni_sin_desempenio: Total de DNI sin discriminar por desempeño.</span>
+<span class="sd">            - resultado_promedio_velocidad: Promedio de velocidad.</span>
+<span class="sd">            - resultado_promedio_precision: Promedio de precisión.</span>
+<span class="sd">            - resultado_promedio_prosodia: Promedio de prosodia.</span>
+<span class="sd">            - resultado_promedio_comprension: Promedio de comprensión.</span>
+<span class="sd">            - total_dni_presentes: Total de DNI de alumnos presentes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="c1"># Calcular total de DNI por cueanexo y desempeño</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT cueanexo,</span>
+<span class="s2">                    cal_vel, </span>
+<span class="s2">                    cal_pres, </span>
+<span class="s2">                    cal_pros, </span>
+<span class="s2">                    cal_comp,</span>
+<span class="s2">                    COUNT(dni_alumno) as total_dni</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> and asistencia = &#39;true&#39;</span>
+<span class="s2">            GROUP BY cueanexo, cal_vel, cal_pres, cal_pros, cal_comp</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultados_total_dni</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="c1"># Calcular total de DNI sin discriminación de desempeño</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT COUNT(dni_alumno) as total_dni</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">total_dni_sin_desempenio</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Calcular total de alumnos presentes</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT </span>
+<span class="s2">                    COUNT(dni_alumno) as total_dni</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> and asistencia = &#39;true&#39;            </span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">total_dni_presentes</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Calcular promedio de velocidad por cueanexo</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT AVG(velocidad) as promedio_velocidad</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> and asistencia=&#39;true&#39;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultado_promedio_velocidad</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        
+        <span class="c1"># Calcular promedio de precisión por cueanexo</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT AVG(precision) as promedio_precision</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> and asistencia=&#39;true&#39;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultado_promedio_precision</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        
+        <span class="c1"># Calcular promedio de prosodia por cueanexo</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT AVG(prosodia) as promedio_prosodia</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> and asistencia=&#39;true&#39;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultado_promedio_prosodia</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        
+        <span class="c1"># Calcular promedio de comprension por cueanexo</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT AVG(comprension) as promedio_comprension</span>
+<span class="s2">            FROM cenpe.&quot;Evaluacion_Lectora&quot;</span>
+<span class="s2">            WHERE cueanexo = </span><span class="si">%s</span><span class="s2"> and asistencia=&#39;true&#39;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">username</span><span class="p">])</span>
+        <span class="n">resultado_promedio_comprension</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">resultados_total_dni</span><span class="p">,</span> <span class="n">total_dni_sin_desempenio</span><span class="p">,</span> <span class="n">resultado_promedio_velocidad</span><span class="p">,</span> <span class="n">resultado_promedio_precision</span><span class="p">,</span> <span class="n">resultado_promedio_prosodia</span><span class="p">,</span> <span class="n">resultado_promedio_comprension</span><span class="p">,</span> <span class="n">total_dni_presentes</span></div>
+
+
+<div class="viewcode-block" id="tu_vista"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views_resultados.tu_vista">[documentos]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">tu_vista</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista que muestra las estadísticas de evaluación lectora.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla con gráficos y estadísticas.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+    <span class="n">resultados_total_dni</span><span class="p">,</span> <span class="n">total_dni_sin_desempenio</span><span class="p">,</span> <span class="n">resultado_promedio_velocidad</span><span class="p">,</span> <span class="n">resultado_promedio_precision</span><span class="p">,</span> <span class="n">resultado_promedio_prosodia</span><span class="p">,</span> <span class="n">resultado_promedio_comprension</span><span class="p">,</span> <span class="n">total_dni_presentes</span> <span class="o">=</span> <span class="n">calcular_estadisticas_por_cueanexo</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">total_dni_presentes</span><span class="p">)</span>
+    <span class="c1"># Definir el orden y colores para los labels</span>
+    <span class="n">orden_labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Debajo del Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Satisfactorio&quot;</span><span class="p">,</span> <span class="s2">&quot;Avanzado&quot;</span><span class="p">]</span>
+    <span class="n">colores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#1f77b4&#39;</span><span class="p">,</span> <span class="s1">&#39;#ff7f0e&#39;</span><span class="p">,</span> <span class="s1">&#39;#2ca02c&#39;</span><span class="p">,</span> <span class="s1">&#39;#d62728&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Crear un gráfico para cada una de las categorías: velocidad, precisión, prosodia, comprensión</span>
+    <span class="n">graficos</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">atributos</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_pres&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_pros&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span>
+    <span class="n">nombres_atributos</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Velocidad lectora&#39;</span><span class="p">,</span> <span class="s1">&#39;Precisión lectora&#39;</span><span class="p">,</span> <span class="s1">&#39;Prosodia&#39;</span><span class="p">,</span> <span class="s1">&#39;Comprensión lectora&#39;</span><span class="p">]</span>
+    
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">atributo</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">atributos</span><span class="p">):</span>
+        <span class="n">conteo_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">orden_labels</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">resultado</span> <span class="ow">in</span> <span class="n">resultados_total_dni</span><span class="p">:</span>
+            <span class="n">conteo_dict</span><span class="p">[</span><span class="n">resultado</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">resultado</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        
+        <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">conteo_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">valores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">conteo_dict</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="n">total_dni</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">valores</span><span class="p">)</span>
+        <span class="n">etiquetas</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="p">(</span><span class="n">conteo</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">total_dni_presentes</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">valores</span><span class="p">)]</span>
+        
+        <span class="n">grafico</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">valores</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+        <span class="n">grafico</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;Gráfico de </span><span class="si">{</span><span class="n">nombres_atributos</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="mf">0.9</span><span class="p">,</span>  <span class="c1"># Ajusta la posición vertical del título (0.5 es el centro)</span>
+                <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>  <span class="c1"># Ajusta la posición horizontal del título (0.5 es el centro)</span>
+                <span class="s1">&#39;xanchor&#39;</span><span class="p">:</span> <span class="s1">&#39;center&#39;</span><span class="p">,</span>  <span class="c1"># Ancla el texto en el centro horizontal</span>
+                <span class="s1">&#39;yanchor&#39;</span><span class="p">:</span> <span class="s1">&#39;bottom&#39;</span>  <span class="c1"># Ancla el texto en la parte superior vertical</span>
+            <span class="p">},</span>
+            <span class="n">title_font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+                <span class="n">size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>  <span class="c1"># Tamaño de la fuente</span>
+                <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span>  <span class="c1"># Color del texto</span>
+                <span class="n">family</span><span class="o">=</span><span class="s1">&#39;Arial&#39;</span><span class="p">,</span>  <span class="c1"># Tipo de letra</span>
+                <span class="n">weight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">,</span>  <span class="c1"># Texto en negrita</span>
+            <span class="p">),</span>
+            <span class="n">width</span><span class="o">=</span><span class="mi">750</span>  <span class="c1"># Ancho del gráfico</span>
+        <span class="p">)</span>
+
+        
+        <span class="n">graficos</span><span class="p">[</span><span class="n">nombres_atributos</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">grafico</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Verificar si hay un resultado para los promedios</span>
+    <span class="n">promedio_velocidad</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">resultado_promedio_velocidad</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">resultado_promedio_velocidad</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.00</span>
+    <span class="n">promedio_precision</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">resultado_promedio_precision</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">resultado_promedio_precision</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.00</span>
+    <span class="n">promedio_prosodia</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">resultado_promedio_prosodia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">resultado_promedio_prosodia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.00</span>
+    <span class="n">promedio_comprension</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">resultado_promedio_comprension</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">resultado_promedio_comprension</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.00</span>
+
+    <span class="c1"># Renderizar la plantilla con los gráficos y los promedios</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;oplectura/grafico.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;total_dni_sin_desempenio&#39;</span><span class="p">:</span> <span class="n">total_dni_sin_desempenio</span><span class="p">,</span>
+        <span class="s1">&#39;total_dni_presentes&#39;</span><span class="p">:</span> <span class="n">total_dni_presentes</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_velocidad&#39;</span><span class="p">:</span> <span class="n">promedio_velocidad</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_precision&#39;</span><span class="p">:</span> <span class="n">promedio_precision</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_prosodia&#39;</span><span class="p">:</span> <span class="n">promedio_prosodia</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_comprension&#39;</span><span class="p">:</span> <span class="n">promedio_comprension</span><span class="p">,</span>
+        <span class="s1">&#39;grafico_velocidad&#39;</span><span class="p">:</span> <span class="n">graficos</span><span class="p">[</span><span class="s1">&#39;velocidad lectora&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;grafico_precision&#39;</span><span class="p">:</span> <span class="n">graficos</span><span class="p">[</span><span class="s1">&#39;precisión lectora&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;grafico_prosodia&#39;</span><span class="p">:</span> <span class="n">graficos</span><span class="p">[</span><span class="s1">&#39;prosodia&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;grafico_comprension&#39;</span><span class="p">:</span> <span class="n">graficos</span><span class="p">[</span><span class="s1">&#39;comprensión lectora&#39;</span><span class="p">],</span>
+    <span class="p">})</span></div>
+
+<div class="viewcode-block" id="mostrar_grafico_reg"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views_resultados.mostrar_grafico_reg">[documentos]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">mostrar_grafico_reg</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Muestra el gráfico de evaluación según las regiones, ámbitos y sectores seleccionados.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        request (HttpRequest): La solicitud HTTP.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        HttpResponse: Renderiza la plantilla con los gráficos filtrados.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># Obtener los valores seleccionados del checkbox</span>
+    <span class="n">regiones_seleccionadas</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">)</span>
+    <span class="n">ambitos_seleccionados</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ambito&#39;</span><span class="p">)</span>
+    <span class="n">sectores_seleccionados</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sector&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Región seleccionada:&quot;</span><span class="p">,</span> <span class="n">regiones_seleccionadas</span><span class="p">)</span>
+    
+    <span class="n">mostrar_todo</span> <span class="o">=</span> <span class="n">regiones_seleccionadas</span> <span class="o">==</span> <span class="s1">&#39;0&#39;</span>  <span class="c1"># Verifica si se selecciona &quot;Mostrar Todo&quot;</span>
+    
+    <span class="c1"># Establecer conexión con la base de datos PostgreSQL</span>
+    <span class="k">with</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+        <span class="n">dbname</span><span class="o">=</span><span class="s2">&quot;visualizador&quot;</span><span class="p">,</span>
+        <span class="n">user</span><span class="o">=</span><span class="s2">&quot;visualizador&quot;</span><span class="p">,</span>
+        <span class="n">password</span><span class="o">=</span><span class="s2">&quot;Estadisticas24&quot;</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;visoreducativochaco.com.ar&quot;</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mostrar_todo</span><span class="p">:</span>                
+                <span class="c1"># Si se selecciona &quot;Mostrar Todo&quot;, mostrar todos los datos</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                    SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia, ambito, sector</span>
+<span class="s1">                    FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo</span>
+<span class="s1">                &#39;&#39;&#39;</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="n">datos_usuario</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>              
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;general:&#39;</span><span class="p">,</span> <span class="n">datos_usuario</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Filtrar los datos para las regiones seleccionadas</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">                    SELECT velocidad, precision, prosodia, comprension, cal_vel, cal_pres, cal_pros, cal_comp, region, asistencia, ambito, sector </span>
+<span class="s1">                    FROM cenpe.vistaevaluacion_unica_por_dni_y_tramo WHERE 1=1</span>
+<span class="s1">                &#39;&#39;&#39;</span>
+                <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
+                
+                <span class="k">if</span> <span class="n">regiones_seleccionadas</span><span class="p">:</span>
+                    <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND region = </span><span class="si">%s</span><span class="s2">&quot;</span>
+                    <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">regiones_seleccionadas</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ambitos_seleccionados</span><span class="p">:</span>
+                    <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND ambito = </span><span class="si">%s</span><span class="s2">&quot;</span>
+                    <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ambitos_seleccionados</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">sectores_seleccionados</span><span class="p">:</span>
+                    <span class="n">query</span> <span class="o">+=</span> <span class="s2">&quot; AND sector = </span><span class="si">%s</span><span class="s2">&quot;</span>
+                    <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sectores_seleccionados</span><span class="p">)</span>
+                    
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+                <span class="n">datos_usuario</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;datos:&#39;</span><span class="p">,</span> <span class="n">datos_usuario</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">datos_usuario</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;oplectura/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+        <span class="p">})</span>
+    
+    <span class="c1"># Convertir los datos a DataFrames de pandas con las columnas correctas</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;velocidad&#39;</span><span class="p">,</span> <span class="s1">&#39;precision&#39;</span><span class="p">,</span> <span class="s1">&#39;prosodia&#39;</span><span class="p">,</span> <span class="s1">&#39;comprension&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_vel&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_pres&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_pros&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_comp&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">,</span> <span class="s1">&#39;asistencia&#39;</span><span class="p">,</span> <span class="s1">&#39;ambito&#39;</span><span class="p">,</span> <span class="s1">&#39;sector&#39;</span><span class="p">]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">datos_usuario</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+    
+    <span class="c1"># Filtrar los DataFrames para incluir solo a los alumnos presentes (asistencia = True)</span>
+    <span class="n">df_presentes</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;asistencia&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;t&#39;</span><span class="p">]</span>
+    <span class="n">df_total</span> <span class="o">=</span> <span class="n">df</span>
+    
+    <span class="c1"># Separar DataFrames para cada aspecto con solo los presentes</span>
+    <span class="n">df_vel</span> <span class="o">=</span> <span class="n">df_presentes</span><span class="p">[[</span><span class="s1">&#39;velocidad&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_vel&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]]</span>
+    <span class="n">df_pres</span> <span class="o">=</span> <span class="n">df_presentes</span><span class="p">[[</span><span class="s1">&#39;precision&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_pres&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]]</span>
+    <span class="n">df_pros</span> <span class="o">=</span> <span class="n">df_presentes</span><span class="p">[[</span><span class="s1">&#39;prosodia&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_pros&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]]</span>
+    <span class="n">df_comp</span> <span class="o">=</span> <span class="n">df_presentes</span><span class="p">[[</span><span class="s1">&#39;comprension&#39;</span><span class="p">,</span> <span class="s1">&#39;cal_comp&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]]</span>
+    
+    <span class="c1"># Calcular el total de alumnos presentes (que ya están filtrados)</span>
+    <span class="n">total_dni_presentes</span> <span class="o">=</span> <span class="n">df_presentes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">total_alumnos</span> <span class="o">=</span> <span class="n">df_total</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># Verificar las columnas antes de operar</span>
+    <span class="k">if</span> <span class="s1">&#39;velocidad&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_vel</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;cal_vel&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_vel</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;velocidad&#39; o &#39;cal_vel&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;precision&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_pres</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;cal_pres&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_pres</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;precisión&#39; o &#39;cal_pres&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;prosodia&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_pros</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;cal_pros&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_pros</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;prosodia&#39; o &#39;cal_pros&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;comprension&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_comp</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s1">&#39;cal_comp&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_comp</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s2">&quot;Error en los datos: columnas &#39;comprensión&#39; o &#39;cal_comp&#39; no encontradas.&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Definir el orden y colores para los labels</span>
+    <span class="n">orden_labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Debajo del Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Básico&quot;</span><span class="p">,</span> <span class="s2">&quot;Satisfactorio&quot;</span><span class="p">,</span> <span class="s2">&quot;Avanzado&quot;</span><span class="p">]</span>
+    <span class="n">colores</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#1f77b4&#39;</span><span class="p">,</span> <span class="s1">&#39;#ff7f0e&#39;</span><span class="p">,</span> <span class="s1">&#39;#2ca02c&#39;</span><span class="p">,</span> <span class="s1">&#39;#d62728&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Ajustar los conteos según el orden definido, considerando solo los presentes</span>
+    <span class="n">conteo_vel</span> <span class="o">=</span> <span class="n">df_vel</span><span class="p">[</span><span class="s1">&#39;cal_vel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">conteo_pres</span> <span class="o">=</span> <span class="n">df_pres</span><span class="p">[</span><span class="s1">&#39;cal_pres&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">conteo_pros</span> <span class="o">=</span> <span class="n">df_pros</span><span class="p">[</span><span class="s1">&#39;cal_pros&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">conteo_comp</span> <span class="o">=</span> <span class="n">df_comp</span><span class="p">[</span><span class="s1">&#39;cal_comp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c1"># Calcular los porcentajes sobre el total de alumnos presentes</span>
+    <span class="n">porcentajes_vel</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_vel</span> <span class="o">/</span> <span class="n">total_dni_presentes</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">porcentajes_pres</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_pres</span> <span class="o">/</span> <span class="n">total_dni_presentes</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">porcentajes_pros</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_pros</span> <span class="o">/</span> <span class="n">total_dni_presentes</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">porcentajes_comp</span> <span class="o">=</span> <span class="p">(</span><span class="n">conteo_comp</span> <span class="o">/</span> <span class="n">total_dni_presentes</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    
+    <span class="c1"># Crear etiquetas con cantidad y porcentaje</span>
+    <span class="n">etiquetas_vel</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_vel</span><span class="p">,</span> <span class="n">porcentajes_vel</span><span class="p">)]</span>
+    <span class="n">etiquetas_pres</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_pres</span><span class="p">,</span> <span class="n">porcentajes_pres</span><span class="p">)]</span>
+    <span class="n">etiquetas_pros</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_pros</span><span class="p">,</span> <span class="n">porcentajes_pros</span><span class="p">)]</span>
+    <span class="n">etiquetas_comp</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">conteo</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">porcentaje</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">conteo</span><span class="p">,</span> <span class="n">porcentaje</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orden_labels</span><span class="p">,</span> <span class="n">conteo_comp</span><span class="p">,</span> <span class="n">porcentajes_comp</span><span class="p">)]</span>
+    
+    <span class="c1"># Calcular el promedio de puntaje</span>
+    <span class="n">promedio_puntaje_vel</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">df_vel</span><span class="p">[</span><span class="s1">&#39;velocidad&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">promedio_puntaje_pres</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">df_pres</span><span class="p">[</span><span class="s1">&#39;precision&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">promedio_puntaje_pros</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">df_pros</span><span class="p">[</span><span class="s1">&#39;prosodia&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">promedio_puntaje_comp</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">df_comp</span><span class="p">[</span><span class="s1">&#39;comprension&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    
+    <span class="c1"># Obtener el nombre de la región o mostrar &quot;Chaco&quot;</span>
+    <span class="n">regional</span> <span class="o">=</span> <span class="s1">&#39;Chaco&#39;</span> <span class="k">if</span> <span class="n">mostrar_todo</span> <span class="k">else</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df_vel</span><span class="p">[</span><span class="s1">&#39;region&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    
+    <span class="c1"># Crear los gráficos de torta con Plotly de Velocidad</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas_vel</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_vel</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># Crear los gráficos de torta con Plotly de Precisión</span>
+    <span class="n">fig2</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas_pres</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_pres</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig2</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># Crear los gráficos de torta con Plotly de Prosodia</span>
+    <span class="n">fig3</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas_pros</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_pros</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig3</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># Crear los gráficos de torta con Plotly de Comprensión</span>
+    <span class="n">fig4</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">go</span><span class="o">.</span><span class="n">Pie</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">etiquetas_comp</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">conteo_comp</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colores</span><span class="p">))])</span>
+    <span class="n">fig4</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># Convertir las figuras a HTML</span>
+    <span class="n">graph_html</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    <span class="n">graph_html2</span> <span class="o">=</span> <span class="n">fig2</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    <span class="n">graph_html3</span> <span class="o">=</span> <span class="n">fig3</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    <span class="n">graph_html4</span> <span class="o">=</span> <span class="n">fig4</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">default_width</span><span class="o">=</span><span class="mi">700</span><span class="p">)</span>
+    
+    <span class="c1"># Renderizar la plantilla y pasar los gráficos, promedios y total de presentes</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;oplectura/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;grafico&#39;</span><span class="p">:</span> <span class="n">graph_html</span><span class="p">,</span>
+        <span class="s1">&#39;grafico2&#39;</span><span class="p">:</span> <span class="n">graph_html2</span><span class="p">,</span>
+        <span class="s1">&#39;grafico3&#39;</span><span class="p">:</span> <span class="n">graph_html3</span><span class="p">,</span>
+        <span class="s1">&#39;grafico4&#39;</span><span class="p">:</span> <span class="n">graph_html4</span><span class="p">,</span> 
+        <span class="s1">&#39;promedio_puntaje_velocidad&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje_vel</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_puntaje_precision&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje_pres</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_puntaje_prosodia&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje_pros</span><span class="p">,</span>
+        <span class="s1">&#39;promedio_puntaje_comprension&#39;</span><span class="p">:</span> <span class="n">promedio_puntaje_comp</span><span class="p">,</span>
+        <span class="s1">&#39;total_alumnos&#39;</span><span class="p">:</span> <span class="n">total_alumnos</span><span class="p">,</span>
+        <span class="s1">&#39;total_dni_presentes&#39;</span><span class="p">:</span> <span class="n">total_dni_presentes</span><span class="p">,</span>  <span class="c1"># Incluye el total de presentes</span>
+        <span class="s1">&#39;regional&#39;</span><span class="p">:</span> <span class="n">regional</span><span class="p">,</span>
+        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="cargar_grafico_reg"><a class="viewcode-back" href="../../../oplectura.html#apps.oplectura.views_resultados.cargar_grafico_reg">[documentos]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">cargar_grafico_reg</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>    
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;oplectura/graficoreg.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;datos_disponibles&#39;</span><span class="p">:</span> <span class="kc">False</span>
+    <span class="p">})</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2024, Edgardo Javier Gómez.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

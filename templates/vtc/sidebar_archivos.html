@@ -1,0 +1,57 @@
+<!-- includes/sidebar.html -->
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <!-- Logo o título -->
+    <a href="#" class="brand-link text-center">
+        <span class="brand-text font-weight-light">Sistema</span>
+    </a>
+
+    <div class="sidebar">
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" data-accordion="false">
+
+                {% for item in menu %}
+                <li class="nav-item {% if item.children %}has-treeview{% endif %}">
+                    {% if item.url %}
+                        <a href="{% url item.url %}" class="nav-link">
+                            <i class="{{ item.icon }}"></i>
+                            <p>{{ item.label }} {% if item.children %}<i class="right fas fa-angle-left"></i>{% endif %}</p>
+                        </a>
+                    {% else %}
+                        <a href="#" class="nav-link">
+                            <i class="{{ item.icon }}"></i>
+                            <p>{{ item.label }} {% if item.children %}<i class="right fas fa-angle-left"></i>{% endif %}</p>
+                        </a>
+                    {% endif %}
+
+                    {% if item.children %}
+                    <ul class="nav nav-treeview">
+                        {% for child in item.children %}
+                            {% include "includes/menu_item.html" with item=child %}
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </li>
+                {% endfor %}
+
+                <!-- LOGIN / LOGOUT -->
+                <li class="nav-item mt-3">
+                    {% if request.user.is_authenticated %}
+                        <form method="POST" action="{% url 'logueo:logout' %}" class="d-flex flex-column m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link btn btn-dark text-start w-100 d-flex align-items-center">
+                                <i class="fas fa-power-off me-2 text-danger"></i>
+                                Cerrar sesión
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'logueo:login' %}" class="nav-link d-flex align-items-center">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Iniciar sesión
+                        </a>
+                    {% endif %}
+                </li>
+
+            </ul>
+        </nav>
+    </div>
+</aside>

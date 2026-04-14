@@ -1,0 +1,302 @@
+{% extends "archivos/base/dashboard.html" %}
+
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+body { background: #0b1220; }
+
+.game-container {
+    background:#0f172a;
+    padding:15px;
+    border-radius:16px;
+    color:white;
+    box-shadow:0 0 25px rgba(0,200,255,0.12);
+    margin-bottom:20px;
+}
+
+.game-header {
+    display:flex;
+    justify-content:space-between;
+    color:#38bdf8;
+    margin-bottom:10px;
+}
+
+.badge-game {
+    padding:4px 10px;
+    border-radius:999px;
+    background:#334155;
+}
+
+.game-bar {
+    height:28px;
+    background:#111827;
+    border-radius:999px;
+    position:relative;
+}
+
+.game-fill {
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#00d4ff,#3b82f6,#22c55e);
+    border-radius:999px;
+    transition:0.4s;
+}
+
+.hero {
+    position:absolute;
+    top:-20px;
+    left:0%;
+    transform:translateX(-50%);
+    font-size:26px;
+}
+
+#tablaResultados tr:hover {
+    background:#1f2937;
+}
+</style>
+
+<input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+
+<div class="container-fluid mt-4">
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between mb-4 border-bottom pb-2">
+
+        <div>
+            <h4 class="fw-bold text-info mb-0">🚀 SINCRONIZACIÓN MODE</h4>
+            <small class="text-muted">Celery + SSE + Game UI</small>
+        </div>
+
+        <div>
+            <button id="btnSync" class="btn btn-primary" onclick="iniciarSync()">▶ Ejecutar</button>
+            <button id="btnCancel" class="btn btn-danger" onclick="cancelarSync()" disabled>⛔ Cancelar</button>
+            <button class="btn btn-warning" onclick="limpiarHistorial()">🧹 Limpiar</button>
+            <button class="btn btn-secondary" onclick="exportarExcel()">⬇ Exportar</button>
+        </div>
+
+    </div>
+
+    <!-- GAME -->
+    <div class="game-container">
+
+        <div class="game-header">
+            <div>🎯 MISIÓN: SYNC</div>
+            <div id="estadoGame" class="badge-game">INACTIVO</div>
+        </div>
+
+        <div class="game-bar">
+            <div id="gameFill" class="game-fill"></div>
+            <div id="hero" class="hero">🐢</div>
+        </div>
+
+        <div class="mt-2">
+            NIVEL <span id="nivel">1</span> |
+            XP <span id="xp">0</span> |
+            SPEED <span id="speed">0</span>
+        </div>
+
+    </div>
+
+    <!-- KPIs -->
+    <div class="row mb-3">
+        <div class="col-md-4">Procesados: <span id="procesados">0</span></div>
+        <div class="col-md-4">Total: <span id="total">0</span></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card bg-dark text-white">
+        <div class="card-header">📡 Live</div>
+        <div class="card-body">
+
+            <table class="table table-dark">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th>Mensaje</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaResultados"></tbody>
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+let eventSource = null;
+let polling = null;
+let startTime = null;
+let reconnects = 0;
+
+let xp = 0;
+let nivel = 1;
+
+/* CSRF */
+function getCSRFToken() {
+    return document.getElementById("csrf_token").value;
+}
+
+/* RESET */
+function resetUI() {
+    document.getElementById("tablaResultados").innerHTML = "";
+    document.getElementById("procesados").innerText = 0;
+    document.getElementById("total").innerText = 0;
+    document.getElementById("gameFill").style.width = "0%";
+    document.getElementById("hero").style.left = "0%";
+    document.getElementById("estadoGame").innerText = "INACTIVO";
+}
+
+/* GAME */
+function updateGame(pct, speed, estado) {
+
+    document.getElementById("gameFill").style.width = pct + "%";
+    document.getElementById("hero").style.left = pct + "%";
+    document.getElementById("speed").innerText = speed.toFixed(1);
+
+    const map = {
+        procesando: "EN PROCESO",
+        finalizado: "COMPLETADO",
+        cancelado: "CANCELADO",
+        error: "ERROR"
+    };
+
+    document.getElementById("estadoGame").innerText = map[estado] || "INACTIVO";
+}
+
+/* XP */
+function addXP() {
+    xp += 10;
+    if (xp >= 1000) {
+        xp = 0;
+        nivel++;
+        document.getElementById("nivel").innerText = nivel;
+    }
+    document.getElementById("xp").innerText = xp;
+}
+
+/* STREAM */
+function iniciarStream() {
+
+    if (eventSource) eventSource.close();
+
+    eventSource = new EventSource("/usua/sync/stream/");
+
+    eventSource.onmessage = function(event) {
+
+        try {
+            let data = JSON.parse(event.data);
+
+            if (data.tipo === "fila") {
+
+                const tabla = document.getElementById("tablaResultados");
+
+                tabla.insertAdjacentHTML("beforeend", `
+                    <tr>
+                        <td>${data.username}</td>
+                        <td>${data.estado}</td>
+                        <td>${data.msg || ""}</td>
+                    </tr>
+                `);
+
+                addXP();
+            }
+
+            if (["finalizado","error","cancelado"].includes(data.estado)) {
+                finalizarUI();
+                if (data.estado === "finalizado") confetti();
+            }
+
+        } catch (e) {
+            console.log("SSE parse error", e);
+        }
+    };
+
+    eventSource.onerror = function () {
+
+        eventSource.close();
+
+        if (reconnects < 5) {
+            reconnects++;
+            setTimeout(iniciarStream, 2000);
+        }
+    };
+}
+
+/* FINAL */
+function finalizarUI() {
+    if (eventSource) eventSource.close();
+    if (polling) clearInterval(polling);
+    document.getElementById("btnSync").disabled = false;
+    document.getElementById("btnCancel").disabled = true;
+}
+
+/* POLLING */
+function startPolling() {
+
+    polling = setInterval(() => {
+
+        fetch("/usua/sync/progreso/")
+        .then(r => r.json())
+        .then(data => {
+
+            let p = data.procesados || 0;
+            let t = data.total || 0;
+            let pct = t ? Math.round((p/t)*100) : 0;
+
+            let speed = (Date.now()-startTime)/1000;
+            speed = speed ? p/speed : 0;
+
+            updateGame(pct, speed, data.estado);
+
+            document.getElementById("procesados").innerText = p;
+            document.getElementById("total").innerText = t;
+
+            if (["finalizado","error","cancelado"].includes(data.estado)) {
+                finalizarUI();
+            }
+
+        });
+
+    }, 1000);
+}
+
+/* ACTIONS */
+function iniciarSync() {
+
+    resetUI();
+    startTime = Date.now();
+    reconnects = 0;
+
+    fetch("/usua/sync/iniciar/")
+    .then(() => {
+        startPolling();
+        iniciarStream();
+        document.getElementById("btnSync").disabled = true;
+        document.getElementById("btnCancel").disabled = false;
+    });
+}
+
+function cancelarSync() {
+    fetch("/usua/sync/cancelar/", {
+        method:"POST",
+        headers:{ "X-CSRFToken": getCSRFToken() }
+    });
+}
+
+function limpiarHistorial() {
+    document.getElementById("tablaResultados").innerHTML = "";
+}
+
+function exportarExcel() {
+    window.location.href = "/usua/sync/exportar-rechazados/";
+}
+
+</script>
+
+{% endblock %}

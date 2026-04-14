@@ -1,0 +1,147 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between mb-3">
+        <h3>Asignaciones</h3>
+
+        <div>
+            <a href="{% url 'asignacionesuperv:create' %}" class="btn btn-primary">
+                Nueva Asignación
+            </a>
+
+            <a href="{% url 'asignacionesuperv:multiple_create' %}" class="btn btn-success">
+                Asignación múltiple
+            </a>
+
+            <!-- 🔥 BOTÓN SIMPLE (NO DATATABLES) -->
+            <button id="btnExcel" class="btn btn-success">
+                📥 Exportar Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTRO -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <input type="text" id="filtro" class="form-control"
+                   placeholder="Buscar supervisor / escuela / oferta">
+        </div>
+
+        <div class="col-md-2">
+            <button id="btnLimpiar" class="btn btn-secondary w-100">
+                Limpiar
+            </button>
+        </div>
+    </div>
+
+    <!-- TABLA -->
+    <table id="tabla" class="table table-bordered table-hover w-100">
+        <thead>
+            <tr>
+                <th>Supervisor</th>
+                <th>Escuela</th>
+                <th>Región</th>
+                <th>Oferta</th>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+    </table>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(function () {
+
+    console.log("🔥 INIT DATATABLE");
+
+    let table = $('#tabla').DataTable({
+
+        processing: true,
+        serverSide: true,
+
+        ajax: {
+            url: "/asignacionesuperv/datatable/",
+            type: "GET",
+            dataSrc: "data"
+        },
+
+        columns: [
+            { data: "supervisor" },
+            { data: "escuela" },
+            { data: "region" },
+            { data: "oferta" },
+            { data: "desde" },
+            { data: "hasta" },
+            {
+                data: "activo",
+                render: d =>
+                    d
+                        ? '<span class="badge bg-success">Sí</span>'
+                        : '<span class="badge bg-secondary">No</span>'
+            },
+            {
+                data: "id",
+                render: id => `
+                    <a class="btn btn-warning btn-sm"
+                       href="/asignacionesuperv/${id}/update/">
+                       Editar
+                    </a>
+
+                    <button class="btn btn-danger btn-sm btn-delete"
+                            data-id="${id}">
+                        Eliminar
+                    </button>
+                `
+            }
+        ]
+    });
+
+    // 🔥 EXPORT EXCEL SIMPLE (SIN LIBRERÍAS)
+    $('#btnExcel').on('click', function () {
+
+        let csv = "Supervisor,Escuela,Región,Oferta,Desde,Hasta\n";
+
+        table.rows().every(function () {
+            let d = this.data();
+            csv += `${d.supervisor},${d.escuela},${d.region},${d.oferta},${d.desde},${d.hasta}\n`;
+        });
+
+        let blob = new Blob([csv], { type: "text/csv" });
+        let url = URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "asignaciones.csv";
+        a.click();
+    });
+
+    // FILTRO
+    $('#filtro').on('keyup', function () {
+        table.search(this.value).draw();
+    });
+
+    $('#btnLimpiar').on('click', function () {
+        $('#filtro').val('');
+        table.search('').draw();
+    });
+
+});
+</script>
+
+{% endblock %}

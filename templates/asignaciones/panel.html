@@ -1,0 +1,284 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<!-- =========================
+     DATOS SUPERVISOR
+========================= -->
+<input type="hidden" id="sup-username" value="{{ supervisor.usuario }}">
+<input type="hidden" id="sup-apellido" value="{{ usuario_extra.apellido|default:'' }}">
+<input type="hidden" id="sup-nombres" value="{{ usuario_extra.nombres|default:'' }}">
+
+<div class="container mt-4">
+
+<h3>📊 Dashboard de Asignaciones</h3>
+
+<!-- =========================
+     ALERTA GLOBAL (PRO REAL)
+========================= -->
+{% if resumen.RECHAZADO > 0 %}
+<div class="alert alert-danger d-flex justify-content-between align-items-center shadow-sm">
+    <div>
+        ⚠ Tenés <strong>{{ resumen.RECHAZADO }}</strong> asignaciones rechazadas
+    </div>
+</div>
+{% endif %}
+
+<!-- =========================
+     CARDS
+========================= -->
+<div class="row mb-4 text-center">
+
+    <div class="col">
+        <div class="card bg-secondary text-white shadow">
+            <div class="card-body">
+                <h6>Borrador</h6>
+                <h3>{{ resumen.BORRADOR }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card bg-primary text-white shadow">
+            <div class="card-body">
+                <h6>Enviado</h6>
+                <h3>{{ resumen.ENVIADO }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card bg-danger text-white shadow">
+            <div class="card-body">
+                <h6>Rechazado</h6>
+                <h3>{{ resumen.RECHAZADO }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card bg-success text-white shadow">
+            <div class="card-body">
+                <h6>Aprobado</h6>
+                <h3>{{ resumen.APROBADO }}</h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =========================
+     FILTROS
+========================= -->
+<div class="mb-3">
+    <button class="btn btn-outline-dark filtro" data-estado="ALL">Todos</button>
+    <button class="btn btn-outline-secondary filtro" data-estado="BORRADOR">Borrador</button>
+    <button class="btn btn-outline-primary filtro" data-estado="ENVIADO">Enviado</button>
+    <button class="btn btn-outline-danger filtro" data-estado="RECHAZADO">Rechazado</button>
+    <button class="btn btn-outline-success filtro" data-estado="APROBADO">Aprobado</button>
+</div>
+
+<!-- =========================
+     TABLA
+========================= -->
+<table id="tabla" class="table table-bordered table-hover align-middle">
+
+<thead class="table-dark">
+<tr>
+    <th>ID</th>
+    <th>Escuela</th>
+    <th>Región</th>
+    <th>Estado</th>
+    <th>Observación</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for a in asignaciones %}
+<tr>
+
+    <td>{{ a.id }}</td>
+    <td>{{ a.nom_est }}</td>
+    <td>{{ a.region_loc }}</td>
+
+    <!-- ESTADO -->
+    <td data-estado="{{ a.estado }}">
+        <span class="badge 
+        {% if a.estado == "BORRADOR" %}bg-secondary
+        {% elif a.estado == "ENVIADO" %}bg-primary
+        {% elif a.estado == "RECHAZADO" %}bg-danger
+        {% elif a.estado == "APROBADO" %}bg-success
+        {% endif %}
+        ">
+        {{ a.estado }}
+        </span>
+    </td>
+
+    <!-- OBSERVACIÓN -->
+    <td>
+        {% if a.estado == "RECHAZADO" %}
+            <div class="alert alert-danger p-2 m-0 small">
+                {{ a.observacion|default:"Sin detalle" }}
+            </div>
+        {% elif a.estado == "APROBADO" %}
+            <span class="text-success">✔ OK</span>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+
+    <!-- ACCIONES -->
+    <td>
+        {% if a.estado == "BORRADOR" or a.estado == "RECHAZADO" %}
+            <a href="{% url 'asignacionesuperv:editar_asignacion' a.id %}"
+               class="btn btn-sm btn-warning">
+               ✏ Editar
+            </a>
+
+            <button class="btn btn-sm btn-primary enviar-btn"
+                    data-id="{{ a.id }}">
+                📤 Enviar
+            </button>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+<!-- TOAST -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+    <div id="toast" class="toast text-white border-0">
+        <div class="toast-body" id="toastMsg"></div>
+    </div>
+</div>
+
+<!-- LIBRERÍAS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+
+const urlEnviar = "{% url 'asignacionesuperv:enviar_asignacion' %}";
+let table;
+let filtroEstado = "ALL";
+
+// DATOS SUPERVISOR
+const username = $("#sup-username").val();
+const apellido = $("#sup-apellido").val();
+const nombres = $("#sup-nombres").val();
+
+const titulo = "Asignaciones de Supervisor";
+const subtitulo = `Usuario: ${username} | ${apellido}, ${nombres}`;
+
+// TOAST
+function showToast(msg, ok=true) {
+    let toastEl = document.getElementById("toast");
+    let msgEl = document.getElementById("toastMsg");
+
+    toastEl.classList.remove("bg-success", "bg-danger");
+    toastEl.classList.add(ok ? "bg-success" : "bg-danger");
+
+    msgEl.innerHTML = msg;
+
+    new bootstrap.Toast(toastEl).show();
+}
+
+// INIT
+$(document).ready(function () {
+
+    table = $("#tabla").DataTable({
+        language: {
+            url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        },
+        dom: 'Bfrtip',
+        buttons: [
+            { extend: 'excelHtml5', text: '📊 Excel', title: titulo, messageTop: subtitulo },
+            { extend: 'pdfHtml5', text: '📄 PDF', title: titulo, messageTop: subtitulo },
+            { extend: 'print', text: '🖨 Imprimir', title: titulo, messageTop: subtitulo }
+        ]
+    });
+
+    initFiltro();
+});
+
+// FILTRO
+function initFiltro() {
+
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+
+        let row = table.row(dataIndex).node();
+        let estado = $(row).find("td:eq(3)").data("estado");
+
+        if (filtroEstado === "ALL") return true;
+
+        return estado === filtroEstado;
+    });
+
+    $(".filtro").click(function () {
+        filtroEstado = $(this).data("estado");
+        table.draw();
+    });
+}
+
+// ENVIAR SIN RECARGA
+$(document).on("click", ".enviar-btn", function () {
+
+    let btn = $(this);
+    let row = btn.closest("tr");
+    let id = btn.data("id");
+
+    btn.prop("disabled", true).text("...");
+
+    $.post(urlEnviar, {
+        id: id,
+        csrfmiddlewaretoken: "{{ csrf_token }}"
+    }, function (res) {
+
+        if (!res.ok) {
+            showToast("No se pudo enviar", false);
+            btn.prop("disabled", false).text("Enviar");
+            return;
+        }
+
+        row.find("td:eq(3)")
+            .attr("data-estado", "ENVIADO")
+            .html(`<span class="badge bg-primary">ENVIADO</span>`);
+
+        row.find("td:eq(4)").html(`<span class="text-muted">-</span>`);
+        row.find("td:eq(5)").html(`<span class="text-muted">-</span>`);
+
+        table.row(row).invalidate().draw(false);
+
+        showToast("✔ Enviado correctamente");
+
+    });
+
+});
+
+</script>
+
+{% endblock %}

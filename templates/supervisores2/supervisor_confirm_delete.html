@@ -1,0 +1,45 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<div class="card border-danger">
+
+<div class="card-header bg-danger text-white">
+    Confirmar eliminación
+</div>
+
+<div class="card-body">
+
+<p>
+    ¿Está seguro que desea eliminar al supervisor?
+</p>
+
+<strong>
+    {{ object.apellido }} {{ object.nombres }}
+</strong>
+
+</div>
+
+<div class="card-footer d-flex justify-content-end">
+
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger me-2">
+        Sí, eliminar
+    </button>
+</form>
+
+<a href="{% url 'supervisores2:list' %}"
+   class="btn btn-secondary">
+    Cancelar
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
