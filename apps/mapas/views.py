@@ -92,6 +92,124 @@ def filter_data(request):
         print("\n⚠️ ERROR CARGANDO RADIOS:", e)
 
     context['indec_geojson'] = indec_geojson
+    
+    
+    # =========================================================
+    # 🛣️ RED VIAL IGN (PostGIS → GeoJSON)
+    # =========================================================
+    vial_geojson = {"type": "FeatureCollection", "features": []}
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT jsonb_build_object(
+                    'type', 'FeatureCollection',
+                    'features', jsonb_agg(feature)
+                )
+                FROM (
+                    SELECT jsonb_build_object(
+                        'type', 'Feature',
+                        'geometry', ST_AsGeoJSON(geom)::jsonb,
+                        'properties', jsonb_build_object(
+                            'rtn', rtn,
+                            'typ', typ,
+                            'rst', rst
+                        )
+                    ) AS feature
+                    FROM (
+                        SELECT 
+                            rtn,
+                            typ,
+                            rst,
+                            ST_LineMerge(
+                                ST_UnaryUnion(
+                                    ST_SnapToGrid(
+                                        ST_Collect(
+                                            ST_Transform(geom, 4326)
+                                        ), 0.00001
+                                    )
+                                )
+                            ) AS geom
+                        FROM public.vial_provincial
+                        WHERE typ = '40'
+                        GROUP BY rtn, typ, rst
+                    ) t
+                ) fc;
+            """)
+
+            row_vial = cursor.fetchone()
+
+        if row_vial and row_vial[0]:
+            vial_geojson = row_vial[0]
+
+            if isinstance(vial_geojson, str):
+                vial_geojson = json.loads(vial_geojson)
+
+    except Exception as e:
+        print("⚠️ ERROR VIAL PROVINCIAL:", e)
+
+    context['vial_geojson'] = vial_geojson
+    
+    # =========================================================
+    # 🔍 DEBUG
+    # =========================================================
+    print("✔ VIAL OK:", len(vial_geojson.get("features", [])))
+    
+    
+    # =========================================================
+    # 📍 PARAJES CHACO (PostGIS → GeoJSON)
+    # =========================================================
+    parajes_geojson = {"type": "FeatureCollection", "features": []}
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT jsonb_build_object(
+                    'type', 'FeatureCollection',
+                    'features', jsonb_agg(feature)
+                )
+                FROM (
+                    SELECT jsonb_build_object(
+                        'type', 'Feature',
+                        'geometry', ST_AsGeoJSON(ST_Transform(geom, 4326))::jsonb,
+                        'properties', jsonb_build_object(
+                            'id', id,
+                            'cod_pcia', cod_pcia,
+                            'nom_pcia', nom_pcia,
+                            'cod_depto', cod_depto,
+                            'nom_depto', nom_depto,
+                            'cod_ase', cod_ase,
+                            'fna', fna,
+                            'tipo_asent', tipo_asent,
+                            'nom_agl', nom_agl,
+                            'lat', lat_gd,
+                            'lng', long_gd
+                        )
+                    ) AS feature
+                    FROM public.parajes_chaco
+                    WHERE geom IS NOT NULL
+                ) fc;
+            """)
+
+            row_parajes = cursor.fetchone()
+
+        if row_parajes and row_parajes[0]:
+            parajes_geojson = row_parajes[0]
+
+            if isinstance(parajes_geojson, str):
+                parajes_geojson = json.loads(parajes_geojson)
+
+            print("\n📍 PARAJES FEATURES:", len(parajes_geojson.get("features", [])))
+
+    except Exception as e:
+        print("⚠️ ERROR PARAJES:", e)
+
+    context['parajes_geojson'] = parajes_geojson
+    
+    # =========================================================
+    # 🔍 DEBUG
+    # =========================================================
+    print("✔ PARAJES OK:", len(parajes_geojson.get("features", [])))
 
     return render(request, 'mapa/ofertasmark.html', context)
     

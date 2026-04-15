@@ -12,6 +12,30 @@ Ubicación Geográfica de Unidades de Servicio
 
 <div id="map"></div>
 
+<!-- BOTÓN FIJO (siempre visible) -->
+<div id="layer-toggle-btn" class="layer-toggle-btn">
+    🗺️ Capas
+</div>
+
+<!-- PANEL DE CAPAS -->
+<div id="layer-panel" class="layer-panel collapsed">
+
+    <div class="layer-header">
+        Control de capas
+    </div>
+
+    <div class="layer-group">
+        <div class="group-title">Base</div>
+        <div id="base-switches"></div>
+    </div>
+
+    <div class="layer-group">
+        <div class="group-title">Overlays</div>
+        <div id="overlay-switches"></div>
+    </div>
+
+</div>
+
 <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
 
 <div class="badge bg-primary fs-6">
@@ -139,6 +163,107 @@ border:1px solid #e9ecef;
 margin-bottom:10px;
 }
 
+.layer-panel{
+    position:absolute;
+    top:90px;
+    right:15px;
+    width:240px;
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.2);
+    z-index:9999;
+    font-size:13px;
+    overflow:hidden;
+    transition: all .25s ease;
+}
+
+/* estado cerrado */
+.layer-panel.collapsed{
+    transform: translateX(120%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* botón flotante */
+.layer-toggle-btn{
+    position:absolute;
+    top:90px;
+    right:15px;
+    background:#0d6efd;
+    color:#fff;
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    z-index:10000;
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+    font-size:13px;
+    user-select:none;
+}
+
+/* resto tuyo (igual lo mantenés) */
+.layer-header{
+    background:#0d6efd;
+    color:#fff;
+    padding:10px;
+    font-weight:600;
+}
+
+.layer-group{
+    padding:10px;
+    border-bottom:1px solid #eee;
+}
+
+.group-title{
+    font-size:11px;
+    font-weight:bold;
+    color:#6c757d;
+    margin-bottom:6px;
+    text-transform:uppercase;
+}
+
+.switch-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:6px;
+}
+
+.toggle{
+    position:relative;
+    width:34px;
+    height:18px;
+}
+
+.toggle input{display:none;}
+
+.slider{
+    position:absolute;
+    cursor:pointer;
+    top:0;left:0;right:0;bottom:0;
+    background:#ccc;
+    border-radius:18px;
+    transition:.3s;
+}
+
+.slider:before{
+    content:"";
+    position:absolute;
+    height:14px;width:14px;
+    left:2px;top:2px;
+    background:#fff;
+    border-radius:50%;
+    transition:.3s;
+}
+
+.toggle input:checked + .slider{
+    background:#0d6efd;
+}
+
+.toggle input:checked + .slider:before{
+    transform:translateX(16px);
+}
+
+
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
@@ -160,18 +285,175 @@ margin-bottom:10px;
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://unpkg.com/leaflet-textpath/leaflet.textpath.js"></script>
 
 {{ indec_geojson|json_script:"radios-data" }}
+{{ vial_geojson|json_script:"vial-data" }}
+{{ parajes_geojson|json_script:"parajes-data" }}
 
 <script>
+/* ============================
+   🎨 ESTILO RED VIAL
+============================ */
+function styleVial(feature) {
+    const p = feature.properties || {};
+    const rst = String(p.rst);
+
+    // 🟥 Pavimentado
+    if (rst === "1") {
+        return {
+            color: "#d73027",
+            weight: 4,
+            opacity: 1,
+            dashArray: null,
+            lineCap: "round",
+            lineJoin: "round"
+        };
+    }
+
+    // 🟨 Consolidado
+    if (rst === "2") {
+        return {
+            color: "#ffd60a",
+            weight: 3,
+            opacity: 1,
+            dashArray: null,
+            lineCap: "round",
+            lineJoin: "round"
+        };
+    }
+
+    // 🟩 Tierra
+    if (rst === "3") {
+        return {
+            color: "#2b9348",
+            weight: 2.5,
+            opacity: 1,
+            dashArray: null,
+            lineCap: "round",
+            lineJoin: "round"
+        };
+    }
+
+    // ⚪ Otros caminos
+    return {
+        color: "#adb5bd",
+        weight: 2,
+        opacity: 0.8,
+        dashArray: null
+    };
+}
+
+function getStyle(feature, zoom) {
+
+    const rst = String(feature.properties?.rst);
+
+    let weight;
+
+    // 🔥 escala realista por zoom
+    if (zoom >= 12) {
+        weight = rst === "1" ? 4 : rst === "2" ? 3 : 2;
+    } else if (zoom >= 9) {
+        weight = rst === "1" ? 3 : rst === "2" ? 2.5 : 2;
+    } else {
+        weight = rst === "1" ? 2.5 : rst === "2" ? 2 : 1.5;
+    }
+
+    // 🎨 colores IGN-like
+    if (rst === "1") return { color: "#d73027", weight, opacity: 1 };
+    if (rst === "2") return { color: "#ffd60a", weight, opacity: 1 };
+    if (rst === "3") return { color: "#2b9348", weight, opacity: 1 };
+
+    return { color: "#adb5bd", weight: 1.5, opacity: 0.8 };
+}
+
+
+function applyLabel() {
+    const zoom = map.getZoom();
+
+    if (!layer.setText) return;
+
+    if (zoom >= 11) {
+        layer.setText(` RP ${p.rtn} `, {
+            repeat: true,
+            offset: 6,
+            attributes: {
+                fill: "#000",
+                "font-size": "12px",
+                "font-weight": "bold",
+                "stroke": "#fff",
+                "stroke-width": 3
+            }
+        });
+    } else if (zoom >= 9) {
+        layer.setText(`RP ${p.rtn}`, {
+            repeat: true,
+            attributes: {
+                fill: "#333",
+                "font-size": "10px",
+                "stroke": "#fff",
+                "stroke-width": 2
+            }
+        });
+    } else {
+        layer.setText(null);
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded',function(){
+
+const layerState = JSON.parse(localStorage.getItem("layerState") || "{}");
+
+function addSwitch(container, name, layer, icon, defaultOn=true){
+
+    const id = "sw_" + name.replace(/\s/g,'');
+
+    const checked = layerState[name] !== undefined
+        ? layerState[name]
+        : defaultOn;
+
+    const row = document.createElement("div");
+    row.className = "switch-row";
+
+    row.innerHTML = `
+        <div>${icon} ${name}</div>
+        <label class="toggle">
+            <input type="checkbox" id="${id}" ${checked ? "checked" : ""}>
+            <span class="slider"></span>
+        </label>
+    `;
+
+    container.appendChild(row);
+
+    const input = row.querySelector("input");
+
+    function update(){
+        if(input.checked){
+            map.addLayer(layer);
+        }else{
+            map.removeLayer(layer);
+        }
+
+        layerState[name] = input.checked;
+        localStorage.setItem("layerState", JSON.stringify(layerState));
+    }
+
+    input.addEventListener("change", update);
+
+    update(); // init
+}
 
 const data = JSON.parse('{{ data_json|escapejs }}');
 
 const radiosCensales = JSON.parse(
     document.getElementById("radios-data").textContent
 );
+
+const vialData = JSON.parse(
+    document.getElementById("vial-data").textContent
+);
+
 
 const map = L.map('map').setView([-27.45,-59.0],7);
 
@@ -237,19 +519,166 @@ const radiosLayer = L.geoJSON(radiosCensales, {
     }
 });
 
+map.createPane('vialPane');
+map.getPane('vialPane').style.zIndex = 450;
+
+
+// ============================
+// 🎨 CAPA COLOR REAL
+// ============================
+const vialLine = L.geoJSON(vialData, {
+
+    renderer: L.svg(), // 🔥 clave (no canvas)
+
+    smoothFactor: 0,   // 🔥 evita simplificación
+    bubblingMouseEvents: false,
+
+    filter: f => f.properties && f.properties.typ == "40",
+
+    style: function(feature) {
+        return getStyle(feature, map.getZoom());
+    },
+
+    onEachFeature: function(feature, layer) {
+
+        const p = feature.properties;
+
+        // 🔁 actualizar estilo en zoom (SIN recalcular geometría)
+        map.on("zoomend", () => {
+            layer.setStyle(getStyle(feature, map.getZoom()));
+        });
+
+        // 🖱️ interacción suave (SIN romper la línea)
+        layer.on({
+            mouseover: function(e){
+                const l = e.target;
+
+                // 🎨 resaltar
+                e.target.setStyle({
+                    weight: e.target.options.weight + 1,
+                    opacity: 1
+                });
+
+                // 🚀 abrir popup en hover
+                l.openPopup(e.latlng);
+            },
+            mousemove: function(e){
+                // 👉 hace que el popup siga al mouse (opcional pero PRO)
+                e.target.getPopup().setLatLng(e.latlng);
+            },
+            mouseout: function(e){
+
+                const l = e.target;
+
+                // 🎨 volver estilo normal
+                layer.setStyle(getStyle(feature, map.getZoom()));
+
+                // ❌ cerrar popup
+        l.closePopup();
+            }
+        });
+
+        // 🪟 popup liviano
+        layer.bindPopup(`
+            <b>🛣️ Ruta Provincial ${p.rtn}</b><br>
+            <b>Tipo:</b>
+            ${
+                p.rst == 1 ? "Pavimentado" :
+                p.rst == 2 ? "Consolidado" :
+                p.rst == 3 ? "Tierra" : "Sin datos"
+            }
+        `);
+    }
+});
+
+
+/* ============================
+   📍 PARAJES CHACO
+============================ */
+
+const parajesData = JSON.parse(
+    document.getElementById("parajes-data").textContent
+);
+
+const parajesLayer = L.geoJSON(parajesData, {
+
+    pointToLayer: function(feature, latlng) {
+        return L.circleMarker(latlng, {
+            radius: 5,
+            color: "#6f42c1",
+            fillColor: "#6f42c1",
+            fillOpacity: 0.8,
+            weight: 1
+        });
+    },
+
+    onEachFeature: function(feature, layer) {
+        const p = feature.properties || {};
+
+        layer.bindPopup(`
+            <div style="font-size:13px">
+                <b>📍 Paraje</b><br><br>
+
+                <b>Departamento:</b> ${p.nom_depto || ''}<br>
+                <b>Tipo:</b> ${p.tipo_asent || ''}<br>
+                <b>Nombre:</b> ${p.fna || ''}
+            </div>
+        `);
+    }
+});
+
+/* ============================
+   CAPA ZONAS AISLADAS
+============================ */
+const ruralLayer = L.layerGroup();
+data.forEach(row=>{
+    const ambito = row[5];
+    const lat = row[1];
+    const lng = row[2];
+    if(ambito==='Rural Disperso' && lat && lng){
+        const circle = L.circle([lat,lng],{
+            radius: 1200,
+            color: '#dc3545',
+            fillColor: '#dc3545',
+            fillOpacity: 0.2,
+            weight:1
+        }).bindTooltip('Zona rural dispersa', {permanent:false});
+        ruralLayer.addLayer(circle);
+    }
+});
+
+const baseContainer = document.getElementById("base-switches");
+const overlayContainer = document.getElementById("overlay-switches");
+
+/* BASES */
+addSwitch(baseContainer, "Mapa claro", baseLight, "🌤️", true);
+addSwitch(baseContainer, "Satélite", baseSat, "🛰️", false);
+
+/* OVERLAYS */
+addSwitch(overlayContainer, "Radios censales", radiosLayer, "📊", true);
+addSwitch(overlayContainer, "Red vial provincial", vialLine, "🛣️", true);
+addSwitch(overlayContainer, "Parajes", parajesLayer, "📍", false);
+addSwitch(overlayContainer, "Zonas rurales dispersas", ruralLayer, "🚨", false);
+
+
 baseLight.addTo(map);
 
 
-L.control.layers({
+{% comment %} L.control.layers({
 "Mapa claro":baseLight,
 "Mapa oscuro":baseDark,
 "Satélite":baseSat,
 "Mosaico":baseMosaic
 }, {
-"Radios censales INDEC": radiosLayer
-}).addTo(map);
+"Radios censales INDEC": radiosLayer,
+"Red vial": vialLine,
+"Parajes": parajesLayer,
+}).addTo(map); {% endcomment %}
 
-radiosLayer.addTo(map);
+//radiosLayer.addTo(map);
+//vialLine.addTo(map);
+
+
 
 // IMPORTANTE: zoom después de render
 setTimeout(() => {
@@ -257,7 +686,12 @@ setTimeout(() => {
 }, 500);
 
 
+const panel = document.getElementById("layer-panel");
+const toggleBtn = document.getElementById("layer-toggle-btn");
 
+toggleBtn.addEventListener("click", function () {
+    panel.classList.toggle("collapsed");
+});
 
 /* ICONO Y CLUSTER */
 const iconSchool=L.divIcon({className:"school-marker",html:"🎓",iconSize:[30,30],iconAnchor:[15,30]});
@@ -358,26 +792,8 @@ map.on('popupopen', function(e){
     });
 });
 
-/* ============================
-   CAPA ZONAS AISLADAS
-============================ */
-const ruralLayer = L.layerGroup().addTo(map);
-data.forEach(row=>{
-    const ambito = row[5];
-    const lat = row[1];
-    const lng = row[2];
-    if(ambito==='Rural Disperso' && lat && lng){
-        const circle = L.circle([lat,lng],{
-            radius: 1200,
-            color: '#dc3545',
-            fillColor: '#dc3545',
-            fillOpacity: 0.2,
-            weight:1
-        }).bindTooltip('Zona rural dispersa', {permanent:false});
-        ruralLayer.addLayer(circle);
-    }
-});
-L.control.layers(null, {"Zonas aisladas": ruralLayer}, {collapsed:false}).addTo(map);
+
+
 
 /* ============================
    FILTRO ESPACIAL
@@ -415,6 +831,7 @@ history.pop();
 const prev=history.length?history[history.length-1]:allMarkers;
 applyFilter(prev);
 };
+
 
 /* ============================
    DATATABLE
@@ -545,6 +962,8 @@ updateCharts(markers);
 applyFilter(allMarkers);
 
 });
+
+
 </script>
 
 {% endblock %}
