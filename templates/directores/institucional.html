@@ -223,6 +223,32 @@
 
 </div>
 
+<script>
+const estado = {{ estado|safe|default:"null" }};
+</script>
+
+<script>
+if (estado) {
+
+    console.log("🔥 Restaurando estado:", estado);
+
+    // 👉 scroll
+    if (estado.scroll) {
+        window.scrollTo(0, estado.scroll);
+    }
+
+    // 👉 cueanexo (dispara el click automático)
+    if (estado.cueanexo) {
+        setTimeout(() => {
+            const el = document.querySelector(
+                `[data-cueanexo="${estado.cueanexo}"]`
+            );
+            if (el) el.click();
+        }, 500);
+    }
+}
+</script>
+
 <!-- JS para AJAX de matrícula -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>

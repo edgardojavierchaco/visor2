@@ -26,6 +26,7 @@ from .views_trace import (
     trazabilidad_usuario
 )
 from .views_trace_dashboard import dashboard_data, dashboard_view
+from .views_estado import guardar_estado
 
 
 app_name='usuarios'
@@ -61,4 +62,5 @@ urlpatterns=[
     path('trazabilidad/<str:username>/', trazabilidad_usuario),
     path('dashboard_trace/data/', dashboard_data, name='dashboard_trace_data'),
     path('dashboard_trace/', dashboard_view, name='dashboard_trace'),
+    path('guardar-estado/', guardar_estado, name='guardar_estado'),
 ]

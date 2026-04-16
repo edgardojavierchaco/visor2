@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def filtrar_tablas_view_directores(request):
+    
+    estado = request.session.pop('estado_restaurar', None)
 
     # 🔥 SIEMPRE inicializar flags (clave)
     request.flags_menu = set()
@@ -200,7 +202,9 @@ def filtrar_tablas_view_directores(request):
 
     except Exception as e:
         conn_main.close()
-        return render(request, 'directores/institucional.html', {'error': str(e)})
+        return render(request, 'directores/institucional.html',
+            {'error': str(e),
+             'estado': estado,})
 
     conn_main.close()
 
@@ -211,7 +215,8 @@ def filtrar_tablas_view_directores(request):
         'tiene_bibliotecas': tiene_bibliotecas,
         'comun_primaria': comun_primaria,
         'comun_secundaria': comun_secundaria,
-        'privado': privado
+        'privado': privado,
+        'estado': estado,
     })
 
 @login_required

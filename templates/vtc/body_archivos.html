@@ -1,56 +1,190 @@
 {% extends 'superv/home.html' %}
-{% block body %}
-    <body class="hold-transition sidebar-mini layout-fixed">
-    <div class="wrapper">
-        <!-- Header -->
-        {% include 'vtc/header_archivos.html' %}
-        <!-- Sidebar -->
-        {% include 'vtc/sidebar_archivos.html' %}
-        <!-- Content -->
-        <div class="content-wrapper">
-            <div class="content-header">
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-sm-6">
-                            <h1 class="m-0 text-dark"> Bienvenido/a <small>{{ request.user.nombres }} {{ request.user.apellido }}</small></h1>
-                        </div>
-                        <div class="col-sm-6">
-                            <ol class="breadcrumb float-sm-right">
-                                <li class="breadcrumb-item"><a href="{% url 'archivos:portada_gestor' %}">Home</a></li>
-                                <li class="breadcrumb-item"><a href="{{ list_url }}">{{ entity }}</a></li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="content">
-                <div class="container-fluid">
-                    {% block content %}
+{% load static %}
 
-                    {% endblock %}
+{% block body %}
+<body class="hold-transition sidebar-mini layout-fixed">
+
+<div class="wrapper">
+
+    <!-- HEADER -->
+    {% include 'vtc/header_archivos.html' %}
+
+    <!-- SIDEBAR -->
+    {% include 'vtc/sidebar_archivos.html' %}
+
+    <!-- CONTENT -->
+    <div class="content-wrapper">
+
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row">
+
+                    <div class="col-sm-6">
+                        <h1 class="m-0 text-dark">
+                            Bienvenido/a <small>{{ request.user.nombres }} {{ request.user.apellido }}</small>
+                        </h1>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'archivos:portada_gestor' %}">Home</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{{ list_url }}">{{ entity }}</a>
+                            </li>
+                        </ol>
+                    </div>
+
                 </div>
             </div>
         </div>
-        <!-- Footer -->
-        {% include 'superv/footer.html' %}
-    </div>
-    <!-- Block javascript -->
-    {% block scripts %}{% endblock %}
 
-    <script>
-        {% if messages %}
-            var html = '<p>';
-            {% for message in messages %}
-                html += '{{ message }}<br>';
-            {% endfor %}
-            html += '</p>';
-            Swal.fire({
-                title: 'Error!',
-                html: html,
-                icon: 'error'
-            });
-        {% endif %}
-    </script>
-    </body>
+        <div class="content">
+            <div class="container-fluid">
+
+                {% block content %}
+
+                <!-- ========================= -->
+                <!-- 🔥 EJEMPLO LISTADO -->
+                <!-- ========================= -->
+
+                <div class="card">
+                    <div class="card-body">
+
+                        <h5>Listado CUEANEXOS</h5>
+
+                        <ul class="list-group">
+
+                            {% for a in anexos %}
+                            <li class="list-group-item">
+
+                                <a href="#"
+                                   class="cueanexo-link"
+                                   data-cueanexo="{{ a.cueanexo }}">
+                                    {{ a.cueanexo }}
+                                </a>
+
+                            </li>
+                            {% endfor %}
+
+                        </ul>
+
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR AJAX -->
+                <div id="matricula-container" class="mt-4"></div>
+
+                {% endblock %}
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    {% include 'superv/footer.html' %}
+
+</div>
+
+</body>
 {% endblock %}
 
+{% block scripts %}
+
+<script>
+const estado = {{ estado|default:"null"|safe }};
+
+/* =========================
+   🔥 RESTAURAR ESTADO
+========================= */
+if (estado) {
+
+    console.log("🔥 Restaurando estado gestor:", estado);
+
+    if (estado.scroll) {
+        window.scrollTo(0, estado.scroll);
+    }
+
+    if (estado.cueanexo) {
+        setTimeout(() => {
+            const el = document.querySelector(
+                `[data-cueanexo="${estado.cueanexo}"]`
+            );
+            if (el) el.click();
+        }, 400);
+    }
+}
+</script>
+
+<script>
+$(document).on('click', '.cueanexo-link', function(e) {
+    e.preventDefault();
+
+    const cueanexo = $(this).data('cueanexo');
+
+    /* =========================
+       🔥 GUARDAR ESTADO BACKEND
+    ========================= */
+    fetch("/guardar-estado/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken")
+        },
+        body: JSON.stringify({
+            url: window.location.pathname,
+            cueanexo: cueanexo,
+            scroll: window.scrollY
+        })
+    });
+
+    /* =========================
+       🔥 AJAX MATRÍCULA
+    ========================= */
+    $.ajax({
+        url: "{% url 'directores:matricula_uegp' %}",
+        data: { cueanexo: cueanexo },
+        type: "GET",
+        success: function(data) {
+
+            $("#matricula-container").html(data);
+
+            $("html, body").animate({
+                scrollTop: $("#matricula-container").offset().top
+            }, 500);
+
+        },
+        error: function() {
+            alert("Error al cargar matrícula");
+        }
+    });
+});
+
+/* =========================
+   🔑 CSRF TOKEN
+========================= */
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+</script>
+
+{% endblock %}

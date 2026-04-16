@@ -3,7 +3,10 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login
 from django.conf import settings
-
+from apps.usuarios.models import EstadoUsuario
+from typing import cast
+from apps.usuarios.models import UsuariosVisualizador
+from django.urls import resolve, reverse
 
 class LoginFormView(LoginView):
     template_name = 'login/login.html'
@@ -73,15 +76,40 @@ class LoginFormView(LoginView):
             return reverse(self.CATEGORY_REDIRECTS[categoria])
 
         return settings.LOGIN_REDIRECT_URL
-
+    
+    # =========================
+    # 🔥 LOGIN SUCCESS
+    # =========================
     def get_success_url(self):
-        user = self.request.user
+        request = self.request
+        user = request.user
 
         if not user.is_authenticated or not user.is_staff:
             return reverse('login')
+        
+        # =========================
+        # 🔥 RESTAURAR ESTADO
+        # =========================
+        estado_obj = getattr(user, "estado", None)
 
+        if estado_obj:
+            estado = estado_obj.data or {}
+            url = estado.get("url")
+
+            if url:
+                try:
+                    resolve(url)  
+                    request.session['estado_restaurar'] = estado
+                    return url
+                except:
+                    pass  
+
+        # 🎯 fallback normal
         return self.resolve_redirect_url(user)
-
+    
+    # =========================
+    # 🔥 FORM VALID
+    # =========================
     def form_valid(self, form):
         user = authenticate(
             username=form.cleaned_data['username'],
@@ -89,6 +117,7 @@ class LoginFormView(LoginView):
         )
 
         if user is not None:
+            user=form.get_user()
             login(self.request, user)
 
             if user.is_staff:

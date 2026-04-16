@@ -21,12 +21,37 @@ import qrcode
 from io import BytesIO
 from datetime import datetime
 from collections import defaultdict
+from apps.consultasge.models import CapaUnicaOfertas
+import re
+from django.db.models import F, Value, Func
 
 
 @login_required
 def generar_pdf_material_bibliografico(request):    
     
-    usuario =request.user.username
+    usuario_logueado = request.user.username
+    usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+    cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+        cuit_limpio=Func(
+            F('resploc_cuitcuil'),
+            Value('-'),
+            Value(''),
+            function='REPLACE'
+        )
+    ).filter(
+        cuit_limpio=usuario_limpio,
+        oferta='Común - Servicios complementarios ',
+        acronimo='BI'
+    ).values_list('cueanexo', flat=True)
+
+    cueanexos = list(cueanexos_qs)
+    print("CUEANEXOS encontrados:", cueanexos)
+    
+    if not cueanexos:
+        return HttpResponse("No se encontró cueanexo", status=400)
+
+    cueanexo = [str(c) for c in cueanexos]
     
     # Establecer la conexión a la base de datos padron
     try:
@@ -45,9 +70,9 @@ def generar_pdf_material_bibliografico(request):
     query = """SELECT categoria, jornada, oferta, nom_est, ref_loc, calle, numero, anexo, apellido_resp, nombre_resp, resploc_telefono, resploc_email,
             sup_tecnico, email_suptecnico, tel_suptecnico, cui_loc, cuof_loc, region_loc, localidad, acronimo_oferta
         FROM public.padron_ofertas        
-        WHERE cueanexo = %s and acronimo_oferta ilike %s"""
+        WHERE cueanexo = ANY(%s) and acronimo_oferta ilike %s"""
     
-    cursor.execute(query, (usuario,acronimo))
+    cursor.execute(query, (cueanexo,acronimo))
     datosbiblio = cursor.fetchall()
     print(datosbiblio)
     
@@ -75,33 +100,29 @@ def generar_pdf_material_bibliografico(request):
 #             MATERIAL BIBLIOGRAFICO               #
 ####################################################
     
-    ultimo_registro_mes = GenerarInforme.objects.filter(cueanexo=usuario).order_by('-id').first()
+    ultimo_registro_mes = GenerarInforme.objects.filter(cueanexo__in=cueanexo).order_by('-id').first()
+    print("Último registro:", ultimo_registro_mes)
+    
+    if not ultimo_registro_mes:
+        return HttpResponse("No hay registros", status=400)
+
+    mess=ultimo_registro_mes.meses
+    anios=ultimo_registro_mes.annos
+    
+    # Cambiar estado del último registro a ENVIADO    
     if ultimo_registro_mes:
-        mess = ultimo_registro_mes.meses
-    else:
-        mess = "Mes no disponible"
-        
-    ultimo_registro_anno = GenerarInforme.objects.filter(cueanexo=usuario).order_by('-id').first()
-    if ultimo_registro_anno:
-        anios = ultimo_registro_anno.annos
-    else:
-        anios = "Año no disponible"
+        ultimo_registro_mes.estado = 'ENVIADO'
+        ultimo_registro_mes.f_envio = datetime.now()  # Asigna la fecha y hora actual
+        ultimo_registro_mes.save()
     
-    # Cambiar estado del último registro a ENVIADO
-    ultimo_registro = GenerarInforme.objects.filter(cueanexo=usuario, meses=mess, annos=anios).order_by('-id').first()
-    if ultimo_registro:
-        ultimo_registro.estado = 'ENVIADO'
-        ultimo_registro.f_envio = datetime.now()  # Asigna la fecha y hora actual
-        ultimo_registro.save()
-    
-    turnos = MaterialBibliografico.objects.filter(cueanexo=usuario).select_related('turnos_id').values_list('turnos__nom_turno', flat=True).distinct()
+    turnos = MaterialBibliografico.objects.filter(cueanexo__in=cueanexo).select_related('turnos_id').values_list('turnos__nom_turno', flat=True).distinct()
       
     # Convertimos el QuerySet a una lista
     turnos_lista = list(turnos)
     
     # Preparar la respuesta PDF
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{usuario}-Material Bibliográfico y Especial.pdf"'    
+    response['Content-Disposition'] = f'attachment; filename="{cueanexo}-Material Bibliográfico y Especial.pdf"'    
     
     p = canvas.Canvas(response, pagesize=landscape(legal))
     p.setTitle('Planilla')
@@ -114,7 +135,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -147,7 +168,7 @@ def generar_pdf_material_bibliografico(request):
     for cat in service_categories:
         turnos = (
             MaterialBibliografico.objects.filter(servicio__cod_servicio=cat["cod_servicio"],
-                                                 cueanexo=usuario, mes=mess, anio=anios)
+                                                 cueanexo__in=cueanexo, mes=mess, anio=anios)
             .values_list("turnos__nom_turno", flat=True)
             .distinct()
         )
@@ -171,7 +192,7 @@ def generar_pdf_material_bibliografico(request):
                         MaterialBibliografico.objects.filter(
                             servicio__cod_servicio=cat["cod_servicio"],
                             t_material__nom_material__in=["PARTITURAS", "GRABACIONES"],
-                            turnos__nom_turno=turno, cueanexo=usuario, mes=mess, anio=anios
+                            turnos__nom_turno=turno, cueanexo__in=cueanexo, mes=mess, anio=anios
                         )
                         .aggregate(total=Sum("cantidad"))["total"] or 0
                     )
@@ -180,7 +201,7 @@ def generar_pdf_material_bibliografico(request):
                         MaterialBibliografico.objects.filter(
                             servicio__cod_servicio=cat["cod_servicio"],
                             t_material__nom_material=mat_type,
-                            turnos__nom_turno=turno, cueanexo=usuario, mes=mess, anio=anios
+                            turnos__nom_turno=turno, cueanexo__in=cueanexo, mes=mess, anio=anios
                         )
                         .aggregate(total=Sum("cantidad"))["total"] or 0
                     )
@@ -243,7 +264,7 @@ def generar_pdf_material_bibliografico(request):
     table.drawOn(p, 50, height - 315)
 
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Obtener el total de la columna Totales (última columna)
@@ -280,7 +301,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -305,13 +326,13 @@ def generar_pdf_material_bibliografico(request):
     total_t_general = 0
         
     
-    turnos_sref = ServicioReferencia.objects.filter(cueanexo=usuario).select_related('turnos_id').values_list('turnos__nom_turno', flat=True).distinct()
+    turnos_sref = ServicioReferencia.objects.filter(cueanexo__in=cueanexo).select_related('turnos_id').values_list('turnos__nom_turno', flat=True).distinct()
    
 
     for cat in service_categories:
         turnos_data = (
             ServicioReferencia.objects.filter(servicio__cod_servicio=cat["cod_servicio"],
-                    cueanexo=usuario, mes=mess, anio=anios)
+                    cueanexo__in=cueanexo, mes=mess, anio=anios)
             .values("turnos__nom_turno")  
             .annotate(total_v=Sum("varones"), total_t=Sum("total"))
         )
@@ -361,7 +382,7 @@ def generar_pdf_material_bibliografico(request):
         turnos_data = (
             ServicioReferenciaVirtual.objects.filter(
                 servicio__cod_servicio=cat["cod_servicio"],
-                cueanexo=usuario, mes=mess, anio=anios
+                cueanexo__in=cueanexo, mes=mess, anio=anios
             )
             .values("turnos__nom_turno")
             .annotate(total_v1=Sum("varones"), total_t1=Sum("total"))
@@ -456,7 +477,7 @@ def generar_pdf_material_bibliografico(request):
     table2.drawOn(p, 470, height - 220)  # Ajusta la posición según sea necesario
     
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     total_referencia = total_t_general 
@@ -610,11 +631,10 @@ def generar_pdf_material_bibliografico(request):
 
 ###########################################
 #          INFORME PEDAGÓGICO             #
-###########################################    
-        
+###########################################            
        
     # Obtener los datos desde el modelo InformePedagogico
-    datos = InformePedagogico.objects.filter(cueanexo=usuario, mes=mess, anio=anios).values(
+    datos = InformePedagogico.objects.filter(cueanexo__in=cueanexo, mes=mess, anio=anios).values(
         'servicio__nom_servicio', 
         'varones', 
         'total'
@@ -651,7 +671,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 12)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 12)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 11)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 12)
@@ -727,7 +747,7 @@ def generar_pdf_material_bibliografico(request):
     p.line(x_start, y_current, x_start + sum(col_widths), y_current)
 
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Obtener el total de la columna Totales (última columna)
@@ -769,7 +789,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -786,7 +806,7 @@ def generar_pdf_material_bibliografico(request):
     
     # Consultar la base de datos y sumar por nivel y tipo de usuario
     asistencia = (
-        AsistenciaUsuarios.objects.filter(cueanexo=usuario, mes=mess, anio=anios)
+        AsistenciaUsuarios.objects.filter(cueanexo__in=cueanexo, mes=mess, anio=anios)
         .values('nivel', 'usuario')  
         .annotate(
             total=Sum('total'),
@@ -879,7 +899,7 @@ def generar_pdf_material_bibliografico(request):
         table.drawOn(p, 50, y_position - (len(table_data) * 20))
 
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Obtener el total de la columna Totales (última columna)
@@ -911,7 +931,7 @@ def generar_pdf_material_bibliografico(request):
 ###################################################
             
     # Obtener datos de la base de datos
-    instituciones = list(InstitucionesPrestaServicios.objects.filter(cueanexo=usuario, mes=mess, anio=anios)
+    instituciones = list(InstitucionesPrestaServicios.objects.filter(cueanexo__in=cueanexo, mes=mess, anio=anios)
                      .values_list('escuela', 'matricula', 'docentes', 'matricdisc', 'etnia'))
     
         
@@ -921,7 +941,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -968,7 +988,7 @@ def generar_pdf_material_bibliografico(request):
 
     
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")    
       
      # Obtener el total de la columna Totales (última columna)
@@ -1004,7 +1024,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -1014,7 +1034,7 @@ def generar_pdf_material_bibliografico(request):
     p.drawString(550, height - 560, f"RESPONSABLE: {apellido_resp} {nombre_resp} - TEL: {resploc_telefono}")
     
     # Obtener datos desde la base de datos
-    registros = ProcesosTecnicos.objects.filter(cueanexo=usuario, mes=mess, anio=anios).values_list('material__nom_material', 'procesos', 'total')
+    registros = ProcesosTecnicos.objects.filter(cueanexo__in=cueanexo, mes=mess, anio=anios).values_list('material__nom_material', 'procesos', 'total')
 
     # Agrupar datos por material y procesos
     datos_agrupados = defaultdict(lambda: defaultdict(int))
@@ -1084,7 +1104,7 @@ def generar_pdf_material_bibliografico(request):
     
     
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Obtener el total de la columna Totales (última columna)
@@ -1117,7 +1137,7 @@ def generar_pdf_material_bibliografico(request):
     ##########################################
     
     # Obtener datos de la base de datos
-    aguapey = Aguapey.objects.filter(cueanexo=usuario, mes=mess, anio=anios).first()    
+    aguapey = Aguapey.objects.filter(cueanexo__in=cueanexo, mes=mess, anio=anios).first()    
     
     # Asignar valores por defecto si no hay datos
     total_mes = aguapey.total_mes if aguapey and aguapey.total_mes is not None else 0
@@ -1130,7 +1150,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -1194,7 +1214,7 @@ def generar_pdf_material_bibliografico(request):
     tabla3.drawOn(p, 100, height - 500)
     
     # Datos para el QR
-    cueanexo = usuario
+    cueanexo = cueanexo
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
     # Obtener el total de la columna Totales (última columna)
@@ -1248,7 +1268,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -1315,7 +1335,7 @@ def generar_pdf_material_bibliografico(request):
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
     p.setFont("Helvetica", 14)  
-    p.drawString(30, height - 55, f"CUE: {usuario} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
+    p.drawString(30, height - 55, f"CUE: {cueanexo} OFICINA: {cuof_loc} MES: {mess} AÑO: {anios}")
     p.setFont("Helvetica-Bold", 14)
     p.drawString(30, height - 70, f"BIBLIOTECA: {nom_est} MODALIDAD: {oferta}")
     p.setFont("Helvetica", 14)
@@ -1326,7 +1346,7 @@ def generar_pdf_material_bibliografico(request):
     
 
     # Obtener registros del modelo
-    registros = BibliotecariosCue.objects.filter(cueanexo=usuario, mes=mess, anio=anios)
+    registros = BibliotecariosCue.objects.filter(cueanexo__in=cueanexo, mes=mess, anio=anios)
 
     encabezado = [
         ["13. - DATOS DE BIBLIOTECARIOS"],
@@ -1374,7 +1394,7 @@ def generar_pdf_material_bibliografico(request):
     # Generar código QR
     fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     total_bibliotecarios = len(registros)
-    qr_data = f"CUE: {usuario}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\n" \
+    qr_data = f"CUE: {cueanexo}\nMes: {mess}\nAño:{anios}\nFecha de generación: {fecha_generacion}\n" \
               f"Planilla: 7. DATOS DE BIBLIOTECARIOS\nTotal registros: {total_bibliotecarios}\n" \
               f"Responsable: {apellido_resp} {nombre_resp}"
 
@@ -1412,7 +1432,7 @@ def generar_pdf_material_bibliografico(request):
         p.drawString(30, y_position, "ESTADÍSTICA DE SERVICIOS BIBLIOTECARIOS - MENSUAL")
         y_position -= 20
         
-        p.drawString(30, y_position, f"CUE: {usuario}   OFICINA: {cuof_loc}   MES: {mess}   AÑO: {anios}")
+        p.drawString(30, y_position, f"CUE: {cueanexo}   OFICINA: {cuof_loc}   MES: {mess}   AÑO: {anios}")
         y_position -= 15
         p.drawString(30, y_position, f"BIBLIOTECA: {nom_est}   MODALIDAD: {oferta}")
         y_position -= 15
@@ -1430,7 +1450,7 @@ def generar_pdf_material_bibliografico(request):
     for nombre, rango in agrupamientos.items():
         registros = (
             PlanillasAnexas.objects
-            .filter(cueanexo=usuario,mes=mess, anio=anios, servicio__cod_servicio__in=rango)
+            .filter(cueanexo__in=cueanexo,mes=mess, anio=anios, servicio__cod_servicio__in=rango)
             .values("servicio__nom_servicio")
             .annotate(total_cantidad=Sum("cantidad"))
         )
@@ -1482,7 +1502,7 @@ def generar_pdf_material_bibliografico(request):
         
         
         # Datos para el QR
-        cueanexo = usuario
+        cueanexo = cueanexo
         fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Obtener el total de la columna Totales (última columna)

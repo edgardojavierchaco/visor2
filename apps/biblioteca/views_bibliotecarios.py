@@ -300,8 +300,9 @@ class BibliotecariosCueListView(LoginRequiredMixin, ListView):
         context['create_url'] = reverse_lazy('bibliotecas:bibliotecario_create')
         context['list_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
         context['update_url'] = reverse_lazy('bibliotecas:bibliotecario_update', args=[0])
-        context['hide_lock_button'] = False      
+        context['hide_lock_button'] = True      
         context['generar_pdf_button'] = False
+        context['generar_pdf_url'] = reverse_lazy('bibliotecas:generar_pdf')
         context['entity'] = 'Personal'
         return context
         

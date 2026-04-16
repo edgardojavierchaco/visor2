@@ -236,10 +236,16 @@ class MaterialBibliograficoListView(LoginRequiredMixin, ListView):
 
         if not cueanexo:
             return MaterialBibliografico.objects.none()
+        
+        anio = self.request.GET.get('anio')
+        mes = self.request.GET.get('mes')
 
         qs = MaterialBibliografico.objects.filter(
-            cueanexo=cueanexo
-        ).order_by('-anio', '-mes')[:1]  # 🔥 último registro
+            cueanexo=cueanexo)
+        
+        if anio and mes:
+            qs = qs.filter(anio=anio, mes=mes
+        ).order_by('-anio', '-mes')
 
         print("Último material:", qs)
         return qs

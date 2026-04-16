@@ -2,11 +2,10 @@
 {% load static %}
 
 {% block head %}
-<!-- Bootstrap Icons -->
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
 <style>
-/* Contenedor flotante de notificaciones */
 .messaging-container {
     position: fixed;
     top: 80px;
@@ -22,20 +21,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     color: white;
     cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
-.messaging-float:hover {
-    transform: scale(1.08);
-}
+.messaging-float:hover { transform: scale(1.08); }
 
-.messaging-icon {
-    font-size: 24px;
-}
+.messaging-icon { font-size: 24px; }
 
 .messaging-badge {
     position: absolute;
@@ -46,7 +39,6 @@
     font-size: 11px;
     padding: 4px 8px;
     border-radius: 50px;
-    font-weight: 600;
     min-width: 20px;
     text-align: center;
     box-shadow: 0 0 0 2px white;
@@ -60,24 +52,44 @@
     }
 }
 
+.pulse-danger {
+    animation: pulse-alert 1.8s infinite;
+}
+
 @keyframes pulse-alert {
     0% { box-shadow: 0 0 0 0 rgba(220,53,69, 0.7); }
     70% { box-shadow: 0 0 0 15px rgba(220,53,69, 0); }
     100% { box-shadow: 0 0 0 0 rgba(220,53,69, 0); }
 }
-
-.pulse-danger {
-    animation: pulse-alert 1.8s infinite;
-}
 </style>
+
+<script>
+function guardarEstadoGlobal(extra = {}) {
+    fetch("/guardar-estado/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]')?.value
+        },
+        body: JSON.stringify({
+            url: window.location.pathname,
+            full_url: window.location.href,
+            scroll: window.scrollY,
+            ...extra
+        })
+    });
+}
+</script>
+
 {% endblock %}
 
 {% block content %}
 
-<!-- MENÚ FLOTANTE DE CONSULTAS -->
+<!-- MENÚ FLOTANTE -->
 <div class="messaging-container">
     <div class="dropdown">
         <button id="floatBtn"
+                onclick="guardarEstadoGlobal({ modulo: 'consultas' })"
                 class="messaging-float dropdown-toggle
                 {% if float_vencidas > 0 %}
                     bg-danger pulse-danger
@@ -86,10 +98,10 @@
                 {% else %}
                     bg-success
                 {% endif %}"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-                title="Cargando...">
+                data-bs-toggle="dropdown">
+
             <i class="bi bi-chat-dots-fill messaging-icon"></i>
+
             <span id="floatBadge"
                   class="messaging-badge"
                   {% if float_total_activas == 0 %}style="display:none;"{% endif %}>
@@ -99,13 +111,15 @@
 
         <ul class="dropdown-menu dropdown-menu-end shadow p-3" style="width:260px;">
             <li><strong>Resumen de consultas</strong></li>
-            <li><hr class="dropdown-divider"></li>
+            <li><hr></li>
             <li>Pendientes: <span id="resPend">{{ float_pendientes }}</span></li>
             <li>En proceso: <span id="resProceso">{{ float_en_proceso }}</span></li>
-            <li>Vencidas: <span id="resVencidas" class="text-danger">{{ float_vencidas }}</span></li>
-            <li><hr class="dropdown-divider"></li>
-            <li class="text-center">
-                <a href="{% url 'consultasge:consultas_lista' %}" class="btn btn-sm btn-primary w-100">
+            <li>Vencidas: <span id="resVencidas">{{ float_vencidas }}</span></li>
+            <li><hr></li>
+            <li>
+                <a href="{% url 'consultasge:consultas_lista' %}"
+                   onclick="guardarEstadoGlobal({ modulo: 'consultas_lista' })"
+                   class="btn btn-primary btn-sm w-100">
                    Ver todas
                 </a>
             </li>
@@ -113,40 +127,35 @@
     </div>
 </div>
 
-<!-- TOAST PARA NUEVAS CONSULTAS -->
-<div class="position-fixed top-0 end-0 p-3" style="z-index: 11000">
-    <div id="consultaToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+<!-- TOAST -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index:11000">
+    <div id="consultaToast" class="toast text-bg-primary border-0">
         <div class="d-flex">
-            <div class="toast-body" id="toastMessage">
-                Nueva consulta recibida
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <div class="toast-body" id="toastMessage">Nueva consulta</div>
+            <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
-<!-- SONIDO DE ALERTA -->
 <audio id="alertSound">
-    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
 </audio>
 
 {% endblock %}
 
 {% block scripts %}
+
 <script>
 let ultimoTotal = {{ float_total_activas|default:0 }};
 
 function actualizarNotificaciones() {
     fetch("{% url 'consultasge:notificaciones_consultas' %}")
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
+
             const btn = document.getElementById("floatBtn");
             const badge = document.getElementById("floatBadge");
-            const toastEl = document.getElementById("consultaToast");
-            const toastMsg = document.getElementById("toastMessage");
-            const sound = document.getElementById("alertSound");
 
-            // Actualizar badge
             if (data.activas > 0) {
                 badge.style.display = "inline-block";
                 badge.innerText = data.activas;
@@ -154,41 +163,48 @@ function actualizarNotificaciones() {
                 badge.style.display = "none";
             }
 
-            // Cambiar colores del botón
             btn.classList.remove("bg-danger","bg-warning","bg-success","pulse-danger");
-            if (data.vencidas > 0) {
-                btn.classList.add("bg-danger","pulse-danger");
-                if (data.activas > ultimoTotal) sound.play();
-            } else if (data.activas > 0) {
-                btn.classList.add("bg-warning");
-            } else {
-                btn.classList.add("bg-success");
-            }
 
-            // Actualizar resumen
+            if (data.vencidas > 0) btn.classList.add("bg-danger","pulse-danger");
+            else if (data.activas > 0) btn.classList.add("bg-warning");
+            else btn.classList.add("bg-success");
+
             document.getElementById("resPend").innerText = data.pendientes;
             document.getElementById("resProceso").innerText = data.en_proceso;
             document.getElementById("resVencidas").innerText = data.vencidas;
 
-            // Tooltip dinámico
-            let mensaje = data.vencidas > 0 ? `${data.vencidas} consulta(s) vencida(s)` :
-                          data.activas > 0 ? `${data.activas} consulta(s) activa(s)` :
-                          "Sin consultas pendientes";
-            btn.setAttribute("title", mensaje);
-
-            // Mostrar toast si hay nuevas consultas
             if (data.activas > ultimoTotal) {
-                toastMsg.innerText = "📩 Nueva consulta recibida";
-                new bootstrap.Toast(toastEl).show();
+                new bootstrap.Toast(document.getElementById("consultaToast")).show();
             }
 
             ultimoTotal = data.activas;
         });
 }
 
-// Primera actualización
 actualizarNotificaciones();
-// Cada 30 segundos
 setInterval(actualizarNotificaciones, 30000);
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    document.querySelectorAll("aside a, .sidebar a, nav a").forEach(link => {
+
+        link.addEventListener("click", function () {
+
+            const href = this.getAttribute("href");
+
+            if (!href || href.startsWith("#")) return;
+
+            guardarEstadoGlobal({
+                destino: href
+            });
+
+        });
+
+    });
+
+});
+</script>
+
 {% endblock %}

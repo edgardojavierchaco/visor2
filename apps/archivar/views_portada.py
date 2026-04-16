@@ -23,8 +23,10 @@ def DepGestorPortada(request):
     Returns:
         HttpResponse: La respuesta renderizada con la plantilla de portada.
     """
+    estado = request.session.pop('estado_restaurar', None)
     
-    return render(request, 'archivos/base/dashboard.html')
+    return render(request, 'archivos/base/dashboard.html',
+        {'estado': estado})
 
 
 @cache_control(no_cache=True, must_revalidate=True)

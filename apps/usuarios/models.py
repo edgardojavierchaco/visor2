@@ -288,3 +288,23 @@ class PasswordChangeLog(models.Model):
     ip = models.GenericIPAddressField()
     user_agent = models.TextField()
     tipo = models.CharField(max_length=20)  # reset / manual
+    
+
+# --------------------------
+# Estado persistente del usuario
+# --------------------------
+class EstadoUsuario(models.Model):
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='estado'
+    )
+
+    data = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'usuarios_estado'
+
+    def __str__(self):
+        return f"Estado de {self.usuario.username}"

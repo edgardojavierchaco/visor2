@@ -5,39 +5,84 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
+
     <link rel="icon" href="{% static 'img/logoEstMini.png' %}" type="image/png"/>
     <title>{{ title }}</title>
-    <!-- Font Awesome Icons -->
+
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'lib/AdminLTE-3.0.4/plugins/fontawesome-free/css/all.min.css' %}">
-    <!-- Theme style -->
+    <!-- AdminLTE -->
     <link rel="stylesheet" href="{% static 'lib/AdminLTE-3.0.4/dist/css/adminlte.min.css' %}">
-    <!-- Google Font: Source Sans Pro -->
+    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
-    <!-- jQuery -->
+
+    <!-- JS -->
     <script src="{% static 'lib/AdminLTE-3.0.4/plugins/jquery/jquery.min.js' %}"></script>
-    <!-- Bootstrap 4 -->
     <script src="{% static 'lib/AdminLTE-3.0.4/plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <!-- AdminLTE App -->
     <script src="{% static 'lib/AdminLTE-3.0.4/dist/js/adminlte.min.js' %}"></script>
-    <!-- Sweetalert2 -->
+
+    <!-- Extras -->
     <script src="{% static 'lib/sweetalert2/sweetalert2.all.min.js' %}"></script>
-    <!-- Jquery Confirm -->
     <link rel="stylesheet" href="{% static 'lib/jquery-confirm-v3.3.4/jquery-confirm.min.css' %}">
     <script src="{% static 'lib/jquery-confirm-v3.3.4/jquery-confirm.min.js' %}"></script>
-    <!-- My css -->
+
     <link rel="stylesheet" href="{% static 'superv/mystyle.css' %}">
-    <!-- Functions -->
     <script src="{% static 'superv/functions.js' %}"></script>
-    <!-- Block head -->
-    {% block head %}    {% endblock %}
+
+    {% block head %}{% endblock %}
 </head>
+
 <body class="hold-transition sidebar-mini layout-fixed">
 
+<!-- 🔥 ESTADO GLOBAL DEL SISTEMA -->
+<script>
+    const estado = {{ estado|default:"null"|safe }};
+
+    $(document).ready(function () {
+
+        if (!estado) return;
+
+        console.log("🔥 Restaurando estado global:", estado);
+
+        // ================================
+        // 📌 SIDEBAR (colapsado o abierto)
+        // ================================
+        if (estado.sidebar === "collapsed") {
+            $('body').addClass('sidebar-collapse');
+        }
+
+        // ================================
+        // 📌 MENÚ ACTIVO
+        // ================================
+        if (estado.menu) {
+            $('.nav-link').each(function () {
+                if ($(this).data('menu') === estado.menu) {
+                    $(this).addClass('active');
+                }
+            });
+        }
+
+        // ================================
+        // 📌 ÚLTIMA URL (opcional debug)
+        // ================================
+        if (estado.url) {
+            console.log("Última URL:", estado.url);
+        }
+
+        // ================================
+        // 📌 SCROLL GLOBAL
+        // ================================
+        if (estado.scroll) {
+            window.scrollTo(0, estado.scroll);
+        }
+
+    });
+</script>
+
 {% block body %}
-<!-- 🔥 ACÁ VIVE TODO EL CONTENIDO -->
+<!-- 🔥 CONTENIDO PRINCIPAL -->
 {% endblock %}
 
-<!-- 🔥 ACÁ VAN LOS SCRIPTS (IMPORTANTE) -->
 {% block scripts %}{% endblock %}
 
 </body>
