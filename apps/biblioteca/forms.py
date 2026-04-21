@@ -36,8 +36,6 @@ class MaterialBibliograficoForm(forms.ModelForm):
                 
                 self.fields['cantidad'].required = True
         
-        
-        
 
 # Formulario para ServicioReferencia
 class ServicioReferenciaForm(forms.ModelForm):
@@ -67,7 +65,19 @@ class ServicioReferenciaForm(forms.ModelForm):
         # Hacer que los campos sean obligatorios
         self.fields['varones'].required = True
         self.fields['total'].required = True
-    
+
+    def clean(self):
+        cleaned_data = super().clean()
+        varones = cleaned_data.get('varones')
+        total = cleaned_data.get('total')
+
+        # Validar que el total no sea menor que varones
+        if varones is not None and total is not None and total < varones:
+            self.add_error('total', 'El Total no puede ser menor que Varones.')
+            raise ValidationError("Corrige los errores antes de continuar.")  # Evita que el formulario se guarde
+
+        return cleaned_data
+        
         
 # Formulario para ServicioReferenciaVirtual
 class ServicioReferenciaVirtualForm(forms.ModelForm):
@@ -97,7 +107,18 @@ class ServicioReferenciaVirtualForm(forms.ModelForm):
                 self.fields['varones'].required = True
                 self.fields['total'].required = True
 
-        
+        def clean(self):
+                cleaned_data = super().clean()
+
+                # Obtener los valores de 'varones' y 'total' para validar
+                varones = cleaned_data.get('varones')
+                total = cleaned_data.get('total')
+
+                # Validar que el total no sea menor que varones
+                if varones is not None and total is not None and total < varones:
+                        self.add_error('total', 'El Total no puede ser menor que Varones.')
+
+                return cleaned_data
 
 # Formulario para ServicioPrestamo
 class ServicioPrestamoForm(forms.ModelForm):
@@ -152,7 +173,19 @@ class InformePedagogicoForm(forms.ModelForm):
                 self.fields['varones'].required = True
                 self.fields['total'].required = True
 
-        
+        def clean(self):
+                cleaned_data = super().clean()
+
+                # Obtener los valores de 'varones' y 'total' para validar
+                varones = cleaned_data.get('varones')
+                total = cleaned_data.get('total')
+
+                # Validar que el total no sea menor que varones
+                if varones is not None and total is not None and total < varones:
+                        self.add_error('total', 'El Total no puede ser menor que Varones.')
+
+                return cleaned_data
+
 
 # Formulario para AsistenciaUsuarios
 class AsistenciaUsuariosForm(forms.ModelForm):
@@ -181,7 +214,18 @@ class AsistenciaUsuariosForm(forms.ModelForm):
                 self.fields['varones'].required = True
                 self.fields['total'].required = True
 
-        
+        def clean(self):
+                cleaned_data = super().clean()
+
+                # Obtener los valores de 'varones' y 'total' para validar
+                varones = cleaned_data.get('varones')
+                total = cleaned_data.get('total')
+
+                # Validar que el total no sea menor que varones
+                if varones is not None and total is not None and total < varones:
+                        self.add_error('total', 'El Total no puede ser menor que Varones.')
+
+                return cleaned_data
 
 # Formulario para InstitucionesPrestaServicios
 class InstitucionesPrestaServiciosForm(forms.ModelForm):
