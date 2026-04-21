@@ -1,25 +1,76 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
-{% block head_list %}
-    <script src="{% static 'biblioteca/pem/fondos/js/registro_list.js' %}"></script>
-{% endblock %}
+{% block content %}
+<h2>Listado de Destino de Fondos</h2>
 
-{% block columns %}
+<table id="tabla" class="table table-bordered table-striped">
     <thead>
         <tr>
-            <th scope="col" style="width: 15%;">CUEANEXO</th>
-            <th scope="col" style="width: 15%;">MES</th>
-            <th scope="col" style="width: 10%;">AÑO</th>                       
-            <th scope="col" style="width: 20%;">DESTINO</th>   
-            <th scope="col" style="width: 10%;">DESCRIPCION</th>         
-            <th scope="col" style="width: 10%;">Acciones</th>
+            <th>CUEANEXO</th>
+            <th>MES</th>
+            <th>AÑO</th>
+            <th>DESTINO</th>
+            <th>CANTIDAD</th>
+            <th>DESCRIPCIÓN</th>
+            <th>ACCIONES</th>
         </tr>
     </thead>
-    <tbody>
-        <!-- Se cargan los datos vía AJAX -->
-    </tbody>
-    <tfoot>
-        
-    </tfoot>
+    <tbody></tbody>
+</table>
+
+<!-- LIBS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script>
+let tabla = $('#tabla').DataTable({
+    ajax: {
+        url: "{{ list_url }}",
+        type: "GET",
+        dataSrc: "data"
+    },
+    columns: [
+        { data: "cueanexo" },
+        { data: "mes" },
+        { data: "anio" },
+        { data: "destino" },
+        { data: "cantidad" },
+        { data: "descripcion" },
+        {
+            data: "id",
+            render: function (data) {
+                return `
+                    <button class="btn btn-danger btn-sm eliminar" data-id="${data}">
+                        Eliminar
+                    </button>
+                `;
+            }
+        }
+    ]
+});
+
+// =======================
+// ELIMINAR (AJAX)
+// =======================
+$('#tabla tbody').on('click', '.eliminar', function () {
+
+    let id = $(this).data('id');
+
+    if (!confirm("¿Eliminar registro?")) return;
+
+    fetch(`/bibliotecas/regfondos/delete/${id}/`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(() => {
+        tabla.ajax.reload();
+    });
+});
+</script>
+
 {% endblock %}

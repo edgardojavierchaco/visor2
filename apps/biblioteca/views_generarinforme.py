@@ -33,7 +33,7 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
 
         context['cueanexo_usuario'] = cueanexo_qs.first() if cueanexo_qs.exists() else ''
@@ -56,7 +56,7 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)  # Convertir a lista para manejarlo

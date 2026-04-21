@@ -48,7 +48,7 @@ def modal_generar_pdf_cuemesanio_uno(request):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
     cueanexo=cueanexo_qs.first() if cueanexo_qs.exists() else None

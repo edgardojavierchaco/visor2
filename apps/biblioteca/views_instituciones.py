@@ -39,7 +39,7 @@ class InstitucionesCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -91,7 +91,7 @@ class InstitucionesCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)    
         
         context['title'] = 'Carga de Instituciones Presta Servicios'
@@ -166,7 +166,7 @@ class InstitucionesUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)    
         
         context['title'] = 'Edición de Instituciones'
@@ -239,7 +239,7 @@ class InstitucionesListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -275,6 +275,7 @@ class InstitucionesListView(LoginRequiredMixin, ListView):
         context['entity'] = 'Instituciones'
         context['hide_lock_button'] = False      
         context['generar_pdf_button'] = True,  
+        context['before_url'] = reverse_lazy('bibliotecas:asistusua_list')
         context['next_url'] = reverse_lazy('bibliotecas:proctec_create')
         return context
 

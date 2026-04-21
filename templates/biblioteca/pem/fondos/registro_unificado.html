@@ -1,0 +1,202 @@
+{% extends 'biblioteca/layout.html' %}
+{% load widget_tweaks %}
+
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div class="card card-primary">
+
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+    </div>
+
+    <div class="card-body">
+
+        <div class="form-group">
+            <label>Agregar destino</label>
+            <select id="select-destino" class="form-control select2">
+                <option value="">-- Seleccionar --</option>
+                {% for item in destino %}
+                    <option value="{{ item.id }}" data-nombre="{{ item.nom_fondo }}">
+                        {{ item.nom_fondo }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <table id="tabla" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Destino</th>
+                    <th>Cantidad</th>
+                    <th>Descripción</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script>
+$(function () {
+
+    $('.select2').select2();
+
+    // =========================
+    // OPCIONES SELECT (evita loop Django+JS)
+    // =========================
+    let destinosOptions = `{% for item in destino %}<option value="{{ item.id }}">{{ item.nom_fondo }}</option>{% endfor %}`;
+
+    let table; // 🔥 IMPORTANTE: declarar primero
+
+    // =========================
+    // DATA TABLE
+    // =========================
+    table = $('#tabla').DataTable({
+        ajax: {
+            url: "{{ list_url }}",
+            dataSrc: "data"
+        },
+
+        columns: [
+            {
+                data: "destino",
+                render: function (d, t, r) {
+                    return `
+                        <select class="form-control destino" data-id="${r.id}">
+                            ${destinosOptions}
+                        </select>
+                    `;
+                }
+            },
+            {
+                data: "cantidad",
+                render: function (d, t, r) {
+                    return `<input type="number" class="form-control cantidad" value="${d}" data-id="${r.id}">`;
+                }
+            },
+            {
+                data: "descripcion",
+                render: function (d, t, r) {
+                    return `<input type="text" class="form-control descripcion" value="${d || ''}" data-id="${r.id}">`;
+                }
+            },
+            {
+                data: null,
+                render: function (d, t, r) {
+                    return `
+                        <button class="btn btn-danger eliminar" data-id="${r.id}">
+                            X
+                        </button>
+                    `;
+                }
+            }
+        ]
+    });
+
+    // =========================
+    // SETEAR SELECT DESPUÉS DE RENDER
+    // =========================
+    $('#tabla').on('draw.dt', function () {
+
+        $('#tabla tbody tr').each(function () {
+
+            let row = table.row(this).data();
+
+            if (!row) return;
+
+            $(this).find('.destino').val(row.destino_id);
+
+        });
+
+    });
+
+    // =========================
+    // CREATE
+    // =========================
+    $('#select-destino').change(function () {
+
+        let id = $(this).val();
+        if (!id) return;
+
+        $.post(window.location.pathname, {
+            action: "create",
+            destino_id: id,
+            cantidad: 1,
+            descripcion: ""
+        }, function () {
+            table.ajax.reload();
+        });
+
+    });
+
+    // =========================
+    // UPDATE cantidad
+    // =========================
+    $('#tabla').on('change', '.cantidad', function () {
+
+        $.post(window.location.pathname, {
+            action: "update",
+            id: $(this).data('id'),
+            cantidad: $(this).val()
+        });
+
+    });
+
+    // =========================
+    // UPDATE descripción
+    // =========================
+    $('#tabla').on('change', '.descripcion', function () {
+
+        $.post(window.location.pathname, {
+            action: "update",
+            id: $(this).data('id'),
+            descripcion: $(this).val()
+        });
+
+    });
+
+    // =========================
+    // UPDATE destino
+    // =========================
+    $('#tabla').on('change', '.destino', function () {
+
+        $.post(window.location.pathname, {
+            action: "update",
+            id: $(this).data('id'),
+            destino_id: $(this).val()
+        });
+
+    });
+
+    // =========================
+    // DELETE
+    // =========================
+    $('#tabla').on('click', '.eliminar', function () {
+
+        $.post(window.location.pathname, {
+            action: "delete",
+            id: $(this).data('id')
+        }, function () {
+            table.ajax.reload();
+        });
+
+    });
+
+});
+</script>
+
+{% endblock %}

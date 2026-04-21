@@ -39,7 +39,7 @@ class ProcTecCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -84,7 +84,7 @@ class ProcTecCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)       
         
         context['title'] = 'Carga de Procesos Técnicos'
@@ -152,7 +152,7 @@ class ProcTecUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)       
         
         context['title'] = 'Edición de Procesos Técnicos'
@@ -214,7 +214,7 @@ class ProcTecListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)       
         
         serviciosref = ProcesosTecnicos.objects.filter(cueanexo=cueanexo_qs.first() if cueanexo_qs.exists() else None)
@@ -248,6 +248,7 @@ class ProcTecListView(LoginRequiredMixin, ListView):
         context['update_url'] = reverse_lazy('bibliotecas:proctec_update', args=[0]) 
         context['hide_lock_button'] = False    
         context['generar_pdf_button'] = True,  
+        context['before_url'] = reverse_lazy('bibliotecas:instituciones_list')
         context['next_url'] = reverse_lazy('bibliotecas:aguapey_create')
         context['entity'] = 'Asistencia'
         return context

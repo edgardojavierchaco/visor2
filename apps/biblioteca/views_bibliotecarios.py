@@ -39,7 +39,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)        
@@ -99,7 +99,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)  
         
         cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
@@ -190,7 +190,7 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)          
     
         context['title'] = 'Editar Bibliotecario'
@@ -266,7 +266,7 @@ class BibliotecariosCueListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)

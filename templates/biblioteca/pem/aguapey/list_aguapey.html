@@ -1,36 +1,32 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
-{% block head_list %}
-    <script src="{% static 'biblioteca/pem/aguapey/js/list.js' %}"></script>
+{% block columns %}
+<tr>
+    <th>CUEANEXO</th>
+    <th>MES</th>
+    <th>AÑO</th>
+    <th>TOTAL MES</th>
+    <th>TOTAL BASE</th>
+    <th>TOTAL USUARIOS</th>
+    <th>OBSERVACIONES</th>
+    <th>BOTONES</th>
+</tr>
 {% endblock %}
 
-{% block columns %}
-   <thead>
-        <tr>
-            <th scope="col" style="width: 15%;">CUEANEXO</th>
-            <th scope="col" style="width: 15%;">MES</th>
-            <th scope="col" style="width: 10%;">AÑO</th>
-            <th scope="col" style="width: 15%;">TOTAL MES</th>            
-            <th scope="col" style="width: 20%;">TOTAL BASE</th>  
-            <th scope="col" style="width: 20%;">TOTAL USUARIOS</th>  
-            <th scope="col" style="width: 20%;">OBSERVACIONES</th>               
-            <th scope="col" style="width: 20%;">Botones</th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Se cargan los datos vía AJAX -->
-    </tbody>
-    <tfoot>
-        <tr>
-            <th colspan="5" class="text-right">Total:</th>
-            <th id="totalmes">0</th>
-            <th id="totalbase">0</th>
-            <th></th>
-        </tr>
-    </tfoot> 
+{% block footer %}
+<tr>
+    <th></th> <!-- CUEANEXO -->
+    <th></th> <!-- MES -->
+    <th class="text-end">Totales:</th> <!-- AÑO -->
+    <th>0</th> <!-- TOTAL MES -->
+    <th>0</th> <!-- TOTAL BASE -->
+    <th>0</th> <!-- TOTAL USUARIOS -->
+    <th></th> <!-- OBS -->
+    <th></th> <!-- BOTONES -->
+</tr>
 {% endblock %}
 
 {% block javascript %}
-
+<script src="{% static 'biblioteca/pem/aguapey/js/list.js' %}"></script>
 {% endblock %}

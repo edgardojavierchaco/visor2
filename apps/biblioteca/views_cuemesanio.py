@@ -632,6 +632,8 @@ def generar_pdf_cuemesanio(request):
         paragraph.wrapOn(p, width, height)
         paragraph.drawOn(p, x, y)
 
+    p.setPageSize(landscape(legal))
+    
     # Agregar encabezados estáticos
     p.setFont("Helvetica-Bold", 12)
     p.drawString(30, height - 40, "ESTADISTICA DE SERVICIOS BIBLIOTECARIOS-MENSUAL-")  
@@ -871,7 +873,8 @@ def generar_pdf_cuemesanio(request):
         ["INSTITUCIÓN EDUCATIVA", "MATRÍCULA ESCOLAR", "DOCENTES", 
          "CON DISCAPACIDAD", "ALGUNA ETNIA"]
     ]
-
+    y_position = y_start - 20
+    
     # Agregar datos de la base de datos a la tabla
     if instituciones:
         data.extend(instituciones)
@@ -897,8 +900,11 @@ def generar_pdf_cuemesanio(request):
     table.setStyle(style)
 
     # Dibujar la tabla en el PDF
-    table.wrapOn(p, width, height)
-    table.drawOn(p, 50, y_position - len(table_data)*20)
+    table_width, table_height = table.wrap(0, 0)
+
+    y_position = height - 140
+
+    table.drawOn(p, 50, y_position - table_height)
 
     p.showPage()
     

@@ -35,6 +35,11 @@
 
                 {% endblock %}
                 </tbody>
+                <tfoot>
+                {% block footer %}
+                
+                {% endblock %}
+            </tfoot>
             </table>
         </div>
         <div class="card-footer">
@@ -42,12 +47,17 @@
                 <a href="{{ create_url }}" class="btn btn-primary btn-flat btnTest">
                     <i class="fas fa-plus"></i> Nuevo registro
                 </a>
-                <a href="{{ list_url }}" class="btn btn-success btn-flat">
-                    <i class="fas fa-sync"></i> Actualizar
-                </a>
+                <a href="{{ list_url }}" class="btn btn-warning btn-flat">
+                    <i class="fas fa-sync-alt fa-spin"></i> Actualizar
+                </a>                
+                {% if not hide_lock_button %}                                   
+                    <a href="{{ before_url }}" class="btn btn-success btn-flat">
+                        <i class="fas fa-arrow-left"></i> Anterior
+                    </a>
+                {% endif %}
                 {% if not hide_lock_button %}                                   
                     <a href="{{ next_url }}" class="btn btn-danger btn-flat">
-                        <i class="fas fa-lock"></i> Siguiente
+                        <i class="fas fa-arrow-right"></i> Siguiente
                     </a>
                 {% endif %}
                 {% if not generar_pdf_button %}                                   

@@ -29,12 +29,14 @@ class MaterialBibliograficoForm(forms.ModelForm):
                 'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'max_length':'3',
                         'style': 'width: 100px; text-align: center;' }),
                 }
-    
+            
         def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(cod_servicio__range=(110,113))
                 
                 self.fields['cantidad'].required = True
+        
+        
         
 
 # Formulario para ServicioReferencia
@@ -65,19 +67,7 @@ class ServicioReferenciaForm(forms.ModelForm):
         # Hacer que los campos sean obligatorios
         self.fields['varones'].required = True
         self.fields['total'].required = True
-
-    def clean(self):
-        cleaned_data = super().clean()
-        varones = cleaned_data.get('varones')
-        total = cleaned_data.get('total')
-
-        # Validar que el total no sea menor que varones
-        if varones is not None and total is not None and total < varones:
-            self.add_error('total', 'El Total no puede ser menor que Varones.')
-            raise ValidationError("Corrige los errores antes de continuar.")  # Evita que el formulario se guarde
-
-        return cleaned_data
-        
+    
         
 # Formulario para ServicioReferenciaVirtual
 class ServicioReferenciaVirtualForm(forms.ModelForm):
@@ -107,18 +97,7 @@ class ServicioReferenciaVirtualForm(forms.ModelForm):
                 self.fields['varones'].required = True
                 self.fields['total'].required = True
 
-        def clean(self):
-                cleaned_data = super().clean()
-
-                # Obtener los valores de 'varones' y 'total' para validar
-                varones = cleaned_data.get('varones')
-                total = cleaned_data.get('total')
-
-                # Validar que el total no sea menor que varones
-                if varones is not None and total is not None and total < varones:
-                        self.add_error('total', 'El Total no puede ser menor que Varones.')
-
-                return cleaned_data
+        
 
 # Formulario para ServicioPrestamo
 class ServicioPrestamoForm(forms.ModelForm):
@@ -173,19 +152,7 @@ class InformePedagogicoForm(forms.ModelForm):
                 self.fields['varones'].required = True
                 self.fields['total'].required = True
 
-        def clean(self):
-                cleaned_data = super().clean()
-
-                # Obtener los valores de 'varones' y 'total' para validar
-                varones = cleaned_data.get('varones')
-                total = cleaned_data.get('total')
-
-                # Validar que el total no sea menor que varones
-                if varones is not None and total is not None and total < varones:
-                        self.add_error('total', 'El Total no puede ser menor que Varones.')
-
-                return cleaned_data
-
+        
 
 # Formulario para AsistenciaUsuarios
 class AsistenciaUsuariosForm(forms.ModelForm):
@@ -214,18 +181,7 @@ class AsistenciaUsuariosForm(forms.ModelForm):
                 self.fields['varones'].required = True
                 self.fields['total'].required = True
 
-        def clean(self):
-                cleaned_data = super().clean()
-
-                # Obtener los valores de 'varones' y 'total' para validar
-                varones = cleaned_data.get('varones')
-                total = cleaned_data.get('total')
-
-                # Validar que el total no sea menor que varones
-                if varones is not None and total is not None and total < varones:
-                        self.add_error('total', 'El Total no puede ser menor que Varones.')
-
-                return cleaned_data
+        
 
 # Formulario para InstitucionesPrestaServicios
 class InstitucionesPrestaServiciosForm(forms.ModelForm):
@@ -386,20 +342,40 @@ class PlanillasAnexasForm(forms.ModelForm):
                 self.fields['cantidad'].required = True
 
 
+
 class RegistroDestinoFondosForm(forms.ModelForm):
-    
+
         class Meta:
                 model = RegistroDestinoFondos
                 fields = '__all__'
                 widgets = {
-                'cueanexo': forms.TextInput(attrs={'class': 'form-control','max_length':'9', 
-                        'style': 'width: 100px; text-align: center;', 'readonly':'readonly'}),
-                'mes': forms.TextInput(attrs={'class': 'form-control', 'readonly':'readonly'}),
-                'anio': forms.NumberInput(attrs={'class': 'form-control', 'max_length':'4', 
-                        'style': 'width: 100px; text-align: center;', 'readonly':'readonly'}),
+                'cueanexo': forms.TextInput(attrs={
+                        'class': 'form-control',
+                        'style': 'width: 100px; text-align: center;',
+                        'readonly': 'readonly'
+                }),
+                'mes': forms.TextInput(attrs={
+                        'class': 'form-control',
+                        'readonly': 'readonly'
+                }),
+                'anio': forms.NumberInput(attrs={
+                        'class': 'form-control',
+                        'style': 'width: 100px; text-align: center;',
+                        'readonly': 'readonly'
+                }),
                 'destino': forms.Select(attrs={'class': 'form-control'}),
-                'descripcion': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 100%; height: 100px;'}),
+                'descripcion': forms.TextInput(attrs={'class': 'form-control'}),
+                'cantidad': forms.NumberInput(attrs={'class': 'form-control'}),
                 }
+
+        def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.fields['destino'].queryset = DestinoFondos.objects.all()
+
+                self.fields['cantidad'].required = True
+
+
+
                 
 
 class NoDocentesMensualForm(forms.ModelForm):

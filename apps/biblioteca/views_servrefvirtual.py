@@ -40,7 +40,7 @@ class ServiciosRefVirtualCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -92,7 +92,7 @@ class ServiciosRefVirtualCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)  
         
         cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
@@ -169,7 +169,7 @@ class ServiciosRefVirtualUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)  
         
         cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
@@ -244,7 +244,7 @@ class ServiciosRefVirtualListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)  
         
         cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
@@ -279,7 +279,8 @@ class ServiciosRefVirtualListView(LoginRequiredMixin, ListView):
         context['list_url'] = reverse_lazy('bibliotecas:servrefvirtual_list')
         context['update_url'] = reverse_lazy('bibliotecas:servrefvirtual_update', args=[0]) 
         context['hide_lock_button'] = False   
-        context['generar_pdf_button'] = True,     
+        context['generar_pdf_button'] = True, 
+        context['before_url'] = reverse_lazy('bibliotecas:servref_list')    
         context['next_url'] = reverse_lazy('bibliotecas:servprestamo_create')
         context['entity'] = 'Servicios_Virtual'
         return context

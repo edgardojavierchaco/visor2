@@ -1,0 +1,36 @@
+{% extends 'biblioteca/list.html' %}
+{% load static %}
+
+{% block head_list %}
+    
+{% endblock %}
+
+{% block columns %}
+   
+        <tr>
+            <th scope="col" style="width: 15%;">CUEANEXO</th>
+            <th scope="col" style="width: 15%;">MES</th>
+            <th scope="col" style="width: 10%;">AÑO</th>
+            <th scope="col" style="width: 15%;">DESTINO</th>
+            <th scope="col" style="width: 15%;">DESCRIPCION</th>
+            <th scope="col" style="width: 20%;">CANTIDAD</th>
+            <th scope="col" style="width: 20%;">Botones</th>
+        </tr>
+{% endblock %}
+{% block footer %}
+    
+    <tr>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th class="text-end">Total:</th>
+        <th>0</th>
+        <th></th>
+    </tr>
+     
+{% endblock %}
+
+{% block javascript %}
+    <script src="{% static 'biblioteca/pem/fondos/js/list.js' %}"></script>
+{% endblock %}

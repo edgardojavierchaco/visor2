@@ -31,7 +31,7 @@ class CueanexoMixin:
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
 
         return qs.first() if qs.exists() else None
@@ -195,6 +195,7 @@ class AguapeyListView(LoginRequiredMixin, CueanexoMixin, ListView):
         return Aguapey.objects.filter(
             cueanexo=cueanexo
         )
+        
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -214,7 +215,7 @@ class AguapeyListView(LoginRequiredMixin, CueanexoMixin, ListView):
 
         except Exception as e:
             data = {'error': str(e)}
-
+        print(data)
         return JsonResponse(data, safe=False)
 
     def get_context_data(self, **kwargs):
@@ -227,6 +228,7 @@ class AguapeyListView(LoginRequiredMixin, CueanexoMixin, ListView):
         context['entity'] = 'Aguapey'
         context['hide_lock_button'] = False
         context['generar_pdf_button'] = True
-        context['next_url'] = reverse_lazy('bibliotecas:regfondos')
+        context['before_url'] = reverse_lazy('bibliotecas:proctec_list')
+        context['next_url'] = reverse_lazy('bibliotecas:fondos_create')
 
         return context

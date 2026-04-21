@@ -38,7 +38,7 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -83,7 +83,7 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)       
         
         context['title'] = 'Carga Servicio Material Bibliográfico'
@@ -151,7 +151,7 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)       
         
         context['title'] = 'Edición Servicio Material Bibliográfico'

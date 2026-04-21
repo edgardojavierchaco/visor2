@@ -38,7 +38,7 @@ class AsistUsuarioCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -90,7 +90,7 @@ class AsistUsuarioCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         context['title'] = 'Carga de Asistencia de Usuarios'
@@ -164,7 +164,7 @@ class AsistUsuaUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         context['title'] = 'Edición de Asistencia de Usuarios'
@@ -221,9 +221,29 @@ class AsistUsuaListView(LoginRequiredMixin, ListView):
     #permission_required = 'apps.view_supervisor'    
     
     def get_queryset(self):    
-        serviciosref = AsistenciaUsuarios.objects.filter(cueanexo=self.request.user.username)
-        print('material:',serviciosref)
-        return serviciosref
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username  
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
+        
+        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+            cuit_limpio=Func(
+                F('resploc_cuitcuil'),
+                Value('-'),
+                Value(''),
+                function='REPLACE'
+            )
+        ).filter(
+            cuit_limpio=usuario_limpio,
+            oferta='Común - Servicios complementarios ',
+            acronimo__startswith='BI'
+        ).values_list('cueanexo', flat=True)
+        
+        cueanexos = list(cueanexos_qs)
+        asistusuarios = AsistenciaUsuarios.objects.filter(cueanexo=cueanexos[0] if cueanexos else None)
+        print('usuarios:',asistusuarios)
+        return asistusuarios
         
 
     @method_decorator(csrf_exempt)
@@ -262,7 +282,7 @@ class AsistUsuaListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         context['title'] = 'Listado de Asistencia de Usuarios'
@@ -271,7 +291,8 @@ class AsistUsuaListView(LoginRequiredMixin, ListView):
         context['update_url'] = reverse_lazy('bibliotecas:asistusua_update', args=[0]) 
         context['hide_lock_button'] = False      
         context['generar_pdf_button'] = True,  
-        context['next_url'] = reverse_lazy('bibliotecas:proctec_create')
+        context['before_url']=reverse_lazy('bibliotecas:infopedago_list')
+        context['next_url'] = reverse_lazy('bibliotecas:instituciones_create')
         context['entity'] = 'Asistencia'
         return context
 

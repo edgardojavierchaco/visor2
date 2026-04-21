@@ -38,7 +38,7 @@ class InfoPedagoCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -90,7 +90,7 @@ class InfoPedagoCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)      
         
         context['title'] = 'Carga de Informe Pedagógico'
@@ -165,7 +165,7 @@ class InfoPedagoUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)      
         
         context['title'] = 'Edición de Informe Pedagógico'
@@ -238,7 +238,7 @@ class InfoPedagoListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -272,8 +272,9 @@ class InfoPedagoListView(LoginRequiredMixin, ListView):
         context['list_url'] = reverse_lazy('bibliotecas:infopedago_list')
         context['update_url'] = reverse_lazy('bibliotecas:infopedago_update', args=[0]) 
         context['hide_lock_button'] = False     
-        context['generar_pdf_button'] = True,    
-        context['next_url'] = reverse_lazy('bibliotecas:instituciones_create')
+        context['generar_pdf_button'] = True,  
+        context['before_url'] = reverse_lazy('bibliotecas:servprestamo_list')
+        context['next_url'] = reverse_lazy('bibliotecas:asistusua_create')
         context['entity'] = 'Informe_Pedagógico'
         return context
 

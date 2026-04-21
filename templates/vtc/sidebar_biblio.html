@@ -30,15 +30,23 @@
                 </li>
                 <li class="nav-item">
                     <a href="{% url 'bibliotecas:generar_info' %}" class="nav-link">
-                        <i class="nav-icon fas fa-unlock"></i>
+                        <i class="nav-icon fas fa-unlock text-danger"></i>
                         <p>
                             Generar Periodo
                         </p>
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{% url 'bibliotecas:materialbibliografico_list' %}" class="nav-link">
+                        <i class="nav-icon fas fa-sync-alt text-success"></i>
+                        <p>
+                            Continuar Carga
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{% url 'bibliotecas:modal_generar_pdf_uno' %}" class="nav-link">
-                        <i class="nav-icon fas fa-file"></i>
+                        <i class="nav-icon fas fa-file" style="color: blue;"></i>
                         <p>
                             Generar PDF
                         </p>

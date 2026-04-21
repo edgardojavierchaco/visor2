@@ -37,7 +37,7 @@ class ServiciosReferenciaCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)        
@@ -97,7 +97,7 @@ class ServiciosReferenciaCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)  
         
         cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
@@ -188,7 +188,7 @@ class ServiciosReferenciaUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)  
         
         context['title'] = 'Edición Servicios de Referencia'
@@ -261,7 +261,7 @@ class ServiciosReferenciaListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -297,7 +297,8 @@ class ServiciosReferenciaListView(LoginRequiredMixin, ListView):
         context['update_url'] = reverse_lazy('bibliotecas:servref_update', args=[0])
         context['hide_lock_button'] = False      
         context['generar_pdf_button'] = True,   
-        context['next_url'] = reverse_lazy('bibliotecas:infopedago_create')
+        context['before_url'] = reverse_lazy('bibliotecas:materialbibliografico_list')
+        context['next_url'] = reverse_lazy('bibliotecas:servrefvirtual_create')
         context['entity'] = 'Servicios_Referencia'
         return context
         

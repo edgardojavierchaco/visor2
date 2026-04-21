@@ -150,7 +150,7 @@ DATABASES = {
         'OPTIONS': {
             'options': '-c search_path=public,evaluacion,cenpe,operativoschaco,indicadores,pem,pof'
         }
-    },
+    },        
     'Evaluacion': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': os.environ.get('POSTGRES_DB_EVALUACION'),

@@ -25,7 +25,7 @@ def generar_informe(request):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
     cueanexos = list(cueanexos_qs)

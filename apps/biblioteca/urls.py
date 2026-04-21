@@ -76,7 +76,7 @@ from .views_dashboard import DashboardView, DashboardDirView
 from .views_reporteinformes import generar_informe_list, generar_informe
 from .views_cuemesanio import generar_pdf_cuemesanio, modal_generar_pdf_cuemesanio
 from .views_cuemesanio_uno import generar_pdf_cuemesanio_uno, modal_generar_pdf_cuemesanio_uno
-from .views_registrofondos import RegistroDestinoFondosView, RegistroDestinoFondosListView, RegistroDestinoFondosDeleteView
+from .views_registrofondos import RegistroDestinoFondosCreateView, RegistroDestinoFondosUpdateView, RegistroDestinoFondosDeleteView, RegistroDestinoFondosListView
 from .views import (
     servicio_prestamo_view, 
     filtrar_servicio_prestamo, 
@@ -165,9 +165,10 @@ urlpatterns = [
     path('aguapey/delete/<int:pk>/', AguapeyDeleteView.as_view(), name='aguapey_delete'),
     
     # Registro Destino de Fondos
-    path('regfondos/', RegistroDestinoFondosView.as_view(), name='regfondos'),
-    path('regfondos_list/', RegistroDestinoFondosListView.as_view(), name='regfondos_list'),
-    path('regfondos/delete/<int:pk>/', RegistroDestinoFondosDeleteView.as_view(), name='regfondos   _delete'),
+    path('fondos/list/', RegistroDestinoFondosListView.as_view(), name='fondos_list'),
+    path('fondos/add/', RegistroDestinoFondosCreateView.as_view(), name='fondos_create'),
+    path('fondos/update/<int:pk>/', RegistroDestinoFondosUpdateView.as_view(), name='fondos_update'),
+    path('fondos/delete/<int:pk>/', RegistroDestinoFondosDeleteView.as_view(), name='fondos_delete'),
     
     # Planillas Anexas
     path('plan_anexas/', PlanillasAnexasView.as_view(), name='plan_anexas'),

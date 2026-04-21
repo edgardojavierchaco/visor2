@@ -38,7 +38,7 @@ class ServiciosPrestamoCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -84,7 +84,7 @@ class ServiciosPrestamoCreateView(LoginRequiredMixin, CreateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)    
         
         context['title'] = 'Carga Servicios de Préstamos'
@@ -152,7 +152,7 @@ class ServiciosPrestamoUpdateView(LoginRequiredMixin, UpdateView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)    
         
         context['title'] = 'Edición Servicios de Préstamos'
@@ -225,7 +225,7 @@ class ServiciosPrestamoListView(LoginRequiredMixin, ListView):
         ).filter(
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
-            acronimo='BI'
+            acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
         
         cueanexos = list(cueanexos_qs)
@@ -262,6 +262,7 @@ class ServiciosPrestamoListView(LoginRequiredMixin, ListView):
         context['update_url'] = reverse_lazy('bibliotecas:servprestamo_update', args=[0]) 
         context['hide_lock_button'] = False    
         context['generar_pdf_button'] = True,    
+        context['before_url'] = reverse_lazy('bibliotecas:servrefvirtual_list')
         context['next_url'] = reverse_lazy('bibliotecas:infopedago_create')
         context['entity'] = 'Servicios_Préstamo'
         return context

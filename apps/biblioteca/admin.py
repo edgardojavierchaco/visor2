@@ -27,5 +27,6 @@ admin.site.register(FocalLicDocentes)
 admin.site.register(BibliotecariosCue)
 admin.site.register(TiposLicenciasPermisos)
 admin.site.register(TiposSituacionLaboral)
+admin.site.register(VMaterialBiblioDynamic)
 
 
