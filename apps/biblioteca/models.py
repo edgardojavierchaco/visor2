@@ -1217,6 +1217,9 @@ class GenerarInforme(models.Model):
     def __str__(self):
         return f"{self.cueanexo} - {self.meses}: {self.annos}"    
     
+    def is_editable(self):
+        return self.estado != "ENVIADO"
+    
     def toJSON(self):
         item = model_to_dict(self)        
         item['cueanexo'] = self.cueanexo

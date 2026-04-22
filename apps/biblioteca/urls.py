@@ -107,6 +107,8 @@ from .views_bibliotecarios import (
     BibliotecariosCueDeleteView
 )
 
+from .views_continuidad import ContinuarCargaView
+
 app_name = 'bibliotecas'
 
 urlpatterns = [
@@ -224,6 +226,8 @@ urlpatterns = [
     path('bibliotecarios/create/', BibliotecariosCueCreateView.as_view(), name='bibliotecario_create'),
     path('bibliotecarios/update/<int:pk>/', BibliotecariosCueUpdateView.as_view(), name='bibliotecario_update'),
     path('bibliotecarios/delete/<int:pk>/', BibliotecariosCueDeleteView.as_view(), name='bibliotecario_delete'),
+
+    path('continuar/', ContinuarCargaView.as_view(), name='continuar_carga'),
 ]
 
 

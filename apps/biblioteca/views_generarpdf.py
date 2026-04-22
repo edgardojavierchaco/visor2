@@ -42,6 +42,7 @@ from reportlab.platypus import KeepTogether, Spacer
 from django.utils.text import slugify
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+from django.utils import timezone
 
 
 # =========================================================
@@ -549,6 +550,17 @@ def generar_pdf_material_bibliografico(request):
     )
 
     doc.build(story, canvasmaker=canvasmaker)
+    
+    GenerarInforme.objects.filter(
+        cueanexo__in=cueanexos,
+        meses=mes,
+        annos=anio,
+        estado="GENERADO"
+    ).update(
+        estado="ENVIADO",
+        f_envio=timezone.now()
+    )
+
 
     return response
 

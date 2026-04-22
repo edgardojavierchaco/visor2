@@ -93,8 +93,14 @@
         </div>
     </form>
 
+    <!-- ========================= -->
+    <!-- 🔥 JAVASCRIPT -->
+    <!-- ========================= -->
     <script>
-        // Mostrar alerta con errores si existen
+
+        // =========================
+        // ERRORES FORM (SweetAlert)
+        // =========================
         {% if form.errors %}
             var errors = '';
             {% for field in form %}
@@ -102,27 +108,58 @@
                     errors += '{{ error }}\n';
                 {% endfor %}
             {% endfor %}
-            {% for error in form.non_field_errors %}
-                errors += '{{ error }}\n';
-            {% endfor %}
+
             Swal.fire({
-                title: 'Error!',
-                text: errors,
-                icon: 'error'
+                icon: 'error',
+                title: 'Error',
+                text: errors
             });
         {% endif %}
 
-        // Manejo de envío con AJAX
+        // =========================
+        // SUBMIT AJAX
+        // =========================
         $('form').on('submit', function (e) {
             e.preventDefault();
+
             var parameters = new FormData(this);
-            submit_with_ajax(window.location.pathname, 'Notificación', '¿Estas seguro de realizar la siguiente acción?', parameters, function () {
-                location.href = '{{ list_url }}';
+
+            submit_with_ajax(
+                window.location.pathname,
+                'Notificación',
+                '¿Estás seguro de realizar la siguiente acción?',
+                parameters,
+                function () {
+                    location.href = '{{ list_url }}';
+                }
+            );
+        });
+
+        // =========================
+        // INFO POPUP
+        // =========================
+        $('#showPopupBtn').click(function () {
+            Swal.fire({
+                title: 'Información',
+                html: `<p>En esta sección se carga el material bibliográfico correspondiente.</p>`,
+                icon: 'info'
             });
         });
-        
 
-        // Asignar valor al campo cueanexo (si es necesario)
+        // =========================
+        // BLOQUEO (SI VIENE DEL BACKEND)
+        // =========================
+        {% if bloqueado %}
+            Swal.fire({
+                icon: 'warning',
+                title: 'Informe enviado',
+                text: 'Este período ya fue enviado y no puede modificarse.'
+            });
+        {% endif %}
+
+        // ===============================
+        // 📌 AUTO FILL CAMPOS
+        // ===============================
         document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
         document.getElementById("id_mes").value = "{{ mes }}";
         document.getElementById("id_anio").value = "{{ anno }}";

@@ -5,6 +5,7 @@ from django.views.generic import CreateView, UpdateView, DeleteView, ListView, V
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Func, Value
 import re
+from .mixins import InformeBloqueoMixin
 
 from .models import BibliotecariosCue, GenerarInforme
 from .forms import BibliotecariosCueForm
@@ -16,19 +17,42 @@ from django.utils.decorators import method_decorator
 # =========================================================
 # CREATE
 # =========================================================
-class BibliotecariosCueCreateView(LoginRequiredMixin, CreateView):
+class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,CreateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
     success_url = reverse_lazy('bibliotecas:bibliotecario_list')
 
+    def get_cueanexo(self):
+        usuario_limpio = re.sub(r'\D', '', self.request.user.username)
+
+        return (
+            CapaUnicaOfertas.objects.annotate(
+                cuit_limpio=Func(
+                    F('resploc_cuitcuil'),
+                    Value('-'),
+                    Value(''),
+                    function='REPLACE'
+                )
+            )
+            .filter(
+                cuit_limpio=usuario_limpio,
+                oferta='Común - Servicios complementarios ',
+                acronimo__startswith='BI'
+            )
+            .values_list('cueanexo', flat=True)
+            .first()
+        )
+    
     def form_valid(self, form):
-        # 🔹 Obtener usuario logueado correctamente
-        usuario_logueado = self.request.user.username  
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
-        print("Usuario logueado:", usuario_logueado)  # Debug: Verificar el usuario logueado
         
-        # 🔹 Obtener todos los cueanexos que cumplan la condición
+        # 🔹 Obtener usuario logueado correctamente
+        usuario_logueado = self.request.user.username
+        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+
+        print("Usuario logueado:", usuario_logueado)  # Debug
+
+        # 🔹 Obtener cueanexos del usuario
         cueanexos_qs = CapaUnicaOfertas.objects.annotate(
             cuit_limpio=Func(
                 F('resploc_cuitcuil'),
@@ -41,45 +65,63 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, CreateView):
             oferta='Común - Servicios complementarios ',
             acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
+
+        cueanexos = list(cueanexos_qs)
+
+        # 🔥 cueanexo activo
+        cueanexo = cueanexos[0] if cueanexos else None
+
+        # 🔥 GUARDAR EN SESIÓN (CLAVE PARA EL Mixin)
+        self.request.session["cueanexo"] = cueanexo
+        print("SESSION CUEANEXO:", self.request.session.get("cueanexo"))
         
-        cueanexos = list(cueanexos_qs)        
-        
-        form.instance.cueanexo = cueanexos[0] if cueanexos else None  # Asignar el primer cueanexo encontrado o None si no hay
+        # 🔥 asignar al objeto
+        form.instance.cueanexo = cueanexo
+
         return super().form_valid(form)
 
+    def dispatch(self, request, *args, **kwargs):
+        self.request = request
+
+        # 🔥 obtener cueanexo UNA SOLA VEZ
+        cueanexo = self.get_cueanexo()
+
+        # 🔥 guardar en sesión
+        request.session["cueanexo"] = cueanexo
+
+        print("🔥 CUEANEXO EN DISPATCH:", cueanexo)
+        print("🔥 SESIÓN:", request.session.get("cueanexo"))
+        return super().dispatch(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
-        """Manejo de AJAX para agregar servicio de referencia."""
         data = {}
 
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':  # Detecta si es una solicitud AJAX
-            try:
-                action = request.POST.get('action', None)  # Evita KeyError
-                if action == 'add':
-                    form = self.get_form()
-                    if form.is_valid():
-                        instance = form.save()
-                        data = {'message': 'Guardado correctamente', 'instance': instance.toJSON()}
-                    else:
-                        # Extraer el primer error de 'total' (si existe) y devolver solo ese mensaje
-                        total_error = form.errors.get('total', None)
-                        if total_error:
-                            data['error'] = total_error[0]  # Extrae solo el primer mensaje de error
-                        else:
-                            data['error'] = 'Corrige los errores antes de continuar.'  # Error general si no hay errores en 'total'
+        # 🔥 BLOQUEO REAL
+        if self.informe_bloqueado():
+            return JsonResponse({
+                "error": True,
+                "message": "El último informe ya fue ENVIADO. No se puede modificar."
+            }, status=403)
+
+        try:
+            action = request.POST['action']
+
+            if action == 'add':
+                form = self.get_form()
+
+                if form.is_valid():
+                    instance = form.save()
+                    data = instance.toJSON()
                 else:
-                    data['error'] = 'Acción no válida.'
-            except Exception as e:
-                data['error'] = str(e)
+                    data['error'] = form.errors.as_json()
 
-            return JsonResponse(data)
+            else:
+                data['error'] = 'No ha ingresado a ninguna opción'
 
-        # Si no es AJAX, manejamos el formulario normalmente
-        form = self.get_form()
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
-            # En caso de que el formulario no sea válido, volvemos a renderizar el template con los errores.
-            return self.render_to_response(self.get_context_data(form=form)) 
+        except Exception as e:
+            data['error'] = str(e)
+
+        return JsonResponse(data) 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -100,104 +142,14 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, CreateView):
             cuit_limpio=usuario_limpio,
             oferta='Común - Servicios complementarios ',
             acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)  
+        ).values_list('cueanexo', flat=True)       
         
-        cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
-        context['cueanexo']= cueanexo
         context['title'] = 'Carga Servicios de Referencia'
         context['entity'] = 'Servicios_Referencia'
         context['list_url'] = self.success_url
         context['action'] = 'add'
-        
-        # Obtener el último mes y año del usuario logueado
-        ultimo_informe=None
-        if cueanexo:
-            ultimo_informe = GenerarInforme.objects.filter(
-                cueanexo=cueanexo
-            ).order_by('-annos', '-meses').first()
-
-        context['mes'] = ultimo_informe.meses if ultimo_informe else None
-        context['anno'] = ultimo_informe.annos if ultimo_informe else None
-        
-
-        return context
-
-
-# =========================================================
-# UPDATE
-# =========================================================
-class BibliotecariosCueUpdateView(LoginRequiredMixin, UpdateView):
-    model = BibliotecariosCue
-    form_class = BibliotecariosCueForm
-    template_name = 'biblioteca/pem/personal/create.html'
-    success_url = reverse_lazy('bibliotecas:bibliotecario_list')
-    url_redirect = success_url
-
-    def dispatch(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        return super().dispatch(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        """Manejo de AJAX para editar servicio de referencia."""
-        data = {}
-
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':  # Detecta si es una solicitud AJAX
-            try:
-                action = request.POST.get('action', None)  # Evita KeyError
-                if action == 'edit':
-                    form = self.get_form()
-                    if form.is_valid():
-                        instance = form.save()
-                        data = {'message': 'Actualizado correctamente', 'instance': instance.toJSON()}
-                    else:
-                        # Extraer el primer error de 'total' (si existe) y devolver solo ese mensaje
-                        total_error = form.errors.get('total', None)
-                        if total_error:
-                            data['error'] = total_error[0]  # Extrae solo el primer mensaje de error
-                        else:
-                            data['error'] = 'Corrige los errores antes de continuar.'  # Error general si no hay errores en 'total'
-                else:
-                    data['error'] = 'Acción no válida.'
-            except Exception as e:
-                data['error'] = str(e)
-
-            return JsonResponse(data)
-
-        # Si no es AJAX, manejamos el formulario normalmente
-        form = self.get_form()
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
-            # En caso de que el formulario no sea válido, volvemos a renderizar el template con los errores.
-            return self.render_to_response(self.get_context_data(form=form))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        usuario_logueado = self.request.user.username
-
-        # Limpiar caracteres no numéricos del CUIT/CUIL
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
-
-        # Obtener primer cueanexo del usuario
-        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)          
-    
-        context['title'] = 'Editar Bibliotecario'
-        context['entity'] = 'Personal'
-        context['list_url'] = self.success_url
-        context['action'] = 'edit'
-        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None
+        cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
         # Obtener el último mes y año del usuario logueado
         ultimo_informe = GenerarInforme.objects.filter(cueanexo=context['cueanexo']).order_by('-annos', '-meses').first()
@@ -208,6 +160,103 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, UpdateView):
         else:
             context['mes'] = None
             context['anno'] = None
+        print(context)        
+
+        return context
+
+
+# =========================================================
+# UPDATE
+# =========================================================
+class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin,UpdateView):
+    model = BibliotecariosCue
+    form_class = BibliotecariosCueForm
+    template_name = 'biblioteca/pem/personal/create.html'
+    success_url = reverse_lazy('bibliotecas:bibliotecario_list')
+    url_redirect = success_url
+
+    # 🔥 obtener objeto (UpdateView lo necesita)
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.request = request
+        return super().dispatch(request, *args, **kwargs)
+
+    # 🔥 POST con SweetAlert + AJAX (igual que CREATE)
+    def post(self, request, *args, **kwargs):
+        data = {}
+
+        # 🚨 BLOQUEO POR INFORME ENVIADO
+        if self.informe_bloqueado():
+            return JsonResponse({
+                "error": True,
+                "message": "El último informe ya fue ENVIADO. No se puede modificar."
+            }, status=403)
+
+        try:
+            action = request.POST.get('action')
+
+            if action == 'edit':
+                form = self.get_form()
+
+                if form.is_valid():
+                    instance = form.save()
+                    data = instance.toJSON()
+                else:
+                    return JsonResponse({
+                        "error": True,
+                        "message": form.errors.as_json()
+                    })
+
+            else:
+                return JsonResponse({
+                    "error": True,
+                    "message": "Acción no válida"
+                })
+
+        except Exception as e:
+            return JsonResponse({
+                "error": True,
+                "message": str(e)
+            })
+
+        return JsonResponse(data)
+
+    # 🔥 CONTEXTO 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        usuario_limpio = re.sub(r'\D', '', self.request.user.username)
+
+        cueanexo = (
+            CapaUnicaOfertas.objects.annotate(
+                cuit_limpio=Func(
+                    F('resploc_cuitcuil'),
+                    Value('-'),
+                    Value(''),
+                    function='REPLACE'
+                )
+            )
+            .filter(
+                cuit_limpio=usuario_limpio,
+                oferta='Común - Servicios complementarios ',
+                acronimo__startswith='BI'
+            )
+            .values_list('cueanexo', flat=True)
+            .first()
+        )       
+    
+        context['title'] = 'Editar Bibliotecario'
+        context['entity'] = 'Personal'
+        context['list_url'] = self.success_url
+        context['action'] = 'edit'
+        context['cueanexo'] = cueanexo
+        
+        ultimo_informe = GenerarInforme.objects.filter(
+            cueanexo=cueanexo
+        ).order_by('-annos', '-meses').first()
+
+        context['mes'] = ultimo_informe.meses if ultimo_informe else None
+        context['anno'] = ultimo_informe.annos if ultimo_informe else None
             
         return context
 
@@ -215,7 +264,7 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, UpdateView):
 # =========================================================
 # DELETE
 # =========================================================
-class BibliotecariosCueDeleteView(LoginRequiredMixin, DeleteView):
+class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, DeleteView):
     model = BibliotecariosCue
     template_name = 'biblioteca/pem/personal/delete.html'
     success_url = reverse_lazy('bibliotecas:bibliotecario_list')
@@ -224,16 +273,34 @@ class BibliotecariosCueDeleteView(LoginRequiredMixin, DeleteView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
+        self.request = request
         return super().dispatch(request, *args, **kwargs)
 
+    # 🔥 DELETE con AJAX + SweetAlert
     def post(self, request, *args, **kwargs):
         data = {}
+
+        # 🚨 BLOQUEO POR INFORME ENVIADO
+        if self.informe_bloqueado():
+            return JsonResponse({
+                "error": True,
+                "message": "El último informe ya fue ENVIADO. No se puede eliminar."
+            }, status=403)
+
         try:
             self.object.delete()
-        except Exception as e:
-            data['error'] = str(e)
-        return JsonResponse(data)
 
+            return JsonResponse({
+                "success": True,
+                "message": "Registro eliminado correctamente"
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                "error": True,
+                "message": str(e)
+            })
+            
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Eliminación Personal'
