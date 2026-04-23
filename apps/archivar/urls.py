@@ -24,7 +24,13 @@ from .views_biblio import (
     destino_fondos_view,
     filtrar_destino_fondos,
     planillas_anexas_view,
-    filtrar_planillas_anexas
+    filtrar_planillas_anexas,
+    instituciones_view,
+    filtrar_instituciones,
+    aguapey_view,
+    filtrar_aguapey,
+    bibliotecarios_view,
+    filtrar_bibliotecarios
 )
 
 from .views_fluidez import (
@@ -77,6 +83,13 @@ urlpatterns=[
     path("filtrar_desfondos/", filtrar_destino_fondos, name="filtrar_desfondos"),
     path("plan_anex/", planillas_anexas_view, name="plan_anex"),
     path("filtrar_plananex/", filtrar_planillas_anexas, name="filtrar_plananex"),
+    path("instituciones/", instituciones_view, name="instituciones"),
+    path("filtrar_instituciones/", filtrar_instituciones, name="filtrar_instituciones"),
+    path("aguapey/", aguapey_view, name="aguapey"),
+    path("filtrar_aguapey/", filtrar_aguapey, name="filtrar_aguapey"),
+    path("bibliotecarios-cue/", bibliotecarios_view, name="bibliotecarios_cue"),
+    path("filtrar_bibliotecarios/", filtrar_bibliotecarios, name="filtrar_bibliotecarios"),
+    
     
     # Archivos para Evaluación
     path('crear_fluidez/',ArchivoEvaluacionCreateView.as_view(),name='crear_fluidez'),

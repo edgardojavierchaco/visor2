@@ -21,7 +21,7 @@
                 <li class="nav-header">Mantenimientos</li>
                 
                 <li class="nav-item">
-                    <a href="{% url 'funcionario:portada_func' %}" class="nav-link">
+                    <a href="{% url 'archivos:portada_gestor' %}" class="nav-link">
                         <i class="nav-icon fas fa-home" style="color:orange;"></i>
                         <p>
                             Inicio
@@ -29,21 +29,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'bibliotecas:generar_informe_list' %}" class="nav-link">
+                    <a href="{% url 'bibliotecas:dashboard_informes' %}" class="nav-link">
                         <i class="nav-icon fas fa-unlock" style="color:green;"></i>
                         <p>
                             Monitoreo Carga Planillas
                         </p>
                     </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{% url 'bibliotecas:modal_generar_pdf_cue' %}" class="nav-link">
-                        <i class="nav-icon fas fa-file" style="color:red;"></i>
-                        <p>
-                            Generar PDF - Cueanexo
-                        </p>
-                    </a>
-                </li>
+                </li>                
                 <li class="nav-item has-treeview">
                     <a href="#" class="nav-link">
                         <i class="nav-icon fas fa-archive" style="color:blue;"></i>

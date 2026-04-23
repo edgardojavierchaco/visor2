@@ -67,6 +67,8 @@ from .views_list_docnodoc import (
     NoDocentePonMensualListView
 )
 
+from . import views_reporteinformes
+
 
 from .views_generarpdf import generar_pdf_material_bibliografico
 from .views_instituciones import ObtenerEscuelaView
@@ -228,6 +230,20 @@ urlpatterns = [
     path('bibliotecarios/delete/<int:pk>/', BibliotecariosCueDeleteView.as_view(), name='bibliotecario_delete'),
 
     path('continuar/', ContinuarCargaView.as_view(), name='continuar_carga'),
+    
+    # 🏛️ DASHBOARD HTML
+    path(
+        "dashboard-informes/",
+        views_reporteinformes.dashboard_informes_view,
+        name="dashboard_informes"
+    ),
+
+    # 📊 API DASHBOARD
+    path(
+        "api/dashboard-informes/",
+        views_reporteinformes.dashboard_informes_api,
+        name="dashboard_informes_api"
+    ),
 ]
 
 

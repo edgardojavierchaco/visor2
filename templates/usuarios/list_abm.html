@@ -3,13 +3,19 @@
 {% extends "archivos/base/dashboard.html" %}
 
 {% block head %}
-<!-- DataTables CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
-{% endblock %}
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {% endblock %}
 
 {% block content %}
 
 <div class="container-fluid">
+
+    <input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+    <!-- 🔥 URLs dinámicas Django -->
+    <input type="hidden" id="urlEditar" value="{% url 'usuarios:usuario_update' 0 %}">
+    <input type="hidden" id="urlEliminar" value="{% url 'usuarios:usuario_delete' 0 %}">
 
     <h3 class="mb-3">👥 {{ titulo }}</h3>
 
@@ -62,10 +68,13 @@
             <table id="tablaUsuarios" class="table table-striped table-hover w-100">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Username</th>
+                        <th>Apellido y Nombre</th>
                         <th>Rol</th>
                         <th>Nivel Acceso</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
             </table>
@@ -74,6 +83,7 @@
     </div>
 
 </div>
+
 
 {% endblock %}
 
@@ -85,63 +95,161 @@
 <script>
 window.URL_USUARIOS_AJAX = "{% url 'usuarios:usuarios_list_ajax' %}";
 
+/* =========================
+   FUNCIONES GLOBALES 🔥
+========================= */
+
+// 🔗 armar URL dinámica
+function getUrl(base, id) {
+    return base.replace('/0/', '/' + id + '/');
+}
+
+// ✏️ EDITAR
+window.editar = function(id) {
+    const base = document.getElementById("urlEditar").value;
+    const url = getUrl(base, id);
+
+    console.log("EDITAR:", url); // debug
+    window.location.href = url;
+};
+
+// 🧠 TOAST reutilizable
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000
+});
+
+// 🗑️ BAJA LÓGICA PRO (NO BORRA)
+window.eliminar = function(id, btn) {
+
+    Swal.fire({
+        title: '¿Desactivar usuario?',
+        text: "Se marcará como INACTIVO",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+
+        if (!result.isConfirmed) return;
+
+        const base = document.getElementById("urlEliminar").value;
+        const url = getUrl(base, id);
+
+        Swal.fire({
+            title: 'Procesando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": document.getElementById("csrf_token").value
+            }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Error en delete");
+            return res.json();
+        })
+        .then(() => {
+
+            Swal.close();
+
+            let row = $(btn).closest('tr');
+
+            row.find('td:eq(5)').html(
+                '<span class="badge bg-danger">Inactivo</span>'
+            );
+
+            $(btn).prop('disabled', true);
+            row.fadeTo(300, 0.6);
+
+            Toast.fire({
+                icon: 'success',
+                title: 'Usuario desactivado'
+            });
+
+        })
+        .catch(() => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo desactivar'
+            });
+        });
+
+    });
+};
+    
+/* =========================
+   INIT DATATABLE
+========================= */
+
 document.addEventListener("DOMContentLoaded", function () {
 
-    // 🔥 Verificación de DataTables
-    if (typeof $.fn.DataTable === "undefined") {
-        console.error("❌ DataTables NO está cargado. Revisa CDN o base.html.");
-        return;
-    }
+    let table = $('#tablaUsuarios').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
 
-    // 🔥 Inicialización única
-    if (!window.tableInitialized) {
-
-        window.tableInitialized = true;
-
-        let table = $('#tablaUsuarios').DataTable({
-            processing: true,
-            serverSide: true,
-            responsive: true,
-            ajax: {
-                url: window.URL_USUARIOS_AJAX,
-                data: function (d) {
-                    d.username = $('#username').val();
-                    d.estado = $('#estado').val();
-                }
-            },
-            columns: [
-                { data: 0 },
-                { data: 1 },
-                { data: 2 },
-                { data: 3 }
-            ],
-            language: {
-                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-            },
-            pageLength: 10,
-            order: [[0, "asc"]]
-        });
-
-        // 🔍 Buscar
-        $('#btnBuscar').on('click', function () {
-            table.ajax.reload();
-        });
-
-        // ♻️ Reset
-        $('#btnReset').on('click', function () {
-            $('#username').val('');
-            $('#estado').val('');
-            table.ajax.reload();
-        });
-
-        // 🔥 ENTER para buscar
-        $('#username').on('keypress', function (e) {
-            if (e.which === 13) {
-                table.ajax.reload();
+        ajax: {
+            url: window.URL_USUARIOS_AJAX,
+            data: function (d) {
+                d.username = $('#username').val();
+                d.estado = $('#estado').val();
             }
-        });
+        },
 
-    }
+        columns: [
+            { data: 0 },
+            { data: 1 },
+            { data: 2 },
+            { data: 3 },
+            { data: 4 },
+            { data: 5 },
+            { data: 6, orderable: false, searchable: false }
+        ],
+
+        language: {
+            url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        },
+
+        pageLength: 10,
+        order: [[0, "asc"]]
+    });
+
+    // 🔍 BUSCAR
+    $('#btnBuscar').on('click', function () {
+        table.ajax.reload();
+    });
+
+    // ♻️ RESET
+    $('#btnReset').on('click', function () {
+        $('#username').val('');
+        $('#estado').val('');
+        table.search('').draw();
+    });
+
+    // ⌨️ ENTER
+    $('#username').on('keypress', function (e) {
+        if (e.which === 13) table.ajax.reload();
+    });
+
+    // 🔥 BUSCADOR GLOBAL PRO
+    let timer = null;
+
+    $('#tablaUsuarios_filter input').off().on('keyup', function () {
+        clearTimeout(timer);
+
+        let value = this.value;
+
+        timer = setTimeout(function () {
+            table.search(value).draw();
+        }, 400);
+    });
 
 });
 </script>

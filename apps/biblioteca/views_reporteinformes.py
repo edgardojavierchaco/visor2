@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 from django.db import connection
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -6,7 +8,13 @@ from pyparsing import C
 from .models import GenerarInforme
 from apps.consultasge.models import CapaUnicaOfertas
 from django.db.models import Func, F, Value
-import re
+from django.db.models import Count, Q, Subquery, OuterRef
+from django.views.decorators.cache import cache_page
+from django.db.models.functions import Cast
+from django.db.models import CharField
+from django.db.models.expressions import RawSQL
+
+logger = logging.getLogger(__name__)
 
 def generar_informe(request):
     # 🔹 Obtener usuario logueado correctamente
@@ -125,3 +133,155 @@ def generar_informe_list(request):
         'total_faltantes': total_faltantes
     }
     return render(request, 'biblioteca/generar_informe_list.html', context)
+
+
+# ==========================================
+# 🌐 VISTA HTML
+# ==========================================
+def dashboard_informes_view(request):
+    return render(request, "biblioteca/dashboard_informes.html")
+
+
+# ==========================================
+# 📊 API MINISTERIAL PRO (ESTABLE)
+# ==========================================
+@cache_page(60 * 5)
+def dashboard_informes_api(request):
+
+    cue = request.GET.get('cueanexo', '').strip()
+    meses = request.GET.get('meses', '').strip()
+    annos = request.GET.get('annos', '').strip()
+    region = request.GET.get('region_loc', '').strip()
+
+    filtros = Q()
+
+    if cue:
+        filtros &= Q(cueanexo=cue)
+
+    if meses:
+        filtros &= Q(meses=meses)
+
+    if annos.isdigit():
+        filtros &= Q(annos=int(annos))
+
+    try:
+
+        # =========================
+        # 🏛️ TOTAL OFERTAS
+        # =========================
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(DISTINCT cueanexo)
+                FROM v_capa_unica_ofertas
+                WHERE acronimo ILIKE 'BI%'
+            """)
+            total_ofertas = cursor.fetchone()[0] or 0
+
+        # =========================
+        # 🌍 MAPA REGION (SIN ORM)
+        # =========================
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT cueanexo, region_loc
+                FROM v_capa_unica_ofertas_ant
+                WHERE region_loc IS NOT NULL
+            """)
+            region_map = {
+                str(row[0]): row[1]
+                for row in cursor.fetchall()
+            }
+
+        # =========================
+        # 📊 DATA BASE
+        # =========================
+        qs = GenerarInforme.objects.filter(filtros)
+
+        data = list(qs.values(
+            "id",
+            "cueanexo",
+            "meses",
+            "annos",
+            "estado"
+        ))
+
+        # =========================
+        # 🔥 INYECTAR REGION
+        # =========================
+        for d in data:
+            d["region_loc"] = region_map.get(str(d["cueanexo"]), "SIN REGIÓN")
+
+        # =========================
+        # 🌍 FILTRO REGION
+        # =========================
+        if region:
+            data = [d for d in data if d["region_loc"] == region]
+
+        # =========================
+        # 📊 KPI
+        # =========================
+        generados = sum(1 for d in data if d["estado"] == "GENERADO")
+        enviados = sum(1 for d in data if d["estado"] == "ENVIADO")
+        faltantes = max(total_ofertas - enviados, 0)
+
+        # =========================
+        # 📈 ESTADOS
+        # =========================
+        por_estado = {}
+        for d in data:
+            por_estado[d["estado"]] = por_estado.get(d["estado"], 0) + 1
+
+        # =========================
+        # 📅 MES
+        # =========================
+        por_mes = {}
+        for d in data:
+            por_mes[d["meses"]] = por_mes.get(d["meses"], 0) + 1
+
+        # =========================
+        # 🏫 RANKING
+        # =========================
+        ranking = {}
+        for d in data:
+            key = d["cueanexo"]
+            ranking[key] = ranking.get(key, 0) + 1
+
+        ranking = [
+            {
+                "cueanexo": k,
+                "total": v,
+                "estado": next((x["estado"] for x in data if x["cueanexo"] == k), ""),
+                "region_loc": next((x["region_loc"] for x in data if x["cueanexo"] == k), "")
+            }
+            for k, v in sorted(ranking.items(), key=lambda x: x[1], reverse=True)[:15]
+        ]
+
+        # =========================
+        # 🌍 REGIONES
+        # =========================
+        regiones = sorted(set(region_map.values()))
+
+        return JsonResponse({
+            "success": True,
+            "kpis": {
+                "ofertas": total_ofertas,
+                "generados": generados,
+                "enviados": enviados,
+                "faltantes": faltantes,
+                "cumplimiento": round((enviados / total_ofertas) * 100, 2) if total_ofertas else 0
+            },
+            "graficos": {
+                "por_estado": [{"estado": k, "total": v} for k, v in por_estado.items()],
+                "por_mes": [{"meses": k, "total": v} for k, v in por_mes.items()]
+            },
+            "ranking": ranking,
+            "regiones": regiones
+        })
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+
+        return JsonResponse({
+            "success": False,
+            "error": "Error interno"
+        }, status=500)

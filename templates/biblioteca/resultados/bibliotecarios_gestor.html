@@ -1,0 +1,200 @@
+{% extends 'biblioteca/layout_gestor.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- ================= FILTROS ================= -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5>Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form id="filter-form">
+
+                        <div class="form-group">
+                            <label>Cueanexo:</label>
+                            <input type="text" name="cueanexo" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mes:</label>
+                            <select name="mes" class="form-control">
+                                <option value="">Todos</option>
+                                {% for numero, nombre in meses %}
+                                    <option value="{{ numero }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Regional:</label>
+                            <select name="regional" class="form-control">
+                                <option value="">Todas</option>
+                                {% for value, label in regionales %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Año:</label>
+                            <input type="number" name="anio" class="form-control">
+                        </div>
+
+                        <!-- CARGO -->
+                        <div class="form-group">
+                            <label>Cargo:</label>
+                            <select name="cargos" class="form-control">
+                                <option value="">Todos</option>
+                                {% for value, label in cargos %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- SITUACION REVISTA -->
+                        <div class="form-group">
+                            <label>Situación Revista:</label>
+                            <select name="sit_revista" class="form-control">
+                                <option value="">Todas</option>
+                                {% for value, label in sit_revistas %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- TURNOS -->
+                        <div class="form-group">
+                            <label>Turno:</label>
+                            <select name="turnos" class="form-control">
+                                <option value="">Todos</option>
+                                {% for t in turnos %}
+                                    <option value="{{ t }}">{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- SITUACION LABORAL -->
+                        <div class="form-group">
+                            <label>Situación Laboral:</label>
+                            <select name="sit_lab" class="form-control">
+                                <option value="">Todas</option>
+                                {% for s in sitlab %}
+                                    <option value="{{ s }}">{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TABLA ================= -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5>Resultados Bibliotecarios</h5>
+                </div>
+
+                <div class="card-body">
+                    <table class="table table-striped table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>CUE</th>
+                                <th>Mes</th>
+                                <th>Año</th>
+                                <th>Nombre</th>
+                                <th>Documento</th>
+                                <th>Cargo</th>
+                                <th>Revista</th>
+                                <th>Turno</th>
+                                <th>Situación</th>
+                                <th>Estado</th>
+                                <th>Antigüedad</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="resultados"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= AJAX ================= -->
+<script>
+$(document).ready(function() {
+
+    function actualizarResultados() {
+
+        $.ajax({
+            url: "{% url 'archivos:filtrar_bibliotecarios' %}",
+            type: "GET",
+            data: $("#filter-form").serialize(),
+            dataType: "json",
+
+            success: function(response) {
+
+                let tbody = $("#resultados");
+                tbody.empty();
+
+                if (response.datos.length > 0) {
+
+                    $.each(response.datos, function(index, item) {
+                        tbody.append(`
+                            <tr>
+                                <td>${item.cueanexo}</td>
+                                <td>${item.mes}</td>
+                                <td>${item.anio}</td>
+                                <td>${item.apellidos}, ${item.nombres}</td>
+                                <td>${item.n_doc}</td>
+                                <td>${item.cargo}</td>
+                                <td>${item.situacion_revista}</td>
+                                <td>${item.turno}</td>
+                                <td>${item.situacion_laboral}</td>
+                                <td>
+                                    <span class="badge ${item.estado === 'ACTIVO' ? 'badge-success' : 'badge-danger'}">
+                                        ${item.estado}
+                                    </span>
+                                </td>
+                                <td>${item.antiguedad || 0}</td>
+                            </tr>
+                        `);
+                    });
+
+                    // TOTAL
+                    tbody.append(`
+                        <tr class="bg-light font-weight-bold">
+                            <td colspan="11" class="text-center">
+                                Total de bibliotecarios: ${response.total_general.total || 0}
+                            </td>
+                        </tr>
+                    `);
+
+                } else {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="11" class="text-center">No hay datos</td>
+                        </tr>
+                    `);
+                }
+            }
+        });
+    }
+
+    // eventos
+    $("#filter-form input, #filter-form select").on("change", actualizarResultados);
+
+    // carga inicial
+    actualizarResultados();
+
+});
+</script>
+
+{% endblock %}

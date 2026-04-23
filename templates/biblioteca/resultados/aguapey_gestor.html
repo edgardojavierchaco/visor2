@@ -1,0 +1,148 @@
+{% extends 'biblioteca/layout_gestor.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- ================= FILTROS ================= -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5>Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form id="filter-form">
+
+                        <div class="form-group">
+                            <label>Cueanexo:</label>
+                            <input type="text" name="cueanexo" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mes:</label>
+                            <select name="mes" class="form-control">
+                                <option value="">Seleccione</option>
+                                {% for numero, nombre in meses %}
+                                    <option value="{{ numero }}">{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>                       
+
+                        <div class="form-group">
+                            <label>Regional:</label>
+                            <select name="regional" class="form-control">
+                                <option value="">Seleccione</option>
+                                {% for value, label in regionales %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Año:</label>
+                            <input type="number" name="anio" class="form-control" min="2000" max="2030">
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TABLA ================= -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5>Resultados Aguapey</h5>
+                </div>
+
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Cueanexo</th>
+                                <th class="text-center">Mes</th>
+                                <th class="text-center">Año</th>
+                                <th class="text-center">Mensual</th>
+                                <th class="text-center">Base</th>
+                                <th class="text-center">Usuarios</th>
+                                <th class="text-center">Porcentaje</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="resultados">
+                            <!-- dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= AJAX ================= -->
+<script>
+$(document).ready(function() {
+
+    function actualizarResultados() {
+
+        $.ajax({
+            url: "{% url 'archivos:filtrar_aguapey' %}",
+            type: "GET",
+            data: $("#filter-form").serialize(),
+            dataType: "json",
+
+            success: function(response) {
+
+                let tbody = $("#resultados");
+                tbody.empty();
+
+                if (response.datos.length > 0) {
+
+                    $.each(response.datos, function(index, item) {
+                        tbody.append(`
+                            <tr>
+                                <td class="text-center">${item.cueanexo}</td>
+                                <td class="text-center">${item.mes}</td>
+                                <td class="text-center">${item.anio}</td>                                
+                                <td class="text-center">${item.total_mes}</td>
+                                <td class="text-center">${item.total_base}</td>
+                                <td class="text-center">${item.total_usuarios}</td>
+                                <td class="text-center">${item.porcentaje_uso}</td>
+                            </tr>
+                        `);
+                    });
+
+                    // ================= TOTALES =================
+                    tbody.append(`
+                        <tr class="bg-light font-weight-bold">
+                            <td colspan="4" class="text-right"><strong>TOTALES:</strong></td>
+                            <td class="text-center"><strong>${response.total_general.meses}</strong></td>
+                            <td class="text-center"><strong>${response.total_general.base}</strong></td>
+                            <td class="text-center"><strong>${response.total_general.usuarios}</strong></td>
+                            <td class="text-center"><strong>${response.total_general.porcentaje}</strong></td>
+                        </tr>
+                    `);
+
+                } else {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="8" class="text-center">No hay datos</td>
+                        </tr>
+                    `);
+                }
+            }
+        });
+    }
+
+    // Ejecutar al cambiar filtros
+    $("#filter-form input, #filter-form select").on("change", actualizarResultados);
+
+    // carga inicial
+    actualizarResultados();
+
+});
+</script>
+
+{% endblock %}

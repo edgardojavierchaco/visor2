@@ -1,0 +1,274 @@
+{% extends 'biblioteca/layout_dir.html' %}
+{% load static %}
+
+{% block title %}Dashboard Ministerial por Región{% endblock %}
+
+{% block head %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.badge {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
+table.dataTable tbody tr:hover {
+    background-color: #f2f6ff;
+}
+
+.card {
+    border-radius: 12px;
+}
+</style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid mt-3">
+
+    <!-- 🔎 FILTROS -->
+    <div class="card shadow mb-3">
+        <div class="card-body">
+
+            <form id="filtro-form" class="row g-2">
+
+                <div class="col-md-3">
+                    <input id="cueanexo" class="form-control" placeholder="CUEANEXO">
+                </div>
+
+                <div class="col-md-2">
+                    <select id="meses" class="form-control">
+                        <option value="">Mes</option>
+                        <option>ENERO</option><option>FEBRERO</option><option>MARZO</option>
+                        <option>ABRIL</option><option>MAYO</option><option>JUNIO</option>
+                        <option>JULIO</option><option>AGOSTO</option><option>SEPTIEMBRE</option>
+                        <option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <input id="annos" class="form-control" placeholder="Año">
+                </div>
+
+                <div class="col-md-3">
+                    <select id="region_loc" class="form-control">
+                        <option value="">REGIÓN</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100">Filtrar</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- 📊 KPI -->
+    <div class="row">
+
+        <div class="col-md-3">
+            <div class="card bg-primary text-white p-3">
+                <h6>OFERTAS</h6>
+                <h2 id="kpi-ofertas">0</h2>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-success text-white p-3">
+                <h6>ENVIADOS</h6>
+                <h2 id="kpi-enviados">0</h2>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-warning p-3">
+                <h6>GENERADOS</h6>
+                <h2 id="kpi-generados">0</h2>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-danger text-white p-3">
+                <h6>FALTANTES</h6>
+                <h2 id="kpi-faltantes">0</h2>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 🚨 ALERTA -->
+    <div id="alerta" class="alert mt-3 d-none"></div>
+
+    <!-- 📊 GRÁFICOS -->
+    <div class="row mt-3">
+
+        <div class="col-md-6">
+            <div class="card p-3 shadow">
+                <h6>Estados</h6>
+                <canvas id="chartEstado"></canvas>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-3 shadow">
+                <h6>Meses</h6>
+                <canvas id="chartMes"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 📋 TABLA -->
+    <div class="card mt-3 shadow">
+        <div class="card-body">
+
+            <table id="tabla" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>CUEANEXO</th>
+                        <th>ESTADO</th>
+                        <th>REGIÓN</th>
+                        <th>TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+let tabla;
+let chartEstado;
+let chartMes;
+
+$(document).ready(function () {
+
+    tabla = $('#tabla').DataTable({
+        language: {
+            search: "Buscar:",
+            lengthMenu: "Mostrar _MENU_",
+            info: "Mostrando _START_ a _END_ de _TOTAL_",
+            zeroRecords: "Sin datos",
+            paginate: {
+                first: "Primero",
+                previous: "Anterior",
+                next: "Siguiente",
+                last: "Último"
+            }
+        }
+    });
+
+    cargar();
+
+    $('#filtro-form').on('submit', function (e) {
+        e.preventDefault();
+        cargar();
+    });
+
+});
+
+function estadoBadge(estado) {
+
+    if (estado === "ENVIADO")
+        return '<span class="badge bg-success">🟢 ENVIADO</span>';
+
+    if (estado === "GENERADO")
+        return '<span class="badge bg-warning text-dark">🟡 GENERADO</span>';
+
+    return '<span class="badge bg-secondary">SIN ESTADO</span>';
+}
+
+function cargar() {
+
+    $.get("{% url 'bibliotecas:dashboard_informes_api' %}", {
+        cueanexo: $('#cueanexo').val(),
+        meses: $('#meses').val(),
+        annos: $('#annos').val(),
+        region_loc: $('#region_loc').val()
+    }, function (data) {
+
+        if (!data.success) return;
+
+        // KPI
+        $('#kpi-ofertas').text(data.kpis.ofertas);
+        $('#kpi-enviados').text(data.kpis.enviados);
+        $('#kpi-generados').text(data.kpis.generados);
+        $('#kpi-faltantes').text(data.kpis.faltantes);
+
+        // ALERTA
+        $('#alerta')
+            .removeClass('d-none')
+            .addClass(data.kpis.faltantes > 0 ? 'alert-warning' : 'alert-success')
+            .text("Cumplimiento: " + data.kpis.cumplimiento + "%");
+
+        // REGIONES
+        if ($('#region_loc option').length === 1) {
+            data.regiones.forEach(r => {
+                $('#region_loc').append(`<option value="${r}">${r}</option>`);
+            });
+        }
+
+        // TABLA
+        tabla.clear();
+
+        data.ranking.forEach(r => {
+
+            tabla.row.add([
+                r.cueanexo,
+                estadoBadge(r.estado),
+                '<span class="badge bg-info">' + (r.region_loc || 'SIN REGIÓN') + '</span>',
+                '<span class="badge bg-primary">' + r.total + '</span>'
+            ]);
+
+        });
+
+        tabla.draw();
+
+        // CHART ESTADO
+        if (chartEstado) chartEstado.destroy();
+
+        chartEstado = new Chart($('#chartEstado'), {
+            type: 'doughnut',
+            data: {
+                labels: data.graficos.por_estado.map(x => x.estado),
+                datasets: [{
+                    data: data.graficos.por_estado.map(x => x.total)
+                }]
+            }
+        });
+
+        // CHART MES
+        if (chartMes) chartMes.destroy();
+
+        chartMes = new Chart($('#chartMes'), {
+            type: 'line',
+            data: {
+                labels: data.graficos.por_mes.map(x => x.meses),
+                datasets: [{
+                    label: "Informes",
+                    data: data.graficos.por_mes.map(x => x.total)
+                }]
+            }
+        });
+
+    });
+
+}
+
+</script>
+
+{% endblock %}

@@ -151,19 +151,43 @@ def sync_stream(request):
 
                 if items:
                     for item in items:
-                        yield f"data: {item}\n\n"
+
+                        # 🔥 parse seguro
+                        try:
+                            data_item = json.loads(item)
+                        except Exception:
+                            data_item = {"raw": item}
+
+                        payload = {
+                            "tipo": "fila",
+                            "data": data_item
+                        }
+
+                        yield "data: " + json.dumps(payload) + "\n\n"
+
                         last_index += 1
 
-                # 🔥 cortar automáticamente
+                # 🔥 estado final
                 estado = r.get("sync_estado")
                 if estado in ["finalizado", "error", "cancelado"]:
-                    yield f"data: {json.dumps({'estado': estado})}\n\n"
+                    payload = {
+                        "tipo": "estado",
+                        "data": {"estado": estado}
+                    }
+                    yield f"data: {json.dumps(payload)}\n\n"
                     break
 
                 time.sleep(0.5)
 
             except GeneratorExit:
                 # cliente cerró conexión
+                break
+            
+            except Exception as e:
+                yield "data: " + json.dumps({
+                    "tipo": "error",
+                    "data": str(e)
+                }) + "\n\n"
                 break
 
     response = StreamingHttpResponse(
@@ -172,4 +196,5 @@ def sync_stream(request):
     )
 
     response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
     return response

@@ -3,7 +3,8 @@ import locale
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
-from apps.biblioteca.models import ServiciosMatBiblio, TipoMaterialBiblio, DestinoFondos
+from apps.biblioteca.models import ServiciosMatBiblio, TipoMaterialBiblio, DestinoFondos, turno, TiposSituacionLaboral
+from apps.consultasge.models_padron import CapaUnicaOfertas
 
 MESES_ES = [
     (1, "ENERO"), (2, "FEBRERO"), (3, "MARZO"), (4, "ABRIL"), (5, "MAYO"), (6, "JUNIO"),
@@ -37,6 +38,22 @@ PROCESOS_CHOICES=[
     ('BAJAS', 'BAJAS'),
 ]
 
+CARGO_CHOICES = [
+    ('BIBLIOTECARIO', 'BIBLIOTECARIO'),
+    ('DIRECTOR BIBLIOTECA 1RA', 'DIRECTOR BIBLIOTECA 1RA'),
+    ('DIRECTOR BIBLIOTECA 2DA', 'DIRECTOR BIBLIOTECA 2DA'),
+    ('DIRECTOR BIBLIOTECA 3RA', 'DIRECTOR BIBLIOTECA 3RA'),
+    ('DIRECTOR BIBLIOTECA CENTRAL', 'DIRECTOR BIBLIOTECA CENTRAL'),
+    ('VICEDIRECTOR BIBLIOTECA', 'BICEDIRECTOR BIBLIOTECA'),
+]
+
+SIT_REVISTA_CHOICES = [
+    ('TITULAR', 'TITULAR'),
+    ('INTERINO', 'INTERINO'),
+    ('SUPLENTE', 'SUPLENTE'),
+    ('CONTRATADO', 'CONTRATADO'),
+]
+
 servicios_mb=ServiciosMatBiblio.objects.filter(cod_servicio__range=(111,114))
 servicios_sr=ServiciosMatBiblio.objects.filter(cod_servicio__range=(211,212))
 servicios_srv=ServiciosMatBiblio.objects.filter(cod_servicio__range=(311,313))
@@ -45,6 +62,29 @@ servicios_ip=ServiciosMatBiblio.objects.filter(cod_servicio__range=(511,527))
 tipo_mat=TipoMaterialBiblio.objects.all()
 fondos=DestinoFondos.objects.all()
 servicios_pa=ServiciosMatBiblio.objects.filter(cod_servicio__gt=710)
+escuelas_pa = (
+    CapaUnicaOfertas.objects
+    .filter(acronimo__startswith="BI")
+    .values_list("nom_est", flat=True)
+    .distinct()
+    .order_by("cueanexo")
+)
+
+turnos_pa = (
+    turno.objects
+    .all()
+    .values_list("nom_turno", flat=True)
+    .distinct()
+    .order_by("nom_turno")
+)
+
+sitlab_pa=(
+    TiposSituacionLaboral.objects
+    .all()
+    .values_list("tipo_situacion", flat=True)
+    .distinct()
+    .order_by("tipo_situacion")
+)
 
 
 """ SERVICIOS_SP = [
@@ -712,3 +752,251 @@ def filtrar_planillas_anexas(request):
         print("Total general:", total_general)
         
     return JsonResponse({"datos": datos, "total_general": total_general})
+
+
+##########################
+#     INSTITUCIONES      #
+##########################
+def instituciones_view(request):    
+    return render(request, "biblioteca/resultados/instituciones_gestor.html", {'meses': MESES_ES, 'escuela': escuelas_pa, 'regionales': REGIONES})
+
+def filtrar_instituciones(request):
+    cueanexo = request.GET.get("cueanexo", "")
+    mes = request.GET.get("mes", "")
+    anio = request.GET.get("anio", "")    
+    escuela = request.GET.get("escuela", "")
+    regional = request.GET.get("regional", "")
+    print(cueanexo, mes, anio, escuela, regional)
+    
+    condiciones = []
+    parametros = []
+
+    if cueanexo:
+        condiciones.append("cueanexo = %s")
+        parametros.append(cueanexo)
+    if mes:
+        condiciones.append("mes = %s")
+        parametros.append(mes)
+    if anio:
+        condiciones.append("anio = %s")
+        parametros.append(anio)       
+    if escuela:
+        condiciones.append("nom_est = %s")
+        parametros.append(escuela)          
+    if regional:
+        condiciones.append("region_loc = %s")
+        parametros.append(regional)
+
+    sql = """
+        SELECT cueanexo, mes, anio, escuela, matricula, docentes, matricdisc, etnia, region_loc, localidad
+        FROM pem.v_instituciones_servicios
+        WHERE 1=1
+    """
+    
+    if condiciones:
+        sql += " AND " + " AND ".join(condiciones)
+
+    sql_total = """
+        SELECT 
+            COALESCE(SUM(matricula), 0)  AS matricula,
+            COALESCE(SUM(docentes), 0)   AS docentes,
+            COALESCE(SUM(matricdisc), 0)  AS matricdisc,
+            COALESCE(SUM(etnia), 0)      AS etnia
+        FROM pem.v_instituciones_servicios
+        WHERE 1=1
+    """
+
+    if condiciones:
+        sql_total += " AND " + " AND ".join(condiciones)
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, parametros)
+        columnas = [col[0] for col in cursor.description]
+        datos = [dict(zip(columnas, row)) for row in cursor.fetchall()]
+
+        cursor.execute(sql_total, parametros)
+        row=cursor.fetchone()
+        
+        total_general = {
+            "matricula": row[0] if row else 0,
+            "docentes": row[1] if row else 0,
+            "matridisc": row[2] if row else 0,
+            "etnia": row[3] if row else 0,
+        }
+        
+        
+        print("Total general:", total_general)
+        
+    return JsonResponse({"datos": datos, "total_general": total_general})
+
+
+##########################
+#        AGUAPEY         #
+##########################
+def aguapey_view(request):    
+    return render(request, "biblioteca/resultados/aguapey_gestor.html", {'meses': MESES_ES, 'regionales': REGIONES})
+
+def filtrar_aguapey(request):
+    cueanexo = request.GET.get("cueanexo", "")
+    mes = request.GET.get("mes", "")
+    anio = request.GET.get("anio", "")    
+    regional = request.GET.get("regional", "")
+    print(cueanexo, mes, anio, regional)
+    
+    condiciones = []
+    parametros = []
+
+    if cueanexo:
+        condiciones.append("cueanexo = %s")
+        parametros.append(cueanexo)
+    if mes:
+        condiciones.append("mes = %s")
+        parametros.append(mes)
+    if anio:
+        condiciones.append("anio = %s")
+        parametros.append(anio)       
+    if regional:
+        condiciones.append("region_loc = %s")
+        parametros.append(regional)
+
+    sql = """
+        SELECT cueanexo, mes, anio, total_mes, total_base, total_usuarios, porcentaje_uso, region_loc, localidad
+        FROM pem.v_aguapey
+        WHERE 1=1
+    """
+    
+    if condiciones:
+        sql += " AND " + " AND ".join(condiciones)
+
+    sql_total = """
+        SELECT 
+            COALESCE(SUM(total_mes), 0)  AS mes,
+            COALESCE(SUM(total_base), 0)   AS base,
+            COALESCE(SUM(total_usuarios), 0)  AS usuarios,
+            COALESCE(SUM(porcentaje_uso), 0)      AS porcentaje
+        FROM pem.v_aguapey
+        WHERE 1=1
+    """
+
+    if condiciones:
+        sql_total += " AND " + " AND ".join(condiciones)
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, parametros)
+        columnas = [col[0] for col in cursor.description]
+        datos = [dict(zip(columnas, row)) for row in cursor.fetchall()]
+
+        cursor.execute(sql_total, parametros)
+        row=cursor.fetchone()
+        
+        total_general = {
+            "meses": row[0] if row else 0,
+            "base": row[1] if row else 0,
+            "usuarios": row[2] if row else 0,
+            "porcentaje": float(row[3]) if row else 0,
+        }
+        
+        
+        print("Total general:", total_general)
+        
+    return JsonResponse({"datos": datos, "total_general": total_general})
+
+
+
+# ===========================
+# BIBLIOTECARIOS
+# ===========================
+def bibliotecarios_view(request):    
+    return render(request, "biblioteca/resultados/bibliotecarios_gestor.html", {
+        'meses': MESES_ES,
+        'regionales': REGIONES,
+        'cargos': CARGO_CHOICES,
+        'sit_revistas': SIT_REVISTA_CHOICES,
+        'turnos': turnos_pa,
+        'sitlab': sitlab_pa,
+    })
+
+
+def filtrar_bibliotecarios(request):
+    cueanexo = request.GET.get("cueanexo", "")
+    mes = request.GET.get("mes", "")
+    anio = request.GET.get("anio", "")    
+    regional = request.GET.get("regional", "")
+    cargos = request.GET.get("cargos","")
+    sit_revista = request.GET.get("sit_revista","")
+    turnos = request.GET.get("turnos","")
+    sit_lab = request.GET.get("sit_lab","")    
+
+    condiciones = []
+    parametros = []
+
+    if cueanexo:
+        condiciones.append("cueanexo = %s")
+        parametros.append(cueanexo)
+
+    if mes:
+        condiciones.append("mes = %s")
+        parametros.append(mes)
+
+    if anio:
+        condiciones.append("anio = %s")
+        parametros.append(anio)
+
+    if regional:
+        condiciones.append("region_loc = %s")
+        parametros.append(regional)
+
+    if cargos:
+        condiciones.append("cargo = %s")  # ✅ CORRECTO
+        parametros.append(cargos)
+
+    if sit_revista:
+        condiciones.append("situaciones_revista = %s")  # ✅ CORRECTO
+        parametros.append(sit_revista)
+
+    if turnos:
+        condiciones.append("turno = %s")  # ✅ CORRECTO
+        parametros.append(turnos)
+
+    if sit_lab:
+        condiciones.append("situacion_laboral = %s")  # ✅ CORRECTO
+        parametros.append(sit_lab)
+
+    sql = """
+        SELECT cueanexo, mes, anio, cuil, n_doc, apellidos, nombres,
+               cargo, situacion_revista, turno, situacion_laboral,
+               estado, antiguedad
+        FROM pem.v_bibliotecarios_cue
+        WHERE 1=1
+    """
+
+    if condiciones:
+        sql += " AND " + " AND ".join(condiciones)
+
+    sql_total = """
+        SELECT COUNT(*) 
+        FROM pem.v_bibliotecarios_cue
+        WHERE 1=1
+    """
+
+    if condiciones:
+        sql_total += " AND " + " AND ".join(condiciones)
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, parametros)
+        columnas = [col[0] for col in cursor.description]
+        datos = [dict(zip(columnas, row)) for row in cursor.fetchall()]
+
+        cursor.execute(sql_total, parametros)
+        row = cursor.fetchone()
+
+        total_general = {
+            "total": row[0] if row else 0
+        }
+
+    print("Total general:", total_general)
+    
+    return JsonResponse({
+        "datos": datos,
+        "total_general": total_general
+    })

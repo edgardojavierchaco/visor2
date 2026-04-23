@@ -195,21 +195,26 @@ function iniciarStream() {
             if (data.tipo === "fila") {
 
                 const tabla = document.getElementById("tablaResultados");
+                const d = data.data;
 
                 tabla.insertAdjacentHTML("beforeend", `
                     <tr>
-                        <td>${data.username}</td>
-                        <td>${data.estado}</td>
-                        <td>${data.msg || ""}</td>
+                        <td>${d.username || ""}</td>
+                        <td>${d.estado || ""}</td>
+                        <td>${d.msg || ""}</td>
                     </tr>
                 `);
 
                 addXP();
             }
 
-            if (["finalizado","error","cancelado"].includes(data.estado)) {
-                finalizarUI();
-                if (data.estado === "finalizado") confetti();
+            if (data.tipo === "estado") {
+                const estado = data.data.estado;
+
+                if (["finalizado","error","cancelado"].includes(estado)) {
+                    finalizarUI();
+                    if (estado === "finalizado") confetti();
+                }
             }
 
         } catch (e) {
