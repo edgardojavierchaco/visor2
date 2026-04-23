@@ -289,8 +289,8 @@ Fecha: {consulta.fecha.strftime("%d/%m/%Y %H:%M")}
                 from_email = settings.EMAIL_HOST_USER1
                 password = settings.EMAIL_HOST_PASSWORD1
             else:
-                from_email = settings.EMAIL_HOST_USER2
-                password = settings.EMAIL_HOST_PASSWORD2
+                from_email = settings.EMAIL_HOST_USER_ALT
+                password = settings.EMAIL_HOST_PASSWORD_ALT
 
             connection = get_connection(
                 backend='django.core.mail.backends.smtp.EmailBackend',

@@ -149,7 +149,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
         context['entity'] = 'Servicios_Referencia'
         context['list_url'] = self.success_url
         context['action'] = 'add'
-        cueanexo = cueanexo_qs.first() if cueanexo_qs.exists() else None
+        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None
         
         # Obtener el último mes y año del usuario logueado
         ultimo_informe = GenerarInforme.objects.filter(cueanexo=context['cueanexo']).order_by('-annos', '-meses').first()
