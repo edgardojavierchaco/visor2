@@ -1,9 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load widget_tweaks %}
 
-{% block head %}
-    {% block head_form %}
-    {% endblock %}
+{% block head %}    
 {% endblock %}
 
 {% block content %}
@@ -22,22 +20,29 @@
             </div>
             <div class="card-body">
                 {% csrf_token %}
-                <input type="hidden" name="action" value="{{ action }}">
+                <input type="hidden" name="action" value="{{ action }}">   
+                
+                <!-- 🔥 BLOQUEO VISUAL -->
+                {% if bloqueado %}
+                    <div class="alert alert-danger">
+                        ⚠ El último informe ya fue ENVIADO. No se puede modificar este período.
+                    </div>
+                {% endif %}
 
-                <div class="card-body">
-
-            {% if form.errors %}
-            <div class="alert alert-danger">
-                <ul>
-                    {% for field in form %}
-                        {% for error in field.errors %}
-                            <li>{{ error }}</li>
+                <!-- ERRORES FORM -->
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <ul>
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
                         {% endfor %}
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
 
+            <!-- CUEANEXO -->    
             <div class="form-group row">
                 <div class="col-md-4">
                     <label>CUE Anexo</label>
@@ -46,12 +51,12 @@
 
                 <div class="col-md-4">
                     <label>Mes</label>
-                    {{ form.mes|add_class:"form-control" }}
+                    {{ form.mes|add_class:"form-control"|attr:"id:id_mes"  }}
                 </div>
 
                 <div class="col-md-4">
                     <label>Año</label>
-                    {{ form.anio|add_class:"form-control" }}
+                    {{ form.anio|add_class:"form-control"|attr:"id:id_anio"  }}
                 </div>
             </div>
 
@@ -173,70 +178,376 @@
 <!-- ========================= -->
 <script>
 
-    // =========================
-    // ERRORES FORM (SweetAlert)
-    // =========================
-    {% if form.errors %}
-        var errors = '';
-        {% for field in form %}
-            {% for error in field.errors %}
-                errors += '{{ error }}\n';
-            {% endfor %}
-        {% endfor %}
+// =========================
+// 🎯 CONFIG
+// =========================
+const form = document.querySelector('form');
+const btnSubmit = form.querySelector('button[type="submit"]');
 
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: errors
-        });
-    {% endif %}
+const fields = {
+    f_nac: document.getElementById('id_f_nac'),
+    f_ingreso: document.getElementById('id_f_ingreso'),
+    f_hasta: document.getElementById('id_f_hasta'),
+    f_desde_lic: document.getElementById('id_f_desde_lic'),
+    f_hasta_lic: document.getElementById('id_f_hasta_lic'),
+    dni: document.getElementById('id_n_doc'),
+    cuil: document.getElementById('id_cuil'),
+    apellidos: document.getElementById('id_apellidos'),
+    nombres: document.getElementById('id_nombres'),
+};
+
+// regex nombres
+const regexNombre = /^[A-ZÁÉÍÓÚÑ\s]+$/;
+
+// =========================
+// 🎨 HELPERS UI
+// =========================
+function removeError(input) {
+    if (!input) return;
+
+    input.classList.remove('is-invalid');
+
+    let next = input.nextElementSibling;
+    if (next && next.classList.contains('invalid-feedback')) {
+        next.remove();
+    }
+}
+
+function setError(input, message) {
+    if (!input) return;
+
+    removeError(input);
+
+    input.classList.add('is-invalid');
+    input.insertAdjacentHTML('afterend',
+        `<div class="invalid-feedback d-block">${message}</div>`
+    );
+}
+
+function highlight(input) {
+    input.style.transition = 'all 0.3s';
+    input.style.boxShadow = '0 0 0 3px rgba(220,53,69,0.3)';
+    setTimeout(() => input.style.boxShadow = '', 800);
+}
+
+// =========================
+// 🔤 NORMALIZAR TEXTO
+// =========================
+function normalizarTexto(input) {
+    if (!input) return;
+
+    input.addEventListener('input', function () {
+
+        let start = this.selectionStart;
+        let end = this.selectionEnd;
+
+        let valor = this.value.toUpperCase();
+
+        // solo letras + espacios
+        valor = valor.replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');
+
+        // quitar dobles espacios
+        valor = valor.replace(/\s+/g, ' ');
+
+        this.value = valor;
+
+        this.setSelectionRange(start, end);
+    });
+}
+
+// =========================
+// 🧮 VALIDAR CUIL
+// =========================
+function validarCUIL(cuil) {
+
+    if (!/^\d{11}$/.test(cuil)) return false;
+
+    const mult = [5,4,3,2,7,6,5,4,3,2];
+    let total = 0;
+
+    for (let i = 0; i < 10; i++) {
+        total += parseInt(cuil[i]) * mult[i];
+    }
+
+    let mod = 11 - (total % 11);
+
+    if (mod === 11) mod = 0;
+    if (mod === 10) mod = 9;
+
+    return mod === parseInt(cuil[10]);
+}
+
+// =========================
+// 🧠 VALIDADOR CENTRAL
+// =========================
+function validar() {
+
+    let errores = 0;
+    let firstError = null;
+    let hoy = new Date().toISOString().split('T')[0];
+
+    Object.values(fields).forEach(removeError);
+
+    const {
+        f_nac, f_ingreso, f_hasta,
+        f_desde_lic, f_hasta_lic,
+        dni, cuil, apellidos, nombres
+    } = fields;
 
     // =========================
-    // SUBMIT AJAX
+    // 🔤 NOMBRES
     // =========================
-    $('form').on('submit', function (e) {
-        e.preventDefault();
+    if (apellidos.value && !regexNombre.test(apellidos.value)) {
+        setError(apellidos, 'El apellido solo puede contener letras');
+        errores++; if (!firstError) firstError = apellidos;
+    }
 
-        var parameters = new FormData(this);
+    if (nombres.value && !regexNombre.test(nombres.value)) {
+        setError(nombres, 'El nombre solo puede contener letras');
+        errores++; if (!firstError) firstError = nombres;
+    }
 
-        submit_with_ajax(
-            window.location.pathname,
-            'Notificación',
-            '¿Estás seguro de realizar la siguiente acción?',
-            parameters,
-            function () {
-                location.href = '{{ list_url }}';
+    // =========================
+    // 🆔 DNI
+    // =========================
+    if (dni.value && !/^\d+$/.test(dni.value)) {
+        setError(dni, 'El DNI debe contener solo números');
+        errores++; if (!firstError) firstError = dni;
+    }
+
+    // =========================
+    // 🆔 CUIL
+    // =========================
+    if (cuil.value) {
+
+        let cuilClean = cuil.value.replace(/\D/g, '');
+
+        if (!/^\d{11}$/.test(cuilClean)) {
+            setError(cuil, 'El CUIL debe tener 11 dígitos');
+            errores++; if (!firstError) firstError = cuil;
+        } else {
+
+            if (!validarCUIL(cuilClean)) {
+                setError(cuil, 'CUIL inválido');
+                errores++; if (!firstError) firstError = cuil;
             }
-        );
+
+            let dniFromCuil = cuilClean.substring(2, 10);
+
+            if (dni.value && dniFromCuil !== dni.value.padStart(8, '0')) {
+                setError(cuil, 'El CUIL no corresponde al DNI');
+                errores++; if (!firstError) firstError = cuil;
+            }
+        }
+    }
+
+    // =========================
+    // 📅 NACIMIENTO
+    // =========================
+    if (f_nac.value && f_nac.value > hoy) {
+        setError(f_nac, 'No puede ser futura');
+        errores++; if (!firstError) firstError = f_nac;
+    }
+
+    // =========================
+    // 🎂 EDAD >= 18
+    // =========================
+    if (f_nac.value && f_ingreso.value) {
+
+        let nac = new Date(f_nac.value);
+        let ing = new Date(f_ingreso.value);
+
+        let edad = ing.getFullYear() - nac.getFullYear();
+
+        if (
+            ing.getMonth() < nac.getMonth() ||
+            (ing.getMonth() === nac.getMonth() && ing.getDate() < nac.getDate())
+        ) edad--;
+
+        if (edad < 18) {
+            setError(f_ingreso, 'Debe tener al menos 18 años');
+            errores++; if (!firstError) firstError = f_ingreso;
+        }
+    }
+
+    // =========================
+    // 📅 INGRESO <= HASTA
+    // =========================
+    if (f_ingreso.value && f_hasta.value && f_hasta.value < f_ingreso.value) {
+        setError(f_hasta, 'No puede ser menor al ingreso');
+        errores++; if (!firstError) firstError = f_hasta;
+    }
+
+    // =========================
+    // 📅 LICENCIAS
+    // =========================
+    if (f_desde_lic.value && f_ingreso.value && f_desde_lic.value < f_ingreso.value) {
+        setError(f_desde_lic, 'No puede ser anterior al ingreso');
+        errores++; if (!firstError) firstError = f_desde_lic;
+    }
+
+    if (f_desde_lic.value && f_hasta.value && f_desde_lic.value > f_hasta.value) {
+        setError(f_desde_lic, 'No puede ser posterior a fecha hasta');
+        errores++; if (!firstError) firstError = f_desde_lic;
+    }
+
+    if (f_hasta_lic.value && f_desde_lic.value && f_hasta_lic.value < f_desde_lic.value) {
+        setError(f_hasta_lic, 'No puede ser menor que desde');
+        errores++; if (!firstError) firstError = f_hasta_lic;
+    }
+
+    if (f_hasta_lic.value && f_ingreso.value && f_hasta_lic.value < f_ingreso.value) {
+        setError(f_hasta_lic, 'No puede ser anterior al ingreso');
+        errores++; if (!firstError) firstError = f_hasta_lic;
+    }
+
+    if (f_hasta_lic.value && f_hasta.value && f_hasta_lic.value > f_hasta.value) {
+        setError(f_hasta_lic, 'No puede ser posterior a fecha hasta');
+        errores++; if (!firstError) firstError = f_hasta_lic;
+    }
+
+    // =========================
+    // UX
+    // =========================
+    if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstError.focus();
+        highlight(firstError);
+    }
+
+    btnSubmit.disabled = errores > 0;
+
+    return errores === 0;
+}
+
+// =========================
+// 🔒 RESTRICCIONES
+// =========================
+function restricciones() {
+
+    const { f_ingreso, f_hasta, f_desde_lic, f_hasta_lic } = fields;
+
+    if (f_ingreso.value) {
+        f_hasta.min = f_ingreso.value;
+        f_desde_lic.min = f_ingreso.value;
+        f_hasta_lic.min = f_ingreso.value;
+    }
+
+    if (f_hasta.value) {
+        f_desde_lic.max = f_hasta.value;
+        f_hasta_lic.max = f_hasta.value;
+    }
+
+    if (f_desde_lic.value) {
+        f_hasta_lic.min = f_desde_lic.value;
+    }
+}
+
+// =========================
+// 🚀 EVENTOS
+// =========================
+Object.values(fields).forEach(input => {
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        restricciones();
+        validar();
     });
+});
 
-    // =========================
-    // INFO POPUP
-    // =========================
-    $('#showPopupBtn').click(function () {
-        Swal.fire({
-            title: 'Información',
-            html: `<p>En esta sección se carga el material bibliográfico correspondiente.</p>`,
-            icon: 'info'
-        });
+// activar mayúsculas
+normalizarTexto(fields.apellidos);
+normalizarTexto(fields.nombres);
+
+// =========================
+// SUBMIT AJAX
+// =========================
+$('form').on('submit', function (e) {
+    e.preventDefault();
+
+    if (!validar()) return;
+
+    var parameters = new FormData(this);
+
+    $.ajax({
+        url: window.location.pathname,
+        type: 'POST',
+        data: parameters,
+        processData: false,
+        contentType: false,
+
+        success: function (response) {
+
+            if (response.error) {
+
+                let parsed = typeof response.error === 'string'
+                    ? JSON.parse(response.error)
+                    : response.error;
+
+                let errors = '';
+
+                for (let field in parsed) {
+
+                    let input = $('#id_' + field);
+
+                    parsed[field].forEach(function (e) {
+
+                        let msg = e.message || e;
+
+                        errors += msg + '\n';
+
+                        input.addClass('is-invalid');
+                        input.after('<div class="invalid-feedback d-block">' + msg + '</div>');
+                    });
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errors
+                });
+
+                return;
+            }
+
+            window.location.href = '{{ list_url }}';
+        },
+
+        error: function () {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error del servidor'
+            });
+        }
     });
+});
 
-    // =========================
-    // BLOQUEO (SI VIENE DEL BACKEND)
-    // =========================
-    {% if bloqueado %}
-        Swal.fire({
-            icon: 'warning',
-            title: 'Informe enviado',
-            text: 'Este período ya fue enviado y no puede modificarse.'
-        });
-    {% endif %}
+// =========================
+// INIT
+// =========================
+document.addEventListener('DOMContentLoaded', function () {
+    restricciones();
+    validar();
+});
 
-    // ===============================
-// 📌 AUTO FILL CAMPOS
-// ===============================
-document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
+// =========================
+// BLOQUEO BACKEND
+// =========================
+{% if bloqueado %}
+Swal.fire({
+    icon: 'warning',
+    title: 'Informe enviado',
+    text: 'Este período ya fue enviado y no puede modificarse.'
+});
+{% endif %}
+
+// =========================
+// AUTO FILL
+// =========================
 document.getElementById("id_mes").value = "{{ mes }}";
 document.getElementById("id_anio").value = "{{ anno }}";
+
+</script>
 
 {% endblock %}

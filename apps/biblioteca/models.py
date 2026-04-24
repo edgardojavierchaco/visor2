@@ -126,7 +126,7 @@ class MaterialBibliografico(models.Model):
         verbose_name='Material'
     )
 
-    cantidad = models.IntegerField(verbose_name='Cantidad')
+    cantidad = models.PositiveIntegerField(verbose_name='Cantidad')
 
     class Meta:
         verbose_name = 'Material_Bibliografico'
@@ -235,8 +235,8 @@ class ServicioReferencia(models.Model):
         verbose_name='Turnos'
     )
 
-    varones = models.IntegerField(verbose_name='Varones')
-    total = models.IntegerField(verbose_name='Total')
+    varones = models.PositiveIntegerField(verbose_name='Varones')
+    total = models.PositiveIntegerField(verbose_name='Total')
 
     class Meta:
         verbose_name = 'Servicio_Referencia'
@@ -342,8 +342,8 @@ class ServicioReferenciaVirtual(models.Model):
         verbose_name='Turnos'
     )
 
-    varones = models.IntegerField(verbose_name='Varones')
-    total = models.IntegerField(verbose_name='Total')
+    varones = models.PositiveIntegerField(verbose_name='Varones')
+    total = models.PositiveIntegerField(verbose_name='Total')
 
     class Meta:
         verbose_name = 'Servicio_Referencia_Virtual'
@@ -455,7 +455,7 @@ class ServicioPrestamo(models.Model):
         verbose_name='Instalacion'
     )
 
-    total = models.IntegerField(verbose_name='Total')
+    total = models.PositiveIntegerField(verbose_name='Total')
 
     class Meta:
         verbose_name = 'Servicio_Prestamo'
@@ -557,8 +557,8 @@ class InformePedagogico(models.Model):
         verbose_name='Servicio'
     )
 
-    varones = models.IntegerField(verbose_name='Varones')
-    total = models.IntegerField(verbose_name='Total')
+    varones = models.PositiveIntegerField(verbose_name='Varones')
+    total = models.PositiveIntegerField(verbose_name='Total')
 
     class Meta:
         verbose_name = 'Informe_Pedagogico'
@@ -747,10 +747,10 @@ class InstitucionesPrestaServicios(models.Model):
 
     escuela = models.CharField(max_length=255, verbose_name='Escuela')
 
-    matricula = models.IntegerField(verbose_name='Matricula')
-    docentes = models.IntegerField(verbose_name='Docentes')
-    matricdisc = models.IntegerField(verbose_name='Discapacidad')
-    etnia = models.IntegerField(verbose_name='Etnia')
+    matricula = models.PositiveIntegerField(verbose_name='Matricula')
+    docentes = models.PositiveIntegerField(verbose_name='Docentes')
+    matricdisc = models.PositiveIntegerField(verbose_name='Discapacidad')
+    etnia = models.PositiveIntegerField(verbose_name='Etnia')
 
     class Meta:
         verbose_name = 'Institucion_Servicio'
@@ -860,7 +860,7 @@ class ProcesosTecnicos(models.Model):
         verbose_name='Procesos'
     )
 
-    total = models.IntegerField(verbose_name='Total')
+    total = models.PositiveIntegerField(verbose_name='Total')
 
     class Meta:
         verbose_name = 'Proceso_Tecnico'
@@ -952,9 +952,9 @@ class Aguapey(models.Model):
     mes = models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
     anio = models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')
 
-    total_mes = models.IntegerField(verbose_name='Total Mes')
-    total_base = models.IntegerField(verbose_name='Total Base')
-    total_usuarios = models.IntegerField(verbose_name='Total Usuarios')
+    total_mes = models.PositiveIntegerField(verbose_name='Total Mes')
+    total_base = models.PositiveIntegerField(verbose_name='Total Base')
+    total_usuarios = models.PositiveIntegerField(verbose_name='Total Usuarios')
 
     observaciones = models.TextField(max_length=255, verbose_name='Observaciones')
 
@@ -1087,7 +1087,7 @@ class RegistroDestinoFondos(models.Model):
     )
 
     descripcion = models.CharField(max_length=255, verbose_name='Descripcion')
-    cantidad = models.IntegerField(verbose_name='Cantidad')
+    cantidad = models.PositiveIntegerField(verbose_name='Cantidad')
 
     class Meta:
         verbose_name = 'RegistroDestinoFondo'
@@ -1699,8 +1699,8 @@ class AsistenciaUsuariosResumen(models.Model):
     anio = models.IntegerField()
     nivel = models.CharField(max_length=100)
     usuario = models.CharField(max_length=50)
-    total = models.IntegerField()
-    varones = models.IntegerField()
+    total = models.PositiveIntegerField()
+    varones = models.PositiveIntegerField()
 
     class Meta:
         managed = False

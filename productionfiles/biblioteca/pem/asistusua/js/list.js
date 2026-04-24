@@ -37,32 +37,33 @@ $(function () {
         footerCallback: function (row, data, start, end, display) {
             var api = this.api();
 
-            // Función para convertir a número
             var intVal = function (i) {
-                return typeof i === 'string' ?
-                    i.replace(/[\$,]/g, '') * 1 :
-                    typeof i === 'number' ? i : 0;
+                return typeof i === 'string'
+                    ? parseFloat(i.replace(/[\$,]/g, '')) || 0
+                    : typeof i === 'number'
+                    ? i
+                    : 0;
             };
 
-            // Sumar la columna "varones" (índice 5)
-            var totales = api
+            // ✅ Sumar VARONES (columna 5)
+            var varones = api
                 .column(5, { search: 'applied' })
                 .data()
-                .reduce(function(a, b) { 
-                    return intVal(a) + intVal(b); 
+                .reduce(function (a, b) {
+                    return intVal(a) + intVal(b);
                 }, 0);
 
-            // Sumar la columna "total" (índice 6)
+            // ✅ Sumar TOTAL (columna 6)
             var totales = api
                 .column(6, { search: 'applied' })
                 .data()
-                .reduce(function(a, b) { 
-                    return intVal(a) + intVal(b); 
+                .reduce(function (a, b) {
+                    return intVal(a) + intVal(b);
                 }, 0);
-            
-            // Insertar los totales en el footer (columnas 5 y 6)  
-            $(api.column(6).footer()).html(varones);
-            $(api.column(7).footer()).html(totales);            
+
+            // ✅ Insertar en el footer correcto
+            $(api.column(5).footer()).html(varones);
+            $(api.column(6).footer()).html(totales);
         }
     });
 });

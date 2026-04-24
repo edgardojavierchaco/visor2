@@ -109,9 +109,23 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
             if action == 'add':
                 form = self.get_form()
 
+                # 🔥 obtener cueanexo
+                cueanexo = request.session.get("cueanexo")
+
+                print("🔥 CUEANEXO EN POST:", cueanexo)
+                
+                if not cueanexo:
+                    return JsonResponse({
+                        "error": True,
+                        "message": "No se pudo determinar el CUE Anexo"
+                    }, status=400)
+                    
                 if form.is_valid():
-                    instance = form.save()
-                    data = instance.toJSON()
+                    instance = form.save(commit=False)
+                    instance.cueanexo = cueanexo
+                    instance.save()
+                    
+                    data = {"success": True}
                 else:
                     data['error'] = form.errors.as_json()
 
@@ -203,8 +217,7 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin,Update
                     data = instance.toJSON()
                 else:
                     return JsonResponse({
-                        "error": True,
-                        "message": form.errors.as_json()
+                        "error": form.errors.as_json()
                     })
 
             else:
