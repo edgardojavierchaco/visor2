@@ -15,67 +15,14 @@ import re
 from typing import Any, Optional
 from .mixins import InformeBloqueoMixin
 
-def get_cueanexo(self):
-    usuario_limpio = re.sub(r'\D', '', self.request.user.username)
+# =========================
+# 🔹 CUEANEXOS DEL USUARIO
+# =========================
+def get_cueanexos_usuario(user):
+    usuario_limpio = re.sub(r'\D', '', user.username)
 
-    return (
+    return list(
         CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        )
-        .filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        )
-        .values_list('cueanexo', flat=True)
-        .first()
-    )
-
-# Cargar
-class MaterialBibliograficoCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
-    model = MaterialBibliografico
-    form_class = MaterialBibliograficoForm
-    template_name = 'biblioteca/pem/matbibl/create.html'
-    success_url = reverse_lazy('bibliotecas:materialbibliografico_list')
-    #permission_required = 'apps.add_client'
-    url_redirect = success_url
-    
-    def get_cueanexo(self):
-        usuario_limpio = re.sub(r'\D', '', self.request.user.username)
-
-        return (
-            CapaUnicaOfertas.objects.annotate(
-                cuit_limpio=Func(
-                    F('resploc_cuitcuil'),
-                    Value('-'),
-                    Value(''),
-                    function='REPLACE'
-                )
-            )
-            .filter(
-                cuit_limpio=usuario_limpio,
-                oferta='Común - Servicios complementarios ',
-                acronimo__startswith='BI'
-            )
-            .values_list('cueanexo', flat=True)
-            .first()
-        )
-    
-    def form_valid(self, form):
-        
-        # 🔹 Obtener usuario logueado correctamente
-        usuario_logueado = self.request.user.username
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
-
-        print("Usuario logueado:", usuario_logueado)  # Debug
-
-        # 🔹 Obtener cueanexos del usuario
-        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
             cuit_limpio=Func(
                 F('resploc_cuitcuil'),
                 Value('-'),
@@ -87,38 +34,69 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, InformeBloqueoMixin, C
             oferta='Común - Servicios complementarios ',
             acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
+    )
 
-        cueanexos = list(cueanexos_qs)
 
-        # 🔥 cueanexo activo
-        cueanexo = cueanexos[0] if cueanexos else None
-
-        # 🔥 GUARDAR EN SESIÓN (CLAVE PARA EL Mixin)
-        self.request.session["cueanexo"] = cueanexo
-        print("SESSION CUEANEXO:", self.request.session.get("cueanexo"))
-        
-        # 🔥 asignar al objeto
-        form.instance.cueanexo = cueanexo
-
-        return super().form_valid(form)
-
+# =========================
+# 🔹 CUEANEXO ACTIVO
+# =========================
+def get_cueanexo_activo(request):
+    return request.session.get("cueanexo_activo")
+    
+# ==========================================================
+# CREATE
+# ==========================================================
+class MaterialBibliograficoCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
+    model = MaterialBibliografico
+    form_class = MaterialBibliograficoForm
+    template_name = 'biblioteca/pem/matbibl/create.html'
+    success_url = reverse_lazy('bibliotecas:materialbibliografico_list')    
+    
+    # =========================
+    # DISPATCH
+    # =========================
     def dispatch(self, request, *args, **kwargs):
         self.request = request
 
-        # 🔥 obtener cueanexo UNA SOLA VEZ
-        cueanexo = self.get_cueanexo()
+        cueanexo = request.session.get("cueanexo_activo")
 
-        # 🔥 guardar en sesión
-        request.session["cueanexo"] = cueanexo
+        # 🔥 fallback si no existe
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
 
-        print("🔥 CUEANEXO EN DISPATCH:", cueanexo)
-        print("🔥 SESIÓN:", request.session.get("cueanexo"))
         return super().dispatch(request, *args, **kwargs)
+    
+    # =========================
+    # FORM VALID
+    # =========================   
+    def form_valid(self, form):
+        
+        if self.informe_bloqueado():
+            return JsonResponse({
+                "error": True,
+                "message": "El último informe ya fue ENVIADO. No se puede modificar."
+            }, status=403)
 
+        cueanexo = self.request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            return JsonResponse({
+                "error": True,
+                "message": "No hay cueanexo activo"
+            }, status=400)
+
+        form.instance.cueanexo = cueanexo
+
+        return super().form_valid(form)
+    
+
+    # =========================
+    # POST AJAX
+    # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
 
-        # 🔥 BLOQUEO REAL
         if self.informe_bloqueado():
             return JsonResponse({
                 "error": True,
@@ -126,64 +104,49 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, InformeBloqueoMixin, C
             }, status=403)
 
         try:
-            action = request.POST['action']
+            action = request.POST.get('action')
 
             if action == 'add':
                 form = self.get_form()
 
                 if form.is_valid():
                     instance = form.save()
-                    data = instance.toJSON()
+                    return JsonResponse(instance.toJSON())
                 else:
-                    data['error'] = form.errors.as_json()
+                    return JsonResponse({
+                        'error': True,
+                        'errors': form.errors
+                    })
 
-            else:
-                data['error'] = 'No ha ingresado a ninguna opción'
+            return JsonResponse({'error': 'Acción no válida'})
 
         except Exception as e:
-            data['error'] = str(e)
+            return JsonResponse({'error': str(e)})
 
-        return JsonResponse(data) 
-    
-
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        usuario_logueado = self.request.user.username
 
-        # Limpiar caracteres no numéricos del CUIT/CUIL
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        cueanexo = get_cueanexo_activo(self.request)
 
-        # Obtener primer cueanexo del usuario
-        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)       
-        
+        context['cueanexo'] = cueanexo
+        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
+
+        ultimo = GenerarInforme.objects.filter(
+            cueanexo=cueanexo
+        ).order_by('-annos', '-meses').first()
+
+        context['mes'] = ultimo.meses if ultimo else None
+        context['anno'] = ultimo.annos if ultimo else None
+
         context['title'] = 'Carga Servicio Material Bibliográfico'
         context['entity'] = 'Material'
         context['list_url'] = self.success_url
         context['action'] = 'add'
-        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None      
-        
-        # Obtener el último mes y año del usuario logueado
-        ultimo_informe = GenerarInforme.objects.filter(cueanexo=context['cueanexo']).order_by('-annos', '-meses').first()
 
-        if ultimo_informe:
-            context['mes'] = ultimo_informe.meses
-            context['anno'] = ultimo_informe.annos
-        else:
-            context['mes'] = None
-            context['anno'] = None
-        print(context)
-        return context
+        return context    
 
 
 #editar
@@ -192,19 +155,30 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
     form_class = MaterialBibliograficoForm
     template_name = 'biblioteca/pem/matbibl/create.html'
     success_url = reverse_lazy('bibliotecas:materialbibliografico_list')
-    url_redirect = success_url
-
-    # 🔥 obtener objeto (UpdateView lo necesita)
+    
+     # =========================
+    # DISPATCH
+    # =========================
     def dispatch(self, request, *args, **kwargs):
-        self.object = self.get_object()
         self.request = request
+        self.object = self.get_object()
+        
+        # 🔥 asegurar cueanexo activo
+        cueanexo = request.session.get("cueanexo_activo")
+        
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
+        
         return super().dispatch(request, *args, **kwargs)
 
     # 🔥 POST con SweetAlert + AJAX (igual que CREATE)
+    # =========================
+    # POST AJAX
+    # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
 
-        # 🚨 BLOQUEO POR INFORME ENVIADO
         if self.informe_bloqueado():
             return JsonResponse({
                 "error": True,
@@ -219,18 +193,17 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
 
                 if form.is_valid():
                     instance = form.save()
-                    data = instance.toJSON()
+                    return JsonResponse(instance.toJSON())
                 else:
                     return JsonResponse({
                         "error": True,
-                        "message": form.errors.as_json()
+                        "errors": form.errors
                     })
 
-            else:
-                return JsonResponse({
-                    "error": True,
-                    "message": "Acción no válida"
-                })
+            return JsonResponse({
+                "error": True,
+                "message": "Acción no válida"
+            })
 
         except Exception as e:
             return JsonResponse({
@@ -238,37 +211,16 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
                 "message": str(e)
             })
 
-        return JsonResponse(data)
-
-    # 🔥 CONTEXTO 
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        usuario_limpio = re.sub(r'\D', '', self.request.user.username)
+        cueanexo = get_cueanexo_activo(self.request)
 
-        cueanexo = (
-            CapaUnicaOfertas.objects.annotate(
-                cuit_limpio=Func(
-                    F('resploc_cuitcuil'),
-                    Value('-'),
-                    Value(''),
-                    function='REPLACE'
-                )
-            )
-            .filter(
-                cuit_limpio=usuario_limpio,
-                oferta='Común - Servicios complementarios ',
-                acronimo__startswith='BI'
-            )
-            .values_list('cueanexo', flat=True)
-            .first()
-        )
-
-        context['title'] = 'Edición Servicio Material Bibliográfico'
-        context['entity'] = 'Material'
-        context['list_url'] = self.success_url
-        context['action'] = 'edit'
         context['cueanexo'] = cueanexo
+        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
 
         ultimo_informe = GenerarInforme.objects.filter(
             cueanexo=cueanexo
@@ -276,6 +228,11 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
 
         context['mes'] = ultimo_informe.meses if ultimo_informe else None
         context['anno'] = ultimo_informe.annos if ultimo_informe else None
+
+        context['title'] = 'Edición Servicio Material Bibliográfico'
+        context['entity'] = 'Material'
+        context['list_url'] = self.success_url
+        context['action'] = 'edit'
 
         return context
 
@@ -285,16 +242,28 @@ class MaterialBibliograficoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
     model = MaterialBibliografico
     template_name = 'biblioteca/pem/matbibl/delete.html'
     success_url = reverse_lazy('bibliotecas:materialbibliografico_list')
-    url_redirect = success_url
 
+    # =========================
+    # DISPATCH
+    # =========================
     def dispatch(self, request, *args, **kwargs):
-        self.object = self.get_object()
         self.request = request
+        self.object = self.get_object()
+
+        # 🔥 asegurar cueanexo activo
+        cueanexo = request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
+
         return super().dispatch(request, *args, **kwargs)
 
-    # 🔥 DELETE con AJAX + SweetAlert
+    # =========================
+    # DELETE AJAX
+    # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
 
         # 🚨 BLOQUEO POR INFORME ENVIADO
         if self.informe_bloqueado():
@@ -304,6 +273,15 @@ class MaterialBibliograficoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
             }, status=403)
 
         try:
+            cueanexo = request.session.get("cueanexo_activo")
+
+            # 🔒 SEGURIDAD: evitar borrar otro cueanexo
+            if str(self.object.cueanexo) != str(cueanexo):
+                return JsonResponse({
+                    "error": True,
+                    "message": "No autorizado"
+                }, status=403)
+
             self.object.delete()
 
             return JsonResponse({
@@ -317,6 +295,9 @@ class MaterialBibliograficoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
                 "message": str(e)
             })
 
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -328,97 +309,88 @@ class MaterialBibliograficoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
         return context
 
 
-#Listado
+# =========================
+# LIST VIEW
+# =========================
 class MaterialBibliograficoListView(LoginRequiredMixin, ListView):
     model = MaterialBibliografico
     template_name = 'biblioteca/pem/matbibl/list_matbiblio.html'
 
     # =========================
-    # 🔹 Obtener cueanexo del usuario
+    # SESSION
     # =========================
-    def get_cueanexo(self):
-        usuario_logueado = self.request.user.username
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+    def dispatch(self, request, *args, **kwargs):
 
-        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo='BI'
-        ).values_list('cueanexo', flat=True)
-
-        return cueanexo_qs.first() if cueanexo_qs.exists() else None
-
-    # =========================
-    # 🔹 SOLO el último registro
-    # =========================
-    def get_queryset(self):
-        cueanexo = self.get_cueanexo()
+        cueanexo = request.session.get("cueanexo_activo")
 
         if not cueanexo:
-            return MaterialBibliografico.objects.none()
-        
-        anio = self.request.GET.get('anio')
-        mes = self.request.GET.get('mes')
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
 
-        qs = MaterialBibliografico.objects.filter(
-            cueanexo=cueanexo)
-        
-        if anio and mes:
-            qs = qs.filter(anio=anio, mes=mes
-        ).order_by('-anio', '-mes')
-
-        print("Último material:", qs)
-        return qs
-
-    # =========================
-    # 🔹 CSRF EXEMPT (si usás AJAX)
-    # =========================
-    @method_decorator(csrf_exempt)
-    def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
     # =========================
-    # 🔹 AJAX POST
+    # QUERYSET
+    # =========================
+    def get_queryset(self):
+
+        cueanexo = self.request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            return MaterialBibliografico.objects.none()
+
+        qs = MaterialBibliografico.objects.filter(cueanexo=cueanexo)
+
+        anio = self.request.GET.get('anio')
+        mes = self.request.GET.get('mes')
+
+        if anio:
+            qs = qs.filter(anio=anio)
+
+        if mes:
+            qs = qs.filter(mes=mes)
+
+        return qs.order_by('-anio', '-mes')
+
+    # =========================
+    # AJAX
     # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
-
         try:
-            action = request.POST.get('action')
+            if request.POST.get('action') == 'searchdata':
 
-            if action == 'searchdata':
-                data = []
-                for obj in self.get_queryset():
-                    data.append(obj.toJSON())
-            else:
-                data['error'] = 'Acción no válida'
+                data = [obj.toJSON() for obj in self.get_queryset()]
+
+                return JsonResponse(data, safe=False)
+
+            return JsonResponse({
+                'error': True,
+                'message': 'Acción no válida'
+            })
 
         except Exception as e:
-            data['error'] = str(e)
+            import traceback
+            print(traceback.format_exc())
 
-        return JsonResponse(data, safe=False)
+            return JsonResponse({
+                'error': True,
+                'message': str(e)
+            }, status=500)
 
     # =========================
-    # 🔹 Contexto del template
+    # CONTEXTO
     # =========================
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['title'] = 'Listado de Servicio Material Bibliográfico cargado'
+        context['title'] = 'Listado de Material Bibliográfico'
         context['create_url'] = reverse_lazy('bibliotecas:materialbibliografico_create')
         context['list_url'] = reverse_lazy('bibliotecas:materialbibliografico_list')
         context['update_url'] = reverse_lazy('bibliotecas:materialbibliografico_update', args=[0])
-
-        context['hide_lock_button'] = False
-        context['generar_pdf_button'] = True
+        context['hide_lock_button'] = False    
+        context['generar_pdf_button'] = True,    
+        context['before_url'] = reverse_lazy('bibliotecas:materialbibliografico_list')
         context['next_url'] = reverse_lazy('bibliotecas:servref_create')
-        context['entity'] = 'Material'
-
+        context['entity'] = 'Material Bibliografico'
         return context

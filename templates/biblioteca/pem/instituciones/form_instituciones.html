@@ -107,6 +107,83 @@
 <!-- 🔥 JAVASCRIPT -->
 <!-- ========================= -->
 <script>
+    // =========================
+    // 🎯 CAMPOS
+    // =========================
+    const form = document.getElementById('formulario');
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    const fields = {
+        matricula: document.getElementById('id_matricula'),
+        matricdisc: document.getElementById('id_matricdisc'),
+        etnia: document.getElementById('id_etnia'),
+    };
+
+    // =========================
+    // 🎨 HELPERS
+    // =========================
+    function removeError(input) {
+        if (!input) return;
+        input.classList.remove('is-invalid');
+        let next = input.nextElementSibling;
+        if (next && next.classList.contains('invalid-feedback')) next.remove();
+    }
+
+    function setError(input, message) {
+        if (!input) return;
+        removeError(input);
+        input.classList.add('is-invalid');
+        input.insertAdjacentHTML('afterend',
+            `<div class="invalid-feedback d-block">${message}</div>`
+        );
+    }
+
+    // =========================
+    // 🧠 VALIDACIÓN
+    // =========================
+    function validar() {
+        let errores = 0;
+
+        Object.values(fields).forEach(removeError);
+
+        let matricula = parseInt(fields.matricula.value) || 0;
+        let disc = parseInt(fields.matricdisc.value) || 0;
+        let etnia = parseInt(fields.etnia.value) || 0;
+
+        if (disc > matricula) {
+            setError(fields.matricdisc, 'No puede ser mayor a la matrícula');
+            errores++;
+        }
+
+        if (etnia > matricula) {
+            setError(fields.etnia, 'No puede ser mayor a la matrícula');
+            errores++;
+        }
+
+        btnSubmit.disabled = errores > 0;
+        return errores === 0;
+    }
+
+    // =========================
+    // EVENTOS
+    // =========================
+    Object.values(fields).forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', validar);
+    });
+
+    // =========================
+    // 🔥 MARCAR ERRORES BACKEND
+    // =========================
+    function marcarErroresBackend(errors) {
+        Object.keys(errors).forEach(function (field) {
+            let input = document.getElementById('id_' + field);
+
+            if (input) {
+                setError(input, errors[field][0]);
+            }
+        });
+    }
 
     // =========================
     // ERRORES FORM (SweetAlert)
@@ -131,6 +208,8 @@
     // =========================
     $('form').on('submit', function (e) {
         e.preventDefault();
+
+        if (!validar()) return;
 
         var parameters = new FormData(this);
 

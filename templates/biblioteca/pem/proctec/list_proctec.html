@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head_list %}
-    <script src="{% static 'biblioteca/pem/proctec/js/list_proctec.js' %}"></script>
+    
 {% endblock %}
 
 {% block columns %}
@@ -32,4 +32,9 @@
 
 {% block javascript %}
 
+    <script src="{% static 'biblioteca/pem/proctec/js/list_proctec.js' %}"></script>
+    <!-- 🔥 CSRF TOKEN (OCULTO PERO EXISTE) -->
+    <form style="display:none;">
+        {% csrf_token %}
+    </form>
 {% endblock %}

@@ -46,7 +46,7 @@
             <div class="form-group row">
                 <div class="col-md-4">
                     <label>CUE Anexo</label>
-                    <input type="text" class="form-control" value="{{ cueanexo }}" readonly>
+                    <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
                 </div>
 
                 <div class="col-md-4">
@@ -184,6 +184,17 @@
 const form = document.querySelector('form');
 const btnSubmit = form.querySelector('button[type="submit"]');
 
+// =========================
+// 🔐 CSRF TOKEN
+// =========================
+function getCSRFToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : null;
+}
+
+// =========================
+// 📦 CAMPOS
+// =========================
 const fields = {
     f_nac: document.getElementById('id_f_nac'),
     f_ingreso: document.getElementById('id_f_ingreso'),
@@ -196,11 +207,13 @@ const fields = {
     nombres: document.getElementById('id_nombres'),
 };
 
-// regex nombres
-const regexNombre = /^[A-ZÁÉÍÓÚÑ\s]+$/;
+// debug útil
+Object.entries(fields).forEach(([k,v]) => {
+    if (!v) console.warn("⚠ Campo no encontrado:", k);
+});
 
 // =========================
-// 🎨 HELPERS UI
+// 🎨 HELPERS
 // =========================
 function removeError(input) {
     if (!input) return;
@@ -224,34 +237,17 @@ function setError(input, message) {
     );
 }
 
-function highlight(input) {
-    input.style.transition = 'all 0.3s';
-    input.style.boxShadow = '0 0 0 3px rgba(220,53,69,0.3)';
-    setTimeout(() => input.style.boxShadow = '', 800);
-}
-
 // =========================
-// 🔤 NORMALIZAR TEXTO
+// 🔤 NORMALIZAR
 // =========================
 function normalizarTexto(input) {
     if (!input) return;
 
     input.addEventListener('input', function () {
-
-        let start = this.selectionStart;
-        let end = this.selectionEnd;
-
-        let valor = this.value.toUpperCase();
-
-        // solo letras + espacios
-        valor = valor.replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');
-
-        // quitar dobles espacios
-        valor = valor.replace(/\s+/g, ' ');
-
-        this.value = valor;
-
-        this.setSelectionRange(start, end);
+        this.value = this.value
+            .toUpperCase()
+            .replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '')
+            .replace(/\s+/g, ' ');
     });
 }
 
@@ -259,7 +255,6 @@ function normalizarTexto(input) {
 // 🧮 VALIDAR CUIL
 // =========================
 function validarCUIL(cuil) {
-
     if (!/^\d{11}$/.test(cuil)) return false;
 
     const mult = [5,4,3,2,7,6,5,4,3,2];
@@ -270,7 +265,6 @@ function validarCUIL(cuil) {
     }
 
     let mod = 11 - (total % 11);
-
     if (mod === 11) mod = 0;
     if (mod === 10) mod = 9;
 
@@ -278,141 +272,49 @@ function validarCUIL(cuil) {
 }
 
 // =========================
-// 🧠 VALIDADOR CENTRAL
+// 🧠 VALIDADOR
 // =========================
 function validar() {
 
     let errores = 0;
-    let firstError = null;
     let hoy = new Date().toISOString().split('T')[0];
 
     Object.values(fields).forEach(removeError);
 
-    const {
-        f_nac, f_ingreso, f_hasta,
-        f_desde_lic, f_hasta_lic,
-        dni, cuil, apellidos, nombres
-    } = fields;
+    const { f_nac, f_ingreso, f_hasta, dni, cuil, apellidos, nombres } = fields;
 
-    // =========================
-    // 🔤 NOMBRES
-    // =========================
-    if (apellidos.value && !regexNombre.test(apellidos.value)) {
-        setError(apellidos, 'El apellido solo puede contener letras');
-        errores++; if (!firstError) firstError = apellidos;
+    if (apellidos && apellidos.value && !/^[A-ZÁÉÍÓÚÑ\s]+$/.test(apellidos.value)) {
+        setError(apellidos, 'Solo letras');
+        errores++;
     }
 
-    if (nombres.value && !regexNombre.test(nombres.value)) {
-        setError(nombres, 'El nombre solo puede contener letras');
-        errores++; if (!firstError) firstError = nombres;
+    if (nombres && nombres.value && !/^[A-ZÁÉÍÓÚÑ\s]+$/.test(nombres.value)) {
+        setError(nombres, 'Solo letras');
+        errores++;
     }
 
-    // =========================
-    // 🆔 DNI
-    // =========================
-    if (dni.value && !/^\d+$/.test(dni.value)) {
-        setError(dni, 'El DNI debe contener solo números');
-        errores++; if (!firstError) firstError = dni;
+    if (dni && dni.value && !/^\d+$/.test(dni.value)) {
+        setError(dni, 'Solo números');
+        errores++;
     }
 
-    // =========================
-    // 🆔 CUIL
-    // =========================
-    if (cuil.value) {
+    if (cuil && cuil.value) {
+        let clean = cuil.value.replace(/\D/g, '');
 
-        let cuilClean = cuil.value.replace(/\D/g, '');
-
-        if (!/^\d{11}$/.test(cuilClean)) {
-            setError(cuil, 'El CUIL debe tener 11 dígitos');
-            errores++; if (!firstError) firstError = cuil;
-        } else {
-
-            if (!validarCUIL(cuilClean)) {
-                setError(cuil, 'CUIL inválido');
-                errores++; if (!firstError) firstError = cuil;
-            }
-
-            let dniFromCuil = cuilClean.substring(2, 10);
-
-            if (dni.value && dniFromCuil !== dni.value.padStart(8, '0')) {
-                setError(cuil, 'El CUIL no corresponde al DNI');
-                errores++; if (!firstError) firstError = cuil;
-            }
+        if (!validarCUIL(clean)) {
+            setError(cuil, 'CUIL inválido');
+            errores++;
         }
     }
 
-    // =========================
-    // 📅 NACIMIENTO
-    // =========================
-    if (f_nac.value && f_nac.value > hoy) {
-        setError(f_nac, 'No puede ser futura');
-        errores++; if (!firstError) firstError = f_nac;
+    if (f_nac && f_nac.value && f_nac.value > hoy) {
+        setError(f_nac, 'Fecha inválida');
+        errores++;
     }
 
-    // =========================
-    // 🎂 EDAD >= 18
-    // =========================
-    if (f_nac.value && f_ingreso.value) {
-
-        let nac = new Date(f_nac.value);
-        let ing = new Date(f_ingreso.value);
-
-        let edad = ing.getFullYear() - nac.getFullYear();
-
-        if (
-            ing.getMonth() < nac.getMonth() ||
-            (ing.getMonth() === nac.getMonth() && ing.getDate() < nac.getDate())
-        ) edad--;
-
-        if (edad < 18) {
-            setError(f_ingreso, 'Debe tener al menos 18 años');
-            errores++; if (!firstError) firstError = f_ingreso;
-        }
-    }
-
-    // =========================
-    // 📅 INGRESO <= HASTA
-    // =========================
-    if (f_ingreso.value && f_hasta.value && f_hasta.value < f_ingreso.value) {
-        setError(f_hasta, 'No puede ser menor al ingreso');
-        errores++; if (!firstError) firstError = f_hasta;
-    }
-
-    // =========================
-    // 📅 LICENCIAS
-    // =========================
-    if (f_desde_lic.value && f_ingreso.value && f_desde_lic.value < f_ingreso.value) {
-        setError(f_desde_lic, 'No puede ser anterior al ingreso');
-        errores++; if (!firstError) firstError = f_desde_lic;
-    }
-
-    if (f_desde_lic.value && f_hasta.value && f_desde_lic.value > f_hasta.value) {
-        setError(f_desde_lic, 'No puede ser posterior a fecha hasta');
-        errores++; if (!firstError) firstError = f_desde_lic;
-    }
-
-    if (f_hasta_lic.value && f_desde_lic.value && f_hasta_lic.value < f_desde_lic.value) {
-        setError(f_hasta_lic, 'No puede ser menor que desde');
-        errores++; if (!firstError) firstError = f_hasta_lic;
-    }
-
-    if (f_hasta_lic.value && f_ingreso.value && f_hasta_lic.value < f_ingreso.value) {
-        setError(f_hasta_lic, 'No puede ser anterior al ingreso');
-        errores++; if (!firstError) firstError = f_hasta_lic;
-    }
-
-    if (f_hasta_lic.value && f_hasta.value && f_hasta_lic.value > f_hasta.value) {
-        setError(f_hasta_lic, 'No puede ser posterior a fecha hasta');
-        errores++; if (!firstError) firstError = f_hasta_lic;
-    }
-
-    // =========================
-    // UX
-    // =========================
-    if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        firstError.focus();
-        highlight(firstError);
+    if (f_ingreso && f_hasta && f_hasta.value < f_ingreso.value) {
+        setError(f_hasta, 'Fecha incorrecta');
+        errores++;
     }
 
     btnSubmit.disabled = errores > 0;
@@ -421,46 +323,18 @@ function validar() {
 }
 
 // =========================
-// 🔒 RESTRICCIONES
-// =========================
-function restricciones() {
-
-    const { f_ingreso, f_hasta, f_desde_lic, f_hasta_lic } = fields;
-
-    if (f_ingreso.value) {
-        f_hasta.min = f_ingreso.value;
-        f_desde_lic.min = f_ingreso.value;
-        f_hasta_lic.min = f_ingreso.value;
-    }
-
-    if (f_hasta.value) {
-        f_desde_lic.max = f_hasta.value;
-        f_hasta_lic.max = f_hasta.value;
-    }
-
-    if (f_desde_lic.value) {
-        f_hasta_lic.min = f_desde_lic.value;
-    }
-}
-
-// =========================
 // 🚀 EVENTOS
 // =========================
 Object.values(fields).forEach(input => {
     if (!input) return;
-
-    input.addEventListener('input', () => {
-        restricciones();
-        validar();
-    });
+    input.addEventListener('input', validar);
 });
 
-// activar mayúsculas
 normalizarTexto(fields.apellidos);
 normalizarTexto(fields.nombres);
 
 // =========================
-// SUBMIT AJAX
+// 📤 SUBMIT AJAX
 // =========================
 $('form').on('submit', function (e) {
     e.preventDefault();
@@ -472,6 +346,9 @@ $('form').on('submit', function (e) {
     $.ajax({
         url: window.location.pathname,
         type: 'POST',
+        headers: {
+            "X-CSRFToken": getCSRFToken()
+        },
         data: parameters,
         processData: false,
         contentType: false,
@@ -480,25 +357,25 @@ $('form').on('submit', function (e) {
 
             if (response.error) {
 
-                let parsed = typeof response.error === 'string'
-                    ? JSON.parse(response.error)
-                    : response.error;
-
                 let errors = '';
 
-                for (let field in parsed) {
+                if (response.errors) {
+                    for (let field in response.errors) {
 
-                    let input = $('#id_' + field);
+                        let input = $('#id_' + field);
 
-                    parsed[field].forEach(function (e) {
+                        response.errors[field].forEach(function (e) {
+                            let msg = e.message || e;
+                            errors += msg + '\n';
 
-                        let msg = e.message || e;
-
-                        errors += msg + '\n';
-
-                        input.addClass('is-invalid');
-                        input.after('<div class="invalid-feedback d-block">' + msg + '</div>');
-                    });
+                            if (input.length) {
+                                input.addClass('is-invalid');
+                                input.after('<div class="invalid-feedback d-block">' + msg + '</div>');
+                            }
+                        });
+                    }
+                } else {
+                    errors = response.message || "Error";
                 }
 
                 Swal.fire({
@@ -513,11 +390,22 @@ $('form').on('submit', function (e) {
             window.location.href = '{{ list_url }}';
         },
 
-        error: function () {
+        error: function (xhr) {
+
+            console.error("STATUS:", xhr.status);
+            console.error("RESPONSE:", xhr.responseText);
+
+            let msg = "Error del servidor";
+
+            try {
+                let json = JSON.parse(xhr.responseText);
+                msg = json.message || msg;
+            } catch (e) {}
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Error del servidor'
+                text: msg
             });
         }
     });
@@ -527,24 +415,13 @@ $('form').on('submit', function (e) {
 // INIT
 // =========================
 document.addEventListener('DOMContentLoaded', function () {
-    restricciones();
     validar();
 });
 
 // =========================
-// BLOQUEO BACKEND
-// =========================
-{% if bloqueado %}
-Swal.fire({
-    icon: 'warning',
-    title: 'Informe enviado',
-    text: 'Este período ya fue enviado y no puede modificarse.'
-});
-{% endif %}
-
-// =========================
 // AUTO FILL
 // =========================
+document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
 document.getElementById("id_mes").value = "{{ mes }}";
 document.getElementById("id_anio").value = "{{ anno }}";
 

@@ -12,47 +12,17 @@ from apps.consultasge.models import CapaUnicaOfertas
 from django.db.models import Func, F, Value 
 import re
 from .mixins import InformeBloqueoMixin
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 
-# Cargar
-class ProcTecCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
-    model = ProcesosTecnicos
-    form_class = ProcesosTecnicosForm
-    template_name = 'biblioteca/pem/proctec/create.html'
-    success_url = reverse_lazy('bibliotecas:proctec_list')
-    #permission_required = 'apps.add_client'
-    url_redirect = success_url
-    
-    def get_cueanexo(self):
-        usuario_limpio = re.sub(r'\D', '', self.request.user.username)
+# =========================
+# 🔹 UTIL
+# =========================
+def get_cueanexos_usuario(user):
+    usuario_limpio = re.sub(r'\D', '', user.username)
 
-        return (
-            CapaUnicaOfertas.objects.annotate(
-                cuit_limpio=Func(
-                    F('resploc_cuitcuil'),
-                    Value('-'),
-                    Value(''),
-                    function='REPLACE'
-                )
-            )
-            .filter(
-                cuit_limpio=usuario_limpio,
-                oferta='Común - Servicios complementarios ',
-                acronimo__startswith='BI'
-            )
-            .values_list('cueanexo', flat=True)
-            .first()
-        )
-    
-    def form_valid(self, form):
-        
-        # 🔹 Obtener usuario logueado correctamente
-        usuario_logueado = self.request.user.username
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
-
-        print("Usuario logueado:", usuario_logueado)  # Debug
-
-        # 🔹 Obtener cueanexos del usuario
-        cueanexos_qs = CapaUnicaOfertas.objects.annotate(
+    return list(
+        CapaUnicaOfertas.objects.annotate(
             cuit_limpio=Func(
                 F('resploc_cuitcuil'),
                 Value('-'),
@@ -64,38 +34,64 @@ class ProcTecCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
             oferta='Común - Servicios complementarios ',
             acronimo__startswith='BI'
         ).values_list('cueanexo', flat=True)
+    )
 
-        cueanexos = list(cueanexos_qs)
 
-        # 🔥 cueanexo activo
-        cueanexo = cueanexos[0] if cueanexos else None
+def get_cueanexo_activo(request):
+    return request.session.get("cueanexo_activo")
 
-        # 🔥 GUARDAR EN SESIÓN (CLAVE PARA EL Mixin)
-        self.request.session["cueanexo"] = cueanexo
-        print("SESSION CUEANEXO:", self.request.session.get("cueanexo"))
+
+# ==========================================================
+# CREATE
+# ==========================================================
+class ProcTecCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
+    model = ProcesosTecnicos
+    form_class = ProcesosTecnicosForm
+    template_name = 'biblioteca/pem/proctec/create.html'
+    success_url = reverse_lazy('bibliotecas:proctec_list')
         
-        # 🔥 asignar al objeto
+    # =========================
+    # DISPATCH
+    # =========================
+    def dispatch(self, request, *args, **kwargs):
+
+        cueanexo = request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
+
+        return super().dispatch(request, *args, **kwargs)
+
+    # =========================
+    # FORM VALID
+    # =========================
+    def form_valid(self, form):
+
+        if self.informe_bloqueado():
+            return JsonResponse({
+                "error": True,
+                "message": "El último informe ya fue ENVIADO. No se puede modificar."
+            }, status=403)
+
+        cueanexo = self.request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            return JsonResponse({
+                "error": True,
+                "message": "No hay cueanexo activo"
+            })
+
         form.instance.cueanexo = cueanexo
 
         return super().form_valid(form)
 
-    def dispatch(self, request, *args, **kwargs):
-        self.request = request
-
-        # 🔥 obtener cueanexo UNA SOLA VEZ
-        cueanexo = self.get_cueanexo()
-
-        # 🔥 guardar en sesión
-        request.session["cueanexo"] = cueanexo
-
-        print("🔥 CUEANEXO EN DISPATCH:", cueanexo)
-        print("🔥 SESIÓN:", request.session.get("cueanexo"))
-        return super().dispatch(request, *args, **kwargs)
-
+    # =========================
+    # POST AJAX
+    # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
 
-        # 🔥 BLOQUEO REAL
         if self.informe_bloqueado():
             return JsonResponse({
                 "error": True,
@@ -103,86 +99,93 @@ class ProcTecCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
             }, status=403)
 
         try:
-            action = request.POST['action']
+            action = request.POST.get('action')
 
             if action == 'add':
+
                 form = self.get_form()
 
                 if form.is_valid():
                     instance = form.save()
-                    data = instance.toJSON()
+                    return JsonResponse(instance.toJSON())
                 else:
-                    data['error'] = form.errors.as_json()
+                    return JsonResponse({
+                        'error': True,
+                        'errors': form.errors
+                    })
 
-            else:
-                data['error'] = 'No ha ingresado a ninguna opción'
+            return JsonResponse({
+                'error': True,
+                'message': 'Acción no válida'
+            })
 
         except Exception as e:
-            data['error'] = str(e)
+            return JsonResponse({
+                'error': True,
+                'message': str(e)
+            })
 
-        return JsonResponse(data)   
-    
-
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
+
         context = super().get_context_data(**kwargs)
-        usuario_logueado = self.request.user.username
 
-        # Limpiar caracteres no numéricos del CUIT/CUIL
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
+        cueanexo = self.request.session.get("cueanexo_activo")
 
-        # Obtener primer cueanexo del usuario
-        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)     
+        context['cueanexo'] = cueanexo
+        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
+
+        ultimo = None
+        if cueanexo:
+            ultimo = GenerarInforme.objects.filter(
+                cueanexo=cueanexo
+            ).order_by('-annos', '-meses').first()
+
+        context['mes'] = ultimo.meses if ultimo else None
+        context['anno'] = ultimo.annos if ultimo else None   
         
         context['title'] = 'Carga de Procesos Técnicos'
         context['entity'] = 'Procesos_Técnicos'
         context['list_url'] = self.success_url
-        context['action'] = 'add'
-        context['cueanexo'] = cueanexo_qs.first() if cueanexo_qs.exists() else None
+        context['action'] = 'add'        
         
-        # Obtener el último mes y año del usuario logueado
-        ultimo_informe = GenerarInforme.objects.filter(cueanexo=context['cueanexo']).order_by('-annos', '-meses').first()
-
-        if ultimo_informe:
-            context['mes'] = ultimo_informe.meses
-            context['anno'] = ultimo_informe.annos
-        else:
-            context['mes'] = None
-            context['anno'] = None
-            
         return context
 
 
-#editar
+#===========================
+# UPDATE
+#===========================
 class ProcTecUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
     model = ProcesosTecnicos
     form_class = ProcesosTecnicosForm
     template_name = 'biblioteca/pem/proctec/create.html'
     success_url = reverse_lazy('bibliotecas:proctec_list')
-    #permission_required = 'apps.change_client'
     url_redirect = success_url
 
-    # 🔥 obtener objeto (UpdateView lo necesita)
+    # =========================
+    # DISPATCH
+    # =========================
     def dispatch(self, request, *args, **kwargs):
+
         self.object = self.get_object()
-        self.request = request
+
+        cueanexo = request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
+
         return super().dispatch(request, *args, **kwargs)
 
-    # 🔥 POST con SweetAlert + AJAX (igual que CREATE)
+    # =========================
+    # POST AJAX
+    # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
 
-        # 🚨 BLOQUEO POR INFORME ENVIADO
+        # 🔒 BLOQUEO
         if self.informe_bloqueado():
             return JsonResponse({
                 "error": True,
@@ -193,22 +196,22 @@ class ProcTecUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
             action = request.POST.get('action')
 
             if action == 'edit':
+
                 form = self.get_form()
 
                 if form.is_valid():
                     instance = form.save()
-                    data = instance.toJSON()
+                    return JsonResponse(instance.toJSON())
                 else:
                     return JsonResponse({
                         "error": True,
-                        "message": form.errors.as_json()
+                        "errors": form.errors
                     })
 
-            else:
-                return JsonResponse({
-                    "error": True,
-                    "message": "Acción no válida"
-                })
+            return JsonResponse({
+                "error": True,
+                "message": "Acción no válida"
+            })
 
         except Exception as e:
             return JsonResponse({
@@ -216,31 +219,17 @@ class ProcTecUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
                 "message": str(e)
             })
 
-        return JsonResponse(data)
-
-    # 🔥 CONTEXTO 
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
+
         context = super().get_context_data(**kwargs)
 
-        usuario_limpio = re.sub(r'\D', '', self.request.user.username)
+        cueanexo = self.request.session.get("cueanexo_activo")
 
-        cueanexo = (
-            CapaUnicaOfertas.objects.annotate(
-                cuit_limpio=Func(
-                    F('resploc_cuitcuil'),
-                    Value('-'),
-                    Value(''),
-                    function='REPLACE'
-                )
-            )
-            .filter(
-                cuit_limpio=usuario_limpio,
-                oferta='Común - Servicios complementarios ',
-                acronimo__startswith='BI'
-            )
-            .values_list('cueanexo', flat=True)
-            .first()
-        )      
+        context['cueanexo'] = cueanexo
+        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
         
         context['title'] = 'Edición de Procesos Técnicos'
         context['entity'] = 'Procesos_Técnicos'
@@ -248,34 +237,49 @@ class ProcTecUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
         context['action'] = 'edit'
         context['cueanexo'] = cueanexo
         
-        ultimo_informe = GenerarInforme.objects.filter(
-            cueanexo=cueanexo
-        ).order_by('-annos', '-meses').first()
+        ultimo = None
+        if cueanexo:
+            ultimo = GenerarInforme.objects.filter(
+                cueanexo=cueanexo
+            ).order_by('-annos', '-meses').first()
 
-        context['mes'] = ultimo_informe.meses if ultimo_informe else None
-        context['anno'] = ultimo_informe.annos if ultimo_informe else None
-        
+        context['mes'] = ultimo.meses if ultimo else None
+        context['anno'] = ultimo.annos if ultimo else None
+                
         return context
 
 
-#Eliminar
+#=====================
+# DELETE
+#=====================
 class ProcTecDeleteView(LoginRequiredMixin, InformeBloqueoMixin, DeleteView):
     model = ProcesosTecnicos
     template_name = 'biblioteca/pem/proctec/delete.html'
     success_url = reverse_lazy('bibliotecas:proctec_list')
-    #permission_required = 'apps.delete_client'
     url_redirect = success_url
 
+    # =========================
+    # DISPATCH
+    # =========================
     def dispatch(self, request, *args, **kwargs):
+
         self.object = self.get_object()
-        self.request = request
+
+        cueanexo = request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
+
         return super().dispatch(request, *args, **kwargs)
 
-    # 🔥 DELETE con AJAX + SweetAlert
+    # =========================
+    # DELETE (AJAX)
+    # =========================
     def post(self, request, *args, **kwargs):
-        data = {}
 
-        # 🚨 BLOQUEO POR INFORME ENVIADO
+        # 🔒 BLOQUEO
         if self.informe_bloqueado():
             return JsonResponse({
                 "error": True,
@@ -296,65 +300,106 @@ class ProcTecDeleteView(LoginRequiredMixin, InformeBloqueoMixin, DeleteView):
                 "message": str(e)
             })
 
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
+
         context = super().get_context_data(**kwargs)
+
+        cueanexo = self.request.session.get("cueanexo_activo")
+
+        context['cueanexo'] = cueanexo
+        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
+    
         context['title'] = 'Eliminación de Procesos Técnicos'
         context['entity'] = 'Procesos_Técnicos'
         context['list_url'] = self.success_url
         return context
 
-
-#Listado
+#=========================
+# LIST
+#=========================
 class ProcTecListView(LoginRequiredMixin, ListView):
     model = ProcesosTecnicos
-    template_name = 'biblioteca/pem/proctec/list_proctec.html'
-    #permission_required = 'apps.view_supervisor'    
+    template_name = 'biblioteca/pem/proctec/list_proctec.html'  
     
-    def get_queryset(self):    
-        usuario_logueado = self.request.user.username
-
-        # Limpiar caracteres no numéricos del CUIT/CUIL
-        usuario_limpio = re.sub(r'\D', '', usuario_logueado)
-
-        # Obtener primer cueanexo del usuario
-        cueanexo_qs = CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)       
-        
-        serviciosref = ProcesosTecnicos.objects.filter(cueanexo=cueanexo_qs.first() if cueanexo_qs.exists() else None)
-        print('material:',serviciosref)
-        return serviciosref
-        
-
-    @method_decorator(csrf_exempt)
+    # =========================
+    # SESSION
+    # =========================
     def dispatch(self, request, *args, **kwargs):
+
+        cueanexo = request.session.get("cueanexo_activo")
+
+        if not cueanexo:
+            cueanexos = get_cueanexos_usuario(request.user)
+            cueanexo = cueanexos[0] if cueanexos else None
+            request.session["cueanexo_activo"] = cueanexo
+
         return super().dispatch(request, *args, **kwargs)
 
-    def post(self, request, *args, **kwargs):
-        data = {}
-        try:
-            action = request.POST['action']
-            if action == 'searchdata':
-                data = []
-                for i in self.get_queryset():
-                    data.append(i.toJSON())
-            else:
-                data['error'] = 'Ha ocurrido un error'
-        except Exception as e:
-            data['error'] = str(e)
-        return JsonResponse(data, safe=False)
+    # =========================
+    # QUERYSET
+    # =========================
+    def get_queryset(self):
 
+        cueanexo = self.request.session.get("cueanexo_activo")
+        print("Cueanexo sesión:",cueanexo)
+
+        if not cueanexo:
+            return ProcesosTecnicos.objects.none()
+        
+        qs = ProcesosTecnicos.objects.filter(cueanexo=cueanexo)
+
+        anio = self.request.GET.get('anio')
+        mes = self.request.GET.get('mes')
+
+        if anio:
+            qs = qs.filter(anio=anio)
+
+        if mes:
+            qs = qs.filter(mes=mes)
+
+        return qs.order_by('-anio', '-mes')
+
+    # =========================
+    # AJAX
+    # =========================
+    def post(self, request, *args, **kwargs):
+
+        try:
+            if request.POST.get('action') == 'searchdata':
+
+                data = [obj.toJSON() for obj in self.get_queryset()]
+
+                return JsonResponse(data, safe=False)
+
+            return JsonResponse({
+                'error': True,
+                'message': 'Acción no válida'
+            })
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+
+            return JsonResponse({
+                'error': True,
+                'message': str(e)
+            }, status=500)
+
+    # =========================
+    # CONTEXTO
+    # =========================
     def get_context_data(self, **kwargs):
+
         context = super().get_context_data(**kwargs)
+
+        cueanexo = self.request.session.get("cueanexo_activo")
+
+        context['cueanexo'] = cueanexo
+        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
+    
         context['title'] = 'Listado de Procesos Técnicos'
         context['create_url'] = reverse_lazy('bibliotecas:proctec_create')
         context['list_url'] = reverse_lazy('bibliotecas:proctec_list')
@@ -363,7 +408,7 @@ class ProcTecListView(LoginRequiredMixin, ListView):
         context['generar_pdf_button'] = True,  
         context['before_url'] = reverse_lazy('bibliotecas:instituciones_list')
         context['next_url'] = reverse_lazy('bibliotecas:aguapey_create')
-        context['entity'] = 'Asistencia'
+        context['entity'] = 'Procesos Técnicos'
         return context
 
 

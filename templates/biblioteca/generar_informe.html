@@ -1,112 +1,182 @@
 {% extends "biblioteca/layout.html" %}
+{% load static %}
 
 {% block content %}
-    <h2>Generar Mes - Año para PLANILLA DE ESTADISTICA</h2>
 
-    <!-- Botón para abrir el modal -->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generarInformeModal">
-        Generar
-    </button>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 
-    <!-- Modal -->
-    <div class="modal fade" id="generarInformeModal" tabindex="-1" aria-labelledby="generarInformeModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="generarInformeModalLabel">Generar Informe</h5>
-                    <button type="button" class="btn-close text-yellow bg-danger rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Formulario -->
-                    <form id="generarInformeForm" method="POST">
-                        {% csrf_token %}
-                        
-                        <!-- Campos manuales -->
-                        <label for="cueanexo">Cueanexo:</label>
-                        <input type="text" name="cueanexo" value="{{ cueanexo_usuario }}" readonly class="form-control">
+<h3>Generación de Informes</h3>
 
-                        <label for="estado">Estado:</label>
-                        <input type="text" name="estado" value="GENERADO" readonly class="form-control">
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalInforme">
+    ➕ Generar Informe
+</button>
 
-                        <!-- Excluir cueanexo y estado del formulario generado -->
-                        {% for field in form %}
-                            {% if field.name != "cueanexo" and field.name != "estado" %}
-                                <div class="mb-3">
-                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                    {{ field }}
-                                    {% if field.errors %}
-                                        <div class="text-danger">{{ field.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        {% endfor %}
+<!-- ===================== MODAL ===================== -->
+<div class="modal fade" id="modalInforme" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
 
-                        <button type="submit" class="btn btn-success">Guardar</button>
-                    </form>
+      <div class="modal-header bg-dark text-white">
+        <h5>Generar Informe</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
 
-                </div>
+      <div class="modal-body">
+
+        <form id="formInforme">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label>Cueanexo</label>
+                <select name="cueanexo" id="cueanexo" class="form-select select2">
+                    <option value="">Seleccione...</option>
+                    {% for c in cueanexos_usuario %}
+                        <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
+
+            <div class="mb-3">
+                <label>Mes</label>
+                <select name="meses" id="meses" class="form-select select2">
+                    <option value="">Seleccione...</option>
+                    <option>ABRIL</option>
+                    <option>JULIO</option>
+                    <option>NOVIEMBRE</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Año</label>
+                <select name="annos" id="annos" class="form-select select2">
+                    <option value="">Seleccione...</option>
+                    <option>2025</option>
+                    <option>2026</option>
+                    <option>2027</option>
+                </select>
+            </div>
+
+            <div id="alertaDup" class="alert alert-danger d-none">
+                Ya existe informe para ese período
+            </div>
+
+            <button class="btn btn-success w-100">Guardar</button>
+        </form>
+
+      </div>
+
     </div>
+  </div>
+</div>
 
-    <!-- Scripts de Bootstrap -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- ===================== JS ===================== -->
 
-    <script>
-        document.getElementById("generarInformeForm").addEventListener("submit", function(event) {
-            event.preventDefault(); // Evita la recarga de la página
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-            let formData = new FormData(this);
+<script>
 
-            // Mostrar alerta de confirmación antes de enviar el formulario
+// SELECT2
+$('#modalInforme').on('shown.bs.modal', function () {
+    $('.select2').select2({
+        width: '100%',
+        dropdownParent: $('#modalInforme')
+    });
+});
+
+// CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(c.substring(name.length + 1));
+        }
+    });
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+
+// ================= DUPLICADO =================
+function verificarDuplicado() {
+    let cue = cueanexo.value;
+    let mes = meses.value;
+    let anio = annos.value;
+
+    if (!cue || !mes || !anio) return;
+
+    fetch("{% url 'bibliotecas:verificar_informe_ajax' %}?cueanexo="+cue+"&meses="+mes+"&annos="+anio)
+    .then(r => r.json())
+    .then(data => {
+        if (data.existe) {
+            alertaDup.classList.remove("d-none");
+        } else {
+            alertaDup.classList.add("d-none");
+        }
+    });
+}
+
+cueanexo.onchange = verificarDuplicado;
+meses.onchange = verificarDuplicado;
+annos.onchange = verificarDuplicado;
+
+
+// ================= SUBMIT =================
+formInforme.onsubmit = function(e){
+    e.preventDefault();
+
+    let formData = new FormData(this);
+
+    fetch("{% url 'bibliotecas:generar_informe' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-CSRFToken": csrftoken,
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(async r => {
+
+        const text = await r.text();
+        console.log("RESPUESTA SERVER:", text);
+
+        if (!r.ok) {
+            throw new Error("Error servidor");
+        }
+
+        return JSON.parse(text);
+    })
+    .then(data => {
+
+        if (data.success){
+
             Swal.fire({
-                title: "¿Está seguro?",
-                text: "Se guardará el informe en la base de datos.",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Sí, guardar",
-                cancelButtonText: "Cancelar"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch("{% url 'bibliotecas:generar_info' %}", { // URL de la vista
-                        method: "POST",
-                        body: formData,
-                        headers: {
-                            "X-Requested-With": "XMLHttpRequest"
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                title: "¡Éxito!",
-                                text: "Informe generado exitosamente.",
-                                icon: "success",
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.href = data.redirect_url; // Redirigir tras éxito
-                            });
-                        } else {
-                            Swal.fire({
-                                title: "Error",
-                                text: data.message, // Mensaje de error desde el backend
-                                icon: "error"
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error:", error);
-                        Swal.fire({
-                            title: "Error",
-                            text: "Error al procesar el formulario.",
-                            icon: "error"
-                        });
-                    });
-                }
+                icon: "success",
+                title: "OK",
+                text: data.message,
+                timer: 1200,
+                showConfirmButton: false
             });
-        });
-    </script>
 
-    {% endblock %}
+            // 🔥 REDIRECCIÓN REAL
+            setTimeout(() => {
+                window.location.href = data.redirect_url;
+            }, 1200);
+
+        } else {
+            Swal.fire("Error", data.message, "error");
+        }
+
+    })
+    .catch(err => {
+        Swal.fire("Error", err.message, "error");
+    });
+}
+
+</script>
+
+{% endblock %}

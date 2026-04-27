@@ -64,7 +64,7 @@
                 
                <div class="card mt-4 border-success shadow">
                     <div class="card-header bg-success text-white fw-bold">
-                        AGUAPEY
+                        AGUAPEY u Otra Base de Datos
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -112,6 +112,76 @@
 <!-- 🔥 JAVASCRIPT -->
 <!-- ========================= -->
 <script>
+    // =========================
+    // CAMPOS
+    // =========================
+    const form = document.getElementById('formulario');
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    const fields = {
+        total_mes: document.getElementById('id_total_mes'),
+        total_base: document.getElementById('id_total_base'),
+    };
+
+    // =========================
+    // HELPERS
+    // =========================
+    function removeError(input) {
+        if (!input) return;
+        input.classList.remove('is-invalid');
+        let next = input.nextElementSibling;
+        if (next && next.classList.contains('invalid-feedback')) next.remove();
+    }
+
+    function setError(input, message) {
+        if (!input) return;
+        removeError(input);
+        input.classList.add('is-invalid');
+        input.insertAdjacentHTML('afterend',
+            `<div class="invalid-feedback d-block">${message}</div>`
+        );
+    }
+
+    // =========================
+    // VALIDACIÓN
+    // =========================
+    function validar() {
+        let errores = 0;
+
+        Object.values(fields).forEach(removeError);
+
+        let mes = parseInt(fields.total_mes.value) || 0;
+        let base = parseInt(fields.total_base.value) || 0;
+
+        if (base < mes) {
+            setError(fields.total_base, 'No puede ser menor al total del mes');
+            errores++;
+        }
+
+        btnSubmit.disabled = errores > 0;
+        return errores === 0;
+    }
+
+    // =========================
+    // EVENTOS
+    // =========================
+    Object.values(fields).forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', validar);
+    });
+
+    // =========================
+    // 🔥 MARCAR ERRORES BACKEND
+    // =========================
+    function marcarErroresBackend(errors) {
+        Object.keys(errors).forEach(function (field) {
+            let input = document.getElementById('id_' + field);
+
+            if (input) {
+                setError(input, errors[field][0]);
+            }
+        });
+    }
 
     // =========================
     // ERRORES FORM (SweetAlert)
@@ -136,6 +206,8 @@
     // =========================
     $('form').on('submit', function (e) {
         e.preventDefault();
+
+        if (!validar()) return;
 
         var parameters = new FormData(this);
 

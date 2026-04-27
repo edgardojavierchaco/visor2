@@ -67,12 +67,18 @@ from .views_list_docnodoc import (
     NoDocentePonMensualListView
 )
 
-from . import views_reporteinformes
+from .views_reporteinformes import (
+    generar_informe,
+    generar_informe_list,
+    dashboard_informes_api,
+    dashboard_informes_view,
+    reabrir_informe
+)
 
 
 from .views_generarpdf import generar_pdf_material_bibliografico
 from .views_instituciones import ObtenerEscuelaView
-from .views_generarinforme import GenerarInformeView
+from .views_generarinforme import GenerarInformeView, VerificarInformeAjax
 from .views_planillasanexas import PlanillasAnexasView, PlanillasAnexasListView, PlanillasAnexasUpdateView, PlanillasAnexasDeleteView
 from .views_dashboard import DashboardView, DashboardDirView
 from .views_reporteinformes import generar_informe_list, generar_informe
@@ -191,11 +197,23 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard_dir/', DashboardDirView.as_view(), name='dashboard_dir'),
     path('generar_informe_list/', generar_informe_list, name='generar_informe_list'),
-    path('generar_informe/', generar_informe, name='generar_informe'),
+    # =========================
+    # 📄 GENERAR INFORME (FORM + MODAL)
+    # =========================
+    path('generar_informe/', GenerarInformeView.as_view(), name='generar_informe'),
     path('generar_pdf_cue/', generar_pdf_cuemesanio, name='generar_pdf_cue'),
     path('modal_generar_pdf_cue/', modal_generar_pdf_cuemesanio, name='modal_generar_pdf_cue'),
     path('generar_pdf_uno/', generar_pdf_cuemesanio_uno, name='generar_pdf_uno'),
     path('modal_generar_pdf_uno/', modal_generar_pdf_cuemesanio_uno, name='modal_generar_pdf_uno'),
+    # =========================
+    # 🔎 AJAX: VERIFICAR DUPLICADOS EN TIEMPO REAL
+    # =========================
+    path(
+        'verificar-informe-ajax/',
+        VerificarInformeAjax.as_view(),
+        name='verificar_informe_ajax'
+    ),
+    
 
     # Resultados
     path("servicio_prestamo/", servicio_prestamo_view, name="servicio_prestamo"),
@@ -234,16 +252,17 @@ urlpatterns = [
     # 🏛️ DASHBOARD HTML
     path(
         "dashboard-informes/",
-        views_reporteinformes.dashboard_informes_view,
+        dashboard_informes_view,
         name="dashboard_informes"
     ),
 
     # 📊 API DASHBOARD
     path(
         "api/dashboard-informes/",
-        views_reporteinformes.dashboard_informes_api,
+        dashboard_informes_api,
         name="dashboard_informes_api"
     ),
+    path('reabrir-informe/', reabrir_informe, name='reabrir_informe'),
 ]
 
 

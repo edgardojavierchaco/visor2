@@ -1208,7 +1208,8 @@ class GenerarInforme(models.Model):
     f_generacion=models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Generación")
     estado=models.CharField(default='GENERADO', verbose_name='Estado')
     f_envio=models.DateTimeField(auto_now_add=False,blank=True, null=True, verbose_name='Fecha Envío')
-    
+    f_rehab = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Reapertura")
+    rehab=models.BooleanField(default=False, verbose_name='Reapertura')
     class Meta:              
         verbose_name = 'GenerarInforme'
         verbose_name_plural='GenerarInformes'
@@ -1228,6 +1229,8 @@ class GenerarInforme(models.Model):
         item['f_generacion'] = self.f_generacion      
         item['estado'] = self.estado
         item['f_envio'] = self.f_envio   
+        item['f_rehab']=self.f_rehab
+        item['rehab']=self.rehab
         return item
 
 

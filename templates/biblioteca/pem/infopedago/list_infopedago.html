@@ -33,4 +33,9 @@
 
 {% block javascript %}
 
+<!-- 🔥 CSRF TOKEN (OCULTO PERO EXISTE) -->
+<form style="display:none;">
+    {% csrf_token %}
+</form>
+
 {% endblock %}

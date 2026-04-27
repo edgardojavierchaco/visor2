@@ -13,7 +13,7 @@ class InformeBloqueoMixin(View):
     request: HttpRequest
 
     def get_cueanexo_activo(self):
-        cueanexo = self.request.session.get("cueanexo")
+        cueanexo = self.request.session.get("cueanexo_activo")
 
         print("🔥 SESIÓN CUEANEXO:", cueanexo)
 
@@ -28,7 +28,7 @@ class InformeBloqueoMixin(View):
         ultimo = (
             GenerarInforme.objects
             .filter(cueanexo=cueanexo)
-            .order_by('-id')
+            .order_by('-annos', '-meses')
             .first()
         )
 

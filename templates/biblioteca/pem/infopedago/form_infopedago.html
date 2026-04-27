@@ -94,6 +94,88 @@
 <!-- 🔥 JAVASCRIPT -->
 <!-- ========================= -->
 <script>
+    // =========================
+    // 🎯 CAMPOS
+    // =========================
+    const form = document.getElementById('formulario');
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    const fields = {
+        mes: document.getElementById('id_mes'),
+        anio: document.getElementById('id_anio'),
+        servicio: document.getElementById('id_servicio'),
+        varones: document.getElementById('id_varones'),
+        total: document.getElementById('id_total'),
+    };
+
+    // =========================
+    // 🎨 HELPERS UI
+    // =========================
+    function removeError(input) {
+        if (!input) return;
+
+        input.classList.remove('is-invalid');
+
+        let next = input.nextElementSibling;
+        if (next && next.classList.contains('invalid-feedback')) {
+            next.remove();
+        }
+    }
+
+    function setError(input, message) {
+        if (!input) return;
+
+        removeError(input);
+
+        input.classList.add('is-invalid');
+        input.insertAdjacentHTML('afterend',
+            `<div class="invalid-feedback d-block">${message}</div>`
+        );
+    }
+
+    // =========================
+    // 🧠 VALIDACIÓN FRONT
+    // =========================
+    function validar() {
+
+        let errores = 0;
+
+        Object.values(fields).forEach(removeError);
+
+        const { varones, total } = fields;
+
+        if (varones.value && total.value) {
+            if (parseInt(total.value) < parseInt(varones.value)) {
+                setError(total, 'No debe ser menor a cantidad de varones');
+                errores++;
+            }
+        }
+
+        btnSubmit.disabled = errores > 0;
+
+        return errores === 0;
+    }
+
+    // =========================
+    // 🚀 EVENTOS INPUT
+    // =========================
+    Object.values(fields).forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', validar);
+    });
+
+    // =========================
+    // 🔥 MARCAR ERRORES BACKEND
+    // =========================
+    function marcarErroresBackend(errors) {
+        Object.keys(errors).forEach(function (field) {
+            let input = document.getElementById('id_' + field);
+
+            if (input) {
+                setError(input, errors[field][0]);
+            }
+        });
+    }
 
     // =========================
     // ERRORES FORM (SweetAlert)

@@ -130,26 +130,36 @@ def footer(canvas, doc):
     canvas.restoreState()
 
 
+
 # =========================================================
 # VIEW
 # =========================================================
 @login_required
 def generar_pdf_material_bibliografico(request):
+    
+    # =========================================
+    # 🔥 CUEANEXO ACTIVO (CLAVE)
+    # =========================================
+    cueanexo_activo = request.session.get("cueanexo_activo")
 
-    usuario = request.user.username
-    usuario_limpio = re.sub(r'\D', '', usuario)
+    if not cueanexo_activo:
+        return HttpResponse("No hay cueanexo activo en sesión", status=400)
 
-    cueanexos_qs = CapaUnicaOfertas.objects.annotate(
-        cuit_limpio=Func(F('resploc_cuitcuil'), Value('-'), Value(''), function='REPLACE')
-    ).filter(
-        cuit_limpio=usuario_limpio,
-        acronimo__startswith='BI'
-    ).values_list('cueanexo', flat=True)
+    cueanexos = str(cueanexo_activo)
+    cueanexo_activo = str(cueanexo_activo)
+    
+    # =========================================
+    # 🔥 ÚLTIMO INFORME SOLO DE ESE CUE
+    # =========================================
+    ultimo = GenerarInforme.objects.filter(
+        cueanexo=cueanexo_activo
+    ).order_by('-id').first()
 
-    cueanexos = list(map(str, cueanexos_qs))
+    if not ultimo:
+        return HttpResponse("No hay informes para el cue activo", status=400)
 
-    if not cueanexos:
-        return HttpResponse("No se encontró cueanexo", status=400)
+    mes = ultimo.meses
+    anio = ultimo.annos    
 
     # =========================================================
     # DB
@@ -168,8 +178,14 @@ def generar_pdf_material_bibliografico(request):
                resploc_telefono, resploc_email,
                cuof_loc, region_loc, localidad
         FROM public.padron_ofertas
-        WHERE cueanexo = ANY(%s)
-    """, (cueanexos,))
+        WHERE cueanexo = %s
+    """, (cueanexo_activo,))
+    
+    row = cursor.fetchone()
+    
+    if not row:
+        return HttpResponse("No se encontraron datos del padron", status=400)
+
 
     (
         categoria, jornada, oferta, nom_est,
@@ -177,21 +193,14 @@ def generar_pdf_material_bibliografico(request):
         apellido_resp, nombre_resp,
         telefono, email,
         cuof_loc, region_loc, localidad
-    ) = cursor.fetchall()[0]
-
-    ultimo = GenerarInforme.objects.filter(cueanexo__in=cueanexos).order_by('-id').first()
-
-    mes = ultimo.meses
-    anio = ultimo.annos
+    ) = row
     
     fecha_gen = datetime.now().strftime("%d-%m-%Y_%H-%M")
 
-    cue = cueanexos[0] if cueanexos else "SIN_CUE"
+    nombre_resp_full = f"{apellido_resp} {nombre_resp}"
+    nombre_resp_limpio = slugify(nombre_resp_full)
 
-    nombre_resp = f"{apellido_resp} {nombre_resp}"
-    nombre_resp_limpio = slugify(nombre_resp)
-
-    filename = f"{cue} - {nombre_resp_limpio} - {fecha_gen}.pdf"
+    filename = f"{cueanexo_activo} - {nombre_resp_limpio} - {fecha_gen}.pdf"
 
     # =========================================================
     # PDF
@@ -215,7 +224,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     # metadata
-    doc.cueanexo = cueanexos
+    doc.cueanexo = cueanexo_activo
     doc.mes = mes
     doc.anio = anio
     doc.nom_est = nom_est
@@ -236,14 +245,14 @@ def generar_pdf_material_bibliografico(request):
     
     def canvasmaker(*args, **kwargs):
         c = NumberedCanvas(*args, **kwargs)
-        c.cueanexo = cueanexos  # 👈 acá lo inyectás directo
+        c.cueanexo = cueanexo_activo  # 👈 acá lo inyectás directo
         return c
 
     # =========================================================
     # 1. MATERIAL BIBLIOGRÁFICO
     # =========================================================
     material = MaterialBibliografico.objects.filter(
-        cueanexo__in=cueanexos, mes=mes, anio=anio
+        cueanexo=cueanexo_activo, mes=mes, anio=anio
     ).values("servicio__nom_servicio", "turnos__nom_turno", "t_material__nom_material").annotate(total=Sum("cantidad")
     ).order_by("servicio__nom_servicio", "t_material__nom_material", "turnos__nom_turno")
 
@@ -258,7 +267,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "1. MATERIAL BIBLIOGRÁFICO",
+        "1. MATERIAL BIBLIOGRÁFICO Y ESPECIAL",
         build_table(data),
         build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )
@@ -267,7 +276,7 @@ def generar_pdf_material_bibliografico(request):
     # 2. SERVICIO DE REFERENCIA
     # =========================================================
     ref = ServicioReferencia.objects.filter(
-        cueanexo__in=cueanexos,
+        cueanexo=cueanexo_activo,
         mes=mes,
         anio=anio
     ).values(
@@ -299,7 +308,7 @@ def generar_pdf_material_bibliografico(request):
     # 3. SERVICIO DE REFERENCIA VIRTUAL
     # =========================================================
     virtual = ServicioReferenciaVirtual.objects.filter(
-        cueanexo__in=cueanexos,
+        cueanexo=cueanexo_activo,
         mes=mes,
         anio=anio
     ).values(
@@ -331,7 +340,7 @@ def generar_pdf_material_bibliografico(request):
     # 4.  SERVICIO DE PRÉSTAMO
     # =========================
     prestamo = ServicioPrestamo.objects.filter(
-        cueanexo__in=cueanexos,
+        cueanexo=cueanexo_activo,
         mes=mes,
         anio=anio
     ).values(
@@ -362,7 +371,7 @@ def generar_pdf_material_bibliografico(request):
     # 5.  INFORME PEDAGÓGICO
     # ========================
     ped = InformePedagogico.objects.filter(
-        cueanexo__in=cueanexos,
+        cueanexo=cueanexo_activo,
         mes=mes,
         anio=anio
     ).values(
@@ -383,7 +392,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "5. INFORME PEDAGÓGICO",
+        "5. INFORME PEDAGÓGICO DE SERVICIOS",
         build_table(data),
         build_qr(f"PEDAGÓGICO {cueanexos} {mes}/{anio}\n\n{qr_pedagogico_data}")
     )
@@ -393,7 +402,7 @@ def generar_pdf_material_bibliografico(request):
     # 6. ASISTENCIA DE USUARIOS
     # ==========================
     asi = AsistenciaUsuarios.objects.filter(
-        cueanexo__in=cueanexos,
+        cueanexo=cueanexo_activo,
         mes=mes,
         anio=anio
     ).values(
@@ -415,7 +424,7 @@ def generar_pdf_material_bibliografico(request):
     ])
     
     engine.add_section(
-        "6. ASISTENCIA DE USUARIOS",
+        "6. ASISTENCIA DE USUARIOS BIBLIOTECAS ESCOLARES",
         build_table(data),
         build_qr(f"ASISTENCIA {cueanexos} {mes}/{anio}\n\n{qr_asistencia_data}")
     )
@@ -425,7 +434,7 @@ def generar_pdf_material_bibliografico(request):
     # 7. INSTITUCIONES A LAS QUE PRESTA SERVICIOS
     # ============================================
     inst = InstitucionesPrestaServicios.objects.filter(
-        cueanexo__in=cueanexos, mes=mes, anio=anio
+        cueanexo=cueanexo_activo, mes=mes, anio=anio
     ).values_list('escuela', 'matricula', 'docentes', 'matricdisc', 'etnia')
 
     data = [["INSTITUCION", "MATRICULA", "DOCENTES", "DISCAPACIDAD", "ETNIA"]] + list(inst)
@@ -436,7 +445,7 @@ def generar_pdf_material_bibliografico(request):
     ])
     
     engine.add_section(
-        "7. INSTITUCIONES",
+        "7. INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
         build_table(data),
         build_qr(f"INSTITUCIONES {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )
@@ -446,7 +455,7 @@ def generar_pdf_material_bibliografico(request):
     # 8. PROCESOS TÉCNICOS
     # =========================================================
     registros = ProcesosTecnicos.objects.filter(
-        cueanexo__in=cueanexos, mes=mes, anio=anio
+        cueanexo=cueanexo_activo, mes=mes, anio=anio
     ).values_list('material__nom_material', 'procesos', 'total')
 
     datos_agrupados = defaultdict(lambda: defaultdict(int))
@@ -478,7 +487,7 @@ def generar_pdf_material_bibliografico(request):
         data.append(fila)
 
     engine.add_section(
-        "8. PROCESOS TÉCNICOS",
+        "8. SECTOR PROCESOS TÉCNICOS",
         build_table(data),
         build_qr(f"PROCESOS {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )   
@@ -487,7 +496,7 @@ def generar_pdf_material_bibliografico(request):
     # ===========
     # 9. AGUAPEY
     # ===========
-    aguapey = Aguapey.objects.filter(cueanexo__in=cueanexos, mes=mes, anio=anio).first()
+    aguapey = Aguapey.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio)
 
     data = [["MES", "BASE", "USUARIOS"], [
         getattr(aguapey, "total_mes", 0),
@@ -496,19 +505,19 @@ def generar_pdf_material_bibliografico(request):
         getattr(aguapey, "observaciones", ""),
     ]]
 
-    qr_aguapey_data = f"AGUAPEY | MES: {getattr(aguapey, 'total_mes', 0)} | BASE: {getattr(aguapey, 'total_base', 0)} | USUARIOS: {getattr(aguapey, 'total_usuarios', 0)} | OBS: {getattr(aguapey, 'observaciones', '')}"
+    qr_aguapey_data = f"BASE DE DATOS COMO RECURSO DE GESTION | MES: {getattr(aguapey, 'total_mes', 0)} | BASE: {getattr(aguapey, 'total_base', 0)} | USUARIOS: {getattr(aguapey, 'total_usuarios', 0)} | OBS: {getattr(aguapey, 'observaciones', '')}"
     
     engine.add_section(
-        "9. AGUAPEY",
+        "9. BASE DE DATOS COMO RECURSOS DE GESTION",
         build_table(data),
         build_qr(qr_aguapey_data)
     )
     
 
     # =========================================================
-    # 10. REGISTRO DESTINO DE FONDOS
+    # 10. REGISTRO DESTINO DE FONDO BIBLIOTECARIO CHAQUEÑO
     # =========================================================
-    fondos = RegistroDestinoFondos.objects.all()
+    fondos = RegistroDestinoFondos.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio)
 
     data = [["DESTINO", "DESCRIPCIÓN", "CANTIDAD"]] + [
         [r.destino.nom_fondo, r.descripcion, r.cantidad] for r in fondos
@@ -520,7 +529,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "10. DESTINO DE FONDOS",
+        "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO",
         build_table(data),
         build_qr(qr_fondos_data)
     )
@@ -530,7 +539,7 @@ def generar_pdf_material_bibliografico(request):
     # 11. BIBLIOTECARIOS
     # =========================================================
     bib = BibliotecariosCue.objects.filter(
-        cueanexo__in=cueanexos, mes=mes, anio=anio
+        cueanexo=cueanexo_activo, mes=mes, anio=anio
     )
 
     data = [["CUIL", "APELLIDO", "NOMBRE", "CARGO", "FECHA INGRESO", "FECHA HASTA","TURNO", "LICENCIA", "DESDE","HASTA"]] + [
@@ -552,7 +561,7 @@ def generar_pdf_material_bibliografico(request):
     doc.build(story, canvasmaker=canvasmaker)
     
     GenerarInforme.objects.filter(
-        cueanexo__in=cueanexos,
+        cueanexo=cueanexo_activo,
         meses=mes,
         annos=anio,
         estado="GENERADO"

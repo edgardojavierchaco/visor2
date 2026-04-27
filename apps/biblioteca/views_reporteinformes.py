@@ -13,6 +13,8 @@ from django.views.decorators.cache import cache_page
 from django.db.models.functions import Cast
 from django.db.models import CharField
 from django.db.models.expressions import RawSQL
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +41,13 @@ def generar_informe(request):
     cueanexos = list(cueanexos_qs)
     cue=cueanexos[0] if cueanexos else None
     
+    # 🔥 DEFAULTS IMPORTANTES
+    mes = None
+    anio = None
+
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT cueanexo FROM v_capa_unica_ofertas WHERE acronimo ILIKE 'BI%'")
+            cursor.execute("SELECT DISTINCT cueanexo FROM public.v_capa_unica_ofertas_ant WHERE acronimo ILIKE 'BI%'")
             ofertas = cursor.fetchall()
             print("✅ Ofertas encontradas:", ofertas)  # Depuración
     except Exception as e:
@@ -164,6 +170,8 @@ def dashboard_informes_api(request):
     if annos.isdigit():
         filtros &= Q(annos=int(annos))
 
+    ofertas = []
+    
     try:
 
         # =========================
@@ -172,7 +180,7 @@ def dashboard_informes_api(request):
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT COUNT(DISTINCT cueanexo)
-                FROM v_capa_unica_ofertas
+                FROM v_capa_unica_ofertas_ant
                 WHERE acronimo ILIKE 'BI%'
             """)
             total_ofertas = cursor.fetchone()[0] or 0
@@ -248,6 +256,8 @@ def dashboard_informes_api(request):
         ranking = [
             {
                 "cueanexo": k,
+                "meses": next((x["meses"] for x in data if x["cueanexo"] == k), ""),
+                "annos": next((x["annos"] for x in data if x["cueanexo"] == k), ""),
                 "total": v,
                 "estado": next((x["estado"] for x in data if x["cueanexo"] == k), ""),
                 "region_loc": next((x["region_loc"] for x in data if x["cueanexo"] == k), "")
@@ -285,3 +295,42 @@ def dashboard_informes_api(request):
             "success": False,
             "error": "Error interno"
         }, status=500)
+
+
+@require_POST
+def reabrir_informe(request):
+    try:
+        data = json.loads(request.body)
+
+        cueanexo = data.get("cueanexo")
+        meses = data.get("meses")
+        annos = data.get("annos")
+
+        if not (cueanexo and meses and annos):
+            return JsonResponse({"success": False, "msg": "Datos incompletos"})
+
+        try:
+            informe = GenerarInforme.objects.get(
+                cueanexo=cueanexo,
+                meses=meses,
+                annos=annos
+            )
+        except GenerarInforme.DoesNotExist:
+            return JsonResponse({"success": False, "msg": "No existe el informe"})
+
+        if informe.estado != "ENVIADO":
+            return JsonResponse({"success": False, "msg": "Solo se pueden reabrir enviados"})
+
+        # 🔥 REAPERTURA
+        informe.estado = "GENERADO"
+        informe.rehab = True
+        informe.f_rehab = timezone.now()
+        informe.save()
+
+        return JsonResponse({
+            "success": True,
+            "msg": "Informe reabierto correctamente"
+        })
+
+    except Exception as e:
+        return JsonResponse({"success": False, "msg": str(e)})

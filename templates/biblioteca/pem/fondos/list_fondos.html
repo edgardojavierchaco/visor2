@@ -33,4 +33,8 @@
 
 {% block javascript %}
     <script src="{% static 'biblioteca/pem/fondos/js/list.js' %}"></script>
+    <!-- 🔥 CSRF TOKEN (OCULTO PERO EXISTE) -->
+    <form style="display:none;">
+        {% csrf_token %}
+    </form>
 {% endblock %}
