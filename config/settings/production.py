@@ -164,3 +164,12 @@ REST_FRAMEWORK = {
 MAP_CACHE_TTL = 60 * 5
 MAP_REDIS_PREFIX = "visor_maps"
 MAP_DEFAULT_RADIO = 1000
+
+DATABASES['Padron'] = {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.environ.get('PADRON_DB_NAME', 'Padron'),
+    'USER': os.environ.get('PADRON_DB_USER', 'visualizador'),
+    'PASSWORD': os.environ.get('PADRON_DB_PASSWORD'), 
+    'HOST': os.environ.get('PADRON_DB_HOST', 'visoreducativochaco.com.ar'),
+    'PORT': os.environ.get('PADRON_DB_PORT', '5432'),
+}

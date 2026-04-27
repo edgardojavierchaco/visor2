@@ -1,7 +1,6 @@
-﻿{% load mis_filtros %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
+﻿{% extends 'archivos/base/layout.html' %}
+{% load mis_filtros %}
+{% block content %}
 <script>
     (function() {
         var styleStr = "";
@@ -26,9 +25,6 @@
         }
     })();
 </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Padrón de Establecimientos - Ofertas Locales</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1207,8 +1203,7 @@
         max-width: 900px;
     }
 </style>
-</head>
-<body>
+
 
 <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• NAVBAR â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
@@ -1609,9 +1604,7 @@
 </div>
 </main>
 
-<footer class="py-3 text-center mt-4">
-    <small><i class="fa-solid fa-shield-halved me-1"></i>Padrón de Establecimientos Educativos · Ministerio de Educación · Provincia del Chaco</small>
-</footer>
+
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -4808,5 +4801,4 @@ $(document).ready(function() {
     queueSidebarSync();
 })();
 </script>
-</body>
-</html>
+{% endblock %}
