@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padrón de Establecimientos - Inicio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --padron-primary:   #1a4f8a;
+            --padron-secondary: #2e7bd4;
+            --padron-bg:        #eef2f7;
+            --padron-card-bg:   #ffffff;
+            --layout-sidebar-width: 0px;
+            --layout-page-gutter: clamp(12px, 2vw, 24px);
+        }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--padron-bg);
+            min-width: 320px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            color: #20364d;
+        }
+        main { min-width: 0; }
+        .navbar,
+        .page-banner,
+        main,
+        footer {
+            width: min(100%, calc(100vw - var(--layout-sidebar-width)));
+            max-width: 100%;
+            margin-left: auto;
+            box-sizing: border-box;
+            transition: width 0.2s ease, margin 0.2s ease;
+        }
+        .navbar > .container-fluid,
+        .page-banner > .container-fluid,
+        main > .container-fluid {
+            width: 100%;
+            max-width: 100%;
+            padding-left: var(--layout-page-gutter) !important;
+            padding-right: var(--layout-page-gutter) !important;
+            box-sizing: border-box;
+            transition: padding 0.2s ease;
+        }
+        footer {
+            padding-left: var(--layout-page-gutter);
+            padding-right: var(--layout-page-gutter);
+        }
+        .card,
+        .quick-card,
+        .row,
+        .navbar-collapse {
+            min-width: 0;
+        }
+        /* ── Navbar ── */
+        .navbar { background-color: var(--padron-primary) !important; }
+        .navbar-brand { font-weight: 800; letter-spacing: .5px; font-size: 1.1rem; }
+        .navbar .nav-link { font-weight: 600; font-size: .9rem; }
+        .navbar .dropdown-item { font-size: .875rem; }
+        .navbar .dropdown-item:hover { background-color: #e8f0fe; color: var(--padron-primary); }
+
+        /* ── Page header ── */
+        .page-banner {
+            background: linear-gradient(135deg, var(--padron-primary) 0%, var(--padron-secondary) 100%);
+            color: #fff;
+            padding: 2.5rem 2rem;
+        }
+
+        /* ── Quick-access cards ── */
+        .quick-card {
+            border: none;
+            border-radius: .75rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,.08);
+            transition: transform .18s, box-shadow .18s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .quick-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,.14);
+            color: var(--padron-primary);
+        }
+        .quick-card .icon-wrap {
+            width: 56px; height: 56px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: .75rem;
+        }
+        .quick-card .card-title { font-weight: 700; font-size: 1rem; margin-bottom: .25rem; }
+        .quick-card .card-text  { font-size: .82rem; color: #6c757d; }
+
+        /* ── Alert ── */
+        .alert-legal { background: #fff8e1; border-left: 4px solid #ffc107; border-radius: .5rem; }
+
+        /* ── Footer ── */
+        footer { background-color: var(--padron-primary); color: rgba(255,255,255,.85); padding: 1rem var(--layout-page-gutter); }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand" href="/padron/">
+            <i class="fa-solid fa-school me-2"></i>Padrón Educativo · Chaco
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/padron/">
+                        <i class="fa-solid fa-house me-1"></i>Inicio
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="javascript:void(0)" role="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-building-columns me-1"></i>Establecimientos
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/padron/establecimiento/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Establecimientos</a></li>
+                        <li><a class="dropdown-item" href="/padron/establecimiento/?campo_filtro=estado&operador_filtro=2&valor_filtro=Baja"><i class="fa-solid fa-ban fa-fw me-2 text-danger"></i>Listar Establecimientos de Baja</a></li>
+                        <li><a class="dropdown-item" href="/padron/establecimiento/?campo_filtro=estado&operador_filtro=2&valor_filtro=Activo"><i class="fa-solid fa-circle-check fa-fw me-2 text-success"></i>Listar Establecimientos Activos</a></li>
+                        <li><a class="dropdown-item" href="/padron/establecimiento/?campo_filtro=estado&operador_filtro=2&valor_filtro=Inactivo"><i class="fa-solid fa-circle-xmark fa-fw me-2 text-warning"></i>Listar Establecimientos Inactivos</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="javascript:void(0)" role="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-map-location-dot me-1"></i>Localizaciones
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/padron/localizacion/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Localizaciones</a></li>
+                        <li><a class="dropdown-item" href="/padron/localizacion/?campo_filtro=estado&operador_filtro=2&valor_filtro=Baja"><i class="fa-solid fa-ban fa-fw me-2 text-danger"></i>Listar Localizaciones de Baja</a></li>
+                        <li><a class="dropdown-item" href="/padron/localizacion/?campo_filtro=estado&operador_filtro=2&valor_filtro=Activo"><i class="fa-solid fa-circle-check fa-fw me-2 text-success"></i>Listar Localizaciones Activas</a></li>
+                        <li><a class="dropdown-item" href="/padron/localizacion/?campo_filtro=estado&operador_filtro=2&valor_filtro=Inactivo"><i class="fa-solid fa-circle-xmark fa-fw me-2 text-warning"></i>Listar Localizaciones Inactivas</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="javascript:void(0)" role="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-graduation-cap me-1"></i>Ofertas Locales
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/padron/ofertalocal/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Ofertas Locales</a></li>
+                        <li><a class="dropdown-item" href="/padron/ofertalocal/?campo_filtro=estado&operador_filtro=2&valor_filtro=Activo"><i class="fa-solid fa-circle-check fa-fw me-2 text-success"></i>Listar Ofertas Locales Activas</a></li>
+                        <li><a class="dropdown-item" href="/padron/ofertalocal/?campo_filtro=estado&operador_filtro=2&valor_filtro=Baja"><i class="fa-solid fa-ban fa-fw me-2 text-danger"></i>Listar Ofertas Locales Baja</a></li>
+                        <li><a class="dropdown-item" href="/padron/ofertalocal/?campo_filtro=estado&operador_filtro=2&valor_filtro=Inactivo"><i class="fa-solid fa-circle-xmark fa-fw me-2 text-warning"></i>Listar Ofertas Locales Inactivas</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="javascript:void(0)" role="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-users me-1"></i>Responsables
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item d-flex gap-2">
+
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<!-- ═══════════════════════ / NAVBAR ═══════════════════════ -->
+
+<!-- Page Banner -->
+<div class="page-banner">
+    <div class="container-fluid px-4">
+        <h1 class="fw-800 mb-1" style="font-size:1.8rem;">
+            <i class="fa-solid fa-school me-2 opacity-75"></i>Padrón de Establecimientos Educativos
+        </h1>
+        <p class="mb-0 opacity-75" style="font-size:.95rem;">Provincia del Chaco · Sistema de Gestión y Consulta</p>
+    </div>
+</div>
+
+<!-- Main Content -->
+<main class="flex-grow-1">
+    <div class="container-fluid px-4 py-4">
+
+        <!-- Welcome text -->
+
+        <!-- Quick Access Cards -->
+        <h6 class="text-uppercase text-muted fw-700 mb-3" style="letter-spacing:.08em; font-size:.78rem;">
+            <i class="fa-solid fa-bolt me-1"></i>Acceso rápido
+        </h6>
+        <div class="row g-3">
+
+            <div class="col-sm-6 col-xl-4">
+                <a href="/padron/establecimiento" class="quick-card card p-4">
+                    <div class="icon-wrap bg-primary bg-opacity-10 text-primary">
+                        <i class="fa-solid fa-building-columns"></i>
+                    </div>
+                    <div class="card-title">Establecimientos</div>
+                    <div class="card-text">Listado completo de establecimientos educativos registrados.</div>
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <a href="/padron/localizacion" class="quick-card card p-4">
+                    <div class="icon-wrap bg-success bg-opacity-10 text-success">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <div class="card-title">Localizaciones</div>
+                    <div class="card-text">Localizaciones físicas asociadas a establecimientos.</div>
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <a href="/padron/ofertalocal" class="quick-card card p-4">
+                    <div class="icon-wrap bg-warning bg-opacity-10 text-warning">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div class="card-title">Ofertas Locales</div>
+                    <div class="card-text">Oferta educativa disponible por localización.</div>
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <a href="/padron/responsable" class="quick-card card p-4">
+                    <div class="icon-wrap bg-info bg-opacity-10 text-info">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="card-title">Responsables</div>
+                    <div class="card-text">Directivos y responsables registrados en el sistema.</div>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="py-3 text-center mt-4">
+    <small><i class="fa-solid fa-shield-halved me-1"></i>Padrón de Establecimientos Educativos · Ministerio de Educación · Provincia del Chaco</small>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+
+
+
+<script>
+// SCRIPTS DE CHAPA Y PINTURA APLICADOS GLOBALMENTE
+
+$(document).ready(function() {
+    $('a[href="#"]').attr('href', 'javascript:void(0)');
+
+    $(document).on('click', '.btn-ver', function(e) {
+        e.preventDefault();
+        var myModal = new bootstrap.Modal(document.getElementById('detalleConstruccionModal'));
+        myModal.show();
+    });
+    $('.btn-ver').removeAttr('onclick');
+
+    // ============================================
+    // ESTILOS DINAMICOS Y UI CORRECTIONS
+    // ============================================
+    if ($('head style#custom-highlight').length === 0) {
+        $('head').append(`
+            <style id="custom-highlight">
+                .highlight-search {
+                    background-color: rgba(25, 135, 84, 0.05) !important;
+                }
+                .filter-toggle-btn { transition: all 0.2s ease; }
+            </style>
+        `);
+    }
+
+    $('.filter-toggle-btn').each(function() {
+        $(this).removeAttr('onclick');
+        $(this).addClass('d-flex justify-content-between align-items-center gap-2');
+        if(!$(this).find('.fa-chevron-down').length && !$(this).find('.fa-chevron-up').length) {
+            $(this).append('<i class="fa-solid fa-chevron-down ms-1" style="font-size:0.75rem;"></i>');
+        }
+    });
+
+    $('.filter-toggle-btn').on('click', function(e) {
+        e.preventDefault();
+        var isFiltro = $(this).text().toLowerCase().indexOf('filtro') !== -1;
+        var btnClicked = $(this);
+        var panelFiltros = $('#pnlFiltros');
+        var panelColumnas = $('#pnlColumnas');
+        var btnF = $('.filter-toggle-btn:contains("Filtros")');
+        var btnC = $('.filter-toggle-btn:contains("Columnas")');
+
+        if(isFiltro) {
+            if(panelFiltros.is(':visible')){
+                panelFiltros.slideUp('fast');
+                btnClicked.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            } else {
+                panelColumnas.slideUp('fast');
+                btnC.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                panelFiltros.slideDown('fast');
+                btnClicked.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+            }
+        } else {
+            if(panelColumnas.is(':visible')){
+                panelColumnas.slideUp('fast');
+                btnClicked.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            } else {
+                panelFiltros.slideUp('fast');
+                btnF.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                panelColumnas.slideDown('fast');
+                btnClicked.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+            }
+        }
+    });
+
+    window.tableHeadersMap = [];
+    function updateTableHeadersMap() {
+        window.tableHeadersMap = [];
+        $('.table-padron thead th').each(function(index) {
+            var text = $(this).text().trim();
+            var aTag = $(this).find('a[href*="orden="]');
+            var dbCol = "";
+            if(aTag.length > 0) {
+                dbCol = aTag.attr('href').split('orden=')[1].split('&')[0];
+            } else {
+                dbCol = text.toLowerCase().replace(/ /g, '_');
+            }
+            if(text && text !== 'Acción') {
+                window.tableHeadersMap.push({idx: index, text: text, dbCol: dbCol});
+            }
+        });
+    }
+    updateTableHeadersMap();
+
+    // ============================================
+    // GESTION DE PESTAÑA COLUMNAS TIPO INSTANTÁNEO (LOCAL DOM)
+    // ============================================
+    $('#pnlColumnas button[type="submit"]').hide();
+
+    function fuzzyMatchCol(label) {
+        var cleanL = label.toLowerCase().replace(/[^a-záéíóúñ0-9]/gi, '');
+        for(var i=0; i<window.tableHeadersMap.length; i++) {
+            var cleanH = window.tableHeadersMap[i].text.toLowerCase().replace(/[^a-záéíóúñ0-9]/gi, '');
+            if(cleanH === cleanL || cleanH.indexOf(cleanL) > -1 || cleanL.indexOf(cleanH) > -1) {
+                return window.tableHeadersMap[i].idx;
+            }
+        }
+        // Manual fallbacks para strings conflictivos
+        if(cleanL.indexOf('codigojuris') > -1) {
+            for(var i=0; i<window.tableHeadersMap.length; i++) if(window.tableHeadersMap[i].text.toLowerCase().indexOf('juris') > -1) return window.tableHeadersMap[i].idx;
+        }
+        if(cleanL.indexOf('establecimiento') > -1) {
+            for(var i=0; i<window.tableHeadersMap.length; i++) if(window.tableHeadersMap[i].text.toLowerCase().indexOf('estab') > -1 && window.tableHeadersMap[i].text.toLowerCase().indexOf('nro') > -1) return window.tableHeadersMap[i].idx;
+        }
+        return -1;
+    }
+
+    function applyColumnsLogic() {
+        var total = $('#pnlColumnas .form-check-input').length;
+        var vis = $('#pnlColumnas .form-check-input:checked').length;
+        
+        // Limpiamos aviso de 0 si existe
+        $('.table-padron tbody tr.warning-cols').remove();
+
+        if(vis === 0 && total > 0) {
+            // Cero seleccionadas: esconder todas
+            $('.table-padron tr').children().hide();
+            $('.table-padron tr').each(function(){ $(this).find('th:eq(0), td:eq(0)').show(); }); // Mostrar Acción
+            $('.table-padron tbody').append('<tr class="warning-cols"><td colspan="2" class="text-center text-muted py-3"><i class="fa-solid fa-eye-slash me-2"></i>Ha ocultado todas las columnas.</td></tr>');
+        } else {
+            // Mostrar u ocultar columna por columna
+            $('#pnlColumnas .form-check-input').each(function() {
+                var label = $(this).next('label').text().trim();
+                var isChecked = $(this).is(':checked');
+                var thIdx = fuzzyMatchCol(label);
+                
+                if(thIdx !== -1) {
+                    if(isChecked) {
+                        $('.table-padron tr').find('th:eq('+thIdx+'), td:eq('+thIdx+')').show();
+                    } else {
+                        $('.table-padron tr').find('th:eq('+thIdx+'), td:eq('+thIdx+')').hide();
+                    }
+                }
+            });
+            // Siempre aseguramos la primera (Acción)
+            $('.table-padron tr').find('th:eq(0), td:eq(0)').show();
+        }
+
+        if($('#colCounterLabel').length) {
+            $('#colCounterLabel').text('Mostrando ' + vis + ' de ' + total + ' columnas');
+            $('#colCounterTopLabel').html('<i class="fa-solid fa-table-columns me-1"></i>Mostrando ' + vis + ' de ' + total + ' columnas');
+        }
+    }
+
+    if($('#pnlColumnas').length) {
+        $('<div class="d-flex justify-content-between align-items-center mt-3 border-top pt-2">'+
+            '<div class="d-flex gap-2">'+
+                '<button type="button" class="btn btn-outline-secondary btn-sm" id="btnRestaurarCols"><i class="fa-solid fa-check-double me-1"></i>Todas</button>'+
+                '<button type="button" class="btn btn-outline-primary btn-sm" id="btnPorDefectoCols"><i class="fa-solid fa-clock-rotate-left me-1"></i>Por Defecto</button>'+
+            '</div>'+
+            '<span id="colCounterLabel" class="small text-muted fw-bold"></span>'+
+          '</div>').appendTo('#pnlColumnas');
+
+        $('<div class="d-flex justify-content-end mb-1"><span id="colCounterTopLabel" class="badge bg-secondary text-white shadow-sm"></span></div>').insertBefore('.table-responsive');
+
+        // Leer estado inicial o defaults
+        var hasColParams = false;
+        var urlParamsTemp = new URLSearchParams(window.location.search);
+        urlParamsTemp.forEach(function(val, key) { if(key.startsWith('col_')) hasColParams = true; });
+        if(hasColParams) {
+            $('#pnlColumnas .form-check-input').prop('checked', false);
+            urlParamsTemp.forEach(function(val, key) { 
+                if(key.startsWith('col_') && val === 'on') {
+                    $('#pnlColumnas input[name="'+key+'"]').prop('checked', true);
+                }
+            });
+        }
+        
+        applyColumnsLogic(); // ejecutar en carga localmente
+
+        $('#btnRestaurarCols').on('click', function() {
+            $('#pnlColumnas .form-check-input').prop('checked', true);
+            applyColumnsLogic();
+        });
+
+        $('#btnPorDefectoCols').on('click', function() {
+            var url = new URL(window.location.href);
+            var keysToDel = [];
+            url.searchParams.forEach((v,k) => { if(k.startsWith('col_')) keysToDel.push(k); });
+            keysToDel.forEach(k => url.searchParams.delete(k));
+            window.location.href = url.toString(); 
+        });
+
+        $('#pnlColumnas .form-check-input').on('change', function() {
+            applyColumnsLogic();
+        });
+    }
+
+    // ============================================
+    // BADGES Y LIMPIAR FILTROS (con "X" de cierre)
+    // ============================================
+    var urlParams = new URLSearchParams(window.location.search);
+    window.serverFilters = [];
+    
+    var pf = urlParams.getAll('f'); var po = urlParams.getAll('o'); var pv = urlParams.getAll('v');
+    for(var i=0; i<pf.length; i++) { if(pv[i]) window.serverFilters.push({ isSmart: false, pf:'f', idx:i, po:'o', pv:'v', valF: pf[i], valV: pv[i] }); }
+    
+    var cf = urlParams.getAll('campo_filtro'); var co = urlParams.getAll('operador_filtro'); var cv = urlParams.getAll('valor_filtro');
+    for(var i=0; i<cf.length; i++) { if(cv[i]) window.serverFilters.push({ isSmart: false, pf:'campo_filtro', idx:i, po:'operador_filtro', pv:'valor_filtro', valF: cf[i], valV: cv[i] }); }
+    
+    var sf = urlParams.get('smart_ui_col'); var sv = urlParams.get('smart_ui_val');
+    var isLiveSearchActive = false;
+    if(sf && sv) {
+        isLiveSearchActive = true;
+        window.serverFilters.push({ isSmart: true, valF: sf, valV: sv }); 
+    }
+
+    function removeFilterFromURL(filterObj) {
+        var baseUrl = window.location.pathname;
+        var params = new URLSearchParams(window.location.search);
+        
+        if (filterObj.isSmart) {
+            params.delete('smart_ui_col');
+            params.delete('smart_ui_val');
+            var foundDbCol = null;
+            for(var i=0; i<window.tableHeadersMap.length; i++){
+                if(window.tableHeadersMap[i].text === filterObj.valF) { foundDbCol = window.tableHeadersMap[i].dbCol; break; }
+            }
+            if(foundDbCol) {
+                var arrF = params.getAll('campo_filtro');
+                var arrO = params.getAll('operador_filtro');
+                var arrV = params.getAll('valor_filtro');
+                for(var j=0; j<arrF.length; j++) {
+                    if(arrF[j] === foundDbCol && arrV[j] === filterObj.valV.toLowerCase()) {
+                        arrF.splice(j, 1); arrO.splice(j, 1); arrV.splice(j, 1);
+                        break;
+                    }
+                }
+                params.delete('campo_filtro'); params.delete('operador_filtro'); params.delete('valor_filtro');
+                arrF.forEach(v => params.append('campo_filtro', v));
+                arrO.forEach(v => params.append('operador_filtro', v));
+                arrV.forEach(v => params.append('valor_filtro', v));
+            }
+        } else {
+            var arrF = params.getAll(filterObj.pf);
+            var arrO = params.getAll(filterObj.po);
+            var arrV = params.getAll(filterObj.pv);
+            arrF.splice(filterObj.idx, 1); arrO.splice(filterObj.idx, 1); arrV.splice(filterObj.idx, 1);
+            params.delete(filterObj.pf); params.delete(filterObj.po); params.delete(filterObj.pv);
+            arrF.forEach(v => params.append(filterObj.pf, v));
+            arrO.forEach(v => params.append(filterObj.po, v));
+            arrV.forEach(v => params.append(filterObj.pv, v));
+        }
+        params.delete('page');
+        var newSearch = params.toString();
+        window.location.href = baseUrl + (newSearch ? ('?' + newSearch) : '');
+    }
+
+    var badgesContainer = $('#serverBadgesContainer');
+    if(badgesContainer.length === 0) {
+        var badgesHtml = '<div class="mb-2 d-flex flex-wrap align-items-center gap-1" id="serverBadgesContainer" style="display:none;"><b class="me-2 small"><i class="fa-solid fa-filter me-1"></i>Filtros aplicados:</b></div>';
+        badgesContainer = $(badgesHtml).insertBefore('.table-responsive');
+    }
+
+    function reapplyHighlights() {
+        $('.table-padron td').removeClass('highlight-search');
+        window.serverFilters.forEach((filter) => {
+            var cIdx = fuzzyMatchCol(filter.valF);
+            if(cIdx !== -1) {
+                $('.table-padron tbody tr').find('td:eq('+cIdx+')').addClass('highlight-search');
+            }
+        });
+    }
+
+    if(window.serverFilters.length > 0) {
+        badgesContainer.show();
+        window.serverFilters.forEach((filter, arrIndex) => {
+            var badgeText = filter.valF + ': ' + filter.valV;
+            var eyeIcon = filter.isSmart ? 'fa-bolt text-warning' : 'fa-filter';
+            var badgeId = filter.isSmart ? 'id="smartSearchBadge"' : '';
+            var html = `<span ${badgeId} class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill py-1 px-3 d-flex align-items-center gap-2" style="font-size:0.85rem;">
+                <i class="fa-solid ${eyeIcon}"></i> <span class="badge-text" style="${filter.isSmart ? 'font-weight:700;' : ''}">${badgeText}</span>
+                <a href="javascript:void(0)" class="text-danger ms-1 close-filter-btn"><i class="fa-solid fa-xmark"></i></a>
+            </span>`;
+            var badgeEl = $(html);
+            badgeEl.find('.close-filter-btn').on('click', function(e) {
+                e.preventDefault();
+                removeFilterFromURL(filter);
+            });
+            badgesContainer.append(badgeEl);
+        });
+
+        if($('#btnLimpiarTodosFiltros').length === 0) {
+            var btnLimpiarHtml = '<button class="btn btn-sm btn-outline-danger ms-2 shadow-sm" id="btnLimpiarTodosFiltros" title="Limpiar todos"><i class="fa-solid fa-broom me-1"></i>Limpiar Todo</button>';
+            badgesContainer.append(btnLimpiarHtml);
+            $('#btnLimpiarTodosFiltros').on('click', function() {
+                window.location.href = window.location.pathname;
+            });
+        }
+        reapplyHighlights();
+    }
+
+    var btnLimpiarViejo = $('<button class="btn btn-outline-danger btn-sm ms-2 shadow-sm" title="Limpiar Filtros o Búsqueda"><i class="fa-solid fa-broom me-1"></i>Limpiar</button>');
+    if($('.filter-toggle-btn').length > 0) {
+        btnLimpiarViejo.insertAfter($('.filter-toggle-btn').last());
+        btnLimpiarViejo.on('click', function(e) {
+            e.preventDefault();
+            if(window.location.search.length > 1) window.location.href = window.location.pathname;
+            else if($('#liveSearchInput').length) {
+                $('#liveSearchInput').val('').trigger('input');
+            }
+        });
+    }
+
+    // ============================================
+    // BUSCADOR INTELIGENTE (AJAX FLUIDO E INTEGRACION FLEX)
+    // ============================================
+    if($('.table-padron').length > 0) {
+
+        var optionsHTML = window.tableHeadersMap.map(h => `<option value="${h.idx}" data-dbcol="${h.dbCol}">${h.text}</option>`).join('');
+        
+        var searchUI = `
+        <div class="input-group input-group-sm shadow-sm flex-nowrap" style="max-width: 380px;" id="liveSearchContainer">
+            <span class="input-group-text bg-white border-end-0 text-muted px-2"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <select id="liveSearchSelect" class="form-select border-start-0 ps-0 text-secondary fw-bold" style="max-width: 155px; background-color: #fff;">
+                ${optionsHTML}
+            </select>
+            <input type="text" id="liveSearchInput" class="form-control border-start-0 ps-1" placeholder="Buscar..." autocomplete="off">
+            <button class="btn btn-outline-secondary bg-white border border-start-0 text-danger" id="liveSearchClear" style="display:none; padding-left:.5rem; padding-right:.5rem;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        `;
+        
+        $('#liveSearchContainer').remove(); 
+        
+        if($('.btn-excel').length){
+            var excelGroup = $('.btn-excel').parent(); 
+            excelGroup.removeClass('flex-wrap align-items-center'); 
+            var superGroup = $('<div class="d-flex flex-wrap justify-content-end align-items-center gap-2 ms-auto py-1"></div>');
+            excelGroup.before(superGroup);
+            superGroup.append(searchUI);
+            superGroup.append(excelGroup);
+        } else {
+            $('.page-heading').parent().append($('<div class="ms-auto">'+searchUI+'</div>'));
+        }
+
+        var debounceTimer;
+        var fetchXhr = null;
+
+        $('#liveSearchInput').on('input', function() {
+            var val = $(this).val();
+            var colIdx = parseInt($('#liveSearchSelect').val());
+            var colName = $('#liveSearchSelect option:selected').text();
+            var dbCol = $('#liveSearchSelect option:selected').attr('data-dbcol'); 
+
+            if(val.trim().length > 0) {
+                $('#liveSearchClear').show();
+
+                var badgesCont = $('#serverBadgesContainer');
+                badgesCont.show();
+                var smartBadge = $('#smartSearchBadge');
+                if(smartBadge.length === 0) {
+                    smartBadge = $(`<span id="smartSearchBadge" class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill py-1 px-3 align-items-center gap-2" style="font-size:0.85rem; display:flex;">
+                        <i class="fa-solid fa-bolt text-warning"></i> <span class="badge-text" style="font-weight:600;"></span>
+                        <a href="javascript:void(0)" class="text-danger ms-1 close-filter-btn"><i class="fa-solid fa-xmark"></i></a>
+                    </span>`);
+                    smartBadge.find('.close-filter-btn').on('click', function(e){
+                        e.preventDefault();
+                        $('#liveSearchInput').val('').trigger('input');
+                    });
+                    badgesCont.prepend(smartBadge);
+                }
+                smartBadge.find('.badge-text').text(colName + ': ' + val);
+                smartBadge.show();
+
+                var checkbox = $('#pnlColumnas label').filter(function() {
+                    return fuzzyMatchCol($(this).text().trim()) === colIdx;
+                }).prev('input[type="checkbox"]');
+                if(checkbox.length && !checkbox.is(':checked')) {
+                    checkbox.prop('checked', true).trigger('change');
+                }
+
+                reapplyHighlights();
+                $('.table-padron tbody tr').find('td:eq('+colIdx+')').addClass('highlight-search');
+
+                var valL = val.trim().toLowerCase();
+                // Ocultar celdas visualmente instántaneo
+                $('.table-padron tbody tr').each(function() {
+                    var cellText = $(this).find('td:eq('+colIdx+')').text().trim().toLowerCase();
+                    if(cellText.indexOf(valL) === -1) $(this).hide(); else $(this).show();
+                });
+
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    var url = new URL(window.location.href);
+                    removeSmartParams(url); // Siempre limpiar antes de agregar (fix efecto fantasma)
+                    
+                    url.searchParams.append('campo_filtro', dbCol);
+                    url.searchParams.append('operador_filtro', '0');
+                    url.searchParams.append('valor_filtro', valL);
+                    url.searchParams.set('smart_ui_col', colName);
+                    url.searchParams.set('smart_ui_val', val);
+                    url.searchParams.delete('page');
+                    
+                    window.history.pushState({}, '', url.toString());
+
+                    if(fetchXhr) fetchXhr.abort();
+                    fetchXhr = $.ajax({
+                        url: url.toString(),
+                        method: 'GET',
+                        success: function(data) {
+                            var $parsed = $(data);
+                            $('.table-responsive').html($parsed.find('.table-responsive').html());
+                            $('nav[aria-label^="Paginación"]').replaceWith($parsed.find('nav[aria-label^="Paginación"]'));
+                            $('.results-bar').html($parsed.find('.results-bar').html());
+                            
+                            updateTableHeadersMap();
+                            
+                            // Reaplicar lógica local luego del AJAX
+                            reapplyHighlights();
+                            $('.table-padron tbody tr').find('td:eq('+colIdx+')').addClass('highlight-search');
+                            $('.btn-ver').removeAttr('onclick');
+                            applyColumnsLogic(); // reesconder columnas si habia
+                            
+                            initPagination();
+                        }
+                    });
+                }.bind(this), 600);
+
+            } else {
+                $('#liveSearchClear').hide();
+                $('#smartSearchBadge').remove(); 
+                
+                if($('#serverBadgesContainer span.badge:not(#smartSearchBadge)').length === 0) {
+                    $('#serverBadgesContainer').hide();
+                }
+
+                reapplyHighlights();
+                $('.table-padron tbody tr').show();
+                applyColumnsLogic(); // para re-esconder lo que no debe verse
+                clearTimeout(debounceTimer);
+
+                var url = new URL(window.location.href);
+                removeSmartParams(url);
+                window.history.pushState({}, '', url.toString());
+
+                if(fetchXhr) fetchXhr.abort();
+                fetchXhr = $.ajax({
+                    url: url.toString(),
+                    method: 'GET',
+                    success: function(data) {
+                        var $parsed = $(data);
+                        $('.table-responsive').html($parsed.find('.table-responsive').html());
+                        $('nav[aria-label^="Paginación"]').replaceWith($parsed.find('nav[aria-label^="Paginación"]'));
+                        $('.results-bar').html($parsed.find('.results-bar').html());
+                        $('.btn-ver').removeAttr('onclick');
+                        
+                        updateTableHeadersMap();
+                        reapplyHighlights();
+                        applyColumnsLogic();
+
+                        initPagination();
+                    }
+                });
+            }
+        });
+
+        function removeSmartParams(url) {
+            var arrF = url.searchParams.getAll('campo_filtro');
+            var arrO = url.searchParams.getAll('operador_filtro');
+            var arrV = url.searchParams.getAll('valor_filtro');
+            
+            var uiVal = url.searchParams.get('smart_ui_val');
+            url.searchParams.delete('smart_ui_col');
+            url.searchParams.delete('smart_ui_val');
+            
+            if(uiVal) {
+                var uiValL = uiVal.trim().toLowerCase();
+                for(var j=0; j<arrF.length; j++) {
+                    if(arrO[j] === '0' && arrV[j] === uiValL) {
+                        arrF.splice(j, 1); arrO.splice(j, 1); arrV.splice(j, 1);
+                        break;
+                    }
+                }
+                url.searchParams.delete('campo_filtro'); url.searchParams.delete('operador_filtro'); url.searchParams.delete('valor_filtro');
+                arrF.forEach(v => url.searchParams.append('campo_filtro', v));
+                arrO.forEach(v => url.searchParams.append('operador_filtro', v));
+                arrV.forEach(v => url.searchParams.append('valor_filtro', v));
+            }
+        }
+
+        $('#liveSearchClear').on('click', function(e) { e.preventDefault(); $('#liveSearchInput').val('').trigger('input'); });
+        $('#liveSearchSelect').on('change', function() {
+            if($('#liveSearchInput').val().trim().length>0) $('#liveSearchInput').trigger('input');
+        });
+
+        if(sf && sv) {
+            $('#liveSearchSelect option').filter(function() { return $(this).text() === sf; }).prop('selected', true);
+            $('#liveSearchInput').val(sv);
+            $('#liveSearchClear').show();
+        }
+    }
+
+    // ============================================
+    // PAGINACION COMPACTA Y SELECTOR PAGE_SIZE
+    // ============================================
+    function initPagination() {
+        var pParams = new URLSearchParams(window.location.search);
+        var pSizeHTML = `
+            <div class="d-flex align-items-center mb-2 mx-auto justify-content-center psize-container">
+                <span class="text-muted small fw-bold me-2">Registros por página:</span>
+                <select class="form-select form-select-sm pageSizeSelector" style="width:70px;">
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        `;
+
+        if($('nav[aria-label^="Paginación"]').length > 0 && $('.psize-container').length === 0) {
+            $(pSizeHTML).insertBefore('nav[aria-label^="Paginación"]');
+        }
+        
+        if($('.pageSizeSelector').length > 0) {
+            var curSize = pParams.get('page_size') || '10';
+            $('.pageSizeSelector').val(curSize);
+            $('.pageSizeSelector').off('change').on('change', function() {
+                var url = new URL(window.location.href);
+                url.searchParams.set('page_size', $(this).val());
+                url.searchParams.set('page', 1);
+                window.location.href = url.toString();
+            });
+        }
+
+        $('nav[aria-label^="Paginación"] a.page-link').each(function() {
+            var href = $(this).attr('href');
+            if(href && href.indexOf('page=') !== -1) {
+                var p = href.split('page=')[1].split('&')[0];
+                var targetURL = new URL(window.location.href);
+                targetURL.searchParams.set('page', p);
+                $(this).attr('href', targetURL.toString());
+            }
+        });
+
+        var items = $('nav[aria-label^="Paginación"] ul.pagination li');
+        if(items.length > 9) {
+            var totalPages = items.length - 2;
+            var activeIdx = $('nav[aria-label^="Paginación"] ul.pagination li.active').index();
+            items.each(function(i) {
+                if(i===0 || i===items.length-1 || i===1 || i===totalPages) return;
+                if(Math.abs(i - activeIdx) > 2) {
+                    if(Math.abs(i - activeIdx) === 3) $(this).html('<span class="page-link border-0 text-muted bg-transparent">...</span>');
+                    else $(this).hide();
+                }
+            });
+            
+            $('nav[aria-label^="Paginación"] ul.pagination li.edge-first').remove();
+            $('nav[aria-label^="Paginación"] ul.pagination li.edge-last').remove();
+            
+            var urlFirst = new URL(window.location.href); urlFirst.searchParams.set('page', 1);
+            var urlLast = new URL(window.location.href); urlLast.searchParams.set('page', totalPages);
+            $('<li class="page-item edge-first"><a class="page-link" href="'+urlFirst.toString()+'" title="Primero"><i class="fa-solid fa-angles-left"></i></a></li>').insertAfter(items.first());
+            $('<li class="page-item edge-last"><a class="page-link" href="'+urlLast.toString()+'" title="Último"><i class="fa-solid fa-angles-right"></i></a></li>').insertBefore(items.last());
+        }
+    }
+    
+    initPagination();
+});
+</script>
+<script>
+(function() {
+    var root = document.documentElement;
+    var sidebarSelectors = [
+        '[data-layout-sidebar]',
+        '[data-sidebar]',
+        '#menu-lateral',
+        '#menuLateral',
+        '#sidebar',
+        '.layout-sidebar',
+        '.main-sidebar',
+        '.app-sidebar',
+        '.sidebar',
+        '.side-menu',
+        'aside.sidebar',
+        'aside.menu-lateral'
+    ];
+    var observedSidebar = null;
+    var resizeObserver = null;
+    var syncQueued = false;
+
+    function queueSidebarSync() {
+        if (syncQueued) {
+            return;
+        }
+
+        syncQueued = true;
+        window.requestAnimationFrame(function() {
+            syncQueued = false;
+            syncSidebarAwareLayout();
+        });
+    }
+
+    function isDockedSidebar(element) {
+        var style;
+        var rect;
+
+        if (!element || window.innerWidth < 992) {
+            return false;
+        }
+
+        style = window.getComputedStyle(element);
+        rect = element.getBoundingClientRect();
+
+        if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+        }
+
+        if (rect.width < 140 || rect.height < 200) {
+            return false;
+        }
+
+        if (rect.right <= 0 || rect.left >= window.innerWidth || rect.left > 32) {
+            return false;
+        }
+
+        if (style.position === 'fixed' && rect.width >= window.innerWidth * 0.72) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function findDockedSidebar() {
+        var i;
+        var element;
+
+        for (i = 0; i < sidebarSelectors.length; i += 1) {
+            element = document.querySelector(sidebarSelectors[i]);
+            if (isDockedSidebar(element)) {
+                return element;
+            }
+        }
+
+        return null;
+    }
+
+    function observeSidebar(element) {
+        if (observedSidebar === element) {
+            return;
+        }
+
+        if (resizeObserver && observedSidebar) {
+            resizeObserver.unobserve(observedSidebar);
+        }
+
+        observedSidebar = element;
+
+        if (resizeObserver && observedSidebar) {
+            resizeObserver.observe(observedSidebar);
+        }
+    }
+
+    function syncSidebarAwareLayout() {
+        var sidebar = findDockedSidebar();
+        var width = sidebar ? Math.max(0, Math.round(sidebar.getBoundingClientRect().width)) : 0;
+
+        root.style.setProperty('--layout-sidebar-width', width + 'px');
+        root.classList.toggle('has-layout-sidebar', width > 0);
+        observeSidebar(sidebar);
+    }
+
+    if ('ResizeObserver' in window) {
+        resizeObserver = new ResizeObserver(queueSidebarSync);
+    }
+
+    window.addEventListener('resize', queueSidebarSync, { passive: true });
+    window.addEventListener('load', queueSidebarSync);
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('[data-bs-toggle="collapse"], .navbar-toggler, .sidebar-toggle, .menu-toggle')) {
+            window.setTimeout(queueSidebarSync, 180);
+        }
+    });
+
+    if ('MutationObserver' in window && document.body) {
+        new MutationObserver(queueSidebarSync).observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class', 'style', 'hidden', 'aria-expanded'],
+            childList: true,
+            subtree: true
+        });
+    }
+
+    queueSidebarSync();
+})();
+</script>
+</body>
+</html>

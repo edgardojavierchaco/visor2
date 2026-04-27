@@ -69,3 +69,12 @@ CACHES = {
 }
 
 CACHE_TTL = 60 * 5  # 5 minutos
+
+DATABASES['Padron'] = {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.environ.get('PADRON_DB_NAME', 'Padron'),
+    'USER': os.environ.get('PADRON_DB_USER', 'visualizador'),
+    'PASSWORD': os.environ.get('PADRON_DB_PASSWORD'), 
+    'HOST': os.environ.get('PADRON_DB_HOST', 'visoreducativochaco.com.ar'),
+    'PORT': os.environ.get('PADRON_DB_PORT', '5432'),
+}

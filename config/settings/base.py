@@ -79,6 +79,7 @@ LOCAL_APPS = [
     'apps.menus.apps.MenusConfig',
     'apps.supervisa2',
     'apps.asignaciones',
+    'apps.padroninterno',
 ]
 
 

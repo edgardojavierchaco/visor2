@@ -67,7 +67,8 @@ urlpatterns = [
     path('sge/',include('apps.tickets.urls',namespace='sge')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
     path('evaluaciones_educativas/', include('apps.evaluaciones_educativas.urls', namespace='evaluaciones_educativas')),
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),    
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    path('padron/', include('apps.padroninterno.urls')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

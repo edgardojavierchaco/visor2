@@ -1,0 +1,1115 @@
+import json
+import re
+from datetime import date, datetime
+from functools import lru_cache
+from io import BytesIO
+from .permisos import padron_interno_admin_o_gestor_required
+import openpyxl
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db import connections
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
+
+PADRON_DB = 'Padron'
+PAGE_SIZE = 10
+
+def _cp_desc_expr(column_name):
+    return (
+        f"COALESCE(BTRIM(CASE "
+        f"WHEN POSITION('-' IN {column_name}) > 0 "
+        f"THEN SUBSTRING({column_name} FROM POSITION('-' IN {column_name}) + 1) "
+        f"ELSE {column_name} END), '')"
+    )
+
+
+def _cp_code_expr(column_name):
+    return (
+        f"COALESCE(BTRIM(CASE "
+        f"WHEN POSITION('-' IN {column_name}) > 0 "
+        f"THEN SUBSTRING({column_name} FROM 1 FOR POSITION('-' IN {column_name}) - 1) "
+        f"ELSE {column_name} END), '')"
+    )
+
+
+DIRECTOR_SQL = """
+    BTRIM(
+        CONCAT(
+            COALESCE(ve.responsable_apellido, ''),
+            CASE
+                WHEN COALESCE(ve.responsable_nombre, '') <> '' AND COALESCE(ve.responsable_apellido, '') <> ''
+                    THEN ', ' || ve.responsable_nombre
+                ELSE COALESCE(ve.responsable_nombre, '')
+            END,
+            CASE
+                WHEN ve.documento_responsable IS NOT NULL
+                    THEN '(' || ve.documento_responsable::text || ')'
+                ELSE ''
+            END
+        )
+    )
+"""
+
+
+OBSERVACIONES_SQL = "COALESCE(BTRIM(est_obs.valor), '')"
+TIPO_OFERTAS_SQL = "COALESCE(BTRIM(otipos.tipo_ofertas), '')"
+
+CAMPO_SQL = {
+    'cue': 've.cue::text',
+    'codigo_jurisdiccional': "COALESCE(BTRIM(ve.codigo_jurisdiccional_sede), '')",
+    'nombre': "COALESCE(BTRIM(ve.nombre), '')",
+    'sector': "COALESCE(BTRIM(ve.sector), '')",
+    'dependencia': "COALESCE(BTRIM(ve.dependencia), '')",
+    'confesional': "COALESCE(BTRIM(ve.confesional), '')",
+    'arancelado': "COALESCE(BTRIM(ve.arancelado), '')",
+    'categoria': "COALESCE(BTRIM(ve.categoria), '')",
+    'director': DIRECTOR_SQL,
+    'estado': "COALESCE(BTRIM(ve.estado), '')",
+    'tipo_ofertas': TIPO_OFERTAS_SQL,
+    'localidad': "COALESCE(BTRIM(ve.localidad_sede), '')",
+    'departamento': "COALESCE(BTRIM(ve.departamento_sede), '')",
+    'nro_establecimiento': "COALESCE(BTRIM(ve.cp_numeroestablecimiento), '')",
+    'tipo_educacion': _cp_desc_expr('ve.cp_est_tipo_ed'),
+    'nivel': _cp_desc_expr('ve.cp_est_nivel'),
+    'cargo_director': _cp_desc_expr('ve.cp_est_cargo_director'),
+    'observaciones': OBSERVACIONES_SQL,
+    'fecha_inst_legal': "COALESCE(BTRIM(ve.cp_est_fecha_inst_legal), '')",
+    'nro_inst_legal': "COALESCE(BTRIM(ve.cp_est_nro_inst_legal), '')",
+    'anio_creacion': "COALESCE(BTRIM(ve.cp_est_anio_inst_legal), '')",
+    'descrip_inst_legal': _cp_code_expr('ve.cp_est_descrip_inst_legal'),
+}
+
+VISIBLE_NAME_MAP = {
+    'cue': 'Cue',
+    'codigo_jurisdiccional': 'Codigo Jurisdiccional',
+    'nombre': 'Nombre',
+    'sector': 'Sector',
+    'dependencia': 'Dependencia',
+    'confesional': 'Confesional',
+    'arancelado': 'Arancelado',
+    'categoria': 'Categoría',
+    'director': 'Director',
+    'estado': 'Estado',
+    'tipo_ofertas': 'Tipo de Ofertas',
+    'localidad': 'Localidad',
+    'departamento': 'Departamento',
+    'nro_establecimiento': 'Nro. de Establecimiento',
+    'tipo_educacion': 'Establecimiento TIPO EDUCACION',
+    'nivel': 'Establecimiento NIVEL',
+    'cargo_director': 'Establecimiento CARGO DIRECTOR',
+    'observaciones': 'Observaciones',
+    'fecha_inst_legal': 'FECHA Inst. Legal Creacion del Establecimiento',
+    'nro_inst_legal': 'NRO. Inst. Legal Creacion del Establecimiento',
+    'anio_creacion': 'AÑO Creacion del Establecimiento',
+    'descrip_inst_legal': 'DESCRIP. Inst. Legal Creacion del Establecimiento',
+}
+
+COLUMNAS_EXPORTACION = [
+    ('Cue', 'cue'),
+    ('Codigo Jurisdiccional', 'codigo_jurisdiccional'),
+    ('Nombre', 'nombre'),
+    ('Sector', 'sector'),
+    ('Dependencia', 'dependencia'),
+    ('Confesional', 'confesional'),
+    ('Arancelado', 'arancelado'),
+    ('Categoría', 'categoria'),
+    ('Director', 'director'),
+    ('Estado', 'estado'),
+    ('Tipo de Ofertas', 'tipo_ofertas'),
+    ('Localidad', 'localidad'),
+    ('Departamento', 'departamento'),
+    ('Nro. de Establecimiento', 'nro_establecimiento'),
+    ('Establecimiento TIPO EDUCACION', 'tipo_educacion'),
+    ('Establecimiento NIVEL', 'nivel'),
+    ('Establecimiento CARGO DIRECTOR', 'cargo_director'),
+    ('Observaciones', 'observaciones'),
+    ('FECHA Inst. Legal Creacion del Establecimiento', 'fecha_inst_legal'),
+    ('NRO. Inst. Legal Creacion del Establecimiento', 'nro_inst_legal'),
+    ('AÑO Creacion del Establecimiento', 'anio_creacion'),
+    ('DESCRIP. Inst. Legal Creacion del Establecimiento', 'descrip_inst_legal'),
+]
+
+_SELECT_FIELDS = f"""
+    SELECT
+        ve.id_establecimiento AS id,
+        COALESCE(BTRIM(ve.cue::text), '') AS cue,
+        COALESCE(BTRIM(ve.codigo_jurisdiccional_sede), '') AS codigo_jurisdiccional,
+        COALESCE(BTRIM(ve.nombre), '') AS nombre,
+        COALESCE(BTRIM(ve.sector), '') AS sector,
+        COALESCE(BTRIM(ve.dependencia), '') AS dependencia,
+        COALESCE(BTRIM(ve.confesional), '') AS confesional,
+        COALESCE(BTRIM(ve.arancelado), '') AS arancelado,
+        COALESCE(BTRIM(ve.categoria), '') AS categoria,
+        {DIRECTOR_SQL} AS director,
+        COALESCE(BTRIM(ve.estado), '') AS estado,
+        {TIPO_OFERTAS_SQL} AS tipo_ofertas,
+        COALESCE(BTRIM(ve.localidad_sede), '') AS localidad,
+        COALESCE(BTRIM(ve.departamento_sede), '') AS departamento,
+        COALESCE(BTRIM(ve.cp_numeroestablecimiento), '') AS nro_establecimiento,
+        {_cp_desc_expr('ve.cp_est_tipo_ed')} AS tipo_educacion,
+        {_cp_desc_expr('ve.cp_est_nivel')} AS nivel,
+        {_cp_desc_expr('ve.cp_est_cargo_director')} AS cargo_director,
+        {OBSERVACIONES_SQL} AS observaciones,
+        COALESCE(BTRIM(ve.cp_est_fecha_inst_legal), '') AS fecha_inst_legal,
+        COALESCE(BTRIM(ve.cp_est_nro_inst_legal), '') AS nro_inst_legal,
+        COALESCE(BTRIM(ve.cp_est_anio_inst_legal), '') AS anio_creacion,
+        {_cp_code_expr('ve.cp_est_descrip_inst_legal')} AS descrip_inst_legal
+"""
+
+_BASE_SQL = """
+    FROM vp_establecimientos ve
+    LEFT JOIN est_campo_prov_valor est_obs
+        ON est_obs.id_establecimiento = ve.id_establecimiento
+       AND est_obs.id_campo_prov = 1019638050
+    LEFT JOIN LATERAL (
+        SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, l.anexo, ol.id_oferta_local) AS tipo_ofertas
+        FROM localizacion l
+        JOIN oferta_local ol ON ol.id_localizacion = l.id_localizacion
+        JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+        WHERE l.id_establecimiento = ve.id_establecimiento
+    ) otipos ON TRUE
+"""
+
+
+class _RawPage:
+    def __init__(self, data_sql, count_sql, params, db_alias):
+        self._data_sql = data_sql
+        self._count_sql = count_sql
+        self._params = params
+        self._db_alias = db_alias
+        self._length = None
+
+    def __len__(self):
+        if self._length is None:
+            with connections[self._db_alias].cursor() as cursor:
+                cursor.execute(self._count_sql, self._params)
+                self._length = cursor.fetchone()[0]
+        return self._length
+
+    def __getitem__(self, item):
+        if not isinstance(item, slice):
+            raise TypeError('Los elementos deben pedirse como slice.')
+
+        start = item.start or 0
+        stop = item.stop or start
+        limit = max(stop - start, 0)
+        sql = f"{self._data_sql} LIMIT {limit} OFFSET {start}"
+
+        with connections[self._db_alias].cursor() as cursor:
+            cursor.execute(sql, self._params)
+            cols = [d[0] for d in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+
+OPERADOR_SQL = {
+    '0': ('ILIKE', lambda v: f'%{v}%'),
+    '1': ('NOT ILIKE', lambda v: f'%{v}%'),
+    '2': ('=', lambda v: v),
+    '3': ('>', lambda v: v),
+    '4': ('>=', lambda v: v),
+    '5': ('<', lambda v: v),
+    '6': ('<=', lambda v: v),
+    '7': ('!=', lambda v: v),
+}
+
+_REPEATED_PAIR_RE = re.compile(r'^(.+)-\1$')
+
+
+def _build_tipo_ofertas_clause(oper):
+    if oper == '1':
+        return (
+            "NOT EXISTS ("
+            "SELECT 1 "
+            "FROM localizacion ltf "
+            "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
+            "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
+            "WHERE ltf.id_establecimiento = ve.id_establecimiento "
+            "AND BTRIM(otf.descripcion)::text ILIKE %s"
+            ")"
+        )
+
+    if oper == '7':
+        return (
+            "NOT EXISTS ("
+            "SELECT 1 "
+            "FROM localizacion ltf "
+            "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
+            "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
+            "WHERE ltf.id_establecimiento = ve.id_establecimiento "
+            "AND BTRIM(otf.descripcion)::text = %s"
+            ")"
+        )
+
+    op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+    return (
+        "EXISTS ("
+        "SELECT 1 "
+        "FROM localizacion ltf "
+        "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
+        "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
+        "WHERE ltf.id_establecimiento = ve.id_establecimiento "
+        f"AND BTRIM(otf.descripcion)::text {op_str} %s"
+        ")"
+    )
+
+
+def _normalize_text(value, keep_linebreaks=False):
+    if value is None:
+        return ''
+
+    text = str(value)
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    if text.strip().upper() == 'NULL':
+        return ''
+
+    if keep_linebreaks:
+        lines = [re.sub(r'\s+', ' ', line).strip() for line in text.split('\n')]
+        return '\n'.join([line for line in lines if line]).strip()
+
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _normalize_optional_text(value, placeholders=None, keep_linebreaks=False):
+    normalized = _normalize_text(value, keep_linebreaks=keep_linebreaks)
+    if not normalized:
+        return ''
+
+    normalized_lower = normalized.lower()
+    invalid_values = {
+        '-',
+        '.',
+        's/inf.',
+        's/inf',
+        's/info',
+        's/info.',
+        's/datos',
+    }
+
+    if placeholders:
+        invalid_values.update({str(item).strip().lower() for item in placeholders if str(item).strip()})
+
+    if normalized_lower in invalid_values:
+        return ''
+
+    return normalized
+
+
+def _format_date(value):
+    normalized = _normalize_optional_text(value)
+    if not normalized:
+        return ''
+
+    if isinstance(value, datetime):
+        dt_value = value
+    elif isinstance(value, date):
+        dt_value = datetime.combine(value, datetime.min.time())
+    else:
+        raw = normalized.split(' ')[0]
+        dt_value = None
+        for fmt in ('%Y-%m-%d', '%Y/%m/%d', '%d/%m/%Y'):
+            try:
+                dt_value = datetime.strptime(raw, fmt)
+                break
+            except ValueError:
+                continue
+        if dt_value is None:
+            return normalized
+
+    meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    return f"{meses[dt_value.month - 1]} {dt_value.day:02d} {dt_value.year}"
+
+
+def _bool_to_si_no(value):
+    if value is None:
+        return ''
+
+    if isinstance(value, bool):
+        return 'Si' if value else 'No'
+
+    normalized = _normalize_text(value).lower()
+    if normalized in {'true', 't', '1', 'si', 'sí'}:
+        return 'Si'
+    if normalized in {'false', 'f', '0', 'no'}:
+        return 'No'
+    return _normalize_text(value)
+
+
+def _build_persona(apellido, nombre, documento=''):
+    apellido_txt = _normalize_text(apellido)
+    nombre_txt = _normalize_text(nombre)
+    documento_txt = _normalize_text(documento)
+
+    if apellido_txt and nombre_txt:
+        persona = f'{apellido_txt}, {nombre_txt}'
+    else:
+        persona = apellido_txt or nombre_txt
+
+    if documento_txt:
+        persona = f'{persona}({documento_txt})' if persona else documento_txt
+
+    return persona
+
+
+def _build_domicilio(calle, nro, cod_postal, localidad, departamento):
+    calle_txt = _normalize_text(calle)
+    nro_txt = _normalize_text(nro)
+    cod_postal_txt = _normalize_text(cod_postal)
+    localidad_txt = _normalize_text(localidad)
+    departamento_txt = _normalize_text(departamento)
+    localidad_con_cp = localidad_txt
+
+    if cod_postal_txt and localidad_txt:
+        localidad_con_cp = f'({cod_postal_txt}) {localidad_txt}'
+    elif cod_postal_txt:
+        localidad_con_cp = f'({cod_postal_txt})'
+
+    primera_parte = ' '.join([value for value in [calle_txt, nro_txt] if value]).strip()
+    return ' - '.join([value for value in [primera_parte, localidad_con_cp, departamento_txt] if value])
+
+def _build_domicilio_con_referencia(calle, nro, referencia, cod_postal, localidad, departamento):
+    calle_txt = _normalize_text(calle)
+    nro_txt = _normalize_text(nro)
+    referencia_txt = _normalize_optional_text(referencia, keep_linebreaks=True)
+
+    domicilio_base = _build_domicilio(calle, nro, cod_postal, localidad, departamento)
+
+    if referencia_txt and not calle_txt and not nro_txt:
+        if domicilio_base:
+            return f"Referencia: {referencia_txt} - {domicilio_base}"
+        return f"Referencia: {referencia_txt}"
+
+    return domicilio_base
+
+def _build_domicilio_establecimiento(calle, nro, referencia, cod_postal, localidad, departamento):
+    domicilio_base = _build_domicilio(calle, nro, cod_postal, localidad, departamento)
+    referencia_txt = _normalize_optional_text(referencia, keep_linebreaks=True)
+
+    if referencia_txt:
+        if domicilio_base:
+            return f"Referencia: {referencia_txt} - {domicilio_base}"
+        return f"Referencia: {referencia_txt}"
+
+    return domicilio_base
+
+def _build_cue_anexo(cue, anexo):
+    cue_txt = _normalize_text(cue)
+    anexo_txt = _normalize_text(anexo)
+
+    if not cue_txt:
+        return ''
+    if not anexo_txt:
+        return cue_txt
+
+    if anexo_txt.isdigit():
+        anexo_txt = anexo_txt.zfill(2)
+
+    return f'{cue_txt}-{anexo_txt}'
+
+
+@lru_cache(maxsize=None)
+def _get_campo_codigo_pairs(id_campo_prov):
+    with connections[PADRON_DB].cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT codigo::text, COALESCE(descripcion, '')
+            FROM campo_prov_codigo
+            WHERE id_campo_prov = %s
+            ORDER BY LENGTH(codigo::text) DESC, codigo::text
+            """,
+            [id_campo_prov],
+        )
+        return tuple((_normalize_text(code), _normalize_text(desc)) for code, desc in cursor.fetchall())
+
+
+def _split_campo_codigo(value, id_campo_prov=None):
+    normalized = _normalize_text(value)
+    if not normalized:
+        return '', ''
+
+    if id_campo_prov is not None:
+        for code, description in _get_campo_codigo_pairs(id_campo_prov):
+            if not code:
+                continue
+            if normalized == code:
+                return code, description or code
+            prefix = f'{code}-'
+            if normalized.startswith(prefix):
+                return code, _normalize_text(normalized[len(prefix):]) or description or code
+
+    repeated_match = _REPEATED_PAIR_RE.match(normalized)
+    if repeated_match:
+        half = _normalize_text(repeated_match.group(1))
+        return half, half
+
+    if '-' in normalized:
+        code, description = normalized.split('-', 1)
+        return _normalize_text(code), _normalize_text(description)
+
+    return normalized, ''
+
+
+def _format_desc_only(value, id_campo_prov=None):
+    code, description = _split_campo_codigo(value, id_campo_prov)
+    return description or code
+
+
+def _format_desc_with_code(value, id_campo_prov=None):
+    normalized = _normalize_text(value)
+    code, description = _split_campo_codigo(value, id_campo_prov)
+    if normalized == '-' and not code and not description:
+        return '()'
+    if description and code:
+        return f'{description} ({code})'
+    return description or code
+
+
+def _format_code_then_desc(value, id_campo_prov=None):
+    code, description = _split_campo_codigo(value, id_campo_prov)
+    if code and description:
+        return f'{code}, {description}'
+    return code or description
+
+
+def _format_desc_then_code(value, id_campo_prov=None):
+    code, description = _split_campo_codigo(value, id_campo_prov)
+    if code and description:
+        return f'{description}, {code}'
+    return description or code
+
+
+def _build_where(request):
+    clauses = []
+    params = []
+    grouped_positive_filters = {}
+    geo_positive_filters = []
+
+    campos = request.GET.getlist('campo_filtro')
+    opers = request.GET.getlist('operador_filtro')
+    valores = request.GET.getlist('valor_filtro')
+
+    for index, campo in enumerate(campos):
+        campo = campo.strip()
+        oper = opers[index].strip() if index < len(opers) else '0'
+        valor = valores[index].strip() if index < len(valores) else ''
+
+        if not campo or not valor or campo not in CAMPO_SQL:
+            continue
+
+        if oper in {'0', '2'}:
+            grouped_positive_filters.setdefault((campo, oper), [])
+            if valor not in grouped_positive_filters[(campo, oper)]:
+                grouped_positive_filters[(campo, oper)].append(valor)
+            continue
+
+        if campo == 'tipo_ofertas' and oper in {'1', '7'}:
+            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+            clauses.append(_build_tipo_ofertas_clause(oper))
+            params.append(val_fn(valor))
+            continue
+
+        col = CAMPO_SQL[campo]
+        op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+        clauses.append(f"{col}::text {op_str} %s")
+        params.append(val_fn(valor))
+
+    for (campo, oper), values in grouped_positive_filters.items():
+        if campo in {'localidad', 'departamento'}:
+            geo_positive_filters.append((campo, oper, values))
+            continue
+
+        if campo == 'tipo_ofertas':
+            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+
+            if len(values) == 1:
+                clauses.append(_build_tipo_ofertas_clause(oper))
+                params.append(val_fn(values[0]))
+                continue
+
+            subclauses = []
+            for value in values:
+                subclauses.append(_build_tipo_ofertas_clause(oper))
+                params.append(val_fn(value))
+            clauses.append(f"({' OR '.join(subclauses)})")
+            continue
+
+        col = CAMPO_SQL[campo]
+        op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+
+        if len(values) == 1:
+            clauses.append(f"{col}::text {op_str} %s")
+            params.append(val_fn(values[0]))
+            continue
+
+        subclauses = []
+        for value in values:
+            subclauses.append(f"{col}::text {op_str} %s")
+            params.append(val_fn(value))
+        clauses.append(f"({' OR '.join(subclauses)})")
+
+    if geo_positive_filters:
+        geo_subclauses = []
+
+        for campo, oper, values in geo_positive_filters:
+            col = CAMPO_SQL[campo]
+            op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+
+            for value in values:
+                geo_subclauses.append(f"{col}::text {op_str} %s")
+                params.append(val_fn(value))
+
+        if geo_subclauses:
+            clauses.append(f"({' OR '.join(geo_subclauses)})")
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        like = f'%{q}%'
+        global_search_clauses = [f"{sql_expr} ILIKE %s" for sql_expr in CAMPO_SQL.values()]
+        clauses.append(f"({' OR '.join(global_search_clauses)})")
+        params.extend([like] * len(global_search_clauses))
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ''
+    return where, params
+
+
+def _armar_texto_filtros(request):
+    partes = []
+    operadores_txt = {
+        '0': 'parecido a',
+        '1': 'no parecido a',
+        '2': 'igual a',
+        '3': 'mayor a',
+        '4': 'mayor o igual a',
+        '5': 'menor a',
+        '6': 'menor o igual a',
+        '7': 'distinto de',
+    }
+
+    if request.GET.get('formato') == 'excel_todo':
+        return 'Sin filtros aplicados'
+
+    campos = request.GET.getlist('campo_filtro')
+    opers = request.GET.getlist('operador_filtro')
+    valores = request.GET.getlist('valor_filtro')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        partes.append(f'Búsqueda: {q}')
+
+    for index, campo in enumerate(campos):
+        campo = campo.strip()
+        valor = valores[index].strip() if index < len(valores) else ''
+        oper = opers[index].strip() if index < len(opers) else '0'
+
+        if not campo or not valor:
+            continue
+
+        partes.append(
+            f"{VISIBLE_NAME_MAP.get(campo, campo)} {operadores_txt.get(oper, 'parecido a')}: {valor}"
+        )
+
+    return ' | '.join(partes) if partes else 'Sin filtros aplicados'
+
+
+def _formatear_fecha_estilo_seguimiento():
+    ahora = datetime.now()
+    dia = ahora.day
+    mes = ahora.month
+    anio = ahora.year
+    hora_12 = ahora.strftime('%I').lstrip('0') or '0'
+    minuto = ahora.strftime('%M')
+    ampm = 'p. m.' if ahora.hour >= 12 else 'a. m.'
+    return f'{dia}/{mes}/{anio} a las {hora_12}:{minuto} {ampm}'
+
+
+def _resolver_columnas_exportar(request, formato):
+    if formato == 'excel_todo':
+        return COLUMNAS_EXPORTACION
+
+    visibles = {value.strip() for value in request.GET.getlist('visible_col') if value.strip()}
+    if not visibles:
+        return COLUMNAS_EXPORTACION
+
+    columnas = [item for item in COLUMNAS_EXPORTACION if item[1] in visibles]
+    return columnas or COLUMNAS_EXPORTACION
+
+
+def _exportar_excel(datos_exportar, formato, request):
+    columnas_mapeo = _resolver_columnas_exportar(request, formato)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Establecimientos'
+
+    total_columnas = len(columnas_mapeo)
+    ultima_columna = get_column_letter(total_columnas)
+
+    ws.merge_cells(f'A1:{ultima_columna}1')
+    ws['A1'] = 'Informe Establecimientos'
+    ws['A1'].font = Font(bold=True, size=10)
+    ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
+
+    ws.merge_cells(f'A2:{ultima_columna}2')
+    ws['A2'] = f'Informe generado el: {_formatear_fecha_estilo_seguimiento()}'
+    ws['A2'].font = Font(size=9)
+    ws['A2'].alignment = Alignment(horizontal='left', vertical='center')
+
+    ws.merge_cells(f'A3:{ultima_columna}3')
+    ws['A3'] = f'Filtros aplicados: {_armar_texto_filtros(request)}'
+    ws['A3'].font = Font(size=9)
+    ws['A3'].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+
+    ws.row_dimensions[1].height = 18
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[3].height = 20
+
+    header_row = 4
+    for col_idx, (titulo_col, _) in enumerate(columnas_mapeo, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=titulo_col)
+        cell.font = Font(bold=True, size=9)
+        cell.alignment = Alignment(horizontal='left', vertical='center')
+
+    for item in datos_exportar:
+        fila = []
+        for _, clave in columnas_mapeo:
+            valor = item.get(clave, '')
+            fila.append(_normalize_text(valor, keep_linebreaks=True))
+        ws.append(fila)
+
+    ws.freeze_panes = 'A5'
+    ws.auto_filter.ref = f'A4:{ultima_columna}{ws.max_row}'
+
+    if formato == 'excel_todo':
+        for col_num in range(1, total_columnas + 1):
+            titulo_col = columnas_mapeo[col_num - 1][0]
+            col_letter = get_column_letter(col_num)
+            ws.column_dimensions[col_letter].width = min(max(len(str(titulo_col)) + 4, 14), 28)
+    else:
+        for row in ws.iter_rows(min_row=5, max_row=ws.max_row):
+            for cell in row:
+                cell.alignment = Alignment(horizontal='left', vertical='top', wrap_text=True)
+                cell.font = Font(size=9)
+
+        for col_num in range(1, total_columnas + 1):
+            col_letter = get_column_letter(col_num)
+            max_length = 0
+            for row_num in range(1, ws.max_row + 1):
+                value = ws[f'{col_letter}{row_num}'].value
+                max_length = max(max_length, len(str(value)) if value is not None else 0)
+            ws.column_dimensions[col_letter].width = min(max_length + 2, 42)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    fecha_archivo = datetime.now().strftime('%Y%m%d_%H%M')
+    sufijo = 'Filtros' if formato == 'excel_pagina' else 'Todo'
+    nombre_archivo = f'Establecimientos_{sufijo}_{fecha_archivo}.xlsx'
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+    return response
+
+def _dictfetchall(cursor):
+    columns = [column[0] for column in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+def _fetch_one(sql, params):
+    with connections[PADRON_DB].cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = _dictfetchall(cursor)
+    return rows[0] if rows else None
+
+
+def _fetch_all(sql, params):
+    with connections[PADRON_DB].cursor() as cursor:
+        cursor.execute(sql, params)
+        return _dictfetchall(cursor)
+
+
+def _sanitize_json_payload(value):
+    if isinstance(value, dict):
+        return {key: _sanitize_json_payload(inner_value) for key, inner_value in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_json_payload(item) for item in value]
+    if value is None:
+        return ''
+    return value
+
+
+@lru_cache(maxsize=1)
+def _get_filter_options():
+    with connections[PADRON_DB].cursor() as cursor:
+        cursor.execute("SELECT descripcion FROM sector_tipo ORDER BY c_sector")
+        sectores = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute("SELECT descripcion FROM dependencia_tipo ORDER BY c_dependencia")
+        dependencias = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute("SELECT descripcion FROM sino_tipo ORDER BY c_sino")
+        sino = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute("SELECT descripcion FROM categoria_tipo ORDER BY c_categoria")
+        categorias = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute("SELECT descripcion FROM estado_tipo ORDER BY c_estado")
+        estados = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute("SELECT BTRIM(descripcion) FROM oferta_tipo ORDER BY c_oferta")
+        tipo_ofertas = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute(
+            """
+            SELECT DISTINCT BTRIM(localidad_sede) AS valor
+            FROM vp_establecimientos
+            WHERE COALESCE(BTRIM(localidad_sede), '') <> ''
+            ORDER BY valor
+            """
+        )
+        localidades = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        cursor.execute(
+            """
+            SELECT DISTINCT BTRIM(departamento_sede) AS valor
+            FROM vp_establecimientos
+            WHERE COALESCE(BTRIM(departamento_sede), '') <> ''
+            ORDER BY valor
+            """
+        )
+        departamentos = [_normalize_text(row[0]) for row in cursor.fetchall()]
+
+        def fetch_campo_options(field_id):
+            cursor.execute(
+                """
+                SELECT COALESCE(descripcion, '')
+                FROM campo_prov_codigo
+                WHERE id_campo_prov = %s
+                ORDER BY codigo::text
+                """,
+                [field_id],
+            )
+            return [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
+
+        return {
+            'sector': sectores,
+            'dependencia': dependencias,
+            'confesional': sino,
+            'arancelado': sino,
+            'categoria': categorias,
+            'estado': [value for value in estados if value],
+            'tipo_ofertas': tipo_ofertas,
+            'localidad': localidades,
+            'departamento': departamentos,
+            'tipo_educacion': fetch_campo_options(1019638074),
+            'nivel': fetch_campo_options(1019638075),
+            'cargo_director': fetch_campo_options(1019638076),
+            'descrip_inst_legal': fetch_campo_options(1019638057),
+        }
+
+
+def _serialize_establecimiento(row):
+    return {
+        'cue': _normalize_text(row.get('cue')),
+        'nombre': _normalize_text(row.get('nombre')),
+        'sector': _normalize_text(row.get('sector')),
+        'dependencia': _normalize_text(row.get('dependencia')),
+        'estado': _normalize_text(row.get('estado')),
+       'domicilio_principal': _build_domicilio_con_referencia(
+            row.get('calle_sede'),
+            row.get('nro_sede'),
+            row.get('referencia_sede'),
+            row.get('cod_postal_sede'),
+            row.get('localidad_sede'),
+            row.get('departamento_sede'),
+        ),
+        'fecha_creacion': _format_date(row.get('fecha_creacion')),
+        'fecha_alta': _format_date(row.get('fecha_alta')),
+        'fecha_baja': _format_date(row.get('fecha_baja')),
+        'fecha_actualizacion': _format_date(row.get('fecha_actualizacion')),
+        'confesional': _normalize_text(row.get('confesional')),
+        'arancelado': _normalize_text(row.get('arancelado')),
+        'categoria': _normalize_text(row.get('categoria')),
+        'director': _build_persona(
+            row.get('responsable_apellido'),
+            row.get('responsable_nombre'),
+            row.get('documento_responsable'),
+        ),
+        'ofertas': _normalize_text(row.get('tipo_ofertas')),
+        'nro_establecimiento': _normalize_text(row.get('cp_numeroestablecimiento')),
+        'fecha_inst_legal': _format_date(row.get('cp_est_fecha_inst_legal')),
+        'nro_inst_legal': _normalize_text(row.get('cp_est_nro_inst_legal')),
+        'anio_creacion': _normalize_text(row.get('cp_est_anio_inst_legal')),
+        'descrip_inst_legal': _format_desc_with_code(row.get('cp_est_descrip_inst_legal'), 1019638057),
+        'tipo_educacion': _format_desc_with_code(row.get('cp_est_tipo_ed'), 1019638074),
+        'nivel': _format_desc_with_code(row.get('cp_est_nivel'), 1019638075),
+        'cargo_director': _format_desc_with_code(row.get('cp_est_cargo_director'), 1019638076),
+        'observaciones': _normalize_text(row.get('observaciones'), keep_linebreaks=True),
+    }
+
+
+def _serialize_localizacion(row):
+    return {
+        'id_localizacion': row.get('id_localizacion'),
+        'cue_anexo': _build_cue_anexo(row.get('cue'), row.get('anexo')),
+        'nombre': _normalize_text(row.get('nombre')),
+        'estado': _normalize_text(row.get('estado_localizacion')),
+        'ofertas_resumen': _normalize_text(row.get('ofertas_resumen')),
+        'ambito': _normalize_text(row.get('ambito')),
+        'codigo_jurisdiccional': _normalize_text(row.get('codigo_jurisdiccional')),
+        'telefono': _normalize_text(row.get('telefono')),
+        'telefono_cod_area': _normalize_text(row.get('telefono_cod_area')),
+        'domicilio_principal': _build_domicilio_con_referencia(
+            row.get('calle'),
+            row.get('nro'),
+            row.get('referencia'),
+            row.get('cod_postal'),
+            row.get('localidad_nombre'),
+            row.get('departamento_nombre'),
+        ),
+        'alternancia': _normalize_text(row.get('alternancia')),
+        'periodo_funcionamiento': _normalize_text(row.get('periodo_funcionamiento')),
+        'email': _normalize_text(row.get('email')),
+        'sitio_web': _normalize_text(row.get('sitio_web')),
+        'cooperadora': _normalize_text(row.get('cooperadora')),
+        'responsable': _build_persona(
+            row.get('responsable_apellido'),
+            row.get('responsable_nombre'),
+            row.get('documento_responsable'),
+        ),
+        'sede': _bool_to_si_no(row.get('sede')),
+        'permanencia': _normalize_text(row.get('permanencia')),
+        'sede_administrativa': _bool_to_si_no(row.get('sede_administrativa')),
+        'observaciones': _normalize_text(row.get('observaciones'), keep_linebreaks=True),
+        'zona_provincial': _format_desc_then_code(_normalize_optional_text(row.get('cp_zonaprovincial'))),
+        'cui': _normalize_optional_text(row.get('cp_esvar2')),
+        'cui_localizacion': _normalize_optional_text(row.get('cp_esvar2')),
+        'regional_actual': _format_code_then_desc(row.get('cp_esvat5'), 1019638011),
+        'regional_hasta_2015': _format_desc_then_code(row.get('cp_p8104_localizacion_1019638033')),
+        'regional_hasta_2020': _format_desc_then_code(row.get('cp_reg_hasta_2020'), 1019638079),
+        'supervisor_tecnico': _format_desc_then_code(row.get('cp_supervisortecnico')),
+        'microregion': _format_desc_then_code(row.get('cp_esvat4'), 1019638010),
+        'udt': _format_desc_then_code(row.get('cp_esvat6'), 1019638012),
+        'cuof_localizacion': _normalize_text(row.get('cp_esvar4')),
+        'director_regional': _format_desc_then_code(row.get('cp_directorregional'), 1019638045),
+        'telefono_director_regional': _normalize_text(row.get('cp_tedirregional')),
+        'email_director_regional': _normalize_text(row.get('cp_emaildirregional')),
+        'telefono_supervisor': _normalize_text(row.get('tel_supervisor')),
+        'email_supervisor': _normalize_text(row.get('email_supervisor')),
+        'patrimonio_edilicio': _format_desc_then_code(_normalize_optional_text(row.get('cp_patrimonioedilicio'))),
+        'fecha_creacion_edificio': _format_date(row.get('cp_estfechacreacionedificio')),
+        'instr_legal_creacion_edificio': _normalize_optional_text(row.get('cp_edif_instlegal_creaciondeestablecimiento')),
+        'anterior_regional_educativa': _format_desc_then_code(row.get('cp_esvat3')),
+    }
+
+
+def _serialize_oferta(row):
+    return {
+        'id_oferta_local': row.get('id_oferta_local'),
+        'localizacion': _build_cue_anexo(row.get('cue'), row.get('anexo')),
+        'oferta': _normalize_text(row.get('oferta')),
+        'estado': _normalize_text(row.get('estado_ofertalocal')),
+        'codigo_jurisdiccional': _normalize_text(row.get('codigo_jurisdiccional_oferta_local')),
+        'subvencion': _normalize_text(row.get('subvencion_oferta_local')),
+        'jornada': _normalize_text(row.get('jornada_ofertalocal')),
+        'cuof': _normalize_text(row.get('cp_efvar4')),
+        'cuof_ryc': _normalize_text(row.get('cp_cuof_ryc')),
+        'cui': _normalize_optional_text(row.get('cp_efvar2')),
+        'cua': _normalize_optional_text(row.get('cp_of_cua')),
+        'udt': _format_desc_only(row.get('cp_efvar6')),
+        'regional': _format_desc_only(row.get('cp_efvar5')),
+        'acronimo': _format_desc_only(row.get('cp_acronimo')),
+        'supervisor_tecnico': _format_desc_only(row.get('cp_supervisortecnico_oferta')),
+        'tel_supervisor': _normalize_optional_text(row.get('cp_tesupervisor_oferta'), placeholders={'0'}),
+        'email_supervisor': _normalize_optional_text(row.get('cp_mailsupervisor_oferta')),
+        'fecha_inst_legal': _format_date(row.get('cp_of_fecha_inst_legal')),
+        'nro_inst_legal': _normalize_optional_text(row.get('cp_of_nro_inst_legal')),
+        'anio_creacion': _normalize_optional_text(row.get('cp_of_anio_inst_legal')),
+        'descrip_inst_legal': _format_desc_only(row.get('cp_of_descrip_inst_legal')),
+        'cabecera_anexo': _format_desc_only(row.get('cp_of_cab_anexo')),
+        'ambito': _format_desc_only(row.get('cp_of_ambito')),
+        'tipo_ed': _format_desc_only(row.get('cp_of_tipo_ed')),
+        'nivel': _format_desc_only(row.get('cp_of_nivel')),
+        'sector': _format_desc_only(row.get('cp_of_sector')),
+        'categoria': _format_desc_only(row.get('cp_of_categoria')),
+    }
+
+
+def _format_historial_instr_legal(numero, descripcion):
+    numero_txt = _normalize_text(numero)
+    descripcion_txt = _normalize_text(descripcion)
+
+    if numero_txt and descripcion_txt:
+        return f'({numero_txt}) {descripcion_txt}'
+    return descripcion_txt or numero_txt
+
+
+def _serialize_historial(row):
+    cue = _normalize_text(row.get('cue'))
+    nombre = _normalize_text(row.get('nombre'))
+    fecha_vigencia = _format_date(row.get('fecha_vigencia'))
+    establecimiento_label = ' - '.join([value for value in [cue, nombre] if value])
+
+    return {
+        'caption': f'{establecimiento_label} ({fecha_vigencia})' if establecimiento_label and fecha_vigencia else establecimiento_label or fecha_vigencia,
+        'establecimiento': establecimiento_label,
+        'movimiento': ' - '.join(
+            [
+                value
+                for value in [
+                    _normalize_text(row.get('id_movimiento')),
+                    _normalize_text(row.get('cod_tipo_mov')),
+                    _normalize_text(row.get('tipo_movimiento')),
+                ]
+                if value
+            ]
+        ),
+        'estado': _normalize_text(row.get('estado')),
+        'fecha_instr_legal': _format_date(row.get('fecha_inst_legal')),
+        'fecha_vigencia': fecha_vigencia,
+        'observacion': _normalize_text(row.get('observacion'), keep_linebreaks=True),
+        'instr_legal': _format_historial_instr_legal(row.get('nro_instr_legal'), row.get('instr_legal')),
+        'motivo': _normalize_text(row.get('motivo')),
+        'usuario': _normalize_text(row.get('usuario')),
+    }
+
+@padron_interno_admin_o_gestor_required
+def detalle_establecimiento_json(request, id_establecimiento):
+    establecimiento_sql = f"""
+        SELECT
+            ve.*,
+            {OBSERVACIONES_SQL} AS observaciones,
+            {TIPO_OFERTAS_SQL} AS tipo_ofertas
+        {_BASE_SQL}
+        WHERE ve.id_establecimiento = %s
+    """
+
+    localizaciones_sql = """
+        SELECT
+            vl.*,
+            tel_sup.valor AS tel_supervisor,
+            email_sup.valor AS email_supervisor,
+            ofres.ofertas_resumen
+        FROM vp_localizaciones vl
+        LEFT JOIN loc_campo_prov_valor tel_sup
+            ON tel_sup.id_localizacion = vl.id_localizacion
+           AND tel_sup.id_campo_prov = 1019638042
+        LEFT JOIN loc_campo_prov_valor email_sup
+            ON email_sup.id_localizacion = vl.id_localizacion
+           AND email_sup.id_campo_prov = 1019638043
+        LEFT JOIN LATERAL (
+            SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, ol.id_oferta_local) AS ofertas_resumen
+            FROM oferta_local ol
+            JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+            WHERE ol.id_localizacion = vl.id_localizacion
+        ) ofres ON TRUE
+        WHERE vl.id_establecimiento = %s
+        ORDER BY vl.anexo, vl.id_localizacion
+    """
+
+    ofertas_sql = """
+        SELECT *
+        FROM vp_oferta_local
+        WHERE id_establecimiento = %s
+        ORDER BY c_oferta, anexo, id_oferta_local
+    """
+
+    historial_sql = """
+        SELECT
+            ce.id_establecimiento,
+            e.cue,
+            e.nombre,
+            m.id_movimiento,
+            tm.cod_tipo_mov,
+            tm.descripcion AS tipo_movimiento,
+            est.descripcion AS estado,
+            m.nro_instr_legal,
+            il.descripcion AS instr_legal,
+            mot.descripcion AS motivo,
+            m.fecha_inst_legal,
+            m.fecha_vigencia,
+            m.observacion,
+            u.nombre AS usuario
+        FROM cambio_estado_establecimiento ce
+        JOIN establecimiento e ON e.id_establecimiento = ce.id_establecimiento
+        JOIN movimiento m ON m.id_movimiento = ce.id_movimiento
+        LEFT JOIN tipo_mov_tipo tm ON tm.c_tipo_mov = m.c_tipo_mov
+        LEFT JOIN estado_tipo est ON est.c_estado = ce.c_estado
+        LEFT JOIN instr_legal_tipo il ON il.c_instr_legal = m.c_instr_legal
+        LEFT JOIN motivo_tipo mot ON mot.c_motivo = m.c_motivo
+        LEFT JOIN usuario u ON u.id_usuario = m.id_usuario
+        WHERE ce.id_establecimiento = %s
+        ORDER BY m.fecha_vigencia DESC, m.id_movimiento DESC
+    """
+
+    try:
+        establecimiento_row = _fetch_one(establecimiento_sql, [id_establecimiento])
+        if not establecimiento_row:
+            return JsonResponse({'error': 'Establecimiento no encontrado.'}, status=404)
+
+        localizaciones_rows = _fetch_all(localizaciones_sql, [id_establecimiento])
+        ofertas_rows = _fetch_all(ofertas_sql, [id_establecimiento])
+        historial_rows = _fetch_all(historial_sql, [id_establecimiento])
+
+        payload = {
+            'establecimiento': _serialize_establecimiento(establecimiento_row),
+            'localizaciones': [_serialize_localizacion(row) for row in localizaciones_rows],
+            'ofertas': [_serialize_oferta(row) for row in ofertas_rows],
+            'historial': [_serialize_historial(row) for row in historial_rows],
+        }
+        return JsonResponse(_sanitize_json_payload(payload))
+    except Exception as exc:
+        return JsonResponse({'error': f'Error al obtener detalle de establecimiento: {exc}'}, status=500)
+
+@padron_interno_admin_o_gestor_required
+def listar_establecimientos(request):
+    formato = request.GET.get('formato')
+
+    if formato == 'excel_todo':
+        where, params = '', []
+    else:
+        where, params = _build_where(request)
+
+    orden_key = request.GET.get('orden', 'cue')
+    col_orden = CAMPO_SQL.get(orden_key, 've.cue::text')
+
+    data_sql = f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {col_orden}, ve.id_establecimiento"
+
+    if formato in {'excel_pagina', 'excel_todo'}:
+        datos_exportar = _fetch_all(data_sql, params)
+        return _exportar_excel(datos_exportar, formato, request)
+
+    count_sql = f"SELECT COUNT(*) {_BASE_SQL} {where}"
+
+    try:
+        current_page_size = int(request.GET.get('page_size', PAGE_SIZE))
+    except (TypeError, ValueError):
+        current_page_size = PAGE_SIZE
+
+    raw = _RawPage(data_sql, count_sql, params, PADRON_DB)
+    paginator = Paginator(raw, current_page_size)
+
+    try:
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.page(page_number)
+    except (EmptyPage, PageNotAnInteger):
+        page_obj = paginator.page(1)
+
+    total = len(raw)
+    desde = (page_obj.number - 1) * current_page_size + 1 if total else 0
+    hasta = min(page_obj.number * current_page_size, total)
+
+    context = {
+        'lista_items': page_obj.object_list,
+        'page_obj': page_obj,
+        'resultado_total': total,
+        'resultado_desde': desde,
+        'resultado_hasta': hasta,
+        'username': getattr(request.user, 'username', ''),
+        'request': request,
+        'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
+    }
+    return render(request, 'padroninterno/establecimientos.html', context)
