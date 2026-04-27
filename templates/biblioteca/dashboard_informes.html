@@ -7,9 +7,16 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -19,11 +26,9 @@
     padding: 6px 10px;
     border-radius: 8px;
 }
-
 table.dataTable tbody tr:hover {
     background-color: #f2f6ff;
 }
-
 .card {
     border-radius: 12px;
 }
@@ -35,10 +40,9 @@ table.dataTable tbody tr:hover {
 
 <div class="container-fluid mt-3">
 
-<!-- 🔎 FILTROS -->
+<!-- FILTROS -->
 <div class="card shadow mb-3">
     <div class="card-body">
-
         <form id="filtro-form" class="row g-2">
 
             <div class="col-md-3">
@@ -47,7 +51,7 @@ table.dataTable tbody tr:hover {
 
             <div class="col-md-2">
                 <select id="meses" class="form-control">
-                    <option value="">Mes</option>                        
+                    <option value="">Mes</option>
                     <option>ABRIL</option>
                     <option>JULIO</option>
                     <option>NOVIEMBRE</option>
@@ -69,11 +73,10 @@ table.dataTable tbody tr:hover {
             </div>
 
         </form>
-
     </div>
 </div>
 
-<!-- 📊 KPI -->
+<!-- KPI -->
 <div class="row">
 
     <div class="col-md-3">
@@ -104,12 +107,24 @@ table.dataTable tbody tr:hover {
         </div>
     </div>
 
+    <div class="col-md-3 mt-3">
+        <div class="card p-3 text-center shadow">
+            <h6>% CUMPLIMIENTO</h6>
+            <h2 id="kpi-cumplimiento">0%</h2>
+
+            <div class="progress mt-2">
+                <div id="progress-bar" class="progress-bar" role="progressbar" style="width:0%"></div>
+            </div>
+
+        </div>
+    </div>
+
 </div>
 
-<!-- 🚨 ALERTA -->
+<!-- ALERTA -->
 <div id="alerta" class="alert mt-3 d-none"></div>
 
-<!-- 📊 GRÁFICOS -->
+<!-- GRÁFICOS -->
 <div class="row mt-3">
 
     <div class="col-md-6">
@@ -128,10 +143,9 @@ table.dataTable tbody tr:hover {
 
 </div>
 
-<!-- 📋 TABLA -->
+<!-- TABLA -->
 <div class="card mt-3 shadow">
     <div class="card-body">
-
         <table id="tabla" class="table table-striped">
             <thead>
                 <tr>
@@ -146,187 +160,199 @@ table.dataTable tbody tr:hover {
             </thead>
             <tbody></tbody>
         </table>
-
     </div>
 </div>
 
 </div>
 
-<!-- 🪟 MODAL REAPERTURA (Bootstrap 5) -->
-<div class="modal fade" id="modalReabrir" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
+<!-- MODAL -->
+<div class="modal fade" id="modalReabrir">
+<div class="modal-dialog">
+<div class="modal-content">
 
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title">Reapertura de Informe</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
+<div class="modal-header bg-dark text-white">
+<h5>Reapertura de Informe</h5>
+<button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
 
-      <div class="modal-body">
+<div class="modal-body">
+<input id="m_cueanexo" class="form-control mb-2" readonly>
+<input id="m_mes" class="form-control mb-2" readonly>
+<input id="m_anio" class="form-control mb-2" readonly>
+<div id="msg_reopen" class="alert d-none"></div>
+</div>
 
-        <input id="m_cueanexo" class="form-control mb-2" placeholder="CUEANEXO">
-        <input id="m_mes" class="form-control mb-2" placeholder="MES">
-        <input id="m_anio" class="form-control mb-2" placeholder="AÑO">
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+<button class="btn btn-danger" onclick="confirmarReapertura()">Reabrir</button>
+</div>
 
-        <div id="msg_reopen" class="alert d-none"></div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-danger" onclick="confirmarReapertura()">Reabrir</button>
-      </div>
-
-    </div>
-  </div>
+</div>
+</div>
 </div>
 
 <script>
 
 let tabla;
-let chartEstado;
-let chartMes;
-
+let chartEstado, chartMes;
 let modalReabrir = new bootstrap.Modal(document.getElementById('modalReabrir'));
 
-// ======================
-// INIT
-// ======================
-$(document).ready(function () {
+function estadoBadge(e){
+    if(e==="ENVIADO") return '<span class="badge bg-success">ENVIADO</span>';
+    if(e==="GENERADO") return '<span class="badge bg-warning text-dark">GENERADO</span>';
+    return '<span class="badge bg-secondary">SIN</span>';
+}
 
-    tabla = $('#tabla').DataTable({
-        language: {
-            search: "Buscar:",
-            lengthMenu: "Mostrar _MENU_",
-            info: "Mostrando _START_ a _END_ de _TOTAL_",
-            zeroRecords: "Sin datos",
-            paginate: {
-                first: "Primero",
-                previous: "Anterior",
-                next: "Siguiente",
-                last: "Último"
+function regionBadge(r){
+    if(!r || r==="SIN REGIÓN") return '<span class="badge bg-secondary">SIN REGIÓN</span>';
+    return `<span class="badge bg-info text-dark">${r}</span>`;
+}
+
+$(document).ready(function(){
+
+tabla = $('#tabla').DataTable({
+    language:{url:"https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json"},
+    pageLength:25,
+    responsive:true,
+    dom:'Bfrtip',
+    buttons:[
+        {
+            extend:'excelHtml5',
+            text:'📥 Exportar a Excel',
+            className:'btn btn-success',
+            title:function(){
+                return 'Reporte_'+$('#meses').val()+'_'+$('#annos').val();
+            },
+            exportOptions:{
+                columns:[0,1,2,3,4,5],
+                format:{
+                    body:function(data){
+                        return $('<div>').html(data).text().trim();
+                    }
+                }
             }
         }
-    });
+    ]
+});
 
+cargar();
+
+$('#filtro-form').on('submit',function(e){
+    e.preventDefault();
     cargar();
-
-    $('#filtro-form').on('submit', function (e) {
-        e.preventDefault();
-        cargar();
-    });
+});
 
 });
 
-// ======================
-// MODAL REAPERTURA
-// ======================
-function abrirReapertura(cueanexo, mes, anio) {
-
-    $('#m_cueanexo').val(cueanexo);
-    $('#m_mes').val(mes);
-    $('#m_anio').val(anio);
-
+function abrirReapertura(c,m,a){
+    $('#m_cueanexo').val(c);
+    $('#m_mes').val(m);
+    $('#m_anio').val(a);
     modalReabrir.show();
 }
 
-function confirmarReapertura() {
-
+function confirmarReapertura(){
     $.ajax({
-        url: "{% url 'bibliotecas:reabrir_informe' %}",
-        method: "POST",
-        contentType: "application/json",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
-        data: JSON.stringify({
-            cueanexo: $('#m_cueanexo').val(),
-            meses: $('#m_mes').val(),
-            annos: $('#m_anio').val()
+        url:"{% url 'bibliotecas:reabrir_informe' %}",
+        method:"POST",
+        contentType:"application/json",
+        headers:{"X-CSRFToken":"{{ csrf_token }}"},
+        data:JSON.stringify({
+            cueanexo:$('#m_cueanexo').val(),
+            meses:$('#m_mes').val(),
+            annos:$('#m_anio').val()
         }),
-        success: function (res) {
-
+        success:function(res){
             $('#msg_reopen')
-                .removeClass('d-none alert-danger alert-success')
-                .addClass(res.success ? 'alert-success' : 'alert-danger')
-                .text(res.msg);
+            .removeClass('d-none alert-danger alert-success')
+            .addClass(res.success?'alert-success':'alert-danger')
+            .text(res.msg);
 
-            if (res.success) {
-                setTimeout(() => {
-                    modalReabrir.hide();
-                    cargar();
-                }, 800);
+            if(res.success){
+                setTimeout(()=>{modalReabrir.hide();cargar();},800);
             }
         }
     });
 }
 
-// ======================
-// BADGES
-// ======================
-function estadoBadge(estado) {
+function cargar(){
 
-    if (estado === "ENVIADO")
-        return '<span class="badge bg-success">🟢 ENVIADO</span>';
+$.get("{% url 'bibliotecas:dashboard_informes_api' %}",{
+    cueanexo:$('#cueanexo').val(),
+    meses:$('#meses').val(),
+    annos:$('#annos').val(),
+    region_loc:$('#region_loc').val()
+},function(data){
 
-    if (estado === "GENERADO")
-        return '<span class="badge bg-warning text-dark">🟡 GENERADO</span>';
+if(!data.success) return;
 
-    return '<span class="badge bg-secondary">SIN ESTADO</span>';
+$('#kpi-ofertas').text(data.kpis.ofertas);
+$('#kpi-enviados').text(data.kpis.enviados);
+$('#kpi-generados').text(data.kpis.generados);
+$('#kpi-faltantes').text(data.kpis.faltantes);
+$('#kpi-cumplimiento').text(data.kpis.cumplimiento+'%');
+
+let color='bg-danger';
+if(data.kpis.cumplimiento>=80) color='bg-success';
+else if(data.kpis.cumplimiento>=50) color='bg-warning';
+
+$('#progress-bar')
+.removeClass('bg-success bg-warning bg-danger')
+.addClass(color)
+.css('width',data.kpis.cumplimiento+'%');
+
+let alerta=$('#alerta');
+alerta.removeClass('d-none alert-success alert-warning alert-danger');
+
+if(data.kpis.cumplimiento>=80){
+alerta.addClass('alert-success').text('✔ Excelente cumplimiento');
+}else if(data.kpis.cumplimiento>=50){
+alerta.addClass('alert-warning').text('⚠ Atención');
+}else{
+alerta.addClass('alert-danger').text('🚨 Bajo cumplimiento');
 }
 
-// ======================
-// CARGA TABLA
-// ======================
-function cargar() {
+if ($('#region_loc option').length === 1) {
+data.regiones.forEach(r=>{
+$('#region_loc').append(`<option value="${r}">${r}</option>`);
+});
+}
 
-    $.get("{% url 'bibliotecas:dashboard_informes_api' %}", {
-        cueanexo: $('#cueanexo').val(),
-        meses: $('#meses').val(),
-        annos: $('#annos').val(),
-        region_loc: $('#region_loc').val()
-    }, function (data) {
+if(chartEstado) chartEstado.destroy();
+chartEstado=new Chart(document.getElementById('chartEstado'),{
+type:'pie',
+data:{
+labels:data.graficos.por_estado.map(e=>e.estado),
+datasets:[{data:data.graficos.por_estado.map(e=>e.total)}]
+}
+});
 
-        if (!data.success) return;
+if(chartMes) chartMes.destroy();
+chartMes=new Chart(document.getElementById('chartMes'),{
+type:'bar',
+data:{
+labels:data.graficos.por_mes.map(e=>e.meses),
+datasets:[{data:data.graficos.por_mes.map(e=>e.total)}]
+}
+});
 
-        $('#kpi-ofertas').text(data.kpis.ofertas);
-        $('#kpi-enviados').text(data.kpis.enviados);
-        $('#kpi-generados').text(data.kpis.generados);
-        $('#kpi-faltantes').text(data.kpis.faltantes);
+tabla.clear();
 
-        $('#alerta')
-            .removeClass('d-none')
-            .addClass(data.kpis.faltantes > 0 ? 'alert-warning' : 'alert-success')
-            .text("Cumplimiento: " + data.kpis.cumplimiento + "%");
+data.ranking.forEach(r=>{
+tabla.row.add([
+r.cueanexo,
+r.meses,
+r.annos,
+estadoBadge(r.estado),
+regionBadge(r.region_loc),
+`<span class="badge bg-primary">${r.total}</span>`,
+`<button class="btn btn-danger btn-sm" onclick="abrirReapertura('${r.cueanexo}','${r.meses}','${r.annos}')">🔁</button>`
+]);
+});
 
-        if ($('#region_loc option').length === 1) {
-            data.regiones.forEach(r => {
-                $('#region_loc').append(`<option value="${r}">${r}</option>`);
-            });
-        }
+tabla.draw();
 
-        tabla.clear();
-
-        data.ranking.forEach(r => {
-
-            tabla.row.add([
-                r.cueanexo,
-                r.meses,
-                r.annos,
-                estadoBadge(r.estado),
-                '<span class="badge bg-info">' + (r.region_loc || 'SIN REGIÓN') + '</span>',
-                '<span class="badge bg-primary">' + r.total + '</span>',
-                `<button class="btn btn-sm btn-outline-danger"
-                    onclick="abrirReapertura('${r.cueanexo}', '${r.meses}', '${r.annos}')">
-                    🔁 Reabrir
-                </button>`
-            ]);
-
-        });
-
-        tabla.draw();
-
-    });
+});
 
 }
 
