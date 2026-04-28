@@ -305,49 +305,49 @@ let alerta=$('#alerta');
 alerta.removeClass('d-none alert-success alert-warning alert-danger');
 
 if(data.kpis.cumplimiento>=80){
-alerta.addClass('alert-success').text('✔ Excelente cumplimiento');
+    alerta.addClass('alert-success').text('✔ Excelente cumplimiento');
 }else if(data.kpis.cumplimiento>=50){
-alerta.addClass('alert-warning').text('⚠ Atención');
+    alerta.addClass('alert-warning').text('⚠ Atención');
 }else{
-alerta.addClass('alert-danger').text('🚨 Bajo cumplimiento');
+    alerta.addClass('alert-danger').text('🚨 Bajo cumplimiento');
 }
 
 if ($('#region_loc option').length === 1) {
-data.regiones.forEach(r=>{
-$('#region_loc').append(`<option value="${r}">${r}</option>`);
-});
+    data.regiones.forEach(r=>{
+        $('#region_loc').append(`<option value="${r}">${r}</option>`);
+    });
 }
 
 if(chartEstado) chartEstado.destroy();
 chartEstado=new Chart(document.getElementById('chartEstado'),{
-type:'pie',
-data:{
-labels:data.graficos.por_estado.map(e=>e.estado),
-datasets:[{data:data.graficos.por_estado.map(e=>e.total)}]
-}
+    type:'pie',
+    data:{
+    labels:data.graficos.por_estado.map(e=>e.estado),
+    datasets:[{data:data.graficos.por_estado.map(e=>e.total)}]
+    }
 });
 
 if(chartMes) chartMes.destroy();
 chartMes=new Chart(document.getElementById('chartMes'),{
-type:'bar',
-data:{
-labels:data.graficos.por_mes.map(e=>e.meses),
-datasets:[{data:data.graficos.por_mes.map(e=>e.total)}]
-}
+    type:'bar',
+    data:{
+    labels:data.graficos.por_mes.map(e=>e.meses),
+    datasets:[{data:data.graficos.por_mes.map(e=>e.total)}]
+    }
 });
 
 tabla.clear();
 
 data.ranking.forEach(r=>{
-tabla.row.add([
-r.cueanexo,
-r.meses,
-r.annos,
-estadoBadge(r.estado),
-regionBadge(r.region_loc),
-`<span class="badge bg-primary">${r.total}</span>`,
-`<button class="btn btn-danger btn-sm" onclick="abrirReapertura('${r.cueanexo}','${r.meses}','${r.annos}')">🔁</button>`
-]);
+    tabla.row.add([
+    r.cueanexo,
+    r.meses,
+    r.annos,
+    estadoBadge(r.estado),
+    regionBadge(r.region_loc),
+    `<span class="badge bg-primary">${r.total}</span>`,
+    `<button class="btn btn-danger btn-sm" onclick="abrirReapertura('${r.cueanexo}','${r.meses}','${r.annos}')">🔁</button>`
+    ]);
 });
 
 tabla.draw();

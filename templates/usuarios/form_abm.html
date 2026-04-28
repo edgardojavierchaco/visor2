@@ -4,98 +4,125 @@
 
 {% block content %}
 
-<div class="container-fluid">
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">{{ titulo }}</h5>
+    </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">{{ titulo }}</h5>
-        </div>
+    <div class="card-body">
 
-        <div class="card-body">
+        <form method="post" novalidate autocomplete="off">
+            {% csrf_token %}
 
-            <form method="post" novalidate>
-                {% csrf_token %}
+            <div class="row">
 
-                <div class="row">
+                <!-- 👤 DATOS -->
+                <div class="col-md-6">
+                    <h6 class="mb-3">👤 Datos personales</h6>
 
-                    <!-- ===================== -->
-                    <!-- 👤 DATOS PERSONALES -->
-                    <!-- ===================== -->
-                    <div class="col-md-6">
-                        <h6 class="mb-3">👤 Datos personales</h6>
-
-                        <div class="mb-3">
-                            {{ form.username.label_tag }}
-                            {{ form.username }}
-                            {{ form.username.errors }}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.apellido.label_tag }}
-                            {{ form.apellido }}
-                            {{ form.apellido.errors }}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.nombres.label_tag }}
-                            {{ form.nombres }}
-                            {{ form.nombres.errors }}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.correo.label_tag }}
-                            {{ form.correo }}
-                            {{ form.correo.errors }}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.telefono.label_tag }}
-                            {{ form.telefono }}
-                            {{ form.telefono.errors }}
-                        </div>
+                    <div class="mb-3">
+                        {{ form.username.label_tag }}
+                        {{ form.username }}
+                        {{ form.username.errors }}
                     </div>
 
-                    <!-- ===================== -->
-                    <!-- 🔐 PERMISOS -->
-                    <!-- ===================== -->
-                    <div class="col-md-6">
-                        <h6 class="mb-3">🔐 Permisos</h6>
+                    <div class="mb-3">
+                        {{ form.apellido.label_tag }}
+                        {{ form.apellido }}
+                        {{ form.apellido.errors }}
+                    </div>
 
-                        <div class="mb-3">
-                            {{ form.nivelacceso.label_tag }}
-                            {{ form.nivelacceso }}
-                            {{ form.nivelacceso.errors }}
+                    <div class="mb-3">
+                        {{ form.nombres.label_tag }}
+                        {{ form.nombres }}
+                        {{ form.nombres.errors }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.correo.label_tag }}
+                        {{ form.correo }}
+                        {{ form.correo.errors }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.telefono.label_tag }}
+                        {{ form.telefono }}
+                        {{ form.telefono.errors }}
+                    </div>
+                </div>
+
+                <!-- 🔐 PERMISOS -->
+                <div class="col-md-6">
+                    <h6 class="mb-3">🔐 Permisos</h6>
+
+                    <div class="mb-3">
+                        {{ form.nivelacceso.label_tag }}
+                        {{ form.nivelacceso }}
+                        {{ form.nivelacceso.errors }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.rol.label_tag }}
+                        {{ form.rol }}
+                        {{ form.rol.errors }}
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        {{ form.activo }}
+                        <label class="form-check-label ms-2">Activo</label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        {{ form.is_staff }}
+                        <label class="form-check-label ms-2">Staff</label>
+                    </div>
+
+                    <hr>
+
+                    <!-- 🔑 PASSWORD PRO -->
+                    <h6 class="d-flex justify-content-between align-items-center">
+                        🔑 Contraseña
+                        <button type="button" id="btnTogglePass" class="btn btn-sm btn-outline-warning" onclick="togglePassword()">
+                            Cambiar contraseña
+                        </button>
+                    </h6>
+
+                    <div id="passwordBox" style="display:none; transition: all .3s ease;">
+
+                        <div class="alert alert-warning py-2">
+                            ⚠️ Dejar vacío si no desea cambiar la contraseña
                         </div>
 
-                        <div class="mb-3">
-                            {{ form.rol.label_tag }}
-                            {{ form.rol }}
-                            {{ form.rol.errors }}
-                        </div>
-
-                        <div class="form-check form-switch mb-3">
-                            {{ form.activo }}
-                            <label class="form-check-label ms-2">Activo</label>
-                        </div>
-
-                        <div class="form-check form-switch mb-3">
-                            {{ form.is_staff }}
-                            <label class="form-check-label ms-2">Staff</label>
-                        </div>
-
-                        <hr>
-
-                        <h6>🔑 Contraseña</h6>
-
-                        <div class="mb-3">
+                        <!-- PASSWORD 1 -->
+                        <div class="mb-3 position-relative">
                             {{ form.password1.label_tag }}
                             {{ form.password1 }}
+
+                            <span onclick="toggleEye('id_password1', this)" 
+                                style="position:absolute; right:10px; top:38px; cursor:pointer;">
+                                👁️
+                            </span>
+
                             {{ form.password1.errors }}
+
+                            <!-- Barra -->
+                            <div class="progress mt-2" style="height:6px;">
+                                <div id="strengthBar" class="progress-bar"></div>
+                            </div>
+
+                            <small id="strengthText"></small>
                         </div>
 
-                        <div class="mb-3">
+                        <!-- PASSWORD 2 -->
+                        <div class="mb-3 position-relative">
                             {{ form.password2.label_tag }}
                             {{ form.password2 }}
+
+                            <span onclick="toggleEye('id_password2', this)" 
+                                style="position:absolute; right:10px; top:38px; cursor:pointer;">
+                                👁️
+                            </span>
+
                             {{ form.password2.errors }}
                         </div>
 
@@ -103,29 +130,22 @@
 
                 </div>
 
-                <!-- ERRORES GENERALES -->
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger mt-3">
-                    {{ form.non_field_errors }}
-                </div>
-                {% endif %}
+            </div>
 
-                <!-- BOTONES -->
-                <div class="mt-4">
-                    <button class="btn btn-success">
-                        💾 Guardar
-                    </button>
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-3">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
 
-                    <a href="{% url 'usuarios:usuarios_list' %}" class="btn btn-secondary">
-                        Volver
-                    </a>
-                </div>
+            <div class="mt-4">
+                <button class="btn btn-success">💾 Guardar</button>
+                <a href="{% url 'usuarios:usuarios_list' %}" class="btn btn-secondary">Volver</a>
+            </div>
 
-            </form>
+        </form>
 
-        </div>
     </div>
-
 </div>
 
 {% endblock %}
@@ -152,7 +172,6 @@
 <script>
 $(document).ready(function() {
 
-    // 🔥 Inicialización robusta
     $('.select2').select2({
         theme: 'bootstrap-5',
         width: '100%',
@@ -161,6 +180,103 @@ $(document).ready(function() {
         },
         allowClear: true
     });
+
+});
+</script>
+
+
+<!-- 🔐 TOGGLE PASSWORD -->
+<script>
+function togglePassword() {
+    const box = document.getElementById("passwordBox");
+    const btn = document.getElementById("btnTogglePass");
+
+    if (!box || !btn) return;
+
+    if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "block";
+        box.style.opacity = 0;
+
+        setTimeout(() => box.style.opacity = 1, 10);
+
+        btn.innerText = "Ocultar contraseña";
+    } else {
+        box.style.opacity = 0;
+
+        setTimeout(() => {
+            box.style.display = "none";
+            box.querySelectorAll("input").forEach(i => i.value = "");
+        }, 200);
+
+        btn.innerText = "Cambiar contraseña";
+    }
+}
+</script>
+
+
+<!-- 👁️ SHOW / HIDE PASSWORD -->
+<script>
+function toggleEye(id, el) {
+    const input = document.getElementById(id);
+    if (!input) return;
+
+    if (input.type === "password") {
+        input.type = "text";
+        el.innerText = "🙈";
+    } else {
+        input.type = "password";
+        el.innerText = "👁️";
+    }
+}
+</script>
+
+
+<!-- 📊 PASSWORD STRENGTH -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const p1 = document.getElementById("id_password1");
+    const bar = document.getElementById("strengthBar");
+    const text = document.getElementById("strengthText");
+
+    if (!p1 || !bar || !text) return;
+
+    p1.addEventListener("input", function() {
+
+        let val = p1.value;
+        let score = 0;
+
+        if (val.length > 5) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+
+        const levels = ["Muy débil","Débil","Media","Fuerte"];
+        const widths = ["25%","50%","75%","100%"];
+        const colors = ["bg-danger","bg-warning","bg-info","bg-success"];
+
+        bar.style.width = widths[score-1] || "0%";
+        bar.className = "progress-bar " + (colors[score-1] || "");
+        text.innerText = levels[score-1] || "";
+    });
+
+});
+</script>
+
+
+<!-- 🔥 AUTO OPEN SI HAY ERROR -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const box = document.getElementById("passwordBox");
+    const btn = document.getElementById("btnTogglePass");
+
+    if (!box || !btn) return;
+
+    if (box.querySelector(".errorlist")) {
+        box.style.display = "block";
+        btn.innerText = "Ocultar contraseña";
+    }
 
 });
 </script>

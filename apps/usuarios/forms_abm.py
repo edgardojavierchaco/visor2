@@ -42,7 +42,8 @@ class UsuarioForm(forms.ModelForm):
         label="Contraseña",
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Ingrese contraseña'
+            'placeholder': 'Ingrese contraseña',
+            'autocomplete': 'new-password'
         })
     )
 
@@ -51,7 +52,8 @@ class UsuarioForm(forms.ModelForm):
         label="Confirmar contraseña",
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Repita la contraseña'
+            'placeholder': 'Repita la contraseña',
+            'autocomplete': 'new-password'
         })
     )
 
@@ -113,8 +115,11 @@ class UsuarioForm(forms.ModelForm):
             if not p1 or not p2:
                 raise ValidationError("Debe ingresar y confirmar la contraseña")
 
-        # 👉 VALIDACIÓN
+        # 👉 UPDATE → solo validar si alguno fue tocado
         if p1 or p2:
+            if not p1 or not p2:
+                raise ValidationError("Debe completar ambos campos de contraseña")
+
             if p1 != p2:
                 raise ValidationError("Las contraseñas no coinciden")
 

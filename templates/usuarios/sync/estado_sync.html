@@ -127,6 +127,11 @@ body { background: #0b1220; }
 
 </div>
 
+{% comment %} <!-- AUDIO -->
+<audio id="successSound" preload="auto">
+    <source src="{% static 'sound/success-level.mp3' %}" type="audio/mpeg">
+</audio> {% endcomment %}
+
 <script>
 
 let eventSource = null;
@@ -214,6 +219,11 @@ function iniciarStream() {
                 if (["finalizado","error","cancelado"].includes(estado)) {
                     finalizarUI();
                     if (estado === "finalizado") confetti();
+                    {% comment %} const audio = document.getElementById("successSound");
+                    if (audio) {
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log("Audio bloqueado:", e));
+                    } {% endcomment %}
                 }
             }
 

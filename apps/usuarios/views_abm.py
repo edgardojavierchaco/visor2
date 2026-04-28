@@ -193,7 +193,7 @@ def usuario_update(request, pk):
 
     if form.is_valid():
         form.save()
-        return redirect("usuarios_list")
+        return redirect("usuarios:usuarios_list")
 
     return render(request, "usuarios/form_abm.html", {
         "form": form,
