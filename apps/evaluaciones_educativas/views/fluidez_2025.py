@@ -1,5 +1,5 @@
-from apps.evaluaciones_educativas.models import *
-from apps.evaluaciones_educativas.forms.forms import *
+from apps.evaluaciones_educativas.models.fluidez_2025 import *
+from apps.evaluaciones_educativas.forms.fluidez_2025 import *
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.core.paginator import Paginator
@@ -48,7 +48,7 @@ def carga_alumno(request,grado_public_id):
 		'seccion_form': seccion_form,
 		'grado_public':grado_public_id,
 			   }
-	return render(request, "alumno.html", context)
+	return render(request, "fluidez_2025/alumno.html", context)
 
 @login_required
 def editar_alumno(request,alumno_public_id):
@@ -87,7 +87,7 @@ def editar_alumno(request,alumno_public_id):
 		'seccion_form': seccion_form,
 		'grado_public':instancia_grado.public_id,
 			   }
-	return render(request, "alumno.html", context)
+	return render(request, "fluidez_2025/alumno.html", context)
 
 @login_required
 def lista(request,grado_public_id): 
@@ -108,7 +108,7 @@ def lista(request,grado_public_id):
 		'nombre_grado':instancia_grado.nombre_grado,
 		'grado_public_id':instancia_grado.public_id
 	}
-	return render(request,"lista.html", contexto)
+	return render(request,"fluidez_2025/lista.html", contexto)
 #-----------------lista para grados------------------
 @login_required
 def lista_grado(request,grado): 
@@ -132,7 +132,7 @@ def lista_grado(request,grado):
 		instancia_grado=Grado.objects.get(cueanexo=nombre_usuario_cueanexo, nombre_grado=grado)
 		return redirect("evaluaciones_educativas:lista", grado_public_id=instancia_grado.public_id)
 	except Grado.DoesNotExist:
-		return render(request,"lista.html")
+		return render(request,"fluidez_2025/lista.html")
 @login_required
 def grado(request):
 	usuario= request.user
@@ -170,7 +170,7 @@ def grado(request):
 	contexto = {
 		'grado_form_data': grado_form_data
 	}
-	return render(request,"grados.html", contexto)
+	return render(request,"fluidez_2025/grados.html", contexto)
 
 	
 @login_required
@@ -216,7 +216,7 @@ def carga_evaluacion(request, alumno_public_id):
 		#Creacion de diccionario para el Post
 	context = {'form': form,
 			   'alumno':alumno_id}
-	return render(request, "evaluacion.html", context)
+	return render(request, "fluidez_2025/evaluacion.html", context)
 
 @login_required
 def editar_evaluacion(request, alumno_public_id):
@@ -244,7 +244,7 @@ def editar_evaluacion(request, alumno_public_id):
 		'form': form,
 		'alumno':alumno_id
 		}
-	return render(request, "evaluacion.html", context)
+	return render(request, "fluidez_2025/evaluacion.html", context)
 
 @login_required
 def asistencia(request,alumno_public_id):
@@ -271,7 +271,7 @@ def asistencia(request,alumno_public_id):
 	context = {'form': form,
 			   'alumno':alumno_id
 			   }
-	return render(request,"asistencia.html",context)
+	return render(request,"fluidez_2025/asistencia.html",context)
 
 @login_required
 def editar_asistencia(request,alumno_public_id):
@@ -298,7 +298,7 @@ def editar_asistencia(request,alumno_public_id):
 	else:
 		asistencia_form = AsistenciaForm()
 	context = {'form': asistencia_form}
-	return render(request,"asistencia.html",context)
+	return render(request,"fluidez_2025/asistencia.html",context)
 
 @login_required
 def borrar_registro_alumno(request,alumno_public_id):
@@ -321,7 +321,7 @@ def borrar_registro_alumno(request,alumno_public_id):
 	context = {'form': form,
 			   'alumno':alumno_id
 			   }
-	return render(request,"borrar_registro_alumno.html",context)
+	return render(request,"fluidez_2025/borrar_registro_alumno.html",context)
 #DESCARGAR EXCEL
 @login_required
 def descargar_excel(request,grado_public_id):
@@ -383,7 +383,7 @@ def descargar_excel(request,grado_public_id):
 #     # # for i in instancia_grado:
 #     # #     print(i)
 #     contexto={'grados':instancia_grado_cueanexo}
-#     return render(request,"monitoreo.html", contexto)
+#     return render(request,"fluidez_2025/monitoreo.html", contexto)
 
 #-----------------------LOGICA PARA VISUALIZAR DATOS ---------------------------
 
@@ -462,7 +462,7 @@ def analisis_evaluaciones_noviembre_2025(request):
 	nombre_archivo = 'evaluaciones_educativas/pdf/INFORME-FLUIDEZ-LECTORA-NOVIEMBRE2025.pdf'
 # Generamos la URL y le pegamos los parámetros del visor
 	contexto["material_pdf"] = static(nombre_archivo)
-	return render(request, "analisis_evaluaciones_noviembre_2025.html", contexto)
+	return render(request, "fluidez_2025/analisis_evaluaciones_noviembre_2025.html", contexto)
 #------------------logica para regional---------------------------
 @login_required
 def analisis_evaluaciones_regional_noviembre_2025(request):
@@ -552,7 +552,7 @@ def analisis_evaluaciones_regional_noviembre_2025(request):
 	nombre_archivo = 'evaluaciones_educativas/pdf/INFORME-FLUIDEZ-LECTORA-NOVIEMBRE2025.pdf'
 # Generamos la URL y le pegamos los parámetros del visor
 	contexto["material_pdf"] = static(nombre_archivo)
-	return render(request, "analisis_evaluaciones_noviembre_2025.html", contexto)
+	return render(request, "fluidez_2025/analisis_evaluaciones_noviembre_2025.html", contexto)
 #--------------------fin de logica para regional----------------
 #---------------------logica para SUBSE Y MINISTRO---------------------------
 @login_required
@@ -647,7 +647,7 @@ def analisis_evaluaciones_ministros_noviembre_2025(request):
 	nombre_archivo = 'evaluaciones_educativas/pdf/INFORME-FLUIDEZ-LECTORA-NOVIEMBRE2025.pdf'
 # Generamos la URL y le pegamos los parámetros del visor
 	contexto["material_pdf"] = static(nombre_archivo)
-	return render(request, "analisis_evaluaciones_noviembre_2025.html", contexto)
+	return render(request, "fluidez_2025/analisis_evaluaciones_noviembre_2025.html", contexto)
 #----------------------FIN SUBSE Y MINISTRO--------------------------------
 #-----------------------FIN LOGICA PARA VISUALIZAR DATOS ---------------------------
 
@@ -968,7 +968,7 @@ def analisis_evaluaciones_mayo_2025(request):
 			print("Conexión cerrada.")            
 	#------------------------CERRAR psycopg2-----------------
 	#print(contexto)
-	return render(request, "analisis_evaluaciones_mayo_2025.html", contexto)
+	return render(request, "fluidez_2025/analisis_evaluaciones_mayo_2025.html", contexto)
 
 
 def analisis_segundo_grado_mayo_2025_grafico(cueanexo,secciones):

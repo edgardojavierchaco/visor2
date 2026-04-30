@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import *
+from .models.fluidez_2025 import *
 
 
 admin.site.register(Alumno)
