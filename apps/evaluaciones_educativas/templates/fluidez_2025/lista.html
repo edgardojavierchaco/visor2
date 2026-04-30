@@ -192,7 +192,7 @@
         </li>
         <li class="nav-item">
           <a
-            href="{% url 'evaluaciones_educativas:lista_grado' grado='SEGUNDO'%}"
+            href="{% url 'evaluaciones_educativas:fluidez_2025:lista_grado' grado='SEGUNDO'%}"
             class="nav-link"
           >
             <i class="bi bi-book"></i>
@@ -202,7 +202,7 @@
 
         <li class="nav-item">
           <a
-            href="{% url 'evaluaciones_educativas:lista_grado' grado='TERCERO'%}"
+            href="{% url 'evaluaciones_educativas:fluidez_2025:lista_grado' grado='TERCERO'%}"
             class="nav-link"
           >
             <i class="bi bi-book"></i>
@@ -288,7 +288,7 @@
                         class="d-inline-flex flex-wrap gap-1 justify-content-center"
                       >
                         <a
-                          href="{% url 'evaluaciones_educativas:editar_alumno' alumno_public_id=eval.alumno.public_id %}"
+                          href="{% url 'evaluaciones_educativas:fluidez_2025:editar_alumno' alumno_public_id=eval.alumno.public_id %}"
                           class="btn btn-sm btn-outline-primary btn-custom"
                           title="Editar Datos del Alumno"
                         >
@@ -296,7 +296,7 @@
                         </a>
 
                         <a
-                          href="{% url 'evaluaciones_educativas:editar_evaluacion' alumno_public_id=eval.alumno.public_id %}"
+                          href="{% url 'evaluaciones_educativas:fluidez_2025:editar_evaluacion' alumno_public_id=eval.alumno.public_id %}"
                           class="btn btn-sm btn-outline-success btn-custom"
                           title="Editar Evaluación de Fluidez"
                         >
@@ -304,7 +304,7 @@
                         </a>
 
                         <a
-                          href="{% url 'evaluaciones_educativas:borrar_registro_alumno' alumno_public_id=eval.alumno.public_id %}"
+                          href="{% url 'evaluaciones_educativas:fluidez_2025:borrar_registro_alumno' alumno_public_id=eval.alumno.public_id %}"
                           class="btn btn-sm btn-outline-danger btn-custom"
                           title="Borrar Registro del Alumno"
                         >
@@ -322,14 +322,14 @@
 
         <div class="d-flex justify-content-between">
           <a
-            href="{% url 'evaluaciones_educativas:grados' %}"
+            href="{% url 'evaluaciones_educativas:fluidez_2025:grados' %}"
             class="btn btn-primary btn-custom"
             >Añadir Alumno</a
           >
          {% if grado_public_id %}
     {# Opción 1: El ID existe, botón funcional (con etiqueta <a>) #}
     <a
-        href="{% url 'evaluaciones_educativas:excel' grado_public_id=grado_public_id %}"
+        href="{% url 'evaluaciones_educativas:fluidez_2025:excel' grado_public_id=grado_public_id %}"
         class="btn btn-danger btn-custom"
     >
         Descargar Lista
