@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Carga de Personal</title>
+
+<style>
+body {
+    font-family: "Segoe UI", sans-serif;
+    background: #eef2f7;
+    margin: 0;
+}
+
+.header {
+    background: linear-gradient(90deg, #1f3c88, #3b5bcc);
+    color: white;
+    padding: 18px 30px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 25px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.section-title {
+    font-weight: 600;
+    margin: 25px 0 15px;
+    font-size: 16px;
+    border-left: 5px solid #3b5bcc;
+    padding-left: 10px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+}
+
+input, select {
+    padding: 7px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.tabla-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+#tabla {
+    min-width: 1600px;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 6px;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background: #f4f6f9;
+}
+
+.fila:hover {
+    background: #f0f6ff;
+}
+
+.btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.add { background: #28a745; color: white; }
+.delete { background: #ff4d4d; color: white; }
+.save { background: #007bff; color: white; width: 100%; margin-top: 20px; }
+
+.delete:hover { background: #d90000; }
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    Sistema de Registro de Personal - SINIDE Personal
+</div>
+
+<div class="container">
+
+<form method="post">
+{% csrf_token %}
+
+<div class="section-title">🧍 Datos Personales</div>
+
+<div class="grid">
+    <div class="field">
+        <label>CUIL</label>
+        {{ form.cuil }}
+        <small id="estado-persona"></small>
+    </div>
+
+    <div class="field"><label>DNI</label>{{ form.dni }}</div>
+    <div class="field"><label>Apellido</label>{{ form.apellido }}</div>
+    <div class="field"><label>Nombre</label>{{ form.nombre }}</div>
+    <div class="field"><label>Sexo</label>{{ form.sexo }}</div>
+    <div class="field"><label>Provincia</label>{{ form.provincia }}</div>
+    <div class="field"><label>Localidad</label>{{ form.localidad }}</div>
+
+    <!-- 🔥 TELEFONO PRO -->
+    <div class="field">
+        <label>Código de Área</label>
+        {{ form.codigo_area }}
+    </div>
+
+    <div class="field">
+        <label>Teléfono</label>
+        {{ form.telefono }}
+        <small>Solo número local (sin código de área)</small>
+    </div>
+
+    <div class="field">
+        <label>📱 Vista previa</label>
+        <input type="text" id="preview-telefono" readonly placeholder="+54..." />
+    </div>
+
+    <div class="field">
+        <label>WhatsApp</label>
+        {{ form.whatsapp }}
+    </div>
+</div>
+
+<div class="section-title">📚 Actividades</div>
+
+{{ formset.management_form }}
+
+<div class="tabla-wrapper">
+<table id="tabla">
+
+<thead>
+<tr>
+    <th>CUE</th>
+    <th>Categoría</th>
+    <th>Modalidad</th>
+    <th>Nivel</th>
+    <th>CEIC</th>
+    <th>Situación</th>
+    <th>Condición</th>
+    <th>Designación</th>
+    <th>Tipo</th>
+    <th>Desde</th>
+    <th>Hasta</th>
+    <th>Horas</th>
+    <th>Estado</th>
+    <th></th>
+</tr>
+</thead>
+
+<tbody id="formset-body">
+{% for f in formset %}
+<tr class="fila">
+    <td>{{ f.cueanexo }}</td>
+    <td>{{ f.categoria }}</td>
+    <td>{{ f.modalidad }}</td>
+    <td>{{ f.niveles }}</td>
+    <td>{{ f.ceic }}</td>
+    <td>{{ f.sit_revista }}</td>
+    <td>{{ f.cond_actividad }}</td>
+    <td>{{ f.designacion }}</td>
+    <td>{{ f.t_designacion }}</td>
+    <td>{{ f.f_desde }}</td>
+    <td>{{ f.f_hasta }}</td>
+    <td>{{ f.carga_horaria }}</td>
+    <td>{{ f.estado }}</td>
+    <td>
+        {{ f.DELETE }}
+        <button type="button" class="btn delete">❌</button>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+</div>
+
+<button type="button" class="btn add" id="add">➕ Agregar actividad</button>
+<button type="submit" class="btn save">💾 Guardar</button>
+
+</form>
+</div>
+
+<script>
+
+/* ================= TELEFONO PREVIEW ================= */
+document.addEventListener("DOMContentLoaded", function () {
+
+    const telefono = document.getElementById("id_telefono");
+    const codigoArea = document.getElementById("id_codigo_area");
+    const preview = document.getElementById("preview-telefono");
+
+    function actualizarPreview() {
+
+        const numero = telefono?.value.replace(/\D/g, '');
+        const selected = codigoArea?.options[codigoArea.selectedIndex];
+
+        if (!numero || !selected) {
+            preview.value = "";
+            return;
+        }
+
+        const match = selected.text.match(/(\d+)$/);
+
+        if (!match) {
+            preview.value = "";
+            return;
+        }
+
+        const cod = match[1];
+
+        preview.value = `+54${cod}${numero}`;
+    }
+
+    telefono?.addEventListener("input", actualizarPreview);
+    codigoArea?.addEventListener("change", actualizarPreview);
+
+});
+
+
+/* ================= PROVINCIA -> LOCALIDAD ================= */
+document.addEventListener("DOMContentLoaded", function () {
+
+    const provincia = document.getElementById("id_provincia");
+    const localidad = document.getElementById("id_localidad");
+
+    if (!provincia || !localidad) return;
+
+    provincia.addEventListener("change", function () {
+
+        const value = this.value;
+
+        localidad.innerHTML = "<option>Cargando...</option>";
+
+        fetch(`{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${value}`)
+            .then(r => r.json())
+            .then(data => {
+
+                localidad.innerHTML = "<option value=''>----</option>";
+
+                data.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item.c_localidad;
+                    opt.textContent = item.descrip_localidad;
+                    localidad.appendChild(opt);
+                });
+
+            });
+    });
+
+});
+
+
+/* ================= FORMSET ================= */
+const emptyForm = `{{ formset.empty_form.as_p|escapejs }}`;
+
+document.getElementById("add").addEventListener("click", function () {
+
+    let total = document.querySelector('[name="form-TOTAL_FORMS"]');
+    let index = parseInt(total.value);
+
+    let html = emptyForm.replace(/__prefix__/g, index);
+
+    let row = document.createElement("tr");
+    row.classList.add("fila");
+    row.innerHTML = html;
+
+    document.getElementById("formset-body").appendChild(row);
+
+    total.value = index + 1;
+});
+
+
+document.addEventListener("click", function (e) {
+
+    if (e.target.classList.contains("delete")) {
+
+        let row = e.target.closest("tr");
+        let del = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+
+        if (del) del.checked = true;
+
+        row.remove();
+    }
+});
+
+
+/* ================= CEIC ================= */
+function cargarCEIC(modalidad, nivel, select) {
+
+    if (!modalidad) return;
+
+    fetch(`{% url 'bnhpersonas:filtrar_ceic' %}?modalidad=${modalidad}&nivel=${nivel || ""}`)
+        .then(r => r.json())
+        .then(data => {
+
+            select.innerHTML = "<option value=''>----</option>";
+
+            data.forEach(e => {
+                let opt = document.createElement("option");
+                opt.value = e.c_ceic;
+                opt.textContent = e.descripcion;
+                select.appendChild(opt);
+            });
+        });
+}
+
+document.addEventListener("change", function (e) {
+
+    if (e.target.name.includes("modalidad") || e.target.name.includes("niveles")) {
+
+        let row = e.target.closest("tr");
+
+        let mod = row.querySelector('[name$="modalidad"]')?.value;
+        let niv = row.querySelector('[name$="niveles"]')?.value;
+        let ceic = row.querySelector('[name$="ceic"]');
+
+        if (ceic) cargarCEIC(mod, niv, ceic);
+    }
+});
+
+</script>
+
+{{ form.media }}
+
+</body>
+</html>

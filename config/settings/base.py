@@ -32,6 +32,7 @@ BASE_APPS = [
     'ckeditor_uploader',
     'django_celery_beat',
     'guardian',
+    'smart_selects',
 ]
 
 LOCAL_APPS = [
@@ -80,6 +81,7 @@ LOCAL_APPS = [
     'apps.supervisa2',
     'apps.asignaciones',
     'apps.padroninterno',
+    'apps.bnhpersonas',
 ]
 
 
@@ -149,7 +151,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public,evaluacion,cenpe,operativoschaco,indicadores,pem,pof'
+            'options': '-c search_path=public,evaluacion,cenpe,bnh,operativoschaco,indicadores,pem,pof'
         }
     },        
     'Evaluacion': {

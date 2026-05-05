@@ -11,3 +11,7 @@ git pull --rebase
 git stash pop
 git add .
 git rebase --continue
+
+
+python manage.py makemigrations --settings=config.settings.local
+python manage.py migrate --settings=config.settings.local

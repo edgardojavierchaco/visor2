@@ -13,3 +13,5 @@ staticfiles/
 
 .ipython/
 
+.env
+
