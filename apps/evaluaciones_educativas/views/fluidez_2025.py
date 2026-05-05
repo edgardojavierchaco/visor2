@@ -117,7 +117,10 @@ def lista(request,grado_public_id):
 @login_required
 def lista_grado(request,grado): 
 	#---------logica para obtener cueanexo por medio de username--------------
+
 	usuario= request.user
+	name=usuario.username
+	numeroCueanexo = obtener_cueanexo(name)
 	#print(f"Este es el usuario desde lista grado: {usuario.username}")
 	if usuario.is_authenticated and usuario.username in listaCueanexoPermitidos:
 		name=usuario.username
@@ -148,8 +151,10 @@ def lista_grado(request,grado):
 @login_required
 def grado(request):
 	usuario= request.user
-	if usuario.is_authenticated:
-		name=usuario.username
+	name=usuario.username
+	numeroCueanexo = obtener_cueanexo(name)
+	# if usuario.is_authenticated:
+		# name=usuario.username
 		#-----logica para DNI+CUEANEXO---------
 		# if len(name)>9  and len(name)<=17:
 		# 	#DNI+CUEANEXO
@@ -157,10 +162,9 @@ def grado(request):
 		# else:
 		# 	nombre_usuario_cueanexo=name
 		# #cueanexo=int(nombre_usuario_cueanexo)
-		numeroCueanexo = obtener_cueanexo(name)
-		if numeroCueanexo not in listaCueanexoPermitidos:
-			raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 		#-----logica para DNI+CUEANEXO---------
+	if numeroCueanexo not in listaCueanexoPermitidos:
+		raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 		
 	opciones_grado = [
 					 ('2do Año/Grado', '2do Año/Grado'),
