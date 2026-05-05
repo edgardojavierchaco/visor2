@@ -4,9 +4,9 @@ from django.db import transaction
 
 from django.core.exceptions import ValidationError
 
-from .models import Personas, RegistroActividades, NomencladorCeic, Localidades
+from .models import Personas, RegistroActividades, NomencladorCeic, Localidades, CodAreasTelefonos
 from .forms import PersonaForm, ActividadFormSet
-from .utils import get_cueanexos_usuario
+from .utils import get_ofertas_usuario
 from apps.consultasge.models_padron import CapaUnicaOfertas
 
 from .services.registro_service import RegistroService
@@ -39,6 +39,7 @@ def filtrar_ceic(request):
 # CARGA PERSONAL (CORE)
 # =========================
 def carga_personal(request):
+    print("USER:", request.user.username)
 
     if request.method == "POST":
         
@@ -52,7 +53,6 @@ def carga_personal(request):
             instance=persona,
             user=request.user
         )
-
 
         if form.is_valid() and formset.is_valid():
 
@@ -79,6 +79,7 @@ def carga_personal(request):
             instance=persona,
             user=request.user
         )
+        
 
     return render(request, "bnh/personas/carga_personal.html", {
         "form": form,
@@ -126,3 +127,25 @@ def filtrar_localidades(request):
     ).values("c_localidad", "descrip_localidad")
 
     return JsonResponse(list(qs), safe=False)
+
+
+def buscar_codigos_area(request):
+    q = request.GET.get("q", "").strip()
+
+    qs = CodAreasTelefonos.objects.all()
+
+    if q:
+        # 🔥 solo números
+        qs = qs.filter(codigo__startswith=q)
+
+    qs = qs.order_by("codigo")[:20]
+
+    data = [
+        {
+            "id": c.id,
+            "label": f"{c.codigo} - {c.localidad} ({c.provincia})"
+        }
+        for c in qs
+    ]
+
+    return JsonResponse(data, safe=False)

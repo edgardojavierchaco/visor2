@@ -3,7 +3,7 @@ from django.forms import inlineformset_factory, BaseInlineFormSet
 
 from .models import Personas, RegistroActividades, Localidades, CodAreasTelefonos
 from apps.consultasge.models_padron import CapaUnicaOfertas
-from .utils import get_cueanexos_usuario
+from .utils import get_ofertas_usuario
 
 
 # =========================
@@ -50,34 +50,50 @@ class ActividadForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 🔥 seguridad: si no hay user, no hay datos
-        if user is None:            
+        if not user:
             return
-        
-        if user:
 
-            cueanexos = get_cueanexos_usuario(user)
+        qs = get_ofertas_usuario(user)
 
-            self.fields["cueanexo"].queryset = CapaUnicaOfertas.objects.filter(
-                cueanexo__in=cueanexos
-            )
-
-        else:
-            self.fields["cueanexo"].queryset = CapaUnicaOfertas.objects.none()
-
+        self.fields["cueanexo"].queryset = qs
+        self.fields["cueanexo"].label_from_instance = lambda obj: obj.cueanexo
 
 # =========================
 # BASE FORMSET
 # =========================
 class BaseActividadFormSet(BaseInlineFormSet):
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
+    def get_queryset_cueanexo(self):
+        if not self.user:
+            return CapaUnicaOfertas.objects.none()
+        return get_ofertas_usuario(self.user)
+
     def _construct_form(self, i, **kwargs):
         kwargs["user"] = self.user
-        return super()._construct_form(i, **kwargs)
+        form = super()._construct_form(i, **kwargs)
 
+        qs = self.get_queryset_cueanexo()
+
+        form.fields["cueanexo"].queryset = qs
+        form.fields["cueanexo"].label_from_instance = lambda obj: obj.cueanexo
+
+        return form
+
+    @property
+    def empty_form(self):
+        form = super().empty_form
+
+        qs = self.get_queryset_cueanexo()
+
+        form.fields["cueanexo"].queryset = qs
+        form.fields["cueanexo"].label_from_instance = lambda obj: obj.cueanexo
+
+        return form
+    
 
 # =========================
 # INLINE FORMSET

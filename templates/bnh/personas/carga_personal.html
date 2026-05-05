@@ -45,12 +45,34 @@ body {
 .field {
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 input, select {
     padding: 7px;
     border-radius: 6px;
     border: 1px solid #ccc;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 999;
+}
+
+.autocomplete-item {
+    padding: 6px;
+    cursor: pointer;
+}
+
+.autocomplete-item:hover {
+    background: #f0f6ff;
 }
 
 .tabla-wrapper {
@@ -93,8 +115,6 @@ thead th {
 .add { background: #28a745; color: white; }
 .delete { background: #ff4d4d; color: white; }
 .save { background: #007bff; color: white; width: 100%; margin-top: 20px; }
-
-.delete:hover { background: #d90000; }
 </style>
 </head>
 
@@ -125,10 +145,14 @@ thead th {
     <div class="field"><label>Provincia</label>{{ form.provincia }}</div>
     <div class="field"><label>Localidad</label>{{ form.localidad }}</div>
 
-    <!-- 🔥 TELEFONO PRO -->
+    <!-- 🔥 AUTOCOMPLETE CODIGO AREA -->
     <div class="field">
         <label>Código de Área</label>
-        {{ form.codigo_area }}
+
+        <input type="text" id="codigo-area-autocomplete" placeholder="Ej: 362">
+        <input type="hidden" name="codigo_area" id="id_codigo_area">
+
+        <div id="codigo-area-list" class="autocomplete-list"></div>
     </div>
 
     <div class="field">
@@ -154,7 +178,6 @@ thead th {
 
 <div class="tabla-wrapper">
 <table id="tabla">
-
 <thead>
 <tr>
     <th>CUE</th>
@@ -197,7 +220,30 @@ thead th {
 </tr>
 {% endfor %}
 </tbody>
-
+</table>
+<!-- 🔥 TEMPLATE OCULTO -->
+<table style="display:none;">
+<tbody>
+<tr id="empty-form">
+    <td>{{ formset.empty_form.cueanexo }}</td>
+    <td>{{ formset.empty_form.categoria }}</td>
+    <td>{{ formset.empty_form.modalidad }}</td>
+    <td>{{ formset.empty_form.niveles }}</td>
+    <td>{{ formset.empty_form.ceic }}</td>
+    <td>{{ formset.empty_form.sit_revista }}</td>
+    <td>{{ formset.empty_form.cond_actividad }}</td>
+    <td>{{ formset.empty_form.designacion }}</td>
+    <td>{{ formset.empty_form.t_designacion }}</td>
+    <td>{{ formset.empty_form.f_desde }}</td>
+    <td>{{ formset.empty_form.f_hasta }}</td>
+    <td>{{ formset.empty_form.carga_horaria }}</td>
+    <td>{{ formset.empty_form.estado }}</td>
+    <td>
+        {{ formset.empty_form.DELETE }}
+        <button type="button" class="btn delete">❌</button>
+    </td>
+</tr>
+</tbody>
 </table>
 </div>
 
@@ -209,40 +255,87 @@ thead th {
 
 <script>
 
-/* ================= TELEFONO PREVIEW ================= */
+/* ================= AUTOCOMPLETE CODIGO AREA ================= */
 document.addEventListener("DOMContentLoaded", function () {
 
-    const telefono = document.getElementById("id_telefono");
-    const codigoArea = document.getElementById("id_codigo_area");
-    const preview = document.getElementById("preview-telefono");
+    const input = document.getElementById("codigo-area-autocomplete");
+    const hidden = document.getElementById("id_codigo_area");
+    const list = document.getElementById("codigo-area-list");
 
-    function actualizarPreview() {
+    let timeout;
 
-        const numero = telefono?.value.replace(/\D/g, '');
-        const selected = codigoArea?.options[codigoArea.selectedIndex];
+    input.addEventListener("input", function () {
 
-        if (!numero || !selected) {
-            preview.value = "";
+        let value = this.value.replace(/\D/g, '');
+        this.value = value;
+
+        if (value.length < 2) {
+            list.innerHTML = "";
             return;
         }
 
-        const match = selected.text.match(/(\d+)$/);
+        clearTimeout(timeout);
 
-        if (!match) {
-            preview.value = "";
-            return;
+        timeout = setTimeout(() => {
+
+            fetch(`/bnh/buscar-codigos-area/?q=${value}`)
+                .then(r => r.json())
+                .then(data => {
+
+                    list.innerHTML = "";
+
+                    data.forEach(item => {
+
+                        const div = document.createElement("div");
+                        div.classList.add("autocomplete-item");
+                        div.textContent = item.label;
+
+                        div.addEventListener("click", function () {
+                            input.value = item.label;
+                            hidden.value = item.id;
+                            list.innerHTML = "";
+                            actualizarPreview();
+                        });
+
+                        list.appendChild(div);
+                    });
+
+                });
+
+        }, 250);
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!input.contains(e.target)) {
+            list.innerHTML = "";
         }
-
-        const cod = match[1];
-
-        preview.value = `+54${cod}${numero}`;
-    }
-
-    telefono?.addEventListener("input", actualizarPreview);
-    codigoArea?.addEventListener("change", actualizarPreview);
+    });
 
 });
 
+/* ================= TELEFONO PREVIEW ================= */
+function actualizarPreview() {
+
+    const telefono = document.getElementById("id_telefono");
+    const input = document.getElementById("codigo-area-autocomplete");
+    const preview = document.getElementById("preview-telefono");
+
+    const numero = telefono?.value.replace(/\D/g, '');
+    const match = input.value.match(/^(\d+)/);
+
+    if (!numero || !match) {
+        preview.value = "";
+        return;
+    }
+
+    const cod = match[1];
+
+    preview.value = `+54${cod}${numero}`;
+}
+
+document.addEventListener("input", function (e) {
+    if (e.target.id === "id_telefono") actualizarPreview();
+});
 
 /* ================= PROVINCIA -> LOCALIDAD ================= */
 document.addEventListener("DOMContentLoaded", function () {
@@ -250,15 +343,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const provincia = document.getElementById("id_provincia");
     const localidad = document.getElementById("id_localidad");
 
-    if (!provincia || !localidad) return;
+    provincia?.addEventListener("change", function () {
 
-    provincia.addEventListener("change", function () {
-
-        const value = this.value;
-
-        localidad.innerHTML = "<option>Cargando...</option>";
-
-        fetch(`{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${value}`)
+        fetch(`{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${this.value}`)
             .then(r => r.json())
             .then(data => {
 
@@ -276,20 +363,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 
-
 /* ================= FORMSET ================= */
 const emptyForm = `{{ formset.empty_form.as_p|escapejs }}`;
 
 document.getElementById("add").addEventListener("click", function () {
 
-    let total = document.querySelector('[name="form-TOTAL_FORMS"]');
+    const total = document.querySelector('[name$="-TOTAL_FORMS"]');
+
+    if (!total) {
+        console.error("No existe TOTAL_FORMS");
+        return;
+    }
+
     let index = parseInt(total.value);
 
-    let html = emptyForm.replace(/__prefix__/g, index);
+    // 🔥 CLONAR FILA REAL
+    let row = document.getElementById("empty-form").cloneNode(true);
 
-    let row = document.createElement("tr");
-    row.classList.add("fila");
-    row.innerHTML = html;
+    row.removeAttribute("id");
+
+    // 🔥 REEMPLAZAR __prefix__
+    row.innerHTML = row.innerHTML.replace(/__prefix__/g, index);
 
     document.getElementById("formset-body").appendChild(row);
 
@@ -298,23 +392,16 @@ document.getElementById("add").addEventListener("click", function () {
 
 
 document.addEventListener("click", function (e) {
-
     if (e.target.classList.contains("delete")) {
-
         let row = e.target.closest("tr");
-        let del = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
-
+        let del = row.querySelector('input[name$="-DELETE"]');
         if (del) del.checked = true;
-
         row.remove();
     }
 });
 
-
 /* ================= CEIC ================= */
 function cargarCEIC(modalidad, nivel, select) {
-
-    if (!modalidad) return;
 
     fetch(`{% url 'bnhpersonas:filtrar_ceic' %}?modalidad=${modalidad}&nivel=${nivel || ""}`)
         .then(r => r.json())

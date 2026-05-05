@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from apps.bnhpersonas.models import Personas, RegistroActividades
 from .bulk_service import BulkService
 from apps.consultasge.models_padron import CapaUnicaOfertas
-from apps.bnhpersonas.utils import get_cueanexos_usuario
+from apps.bnhpersonas.utils import get_ofertas_usuario
 
 
 class RegistroService:

@@ -100,6 +100,7 @@ BASE_MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.regacceso.middleware.RegistroAccesoMiddleware',
     'apps.usuarios.middleware.AuditoriaMiddleware',
+    'apps.intercultural.middleware.UserCueanexoMiddleware',
 ]
 
 THIRD_MIDDLEWARE = [    
