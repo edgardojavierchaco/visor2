@@ -11,9 +11,11 @@ from apps.establecimientos.views import establecimientos
 from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
 from apps.unidadgestion import views_pers_doc_central
 from apps.operativoschaco.views import guardar_examen, examen_guardado
+from apps.bnhpersonas.views import filtrar_ceic
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('chaining/', include('smart_selects.urls')),
     path('al/',include('apps.alumnos.urls', namespace='al')),
     path('dash/', directores, name='dash'),
     path('director/',include('apps.directores.urls',namespace='director')),
@@ -69,6 +71,7 @@ urlpatterns = [
     path('evaluaciones_educativas/', include('apps.evaluaciones_educativas.urls', namespace='evaluaciones_educativas')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     path('padron/', include('apps.padroninterno.urls')),
+    path('bnh/', include('apps.bnhpersonas.urls', namespace='bnhpersonas')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

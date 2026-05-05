@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-    <form method="post" action="." enctype="multipart/form-data">
+    <form id="formulario" method="post" action="." enctype="multipart/form-data">
         <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
@@ -93,7 +93,7 @@
                 </div>
 
             <div class="card-footer">
-                <button type="submit" class="btn btn-primary btn-flat">
+                <button type="submit" id="btnSubmit" class="btn btn-primary btn-flat">
                     <i class="fas fa-save"></i> Guardar registro
                 </button>
                 <a href="{{ list_url }}" class="btn btn-danger btn-flat">
