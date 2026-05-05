@@ -43,6 +43,11 @@ class Año2026(models.Model):
         return self.nombre_año
     
 class Seccion2026(models.Model):
+    OPCIONES_TURNO = [
+    ('MAÑANA', 'Mañana'),
+    ('TARDE', 'Tarde'),
+    ('NOCTURNO', 'Nocturno'),
+    ]
     OPCIONES_SECCION = [
     ('1', '1'),
     ('2', '2'),
@@ -67,8 +72,8 @@ class Seccion2026(models.Model):
     ]
     #id = models.AutoField(primary_key=True)
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
-    seccion = models.CharField(max_length=5, choices=OPCIONES_SECCION, blank=True)
-    # turno = models.CharField(max_length=6, choices=OPCIONES_TURNO, blank=True )
+    seccion = models.CharField(max_length=5, choices=OPCIONES_SECCION)
+    turno = models.CharField(max_length=9,choices=OPCIONES_TURNO)
     año = models.ForeignKey(Año2026, on_delete=models.CASCADE)
     class Meta:
         #managed = False
@@ -197,18 +202,18 @@ class Matematica2026(EvaluacionDiagnostica2026):
     # ('AUSENTE','Ausente'), 
     # ]
     #cantidad_palabras_leidas = models.IntegerField(default=0, null=True)
-    pregunta_1 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_1, blank=True,null=True)
-    pregunta_2 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_2, blank=True,null=True)
-    pregunta_3 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_3, blank=True,null=True)
-    pregunta_4 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_4, blank=True,null=True)
-    pregunta_5 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_5, blank=True,null=True)
-    pregunta_6 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_6, blank=True,null=True)
-    pregunta_7 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_7, blank=True,null=True)
-    pregunta_8 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_8, blank=True,null=True)
-    pregunta_9 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_9, blank=True,null=True)
-    pregunta_10 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_10, blank=True,null=True)
-    pregunta_11 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_11, blank=True,null=True)
-    pregunta_12 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_12, blank=True,null=True)
+    pregunta_2 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_2, null=True)
+    pregunta_1 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_1, null=True)
+    pregunta_3 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_3, null=True)
+    pregunta_4 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_4, null=True)
+    pregunta_5 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_5, null=True)
+    pregunta_6 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_6, null=True)
+    pregunta_7 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_7, null=True)
+    pregunta_8 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_8, null=True)
+    pregunta_9 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_9, null=True)
+    pregunta_10 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_10, null=True)
+    pregunta_11 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_11, null=True)
+    pregunta_12 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_12, null=True)
     #asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     #alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)
     class Meta:
@@ -264,32 +269,32 @@ class Lengua2026(EvaluacionDiagnostica2026):
 	]
     #cantidad_palabras_leidas = models.IntegerField(default=0, null=True)
     pregunta_1 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_2 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_3 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_4 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_5 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_6 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_7 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_8 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_9 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_10 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_11_1 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_1, blank=True,null=True)
-    pregunta_11_2 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_2, blank=True,null=True)
-    pregunta_11_3 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_3, blank=True,null=True)
-    pregunta_11_4 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_4, blank=True,null=True)
-    pregunta_12 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_13 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_14 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_15 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_16 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_17 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_18 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_19= models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_20 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_21= models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, blank=True,null=True)
-    pregunta_22_1 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_1, blank=True,null=True)
-    pregunta_22_2 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_2, blank=True,null=True)
-    pregunta_22_3 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_3, blank=True,null=True)
+    pregunta_2 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_3 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_4 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_5 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_6 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_7 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_8 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_9 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_10 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_11_1 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_1, null=True)
+    pregunta_11_2 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_2, null=True)
+    pregunta_11_3 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_3, null=True)
+    pregunta_11_4 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_11_4, null=True)
+    pregunta_12 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_13 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_14 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_15 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_16 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_17 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_18 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_19= models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_20 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_21= models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS, null=True)
+    pregunta_22_1 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_1, null=True)
+    pregunta_22_2 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_2, null=True)
+    pregunta_22_3 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_3, null=True)
     #asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     #alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)
     class Meta:
@@ -298,4 +303,3 @@ class Lengua2026(EvaluacionDiagnostica2026):
     def __str__(self):
         nombre_examen=f'Evaluación Diagnóstica Lengua {self.alumno.nombre} {self.alumno.apellido} DNI:{self.alumno.dni}'
         return nombre_examen
-
