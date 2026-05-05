@@ -118,11 +118,11 @@ def lista(request,grado_public_id):
 def lista_grado(request,grado): 
 	#---------logica para obtener cueanexo por medio de username--------------
 	usuario= request.user
-	print(f"Este es el usuario desde lista grado: {usuario.username}")
+	#print(f"Este es el usuario desde lista grado: {usuario.username}")
 	if usuario.is_authenticated and usuario.username in listaCueanexoPermitidos:
 		name=usuario.username
 		numeroCueanexo = obtener_cueanexo(name)
-		print(f'numeroCueanexo desde lista grado: {numeroCueanexo}')
+		#print(f'numeroCueanexo desde lista grado: {numeroCueanexo}')
 
 
 	#-----logica para DNI+CUEANEXO---------
@@ -140,7 +140,7 @@ def lista_grado(request,grado):
 	
 	try:
 		instancia_grado=Grado.objects.get(cueanexo=numeroCueanexo, nombre_grado=grado)
-		print(f'instancia_grado{instancia_grado}')
+		#print(f'instancia_grado{instancia_grado}')
 		return redirect("evaluaciones_educativas:fluidez_2025:lista", grado_public_id=instancia_grado.public_id)
 	except Grado.DoesNotExist:
 		return render(request,"fluidez_2025/lista.html")
@@ -148,14 +148,8 @@ def lista_grado(request,grado):
 @login_required
 def grado(request):
 	usuario= request.user
-	print(f"Este es el usuario desde grado: {usuario.username}")
-	nameAux = usuario.username
-	numeroCueanexoAux = obtener_cueanexo(nameAux)
-	print(f'numeroCueanexoAux desde grado: {type(numeroCueanexoAux)}')
-	print(f'numeroCueanexoAux desde grado: {numeroCueanexoAux}')
 	if usuario.is_authenticated:
 		name=usuario.username
-	
 		#-----logica para DNI+CUEANEXO---------
 		# if len(name)>9  and len(name)<=17:
 		# 	#DNI+CUEANEXO
