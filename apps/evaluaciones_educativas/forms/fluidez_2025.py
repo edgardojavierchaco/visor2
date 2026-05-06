@@ -1,5 +1,5 @@
 from django import forms
-from apps.evaluaciones_educativas.models import *
+from apps.evaluaciones_educativas.models.fluidez_2025 import *
 from apps.consultasge.models import CapaUnicaOfertas
 import psycopg2
 import os
