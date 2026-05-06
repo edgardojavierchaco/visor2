@@ -1,4 +1,3 @@
-from encodings.punycode import T
 from django.db import models
 import uuid
 
