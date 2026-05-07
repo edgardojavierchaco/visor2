@@ -245,7 +245,7 @@ def dashboard_informes_api(request):
         for d in data:
             por_mes[d["meses"]] = por_mes.get(d["meses"], 0) + 1
 
-        # =========================
+        """ # =========================
         # 🏫 RANKING
         # =========================
         ranking = {}
@@ -263,8 +263,23 @@ def dashboard_informes_api(request):
                 "region_loc": next((x["region_loc"] for x in data if x["cueanexo"] == k), "")
             }
             for k, v in sorted(ranking.items(), key=lambda x: x[1], reverse=True)[:15]
-        ]
+        ] """
 
+        # =========================
+        # 📋 TABLA REAL
+        # =========================
+        ranking = []
+
+        for d in data:
+            ranking.append({
+                "cueanexo": d["cueanexo"],
+                "meses": d["meses"],
+                "annos": d["annos"],
+                "estado": d["estado"],
+                "region_loc": d["region_loc"],
+                "total": 1
+            })
+        
         # =========================
         # 🌍 REGIONES
         # =========================
