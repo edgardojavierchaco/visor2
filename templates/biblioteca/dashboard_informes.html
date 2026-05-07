@@ -193,6 +193,7 @@ table.dataTable tbody tr:hover{
             <thead>
                 <tr>
                     <th>CUEANEXO</th>
+                    <th>ESTABLECIMIENTO</th>
                     <th>MES</th>
                     <th>AÑO</th>
                     <th>ESTADO</th>
@@ -267,7 +268,7 @@ tabla = $('#tabla').DataTable({
                 return 'Reporte_'+$('#meses').val()+'_'+$('#annos').val();
             },
             exportOptions:{
-                columns:[0,1,2,3,4,5],
+                columns:[0,1,2,3,4,5,6],
                 format:{
                     body:function(data){
                         return $('<div>').html(data).text().trim();
@@ -384,6 +385,7 @@ tabla.clear();
 data.ranking.forEach(r=>{
     tabla.row.add([
     r.cueanexo,
+    r.nom_est,
     r.meses,
     r.annos,
     estadoBadge(r.estado),
