@@ -56,3 +56,16 @@ reentrenar modelo de Machine Learning
 docker exec visor_local_django python manage.py reentrenar_modelo
 docker exec visor_production_django python manage.py reentrenar_modelo
 
+
+########## 
+FLUJO
+##########
+
+git pull
+
+docker compose -f production.yml up -d --build django celery celery-beat
+
+docker compose -f production.yml exec django python manage.py migrate --settings=config.settings.production
+
+docker compose -f production.yml exec django python manage.py collectstatic --noinput --settings=config.settings.production
+
