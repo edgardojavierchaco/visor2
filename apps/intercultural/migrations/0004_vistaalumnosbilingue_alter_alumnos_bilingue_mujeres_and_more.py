@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Vista_Alumno_Bilingue",
                 "verbose_name_plural": "Vistas_Alumnos_Bilingues",
-                "db_table": "v_capa_unica_ofertas",
+                "db_table": "v_capa_unica_ofertas_ant",
                 "managed": False,
             },
         ),

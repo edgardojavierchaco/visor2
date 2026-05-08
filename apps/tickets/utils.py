@@ -8,7 +8,7 @@ def obtener_region_escuela(cue):
 
         cursor.execute("""
             SELECT region_loc
-            FROM v_capa_unica_ofertas
+            FROM v_capa_unica_ofertas_ant
             WHERE cueanexo = %s
             LIMIT 1
         """,[cue])

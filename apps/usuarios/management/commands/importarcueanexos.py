@@ -11,7 +11,7 @@ def limpiar_cuil(cuil):
 
 
 class Command(BaseCommand):
-    help = "Importa relación usuario (CUIL) - cueanexo desde v_capa_unica_ofertas"
+    help = "Importa relación usuario (CUIL) - cueanexo desde v_capa_unica_ofertas_ant"
 
     def handle(self, *args, **kwargs):
 
@@ -20,7 +20,7 @@ class Command(BaseCommand):
                 SELECT DISTINCT
                     cueanexo,
                     resploc_cuitcuil
-                FROM public.v_capa_unica_ofertas
+                FROM public.v_capa_unica_ofertas_ant
                 WHERE resploc_cuitcuil IS NOT NULL
             """)
 

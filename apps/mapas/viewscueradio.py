@@ -62,7 +62,7 @@ def filter_cueradio(request):
 
             
             cursor = connection.cursor()
-            query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1"
+            query = "SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas_ant WHERE 1=1"
             parameters = []
 
             if cueanexos:
@@ -105,7 +105,7 @@ def filter_cueradio(request):
                     cursor.execute("""
                         SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, 
                         ST_Distance(ST_MakePoint(%s, %s)::geography, ST_MakePoint(long, lat)::geography) AS distance
-                        FROM v_capa_unica_ofertas
+                        FROM v_capa_unica_ofertas_ant
                         WHERE cueanexo <> %s AND ST_Distance(ST_MakePoint(%s, %s)::geography, ST_MakePoint(long, lat)::geography) <= %s;
                     """, (center_lng, center_lat, cueanexos, center_lng, center_lat, radio))
                     nearby_rows = cursor.fetchall()

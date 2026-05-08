@@ -61,7 +61,7 @@ def ResultadosLenguaView(request):
     usuario= request.user.username
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -80,7 +80,7 @@ def exportar_pdf_lengua(request):
     
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -149,7 +149,7 @@ def ResultadosMatematicaView(request):
     usuario= request.user.username
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -167,7 +167,7 @@ def exportar_pdf_matematica(request):
     usuario = request.user.username
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -209,7 +209,7 @@ def exportar_pdf_lengua_cueanexo(request):
     
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -272,7 +272,7 @@ def exportar_pdf_matematica_cueanexo(request):
     usuario = request.user.username
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:

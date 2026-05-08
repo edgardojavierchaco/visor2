@@ -11,6 +11,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterModelTable(
             name="vistaalumnosbilingue",
-            table="v_capa_unica_ofertas",
+            table="v_capa_unica_ofertas_ant",
         ),
     ]

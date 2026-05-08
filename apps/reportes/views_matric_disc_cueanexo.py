@@ -51,7 +51,7 @@ def matric_disc_ajax(request):
             LEFT JOIN (
                 SELECT cueanexo, nom_est, sector, ambito, region_loc, departamento, localidad
                 FROM dblink('dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas')
+                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant')
                 AS padron(cueanexo varchar, nom_est varchar, ambito varchar, sector varchar, departamento varchar, localidad varchar, region_loc varchar)
             ) AS p ON mc.cueanexo = p.cueanexo
             WHERE 1=1
@@ -149,7 +149,7 @@ def filter_data_matric_disc_ini_cueanexo(request):
             LEFT JOIN (
                 SELECT cueanexo, nom_est, sector, ambito, region_loc, departamento, localidad
                 FROM dblink('dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas')
+                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant')
                 AS padron(cueanexo varchar, nom_est varchar, ambito varchar, sector varchar, departamento varchar, localidad varchar, region_loc varchar)
             ) AS p ON mc.cueanexo = p.cueanexo
             WHERE 1=1

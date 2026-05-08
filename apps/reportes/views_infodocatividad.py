@@ -25,7 +25,7 @@ def consulta_docentes_actividad(request):
 
     # Obtener los departamentos únicos
     with connection.cursor() as cursor:
-        cursor.execute("SELECT DISTINCT departamento FROM v_capa_unica_ofertas")
+        cursor.execute("SELECT DISTINCT departamento FROM v_capa_unica_ofertas_ant")
         departamentos = [row[0] for row in cursor.fetchall()]
 
     # Consulta SQL dependiendo del departamento seleccionado

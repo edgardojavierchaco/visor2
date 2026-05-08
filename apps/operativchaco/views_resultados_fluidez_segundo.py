@@ -50,7 +50,7 @@ def ResultadosFluidezSegundoView(request):
     usuario= request.user.username
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -69,7 +69,7 @@ def exportar_pdf_segundo(request):
     
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:
@@ -114,7 +114,7 @@ def exportar_pdf_segundo_cueanexo(request):
     
     query = """
             SELECT nom_est 
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
             WHERE cueanexo = %s            
         """
     with connection.cursor() as cursor:

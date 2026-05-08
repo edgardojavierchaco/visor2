@@ -107,7 +107,7 @@ class CapaUnicaOfertas(models.Model):
 
     class Meta:
         managed = False
-        db_table = "v_capa_unica_ofertas"
+        db_table = "v_capa_unica_ofertas_ant"
         verbose_name = "Escuela_colectivo"
         verbose_name_plural = "Escuelas_colectivos"
     

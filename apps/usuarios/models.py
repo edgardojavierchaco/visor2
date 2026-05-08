@@ -108,11 +108,11 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
 
         with connection.cursor() as cursor:
             if categoria == 'all':
-                cursor.execute("SELECT * FROM v_capa_unica_ofertas")
+                cursor.execute("SELECT * FROM v_capa_unica_ofertas_ant")
             elif categoria == 'regional':
                 cursor.execute("""
                     SELECT v.*
-                    FROM public.v_capa_unica_ofertas v
+                    FROM public.v_capa_unica_ofertas_ant v
                     JOIN public.usuarios_regionalusuarios r
                         ON r.region_loc = v.region_loc
                     WHERE r.usuario = %s
@@ -120,14 +120,14 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
             elif categoria == 'propio':
                 cursor.execute("""
                     SELECT *
-                    FROM v_capa_unica_ofertas
+                    FROM v_capa_unica_ofertas_ant
                     WHERE REGEXP_REPLACE(resploc_cuitcuil, '[^0-9]', '', 'g') =
                           REGEXP_REPLACE(%s, '[^0-9]', '', 'g')
                 """, [self.username])
             elif categoria == 'nivel':
                 cursor.execute("""
                     SELECT v.*
-                    FROM public.v_capa_unica_ofertas v
+                    FROM public.v_capa_unica_ofertas_ant v
                     JOIN public.niveles_asignados n
                         ON n.nivel = v.oferta
                     WHERE n.cuil= %s
