@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Escuela",
                 "verbose_name_plural": "Escuelas",
-                "db_table": "v_capa_unica_ofertas",
+                "db_table": "v_capa_unica_ofertas_ant",
                 "managed": False,
             },
         ),

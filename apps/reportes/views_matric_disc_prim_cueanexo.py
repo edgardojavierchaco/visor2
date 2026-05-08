@@ -113,7 +113,7 @@ def matric_disc_prim_ajax(request):
                     FROM 
                         dblink(
                             'dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                            'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas'
+                            'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant'
                         ) AS padron(cueanexo character varying, nom_est character varying, ambito character varying, sector character varying, departamento character varying, localidad character varying, region_loc character varying)
                 ) AS p
                 ON mc.cueanexo = p.cueanexo
@@ -253,7 +253,7 @@ def filter_data_matric_disc_prim_cueanexo(request):
                 FROM 
                     dblink(
                         'dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas'
+                        'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant'
                     ) AS padron(cueanexo character varying, nom_est character varying, ambito character varying, sector character varying, departamento character varying, localidad character varying, region_loc character varying)
             ) AS p
             ON mc.cueanexo = p.cueanexo

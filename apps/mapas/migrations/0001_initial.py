@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ("departamento", models.CharField(verbose_name="departamento")),
             ],
             options={
-                "db_table": "v_capa_unica_ofertas",
+                "db_table": "v_capa_unica_ofertas_ant",
                 "managed": False,
             },
         ),

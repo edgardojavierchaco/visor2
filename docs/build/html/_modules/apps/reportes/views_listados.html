@@ -95,7 +95,7 @@
 
     <span class="c1"># Obtener los departamentos únicos</span>
     <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
-        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT departamento FROM v_capa_unica_ofertas&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT departamento FROM v_capa_unica_ofertas_ant&quot;</span><span class="p">)</span>
         <span class="n">departamentos</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
 
     <span class="c1"># Construir la consulta SQL sin filtro inicialmente</span>
@@ -121,7 +121,7 @@
 <span class="s2">            SUM(CASE WHEN acronimo = &#39;BI ANEXO&#39; OR acronimo = &#39;BI&#39; THEN 1 ELSE 0 END) AS total_biblio,</span>
 <span class="s2">            SUM(CASE WHEN acronimo = &#39;CEF&#39; THEN 1 ELSE 0 END) AS total_cef</span>
 <span class="s2">        FROM </span>
-<span class="s2">            v_capa_unica_ofertas</span>
+<span class="s2">            v_capa_unica_ofertas_ant</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Si un departamento ha sido seleccionado, agregar el WHERE</span>
@@ -217,11 +217,11 @@
 
     <span class="c1"># Obtener los departamentos únicos</span>
     <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
-        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT region_loc FROM v_capa_unica_ofertas&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT DISTINCT region_loc FROM v_capa_unica_ofertas_ant&quot;</span><span class="p">)</span>
         <span class="n">regionales</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
     
     
-    <span class="n">local</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT DISTINCT localidad FROM v_capa_unica_ofertas&quot;&quot;&quot;</span>
+    <span class="n">local</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;SELECT DISTINCT localidad FROM v_capa_unica_ofertas_ant&quot;&quot;&quot;</span>
     
     <span class="k">if</span> <span class="n">selected_regionales</span><span class="p">:</span>
         <span class="n">local</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; WHERE region_loc=&#39;</span><span class="si">{</span><span class="n">selected_regionales</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
@@ -255,7 +255,7 @@
 <span class="s2">            SUM(CASE WHEN acronimo = &#39;BI ANEXO&#39; OR acronimo = &#39;BI&#39; THEN 1 ELSE 0 END) AS total_biblio,</span>
 <span class="s2">            SUM(CASE WHEN acronimo = &#39;CEF&#39; THEN 1 ELSE 0 END) AS total_cef</span>
 <span class="s2">        FROM </span>
-<span class="s2">            v_capa_unica_ofertas</span>
+<span class="s2">            v_capa_unica_ofertas_ant</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Si un departamento ha sido seleccionado, agregar el WHERE</span>

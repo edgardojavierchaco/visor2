@@ -38,7 +38,7 @@ def filter_data_efec_aban_rep(request):
                 ts.categoria_modificada, 
                 SUM(ts.tasa_efectiva) AS tasa_efectiva                
             FROM indicadores.tasas1_primaria_ra2024 as ts
-            LEFT JOIN public.v_capa_unica_ofertas as vcuo
+            LEFT JOIN public.v_capa_unica_ofertas_ant as vcuo
             ON ts.cueanexo::text = vcuo.cueanexo::text
             WHERE ts.categoria_modificada != 'total' and vcuo.region_loc=%s
             GROUP BY vcuo.region_loc, ts.categoria_modificada
@@ -51,7 +51,7 @@ def filter_data_efec_aban_rep(request):
                 ts.categoria_modificada,                 
                 SUM(ts.tasa_abandono) AS tasa_abandono
             FROM indicadores.tasas1_primaria_ra2024 as ts
-            LEFT JOIN public.v_capa_unica_ofertas as vcuo
+            LEFT JOIN public.v_capa_unica_ofertas_ant as vcuo
             ON ts.cueanexo::text = vcuo.cueanexo::text
             WHERE ts.categoria_modificada != 'total' and vcuo.region_loc=%s
             GROUP BY vcuo.region_loc, ts.categoria_modificada
@@ -64,7 +64,7 @@ def filter_data_efec_aban_rep(request):
                 ts.categoria_modificada,                  
                 SUM(ts.tasa_rep) AS tasa_repitencia
             FROM indicadores.tasas1_primaria_ra2024 as ts
-            LEFT JOIN public.v_capa_unica_ofertas as vcuo
+            LEFT JOIN public.v_capa_unica_ofertas_ant as vcuo
             ON ts.cueanexo::text = vcuo.cueanexo::text
             WHERE ts.categoria_modificada != 'total' and vcuo.region_loc=%s
             GROUP BY vcuo.region_loc, ts.categoria_modificada
@@ -148,7 +148,7 @@ def filter_data_efec_aban_rep_total(request):
                 ts.categoria_modificada, 
                 SUM(ts.tasa_efectiva) AS tasa_efectiva                
             FROM indicadores.tasas1_primaria_ra2024 as ts
-            LEFT JOIN public.v_capa_unica_ofertas as vcuo
+            LEFT JOIN public.v_capa_unica_ofertas_ant as vcuo
             ON ts.cueanexo::text = vcuo.cueanexo::text
             WHERE ts.categoria_modificada != 'total'
             GROUP BY vcuo.region_loc, ts.categoria_modificada
@@ -161,7 +161,7 @@ def filter_data_efec_aban_rep_total(request):
                 ts.categoria_modificada,                 
                 SUM(ts.tasa_abandono) AS tasa_abandono
             FROM indicadores.tasas1_primaria_ra2024 as ts
-            LEFT JOIN public.v_capa_unica_ofertas as vcuo
+            LEFT JOIN public.v_capa_unica_ofertas_ant as vcuo
             ON ts.cueanexo::text = vcuo.cueanexo::text
             WHERE ts.categoria_modificada != 'total'
             GROUP BY vcuo.region_loc, ts.categoria_modificada
@@ -174,7 +174,7 @@ def filter_data_efec_aban_rep_total(request):
                 ts.categoria_modificada,                  
                 SUM(ts.tasa_rep) AS tasa_repitencia
             FROM indicadores.tasas1_primaria_ra2024 as ts
-            LEFT JOIN public.v_capa_unica_ofertas as vcuo
+            LEFT JOIN public.v_capa_unica_ofertas_ant as vcuo
             ON ts.cueanexo::text = vcuo.cueanexo::text
             WHERE ts.categoria_modificada != 'total'
             GROUP BY vcuo.region_loc, ts.categoria_modificada

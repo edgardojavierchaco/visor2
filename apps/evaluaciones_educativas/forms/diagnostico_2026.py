@@ -523,7 +523,7 @@
 # # 	try:
 # # 		conn = psycopg2.connect(**db_params)
 # # 		with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-# # 			query_base = "SELECT cueanexo FROM v_capa_unica_ofertas"
+# # 			query_base = "SELECT cueanexo FROM v_capa_unica_ofertas_ant"
 			
 # # 			# 2. EMPEZAMOS LA LISTA DINÁMICA
 # # 			# Siempre incluimos la oferta como primer filtro
@@ -580,7 +580,7 @@
 # #     try:
 # #         conn = psycopg2.connect(**db_params)
 # #         with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-# #             query_base = "SELECT cueanexo FROM v_capa_unica_ofertas"
+# #             query_base = "SELECT cueanexo FROM v_capa_unica_ofertas_ant"
             
 # #             # 2. Construcción dinámica de condiciones (Sin Región)
 # #             condiciones = ["oferta ILIKE %s"]

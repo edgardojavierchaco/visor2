@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ("localidad", models.CharField(max_length=150)),
             ],
             options={
-                "db_table": "v_capa_unica_ofertas",
+                "db_table": "v_capa_unica_ofertas_ant",
                 "managed": False,
             },
         ),

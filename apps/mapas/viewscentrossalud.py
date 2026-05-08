@@ -29,7 +29,7 @@ def api_salud(request):
             # 🔥 Centro
             cursor.execute("""
                 SELECT lat, long, nom_est
-                FROM v_capa_unica_ofertas
+                FROM v_capa_unica_ofertas_ant
                 WHERE cueanexo = %s
                 AND lat IS NOT NULL AND long IS NOT NULL
                 AND lat != 0 AND long != 0

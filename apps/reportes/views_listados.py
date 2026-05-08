@@ -13,7 +13,7 @@ def consulta_ofertas(request):
 
     # Obtener departamentos únicos
     with connection.cursor() as cursor:
-        cursor.execute("SELECT DISTINCT departamento FROM v_capa_unica_ofertas")
+        cursor.execute("SELECT DISTINCT departamento FROM v_capa_unica_ofertas_ant")
         departamentos = [row[0] for row in cursor.fetchall()]
 
     # Consulta principal
@@ -38,7 +38,7 @@ def consulta_ofertas(request):
             SUM(CASE WHEN oferta ILIKE 'Común - SNU%' THEN 1 ELSE 0 END) AS total_snu,
             SUM(CASE WHEN acronimo ILIKE 'BI%' THEN 1 ELSE 0 END) AS total_biblio,
             SUM(CASE WHEN acronimo ILIKE 'CEF%' THEN 1 ELSE 0 END) AS total_cef
-        FROM v_capa_unica_ofertas
+        FROM v_capa_unica_ofertas_ant
     """
     if selected_departamento:
         query += f" WHERE departamento='{selected_departamento}'"
@@ -68,7 +68,7 @@ def consulta_ofertas_reg(request):
 
     # Obtener regiones únicas
     with connection.cursor() as cursor:
-        cursor.execute("SELECT DISTINCT region_loc FROM v_capa_unica_ofertas")
+        cursor.execute("SELECT DISTINCT region_loc FROM v_capa_unica_ofertas_ant")
         regionales = [row[0] for row in cursor.fetchall()]
 
     # Consulta principal
@@ -90,7 +90,7 @@ def consulta_ofertas_reg(request):
             SUM(CASE WHEN oferta ILIKE 'Especial%' THEN 1 ELSE 0 END) AS total_especial,
             SUM(CASE WHEN acronimo ILIKE 'BI%' THEN 1 ELSE 0 END) AS total_biblio,
             SUM(CASE WHEN acronimo ILIKE 'CEF%' THEN 1 ELSE 0 END) AS total_cef
-        FROM v_capa_unica_ofertas
+        FROM v_capa_unica_ofertas_ant
     """
     if selected_region:
         query += f" WHERE region_loc='{selected_region}'"

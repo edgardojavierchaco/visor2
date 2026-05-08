@@ -138,7 +138,7 @@
 
             
             <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
-            <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas WHERE 1=1&quot;</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad FROM v_capa_unica_ofertas_ant WHERE 1=1&quot;</span>
             <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
 
             <span class="k">if</span> <span class="n">cueanexos</span><span class="p">:</span>
@@ -181,7 +181,7 @@
                     <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">                        SELECT cueanexo, lat, long, nom_est, oferta, ambito, sector, region_loc, calle, numero, localidad, </span>
 <span class="s2">                        ST_Distance(ST_MakePoint(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)::geography, ST_MakePoint(long, lat)::geography) AS distance</span>
-<span class="s2">                        FROM v_capa_unica_ofertas</span>
+<span class="s2">                        FROM v_capa_unica_ofertas_ant</span>
 <span class="s2">                        WHERE cueanexo &lt;&gt; </span><span class="si">%s</span><span class="s2"> AND ST_Distance(ST_MakePoint(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)::geography, ST_MakePoint(long, lat)::geography) &lt;= </span><span class="si">%s</span><span class="s2">;</span>
 <span class="s2">                    &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">center_lng</span><span class="p">,</span> <span class="n">center_lat</span><span class="p">,</span> <span class="n">cueanexos</span><span class="p">,</span> <span class="n">center_lng</span><span class="p">,</span> <span class="n">center_lat</span><span class="p">,</span> <span class="n">radio</span><span class="p">))</span>
                     <span class="n">nearby_rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>

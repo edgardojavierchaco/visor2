@@ -91,7 +91,7 @@ def grafico_aplicador_region(request):
             cenpe."Docente_Aplicador" AS da
         LEFT JOIN (
             SELECT DISTINCT cueanexo, region_loc
-            FROM public.v_capa_unica_ofertas
+            FROM public.v_capa_unica_ofertas_ant
         ) AS vcu
         ON da.cueanexo = vcu.cueanexo::text
         WHERE da.dni_docen = '0'

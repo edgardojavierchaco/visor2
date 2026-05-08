@@ -65,7 +65,7 @@ def get_table_data(request):
         FROM funcion.visor_cargo_comun_primaria('ra_carga2024') as vccp
         LEFT JOIN (
             SELECT DISTINCT ON(vcuo.padron_cueanexo) vcuo.padron_cueanexo, vcuo.region_loc as regional, departamento, localidad
-            FROM public.v_capa_unica_ofertas as vcuo
+            FROM public.v_capa_unica_ofertas_ant as vcuo
         ) as vcuo
         ON vccp.cueanexo::text = vcuo.padron_cueanexo::text
         WHERE vccp.total != 0
@@ -107,7 +107,7 @@ def obtener_columnas_cargos(request):
             SELECT * FROM funcion.visor_cargo_comun_primaria('ra_carga2024') as vccp
             LEFT JOIN(
                 SELECT cueanexo,region_loc as regional, departamento, localidad
-                        FROM public.v_capa_unica_ofertas
+                        FROM public.v_capa_unica_ofertas_ant
                     ) as vcuo
                     on vccp.cueanexo::text=vcuo.cueanexo::text
                     LIMIT 0;                                                                                        

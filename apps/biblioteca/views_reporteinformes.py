@@ -95,7 +95,7 @@ def generar_informe_list(request):
 
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT cueanexo FROM v_capa_unica_ofertas WHERE acronimo ILIKE 'BI%'")
+            cursor.execute("SELECT DISTINCT cueanexo FROM v_capa_unica_ofertas_ant WHERE acronimo ILIKE 'BI%'")
             ofertas = cursor.fetchall()
             print("✅ Ofertas encontradas:", ofertas)  # Depuración
     except Exception as e:
