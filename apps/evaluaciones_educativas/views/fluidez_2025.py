@@ -14,6 +14,7 @@ import os
 from openpyxl import Workbook
 from apps.consultasge.models import CapaUnicaOfertas
 from django.core.exceptions import PermissionDenied
+from django.contrib import messages
 
 listaCueanexoPermitidos = [220002601, 220002901, 220010500, 220011100, 220011400, 220012000, 220012900, 220013400, 220017100, 220017200, 220018003, 220020500, 220021000, 220021200, 220021501, 220021800, 220022000, 220022700, 220025800, 220025901, 220026602, 220026603, 220026604, 220030700, 220031301, 220033201, 220034102, 220034104, 220034400, 220035100, 220037600, 220041900, 220046500, 220047200, 220050001, 220051400, 220051500, 220051502, 220052101, 220058400, 220058500, 220058800, 220058900, 220059000, 220059700, 220065400, 220065600, 220066500, 220069000, 220070200, 220071600, 220073301, 220074400, 220074501, 220078600, 220079500, 220091301, 220091302, 220091600, 220104800, 220105700, 220105701, 220109300, 220111101, 220111300, 220124700, 220126500, 220126700, 220129300, 220142100, 220183900, 220184100, 220184601, 220184602, 220206000, 220209200, 220220600, 220235804, 220260600, 220273100, 220006500, 220012800, 220020101, 220020300, 220021500, 220023800, 220024102, 220025902, 220034200, 220035301, 220035800, 220042601, 220047300, 220048300, 220049600, 220051503, 220053201, 220063901, 220065601, 220070201, 220075201, 220077100, 220078900, 220081700, 220084600, 220084601, 220085500, 220102802, 220104302, 220116101, 220117600, 220123000, 220124101, 220125201, 220131900, 220137101, 220139300, 220142201, 220144001, 220203900, 220204001, 220226700]
 
@@ -123,8 +124,18 @@ def lista(request,grado_public_id):
 				if int(cueanexo) not in listaCueanexoPermitidos:
 					raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 				else:
-					instancia_grado=Grado.objects.get(cueanexo=cueanexo, nombre_grado=grado)
-					return redirect("evaluaciones_educativas:fluidez_2025:lista", grado_public_id=instancia_grado.public_id)
+					try:
+						instancia_grado=Grado.objects.get(cueanexo=cueanexo, nombre_grado=grado)
+						return redirect("evaluaciones_educativas:fluidez_2025:lista", grado_public_id=instancia_grado.public_id)
+					except Grado.DoesNotExist:
+						messages.error(request, "No tiene un grado disponible para los datos ingresados.")
+	
+						# 2. Obtienes la URL de donde venía el usuario
+						return_url = request.META.get('HTTP_REFERER', '/') 
+	
+						# 3. Rediriges a esa misma URL
+						return redirect(return_url)
+
 	else:
 		try:
 			instancia_grado=Grado.objects.get(public_id=grado_public_id)
