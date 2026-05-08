@@ -190,12 +190,16 @@ def dashboard_informes_api(request):
         # =========================
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT cueanexo, region_loc
+                SELECT cueanexo, region_loc, nom_est
                 FROM v_capa_unica_ofertas_ant
                 WHERE region_loc IS NOT NULL
             """)
             region_map = {
-                str(row[0]): row[1]
+                str(row[0]): {
+                    "region_loc": row[1],
+                    "nom_est": row[2]
+                }
+                
                 for row in cursor.fetchall()
             }
 
@@ -216,7 +220,10 @@ def dashboard_informes_api(request):
         # 🔥 INYECTAR REGION
         # =========================
         for d in data:
+            info = region_map.get(str(d["cueanexo"]), {})
+            
             d["region_loc"] = region_map.get(str(d["cueanexo"]), "SIN REGIÓN")
+            d["nom_est"] = info.get("nom_est", "SIN NOMBRE")
 
         # =========================
         # 🌍 FILTRO REGION
@@ -245,7 +252,7 @@ def dashboard_informes_api(request):
         for d in data:
             por_mes[d["meses"]] = por_mes.get(d["meses"], 0) + 1
 
-        # =========================
+        """ # =========================
         # 🏫 RANKING
         # =========================
         ranking = {}
@@ -263,12 +270,32 @@ def dashboard_informes_api(request):
                 "region_loc": next((x["region_loc"] for x in data if x["cueanexo"] == k), "")
             }
             for k, v in sorted(ranking.items(), key=lambda x: x[1], reverse=True)[:15]
-        ]
+        ] """
 
+        # =========================
+        # 📋 TABLA REAL
+        # =========================
+        ranking = []
+
+        for d in data:
+            ranking.append({
+                "cueanexo": d["cueanexo"],
+                "nom_est": d["nom_est"],
+                "meses": d["meses"],
+                "annos": d["annos"],
+                "estado": d["estado"],
+                "region_loc": d["region_loc"],
+                "total": 1
+            })
+        
         # =========================
         # 🌍 REGIONES
         # =========================
-        regiones = sorted(set(region_map.values()))
+        regiones = sorted(set(
+            v["region_loc"]
+            for v in region_map.values()
+            if v.get("region_loc")
+        ))
 
         return JsonResponse({
             "success": True,
