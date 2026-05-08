@@ -14,6 +14,7 @@ import os
 from openpyxl import Workbook
 from apps.consultasge.models import CapaUnicaOfertas
 from django.core.exceptions import PermissionDenied
+from django.contrib import messages
 
 listaCueanexoPermitidos = [220002601, 220002901, 220010500, 220011100, 220011400, 220012000, 220012900, 220013400, 220017100, 220017200, 220018003, 220020500, 220021000, 220021200, 220021501, 220021800, 220022000, 220022700, 220025800, 220025901, 220026602, 220026603, 220026604, 220030700, 220031301, 220033201, 220034102, 220034104, 220034400, 220035100, 220037600, 220041900, 220046500, 220047200, 220050001, 220051400, 220051500, 220051502, 220052101, 220058400, 220058500, 220058800, 220058900, 220059000, 220059700, 220065400, 220065600, 220066500, 220069000, 220070200, 220071600, 220073301, 220074400, 220074501, 220078600, 220079500, 220091301, 220091302, 220091600, 220104800, 220105700, 220105701, 220109300, 220111101, 220111300, 220124700, 220126500, 220126700, 220129300, 220142100, 220183900, 220184100, 220184601, 220184602, 220206000, 220209200, 220220600, 220235804, 220260600, 220273100, 220006500, 220012800, 220020101, 220020300, 220021500, 220023800, 220024102, 220025902, 220034200, 220035301, 220035800, 220042601, 220047300, 220048300, 220049600, 220051503, 220053201, 220063901, 220065601, 220070201, 220075201, 220077100, 220078900, 220081700, 220084600, 220084601, 220085500, 220102802, 220104302, 220116101, 220117600, 220123000, 220124101, 220125201, 220131900, 220137101, 220139300, 220142201, 220144001, 220203900, 220204001, 220226700]
 
@@ -94,65 +95,102 @@ def editar_alumno(request,alumno_public_id):
 	return render(request, "fluidez_2025/alumno.html", context)
 
 @login_required
-def lista(request,grado_public_id): 
-	instancia_grado=get_object_or_404(Grado,public_id=grado_public_id)
-	instancia_seccion=Seccion.objects.filter(grado_id=instancia_grado)
-	alumnos = Alumno.objects.filter(seccion_id__in=instancia_seccion).order_by('nombre')
-	# print(instancia_grado)
-	# print('-'*50)
-	# print(instancia_seccion)
-	# print('-'*50)
-	# print(alumnos)
-	evaluacion = EvaluacionFluidezLectora.objects.filter(alumno__in=alumnos)
-	# print('-'*50)
-	# print(evaluacion)
+def lista(request,grado_public_id):
 	contexto = {
-		'lista_alumnos': alumnos,
-		'evaluciones': evaluacion,
-		'nombre_grado':instancia_grado.nombre_grado,
-		'grado_public_id':instancia_grado.public_id
+	'cueanexo':None,
+	'grado_form_data': None,
+	'lista_alumnos': None,
+	'evaluciones': None,
+	'nombre_grado':None,
+	'grado_public_id':None
 	}
+	usuario= request.user
+	name=usuario.username
+	opciones_grado = [
+					 ('2do Año/Grado', '2do Año/Grado'),
+					  ('3er Año/Grado','3er Año/Grado')
+						]
+	grado_form_data = GradoViewForm(cuil=name)
+	grado_form_data.fields['grado'].choices = opciones_grado
+	contexto["grado_form_data"] = grado_form_data
+	if request.method == 'POST':
+		grado_form_data = GradoViewForm(request.POST,cuil=name)
+		grado_form_data.fields['grado'].choices = opciones_grado
+		contexto["grado_form_data"] = grado_form_data
+		if grado_form_data.is_valid():
+			with transaction.atomic():
+				grado=grado_form_data.cleaned_data["grado"]
+				cueanexo=grado_form_data.cleaned_data["cueanexo"]
+				if int(cueanexo) not in listaCueanexoPermitidos:
+					raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+				else:
+					try:
+						instancia_grado=Grado.objects.get(cueanexo=cueanexo, nombre_grado=grado)
+						return redirect("evaluaciones_educativas:fluidez_2025:lista", grado_public_id=instancia_grado.public_id)
+					except Grado.DoesNotExist:
+						messages.error(request, "No tiene un grado disponible para los datos ingresados.")
+	
+						# 2. Obtienes la URL de donde venía el usuario
+						return_url = request.META.get('HTTP_REFERER', '/') 
+	
+						# 3. Rediriges a esa misma URL
+						return redirect(return_url)
+
+	else:
+		try:
+			instancia_grado=Grado.objects.get(public_id=grado_public_id)
+			instancia_seccion=Seccion.objects.filter(grado_id=instancia_grado)
+			alumnos = Alumno.objects.filter(seccion_id__in=instancia_seccion).order_by('nombre')
+			evaluacion = EvaluacionFluidezLectora.objects.filter(alumno__in=alumnos)
+			contexto["nombre_grado"] = instancia_grado.nombre_grado
+			contexto["cueanexo"] = instancia_grado.cueanexo
+			contexto["lista_alumnos"] = alumnos
+			contexto["evaluciones"] = evaluacion
+			contexto["grado_public_id"] = instancia_grado.public_id
+		except Grado.DoesNotExist:
+			raise PermissionDenied("No tiene grado disponible.")
 	return render(request,"fluidez_2025/lista.html", contexto)
 #-----------------lista para grados------------------
 @login_required
 def lista_grado(request,grado): 
 	#---------logica para obtener cueanexo por medio de username--------------
-
+	#contexto={}
 	usuario= request.user
 	name=usuario.username
-	numeroCueanexo = obtener_cueanexo(name)
-	#print(f"Este es el usuario desde lista grado: {usuario.username}")
-	if usuario.is_authenticated and usuario.username in listaCueanexoPermitidos:
-		name=usuario.username
-		numeroCueanexo = obtener_cueanexo(name)
-		#print(f'numeroCueanexo desde lista grado: {numeroCueanexo}')
-
-
-	#-----logica para DNI+CUEANEXO---------
-	# if len(name)>9  and len(name)<=17:
-	# 	#DNI+CUEANEXO
-	# 	nombre_usuario_cueanexo=name[8:]
-	# else:
-	# 	nombre_usuario_cueanexo=name
-	# #cueanexo=int(nombre_usuario_cueanexo)   
-#-----logica para DNI+CUEANEXO---------
-	if grado =='SEGUNDO':
-		grado='2do Año/Grado'
-	elif grado =='TERCERO':
-			grado='3er Año/Grado'
-	
-	try:
-		instancia_grado=Grado.objects.get(cueanexo=numeroCueanexo, nombre_grado=grado)
-		#print(f'instancia_grado{instancia_grado}')
-		return redirect("evaluaciones_educativas:fluidez_2025:lista", grado_public_id=instancia_grado.public_id)
-	except Grado.DoesNotExist:
-		return render(request,"fluidez_2025/lista.html")
+	opciones_grado = [
+					 ('2do Año/Grado', '2do Año/Grado'),
+					  ('3er Año/Grado','3er Año/Grado')
+						]
+	grado_form_data = GradoViewForm(cuil=name)
+	if request.method == 'POST':
+		grado_form_data = GradoViewForm(request.POST,cuil=name)
+		grado_form_data.fields['grado'].choices = opciones_grado
+		if grado_form_data.is_valid():
+			with transaction.atomic():
+				grado=grado_form_data.cleaned_data["grado"]
+				cueanexo=grado_form_data.cleaned_data["cueanexo"]
+				#print(f'{cueanexo}{grado}')
+				if int(cueanexo) not in listaCueanexoPermitidos:
+					raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+				else:
+					try:
+						#print(f'{cueanexo}{grado}')
+						instancia_grado=Grado.objects.get(cueanexo=cueanexo, nombre_grado=grado)
+						return redirect("evaluaciones_educativas:fluidez_2025:lista", grado_public_id=instancia_grado.public_id)
+					except Grado.DoesNotExist:
+						return render(request,"fluidez_2025/lista.html",contexto)
+	else:
+		grado_form_data.fields['grado'].choices = opciones_grado
+	contexto = {
+		'grado_form_data': grado_form_data
+	}
+	return render(request,"fluidez_2025/lista.html",contexto)
 	
 @login_required
 def grado(request):
 	usuario= request.user
 	name=usuario.username
-	numeroCueanexo = obtener_cueanexo(name)
+	#numeroCueanexo = obtener_cueanexo(name)
 	# if usuario.is_authenticated:
 		# name=usuario.username
 		#-----logica para DNI+CUEANEXO---------
@@ -163,24 +201,26 @@ def grado(request):
 		# 	nombre_usuario_cueanexo=name
 		# #cueanexo=int(nombre_usuario_cueanexo)
 		#-----logica para DNI+CUEANEXO---------
-	if numeroCueanexo not in listaCueanexoPermitidos:
-		raise PermissionDenied("No tienes permiso para acceder a esta sección.")
-		
+	#if numeroCueanexo not in listaCueanexoPermitidos:
+	#	raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 	opciones_grado = [
 					 ('2do Año/Grado', '2do Año/Grado'),
 					  ('3er Año/Grado','3er Año/Grado')
 						]
-	grado_form_data = GradoViewForm()
+	grado_form_data = GradoViewForm(cuil=name)
 	if request.method == 'POST':
-		grado_form_data = GradoViewForm(request.POST)
+		grado_form_data = GradoViewForm(request.POST,cuil=name)
 		grado_form_data.fields['grado'].choices = opciones_grado
 		if grado_form_data.is_valid():
 			with transaction.atomic():
 				grado=grado_form_data.cleaned_data["grado"]
-				#print(grado)
-				instancia_grado, creado_grado=Grado.objects.get_or_create(
+				cueanexo=grado_form_data.cleaned_data["cueanexo"]
+				if int(cueanexo) not in listaCueanexoPermitidos:
+					raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+				else:
+					instancia_grado, creado_grado=Grado.objects.get_or_create(
 					nombre_grado=grado,
-					cueanexo=numeroCueanexo
+					cueanexo=cueanexo
 					)
 				grado_public=instancia_grado.public_id
 			return redirect("evaluaciones_educativas:fluidez_2025:carga_alumno", grado_public_id=grado_public)
@@ -198,7 +238,6 @@ def carga_evaluacion(request, alumno_public_id):
 	instancia_seccion=get_object_or_404(Seccion,id=alumno_id.seccion_id)
 	instancia_grado=get_object_or_404(Grado,id=instancia_seccion.grado_id)
 	grado_public=instancia_grado.public_id
-	# print(instancia_grado.nombre_grado)
 	if instancia_grado.nombre_grado =='SEGUNDO':
 		cantidad_palabra_maxima=170
 	else:
@@ -206,13 +245,10 @@ def carga_evaluacion(request, alumno_public_id):
 		
 	evaluacion_existente = None
 	try:
-		# Buscamos el examen que se creó previamente con get_or_create
-		# ASUMO que tu modelo se llama EvaluacionFluidezLectora
+
 		evaluacion_existente = EvaluacionFluidezLectora.objects.get(alumno=alumno_id.id)
 	except EvaluacionFluidezLectora.DoesNotExist:
-		# Si no existe, el formulario será de CREACIÓN (INSERT)
 		pass
-
 	if request.method == 'POST':
 		# 3. Rama POST: Se usa la instancia para forzar la ACTUALIZACIÓN (Sobrescritura)
 		
@@ -1066,7 +1102,9 @@ def analisis_tercer_grado_mayo_2025_grafico(cueanexo,secciones):
 #-----------------------LOGICA OBTENER CUEANEXO MARTIN ---------------------------
 def obtener_cueanexo(name):
 	cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
-	nombreCuenexo = CapaUnicaOfertas.objects.get(resploc_cuitcuil=cuil_con_caracter)
+	nombreCuenexo = CapaUnicaOfertas.objects.filter(resploc_cuitcuil=cuil_con_caracter,oferta__icontains='Común - Primaria de 7 años')
+	# for i in nombreCuenexo:
+	# 	print(i)
 	numeroCueanexo= nombreCuenexo.cueanexo
 	return numeroCueanexo
 

@@ -7,8 +7,34 @@ from psycopg2 import extras
 
 
 class GradoViewForm(forms.Form):
+	# OPCIONES_CUEANEXO = [
+    #     ('', '---'),
+    # ]
 	grado= forms.ChoiceField(label='SELECCIONE UN GRADO', required=False, widget=forms.RadioSelect(
 		))
+	cueanexo = forms.ChoiceField(
+        choices=[('', '--- Seleccionar ---')], # Aquí asignas las opciones
+        label='SELECCIONE UN CUEANEXO', 
+        required=False,
+        widget=forms.Select
+    )
+	def __init__(self, *args, **kwargs):
+		# Extraemos el CUIL de los argumentos
+		cuil = kwargs.pop('cuil', None)
+		super().__init__(*args, **kwargs)
+		if cuil:
+			cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
+			qs =CapaUnicaOfertas.objects.filter(resploc_cuitcuil=cuil_con_caracter,oferta__icontains='Común - Primaria de 7 años').only('cueanexo')
+			#print(qs)
+			choices = [
+					('', '---SELECCIONE UN CUEANEXO-----'),
+					]
+			for i in qs:
+				# label = f'{i.cueanexo}'
+				choices.append((i.cueanexo, i.cueanexo))
+				#print(i.cueanexo)
+			self.fields['cueanexo'].choices = choices
+	
 
 class SeccionViewForm(forms.Form):
 	seccion= forms.ChoiceField(label='secciones', required=False)
