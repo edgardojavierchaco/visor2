@@ -1,73 +1,100 @@
-# Base Python
-FROM python:3.10.10-slim-bullseye AS python-base
+# =========================================================
+# BASE
+# =========================================================
+FROM python:3.10-slim-bullseye AS python-base
+
 LABEL maintainer="Edgardo Javier Gómez"
 
-# Stage build
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# =========================================================
+# BUILD STAGE
+# =========================================================
 FROM python-base AS python-build
+
 ARG BUILD_ENVIRONMENT=production
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
+    gcc \
+    g++ \
     libpq-dev \
     gdal-bin \
     libgdal-dev \
     wkhtmltopdf \
-  && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-COPY ./requirements ./
-RUN pip wheel --wheel-dir /wheels -r ${BUILD_ENVIRONMENT}.txt
+WORKDIR /build
 
-# Stage run
+# Copiar sólo requirements para maximizar caché
+COPY ./requirements /requirements
+
+RUN pip install --upgrade pip setuptools wheel
+
+RUN pip wheel \
+    --wheel-dir /wheels \
+    -r /requirements/${BUILD_ENVIRONMENT}.txt
+
+# =========================================================
+# RUNTIME
+# =========================================================
 FROM python-base AS python-run
+
 ARG BUILD_ENVIRONMENT=production
 ARG APP_HOME=/app
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+ENV HOME=/home/django
+ENV APP_HOME=${APP_HOME}
 ENV BUILD_ENV=${BUILD_ENVIRONMENT}
-
-# Crear usuario django
-RUN useradd -m django
 
 WORKDIR ${APP_HOME}
 
-# Instalar dependencias del sistema
+# Usuario no root
+RUN useradd -m django
+
+# SOLO runtime libs
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    libpq-dev \
+    libpq5 \
+    gettext \
     gdal-bin \
     libgdal-dev \
-    gettext \
     wkhtmltopdf \
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-# Copiar ruedas e instalar dependencias de Python
+# Wheels compiladas
 COPY --from=python-build /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* \
-  && rm -rf /wheels
 
-# Copiar entrypoints
+RUN pip install --no-cache-dir --no-index \
+    --find-links=/wheels /wheels/* \
+    && rm -rf /wheels
+
+# Entrypoint
 COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && chmod +x /entrypoint
 
+# Start
 COPY --chown=django:django ./compose/production/django/start /start
 RUN sed -i 's/\r$//g' /start && chmod +x /start
 
-# Copiar código fuente (excepto media)
-COPY --chown=django:django .. ${APP_HOME}
+# Proyecto
+COPY --chown=django:django . ${APP_HOME}
 
-# Crear carpetas persistentes y dar permisos correctos
-RUN mkdir -p ${APP_HOME}/productionfiles ${APP_HOME}/media && \
-    chown -R django:django ${APP_HOME}/productionfiles ${APP_HOME}/media && \
-    chmod -R 775 ${APP_HOME}/productionfiles ${APP_HOME}/media
+# Directorios persistentes
+RUN mkdir -p \
+    ${APP_HOME}/media \
+    ${APP_HOME}/productionfiles \
+    && chown -R django:django ${APP_HOME}
 
-# Usar usuario no root
 USER django
 
 ENTRYPOINT ["/entrypoint"]
+
+CMD ["/start"]
