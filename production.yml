@@ -1,97 +1,279 @@
-version: '3.8'
-
 volumes:
-  production_postgres_data_visor: {}
-  production_postgres_data_backups_visor: {}
-  production_traefik_visor: {}
-  production_media_visor: {}
-  production_redis_data: {}
+  production_postgres_data_visor:
+  production_postgres_data_backups_visor:
+  production_traefik_visor:
+  production_media_visor:
+  production_redis_data:
+
+networks:
+  backend:
+  frontend:
 
 services:
+
+  # =========================
+  # DJANGO
+  # =========================
   django:
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
+
     image: visor_production_django
     platform: linux/x86_64
-    depends_on:
-      - postgres
-      - redis
+
+    command: /start
+
     env_file:
       - ./.env
+
     volumes:
       - ./productionfiles:/app/productionfiles:Z
       - production_media_visor:/app/media:Z
-    command: /start
+
+    expose:
+      - "5000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
     restart: unless-stopped
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - backend
+      - frontend
+
+
+  # =========================
+  # POSTGRES
+  # =========================
   postgres:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
+
     image: visor_production_postgres
+
     volumes:
       - production_postgres_data_visor:/var/lib/postgresql/data_visor:Z
       - production_postgres_data_backups_visor:/backups_visor:Z
+
     env_file:
       - ./.env
-    ports:
-      - "5433:5432"
+
+    expose:
+      - "5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     restart: unless-stopped
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - backend
+
+
+  # =========================
+  # REDIS
+  # =========================
   redis:
     image: redis:7-alpine
+
     container_name: visor_production_redis
-    ports:
-      - "6379:6379"
+
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
     volumes:
       - production_redis_data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+    expose:
+      - "6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
     restart: unless-stopped
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - backend
+
+
+  # =========================
+  # TRAEFIK
+  # =========================
   traefik:
     build:
       context: .
       dockerfile: ./compose/production/traefik/Dockerfile
+
     image: traefik:latest
+
     depends_on:
-      - django
+      django:
+        condition: service_healthy
+
     volumes:
       - production_traefik_visor:/etc/traefik/acme:Z
+
     ports:
       - "80:80"
       - "443:443"
+
     labels:
       - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
       - "traefik.http.routers.django.entrypoints=websecure"
       - "traefik.http.routers.django.tls.certresolver=le"
       - "traefik.http.services.django.loadbalancer.server.port=5000"
+
     restart: unless-stopped
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - frontend
+      - backend
+
+
+  # =========================
+  # CELERY WORKER
+  # =========================
   celery:
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
+
     image: visor_production_django
     platform: linux/x86_64
-    command: celery -A config worker -l info
-    depends_on:
-      - django
-      - redis
+
+    command: celery -A config worker -l info --concurrency=4
+
     env_file:
       - ./.env
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+      django:
+        condition: service_healthy
+
     restart: unless-stopped
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - backend
+
+
+  # =========================
+  # CELERY BEAT
+  # =========================
   celery-beat:
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
+
     image: visor_production_django
     platform: linux/x86_64
+
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    depends_on:
-      - django
-      - redis
+
     env_file:
       - ./.env
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+      django:
+        condition: service_healthy
+
     restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - backend
+
+
+  # =========================
+  # FLOWER
+  # =========================
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+
+    image: visor_production_django
+
+    command: celery -A config flower --port=5555
+
+    env_file:
+      - ./.env
+
+    ports:
+      - "5555:5555"
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+      django:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    networks:
+      - backend

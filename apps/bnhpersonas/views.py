@@ -1,8 +1,7 @@
-from django.http import JsonResponse
-from django.shortcuts import render, redirect
-from django.db import transaction
-
 from django.core.exceptions import ValidationError
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.db import transaction
 
 from .models import Personas, RegistroActividades, NomencladorCeic, Localidades, CodAreasTelefonos
 from .forms import PersonaForm, ActividadFormSet

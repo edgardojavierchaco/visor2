@@ -1,6 +1,19 @@
-$(function () {
+// =========================
+// 🔐 OBTENER CSRF DESDE INPUT
+// =========================
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
 
-    $('#data').DataTable({
+// =========================
+// DATATABLE
+// =========================
+$(function () {
+    const csrftoken = getCSRFToken();
+
+    console.log("CSRF TOKEN:", csrftoken); // ahora sí va a tener valor
+
+    $('#data').DataTable({        
         responsive: true,
         autoWidth: false,
         destroy: true,
@@ -8,26 +21,46 @@ $(function () {
         ajax: {
             url: window.location.pathname,
             type: "POST",
+            headers: {
+                "X-CSRFToken": csrftoken
+            },
             data: {
                 'action': 'searchdata'
             },
-            dataSrc: ""
+            dataSrc: function (json) {
+
+                console.log("DATA:", json);
+
+                if (json.error) {
+                    Swal.fire("Error", json.message, "error");
+                    return [];
+                }
+
+                return json;
+            },
+
+            error: function (xhr) {
+
+                console.error("STATUS:", xhr.status);
+                console.error("RESPONSE:", xhr.responseText);
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Error AJAX",
+                    text: "Ver consola (F12)"
+                });
+            }
         },
         columns: [
             { data: "cueanexo" },
             { data: "cuil" },
-            { data: "t_doc" },
-            { data: "n_doc" },
             { data: "apellidos" },
             { data: "nombres" },
-            { data: "f_nac" },
             { data: "cargo" },
             { data: "situacion_revista" },
             { data: "f_ingreso" },
             { data: "f_hasta" },
             { data: "turno" },
-            { data: "cuof" },
-            { data: "cuof_anexo" },
             { data: "mes" },
             { data: "anio" },
             {

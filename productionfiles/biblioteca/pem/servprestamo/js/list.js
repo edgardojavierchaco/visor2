@@ -1,4 +1,15 @@
+// =========================
+// 🔐 OBTENER CSRF DESDE INPUT
+// =========================
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
 $(function () {
+    const csrftoken = getCSRFToken();
+
+    console.log("CSRF TOKEN:", csrftoken); // ahora sí va a tener valor
+    
     var table = $('#data').DataTable({
         responsive: true,
         autoWidth: false,
@@ -7,10 +18,35 @@ $(function () {
         ajax: {
             url: window.location.pathname,
             type: 'POST',
+            headers: {
+                "X-CSRFToken": csrftoken
+            },
             data: {
                 'action': 'searchdata'
             },
-            dataSrc: ""
+            dataSrc: function (json) {
+
+                console.log("DATA:", json);
+
+                if (json.error) {
+                    Swal.fire("Error", json.message, "error");
+                    return [];
+                }
+
+                return json;
+            },
+
+            error: function (xhr) {
+
+                console.error("STATUS:", xhr.status);
+                console.error("RESPONSE:", xhr.responseText);
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Error AJAX",
+                    text: "Ver consola (F12)"
+                });
+            }
         },
         columns: [            
             {"data": "cueanexo"},

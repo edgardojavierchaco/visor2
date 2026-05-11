@@ -1,53 +1,85 @@
-version: "3.9"
-
-volumes:
-  visor_local_postgres_data: {}
-  visor_local_postgres_data_backups: {}
-  redis_data:
-
 services:
+
   django:
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
-      target: python-run-stage   # Apunta a la etapa final optimizada
+      target: python-run-stage
+
     image: visor_local_django
     container_name: visor_local_django
+
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
     volumes:
-      - .:/app:cached   # cached para acelerar montajes
+      - .:/app:cached
+
     env_file:
       - ./.env
+
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+
     ports:
       - "8000:8000"
+
     command: /start
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   postgres:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
+
     image: visor_production_postgres
     container_name: visor_local_postgres
+
     volumes:
       - visor_local_postgres_data:/var/lib/postgresql/data
       - visor_local_postgres_data_backups:/backups
+
     env_file:
       - ./.env
+
     ports:
       - "5433:5432"
+
     restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: visor_local_redis
+
     ports:
       - "6379:6379"
+
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+
     restart: unless-stopped
+
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
@@ -59,20 +91,30 @@ services:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
       target: python-run-stage
+
     image: visor_local_django
     container_name: visor_local_celery
+
     depends_on:
       redis:
         condition: service_healthy
       django:
         condition: service_started
+
     env_file:
       - ./.env
+
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.local
-    command: celery -A config worker -l info
+
+    command: >
+      celery -A config worker
+      -l info
+      --concurrency=4
+
     volumes:
       - .:/app:cached
+
     restart: unless-stopped
 
   celery-beat:
@@ -80,18 +122,67 @@ services:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
       target: python-run-stage
+
     image: visor_local_django
     container_name: visor_local_celery_beat
+
     depends_on:
       redis:
         condition: service_healthy
       django:
         condition: service_started
+
     env_file:
       - ./.env
+
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.local
-    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+    command: >
+      celery -A config beat
+      -l info
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
     volumes:
       - .:/app:cached
+
     restart: unless-stopped
+
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+      target: python-run-stage
+
+    image: visor_local_django
+    container_name: visor_local_flower
+
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery:
+        condition: service_started
+
+    env_file:
+      - ./.env
+
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+
+    command: >
+      celery -A config flower
+      --port=5555
+      --persistent=True
+
+    ports:
+      - "5555:5555"
+
+    volumes:
+      - .:/app:cached
+
+    restart: unless-stopped
+
+volumes:
+  visor_local_postgres_data:
+  visor_local_postgres_data_backups:
+  redis_data:
