@@ -382,6 +382,8 @@ chartMes=new Chart(document.getElementById('chartMes'),{
 
 tabla.clear();
 
+console.log(JSON.stringify(data.ranking[0], null, 2))
+
 data.ranking.forEach(r=>{
     tabla.row.add([
     r.cueanexo,
@@ -389,7 +391,7 @@ data.ranking.forEach(r=>{
     r.meses,
     r.annos,
     estadoBadge(r.estado),
-    regionBadge(r.region_loc),
+    regionBadge(r.region_loc.region_loc),
     `<span class="badge bg-primary">${r.total}</span>`,
     `<button class="btn btn-danger btn-sm" onclick="abrirReapertura('${r.cueanexo}','${r.meses}','${r.annos}')">🔁</button>`
     ]);

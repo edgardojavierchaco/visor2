@@ -1,32 +1,54 @@
+// =========================
+// 🔥 MOSTRAR ERRORES BONITO
+// =========================
 function message_error(obj) {
-    var html = '';
-    if (typeof (obj) === 'object') {
-        html = '<ul style="text-align: left;">';
+    let html = '';
+
+    if (typeof obj === 'object') {
+
+        html = '<ul style="text-align:left;">';
+
         $.each(obj, function (key, value) {
-            // Si el valor es un arreglo (como en el caso de los errores de validación), los mostramos todos
+
+            // 🔥 Si es array (errores de Django)
             if (Array.isArray(value)) {
+
                 value.forEach(function (error) {
-                    html += '<li>' + key + ': ' + error + '</li>';
+                    html += `<li><b>${key}</b>: ${error}</li>`;
                 });
+
+            } else if (typeof value === 'object') {
+
+                // 🔥 nested errors (muy importante)
+                $.each(value, function (k, v) {
+                    html += `<li><b>${k}</b>: ${v}</li>`;
+                });
+
             } else {
-                html += '<li>' + key + ': ' + value + '</li>';
+
+                html += `<li>${value}</li>`;
             }
         });
+
         html += '</ul>';
+
     } else {
-        html = '<p>' + obj + '</p>';
+        html = `<p>${obj}</p>`;
     }
 
-    // Usando SweetAlert para mostrar los errores
     Swal.fire({
-        title: 'Error!',
+        title: 'Error',
         html: html,
         icon: 'error'
     });
 }
 
 
-function submit_with_ajax(url,title, content, parameters, callback) {
+// =========================
+// 🚀 AJAX GENÉRICO
+// =========================
+function submit_with_ajax(url, title, content, parameters, callback) {
+
     $.confirm({
         theme: 'material',
         title: title,
@@ -34,72 +56,118 @@ function submit_with_ajax(url,title, content, parameters, callback) {
         content: content,
         columnClass: 'small',
         typeAnimated: true,
-        cancelButtonClass: 'btn-primary',
-        draggable: true,
-        dragWindowBorder: false,
+
         buttons: {
-            info: {
-                text: "Si",
+
+            confirm: {
+                text: "Sí",
                 btnClass: 'btn-primary',
+
                 action: function () {
+
                     $.ajax({
-                        url: url, //window.location.pathname
+                        url: url,
                         type: 'POST',
                         data: parameters,
                         dataType: 'json',
                         processData: false,
                         contentType: false,
-                    }).done(function (data) {
-                        console.log(data);
-                        if (!data.hasOwnProperty('error')) {
-                            callback();
-                            return false;
+
+                        // 🔥 CSRF AUTOMÁTICO (CLAVE)
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
                         }
-                        message_error(data.error);
-                    }).fail(function (jqXHR, textStatus, errorThrown) {
-                        alert(textStatus + ': ' + errorThrown);
-                    }).always(function (data) {
+
+                    }).done(function (data) {
+
+                        console.log("RESPONSE:", data);
+
+                        // =========================
+                        // ✅ CASO OK
+                        // =========================
+                        if (!data.error) {
+                            callback();
+                            return;
+                        }
+
+                        // =========================
+                        // ❌ ERRORES DJANGO
+                        // =========================
+                        if (data.errors) {
+                            message_error(data.errors);
+                            return;
+                        }
+
+                        // =========================
+                        // ❌ ERROR SIMPLE
+                        // =========================
+                        message_error(data.message || "Ocurrió un error");
+
+                    }).fail(function (jqXHR) {
+
+                        console.error("AJAX ERROR:", jqXHR.responseText);
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error AJAX',
+                            text: 'Ver consola (F12)'
+                        });
 
                     });
                 }
             },
-            danger: {
-                text: "No",
-                btnClass: 'btn-red',
-                action: function () {
 
-                }
-            },
+            cancel: {
+                text: "No",
+                btnClass: 'btn-red'
+            }
         }
-    })
+    });
 }
 
-function alert_action(title, content, callback) {
-    $.confirm({
-        theme: 'material',
-        title: title,
-        icon: 'fa fa-info',
-        content: content,
-        columnClass: 'small',
-        typeAnimated: true,
-        cancelButtonClass: 'btn-primary',
-        draggable: true,
-        dragWindowBorder: false,
-        buttons: {
-            info: {
-                text: "Sí",
-                btnClass: 'btn-primary',
-                action: function () {
-                    callback();
-                }
-            },
-            danger: {
-                text: "No",
-                btnClass: 'btn-red',
-                action: function () {
 
-                }
-            },
+// =========================
+// 🔐 OBTENER CSRF COOKIE
+// =========================
+function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== '') {
+
+        const cookies = document.cookie.split(';');
+
+        for (let i = 0; i < cookies.length; i++) {
+
+            let cookie = cookies[i].trim();
+
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
-    })
+    }
+
+    return cookieValue;
+}
+
+
+// =========================
+// ⚠️ CONFIRM SIMPLE
+// =========================
+function alert_action(title, content, callback) {
+
+    Swal.fire({
+        title: title,
+        html: content,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí',
+        cancelButtonText: 'No'
+
+    }).then((result) => {
+        if (result.isConfirmed) {
+            callback();
+        }
+    });
 }

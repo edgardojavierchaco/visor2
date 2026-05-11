@@ -1,69 +1,104 @@
-$(function () {
+// =========================
+// 🔐 OBTENER CSRF DESDE INPUT
+// =========================
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// =========================
+// DATATABLE
+// =========================
+$(document).ready(function () {
+
+    console.log("🔥 JS funcionando");
+    const csrftoken = getCSRFToken();
+
+    console.log("CSRF TOKEN:", csrftoken); // ahora sí va a tener valor
+
     var table = $('#data').DataTable({
         responsive: true,
         autoWidth: false,
         destroy: true,
         deferRender: true,
+
         ajax: {
             url: window.location.pathname,
             type: 'POST',
-            data: {
-                'action': 'searchdata'
+            headers: {
+                "X-CSRFToken": csrftoken
             },
-            dataSrc: ""
-        },
-        columns: [            
-            {"data": "cueanexo"},
-            {"data": "mes"},
-            {"data": "anio"},
-            {"data": "nivel"},
-            {"data": "usuario"},
-            {"data": "varones"},
-            {"data": "total"},
-            {"data": "id"}  // Columna extra para los botones
-        ],
-        columnDefs: [
-            {
-                targets: [-1],  // Aplica sobre la última columna (índice 7)
-                class: 'text-center',
-                orderable: false,
-                render: function (data, type, row) {
-                    var buttons = '<a href="../update/' + row.id + '/" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-edit"></i></a> ';
-                    buttons += '<a href="../delete/' + row.id + '/" type="button" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash-alt"></i></a>';
-                    return buttons;
+            data: { action: 'searchdata' },
+            dataSrc: function (json) {
+
+                console.log("DATA:", json);
+
+                if (json.error) {
+                    Swal.fire("Error", json.message, "error");
+                    return [];
                 }
+
+                return json;
+            },
+
+            error: function (xhr) {
+
+                console.error("STATUS:", xhr.status);
+                console.error("RESPONSE:", xhr.responseText);
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Error AJAX",
+                    text: "Ver consola (F12)"
+                });
             }
+        },
+
+        columns: [
+            { data: "cueanexo" },
+            { data: "mes" },
+            { data: "anio" },
+            { data: "nivel" },
+            { data: "usuario" },
+            { data: "varones" },
+            { data: "total" },
+            { data: "id" }
         ],
-        footerCallback: function (row, data, start, end, display) {
-            var api = this.api();
 
-            var intVal = function (i) {
-                return typeof i === 'string'
-                    ? parseFloat(i.replace(/[\$,]/g, '')) || 0
-                    : typeof i === 'number'
-                    ? i
-                    : 0;
-            };
+        columnDefs: [{
+            targets: -1,
+            class: 'text-center',
+            orderable: false,
+            render: function (data, type, row) {
+                return `
+                    <a href="../update/${row.id}/" class="btn btn-warning btn-xs">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a href="../delete/${row.id}/" class="btn btn-danger btn-xs">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                `;
+            }
+        }],
 
-            // ✅ Sumar VARONES (columna 5)
-            var varones = api
-                .column(5, { search: 'applied' })
-                .data()
-                .reduce(function (a, b) {
-                    return intVal(a) + intVal(b);
-                }, 0);
+        drawCallback: function () {
 
-            // ✅ Sumar TOTAL (columna 6)
-            var totales = api
-                .column(6, { search: 'applied' })
-                .data()
-                .reduce(function (a, b) {
-                    return intVal(a) + intVal(b);
-                }, 0);
+            console.log("✅ sumando datos");
 
-            // ✅ Insertar en el footer correcto
-            $(api.column(5).footer()).html(varones);
-            $(api.column(6).footer()).html(totales);
+            let sumaVarones = 0;
+            let sumaTotales = 0;
+
+            this.api().rows({ search: 'applied' }).every(function () {
+                let d = this.data();
+
+                console.log("fila:", d); // 🔥 DEBUG REAL
+
+                sumaVarones += Number(d.varones) || 0;
+                sumaTotales += Number(d.total) || 0;
+            });
+
+            $('#varones').html(sumaVarones);
+            $('#totales').html(sumaTotales);
         }
     });
+
 });
