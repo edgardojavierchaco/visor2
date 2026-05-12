@@ -37,9 +37,10 @@
                 </div>
                 {% endfor %}
 
+                <input type="hidden" name="cueanexo" value="{{ return_cueanexo }}">
                 <div class="d-flex gap-2 mt-4">
                     <button type="submit" class="btn btn-warning">Guardar cambios</button>
-                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}" class="btn btn-secondary">Cancelar</a>
+                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}{% if return_cueanexo %}?cueanexo={{ return_cueanexo }}{% endif %}" class="btn btn-secondary">Cancelar</a>
                 </div>
             </form>
         </div>
