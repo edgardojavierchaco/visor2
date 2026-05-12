@@ -66,8 +66,7 @@
                                         <select name="seccion" class="form-select form-select-sm select-inline"
                                             onchange="this.form.submit()">
                                             {% for valor, etiqueta in opciones_seccion %}
-                                            <option value="{{ valor }}" {% if alumno.objeto.seccion.seccion==valor
-                                                %}selected{% endif %}>
+                                            <option value="{{ valor }}" {% if alumno.objeto.seccion.seccion == valor %}selected{% endif %}>
                                                 {{ etiqueta }}
                                             </option>
                                             {% endfor %}
@@ -77,8 +76,7 @@
                                         <select name="turno" class="form-select form-select-sm select-inline"
                                             onchange="this.form.submit()">
                                             {% for valor, etiqueta in opciones_turno %}
-                                            <option value="{{ valor }}" {% if alumno.objeto.seccion.turno==valor
-                                                %}selected{% endif %}>
+                                            <option value="{{ valor }}" {% if alumno.objeto.seccion.turno == valor %}selected{% endif %}>
                                                 {{ etiqueta }}
                                             </option>
                                             {% endfor %}
