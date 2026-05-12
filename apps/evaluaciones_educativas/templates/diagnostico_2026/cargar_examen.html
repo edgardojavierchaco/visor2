@@ -44,12 +44,13 @@
 
                     <hr>
 
+                    <input type="hidden" name="cueanexo" value="{{ return_cueanexo }}">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-save"></i>
                             {% if modo_edicion %}Actualizar Examen{% else %}Guardar Examen{% endif %}
                         </button>
-                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}" class="btn btn-secondary">
+                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}{% if return_cueanexo %}?cueanexo={{ return_cueanexo }}{% endif %}" class="btn btn-secondary">
                             Cancelar
                         </a>
                     </div>
