@@ -1,6 +1,6 @@
+from apps.evaluaciones_educativas.views.fluidez_2025 import obtener_cueanexo
+
 from .. import models
-#lograr llamar al modelo y al form de forma disitntsa
-#from apps.evaluaciones_educativas.forms.diagnostico_2026 import forms
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.db import transaction
@@ -12,10 +12,266 @@ import psycopg2
 from psycopg2 import extras
 import os
 from openpyxl import Workbook
+from ..forms import MatematicaForm, LenguaForm, SeleccionarMateriaForm, AlumnoForm
+from ..models import Alumno2026, Matematica2026, Lengua2026, Seccion2026
+from django.http import JsonResponse
 
 @login_required
 def inicio(request):
-    return render(request,"diagnostico_2026/inicio.html")
+    # 1. Obtenemos el CUE del usuario logueado
+    user_cue = str(obtener_cueanexo(request.user.username)).strip()
+    print("CUE del usuario (str):", repr(user_cue))
+
+    # 2. Traemos los alumnos asociados a ese CUE
+    alumnos_qs = Alumno2026.objects.filter(
+        seccion__año__Establecimiento__cueanexo=user_cue
+    ).select_related('seccion__año', 'seccion__año__Establecimiento')
+
+    print("Total alumnos encontrados:", alumnos_qs.count())
+
+    # 3. Procesamos cada alumno para validar sus datos y estado de exámenes
+    lista_alumnos_procesada = []
+    
+    for alumno in alumnos_qs:
+        tiene_datos_completos = all([
+            alumno.dni and len(alumno.dni) >= 7,
+            alumno.nombre,
+            alumno.apellido,
+            alumno.discapacidad,
+            alumno.comunidad_indigena
+        ])
+
+        tiene_matematica = Matematica2026.objects.filter(alumno=alumno).exists()
+        tiene_lengua = Lengua2026.objects.filter(alumno=alumno).exists()
+
+        lista_alumnos_procesada.append({
+            'objeto': alumno,
+            'datos_validados': tiene_datos_completos,
+            'tiene_matematica': tiene_matematica,
+            'tiene_lengua': tiene_lengua,
+            'examen_completo': tiene_matematica and tiene_lengua
+        })
+
+    context = {
+        'alumnos': lista_alumnos_procesada,
+        'cue_escuela': user_cue,
+        'opciones_seccion': Seccion2026.OPCIONES_SECCION,
+        'opciones_turno': Seccion2026.OPCIONES_TURNO,
+    }
+
+    return render(request, "diagnostico_2026/inicio.html", context)
+
+
+@login_required
+def actualizar_seccion(request, alumno_uuid):
+    """Actualiza la sección y turno de un alumno (get_or_create la Seccion2026)."""
+    if request.method == 'POST':
+        alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+        nueva_seccion = request.POST.get('seccion')
+        nuevo_turno = request.POST.get('turno')
+
+        if nueva_seccion and nuevo_turno:
+            # Obtenemos el año actual del alumno para mantener la relación
+            año_actual = alumno.seccion.año
+
+            # Buscamos o creamos la sección con esos datos
+            seccion_obj, creada = Seccion2026.objects.get_or_create(
+                seccion=nueva_seccion,
+                año=año_actual,
+                defaults={'turno': nuevo_turno}
+            )
+
+            # Si ya existía, actualizamos el turno por si cambió
+            if not creada and seccion_obj.turno != nuevo_turno:
+                seccion_obj.turno = nuevo_turno
+                seccion_obj.save()
+
+            # Actualizamos la FK del alumno
+            alumno.seccion = seccion_obj
+            alumno.save()
+
+    return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+# @login_required
+# def asignar_examen_matematica(request, alumno_uuid):
+#     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    
+#     if request.method == 'POST':
+#         form = MatematicaForm(request.POST)
+#         if form.is_valid():
+#             # Creamos el objeto pero no lo guardamos aún (commit=False)
+#             examen = form.save(commit=False)
+#             examen.alumno = alumno  # Asignamos la relación OneToOne
+#             examen.save()
+#             return redirect('inicio')
+#     else:
+#         form = MatematicaForm()
+
+#     return render(request, 'diagnostico_2026/form_examen.html', {
+#         'form': form,
+#         'alumno': alumno,
+#         'materia': 'Matemática'
+#     })
+
+
+# @login_required
+# def asignar_examen_lengua(request, alumno_uuid):
+#     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    
+#     if request.method == 'POST':
+#         form = LenguaForm(request.POST)
+#         if form.is_valid():
+#             examen = form.save(commit=False)
+#             examen.alumno = alumno
+#             examen.save()
+#             return redirect('inicio')
+#     else:
+#         form = LenguaForm()
+
+#     return render(request, 'diagnostico_2026/form_examen.html', {
+#         'form': form,
+#         'alumno': alumno,
+#         'materia': 'Lengua'
+#     })
+
+
+# def crear_examen(request):
+#     return render(request, 'diagnostico_2026/crear_examen.html')
+
+@login_required
+def cargar_examen(request, alumno_uuid, materia):
+    alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    
+    if materia == 'matematica':
+        form_class = MatematicaForm
+        template_materia = "Matemática"
+    elif materia == 'lengua':
+        form_class = LenguaForm
+        template_materia = "Lengua"
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    form = form_class(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        examen = form.save(commit=False)
+        examen.alumno = alumno
+        examen.save()
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    return render(request, 'diagnostico_2026/cargar_examen.html', {
+        'form': form,
+        'materia': template_materia,
+        'alumno': alumno,
+    })
+
+
+@login_required
+def editar_alumno(request, alumno_uuid):
+    alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    form = AlumnoForm(request.POST or None, instance=alumno)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    return render(request, 'diagnostico_2026/editar_alumno.html', {
+        'form': form,
+        'alumno': alumno,
+    })
+
+
+@login_required
+def agregar_alumno(request):
+    from ..models import Año2026
+    user_cue = str(obtener_cueanexo(request.user.username)).strip()
+
+    # Secciones disponibles para ese CUE
+    secciones_qs = Seccion2026.objects.filter(
+        año__Establecimiento__cueanexo=user_cue
+    ).select_related('año').order_by('año__nombre_año', 'seccion')
+
+    form = AlumnoForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        seccion_id = request.POST.get('seccion_id')
+        seccion_obj = Seccion2026.objects.filter(id=seccion_id).first()
+
+        if seccion_obj:
+            alumno = form.save(commit=False)
+            alumno.seccion = seccion_obj
+            alumno.save()
+            return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+        else:
+            form.add_error(None, 'Debes seleccionar una sección válida.')
+
+    return render(request, 'diagnostico_2026/agregar_alumno.html', {
+        'form': form,
+        'secciones': secciones_qs,
+    })
+
+
+@login_required
+def editar_examen(request, alumno_uuid, materia):
+    alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+
+    if materia == 'matematica':
+        examen = get_object_or_404(Matematica2026, alumno=alumno)
+        form = MatematicaForm(request.POST or None, instance=examen)
+        template_materia = "Matemática"
+    elif materia == 'lengua':
+        examen = get_object_or_404(Lengua2026, alumno=alumno)
+        form = LenguaForm(request.POST or None, instance=examen)
+        template_materia = "Lengua"
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    return render(request, 'diagnostico_2026/cargar_examen.html', {
+        'form': form,
+        'materia': template_materia,
+        'alumno': alumno,
+        'modo_edicion': True,
+    })
+
+
+@login_required
+def descargar_examen_pdf(request, alumno_uuid, materia):
+    """Genera un resumen imprimible del examen cargado, similar al comprobante físico."""
+    alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+
+    if materia == 'matematica':
+        examen = get_object_or_404(Matematica2026, alumno=alumno)
+        template_materia = "Matemática"
+    elif materia == 'lengua':
+        examen = get_object_or_404(Lengua2026, alumno=alumno)
+        template_materia = "Lengua"
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    # Construimos la lista de ítems con etiqueta y puntaje seleccionado
+    campos = [f for f in examen._meta.get_fields()
+              if hasattr(f, 'choices') and f.choices and f.name.startswith('pregunta_')]
+    campos_ordenados = sorted(campos, key=lambda f: f.name)
+
+    items = []
+    for campo in campos_ordenados:
+        valor = getattr(examen, campo.name)
+        items.append({
+            'nombre': campo.name.replace('_', ' ').title(),
+            'valor': valor if valor else '—',
+        })
+
+    return render(request, 'diagnostico_2026/examen_imprimible.html', {
+        'alumno': alumno,
+        'examen': examen,
+        'materia': template_materia,
+        'items': items,
+        'fecha': datetime.now().strftime("%d/%m/%Y %H:%M"),
+    })
 
 # @login_required
 # def dev(request):
