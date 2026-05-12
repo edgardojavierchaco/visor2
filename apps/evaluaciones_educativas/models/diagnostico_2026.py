@@ -79,7 +79,7 @@ class Seccion2026(models.Model):
         #managed = False
         db_table = '"diagnostico_2026"."secciones"'
         #unicidad
-        unique_together = ('seccion','año')
+        unique_together = ('seccion','año','turno')
     def __str__(self):
         nombre_seccion=f'{self.año}_{self.seccion}'
         return nombre_seccion
@@ -128,11 +128,9 @@ class EvaluacionDiagnostica2026(models.Model):
     class Meta:
         #managed = False
         db_table = '"diagnostico_2026"."evaluaciones"'
-        
     def __str__(self):
         nombre_examen=f'Evaluacion'
         return nombre_examen
-    
 class Matematica2026(EvaluacionDiagnostica2026):
     OPCIONES_RESPUESTAS_1 = [
     ('6,5', '6,5'),
