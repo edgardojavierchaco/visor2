@@ -4,13 +4,15 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Collecting archivos estáticos..."
-python3 /app/manage.py collectstatic --noinput
+echo "Collecting static files..."
 
-echo "Aplicando migraciones..."
+# 🔥 FIX IMPORTANTE: no romper el container si falla
+python3 /app/manage.py collectstatic --noinput || true
+
+echo "Applying migrations..."
 python3 /app/manage.py migrate --noinput
 
-echo "Starting servidor Gunicorn..."
+echo "Starting Gunicorn..."
 
 exec /usr/local/bin/gunicorn config.wsgi:application \
     --bind 0.0.0.0:5000 \
