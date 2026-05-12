@@ -6,7 +6,6 @@ volumes:
   production_traefik_visor: {}
   production_media_visor: {}
   production_redis_data: {}
-  production_static_visor: {}   # 👈 NUEVO
 
 services:
   django:
@@ -21,9 +20,52 @@ services:
     env_file:
       - ./.env
     volumes:
-      - production_static_visor:/app/productionfiles   # 👈 CAMBIO (antes bind mount)
+      - ./productionfiles:/app/productionfiles:Z
       - production_media_visor:/app/media:Z
     command: /start
+    restart: unless-stopped
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: visor_production_postgres
+    volumes:
+      - production_postgres_data_visor:/var/lib/postgresql/data_visor:Z
+      - production_postgres_data_backups_visor:/backups_visor:Z
+    env_file:
+      - ./.env
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: visor_production_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - production_redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    restart: unless-stopped
+
+  traefik:
+    build:
+      context: .
+      dockerfile: ./compose/production/traefik/Dockerfile
+    image: traefik:latest
+    depends_on:
+      - django
+    volumes:
+      - production_traefik_visor:/etc/traefik/acme:Z
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls.certresolver=le"
+      - "traefik.http.services.django.loadbalancer.server.port=5000"
     restart: unless-stopped
 
   celery:
