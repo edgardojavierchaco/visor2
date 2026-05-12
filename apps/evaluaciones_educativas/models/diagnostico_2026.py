@@ -124,13 +124,15 @@ class EvaluacionDiagnostica2026(models.Model):
     modelo=models.CharField(choices=OPCIONES_MODELO,default='A')
     asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     encargado_carga=models.CharField(max_length=9,default='DIRECTOR')
-    alumno = models.OneToOneField(Alumno2026, on_delete=models.CASCADE)
+    alumno = models.ForeignKey(Alumno2026, on_delete=models.CASCADE)
     class Meta:
         #managed = False
         db_table = '"diagnostico_2026"."evaluaciones"'
+        
     def __str__(self):
         nombre_examen=f'Evaluacion'
         return nombre_examen
+    
 class Matematica2026(EvaluacionDiagnostica2026):
     OPCIONES_RESPUESTAS_1 = [
     ('6,5', '6,5'),

@@ -1,7 +1,6 @@
-from apps.evaluaciones_educativas.views.fluidez_2025 import obtener_cueanexo
-
 from .. import models
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.http import HttpResponse
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -15,18 +14,30 @@ from openpyxl import Workbook
 from ..forms import MatematicaForm, LenguaForm, SeleccionarMateriaForm, AlumnoForm
 from ..models import Alumno2026, Matematica2026, Lengua2026, Seccion2026
 from django.http import JsonResponse
+from ..utils import utilidades
 
 @login_required
 def inicio(request):
-    # 1. Obtenemos el CUE del usuario logueado
-    user_cue = str(obtener_cueanexo(request.user.username)).strip()
-    # user_cue = obtener_cueanexo(request.user.username)
-    print("CUE del usuario (str):", repr(user_cue))
+    usuario = request.user
+    user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
 
-    # 2. Traemos los alumnos asociados a ese CUE
-    alumnos_qs = Alumno2026.objects.filter(
-        seccion__año__Establecimiento__cueanexo=user_cue
-    ).select_related('seccion__año', 'seccion__año__Establecimiento')
+    selected_cue = request.GET.get('cueanexo')
+    if not selected_cue and user_cueanexos:
+        selected_cue = str(user_cueanexos[0])
+
+    if selected_cue not in [str(c) for c in user_cueanexos]:
+        selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+    print("CUEANEXOS del usuario:", user_cueanexos)
+    print("CUE seleccionado:", selected_cue)
+
+    if selected_cue:
+        alumnos_qs = Alumno2026.objects.filter(
+            seccion__año__Establecimiento__cueanexo=int(selected_cue)
+        ).select_related('seccion__año', 'seccion__año__Establecimiento')
+        alumnos_qs = alumnos_qs.order_by('apellido', 'nombre')
+    else:
+        alumnos_qs = Alumno2026.objects.none()
 
     print("Total alumnos encontrados:", alumnos_qs.count())
 
@@ -55,7 +66,9 @@ def inicio(request):
 
     context = {
         'alumnos': lista_alumnos_procesada,
-        'cue_escuela': user_cue,
+        'cue_escuela': selected_cue,
+        'user_cueanexos': user_cueanexos,
+        'selected_cue': selected_cue,
         'opciones_seccion': Seccion2026.OPCIONES_SECCION,
         'opciones_turno': Seccion2026.OPCIONES_TURNO,
     }
@@ -142,6 +155,7 @@ def actualizar_seccion(request, alumno_uuid):
 @login_required
 def cargar_examen(request, alumno_uuid, materia):
     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    return_cueanexo = request.GET.get('cueanexo') or request.POST.get('cueanexo')
     
     if materia == 'matematica':
         form_class = MatematicaForm
@@ -158,34 +172,43 @@ def cargar_examen(request, alumno_uuid, materia):
         examen = form.save(commit=False)
         examen.alumno = alumno
         examen.save()
-        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
+        if return_cueanexo:
+            return redirect(f"{redirect_url}?cueanexo={return_cueanexo}")
+        return redirect(redirect_url)
 
     return render(request, 'diagnostico_2026/cargar_examen.html', {
         'form': form,
         'materia': template_materia,
         'alumno': alumno,
+        'return_cueanexo': return_cueanexo,
     })
 
 
 @login_required
 def editar_alumno(request, alumno_uuid):
     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    return_cueanexo = request.GET.get('cueanexo') or request.POST.get('cueanexo')
     form = AlumnoForm(request.POST or None, instance=alumno)
 
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
+        if return_cueanexo:
+            return redirect(f"{redirect_url}?cueanexo={return_cueanexo}")
+        return redirect(redirect_url)
 
     return render(request, 'diagnostico_2026/editar_alumno.html', {
         'form': form,
         'alumno': alumno,
+        'return_cueanexo': return_cueanexo,
     })
 
 
 @login_required
 def agregar_alumno(request):
     from ..models import Año2026
-    user_cue = str(obtener_cueanexo(request.user.username)).strip()
+    user_cue = str(utilidades.obtener_cueanexo(request.user.username)).strip()
 
     # Secciones disponibles para ese CUE
     secciones_qs = Seccion2026.objects.filter(
@@ -215,6 +238,7 @@ def agregar_alumno(request):
 @login_required
 def editar_examen(request, alumno_uuid, materia):
     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    return_cueanexo = request.GET.get('cueanexo') or request.POST.get('cueanexo')
 
     if materia == 'matematica':
         examen = get_object_or_404(Matematica2026, alumno=alumno)
@@ -229,13 +253,17 @@ def editar_examen(request, alumno_uuid, materia):
 
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
+        if return_cueanexo:
+            return redirect(f"{redirect_url}?cueanexo={return_cueanexo}")
+        return redirect(redirect_url)
 
     return render(request, 'diagnostico_2026/cargar_examen.html', {
         'form': form,
         'materia': template_materia,
         'alumno': alumno,
         'modo_edicion': True,
+        'return_cueanexo': return_cueanexo,
     })
 
 
