@@ -20,6 +20,7 @@ from django.http import JsonResponse
 def inicio(request):
     # 1. Obtenemos el CUE del usuario logueado
     user_cue = str(obtener_cueanexo(request.user.username)).strip()
+    # user_cue = obtener_cueanexo(request.user.username)
     print("CUE del usuario (str):", repr(user_cue))
 
     # 2. Traemos los alumnos asociados a ese CUE
