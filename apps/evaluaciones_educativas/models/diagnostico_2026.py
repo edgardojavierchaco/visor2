@@ -121,7 +121,7 @@ class EvaluacionDiagnostica2026(models.Model):
     ('AUSENTE','Ausente'), 
     ]
     #id = models.AutoField(primary_key=True)
-    modelo=models.CharField(choices=OPCIONES_ASISTENCIA,default='A')
+    modelo=models.CharField(choices=OPCIONES_MODELO,default='A')
     asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     encargado_carga=models.CharField(max_length=9,default='DIRECTOR')
     alumno = models.OneToOneField(Alumno2026, on_delete=models.CASCADE)
