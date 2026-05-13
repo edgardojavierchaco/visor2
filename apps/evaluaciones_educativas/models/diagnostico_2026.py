@@ -73,7 +73,7 @@ class Seccion2026(models.Model):
     #id = models.AutoField(primary_key=True)
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
     seccion = models.CharField(max_length=5, choices=OPCIONES_SECCION)
-    turno = models.CharField(max_length=9,choices=OPCIONES_TURNO)
+    turno = models.CharField(max_length=11,choices=OPCIONES_TURNO)
     año = models.ForeignKey(Año2026, on_delete=models.CASCADE)
     class Meta:
         #managed = False
