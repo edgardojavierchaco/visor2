@@ -300,24 +300,50 @@ WHITENOISE_MAX_AGE = 31536000
 
 
 # ===============================
-# 🚀 CELERY + REDIS CONFIG (FIX)
+# 🚀 CELERY + REDIS CONFIG
 # ===============================
 
 REDIS_URL = os.environ.get("REDIS_URL")
 
 if not REDIS_URL:
-    # fallback SOLO para desarrollo
     REDIS_URL = "redis://localhost:6379/1"
 
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 
+# ===============================
+# SERIALIZATION
+# ===============================
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'America/Argentina/Buenos_Aires'
 
-# 🔥 estabilidad producción
+# ===============================
+# TIMEZONE
+# ===============================
+
+CELERY_TIMEZONE = 'America/Argentina/Buenos_Aires'
+CELERY_ENABLE_UTC = False
+
+# ===============================
+# PRODUCCIÓN
+# ===============================
+
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+# 🔥 arregla warning Celery 6
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# 🔥 evita memory leaks
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100
+
+# 🔥 expiración resultados
+CELERY_RESULT_EXPIRES = 3600
+
+# 🔥 límites tareas
+CELERY_TASK_SOFT_TIME_LIMIT = 300
+CELERY_TASK_TIME_LIMIT = 600

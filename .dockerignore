@@ -1,68 +1,28 @@
-#Git
-.Git
+.git
 .gitignore
 
-#Docker
-.docker
+venv
+.env
 
-#Python
-app/__pycache__/
-app/*/__pycache__/
-app/*/*/__pycache__/
-app/*/*/*/__pycache__/
-
-#Local Postgresql data
-data/
-
-# Python cache
-__pycache__/
+__pycache__
 *.pyc
-*.pyo
-*.pyd
 
-# Django local settings / env
-*.env
-local_settings.py
+media
+productionfiles
+staticfiles
 
-# Database files
-*.sqlite3
-*.db
+node_modules
 
-# Media and static (servidos aparte)
-media/
-staticfiles/
-productionfiles/
+.pytest_cache
+.mypy_cache
+.coverage
 
-# Virtual environments
-venv/
-env/
-.venv/
+.vscode
+.idea
 
-# Node / frontend build
-node_modules/
-build/
-dist/
-
-# Logs
 *.log
-*.pot
-*.mo
 
-# Docker / IDE
-.DS_Store
-*.swp
-*.swo
-.idea/
-.vscode/
-*.iml
+celerybeat-schedule
 
-# Python packaging
-*.egg-info/
-dist/
-*.egg
-
-# Other temporary files
-*.bak
-*.tmp
-*.orig
-
+dist
+build

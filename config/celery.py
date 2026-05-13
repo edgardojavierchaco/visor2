@@ -1,24 +1,43 @@
 import os
 from celery import Celery
 
-# Toma el settings desde variable de entorno (clave para prod)
+# ======================================================
+# DJANGO SETTINGS
+# ======================================================
+
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE",
-    os.environ.get("DJANGO_SETTINGS_MODULE", "config.settings.local")
+    os.environ.get(
+        "DJANGO_SETTINGS_MODULE",
+        "config.settings.local"
+    )
 )
+
+# ======================================================
+# CELERY APP
+# ======================================================
 
 app = Celery("visor2")
 
-# Lee configuración desde Django (CELERY_*)
-app.config_from_object("django.conf:settings", namespace="CELERY")
+# ======================================================
+# LOAD DJANGO SETTINGS
+# ======================================================
 
-# Descubre tasks automáticamente
+app.config_from_object(
+    "django.conf:settings",
+    namespace="CELERY"
+)
+
+# ======================================================
+# AUTODISCOVER TASKS
+# ======================================================
+
 app.autodiscover_tasks()
 
-# Configuración robusta para producción
+# ======================================================
+# EXTRA SAFE CONFIG
+# ======================================================
+
 app.conf.update(
-    task_acks_late=True,
-    worker_prefetch_multiplier=1,
-    task_reject_on_worker_lost=True,
-    task_track_started=True,
+    broker_connection_retry_on_startup=True,
 )

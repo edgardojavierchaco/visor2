@@ -1,18 +1,60 @@
+// =========================
+// 🔐 OBTENER CSRF DESDE INPUT
+// =========================
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
 $(function () {
+
+    const csrftoken = getCSRFToken();
+
+    console.log("CSRF TOKEN:", csrftoken); // ahora sí va a tener valor
+
     var table = $('#data').DataTable({
         responsive: true,
         autoWidth: false,
         destroy: true,
         deferRender: true,
+
         ajax: {
             url: window.location.pathname,
             type: 'POST',
-            data: {
-                'action': 'searchdata'
+
+            headers: {
+                "X-CSRFToken": csrftoken
             },
-            dataSrc: ""
+
+            data: {
+                action: 'searchdata'
+            },
+
+            dataSrc: function (json) {
+
+                console.log("DATA RECIBIDA:", json);
+
+                if (json.error) {
+                    Swal.fire("Error", json.message, "error");
+                    return [];
+                }
+
+                return json;
+            },
+
+            error: function (xhr) {
+
+                console.error("STATUS:", xhr.status);
+                console.error("RESPONSE:", xhr.responseText);
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Error AJAX",
+                    text: "Error 403 CSRF o servidor"
+                });
+            }
         },
-        columns: [            
+
+        columns: [
             {"data": "cueanexo"},
             {"data": "mes"},
             {"data": "anio"},
@@ -20,40 +62,31 @@ $(function () {
             {"data": "turnos"},
             {"data": "t_material"},
             {"data": "cantidad"},
-            {"data": "id"}  // Columna extra para los botones
+            {"data": "id"}
         ],
+
         columnDefs: [
             {
-                targets: [-1],  // Aplica sobre la última columna (índice 7)
+                targets: -1,
                 class: 'text-center',
                 orderable: false,
                 render: function (data, type, row) {
-                    var buttons = '<a href="../update/' + row.id + '/" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-edit"></i></a> ';
-                    buttons += '<a href="../delete/' + row.id + '/" type="button" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash-alt"></i></a>';
-                    return buttons;
+                    return `
+                        <a href="../update/${row.id}/" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="../delete/${row.id}/" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    `;
                 }
             }
         ],
-        footerCallback: function (row, data, start, end, display) {
-            var api = this.api();
 
-            // Función para convertir a número
-            var intVal = function (i) {
-                return typeof i === 'string' ?
-                    i.replace(/[\$,]/g, '') * 1 :
-                    typeof i === 'number' ? i : 0;
-            };
-
-            // Sumar la columna "cantidad" (índice 6)
-            var totales = api
-                .column(6, { search: 'applied' })
-                .data()
-                .reduce(function(a, b) { 
-                    return intVal(a) + intVal(b); 
-                }, 0);
-            
-            // Insertar los totales en el footer (columna 6)
-            $(api.column(6).footer()).html(totales);            
+        footerCallback: function (row, data) {
+            let total = data.reduce((sum, r) => sum + (parseInt(r.cantidad) || 0), 0);
+            $('#totales').html(total);
         }
     });
+
 });

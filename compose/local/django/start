@@ -4,12 +4,17 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-# Ejecuta las migraciones de Django para aplicar los cambios en la base de datos
+echo "Esperando PostgreSQL..."
+python3 manage.py wait_for_db --settings=config.settings.local
+
+echo "Aplicando migraciones..."
 python3 manage.py migrate --settings=config.settings.local
 
-# Inicia el servidor de desarrollo de Django en el puerto 8000 para que escuche en todas las interfaces
-exec python3 manage.py runserver 0.0.0.0:8000 --settings=config.settings.local
+echo "Collecting static..."
+python3 manage.py collectstatic --noinput --settings=config.settings.local
 
-#python manage.py migrate
-#python manage.py runserver 0.0.0.0:8000
+echo "Iniciando Django DEV server..."
+
+exec python3 manage.py runserver 0.0.0.0:8000 \
+    --settings=config.settings.local
 
