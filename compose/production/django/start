@@ -4,8 +4,25 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Collecting archivos estáticos..."
-python3 /app/manage.py collectstatic --noinput
+echo "Collecting static files..."
 
-echo "Starting servidor Gunicorn..."
-/usr/local/bin/gunicorn config.wsgi --bind 0.0.0.0:5000 --chdir=/app
+# 🔥 FIX IMPORTANTE: no romper el container si falla
+python3 /app/manage.py collectstatic --noinput || true
+
+echo "Applying migrations..."
+python3 /app/manage.py migrate --noinput
+
+echo "Starting Gunicorn..."
+
+exec /usr/local/bin/gunicorn config.wsgi:application \
+    --bind 0.0.0.0:5000 \
+    --workers 4 \
+    --threads 2 \
+    --timeout 120 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    --chdir=/app

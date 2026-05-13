@@ -1,0 +1,140 @@
+{% extends 'dashboard/bodydirector.html' %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="card shadow border-0">
+
+        <div class="card-header bg-primary text-white">
+
+            <h4 class="mb-0">
+
+                {{ persona.apellido }},
+                {{ persona.nombre }}
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <!-- DATOS -->
+            <div class="row mb-4">
+
+                <div class="col-md-3">
+                    <strong>DNI:</strong>
+                    {{ persona.dni }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>CUIL:</strong>
+                    {{ persona.cuil }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Teléfono:</strong>
+                    {{ persona.telefono_display }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Localidad:</strong>
+                    {{ persona.localidad }}
+                </div>
+
+            </div>
+
+            <hr>
+
+            <!-- ACTIVIDADES -->
+            <h5 class="mb-3">
+                Actividades Registradas
+            </h5>
+
+            <table class="table table-bordered table-hover">
+
+                <thead class="table-dark">
+
+                    <tr>
+                        <th>Categoría</th>
+                        <th>Modalidad</th>
+                        <th>Nivel</th>
+                        <th>CEIC</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>
+                        <th>Estado</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for act in persona.actividades.all %}
+
+                    <tr>
+
+                        <td>
+                            {{ act.categoria }}
+                        </td>
+
+                        <td>
+                            {{ act.modalidad }}
+                        </td>
+
+                        <td>
+                            {{ act.niveles }}
+                        </td>
+
+                        <td>
+                            {{ act.ceic }}
+                        </td>
+
+                        <td>
+                            {{ act.f_desde }}
+                        </td>
+
+                        <td>
+                            {{ act.f_hasta }}
+                        </td>
+
+                        <td>
+
+                            {% if act.estado == 'ACTIVO' %}
+
+                                <span class="badge bg-success">
+                                    ACTIVO
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-danger">
+                                    INACTIVO
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="7">
+                            Sin actividades registradas
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

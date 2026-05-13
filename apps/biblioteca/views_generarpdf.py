@@ -43,6 +43,7 @@ from django.utils.text import slugify
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 from django.utils import timezone
+from qrcode.constants import ERROR_CORRECT_L
 
 
 # =========================================================
@@ -65,10 +66,25 @@ def build_table(data):
 
 
 def build_qr(data_str):
-    qr_img = qrcode.make(data_str)
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=ERROR_CORRECT_L,
+        box_size=4,
+        border=2,
+    )
+
+    # 🔥 límite defensivo
+    data_str = str(data_str)[:1500]
+
+    qr.add_data(data_str)
+    qr.make(fit=True)
+
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+
     buffer = BytesIO()
     qr_img.save(buffer, format="PNG")
     buffer.seek(0)
+
     return Image(buffer, width=90, height=90)
 
 class ReportEngine:
@@ -269,7 +285,7 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         "1. MATERIAL BIBLIOGRÁFICO Y ESPECIAL",
         build_table(data),
-        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
+        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n")
     )
 
     # =========================================================
@@ -496,9 +512,9 @@ def generar_pdf_material_bibliografico(request):
     # ===========
     # 9. AGUAPEY
     # ===========
-    aguapey = Aguapey.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio)
+    aguapey = Aguapey.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio).first()
 
-    data = [["MES", "BASE", "USUARIOS"], [
+    data = [["MES", "BASE", "USUARIOS", "OBSERVACIONES"], [
         getattr(aguapey, "total_mes", 0),
         getattr(aguapey, "total_base", 0),
         getattr(aguapey, "total_usuarios", 0),
