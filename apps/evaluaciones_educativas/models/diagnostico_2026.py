@@ -214,6 +214,10 @@ class Matematica2026(EvaluacionDiagnostica2026):
     pregunta_10 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_10, null=True)
     pregunta_11 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_11, null=True)
     pregunta_12 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_12, null=True)
+    correcion_comunicacion = models.FloatField(null=True)
+    correcion_reconocimiento =  models.FloatField(null=True)
+    correcion_resolucion =  models.FloatField(null=True)
+    total_puntaje= models.FloatField(null=True, default=0.0)
     #asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     #alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)
     class Meta:
@@ -295,6 +299,11 @@ class Lengua2026(EvaluacionDiagnostica2026):
     pregunta_22_1 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_1, null=True)
     pregunta_22_2 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_2, null=True)
     pregunta_22_3 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_3, null=True)
+    correcion_reflexion = models.FloatField(null=True, default=0.0)
+    correcion_interpretacion =  models.FloatField(null=True,default=0.0)
+    correcion_extraccion =  models.FloatField(null=True,default=0.0)
+    correcion_escritura =  models.FloatField(null=True, default=0.0)
+    total_puntaje= models.FloatField(null=True, default=0.0)
     #asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     #alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)
     class Meta:
