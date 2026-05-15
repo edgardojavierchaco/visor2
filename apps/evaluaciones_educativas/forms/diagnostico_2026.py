@@ -31,6 +31,19 @@ class AlumnoForm(forms.ModelForm):
             'comunidad_indigena': forms.Select(attrs={'class': 'form-select'}),
             'discapacidad': forms.Select(attrs={'class': 'form-select'}),
         }
+    
+    def clean_dni(self):
+        """Validar que el DNI no exista en la base de datos."""
+        dni = self.cleaned_data.get('dni')
+        if dni:
+            # Si es actualización, excluir el alumno actual
+            existing = Alumno2026.objects.filter(dni=dni)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            
+            if existing.exists():
+                raise forms.ValidationError('Ya existe un alumno con ese DNI')
+        return dni
 
 
 class SeleccionarMateriaForm(forms.Form):
@@ -47,19 +60,31 @@ class SeleccionarMateriaForm(forms.Form):
 class MatematicaForm(forms.ModelForm):
     class Meta:
         model = Matematica2026
-        exclude = ['alumno']
+        fields = [
+            'modelo',
+            'asistencia',
+            'encargado_carga',
+            'pregunta_1',
+            'pregunta_2',
+            'pregunta_3',
+            'pregunta_4',
+            'pregunta_5',
+            'pregunta_6',
+            'pregunta_7',
+            'pregunta_8',
+            'pregunta_9',
+            'pregunta_10',
+            'pregunta_11',
+            'pregunta_12',
+        ]
         widgets = {
-            'nombre_examen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Diagnóstico 2A - Mañana'}),
             'asistencia': forms.Select(attrs={'class': 'form-select'}),
             'modelo': forms.Select(attrs={'class': 'form-select'}),
             'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
         }
 
     def __init__(self, *args, **kwargs):
-        # PRIMERO llamamos al super() para que se creen los campos
         super(MatematicaForm, self).__init__(*args, **kwargs)
-        
-        # AHORA ya existe self.fields y podemos iterar
         for field_name, field in self.fields.items():
             if 'pregunta_' in field_name:
                 field.widget.attrs.update({'class': 'form-select'})
@@ -67,9 +92,39 @@ class MatematicaForm(forms.ModelForm):
 class LenguaForm(forms.ModelForm):
     class Meta:
         model = Lengua2026
-        exclude = ['alumno']
+        fields = [
+            'modelo',
+            'asistencia',
+            'encargado_carga',
+            'pregunta_1',
+            'pregunta_2',
+            'pregunta_3',
+            'pregunta_4',
+            'pregunta_5',
+            'pregunta_6',
+            'pregunta_7',
+            'pregunta_8',
+            'pregunta_9',
+            'pregunta_10',
+            'pregunta_11_1',
+            'pregunta_11_2',
+            'pregunta_11_3',
+            'pregunta_11_4',
+            'pregunta_12',
+            'pregunta_13',
+            'pregunta_14',
+            'pregunta_15',
+            'pregunta_16',
+            'pregunta_17',
+            'pregunta_18',
+            'pregunta_19',
+            'pregunta_20',
+            'pregunta_21',
+            'pregunta_22_1',
+            'pregunta_22_2',
+            'pregunta_22_3',
+        ]
         widgets = {
-            'nombre_examen': forms.TextInput(attrs={'class': 'form-control'}),
             'asistencia': forms.Select(attrs={'class': 'form-select'}),
             'modelo': forms.Select(attrs={'class': 'form-select'}),
             'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
@@ -77,7 +132,6 @@ class LenguaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(LenguaForm, self).__init__(*args, **kwargs)
-        
         for field_name, field in self.fields.items():
             if 'pregunta_' in field_name:
                 field.widget.attrs.update({'class': 'form-select'})

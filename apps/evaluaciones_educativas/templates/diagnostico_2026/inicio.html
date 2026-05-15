@@ -8,9 +8,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         .select-inline {
-            min-width: 90px;
+            min-width: 170px;
+            max-width: 240px;
             font-size: 0.82rem;
-            padding: 2px 4px;
+            padding: 4px 10px 4px 8px;
+            padding-right: 2.5rem;
+        }
+
+        #cueanexo {
+            width: auto;
+            min-width: 170px;
         }
 
         th,
@@ -33,22 +40,23 @@
                     <form method="get" action="" id="cueanexo-form" class="d-flex align-items-center gap-2 mb-0">
                         <label for="cueanexo" class="mb-0 small text-white">Cueanexo</label>
                         {% if user_cueanexos %}
-                        <select name="cueanexo" id="cueanexo" class="form-select form-select-sm select-inline">
+                        <select name="cueanexo" id="cueanexo"
+                            class="form-select form-select-sm select-inline px-3 py-1">
                             {% for cue in user_cueanexos %}
                             <option value="{{ cue }}" {% if cue|stringformat:"s" == selected_cue %}selected{% endif %}>
                                 {{ cue }}
                             </option>
                             {% endfor %}
                         </select>
-                        <button type="submit" class="btn btn-light btn-sm">Filtrar</button>
                         {% else %}
                         <span class="badge bg-warning text-dark">No hay cueanexos disponibles</span>
                         {% endif %}
+                        <div class="input-group input-group-sm">
+                            <input type="search" name="search" value="{{ search_query }}" class="form-control"
+                                placeholder="Buscar alumno...">
+                            <button type="submit" class="btn btn-light">Buscar</button>
+                        </div>
                     </form>
-                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:agregar_alumno' %}"
-                        class="btn btn-light btn-sm">
-                        + Agregar Alumno
-                    </a>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -64,7 +72,7 @@
                                 <th>Año</th>
                                 <th>Sección</th>
                                 <th>Turno</th>
-                                <th class="text-center">Acciones</th>
+                                <th class="text-center">Editar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -77,88 +85,41 @@
                                 <td>{{ alumno.objeto.get_discapacidad_display }}</td>
                                 <td>{{ alumno.objeto.seccion.año.nombre_año }}</td>
 
-                                {# Sección y Turno: desplegable con autoguardado #}
-                                <form method="post"
-                                    action="{% url 'evaluaciones_educativas:diagnostico_2026:actualizar_seccion' alumno.objeto.public_id %}"
-                                    id="form-sec-{{ forloop.counter }}">
-                                    {% csrf_token %}
-                                    <td>
-                                        <select name="seccion" class="form-select form-select-sm select-inline"
-                                            onchange="this.form.submit()">
-                                            {% for valor, etiqueta in opciones_seccion %}
-                                            <option value="{{ valor }}" {% if alumno.objeto.seccion.seccion == valor %}selected{% endif %}>
-                                                {{ etiqueta }}
-                                            </option>
+                                <td colspan="2">
+                                    <form method="post" 
+                                        action="{% url 'evaluaciones_educativas:diagnostico_2026:actualizar_seccion' alumno.objeto.public_id %}" 
+                                        id="form-sec-{{ forloop.counter }}" 
+                                        class="d-flex gap-2">
+                                        {% csrf_token %}
+                                        
+                                        <select name="seccion" class="form-select form-select-sm select-inline" onchange="this.form.submit()">
+                                            {% for valor in secciones_disponibles.secciones %}
+                                                <option value="{{ valor }}" {% if alumno.objeto.seccion.seccion == valor %}selected{% endif %}>
+                                                    {{ valor }}
+                                                </option>
                                             {% endfor %}
                                         </select>
-                                    </td>
-                                    <td>
-                                        <select name="turno" class="form-select form-select-sm select-inline"
-                                            onchange="this.form.submit()">
-                                            {% for valor, etiqueta in opciones_turno %}
-                                            <option value="{{ valor }}" {% if alumno.objeto.seccion.turno == valor %}selected{% endif %}>
-                                                {{ etiqueta }}
-                                            </option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                </form>
 
-                                {# Columna Acciones #}
+                                        <select name="turno" class="form-select form-select-sm select-inline" onchange="this.form.submit()">
+                                            {% for valor in secciones_disponibles.turnos %}
+                                                <option value="{{ valor }}" {% if alumno.objeto.seccion.turno == valor %}selected{% endif %}>
+                                                    {{ valor|title }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </form>
+                                </td>
+
                                 <td class="text-center">
-                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
-
-                                        {# Botón Editar alumno #}
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_alumno' alumno.objeto.public_id %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-outline-secondary btn-sm" title="Editar datos del alumno">
-                                            ✏️ Editar
-                                        </a>
-
-                                        {% if alumno.datos_validados %}
-                                        {# --- MATEMÁTICA --- #}
-                                        {% if not alumno.tiene_matematica %}
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:cargar_examen' alumno.objeto.public_id 'matematica' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-success btn-sm" title="Cargar examen de Matemática">
-                                            ➕ Matemática
-                                        </a>
-                                        {% else %}
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_examen' alumno.objeto.public_id 'matematica' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-warning btn-sm" title="Editar examen de Matemática">
-                                            ✏️ Mate
-                                        </a>
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examen' alumno.objeto.public_id 'matematica' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-outline-dark btn-sm"
-                                            title="Ver/Imprimir examen de Matemática" target="_blank">
-                                            🖨️
-                                        </a>
-                                        {% endif %}
-
-                                        {# --- LENGUA --- #}
-                                        {% if not alumno.tiene_lengua %}
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:cargar_examen' alumno.objeto.public_id 'lengua' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-info btn-sm text-white" title="Cargar examen de Lengua">
-                                            ➕ Lengua
-                                        </a>
-                                        {% else %}
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_examen' alumno.objeto.public_id 'lengua' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-warning btn-sm" title="Editar examen de Lengua">
-                                            ✏️ Lengua
-                                        </a>
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examen' alumno.objeto.public_id 'lengua' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                            class="btn btn-outline-dark btn-sm" title="Ver/Imprimir examen de Lengua"
-                                            target="_blank">
-                                            🖨️
-                                        </a>
-                                        {% endif %}
-                                        {% else %}
-                                        <span class="badge bg-danger">Datos incompletos</span>
-                                        {% endif %}
-                                    </div>
+                                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_alumno' alumno.objeto.public_id %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
+                                    class="btn btn-outline-secondary btn-sm" title="Editar datos del alumno">
+                                        ✏️
+                                    </a>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="8" class="text-center py-3 text-muted">
+                                <td colspan="9" class="text-center py-3 text-muted">
                                     No hay alumnos cargados para este establecimiento.
                                 </td>
                             </tr>
@@ -167,20 +128,22 @@
                     </table>
                 </div>
             </div>
+            <div class="card-footer bg-light border-top">
+                <div class="d-flex flex-column flex-md-row justify-content-end gap-2 mb-0">
+                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:agregar_alumno' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
+                        class="btn btn-primary">
+                        + Agregar Alumno
+                    </a>
+                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:realizar_carga' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
+                        class="btn btn-success">
+                        Realizar Carga
+                    </a>
+                </div>
+            </div>
         </div>
-
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const selectCueanexo = document.getElementById('cueanexo');
-        if (selectCueanexo) {
-          selectCueanexo.addEventListener('change', function() {
-            this.form.submit();
-          });
-        }
-      });
-    </script>
+    <p>{{ data }}</p>
+    </div>
 </body>
 
 </html>
