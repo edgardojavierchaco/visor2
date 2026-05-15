@@ -1,24 +1,95 @@
 from .. import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.templatetags.static import static
 from django.db.models import Count,Q,Avg
 from datetime import date, datetime
+import io
+import re
 import psycopg2
 from psycopg2 import extras
 import os
 from openpyxl import Workbook
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from ..forms import MatematicaForm, LenguaForm, SeleccionarMateriaForm, AlumnoForm
-from ..models import Alumno2026, Matematica2026, Lengua2026, Seccion2026
+from ..models import Alumno2026, Matematica2026, Lengua2026, Seccion2026, TablaTemporalAlumno
 from django.http import JsonResponse
 from ..utils import utilidades
+
+
+def _orden_pregunta_field(field):
+    numeros = re.findall(r'\d+', field.name)
+    return [int(n) for n in numeros] if numeros else [0]
+
+
+def _obtener_estructura_preguntas_lengua():
+    """Retorna estructura de preguntas de Lengua con puntajes"""
+    estructura = {
+        'preguntas_simples': [
+            {'num': i, 'puntajes': ['A', 'B', 'C', 'D', 'OMITIÓ']} 
+            for i in range(1, 11)
+        ] + [
+            {'num': i, 'puntajes': ['A', 'B', 'C', 'D', 'OMITIÓ']} 
+            for i in range(12, 22)
+        ],
+        'preguntas_compuestas': {
+            11: {
+                'titulo': 'Pregunta 11',
+                'partes': {
+                    '11_1': {'label': '11.1. Elección de la opción', 'puntajes': [2, 0]},
+                    '11_2': {'label': '11.2. Justificación', 'puntajes': [5.65, 2.80, 0]},
+                    '11_3': {'label': '11.3. Normativa - Puntuación', 'puntajes': [2.30, 1.15, 0]},
+                    '11_4': {'label': '11.4. Normativa - Ortografía', 'puntajes': [2.30, 1.15, 0]},
+                },
+                'total': 13.25,
+            },
+            22: {
+                'titulo': 'Pregunta 22',
+                'partes': {
+                    '22_1': {'label': '22.1. Contenido, autores y obras', 'puntajes': [7.65, 3.80, 0]},
+                    '22_2': {'label': '22.2. Normativa - Puntuación', 'puntajes': [2.30, 1.15, 0]},
+                    '22_3': {'label': '22.3. Normativa - Ortografía', 'puntajes': [2.30, 1.15, 0]},
+                },
+                'total': 12.50,
+            }
+        },
+        'total_puntos': 100
+    }
+    return estructura
+
+
+def _obtener_estructura_preguntas_matematica():
+    """Retorna estructura de preguntas de Matemática con puntajes"""
+    estructura = {
+        'preguntas': [
+            {'num': 1, 'puntajes': [6.5, 3.25, 0]},
+            {'num': 2, 'puntajes': [6, 4, 2, 0]},
+            {'num': 3, 'puntajes': ['A', 'B', 'C', 'OMITIÓ']},  # Respuesta libre, mostrar opciones
+            {'num': 4, 'puntajes': [6, 3, 0]},
+            {'num': 5, 'puntajes': [7, 3.5, 0]},
+            {'num': 6, 'puntajes': [8, 4, 0]},
+            {'num': 7, 'puntajes': [10, 5, 0]},
+            {'num': 8, 'puntajes': ['A', 'B', 'C', 'OMITIÓ']},
+            {'num': 9, 'puntajes': [11, 5.50, 0]},
+            {'num': 10, 'puntajes': ['A', 'B', 'C', 'OMITIÓ']},
+            {'num': 11, 'puntajes': [11.5, 7, 3.5, 0]},
+            {'num': 12, 'puntajes': [9, 4.5, 0]},
+        ],
+        'total_puntos': 100
+    }
+    return estructura
+
 
 @login_required
 def inicio(request):
     usuario = request.user
+    alumnos_test = TablaTemporalAlumno.objects.get_queryset().order_by('apellido', 'nombre')[:10]
     user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
 
     selected_cue = request.GET.get('cueanexo')
@@ -31,10 +102,20 @@ def inicio(request):
     print("CUEANEXOS del usuario:", user_cueanexos)
     print("CUE seleccionado:", selected_cue)
 
+    search_query = request.GET.get('search', '').strip()
+
     if selected_cue:
         alumnos_qs = Alumno2026.objects.filter(
             seccion__año__Establecimiento__cueanexo=int(selected_cue)
         ).select_related('seccion__año', 'seccion__año__Establecimiento')
+
+        if search_query:
+            alumnos_qs = alumnos_qs.filter(
+                Q(nombre__icontains=search_query) |
+                Q(apellido__icontains=search_query) |
+                Q(dni__icontains=search_query)
+            )
+
         alumnos_qs = alumnos_qs.order_by('apellido', 'nombre')
     else:
         alumnos_qs = Alumno2026.objects.none()
@@ -64,16 +145,189 @@ def inicio(request):
             'examen_completo': tiene_matematica and tiene_lengua
         })
 
+    # Obtener secciones disponibles para este cueanexo
+    secciones_disponibles = {}
+    if selected_cue:
+        secciones = Seccion2026.objects.filter(
+            año__Establecimiento__cueanexo=selected_cue
+        ).values_list('seccion', flat=True).distinct()
+        turnos = Seccion2026.objects.filter(
+            año__Establecimiento__cueanexo=selected_cue
+        ).values_list('turno', flat=True).distinct()
+        
+        secciones_disponibles = {
+            'secciones': list(secciones),
+            'turnos': list(turnos),
+        }
+
     context = {
         'alumnos': lista_alumnos_procesada,
         'cue_escuela': selected_cue,
         'user_cueanexos': user_cueanexos,
         'selected_cue': selected_cue,
+        'search_query': search_query,
         'opciones_seccion': Seccion2026.OPCIONES_SECCION,
         'opciones_turno': Seccion2026.OPCIONES_TURNO,
+        'secciones_disponibles': secciones_disponibles,
+        'data': alumnos_test
     }
 
     return render(request, "diagnostico_2026/inicio.html", context)
+
+
+@login_required
+def realizar_carga(request):
+    usuario = request.user
+    user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
+    selected_cue = request.GET.get('cueanexo')
+    if selected_cue not in [str(c) for c in user_cueanexos]:
+        selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+    return render(request, 'diagnostico_2026/realizar_carga.html', {
+        'user_cueanexos': user_cueanexos,
+        'selected_cue': selected_cue,
+    })
+
+
+@login_required
+def examenes_lista(request, materia):
+    usuario = request.user
+    user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
+    selected_cue = request.GET.get('cueanexo')
+    if selected_cue not in [str(c) for c in user_cueanexos]:
+        selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+    if materia == 'matematica':
+        examen_model = Matematica2026
+        materia_nombre = 'Matemática'
+    elif materia == 'lengua':
+        examen_model = Lengua2026
+        materia_nombre = 'Lengua'
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:realizar_carga')
+
+    alumnos_qs = Alumno2026.objects.filter(
+        seccion__año__Establecimiento__cueanexo=selected_cue
+    ).select_related('seccion__año').order_by('apellido', 'nombre') if selected_cue else Alumno2026.objects.none()
+
+    pregunta_campos = [f for f in examen_model._meta.get_fields()
+                       if hasattr(f, 'choices') and f.choices and f.name.startswith('pregunta_')]
+    pregunta_campos = sorted(pregunta_campos, key=_orden_pregunta_field)
+    pregunta_encabezados = [f.name.replace('_', ' ').title() for f in pregunta_campos]
+
+    filas = []
+    for alumno in alumnos_qs:
+        examen = examen_model.objects.filter(alumno=alumno).first()
+        filas.append({
+            'alumno': alumno,
+            'examen': examen,
+            'modelo': examen.modelo if examen else '',
+            'ausentismo': examen.asistencia if examen else '',
+            'preguntas': [getattr(examen, campo.name) if examen else '' for campo in pregunta_campos],
+        })
+
+    return render(request, 'diagnostico_2026/examenes_lista.html', {
+        'filas': filas,
+        'materia_nombre': materia_nombre,
+        'materia': materia,
+        'selected_cue': selected_cue,
+        'pregunta_encabezados': pregunta_encabezados,
+    })
+
+
+@login_required
+def descargar_examenes(request, materia):
+    usuario = request.user
+    user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
+    selected_cue = request.GET.get('cueanexo')
+    if selected_cue not in [str(c) for c in user_cueanexos]:
+        selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+    if materia == 'matematica':
+        examen_model = Matematica2026
+        materia_nombre = 'Matemática'
+    elif materia == 'lengua':
+        examen_model = Lengua2026
+        materia_nombre = 'Lengua'
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:realizar_carga')
+
+    alumnos_qs = Alumno2026.objects.filter(
+        seccion__año__Establecimiento__cueanexo=selected_cue
+    ).select_related('seccion__año').order_by('apellido', 'nombre') if selected_cue else Alumno2026.objects.none()
+
+    pregunta_campos = [f for f in examen_model._meta.get_fields()
+                       if hasattr(f, 'choices') and f.choices and f.name.startswith('pregunta_')]
+    pregunta_campos = sorted(pregunta_campos, key=_orden_pregunta_field)
+    pregunta_encabezados = [f.name.replace('_', ' ').title() for f in pregunta_campos]
+
+    data = [
+        ['Apellido', 'Nombre', 'DNI', 'Sección', 'Turno', 'Modelo', 'Ausentismo'] + pregunta_encabezados
+    ]
+
+    for alumno in alumnos_qs:
+        examen = examen_model.objects.filter(alumno=alumno).first()
+        row = [
+            alumno.apellido,
+            alumno.nombre,
+            alumno.dni,
+            alumno.seccion.seccion if alumno.seccion else '',
+            alumno.seccion.turno if alumno.seccion else '',
+            examen.modelo if examen else '',
+            examen.asistencia if examen else '',
+        ]
+        row.extend([getattr(examen, campo.name) if examen else '' for campo in pregunta_campos])
+        data.append(row)
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+    styles = getSampleStyleSheet()
+    story = []
+
+    story.append(Paragraph(f"Lista de exámenes - {materia_nombre}", styles['Title']))
+    story.append(Paragraph(f"CUE/ANEXO: {selected_cue or 'N/A'}", styles['Normal']))
+    story.append(Spacer(1, 12))
+
+    col_widths = [70, 70, 50, 50, 50, 50, 60] + [40] * len(pregunta_campos)
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E9ECEF')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+    ]))
+
+    story.append(table)
+    doc.build(story)
+    buffer.seek(0)
+
+    filename = f"examenes_{materia}_{selected_cue or 'todos'}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=filename)
+
+
+@login_required
+def eliminar_examen(request, alumno_uuid, materia):
+    alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
+    selected_cue = request.GET.get('cueanexo')
+
+    if materia == 'matematica':
+        examen = Matematica2026.objects.filter(alumno=alumno).first()
+    elif materia == 'lengua':
+        examen = Lengua2026.objects.filter(alumno=alumno).first()
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:realizar_carga')
+
+    if examen:
+        examen.delete()
+
+    redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:examenes_lista', kwargs={'materia': materia})
+    if selected_cue:
+        return redirect(f"{redirect_url}?cueanexo={selected_cue}")
+    return redirect(redirect_url)
 
 
 @login_required
@@ -89,16 +343,11 @@ def actualizar_seccion(request, alumno_uuid):
             año_actual = alumno.seccion.año
 
             # Buscamos o creamos la sección con esos datos
-            seccion_obj, creada = Seccion2026.objects.get_or_create(
+            seccion_obj = Seccion2026.objects.get(
                 seccion=nueva_seccion,
                 año=año_actual,
-                defaults={'turno': nuevo_turno}
+                turno=nuevo_turno
             )
-
-            # Si ya existía, actualizamos el turno por si cambió
-            if not creada and seccion_obj.turno != nuevo_turno:
-                seccion_obj.turno = nuevo_turno
-                seccion_obj.save()
 
             # Actualizamos la FK del alumno
             alumno.seccion = seccion_obj
@@ -156,32 +405,47 @@ def actualizar_seccion(request, alumno_uuid):
 def cargar_examen(request, alumno_uuid, materia):
     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
     return_cueanexo = request.GET.get('cueanexo') or request.POST.get('cueanexo')
-    
+    existing_examen = None
+
     if materia == 'matematica':
+        existing_examen = Matematica2026.objects.filter(alumno=alumno).first()
         form_class = MatematicaForm
         template_materia = "Matemática"
+        estructura_preguntas = _obtener_estructura_preguntas_matematica()
     elif materia == 'lengua':
+        existing_examen = Lengua2026.objects.filter(alumno=alumno).first()
         form_class = LenguaForm
         template_materia = "Lengua"
+        estructura_preguntas = _obtener_estructura_preguntas_lengua()
     else:
         return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
 
-    form = form_class(request.POST or None)
+    form = form_class(request.POST or None, instance=existing_examen)
+    modo_edicion = bool(existing_examen)
 
     if request.method == 'POST' and form.is_valid():
         examen = form.save(commit=False)
         examen.alumno = alumno
         examen.save()
-        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
+        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:examenes_lista', kwargs={'materia': materia})
         if return_cueanexo:
             return redirect(f"{redirect_url}?cueanexo={return_cueanexo}")
         return redirect(redirect_url)
 
-    return render(request, 'diagnostico_2026/cargar_examen.html', {
+    if request.method == 'GET' and existing_examen:
+        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:editar_examen', kwargs={'alumno_uuid': alumno_uuid, 'materia': materia})
+        if return_cueanexo:
+            return redirect(f"{redirect_url}?cueanexo={return_cueanexo}")
+        return redirect(redirect_url)
+
+    return render(request, 'diagnostico_2026/cargar_examen_v2.html', {
         'form': form,
         'materia': template_materia,
+        'materia_slug': materia,
         'alumno': alumno,
         'return_cueanexo': return_cueanexo,
+        'modo_edicion': modo_edicion,
+        'estructura_preguntas': estructura_preguntas,
     })
 
 
@@ -208,11 +472,17 @@ def editar_alumno(request, alumno_uuid):
 @login_required
 def agregar_alumno(request):
     from ..models import Año2026
-    user_cue = str(utilidades.obtener_cueanexo(request.user.username)).strip()
-
+    usuario = request.user
+    user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
+    
+    # Obtener cueanexo del query parameter o usar el primero disponible
+    selected_cue = request.GET.get('cueanexo') or request.POST.get('cueanexo')
+    if selected_cue not in [str(c) for c in user_cueanexos]:
+        selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+    
     # Secciones disponibles para ese CUE
     secciones_qs = Seccion2026.objects.filter(
-        año__Establecimiento__cueanexo=user_cue
+        año__Establecimiento__cueanexo=selected_cue
     ).select_related('año').order_by('año__nombre_año', 'seccion')
 
     form = AlumnoForm(request.POST or None)
@@ -222,16 +492,24 @@ def agregar_alumno(request):
         seccion_obj = Seccion2026.objects.filter(id=seccion_id).first()
 
         if seccion_obj:
-            alumno = form.save(commit=False)
-            alumno.seccion = seccion_obj
-            alumno.save()
-            return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+            try:
+                alumno = form.save(commit=False)
+                alumno.seccion = seccion_obj
+                alumno.save()
+                redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
+                if selected_cue:
+                    return redirect(f"{redirect_url}?cueanexo={selected_cue}")
+                return redirect(redirect_url)
+            except Exception as e:
+                form.add_error(None, f'Error al guardar alumno: {str(e)}')
         else:
             form.add_error(None, 'Debes seleccionar una sección válida.')
 
     return render(request, 'diagnostico_2026/agregar_alumno.html', {
         'form': form,
         'secciones': secciones_qs,
+        'selected_cue': selected_cue,
+        'user_cueanexos': user_cueanexos,
     })
 
 
@@ -244,26 +522,30 @@ def editar_examen(request, alumno_uuid, materia):
         examen = get_object_or_404(Matematica2026, alumno=alumno)
         form = MatematicaForm(request.POST or None, instance=examen)
         template_materia = "Matemática"
+        estructura_preguntas = _obtener_estructura_preguntas_matematica()
     elif materia == 'lengua':
         examen = get_object_or_404(Lengua2026, alumno=alumno)
         form = LenguaForm(request.POST or None, instance=examen)
         template_materia = "Lengua"
+        estructura_preguntas = _obtener_estructura_preguntas_lengua()
     else:
         return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
 
     if request.method == 'POST' and form.is_valid():
         form.save()
-        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
+        redirect_url = reverse('evaluaciones_educativas:diagnostico_2026:examenes_lista', kwargs={'materia': materia})
         if return_cueanexo:
             return redirect(f"{redirect_url}?cueanexo={return_cueanexo}")
         return redirect(redirect_url)
 
-    return render(request, 'diagnostico_2026/cargar_examen.html', {
+    return render(request, 'diagnostico_2026/cargar_examen_v2.html', {
         'form': form,
         'materia': template_materia,
+        'materia_slug': materia,
         'alumno': alumno,
         'modo_edicion': True,
         'return_cueanexo': return_cueanexo,
+        'estructura_preguntas': estructura_preguntas,
     })
 
 
@@ -284,7 +566,7 @@ def descargar_examen_pdf(request, alumno_uuid, materia):
     # Construimos la lista de ítems con etiqueta y puntaje seleccionado
     campos = [f for f in examen._meta.get_fields()
               if hasattr(f, 'choices') and f.choices and f.name.startswith('pregunta_')]
-    campos_ordenados = sorted(campos, key=lambda f: f.name)
+    campos_ordenados = sorted(campos, key=_orden_pregunta_field)
 
     items = []
     for campo in campos_ordenados:

@@ -10,15 +10,26 @@
 <div class="container py-5" style="max-width: 640px;">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">+ Agregar Nuevo Alumno</h5>
+            <div class="d-flex flex-column">
+                <h5 class="mb-1">+ Agregar Nuevo Alumno</h5>
+                <p class="mb-0 small">CUEANEXO seleccionado: <strong>{{ selected_cue|default:"-" }}</strong></p>
+            </div>
         </div>
         <div class="card-body">
 
-            <form method="post">
+            <form method="post" id="agregar-form">
                 {% csrf_token %}
+                {% if selected_cue %}
+                <input type="hidden" name="cueanexo" value="{{ selected_cue }}">
+                {% endif %}
 
                 {% if form.non_field_errors %}
-                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                <div class="alert alert-danger">
+                    <strong>Error:</strong>
+                    {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
                 {% endif %}
 
                 {# Datos personales del alumno #}
@@ -26,10 +37,14 @@
                 <div class="mb-3">
                     <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
                         {{ field.label }}
+                        {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
                     </label>
                     {{ field }}
                     {% if field.errors %}
                     <div class="text-danger small mt-1">{{ field.errors }}</div>
+                    {% endif %}
+                    {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text|safe }}</div>
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -39,7 +54,7 @@
 
                 {# Selector de sección: muestra año, sección y turno juntos #}
                 <div class="mb-3">
-                    <label for="seccion_id" class="form-label fw-semibold">Año / Sección / Turno</label>
+                    <label for="seccion_id" class="form-label fw-semibold">Año / Sección / Turno <span class="text-danger">*</span></label>
                     <select name="seccion_id" id="seccion_id" class="form-select" required>
                         <option value="">--- Seleccionar sección ---</option>
                         {% for s in secciones %}
@@ -55,7 +70,7 @@
 
                 <div class="d-flex gap-2 mt-4">
                     <button type="submit" class="btn btn-primary">Guardar Alumno</button>
-                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}" class="btn btn-secondary">Cancelar</a>
+                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-secondary">Cancelar</a>
                 </div>
             </form>
         </div>
