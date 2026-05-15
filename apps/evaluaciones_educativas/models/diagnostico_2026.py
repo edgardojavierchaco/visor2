@@ -97,12 +97,13 @@ class Alumno2026(models.Model):
 ]
     #id = models.AutoField(primary_key=True)
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
-    dni = models.CharField(max_length=8,unique=True)
+    dni = models.CharField(max_length=11,unique=True)
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)
-    comunidad_indigena=models.CharField(max_length=11, choices= OPCIONES_COMUNIDAD_INDIGENA)
-    discapacidad = models.CharField(choices=OPCIONES_DISCAPACIDAD)
-    seccion = models.ForeignKey(Seccion2026, on_delete=models.CASCADE)
+    comunidad_indigena=models.CharField(max_length=11, choices= OPCIONES_COMUNIDAD_INDIGENA,null=True)
+    discapacidad = models.CharField(choices=OPCIONES_DISCAPACIDAD,null=True)
+    seccion = models.ForeignKey(Seccion2026, on_delete=models.CASCADE, null=True)
+    # AÑADIR A SECCIN null=True, blank=True
     class Meta:
         #managed = False
         db_table = '"diagnostico_2026"."alumnos"'

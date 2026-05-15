@@ -1,3 +1,5 @@
+from apps.evaluaciones_educativas.models.diagnostico_2026 import Año2026
+
 from .. import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -89,7 +91,6 @@ def _obtener_estructura_preguntas_matematica():
 @login_required
 def inicio(request):
     usuario = request.user
-    alumnos_test = TablaTemporalAlumno.objects.get_queryset().order_by('apellido', 'nombre')[:10]
     user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
 
     selected_cue = request.GET.get('cueanexo')
@@ -105,9 +106,15 @@ def inicio(request):
     search_query = request.GET.get('search', '').strip()
 
     if selected_cue:
+
+        #-----cosneguir pasarle la lsita de alumnos 2026 a listar-----
+        lista_dnis = list(TablaTemporalAlumno.objects.filter(cueanexo=selected_cue).values_list('numero_de_documento', flat=True)
+)
+        # alumnos_qs = Alumno2026.objects.filter(
+        #     seccion__año__Establecimiento__cueanexo=int(selected_cue)
+        # ).select_related('seccion__año', 'seccion__año__Establecimiento') 
         alumnos_qs = Alumno2026.objects.filter(
-            seccion__año__Establecimiento__cueanexo=int(selected_cue)
-        ).select_related('seccion__año', 'seccion__año__Establecimiento')
+            dni__in= lista_dnis)
 
         if search_query:
             alumnos_qs = alumnos_qs.filter(
@@ -168,8 +175,7 @@ def inicio(request):
         'search_query': search_query,
         'opciones_seccion': Seccion2026.OPCIONES_SECCION,
         'opciones_turno': Seccion2026.OPCIONES_TURNO,
-        'secciones_disponibles': secciones_disponibles,
-        'data': alumnos_test
+        'secciones_disponibles': secciones_disponibles
     }
 
     return render(request, "diagnostico_2026/inicio.html", context)
@@ -340,8 +346,11 @@ def actualizar_seccion(request, alumno_uuid):
 
         if nueva_seccion and nuevo_turno:
             # Obtenemos el año actual del alumno para mantener la relación
-            año_actual = alumno.seccion.año
-
+            #SOLO TIENE SENTIDO CUANDO EL ALUMNO YA PERTENECE A UNA SECCION
+            #año_actual = alumno.seccion
+            dni=alumno.dni
+            cueanexo=TablaTemporalAlumno.objects.values_list('cueanexo', flat=True).get(numero_de_documento=dni)
+            año_actual= Año2026.objects.get(cueanexo=cueanexo)
             # Buscamos o creamos la sección con esos datos
             seccion_obj = Seccion2026.objects.get(
                 seccion=nueva_seccion,

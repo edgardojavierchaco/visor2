@@ -81,9 +81,9 @@
                                 <td>{{ alumno.objeto.nombre }}</td>
                                 <td>{{ alumno.objeto.apellido }}</td>
                                 <td>{{ alumno.objeto.dni }}</td>
-                                <td>{{ alumno.objeto.get_comunidad_indigena_display }}</td>
-                                <td>{{ alumno.objeto.get_discapacidad_display }}</td>
-                                <td>{{ alumno.objeto.seccion.año.nombre_año }}</td>
+                                <td>{{ alumno.objeto.get_comunidad_indigena_display|default:"Seleccionar" }}</td>
+                                <td>{{ alumno.objeto.get_discapacidad_display|default:"Seleccionar" }}</td>
+                                <td>{{ alumno.objeto.seccion.año.nombre_año|default:"2do Año/Grado"}}</td>
 
                                 <td colspan="2">
                                     <form method="post" 
@@ -142,7 +142,7 @@
             </div>
         </div>
     </div>
-    <p>{{ data }}</p>
+    {% comment %} <p>{{ data }}</p> {% endcomment %}
     </div>
 </body>
 
