@@ -108,8 +108,10 @@ def inicio(request):
     if selected_cue:
 
         #-----cosneguir pasarle la lsita de alumnos 2026 a listar-----
-        lista_dnis = list(TablaTemporalAlumno.objects.filter(cueanexo=selected_cue).values_list('numero_de_documento', flat=True)
-)
+        lista_dnis = list(TablaTemporalAlumno.objects.filter(cueanexo=selected_cue).values_list('numero_de_documento', flat=True))
+        lista=list(Alumno2026.objects.filter(seccion__año__Establecimiento__cueanexo=int(selected_cue)).select_related('seccion__año', 'seccion__año__Establecimiento').values_list('dni', flat=True))
+        #obtenemos lista completa tanto de alumnos ya creados como nuevos
+        lista_dnis.extend(lista)
         # alumnos_qs = Alumno2026.objects.filter(
         #     seccion__año__Establecimiento__cueanexo=int(selected_cue)
         # ).select_related('seccion__año', 'seccion__año__Establecimiento') 
