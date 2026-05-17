@@ -84,10 +84,24 @@ class MatematicaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(MatematicaForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+        self.fields['encargado_carga'].required = False
         for field_name, field in self.fields.items():
-            if 'pregunta_' in field_name:
+            if field_name.startswith('pregunta_'):
+                field.required = False  # ← siempre opcionales
                 field.widget.attrs.update({'class': 'form-select'})
+
+    def clean(self):
+        cleaned_data = super().clean()
+        asistencia = cleaned_data.get('asistencia')
+
+        if asistencia == 'AUSENTE':
+            # Si está ausente, forzamos None en todas las preguntas
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    cleaned_data[field_name] = None
+
+        return cleaned_data
 
 class LenguaForm(forms.ModelForm):
     class Meta:
@@ -131,10 +145,23 @@ class LenguaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(LenguaForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+        self.fields['encargado_carga'].required = False
         for field_name, field in self.fields.items():
-            if 'pregunta_' in field_name:
+            if field_name.startswith('pregunta_'):
+                field.required = False  # ← siempre opcionales
                 field.widget.attrs.update({'class': 'form-select'})
+
+    def clean(self):
+        cleaned_data = super().clean()
+        asistencia = cleaned_data.get('asistencia')
+
+        if asistencia == 'AUSENTE':
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    cleaned_data[field_name] = None
+
+        return cleaned_data
 
 # class MatematicaForm(forms.ModelForm):
 #     class Meta:
