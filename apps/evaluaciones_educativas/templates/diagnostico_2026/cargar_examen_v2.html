@@ -128,19 +128,26 @@
             {% if form.errors %}
             <div class="alert alert-danger no-print" role="alert">
                 <strong>No se pudo guardar.</strong> Revise los campos indicados.
+                <ul class="mb-0 mt-2">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li>{% if field != '__all__' %}<strong>{{ field }}:</strong> {% endif %}{{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
             </div>
             {% endif %}
             <div class="card mb-4 border-secondary bg-light no-print">
                 <div class="card-body">
                     <div class="row g-3">
                         {% if materia_slug == 'matematica' %}
-                        <div class="col-md-5"><label class="form-label fw-bold small">Nombre del Examen</label>{{ form.nombre_examen }}</div>
+                        <div class="col-md-5"><label class="form-label fw-bold small">Nombre del alumno</label> <br>{{ alumno.nombre }} {{ alumno.apellido }}</div>
                         <div class="col-md-3"><label class="form-label fw-bold small">Modelo</label>{{ form.modelo }}</div>
                         <div class="col-md-4"><label class="form-label fw-bold small">Asistencia</label>{{ form.asistencia }}</div>
                         {% else %}
-                        <div class="col-md-4"><label class="form-label fw-bold small">Modelo</label>{{ form.modelo }}</div>
+                        <div class="col-md-5"><label class="form-label fw-bold small">Nombre del alumno</label> <br>{{ alumno.nombre }} {{ alumno.apellido }}</div>
+                        <div class="col-md-3"><label class="form-label fw-bold small">Modelo</label>{{ form.modelo }}</div>
                         <div class="col-md-4"><label class="form-label fw-bold small">Asistencia</label>{{ form.asistencia }}</div>
-                        <div class="col-md-4"><label class="form-label fw-bold small">Encargado de carga</label>{{ form.encargado_carga }}</div>
                         {% endif %}
                     </div>
                 </div>
@@ -478,9 +485,17 @@
                 </tbody>
             </table>
 
-            <div class="text-center mt-4 no-print"><button type="submit" class="btn btn-dark btn-lg px-5 shadow">GUARDAR</button></div>
+            <div style="display: flex; align-items: center; width: 100%; justify-content: center; gap: 1.5rem; height: 100%;">
+                <div class="text-center no-print"><button type="submit" class="btn btn-success btn-lg px-5 shadow">Guardar Exámen</button></div>
+                <a  href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' materia_slug %}{% if return_cueanexo %}?cueanexo={{ return_cueanexo }}{% endif %}" class="btn btn-danger btn-lg px-5 shadow" style="margin-top: 0">
+                    Cancelar
+                </a>
+            </div>
+            
         </form>
     </div>
+
+    {{ respuestas|json_script:"respuestas-guardadas" }}
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -561,6 +576,22 @@
             if (selMod) selMod.addEventListener("change", update);
             if (selAsist) selAsist.addEventListener("change", update);
             initCerradas();
+
+            const respuestasEl = document.getElementById("respuestas-guardadas");
+            if (respuestasEl) {
+                const respuestas = JSON.parse(respuestasEl.textContent);
+                Object.entries(respuestas).forEach(([name, value]) => {
+                    if (!value) return;
+                    const radio = document.querySelector(`input[name="${name}"][value="${CSS.escape(value)}"]`);
+                    if (radio) radio.checked = true;
+                    const select = document.querySelector(`select[name="${name}"]`);
+                    if (select) {
+                        select.value = value;
+                        select.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                });
+            }
+
             update();
         });
     </script>
