@@ -188,7 +188,7 @@ class Matematica2026(EvaluacionDiagnostica2026):
     ('OMITÍO', 'OMITÍO'),
 	]
     OPCIONES_RESPUESTAS_11 = [
-    ('11,5', '11,5'),
+    ('10,5', '10,5'),
     ('7', '7'),
     ('3,5', '3,5'),
     ('0', '0'),  
