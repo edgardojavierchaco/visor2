@@ -19,14 +19,17 @@ class AlumnoForm(forms.ModelForm):
                 'placeholder': 'Ej: 12345678',
                 'minlength': '7',
                 'maxlength': '8',
+                'pattern': '[0-9]*'
             }),
             'nombre': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nombre en mayúsculas',
+                'pattern': '[A-ZÑÁÉÍÓÚ ]*'
             }),
             'apellido': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Apellido en mayúsculas',
+                'pattern': '[A-ZÑÁÉÍÓÚ ]*'
             }),
             'comunidad_indigena': forms.Select(attrs={'class': 'form-select'}),
             'discapacidad': forms.Select(attrs={'class': 'form-select'}),
