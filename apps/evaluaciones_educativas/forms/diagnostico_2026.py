@@ -5,6 +5,279 @@
 # import os
 # from psycopg2 import extras
 
+from django import forms
+from ..models import Matematica2026, Lengua2026, Alumno2026
+
+
+class AlumnoForm(forms.ModelForm):
+    class Meta:
+        model = Alumno2026
+        fields = ['dni', 'nombre', 'apellido', 'comunidad_indigena', 'discapacidad']
+        widgets = {
+            'dni': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: 12345678',
+                'minlength': '7',
+                'maxlength': '8',
+                'pattern': '[0-9]*'
+            }),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre en mayúsculas',
+                'pattern': '[A-ZÑÁÉÍÓÚ ]*'
+            }),
+            'apellido': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Apellido en mayúsculas',
+                'pattern': '[A-ZÑÁÉÍÓÚ ]*'
+            }),
+            'comunidad_indigena': forms.Select(attrs={'class': 'form-select'}),
+            'discapacidad': forms.Select(attrs={'class': 'form-select'}),
+        }
+    
+    def clean_dni(self):
+        """Validar que el DNI no exista en la base de datos."""
+        dni = self.cleaned_data.get('dni')
+        if dni:
+            # Si es actualización, excluir el alumno actual
+            existing = Alumno2026.objects.filter(dni=dni)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            
+            if existing.exists():
+                raise forms.ValidationError('Ya existe un alumno con ese DNI')
+        return dni
+
+
+class SeleccionarMateriaForm(forms.Form):
+    materia = forms.ChoiceField(
+        choices=[
+            ('matematica', 'Matemática'),
+            ('lengua', 'Lengua'),
+        ],
+        label='Seleccione la materia del examen',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
+
+
+class MatematicaForm(forms.ModelForm):
+    class Meta:
+        model = Matematica2026
+        fields = [
+            'modelo',
+            'asistencia',
+            'encargado_carga',
+            'pregunta_1',
+            'pregunta_2',
+            'pregunta_3',
+            'pregunta_4',
+            'pregunta_5',
+            'pregunta_6',
+            'pregunta_7',
+            'pregunta_8',
+            'pregunta_9',
+            'pregunta_10',
+            'pregunta_11',
+            'pregunta_12',
+        ]
+        widgets = {
+            'asistencia': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+            'modelo': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+            'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['encargado_carga'].required = False
+        for field_name, field in self.fields.items():
+            if field_name.startswith('pregunta_'):
+                field.required = False  # ← siempre opcionales
+                field.widget.attrs.update({'class': 'form-select'})
+
+    def clean(self):
+        cleaned_data = super().clean()
+        asistencia = cleaned_data.get('asistencia')
+        
+        if asistencia == 'AUSENTE':
+            # Si está ausente, forzamos None en todas las preguntas
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    cleaned_data[field_name] = None
+                    
+        elif asistencia == 'PRESENTE':
+            # Si está presente, todas las preguntas son obligatorias
+            campos_vacios = []
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    valor = cleaned_data.get(field_name)
+                    if not valor:
+                        # Transformamos 'pregunta_2' en 'Pregunta 2' antes de guardarlo en la lista
+                        nombre_legible = field_name.replace('_', ' ').capitalize()
+                        campos_vacios.append(nombre_legible)
+                        
+            if campos_vacios:
+                raise forms.ValidationError(
+                    f'El alumno está presente. Debe completar todas las preguntas. '
+                    f'Faltan: {", ".join(campos_vacios)}'
+                )
+                
+        return cleaned_data
+
+class LenguaForm(forms.ModelForm):
+    class Meta:
+        model = Lengua2026
+        fields = [
+            'modelo',
+            'asistencia',
+            'encargado_carga',
+            'pregunta_1',
+            'pregunta_2',
+            'pregunta_3',
+            'pregunta_4',
+            'pregunta_5',
+            'pregunta_6',
+            'pregunta_7',
+            'pregunta_8',
+            'pregunta_9',
+            'pregunta_10',
+            'pregunta_11_1',
+            'pregunta_11_2',
+            'pregunta_11_3',
+            'pregunta_11_4',
+            'pregunta_12',
+            'pregunta_13',
+            'pregunta_14',
+            'pregunta_15',
+            'pregunta_16',
+            'pregunta_17',
+            'pregunta_18',
+            'pregunta_19',
+            'pregunta_20',
+            'pregunta_21',
+            'pregunta_22_1',
+            'pregunta_22_2',
+            'pregunta_22_3',
+        ]
+        widgets = {
+            'asistencia': forms.Select(attrs={'class': 'form-select',}),
+            'modelo': forms.Select(attrs={'class': 'form-select',}),
+            'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['encargado_carga'].required = False
+        for field_name, field in self.fields.items():
+            if field_name.startswith('pregunta_'):
+                field.required = False  # ← siempre opcionales
+                field.widget.attrs.update({'class': 'form-select'})
+
+    def clean(self):
+        cleaned_data = super().clean()
+        asistencia = cleaned_data.get('asistencia')
+        
+        if asistencia == 'AUSENTE':
+            # Si está ausente, forzamos None en todas las preguntas
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    cleaned_data[field_name] = None
+                    
+        elif asistencia == 'PRESENTE':
+            # Si está presente, todas las preguntas son obligatorias
+            campos_vacios = []
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    valor = cleaned_data.get(field_name)
+                    if not valor:
+                        # Transformamos 'pregunta_2' en 'Pregunta 2' antes de guardarlo en la lista
+                        nombre_legible = field_name.replace('_', ' ').capitalize()
+                        campos_vacios.append(nombre_legible)
+                        
+            if campos_vacios:
+                raise forms.ValidationError(
+                    f'El alumno está presente. Debe completar todas las preguntas. '
+                    f'Faltan: {", ".join(campos_vacios)}'
+                )
+                
+        return cleaned_data
+
+# class MatematicaForm(forms.ModelForm):
+#     class Meta:
+#         model = Matematica2026
+#         # Incluimos los campos de la clase base y la hija
+#         fields = [
+#             'asistencia', 'modelo', 'encargado_carga',
+#             'pregunta_1', 'pregunta_2', 'pregunta_3', 'pregunta_4', 
+#             'pregunta_5', 'pregunta_6', 'pregunta_7', 'pregunta_8', 
+#             'pregunta_9', 'pregunta_10', 'pregunta_11', 'pregunta_12'
+#         ]
+#         widgets = {
+#             # Podemos añadir clases de Bootstrap para que se vea bien
+#             field: forms.Select(attrs={'class': 'form-select'}) 
+#             for field in fields if field != 'encargado_carga'
+#         }
+
+# class LenguaForm(forms.ModelForm):
+#     class Meta:
+#         model = Lengua2026
+#         fields = [
+#             'asistencia', 'modelo', 'encargado_carga',
+#             'pregunta_1', 'pregunta_2', 'pregunta_3', 'pregunta_4', 'pregunta_5',
+#             'pregunta_6', 'pregunta_7', 'pregunta_8', 'pregunta_9', 'pregunta_10',
+#             'pregunta_11_1', 'pregunta_11_2', 'pregunta_11_3', 'pregunta_11_4',
+#             'pregunta_12', 'pregunta_13', 'pregunta_14', 'pregunta_15', 'pregunta_16',
+#             'pregunta_17', 'pregunta_18', 'pregunta_19', 'pregunta_20', 'pregunta_21',
+#             'pregunta_22_1', 'pregunta_22_2', 'pregunta_22_3'
+#         ]
+#         widgets = {
+#             field: forms.Select(attrs={'class': 'form-select'}) 
+#             for field in fields if field != 'encargado_carga'
+#         }
+
+# class MatematicaForm(forms.ModelForm):
+#     class Meta:
+#         model = Matematica2026
+#         # Excluimos el alumno del formulario de creación
+#         exclude = ['alumno'] 
+#         widgets = {
+#             field: forms.Select(attrs={'class': 'form-control'}) 
+#             for field in self.Meta.model._meta.get_fields() # lógica para automatizar widgets
+#         }
+
+# from django import forms
+# from ..models import Matematica2026, Lengua2026
+
+# class MatematicaForm(forms.ModelForm):
+#     class Meta:
+#         model = Matematica2026
+#         exclude = ['alumno'] # No pedimos el alumno al crear el examen
+#         widgets = {
+#             'nombre_examen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre descriptivo'}),
+#             'asistencia': forms.Select(attrs={'class': 'form-select'}),
+#             'modelo': forms.Select(attrs={'class': 'form-select'}),
+#             'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+#         }
+#         # Agregamos dinámicamente el estilo a las preguntas
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         for field in self.fields:
+#             if 'pregunta_' in field:
+#                 self.fields[field].widget.attrs.update({'class': 'form-select'})
+
+# class LenguaForm(forms.ModelForm):
+#     class Meta:
+#         model = Lengua2026
+#         exclude = ['alumno']
+#         widgets = {
+#             'nombre_examen': forms.TextInput(attrs={'class': 'form-control'}),
+#             'asistencia': forms.Select(attrs={'class': 'form-select'}),
+#             'modelo': forms.Select(attrs={'class': 'form-select'}),
+#         }
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         for field in self.fields:
+#             if 'pregunta_' in field:
+#                 self.fields[field].widget.attrs.update({'class': 'form-select'})
 
 # class AñoViewForm(forms.Form):
 # 	año= forms.ChoiceField(label='SELECCIONE UN AÑO', required=False, widget=forms.RadioSelect(
@@ -523,7 +796,7 @@
 # # 	try:
 # # 		conn = psycopg2.connect(**db_params)
 # # 		with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-# # 			query_base = "SELECT cueanexo FROM v_capa_unica_ofertas_ant"
+# # 			query_base = "SELECT cueanexo FROM v_capa_unica_ofertas"
 			
 # # 			# 2. EMPEZAMOS LA LISTA DINÁMICA
 # # 			# Siempre incluimos la oferta como primer filtro
@@ -580,7 +853,7 @@
 # #     try:
 # #         conn = psycopg2.connect(**db_params)
 # #         with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
-# #             query_base = "SELECT cueanexo FROM v_capa_unica_ofertas_ant"
+# #             query_base = "SELECT cueanexo FROM v_capa_unica_ofertas"
             
 # #             # 2. Construcción dinámica de condiciones (Sin Región)
 # #             condiciones = ["oferta ILIKE %s"]

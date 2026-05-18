@@ -61,6 +61,21 @@ class PadronUsuarioPerfil(models.Model):
 ROLES_PADRON_INTERNO = {
     'Administrador',
     'Gestor',
+    'Ministro',
+    'Subsecretario',
+    'Director General',
+    'Director de Nivel',
+    'Director de Nivel Inicial',
+    'Director de Nivel Primario',
+    'Director de Nivel Secundario',
+    'Director de Nivel Superior',
+    'Director de Modalidad Adultos',
+    'Director de Modalidad Rural',
+    'Director de Modalidad Especial',
+    'Director de Modalidad Contexto',
+    'Director de Servicios Complementarios',
+    'Regional',
+    'Supervisor',
 }
 
 

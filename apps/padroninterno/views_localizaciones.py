@@ -636,16 +636,55 @@ OPERADOR_SQL = {
     '7': ('!=', lambda v: v),
 }
 
+_ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
+_UNACCENTED_CHARS = 'AEIOUUNaeiouun'
+_ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
 
-def _build_tipo_oferta_clause(oper):
+
+def _fold_filter_text(value):
+    return _normalize_text(value).translate(_ACCENT_TRANSLATION).lower()
+
+
+def _folded_sql(expr):
+    return f"LOWER(TRANSLATE(BTRIM(COALESCE(({expr})::text, '')), '{_ACCENTED_CHARS}', '{_UNACCENTED_CHARS}'))"
+
+
+def _filter_tokens(value):
+    folded = _fold_filter_text(value)
+    tokens = [token for token in re.split(r'[^a-z0-9]+', folded) if token]
+    return list(dict.fromkeys(tokens))
+
+
+def _like_token_values(value):
+    return [f'%{token}%' for token in _filter_tokens(value)]
+
+
+def _tipo_oferta_filter_values(oper, value):
+    folded = _fold_filter_text(value)
+    return _like_token_values(value) if oper in {'0', '1'} else [folded]
+
+
+def _build_text_search_clause(expr, value):
+    tokens = _filter_tokens(value)
+    if not tokens:
+        return '', []
+
+    folded_expr = _folded_sql(expr)
+    return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
+
+
+def _build_tipo_oferta_clause(oper, token_count=1):
+    descripcion = _folded_sql('otf.descripcion')
+
     if oper == '1':
+        token_checks = ' AND '.join([f"{descripcion} LIKE %s" for _ in range(max(token_count, 1))])
         return (
             "NOT EXISTS ("
             "SELECT 1 "
             "FROM oferta_local olf "
             "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
             "WHERE olf.id_localizacion = vl.id_localizacion "
-            "AND BTRIM(otf.descripcion)::text ILIKE %s"
+            f"AND {token_checks}"
             ")"
         )
 
@@ -656,31 +695,37 @@ def _build_tipo_oferta_clause(oper):
             "FROM oferta_local olf "
             "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
             "WHERE olf.id_localizacion = vl.id_localizacion "
-            "AND BTRIM(otf.descripcion)::text = %s"
+            f"AND {descripcion} = %s"
             ")"
         )
 
     op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+    if oper in {'0', '2'}:
+        op_str = 'LIKE' if oper == '0' else '='
+    token_checks = ' AND '.join([f"{descripcion} {op_str} %s" for _ in range(max(token_count, 1))])
     return (
         "EXISTS ("
         "SELECT 1 "
         "FROM oferta_local olf "
         "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
         "WHERE olf.id_localizacion = vl.id_localizacion "
-        f"AND BTRIM(otf.descripcion)::text {op_str} %s"
+        f"AND {token_checks}"
         ")"
     )
 
 
-def _build_modalidades_clause(oper):
+def _build_modalidades_clause(oper, token_count=1):
+    descripcion = _folded_sql('m2f.descripcion')
+
     if oper == '1':
+        token_checks = ' AND '.join([f"{descripcion} LIKE %s" for _ in range(max(token_count, 1))])
         return (
             "NOT EXISTS ("
             "SELECT 1 "
             "FROM localizacion_modalidad2_assn lm2f "
             "JOIN modalidad2_tipo m2f ON m2f.c_modalidad2 = lm2f.c_modalidad2 "
             "WHERE lm2f.id_localizacion = vl.id_localizacion "
-            "AND BTRIM(m2f.descripcion)::text ILIKE %s"
+            f"AND {token_checks}"
             ")"
         )
 
@@ -691,18 +736,21 @@ def _build_modalidades_clause(oper):
             "FROM localizacion_modalidad2_assn lm2f "
             "JOIN modalidad2_tipo m2f ON m2f.c_modalidad2 = lm2f.c_modalidad2 "
             "WHERE lm2f.id_localizacion = vl.id_localizacion "
-            "AND BTRIM(m2f.descripcion)::text = %s"
+            f"AND {descripcion} = %s"
             ")"
         )
 
     op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+    if oper in {'0', '2'}:
+        op_str = 'LIKE' if oper == '0' else '='
+    token_checks = ' AND '.join([f"{descripcion} {op_str} %s" for _ in range(max(token_count, 1))])
     return (
         "EXISTS ("
         "SELECT 1 "
         "FROM localizacion_modalidad2_assn lm2f "
         "JOIN modalidad2_tipo m2f ON m2f.c_modalidad2 = lm2f.c_modalidad2 "
         "WHERE lm2f.id_localizacion = vl.id_localizacion "
-        f"AND BTRIM(m2f.descripcion)::text {op_str} %s"
+        f"AND {token_checks}"
         ")"
     )
 
@@ -732,19 +780,26 @@ def _build_where(request):
             continue
 
         if campo == 'tipo_oferta':
-            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-            clauses.append(_build_tipo_oferta_clause(oper))
-            params.append(val_fn(valor))
+            tipo_values = _tipo_oferta_filter_values(oper, valor)
+            clauses.append(_build_tipo_oferta_clause(oper, len(tipo_values)))
+            params.extend(tipo_values)
             continue
 
         if campo == 'modalidades_complementarias':
-            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-            clauses.append(_build_modalidades_clause(oper))
-            params.append(val_fn(valor))
+            mod_values = _like_token_values(valor) if oper in {'0', '1'} else [_fold_filter_text(valor)]
+            clauses.append(_build_modalidades_clause(oper, len(mod_values)))
+            params.extend(mod_values)
             continue
 
         col = CAMPO_SQL[campo]
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+        if oper == '0':
+            token_clause, token_params = _build_text_search_clause(col, valor)
+            if token_clause:
+                clauses.append(token_clause)
+                params.extend(token_params)
+            continue
+
         clauses.append(f"{col}::text {op_str} %s")
         params.append(val_fn(valor))
 
@@ -754,30 +809,32 @@ def _build_where(request):
             continue
 
         if campo == 'tipo_oferta':
-            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
             if len(values) == 1:
-                clauses.append(_build_tipo_oferta_clause(oper))
-                params.append(val_fn(values[0]))
+                tipo_values = _tipo_oferta_filter_values(oper, values[0])
+                clauses.append(_build_tipo_oferta_clause(oper, len(tipo_values)))
+                params.extend(tipo_values)
                 continue
 
             subclauses = []
             for value in values:
-                subclauses.append(_build_tipo_oferta_clause(oper))
-                params.append(val_fn(value))
+                tipo_values = _tipo_oferta_filter_values(oper, value)
+                subclauses.append(_build_tipo_oferta_clause(oper, len(tipo_values)))
+                params.extend(tipo_values)
             clauses.append(f"({' OR '.join(subclauses)})")
             continue
 
         if campo == 'modalidades_complementarias':
-            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
             if len(values) == 1:
-                clauses.append(_build_modalidades_clause(oper))
-                params.append(val_fn(values[0]))
+                mod_values = _like_token_values(values[0]) if oper in {'0', '1'} else [_fold_filter_text(values[0])]
+                clauses.append(_build_modalidades_clause(oper, len(mod_values)))
+                params.extend(mod_values)
                 continue
 
             subclauses = []
             for value in values:
-                subclauses.append(_build_modalidades_clause(oper))
-                params.append(val_fn(value))
+                mod_values = _like_token_values(value) if oper in {'0', '1'} else [_fold_filter_text(value)]
+                subclauses.append(_build_modalidades_clause(oper, len(mod_values)))
+                params.extend(mod_values)
             clauses.append(f"({' OR '.join(subclauses)})")
             continue
 
@@ -785,12 +842,26 @@ def _build_where(request):
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
 
         if len(values) == 1:
+            if oper == '0':
+                token_clause, token_params = _build_text_search_clause(col, values[0])
+                if token_clause:
+                    clauses.append(token_clause)
+                    params.extend(token_params)
+                continue
+
             clauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(values[0]))
             continue
 
         subclauses = []
         for value in values:
+            if oper == '0':
+                token_clause, token_params = _build_text_search_clause(col, value)
+                if token_clause:
+                    subclauses.append(token_clause)
+                    params.extend(token_params)
+                continue
+
             subclauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(value))
         clauses.append(f"({' OR '.join(subclauses)})")
@@ -803,6 +874,13 @@ def _build_where(request):
             op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
 
             for value in values:
+                if oper == '0':
+                    token_clause, token_params = _build_text_search_clause(col, value)
+                    if token_clause:
+                        geo_subclauses.append(token_clause)
+                        params.extend(token_params)
+                    continue
+
                 geo_subclauses.append(f"{col}::text {op_str} %s")
                 params.append(val_fn(value))
 
@@ -811,10 +889,13 @@ def _build_where(request):
 
     q = request.GET.get('q', '').strip()
     if q:
-        like = f'%{q}%'
-        global_search_clauses = [f"{sql_expr} ILIKE %s" for sql_expr in CAMPO_SQL.values()]
-        clauses.append(f"({' OR '.join(global_search_clauses)})")
-        params.extend([like] * len(global_search_clauses))
+        token_groups = []
+        for token in _filter_tokens(q):
+            global_search_clauses = [f"{_folded_sql(sql_expr)} LIKE %s" for sql_expr in CAMPO_SQL.values()]
+            token_groups.append(f"({' OR '.join(global_search_clauses)})")
+            params.extend([f'%{token}%'] * len(global_search_clauses))
+        if token_groups:
+            clauses.append(f"({' AND '.join(token_groups)})")
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ''
     return where, params

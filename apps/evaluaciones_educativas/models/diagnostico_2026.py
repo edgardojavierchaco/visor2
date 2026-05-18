@@ -73,13 +73,13 @@ class Seccion2026(models.Model):
     #id = models.AutoField(primary_key=True)
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
     seccion = models.CharField(max_length=5, choices=OPCIONES_SECCION)
-    turno = models.CharField(max_length=9,choices=OPCIONES_TURNO)
+    turno = models.CharField(max_length=11,choices=OPCIONES_TURNO)
     año = models.ForeignKey(Año2026, on_delete=models.CASCADE)
     class Meta:
         #managed = False
         db_table = '"diagnostico_2026"."secciones"'
         #unicidad
-        unique_together = ('seccion','año')
+        unique_together = ('seccion','año','turno')
     def __str__(self):
         nombre_seccion=f'{self.año}_{self.seccion}'
         return nombre_seccion
@@ -97,12 +97,13 @@ class Alumno2026(models.Model):
 ]
     #id = models.AutoField(primary_key=True)
     public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
-    dni = models.CharField(max_length=8,unique=True)
+    dni = models.CharField(max_length=11,unique=True)
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)
-    comunidad_indigena=models.CharField(max_length=11, choices= OPCIONES_COMUNIDAD_INDIGENA)
-    discapacidad = models.CharField(choices=OPCIONES_DISCAPACIDAD)
-    seccion = models.ForeignKey(Seccion2026, on_delete=models.CASCADE)
+    comunidad_indigena=models.CharField(max_length=11, choices= OPCIONES_COMUNIDAD_INDIGENA,null=True)
+    discapacidad = models.CharField(choices=OPCIONES_DISCAPACIDAD,null=True)
+    seccion = models.ForeignKey(Seccion2026, on_delete=models.CASCADE, null=True)
+    # AÑADIR A SECCIN null=True, blank=True
     class Meta:
         #managed = False
         db_table = '"diagnostico_2026"."alumnos"'
@@ -121,10 +122,10 @@ class EvaluacionDiagnostica2026(models.Model):
     ('AUSENTE','Ausente'), 
     ]
     #id = models.AutoField(primary_key=True)
-    modelo=models.CharField(choices=OPCIONES_ASISTENCIA,default='A')
+    modelo=models.CharField(choices=OPCIONES_MODELO,default='A')
     asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     encargado_carga=models.CharField(max_length=9,default='DIRECTOR')
-    alumno = models.OneToOneField(Alumno2026, on_delete=models.CASCADE)
+    alumno = models.ForeignKey(Alumno2026, on_delete=models.CASCADE)
     class Meta:
         #managed = False
         db_table = '"diagnostico_2026"."evaluaciones"'
@@ -187,7 +188,7 @@ class Matematica2026(EvaluacionDiagnostica2026):
     ('OMITÍO', 'OMITÍO'),
 	]
     OPCIONES_RESPUESTAS_11 = [
-    ('11,5', '11,5'),
+    ('10,5', '10,5'),
     ('7', '7'),
     ('3,5', '3,5'),
     ('0', '0'),  
@@ -214,6 +215,10 @@ class Matematica2026(EvaluacionDiagnostica2026):
     pregunta_10 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_10, null=True)
     pregunta_11 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_11, null=True)
     pregunta_12 = models.CharField(max_length=10,choices= OPCIONES_RESPUESTAS_12, null=True)
+    correcion_comunicacion = models.FloatField(null=True)
+    correcion_reconocimiento =  models.FloatField(null=True)
+    correcion_resolucion =  models.FloatField(null=True)
+    total_puntaje= models.FloatField(null=True, default=0.0)
     #asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     #alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)
     class Meta:
@@ -295,6 +300,11 @@ class Lengua2026(EvaluacionDiagnostica2026):
     pregunta_22_1 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_1, null=True)
     pregunta_22_2 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_2, null=True)
     pregunta_22_3 = models.CharField(max_length=10,choices= OPCIONES_RESULTADOS_22_3, null=True)
+    correcion_reflexion = models.FloatField(null=True, default=0.0)
+    correcion_interpretacion =  models.FloatField(null=True,default=0.0)
+    correcion_extraccion =  models.FloatField(null=True,default=0.0)
+    correcion_escritura =  models.FloatField(null=True, default=0.0)
+    total_puntaje= models.FloatField(null=True, default=0.0)
     #asistencia = models.CharField(choices=OPCIONES_ASISTENCIA,default='AUSENTE')
     #alumno = models.OneToOneField(Alumno,primary_key=True, on_delete=models.CASCADE)
     class Meta:
@@ -303,3 +313,29 @@ class Lengua2026(EvaluacionDiagnostica2026):
     def __str__(self):
         nombre_examen=f'Evaluación Diagnóstica Lengua {self.alumno.nombre} {self.alumno.apellido} DNI:{self.alumno.dni}'
         return nombre_examen
+    
+class TablaTemporalAlumno(models.Model):
+    # NOTA: Django necesita obligatoriamente un campo primary_key.
+    # Si la tabla no tiene una clave primaria explícita, puedes usar uno de los 
+    # campos existentes (como numero_de_documento si es único) o definir un campo ficticio.
+    # Usamos primary_key=True en el documento asumiendo que te servirá para identificar filas.
+    numero_de_documento = models.CharField(max_length=20, primary_key=True, db_column='numero_de_documento')
+
+    cueanexo = models.CharField(max_length=15, null=True, blank=True)
+    nombre_institucion = models.CharField(max_length=255, null=True, blank=True)
+    nivel = models.CharField(max_length=100, null=True, blank=True)
+    tipo_documento = models.CharField(max_length=250, null=True, blank=True)
+    apellido = models.CharField(max_length=250, null=True, blank=True)
+    nombre = models.CharField(max_length=250, null=True, blank=True)
+    titulacion = models.CharField(max_length=255, null=True, blank=True)
+    anio = models.CharField(max_length=50, null=True, blank=True)
+    seccion = models.CharField(max_length=250, null=True, blank=True)
+    estado_inscripcion = models.CharField(max_length=100, null=True, blank=True)
+    ciclo_lectivo = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        managed = False  # <--- Evita que Django cree o modifique la tabla
+        db_table = '"diagnostico_2026"."tabla_temporal_alumno"'  # <--- Esquema y tabla
+
+    def str(self):
+        return f"{self.apellido}, {self.nombre} - {self.numero_de_documento}"
