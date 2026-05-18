@@ -16,18 +16,26 @@
                 <p class="mb-4">CUEANEXO seleccionado: <strong>{{ selected_cue|default:"-" }}</strong></p>
                 <p class="h5 mb-4">¿Qué evaluación desea cargar?</p>
                 <div class="d-grid gap-3 mb-4">
-                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' 'matematica' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-lg">
+                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' 'matematica' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-lg btn-cargando">
                         Examen Matemática
                     </a>
-                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' 'lengua' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-lg">
+                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' 'lengua' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-lg btn-cargando">
                         Examen Lengua
                     </a>
                 </div>
-                <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-outline-secondary">
+                <a href="{% url 'evaluaciones_educativas:diagnostico_2026:inicio' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-outline-secondary btn-cargando">
                     Volver atrás
                 </a>
             </div>
         </div>
     </div>
+    <script>
+        document.querySelectorAll('.btn-cargando, #btn-realizar-carga').forEach(function (enlace) {
+        enlace.addEventListener('click', function () {
+            this.textContent = 'Cargando...';
+            this.classList.add('disabled'); // Bloquea visualmente nuevos clics en Bootstrap
+        });
+    });
+    </script>
 </body>
 </html>
