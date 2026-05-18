@@ -66,7 +66,7 @@
                             Completar carga
                         </button>
                         <a href="{% url 'evaluaciones_educativas:diagnostico_2026:realizar_carga' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-outline-light btn-sm">
-                            Volver a selección
+                            Volver a seleccionar evaluación
                         </a>
                     </div>
                 </div>
@@ -229,25 +229,39 @@
             });
         });
 
-        // Modificamos este evento click para meter la validación
+        // Evento Click del botón
         toggleButton.addEventListener('click', function () {
-            // 🌟 NUEVO: Leemos las variables enviadas por Django desde el botón
             const esValido = toggleButton.getAttribute('data-estado') === 'true';
             const numeroCarga = toggleButton.getAttribute('data-numero');
             const nombreMateria = toggleButton.getAttribute('data-materia');
 
-            // 🌟 NUEVO: Si estado_carga es FALSE, mostramos la alerta y frenamos todo
             if (!esValido) {
                 alert("No se puede completar la carga, quedan por cargar evaluaciones de " + nombreMateria +" en: " + numeroCarga +" alumnos");
-                return; // 🌟 IMPORTANTE: Este return evita que se ejecute el código de abajo
+                return; 
             }
 
-            // Si es TRUE, el código sigue su curso normal como lo tenías antes:
             const currentlyDisabled = localStorage.getItem(storageKey) === 'true';
             setActionButtonsDisabled(!currentlyDisabled);
         });
 
-        const savedState = localStorage.getItem(storageKey) === 'true';
+        // ==========================================
+        // 🌟 LÓGICA DE CONTROL AL RE-ENTRAR A LA PÁGINA
+        // ==========================================
+        
+        // 1. Leemos el estado real actual que nos manda Django
+        const esValidoAlCargar = toggleButton.getAttribute('data-estado') === 'true';
+        
+        // 2. Leemos lo que el navegador recordaba
+        let savedState = localStorage.getItem(storageKey) === 'true';
+
+        // 3. ¡VALIDACIÓN INTELIGENTE!
+        // Si Django dice que NO es válido (quedan alumnos por cargar),
+        // obligamos a la página a volver al estado original (false), limpiando el localStorage.
+        if (!esValidoAlCargar) {
+            savedState = false; 
+        }
+
+        // 4. Aplicamos el estado final resultante
         setActionButtonsDisabled(savedState);
     });
 </script>
