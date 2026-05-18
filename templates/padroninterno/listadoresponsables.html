@@ -1,8 +1,14 @@
-{% extends 'archivos/base/layout.html' %}
+﻿{% extends 'archivos/base/layout.html' %}
 {% load mis_filtros %}
 {% block content %}
 <script>
-document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+(function() {
+    if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
+        document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+    } else {
+        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+    }
+})();
 </script>
 <style id="padron-layout-stability">
     @import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css");
@@ -18,43 +24,36 @@ document.documentElement.classList.add('padron-sidebar-initial-collapsed');
 </style>
 <script>
 (function() {
-    var userTouchedSystemSidebar = false;
-
-    function collapsePadronSidebar() {
-        if (userTouchedSystemSidebar) {
-            return;
-        }
-
+    function syncPadronSidebar() {
         if (!document.body) {
             return;
         }
 
-        document.body.classList.add('sidebar-collapse');
-        document.body.classList.remove(
-            'sidebar-open',
-            'sidebar-expanded',
-            'menu-open',
-            'aside-menu-show',
-            'layout-menu-expanded',
-            'sb-sidenav-toggled'
-        );
+        if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
+            document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+            document.body.classList.add('sidebar-collapse');
+            document.body.classList.remove('sidebar-open', 'sidebar-expanded');
+            return;
+        }
+
+        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+        document.body.classList.remove('sidebar-collapse', 'sidebar-closed');
+        document.body.classList.add('sidebar-open', 'sidebar-expanded');
     }
 
-    collapsePadronSidebar();
-    window.setTimeout(collapsePadronSidebar, 120);
-    window.setTimeout(collapsePadronSidebar, 420);
-    document.addEventListener('DOMContentLoaded', collapsePadronSidebar);
-    window.addEventListener('pageshow', collapsePadronSidebar);
-    window.addEventListener('load', collapsePadronSidebar);
-    document.addEventListener('click', function(event) {
-        if (event.target.closest('.padron-module-nav a')) {
-            collapsePadronSidebar();
-        }
-    }, true);
+    syncPadronSidebar();
+    window.setTimeout(syncPadronSidebar, 120);
+    window.setTimeout(syncPadronSidebar, 420);
+    document.addEventListener('DOMContentLoaded', syncPadronSidebar);
+    window.addEventListener('pageshow', syncPadronSidebar);
+    window.addEventListener('load', syncPadronSidebar);
     document.addEventListener('click', function(event) {
         if (event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
-            userTouchedSystemSidebar = true;
-            document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+            window.setTimeout(function() {
+                var isClosed = document.body && document.body.classList.contains('sidebar-collapse');
+                sessionStorage.setItem('padron_sidebar_state', isClosed ? 'closed' : 'open');
+                syncPadronSidebar();
+            }, 80);
         }
     }, true);
 })();
@@ -94,9 +93,18 @@ html {
 
 /* 4. Solo tabla principal de listados.
    No afecta tablas internas de modales. */
-.table-shell > .table-responsive {
-    min-height: 0 !important;
-}
+    .table-shell > .table-responsive {
+        min-height: 0 !important;
+    }
+
+    .table-padron td.highlight-search {
+        --bs-table-bg: #dfe8e3 !important;
+        --bs-table-striped-bg: #dfe8e3 !important;
+        --bs-table-hover-bg: #d8e2dd !important;
+        background-color: #dfe8e3 !important;
+        box-shadow: inset 0 0 0 9999px rgba(25, 135, 84, 0.025);
+    }
+
     :root {
         --padron-primary: #1a4f8a;
         --padron-secondary: #2e7bd4;
@@ -250,9 +258,6 @@ html {
         color: var(--padron-primary) !important;
     }
 
-    .filter-toggle-btn,
-    .filter-clear-btn,
-    .filter-collapse-btn,
     .btn-excel,
     #liveSearchContainer .input-group-text,
     #liveSearchContainer .form-select,
@@ -636,6 +641,76 @@ html {
     .table-loading-overlay.is-visible {
         opacity: 1;
         visibility: visible;
+    }
+
+    /* =========================================================
+   MINI LOADER NO BLOQUEANTE DE TABLA
+   Aparece como pastilla/botón visual a la izquierda.
+   No tapa la tabla, no cambia el layout, no retrasa resultados.
+   ========================================================= */
+
+    .table-shell {
+        position: relative;
+    }
+
+    .padron-mini-table-loader {
+        position: absolute;
+        top: calc(var(--table-overlay-top, 44px) + 0.55rem);
+        left: 0.75rem;
+        z-index: 12;
+
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+
+        height: 30px;
+        padding: 0 0.75rem;
+        border-radius: 999px;
+
+        border: 1px solid rgba(46, 123, 212, 0.20);
+        background: rgba(255, 255, 255, 0.97);
+        color: #1a4f8a;
+
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1;
+        white-space: nowrap;
+
+        box-shadow: 0 8px 18px rgba(26, 79, 138, 0.12);
+
+        opacity: 0;
+        transform: translateX(-4px);
+        pointer-events: none;
+        visibility: hidden;
+
+        transition:
+            opacity 0.06s linear,
+            transform 0.06s linear,
+            visibility 0.06s linear;
+    }
+
+    .padron-mini-table-loader.is-visible {
+        opacity: 1;
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    .padron-mini-table-loader__spinner {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid #cfe0f8;
+        border-top-color: var(--padron-secondary, #2e7bd4);
+        animation: padronMiniLoaderSpin 0.65s linear infinite;
+    }
+
+    .padron-mini-table-loader__text {
+        display: inline-block;
+    }
+
+    @keyframes padronMiniLoaderSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
 
     .table-shell.has-table-overlay .table-responsive {
@@ -1177,14 +1252,14 @@ html {
         width: min(100%, 560px);
         background: #fff;
         border-radius: 1rem;
-        border: 1px solid rgba(26, 79, 138, 0.12);
+        border: 1px solid rgba(26, 79, 138, 0.28);
         box-shadow: 0 22px 55px rgba(16, 35, 58, 0.2);
         overflow: hidden;
     }
 
     .filter-dialog-header {
         padding: 0.95rem 1rem 0.85rem;
-        border-bottom: 1px solid rgba(26, 79, 138, 0.08);
+        border-bottom: 1px solid rgba(26, 79, 138, 0.18);
         background: #f8fbff;
     }
 
@@ -1202,7 +1277,7 @@ html {
     .filter-dialog-checklist {
         max-height: 260px;
         overflow: auto;
-        border: 1px solid rgba(26, 79, 138, 0.08);
+        border: 1px solid rgba(26, 79, 138, 0.24);
         border-radius: 0.8rem;
         padding: 0.75rem;
         background: #fbfdff;
@@ -1215,13 +1290,13 @@ html {
     }
 
     #dialog_filtro .filter-dialog-check:hover {
-        background: #f8fbff !important;
+        background: #d9e9ff !important;
         box-shadow: none !important;
     }
 
     /* Solo marcar visualmente si realmente está seleccionado */
     #dialog_filtro .filter-dialog-check:has(.filter-dialog-option:checked) {
-        background: #eef5ff !important;
+        background: #d6e8ff !important;
         box-shadow: none !important;
     }
 
@@ -1237,7 +1312,7 @@ html {
     }
 
     #dialog_filtro .filter-dialog-option:not(:checked):focus {
-        border-color: #d8e2ef !important;
+        border-color: #9fb6d1 !important;
         background-color: #fff !important;
     }
 
@@ -1256,6 +1331,14 @@ html {
     .filter-dialog-select,
     .filter-dialog-text {
         border-radius: 0.75rem;
+        border-color: #9fb6d1 !important;
+    }
+
+    #dialog_filtro #operador_filtro,
+    #dialog_filtro .filter-dialog-select,
+    #dialog_filtro .filter-dialog-text {
+        border-color: #8da5c1 !important;
+        box-shadow: inset 0 0 0 1px rgba(26, 79, 138, 0.12) !important;
     }
 
     .filter-dialog-check {
@@ -1301,6 +1384,14 @@ html {
         flex: 0 0 auto !important;
         justify-self: start !important;
         align-self: start !important;
+    }
+
+    #dialog_filtro .filter-dialog-check .form-check-input:not(:checked),
+    .filter-dialog .filter-dialog-check .form-check-input:not(:checked),
+    #dialog_filtro .filter-dialog-check input[type="checkbox"]:not(:checked),
+    .filter-dialog .filter-dialog-check input[type="checkbox"]:not(:checked) {
+        border-color: #8da5c1 !important;
+        border-width: 2px !important;
     }
 
     #dialog_filtro .filter-dialog-check span,
@@ -1836,7 +1927,7 @@ html {
                         </select>
                     </div>
                     {% if page_obj.paginator.num_pages > 1 %}
-                    <nav id="pagination-nav" aria-label="Paginación de responsables">
+                    <nav id="pagination-nav" aria-label="Paginación de responsables" data-current-page="{{ page_obj.number }}" data-total-pages="{{ page_obj.paginator.num_pages }}">
                         <ul class="pagination justify-content-center flex-wrap" id="paginador-lista">
                             {% if page_obj.has_previous %}
                             <li class="page-item">
@@ -2026,6 +2117,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var responsableRequestToken = 0;
     var liveSearchTimer = null;
     var activeTableRequestController = null;
+    var tableSoftDimTimer = null;
+    var tableSoftDimNextToken = 0;
+    var tableSoftDimActiveToken = 0;
     var TABLE_EMPTY_STATE = {
         mode: 'empty',
         title: 'No se encuentran datos con los filtros seleccionados',
@@ -2077,6 +2171,10 @@ document.addEventListener('DOMContentLoaded', function() {
         cueanexo: { label: FILTER_FIELD_LABELS.cueanexo, operators: 'default', mode: 'text', placeholder: 'Ingrese cueanexo...' },
         codigo_jurisdiccional: { label: FILTER_FIELD_LABELS.codigo_jurisdiccional, operators: 'default', mode: 'text', placeholder: 'Ingrese código...' },
         cuil_cuit: { label: FILTER_FIELD_LABELS.cuil_cuit, operators: 'default', mode: 'text', placeholder: 'Ingrese Cuil/Cuit...' }
+    };
+    var FILTER_DIALOG_SYNC_FIELDS = {
+        tipo_documento: true,
+        sexo: true
     };
     var responsableDetalleFields = [
         { label: 'Apellido', keys: ['apellido'] },
@@ -2294,7 +2392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tbody.insertAdjacentHTML(
                 'beforeend',
                 '<tr class="padron-table-empty-row">' +
-                    '<td colspan="' + totalColumns + '" class="text-center py-3">' +
+                    '<td colspan="' + totalColumns + '" class="text-start py-3 ps-3">' +
                         '<span class="padron-empty-inline"><i class="fa-solid fa-inbox"></i>Prueba quitando algunos de los filtros o ajustando la b&uacute;squeda para volver a ver resultados.</span>' +
                     '</td>' +
                 '</tr>'
@@ -2303,6 +2401,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         row.querySelector('td').setAttribute('colspan', totalColumns);
+        row.querySelector('td').classList.remove('text-center');
+        row.querySelector('td').classList.add('text-start', 'ps-3');
     }
 
     function updateTableOverlay() {
@@ -2423,6 +2523,90 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function scheduleTableSoftDim(delayMs, opacity) {
+        var token = tableSoftDimNextToken + 1;
+        tableSoftDimNextToken = token;
+        tableSoftDimActiveToken = token;
+
+        if (tableSoftDimTimer) {
+            clearTimeout(tableSoftDimTimer);
+            tableSoftDimTimer = null;
+        }
+
+        hideTableOverlay();
+        tableSoftDimTimer = setTimeout(function() {
+            var viewport = getTableViewport();
+
+            if (token !== tableSoftDimActiveToken) {
+                return;
+            }
+
+            tableSoftDimTimer = null;
+            if (viewport) {
+                viewport.style.opacity = String(opacity != null ? opacity : 0.82);
+            }
+        }, Math.max(0, delayMs || 0));
+
+        return token;
+    }
+
+    function restoreTableViewportOpacity() {
+        var viewports = document.querySelectorAll('.table-shell .table-responsive');
+
+        document.querySelectorAll('.table-shell').forEach(function(shell) {
+            shell.classList.remove('has-table-overlay');
+        });
+        document.querySelectorAll('.table-loading-overlay').forEach(function(overlay) {
+            overlay.classList.remove('is-visible', 'is-empty', 'is-loading');
+            overlay.setAttribute('aria-hidden', 'true');
+        });
+
+        if (!viewports.length) {
+            return;
+        }
+
+        viewports.forEach(function(viewport) {
+            viewport.classList.remove('compact-instant');
+            viewport.style.transition = 'none';
+            viewport.style.opacity = '1';
+        });
+        viewports[0].offsetHeight;
+        window.requestAnimationFrame(function() {
+            document.querySelectorAll('.table-shell .table-responsive').forEach(function(viewport) {
+                viewport.style.transition = '';
+            });
+        });
+    }
+
+    function queueTableVisualCleanup() {
+        [80, 240, 700].forEach(function(delayMs) {
+            setTimeout(function() {
+                if (tableSoftDimActiveToken === 0) {
+                    restoreTableViewportOpacity();
+                }
+            }, delayMs);
+        });
+    }
+
+    function cancelTableSoftDim(restoreOpacity, token) {
+        if (token && token !== tableSoftDimActiveToken) {
+            return;
+        }
+
+        if (tableSoftDimTimer) {
+            clearTimeout(tableSoftDimTimer);
+            tableSoftDimTimer = null;
+        }
+
+        if (restoreOpacity !== false) {
+            tableSoftDimActiveToken = 0;
+            restoreTableViewportOpacity();
+            queueTableVisualCleanup();
+        } else if (!token || token === tableSoftDimActiveToken) {
+            tableSoftDimActiveToken = 0;
+        }
+    }
+
     function syncTableEmptyOverlay() {
         updateTableOverlayOffset();
         updateTableOverlay();
@@ -2492,7 +2676,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (opts.useFade && currentViewport) {
-            currentViewport.style.opacity = '0.45';
+            currentViewport.style.opacity = '0.82';
         }
 
         currentTableShell.classList.remove('has-table-overlay');
@@ -2501,26 +2685,112 @@ document.addEventListener('DOMContentLoaded', function() {
         currentTableShell.innerHTML = nextTableShell.innerHTML;
         currentPaginationContainer.innerHTML = nextPaginationContainer.innerHTML;
 
+        initPagination();
         renderServerBadges();
+        scheduleReapplyHighlights();
+        cancelTableSoftDim(true);
 
         window.requestAnimationFrame(function() {
             var viewport = getTableViewport();
 
             if (viewport) {
-                viewport.style.opacity = '1';
+                restoreTableViewportOpacity();
             }
         });
     }
 
-    function refreshTableFromUrl(url, options) {
+    var miniTableLoaderTimer = null;
+
+function ensureMiniTableLoader() {
+    var shell = document.querySelector('.table-shell');
+    var loader;
+
+    if (!shell) {
+        return null;
+    }
+
+    loader = shell.querySelector('.padron-mini-table-loader');
+
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.className = 'padron-mini-table-loader';
+        loader.setAttribute('aria-hidden', 'true');
+        loader.setAttribute('role', 'status');
+        loader.innerHTML = [
+            '<span class="padron-mini-table-loader__spinner" aria-hidden="true"></span>',
+            '<span class="padron-mini-table-loader__text">Cargando...</span>'
+        ].join('');
+
+        shell.appendChild(loader);
+    }
+
+    return loader;
+}
+
+    function showMiniTableLoader(text) {
+        var loader = ensureMiniTableLoader();
+        var label;
+
+        if (!loader) {
+            return;
+        }
+
+        if (typeof updateTableOverlayOffset === 'function') {
+            updateTableOverlayOffset();
+        }
+
+        label = loader.querySelector('.padron-mini-table-loader__text');
+
+        if (label) {
+            label.textContent = text || 'Cargando...';
+        }
+
+        loader.classList.add('is-visible');
+        loader.setAttribute('aria-hidden', 'false');
+    }
+
+    function scheduleMiniTableLoader(text, delayMs) {
+        clearTimeout(miniTableLoaderTimer);
+
+        miniTableLoaderTimer = setTimeout(function() {
+            showMiniTableLoader(text || 'Cargando...');
+        }, delayMs == null ? 120 : delayMs);
+    }
+
+    function hideMiniTableLoader() {
+        var shell = document.querySelector('.table-shell');
+        var loader = shell ? shell.querySelector('.padron-mini-table-loader') : null;
+
+        clearTimeout(miniTableLoaderTimer);
+        miniTableLoaderTimer = null;
+
+        if (!loader) {
+            return;
+        }
+
+        loader.classList.remove('is-visible');
+        loader.setAttribute('aria-hidden', 'true');
+    }
+
+        function refreshTableFromUrl(url, options) {
         var opts = options || {};
         var targetUrl = typeof url === 'string' ? url : url.toString();
+
+        /*
+        * Antes era "opts.enableSoftDim !== false".
+        * Ahora el oscurecimiento queda apagado por defecto.
+        */
+        var enableSoftDim = opts.enableSoftDim === true;
+
+        var visualToken = null;
         var requestController;
         var overlayState;
 
         abortActiveTableRequest();
+
         requestController = new AbortController();
         activeTableRequestController = requestController;
+
         overlayState = {
             mode: 'loading',
             title: opts.overlayTitle || TABLE_LOADING_STATE.title,
@@ -2528,8 +2798,24 @@ document.addEventListener('DOMContentLoaded', function() {
             iconClass: opts.overlayIconClass || TABLE_LOADING_STATE.iconClass
         };
 
-        if (opts.showOverlay !== false) {
+        hideTableOverlay();
+
+        if (opts.showMiniLoader !== false) {
+            scheduleMiniTableLoader(
+                opts.miniLoaderText || 'Cargando...',
+                opts.miniLoaderDelayMs == null ? 120 : opts.miniLoaderDelayMs
+            );
+        }
+
+        if (opts.showOverlay === true) {
             showTableOverlay(overlayState);
+        } else if (enableSoftDim) {
+            visualToken = scheduleTableSoftDim(
+                opts.softDimDelayMs != null ? opts.softDimDelayMs : 0,
+                opts.softDimOpacity != null ? opts.softDimOpacity : 0.82
+            );
+        } else {
+            cancelTableSoftDim(true);
         }
 
         return window.fetch(targetUrl, {
@@ -2554,20 +2840,23 @@ document.addEventListener('DOMContentLoaded', function() {
             window.history.pushState({}, '', targetUrl);
             replaceTableFragments(new window.DOMParser().parseFromString(html, 'text/html'), opts);
             syncTableEmptyOverlay();
+            cancelTableSoftDim(true, visualToken);
+            hideMiniTableLoader();
         }).catch(function(error) {
             if (error && error.name === 'AbortError') {
                 return;
             }
 
-            if (opts.allowHardReload !== false) {
-                window.location.href = targetUrl;
-                return;
-            }
+            cancelTableSoftDim(true, visualToken);
+            hideMiniTableLoader();
+
+            if (opts.allowHardReload === true) { window.location.href = targetUrl; return; }
 
             syncTableEmptyOverlay();
         }).finally(function() {
             if (activeTableRequestController === requestController) {
                 activeTableRequestController = null;
+                hideMiniTableLoader();
             }
         });
     }
@@ -2661,6 +2950,62 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = html;
     }
 
+    function clearHighlights() {
+        document.querySelectorAll('.table-padron td.highlight-search').forEach(function(cell) {
+            cell.classList.remove('highlight-search');
+        });
+    }
+
+    function highlightColumnByDbCol(dbCol) {
+        var colClass;
+
+        if (!dbCol || dbCol === SEARCH_ALL_VALUE || dbCol === SEARCH_ACTION_VALUE || dbCol === 'id') {
+            return;
+        }
+
+        colClass = getColumnClassByDbCol(dbCol);
+        if (!colClass) {
+            return;
+        }
+
+        document.querySelectorAll('.table-padron tbody td.' + colClass).forEach(function(cell) {
+            cell.classList.add('highlight-search');
+        });
+    }
+
+    function reapplyHighlights() {
+        var params = new URLSearchParams(window.location.search);
+        var campos = params.getAll('campo_filtro');
+        var opers = params.getAll('operador_filtro');
+        var valores = params.getAll('valor_filtro');
+        var smartCol = params.get('smart_ui_col') || '';
+        var smartVal = (params.get('smart_ui_val') || '').toLowerCase();
+        var smartDbCol = getHeaderDbColByText(smartCol);
+
+        clearHighlights();
+
+        for (var i = 0; i < campos.length; i += 1) {
+            if (!valores[i]) {
+                continue;
+            }
+
+            highlightColumnByDbCol(campos[i]);
+        }
+
+        if (smartDbCol && smartVal) {
+            highlightColumnByDbCol(smartDbCol);
+        }
+    }
+
+    function scheduleReapplyHighlights() {
+        reapplyHighlights();
+        window.requestAnimationFrame(function() {
+            window.requestAnimationFrame(function() {
+                reapplyHighlights();
+            });
+        });
+    }
+
     function removeFilterByIndex(index) {
         var params = new URLSearchParams(window.location.search);
         var campos = params.getAll('campo_filtro');
@@ -2682,9 +3027,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         clearTimeout(liveSearchTimer);
         refreshTableFromUrl(buildListUrl(params), {
-            overlayTitle: 'Actualizando filtros...',
-            overlayText: 'Refrescando el listado sin recargar la pagina.',
-            useFade: false
+            useFade: false,
+            allowHardReload: false,
+            enableSoftDim: true,
+            softDimDelayMs: 0,
+            softDimOpacity: 0.38,
+            showMiniLoader: false,
+            showOverlay: false
         });
     }
 
@@ -2723,9 +3072,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         clearTimeout(liveSearchTimer);
         refreshTableFromUrl(buildListUrl(params), {
-            overlayTitle: 'Quitando busqueda...',
-            overlayText: 'Restaurando los resultados del listado.',
-            useFade: false
+            useFade: false,
+            allowHardReload: false,
+            enableSoftDim: true,
+            softDimDelayMs: 0,
+            softDimOpacity: 0.38,
+            showMiniLoader: false,
+            showOverlay: false
         });
     }
 
@@ -2735,15 +3088,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
     }
 
+    function normalizeFilterMatchValue(value) {
+        return value === undefined || value === null ? '' : String(value).trim();
+    }
+
+    function collectActiveFilterValuesForField(params, field) {
+        var activeValues = {};
+
+        function collect(fieldParam, valueParam) {
+            var fields = params.getAll(fieldParam);
+            var values = params.getAll(valueParam);
+
+            fields.forEach(function(activeField, index) {
+                var activeValue = normalizeFilterMatchValue(values[index]);
+
+                if (activeField === field && activeValue) {
+                    activeValues[activeValue] = true;
+                }
+            });
+        }
+
+        if (!FILTER_DIALOG_SYNC_FIELDS[field]) {
+            return activeValues;
+        }
+
+        collect('campo_filtro', 'valor_filtro');
+        collect('f', 'v');
+
+        return activeValues;
+    }
+
+    function getActiveFilterValuesForField(field) {
+        return collectActiveFilterValuesForField(new URLSearchParams(window.location.search), field);
+    }
+
+    function hasActiveFilterValue(params, field, value, operator) {
+        var normalizedValue = normalizeFilterMatchValue(value);
+
+        function hasMatch(fieldParam, operatorParam, valueParam) {
+            var fields = params.getAll(fieldParam);
+            var operators = params.getAll(operatorParam);
+            var values = params.getAll(valueParam);
+
+            return fields.some(function(activeField, index) {
+                return activeField === field &&
+                    normalizeFilterMatchValue(values[index]) === normalizedValue &&
+                    (operator === undefined || operators[index] === operator);
+            });
+        }
+
+        if (!FILTER_DIALOG_SYNC_FIELDS[field] || !normalizedValue) {
+            return false;
+        }
+
+        return hasMatch('campo_filtro', 'operador_filtro', 'valor_filtro') || hasMatch('f', 'o', 'v');
+    }
+
     function renderFilterValueControl(field) {
         var config = FILTER_DIALOG_CONFIG[field] || FILTER_DIALOG_CONFIG.apellido;
         var html = '';
+        var activeValues = getActiveFilterValuesForField(field);
 
         if (config.mode === 'checklist') {
             html = '<div class="filter-dialog-checklist"><div class="filter-dialog-checklist-grid">' +
                 (config.options || []).map(function(option, index) {
+                    var checkedAttr = activeValues[normalizeFilterMatchValue(option.value)] ? ' checked' : '';
+
                     return '<label class="filter-dialog-check" for="flt_' + field + '_' + index + '">' +
-                        '<input class="form-check-input filter-dialog-option" type="checkbox" value="' + escapeHtml(option.value) + '" data-label="' + escapeHtml(option.label) + '" id="flt_' + field + '_' + index + '">' +
+                        '<input class="form-check-input filter-dialog-option" type="checkbox" value="' + escapeHtml(option.value) + '" data-label="' + escapeHtml(option.label) + '" id="flt_' + field + '_' + index + '"' + checkedAttr + '>' +
                         '<span class="small">' + escapeHtml(option.label) + '</span>' +
                     '</label>';
                 }).join('') +
@@ -2807,7 +3219,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         params = new URLSearchParams(window.location.search);
         params.delete('page');
+        ensureColumnVisibleForSearch(field);
         selections.forEach(function(selection) {
+            if (hasActiveFilterValue(params, field, selection.value, operator)) {
+                return;
+            }
+
             params.append('campo_filtro', field);
             params.append('operador_filtro', operator);
             params.append('valor_filtro', selection.value);
@@ -2816,9 +3233,13 @@ document.addEventListener('DOMContentLoaded', function() {
         closeFilterDialog();
         clearTimeout(liveSearchTimer);
         refreshTableFromUrl(buildListUrl(params), {
-            overlayTitle: 'Aplicando filtros...',
-            overlayText: 'Actualizando los responsables sin salir de esta vista.',
-            useFade: false
+            useFade: false,
+            allowHardReload: false,
+            enableSoftDim: true,
+            softDimDelayMs: 0,
+            softDimOpacity: 0.38,
+            showMiniLoader: false,
+            showOverlay: false
         });
     }
 
@@ -2940,6 +3361,48 @@ document.addEventListener('DOMContentLoaded', function() {
         updateColumnCounters(visible, toggles.length);
     }
 
+    function getTableDataRowsArray() {
+        return Array.prototype.slice.call(document.querySelectorAll('.table-padron tbody tr')).filter(function(row) {
+            return !row.classList.contains('warning-cols') && !row.classList.contains('padron-table-empty-row');
+        });
+    }
+
+    function filterCurrentResponsablesRows(searchState) {
+        var state = searchState || {};
+        var needle = normalizeText(state.trimmedValue || '').toLowerCase();
+        var dbCol = state.dbCol || '';
+        var isAllColumnsSearch = dbCol === SEARCH_ALL_VALUE || dbCol === SEARCH_ACTION_VALUE;
+        var colClass = getColumnClassByDbCol(dbCol);
+        var visibleMatches = 0;
+
+        getTableDataRowsArray().forEach(function(row) {
+            var haystack = '';
+            var targetCell;
+            var matches;
+
+            if (!needle) {
+                row.style.display = '';
+                visibleMatches += 1;
+                return;
+            }
+
+            if (isAllColumnsSearch || !colClass) {
+                haystack = normalizeText(row.textContent || '').toLowerCase();
+            } else {
+                targetCell = row.querySelector('td.' + colClass);
+                haystack = normalizeText(targetCell ? targetCell.textContent : '').toLowerCase();
+            }
+
+            matches = haystack.indexOf(needle) !== -1;
+            row.style.display = matches ? '' : 'none';
+            if (matches) {
+                visibleMatches += 1;
+            }
+        });
+
+        return visibleMatches;
+    }
+
     function renderLiveSearch(state) {
         var mount = document.getElementById('liveSearchMount');
         var params = new URLSearchParams(window.location.search);
@@ -2984,15 +3447,33 @@ document.addEventListener('DOMContentLoaded', function() {
             var selectedOption = select.options[select.selectedIndex];
             var selectedLabel = selectedOption ? selectedOption.text : '';
             var selectedDbCol = select.value || '';
+            var liveSearchState = {
+                rawValue: rawValue,
+                trimmedValue: trimmedValue,
+                colName: selectedLabel,
+                dbCol: selectedDbCol
+            };
+            var visibleMatches = filterCurrentResponsablesRows(liveSearchState);
 
             document.getElementById('liveSearchClear').style.display = trimmedValue ? 'inline-flex' : 'none';
             clearTimeout(liveSearchTimer);
+            abortActiveTableRequest();
+            if (trimmedValue) {
+                scheduleTableSoftDim(0, 0.38);
+                if (typeof scheduleTableLoadingOverlay === 'function') {
+                    scheduleTableLoadingOverlay(120, 'Consultando datos...', 'Actualizando resultados definitivos...', 'fa-circle-notch');
+                }
+            } else {
+                hideTableOverlay();
+                cancelTableSoftDim(true);
+            }
 
             liveSearchTimer = setTimeout(function() {
                 var params = new URLSearchParams(window.location.search);
                 var campos = params.getAll('campo_filtro');
                 var opers = params.getAll('operador_filtro');
                 var valores = params.getAll('valor_filtro');
+                var shouldDimServerSearch = trimmedValue && filterCurrentResponsablesRows(liveSearchState) === 0;
                 var prevSmartCol = params.get('smart_ui_col');
                 var prevSmartVal = params.get('smart_ui_val');
                 var prevSmartDbCol = getHeaderDbColByText(prevSmartCol);
@@ -3034,12 +3515,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     params.set('smart_ui_val', rawValue);
                 }
 
-                refreshTableFromUrl(buildListUrl(params), {
-                    overlayTitle: 'Buscando responsables...',
-                    overlayText: 'Actualizando los resultados sin recargar toda la pagina.',
-                    useFade: true
-                });
-            }, 350);
+                var refreshOptions = {
+                    useFade: false,
+                    allowHardReload: false,
+                    enableSoftDim: true,
+                    softDimDelayMs: 0,
+                    softDimOpacity: 0.38,
+                    showMiniLoader: false,
+                    showOverlay: false
+                };
+
+                refreshTableFromUrl(buildListUrl(params), refreshOptions);
+            }, 220);
         });
 
         document.getElementById('liveSearchClear').addEventListener('click', function(e) {
@@ -3109,6 +3596,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dbCol: opts.dbCol || (currentSearchSelect ? currentSearchSelect.value : ''),
             inputValue: opts.inputValue !== undefined ? opts.inputValue : (currentSearchInput ? currentSearchInput.value : undefined)
         });
+        reapplyHighlights();
         updateTableOverlay();
         queueCompactTableLayout(opts);
     }
@@ -3201,6 +3689,21 @@ if (formato === 'excel_pagina') {
             return url.toString();
         }
 
+        function getFilenameFromContentDisposition(response, fallbackFilename) {
+            var disposition = response.headers.get('Content-Disposition') || '';
+            var utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+            var asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
+            var filename = '';
+
+            if (utf8Match && utf8Match[1]) {
+                filename = decodeURIComponent(utf8Match[1]);
+            } else if (asciiMatch && asciiMatch[1]) {
+                filename = asciiMatch[1];
+            }
+
+            return filename || fallbackFilename;
+        }
+
         var btnPagina = document.getElementById('btnExcelPagina');
         var btnTodo = document.getElementById('btnExcelTodo');
 
@@ -3236,14 +3739,20 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
                 if (!response.ok) {
                     throw new Error('Error del servidor al generar el Excel (' + response.status + ')');
                 }
-                return response.blob();
+                var filename = getFilenameFromContentDisposition(response, 'responsables_filtrados.xlsx');
+                return response.blob().then(function(blob) {
+                    return {
+                        blob: blob,
+                        filename: filename
+                    };
+                });
             })
-            .then(function(blob) {
-                var blobUrl = URL.createObjectURL(blob);
+            .then(function(payload) {
+                var blobUrl = URL.createObjectURL(payload.blob);
                 var tempA = document.createElement('a');
                 tempA.style.display = 'none';
                 tempA.href = blobUrl;
-                tempA.download = 'responsables_filtrados.xlsx';
+                tempA.download = payload.filename;
                 document.body.appendChild(tempA);
                 tempA.click();
 
@@ -3281,15 +3790,21 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
             if (!response.ok) {
                 throw new Error('Error del servidor al generar el Excel (' + response.status + ')');
             }
-            return response.blob();
+            var filename = getFilenameFromContentDisposition(response, 'responsables.xlsx');
+            return response.blob().then(function(blob) {
+                return {
+                    blob: blob,
+                    filename: filename
+                };
+            });
         })
-        .then(function(blob) {
-            var blobUrl = URL.createObjectURL(blob);
+        .then(function(payload) {
+            var blobUrl = URL.createObjectURL(payload.blob);
             var tempA = document.createElement('a');
 
             tempA.style.display = 'none';
             tempA.href = blobUrl;
-            tempA.download = 'responsables.xlsx';
+            tempA.download = payload.filename;
 
             document.body.appendChild(tempA);
             tempA.click();
@@ -3324,6 +3839,7 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
     function initPagination() {
         var params = new URLSearchParams(window.location.search);
         var nav = document.getElementById('pagination-nav');
+        var paginationList = document.getElementById('paginador-lista');
         var pageSizeSelector = document.getElementById('pageSizeSelectorMain');
 
         if (pageSizeSelector) {
@@ -3335,9 +3851,13 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
                 url.searchParams.set('page_size', this.value);
                 url.searchParams.set('page', 1);
                 refreshTableFromUrl(url.toString(), {
-                    overlayTitle: 'Actualizando cantidad de registros...',
-                    overlayText: 'Recalculando la pagina visible.',
-                    useFade: false
+                    useFade: false,
+                    allowHardReload: false,
+                    enableSoftDim: true,
+                    softDimDelayMs: 0,
+                    softDimOpacity: 0.38,
+                    showMiniLoader: false,
+                    showOverlay: false
                 });
             };
         }
@@ -3347,6 +3867,45 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
         }
 
         setPaginationReady(false);
+        Array.prototype.slice.call(nav.querySelectorAll('.edge-first, .edge-last, .edge-boundary, .edge-gap')).forEach(function(item) {
+            item.parentNode.removeChild(item);
+        });
+
+        if (paginationList) {
+            var currentPage = parseInt(nav.getAttribute('data-current-page') || '1', 10);
+            var totalPages = parseInt(nav.getAttribute('data-total-pages') || '0', 10);
+            var pageItems = Array.prototype.slice.call(paginationList.querySelectorAll('li.page-item'));
+            var firstItem = pageItems[0];
+            var lastItem = pageItems[pageItems.length - 1];
+            var visibleNumbers = pageItems.map(function(item) {
+                var value = parseInt((item.textContent || '').trim(), 10);
+                return isNaN(value) ? null : value;
+            }).filter(function(value) {
+                return value !== null;
+            });
+            var firstVisible = visibleNumbers.length ? Math.min.apply(Math, visibleNumbers) : currentPage;
+            var lastVisible = visibleNumbers.length ? Math.max.apply(Math, visibleNumbers) : currentPage;
+
+            function buildPageUrl(page) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('page', page);
+                return url.toString();
+            }
+
+            if (totalPages > 1 && firstItem && lastItem) {
+                firstItem.insertAdjacentHTML('afterend', '<li class="page-item edge-first"><a class="page-link" href="' + buildPageUrl(1) + '"><i class="fa-solid fa-angles-left"></i></a></li>');
+                lastItem.insertAdjacentHTML('beforebegin', '<li class="page-item edge-last"><a class="page-link" href="' + buildPageUrl(totalPages) + '"><i class="fa-solid fa-angles-right"></i></a></li>');
+
+                if (firstVisible > 1) {
+                    paginationList.querySelector('.edge-first').insertAdjacentHTML('afterend', '<li class="page-item edge-boundary"><a class="page-link" href="' + buildPageUrl(1) + '">1</a></li>' + (firstVisible > 2 ? '<li class="page-item edge-gap"><span class="page-link border-0 text-muted bg-transparent">...</span></li>' : ''));
+                }
+
+                if (lastVisible < totalPages) {
+                    paginationList.querySelector('.edge-last').insertAdjacentHTML('beforebegin', (lastVisible < totalPages - 1 ? '<li class="page-item edge-gap"><span class="page-link border-0 text-muted bg-transparent">...</span></li>' : '') + '<li class="page-item edge-boundary"><a class="page-link" href="' + buildPageUrl(totalPages) + '">' + totalPages + '</a></li>');
+                }
+            }
+        }
+
         Array.prototype.slice.call(nav.querySelectorAll('a.page-link')).forEach(function(link) {
             var href = link.getAttribute('href');
 
@@ -3359,9 +3918,12 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
                 event.preventDefault();
                 clearTimeout(liveSearchTimer);
                 refreshTableFromUrl(link.href, {
-                    overlayTitle: 'Cambiando pagina...',
-                    overlayText: 'Trayendo el siguiente bloque de resultados.',
-                    useFade: false
+                    useFade: false,
+                    enableSoftDim: true,
+                    softDimDelayMs: 0,
+                    softDimOpacity: 0.38,
+                    showMiniLoader: false,
+                    showOverlay: false
                 });
             };
         });
@@ -3570,9 +4132,13 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
             params.delete('page');
             clearTimeout(liveSearchTimer);
             refreshTableFromUrl(buildListUrl(params), {
-                overlayTitle: 'Limpiando filtros...',
-                overlayText: 'Volviendo al listado general sin recargar la pagina.',
-                useFade: false
+                useFade: false,
+                allowHardReload: false,
+                enableSoftDim: true,
+                softDimDelayMs: 0,
+                softDimOpacity: 0.38,
+                showMiniLoader: false,
+                showOverlay: false
             });
         });
 
@@ -3753,6 +4319,7 @@ btnPagina.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando
     bindGeneralUi();
     initColumnState();
     renderServerBadges();
+    scheduleReapplyHighlights();
     syncExcelLinks();
     bindModalBreadcrumbs();
     initPagination();
@@ -3798,4 +4365,717 @@ $(document).on('change', '#dialog_filtro .filter-dialog-option', function() {
 
 </script>
 </div>
+
+<!-- PADRON_FIX_X_SIN_RELOAD_START -->
+<script id="padron-fix-x-sin-reload-script">
+(function() {
+    "use strict";
+
+    /*
+     * Fix seguro para la X del buscador:
+     * - No llama directamente a refreshTableFromUrl.
+     * - No usa window.location.href.
+     * - Limpia primero la URL.
+     * - Luego dispara un evento input normal, para que el handler original del HTML
+     *   haga la actualizacion AJAX desde su propio scope.
+     */
+
+    var PATCH_FLAG = "__padronFixXSinReload";
+
+    if (window[PATCH_FLAG]) {
+        return;
+    }
+
+    window[PATCH_FLAG] = true;
+
+    function qs(selector, root) {
+        return (root || document).querySelector(selector);
+    }
+
+    function normalizeValue(value) {
+        return String(value || "").trim().toLowerCase();
+    }
+
+    function getInput() {
+        return qs("#liveSearchInput");
+    }
+
+    function getClearButton() {
+        return qs("#liveSearchClear");
+    }
+
+    function getBadge() {
+        return qs("#smartSearchBadge");
+    }
+
+    function getBadgesContainer() {
+        return qs("#serverBadgesContainer");
+    }
+
+    function isClearTarget(target) {
+        if (!target || !target.closest) {
+            return false;
+        }
+
+        return !!(
+            target.closest("#liveSearchClear") ||
+            target.closest("#smartSearchBadge .close-filter-btn") ||
+            target.closest("#removeSmartSearch")
+        );
+    }
+
+    function removeSmartBadgeDom() {
+        var badge = getBadge();
+        var container = getBadgesContainer();
+
+        if (badge && badge.parentNode) {
+            badge.parentNode.removeChild(badge);
+        }
+
+        if (container && !container.querySelector(".badge")) {
+            container.style.display = "none";
+        }
+    }
+
+    function showClearButton(show) {
+        var clearButton = getClearButton();
+
+        if (!clearButton) {
+            return;
+        }
+
+        clearButton.style.display = show ? "inline-flex" : "none";
+    }
+
+    function cleanSmartParamsFromUrl() {
+        var url = new URL(window.location.href);
+        var params = url.searchParams;
+
+        var smartVal = normalizeValue(params.get("smart_ui_val"));
+        var campos = params.getAll("campo_filtro");
+        var opers = params.getAll("operador_filtro");
+        var valores = params.getAll("valor_filtro");
+
+        var keepCampos = [];
+        var keepOpers = [];
+        var keepValores = [];
+
+        var removedOneSmartFilter = false;
+
+        params.delete("smart_ui_col");
+        params.delete("smart_ui_val");
+        params.delete("q");
+        params.delete("page");
+
+        params.delete("campo_filtro");
+        params.delete("operador_filtro");
+        params.delete("valor_filtro");
+
+        for (var i = 0; i < campos.length; i += 1) {
+            var op = opers[i] || "0";
+            var value = normalizeValue(valores[i]);
+
+            /*
+             * Quita solo el filtro rapido asociado al valor del buscador.
+             * Conserva otros filtros manuales.
+             */
+            if (!removedOneSmartFilter && smartVal && op === "0" && value === smartVal) {
+                removedOneSmartFilter = true;
+                continue;
+            }
+
+            keepCampos.push(campos[i]);
+            keepOpers.push(op);
+            keepValores.push(valores[i] || "");
+        }
+
+        keepCampos.forEach(function(item) {
+            params.append("campo_filtro", item);
+        });
+
+        keepOpers.forEach(function(item) {
+            params.append("operador_filtro", item);
+        });
+
+        keepValores.forEach(function(item) {
+            params.append("valor_filtro", item);
+        });
+
+        window.history.replaceState({}, "", url.toString());
+    }
+
+    function dispatchNativeInput(input) {
+        var event;
+
+        if (!input) {
+            return;
+        }
+
+        event = new Event("input", {
+            bubbles: true,
+            cancelable: true
+        });
+
+        input.dispatchEvent(event);
+    }
+
+    function clearSearchWithoutReload(event) {
+        var input = getInput();
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (typeof event.stopImmediatePropagation === "function") {
+                event.stopImmediatePropagation();
+            }
+        }
+
+        cleanSmartParamsFromUrl();
+
+        if (input) {
+            input.value = "";
+        }
+
+        removeSmartBadgeDom();
+        showClearButton(false);
+
+        /*
+         * Esto deja que el handler original del HTML actualice la tabla.
+         * No llamamos refreshTableFromUrl desde este patch porque puede estar
+         * en scope local y no global.
+         */
+        dispatchNativeInput(input);
+    }
+
+    document.addEventListener("click", function(event) {
+        if (!isClearTarget(event.target)) {
+            return;
+        }
+
+        clearSearchWithoutReload(event);
+    }, true);
+
+})();
+</script>
+<!-- PADRON_FIX_X_SIN_RELOAD_END -->
+
+<!-- PADRON_FIX_LOADER_DENTRO_TABLA_SUPERPUESTO_START -->
+<style id="padron-fix-loader-dentro-tabla-superpuesto-style">
+/* =========================================================
+   FIX: LOADER DENTRO DE LA TABLA, SUPERPUESTO Y LIVIANO
+   No ocupa layout, no empuja filas, no oscurece resultados.
+   ========================================================= */
+
+.table-shell {
+    position: relative !important;
+}
+
+/* El loader debe vivir dentro de .table-shell, flotando sobre la tabla. */
+.table-shell > .padron-mini-table-loader {
+    position: absolute !important;
+
+    /*
+       Queda dentro de la tabla, debajo del encabezado.
+       Usa --table-overlay-top si existe para respetar la altura del thead.
+    */
+    top: calc(var(--table-overlay-top, 44px) + 0.55rem) !important;
+    left: 0.85rem !important;
+
+    z-index: 18 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+
+    width: auto !important;
+    max-width: max-content !important;
+    height: 30px !important;
+    margin: 0 !important;
+    padding: 0 0.75rem !important;
+    border-radius: 999px !important;
+
+    border: 1px solid rgba(46, 123, 212, 0.20) !important;
+    background: rgba(255, 255, 255, 0.97) !important;
+    color: #1a4f8a !important;
+
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+
+    box-shadow: 0 8px 18px rgba(26, 79, 138, 0.12) !important;
+
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: translateY(-3px) !important;
+
+    /*
+       Clave: no bloquea clicks sobre filas/botones.
+    */
+    pointer-events: none !important;
+
+    /*
+       Transicion minima, no pesada.
+    */
+    transition:
+        opacity 0.05s linear,
+        transform 0.05s linear,
+        visibility 0.05s linear !important;
+}
+
+.table-shell > .padron-mini-table-loader.is-visible {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+}
+
+/* No debe quedar en results-bar. Si algun patch viejo lo movio ahi, se oculta. */
+.results-bar > .padron-mini-table-loader {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* Blindaje: nunca dentro del table/thead/tbody como si fuera fila/celda. */
+.table-responsive .padron-mini-table-loader,
+.compact-table-track .padron-mini-table-loader,
+.table-padron .padron-mini-table-loader,
+.table-padron thead .padron-mini-table-loader,
+.table-padron tbody .padron-mini-table-loader {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* No se oscurece la tabla por culpa del loader. */
+.table-shell.has-mini-loader-active .table-responsive {
+    opacity: 1 !important;
+}
+</style>
+
+<script id="padron-fix-loader-dentro-tabla-superpuesto-script">
+(function() {
+    "use strict";
+
+    /*
+     * Este fix:
+     * - No cambia backend.
+     * - No cambia la consulta.
+     * - No cambia filtros.
+     * - Solo controla donde vive el loader y cuando se apaga.
+     */
+
+    var PATCH_FLAG = "__padronFixLoaderDentroTablaSuperpuesto";
+    var FETCH_WRAP_FLAG = "__padronFixLoaderDentroTablaFetchWrapped";
+    var JQ_BIND_FLAG = "__padronFixLoaderDentroTablaJqBound";
+
+    if (window[PATCH_FLAG]) {
+        return;
+    }
+
+    window[PATCH_FLAG] = true;
+
+    var activeAjaxCount = 0;
+    var activeFetchCount = 0;
+    var cleanupTimer = null;
+    var tableObserver = null;
+
+    function qs(selector, root) {
+        return (root || document).querySelector(selector);
+    }
+
+    function qsa(selector, root) {
+        return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+    }
+
+    function hasActiveRequest() {
+        return (activeAjaxCount + activeFetchCount) > 0;
+    }
+
+    function getShell() {
+        return qs(".table-shell");
+    }
+
+    function getLoader() {
+        return qs(".padron-mini-table-loader");
+    }
+
+    function isLoader(node) {
+        return node &&
+               node.nodeType === 1 &&
+               node.classList &&
+               node.classList.contains("padron-mini-table-loader");
+    }
+
+    function updateOffsetIfAvailable() {
+        try {
+            if (typeof updateTableOverlayOffset === "function") {
+                updateTableOverlayOffset();
+            }
+        } catch (e) {}
+    }
+
+    function moveLoaderInsideTableShell() {
+        var shell = getShell();
+        var loader = getLoader();
+
+        if (!shell || !loader) {
+            return;
+        }
+
+        /*
+         * Si algun patch anterior lo llevo a results-bar,
+         * lo devolvemos a .table-shell.
+         */
+        if (loader.parentNode !== shell) {
+            try {
+                shell.appendChild(loader);
+            } catch (e) {}
+        }
+
+        updateOffsetIfAvailable();
+    }
+
+    function hideLoaderOnly() {
+        var shell = getShell();
+
+        qsa(".padron-mini-table-loader").forEach(function(loader) {
+            loader.classList.remove("is-visible");
+            loader.setAttribute("aria-hidden", "true");
+
+            /*
+             * Si hay duplicados por patches viejos, dejamos solo el primero.
+             */
+            if (shell && loader.parentNode !== shell && loader.parentNode) {
+                loader.parentNode.removeChild(loader);
+            }
+        });
+
+        if (shell) {
+            shell.classList.remove("has-mini-loader-active");
+        }
+
+        try {
+            if (typeof hideMiniTableLoader === "function") {
+                hideMiniTableLoader();
+            }
+        } catch (e) {}
+    }
+
+    function hardHideLoader() {
+        clearTimeout(cleanupTimer);
+        cleanupTimer = null;
+
+        hideLoaderOnly();
+
+        try {
+            if (typeof cancelDeferredTableLoadingOverlay === "function") {
+                cancelDeferredTableLoadingOverlay(false);
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof cancelTableSoftDim === "function") {
+                cancelTableSoftDim(true);
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof restoreTableViewportOpacity === "function") {
+                restoreTableViewportOpacity();
+            }
+        } catch (e) {}
+    }
+
+    function hideAfterResultsPaint() {
+        clearTimeout(cleanupTimer);
+
+        cleanupTimer = setTimeout(function() {
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    hardHideLoader();
+                });
+            });
+        }, 0);
+    }
+
+    function markLoaderActiveIfVisible() {
+        var shell = getShell();
+        var loader = getLoader();
+
+        if (!shell || !loader) {
+            return;
+        }
+
+        moveLoaderInsideTableShell();
+
+        if (loader.classList.contains("is-visible")) {
+            shell.classList.add("has-mini-loader-active");
+
+            /*
+             * Si aparece visible pero no hay request activa,
+             * es un timer viejo: apagar inmediatamente.
+             */
+            if (!hasActiveRequest()) {
+                hardHideLoader();
+            }
+        } else {
+            shell.classList.remove("has-mini-loader-active");
+        }
+    }
+
+    function nodeLooksLikeTableResult(node) {
+        if (!node || node.nodeType !== 1) {
+            return false;
+        }
+
+        if (isLoader(node)) {
+            return false;
+        }
+
+        if (
+            node.matches &&
+            node.matches(".table-responsive, .compact-table-track, .table-padron, tbody, tr, #pagination-container, .pagination")
+        ) {
+            return true;
+        }
+
+        return !!(
+            node.querySelector &&
+            node.querySelector(".table-responsive, .compact-table-track, .table-padron, tbody, tr, .padron-table-empty-row, #pagination-container, .pagination")
+        );
+    }
+
+    function observeTableChanges() {
+        var shell = getShell();
+
+        if (!shell || tableObserver) {
+            return;
+        }
+
+        /*
+         * Observador acotado a la tabla, no a todo el body.
+         * Es liviano y solo sirve para apagar el loader cuando ya cambio el resultado.
+         */
+        tableObserver = new MutationObserver(function(mutations) {
+            var sawResultChange = false;
+            var sawLoaderChange = false;
+
+            mutations.forEach(function(mutation) {
+                if (mutation.type === "attributes") {
+                    if (isLoader(mutation.target)) {
+                        sawLoaderChange = true;
+                    }
+                    return;
+                }
+
+                Array.prototype.forEach.call(mutation.addedNodes || [], function(node) {
+                    if (isLoader(node)) {
+                        sawLoaderChange = true;
+                        return;
+                    }
+
+                    if (nodeLooksLikeTableResult(node)) {
+                        sawResultChange = true;
+                    }
+                });
+            });
+
+            if (sawResultChange) {
+                hideAfterResultsPaint();
+                return;
+            }
+
+            if (sawLoaderChange) {
+                requestAnimationFrame(markLoaderActiveIfVisible);
+            }
+        });
+
+        tableObserver.observe(shell, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["class", "aria-hidden"]
+        });
+    }
+
+    function bindJqueryAjaxEvents() {
+        if (!window.jQuery || window[JQ_BIND_FLAG]) {
+            return;
+        }
+
+        window[JQ_BIND_FLAG] = true;
+
+        window.jQuery(document)
+            .on("ajaxSend.padronLoaderDentroTabla", function() {
+                activeAjaxCount += 1;
+                moveLoaderInsideTableShell();
+            })
+            .on("ajaxSuccess.padronLoaderDentroTabla", function() {
+                /*
+                 * El success local ya reemplazo fragmentos.
+                 * Apagamos luego de pintar.
+                 */
+                hideAfterResultsPaint();
+            })
+            .on("ajaxComplete.padronLoaderDentroTabla ajaxError.padronLoaderDentroTabla", function() {
+                activeAjaxCount = Math.max(0, activeAjaxCount - 1);
+                hideAfterResultsPaint();
+            });
+    }
+
+    function wrapFetchForResponsables() {
+        var originalFetch;
+
+        if (window[FETCH_WRAP_FLAG] || typeof window.fetch !== "function") {
+            return;
+        }
+
+        window[FETCH_WRAP_FLAG] = true;
+        originalFetch = window.fetch;
+
+        window.fetch = function() {
+            activeFetchCount += 1;
+            moveLoaderInsideTableShell();
+
+            return originalFetch.apply(this, arguments).then(function(response) {
+                if (response && typeof response.text === "function" && !response.__padronLoaderDentroTablaTextWrapped) {
+                    var originalText = response.text.bind(response);
+
+                    response.text = function() {
+                        return originalText().then(function(text) {
+                            /*
+                             * Devolvemos el texto primero para que el .then(html)
+                             * propio del modulo pueda pintar los resultados.
+                             * Luego, en frames siguientes, apagamos.
+                             */
+                            requestAnimationFrame(function() {
+                                requestAnimationFrame(function() {
+                                    activeFetchCount = Math.max(0, activeFetchCount - 1);
+                                    hardHideLoader();
+                                });
+                            });
+
+                            return text;
+                        }).catch(function(error) {
+                            activeFetchCount = Math.max(0, activeFetchCount - 1);
+                            hardHideLoader();
+                            throw error;
+                        });
+                    };
+
+                    response.__padronLoaderDentroTablaTextWrapped = true;
+                    return response;
+                }
+
+                activeFetchCount = Math.max(0, activeFetchCount - 1);
+                hideAfterResultsPaint();
+                return response;
+            }).catch(function(error) {
+                activeFetchCount = Math.max(0, activeFetchCount - 1);
+                hardHideLoader();
+                throw error;
+            });
+        };
+    }
+
+    function cleanupOldResultsBarLoader() {
+        var shell = getShell();
+
+        qsa(".results-bar > .padron-mini-table-loader").forEach(function(loader) {
+            if (shell) {
+                shell.appendChild(loader);
+            } else if (loader.parentNode) {
+                loader.parentNode.removeChild(loader);
+            }
+        });
+
+        moveLoaderInsideTableShell();
+    }
+
+    function boot() {
+        cleanupOldResultsBarLoader();
+        observeTableChanges();
+        bindJqueryAjaxEvents();
+        wrapFetchForResponsables();
+        markLoaderActiveIfVisible();
+
+        /*
+         * Limpieza defensiva contra timers viejos.
+         */
+        setTimeout(function() {
+            if (!hasActiveRequest()) {
+                hardHideLoader();
+            }
+        }, 260);
+
+        setTimeout(function() {
+            if (!hasActiveRequest()) {
+                hardHideLoader();
+            }
+        }, 700);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot);
+    } else {
+        boot();
+    }
+
+    window.addEventListener("pageshow", boot);
+})();
+</script>
+<!-- PADRON_FIX_LOADER_DENTRO_TABLA_SUPERPUESTO_END -->
+
 {% endblock %}
+<!-- TYAGO_PATCH_BUSQUEDA_ATOMICA_PADRON -->
+<!-- TYAGO_PATCH_RESPONSABLES_DIM_SIN_MENSAJE_FINAL -->
+<!-- TYAGO_PATCH_RESPONSABLES_CARGANDO_CHIPS -->
+<!-- TYAGO_PATCH_RESPONSABLES_LOADER_SOLO_CHIPS -->
+<!-- TYAGO_PATCH_RESPONSABLES_LOADER_COMO_OTROS -->
+
+<!-- 
+TYAGO_PATCH_MENSAJE_SIN_RESULTADOS_RESPONSABLES_IZQUIERDA
+ -->
+<style id=
+"
+tyago-mensaje-sin-resultados-responsables-izquierda
+"
+>
+/* Alinea a la izquierda el estado vacío de Responsables, sin tocar loaders ni filtros. */
+.table-padron tbody tr.padron-table-empty-row > td {
+    text-align: left !important;
+    padding-left: 0.85rem !important;
+}
+
+.table-padron tbody tr.padron-table-empty-row .padron-empty-inline {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.45rem !important;
+    text-align: left !important;
+}
+
+.table-loading-overlay.is-empty {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+}
+
+.table-loading-overlay.is-empty .table-loading-card {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    text-align: left !important;
+}
+
+.table-loading-overlay.is-empty .table-loading-copy,
+.table-loading-overlay.is-empty .table-loading-title,
+.table-loading-overlay.is-empty .table-loading-text {
+    text-align: left !important;
+}
+</style>
+<!-- TYAGO_PATCH_DIFUMINADO_SIN_CARGANDO_REFRESH_TABLA -->
+
