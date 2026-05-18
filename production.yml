@@ -6,6 +6,7 @@ volumes:
   production_traefik_visor: {}
   production_media_visor: {}
   production_redis_data: {}
+  production_static_visor: {}
 
 services:
   django:
