@@ -1,28 +1,19 @@
 from apps.evaluaciones_educativas.models.diagnostico_2026 import Año2026
 
-from .. import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
-from django.http import HttpResponse, FileResponse
-from django.db import transaction
+from django.http import FileResponse
 from django.contrib.auth.decorators import login_required
-from django.templatetags.static import static
-from django.db.models import Count,Q,Avg
-from datetime import date, datetime
+from django.db.models import Q
 import io
 import re
-import psycopg2
-from psycopg2 import extras
-import os
-from openpyxl import Workbook
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from ..forms import MatematicaForm, LenguaForm, SeleccionarMateriaForm, AlumnoForm
+from ..forms import MatematicaForm, LenguaForm, AlumnoForm
 from ..models import Alumno2026, Matematica2026, Lengua2026, Seccion2026, TablaTemporalAlumno
-from django.http import JsonResponse
 from ..utils import utilidades
 from django.core.paginator import Paginator
 from apps.consultasge.models import CapaUnicaOfertas
@@ -254,7 +245,7 @@ def _obtener_estructura_preguntas_matematica():
 			{'num': 8, 'puntajes': ['A', 'B', 'C', 'OMITIÓ']},
 			{'num': 9, 'puntajes': [11, 5.50, 0]},
 			{'num': 10, 'puntajes': ['A', 'B', 'C', 'OMITIÓ']},
-			{'num': 11, 'puntajes': [11.5, 7, 3.5, 0]},
+			{'num': 11, 'puntajes': [10.5, 7, 3.5, 0]},
 			{'num': 12, 'puntajes': [9, 4.5, 0]},
 		],
 		'total_puntos': 100
@@ -486,7 +477,16 @@ def descargar_examenes(request, materia):
 	pregunta_campos = [f for f in examen_model._meta.get_fields()
 					   if hasattr(f, 'choices') and f.choices and f.name.startswith('pregunta_')]
 	pregunta_campos = sorted(pregunta_campos, key=_orden_pregunta_field)
-	pregunta_encabezados = [f.name.replace('_', ' ').title() for f in pregunta_campos]
+	
+	pregunta_encabezados = []
+	for f in pregunta_campos:
+			nombre = f.name.replace('pregunta_', '')
+			partes = nombre.split('_')
+			if len(partes) == 1:
+					encabezado = f'P{partes[0]}'
+			else:
+					encabezado = f'P{partes[0]}.{partes[1]}'
+			pregunta_encabezados.append(encabezado)
 
 	data = [
 		['Apellido', 'Nombre', 'DNI', 'Sección', 'Turno', 'Modelo', 'Asistencia'] + pregunta_encabezados
@@ -515,18 +515,26 @@ def descargar_examenes(request, materia):
 	story.append(Paragraph(f"CUE/ANEXO: {selected_cue or 'N/A'}", styles['Normal']))
 	story.append(Spacer(1, 12))
 
-	col_widths = [70, 70, 50, 50, 50, 50, 60] + [40] * len(pregunta_campos)
+	ancho_disponible = landscape(A4)[0] - 35
+	ancho_fijos = 55 + 55 + 45 + 35 + 35 + 35 + 50
+	ancho_preguntas = (ancho_disponible - ancho_fijos) / len(pregunta_campos)
+	col_widths = [55, 55, 45, 35, 35, 35, 50] + [ancho_preguntas] * len(pregunta_campos)
 	table = Table(data, colWidths=col_widths, repeatRows=1)
 	table.setStyle(TableStyle([
-		('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E9ECEF')),
-		('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-		('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-		('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-		('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-		('FONTSIZE', (0, 0), (-1, -1), 8),
-		('LEFTPADDING', (0, 0), (-1, -1), 3),
-		('RIGHTPADDING', (0, 0), (-1, -1), 3),
-	]))
+    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E9ECEF')),
+    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+    ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+    ('FONTSIZE', (0, 0), (-1, 0), 7),
+    ('FONTSIZE', (0, 1), (-1, -1), 6),
+    ('LEFTPADDING', (0, 0), (-1, -1), 2),
+    ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+    ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ('WORDWRAP', (0, 0), (-1, -1), True),
+]))
 
 	story.append(table)
 	doc.build(story)
@@ -570,15 +578,16 @@ def actualizar_seccion(request, alumno_uuid):
 
 		# Actualizar sección y turno
 		if nueva_seccion and nuevo_turno:
-			#dni = alumno.dni
-			#cueanexo=alumno.seccion.año.cueanexo
-			#cueanexo = TablaTemporalAlumno.objects.values_list('cueanexo', flat=True).get(numero_de_documento=dni)
-			#año_actual = Año2026.objects.get(cueanexo=cueanexo)
-			año_actual=alumno.seccion.año
+			if alumno.seccion:
+					cueanexo = alumno.seccion.año.cueanexo
+			else:
+					cueanexo = request.POST.get('cueanexo')
+					
+			año_actual = Año2026.objects.get(cueanexo=cueanexo)
 			seccion_obj = Seccion2026.objects.get(
-				seccion=nueva_seccion,
-				año=año_actual,
-				turno=nuevo_turno
+					seccion=nueva_seccion,
+					año=año_actual,
+					turno=nuevo_turno
 			)
 			alumno.seccion = seccion_obj
 
@@ -598,51 +607,6 @@ def actualizar_seccion(request, alumno_uuid):
 	url = reverse('evaluaciones_educativas:diagnostico_2026:inicio')
 	return redirect(f"{url}?cueanexo={selected_cue}")
 
-# @login_required
-# def asignar_examen_matematica(request, alumno_uuid):
-#     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
-	
-#     if request.method == 'POST':
-#         form = MatematicaForm(request.POST)
-#         if form.is_valid():
-#             # Creamos el objeto pero no lo guardamos aún (commit=False)
-#             examen = form.save(commit=False)
-#             examen.alumno = alumno  # Asignamos la relación OneToOne
-#             examen.save()
-#             return redirect('inicio')
-#     else:
-#         form = MatematicaForm()
-
-#     return render(request, 'diagnostico_2026/form_examen.html', {
-#         'form': form,
-#         'alumno': alumno,
-#         'materia': 'Matemática'
-#     })
-
-
-# @login_required
-# def asignar_examen_lengua(request, alumno_uuid):
-#     alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
-	
-#     if request.method == 'POST':
-#         form = LenguaForm(request.POST)
-#         if form.is_valid():
-#             examen = form.save(commit=False)
-#             examen.alumno = alumno
-#             examen.save()
-#             return redirect('inicio')
-#     else:
-#         form = LenguaForm()
-
-#     return render(request, 'diagnostico_2026/form_examen.html', {
-#         'form': form,
-#         'alumno': alumno,
-#         'materia': 'Lengua'
-#     })
-
-
-# def crear_examen(request):
-#     return render(request, 'diagnostico_2026/crear_examen.html')
 
 @login_required
 def cargar_examen(request, alumno_uuid, materia):
@@ -796,40 +760,3 @@ def editar_examen(request, alumno_uuid, materia):
 		'estructura_preguntas': estructura_preguntas,
 		'respuestas': _respuestas_formulario(form),
 	})
-
-
-@login_required
-def descargar_examen_pdf(request, alumno_uuid, materia):
-	"""Genera un resumen imprimible del examen cargado, similar al comprobante físico."""
-	alumno = get_object_or_404(Alumno2026, public_id=alumno_uuid)
-
-	if materia == 'matematica':
-		examen = get_object_or_404(Matematica2026, alumno=alumno)
-		template_materia = "Matemática"
-	elif materia == 'lengua':
-		examen = get_object_or_404(Lengua2026, alumno=alumno)
-		template_materia = "Lengua"
-	else:
-		return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
-
-	# Construimos la lista de ítems con etiqueta y puntaje seleccionado
-	campos = [f for f in examen._meta.get_fields()
-			  if hasattr(f, 'choices') and f.choices and f.name.startswith('pregunta_')]
-	campos_ordenados = sorted(campos, key=_orden_pregunta_field)
-
-	items = []
-	for campo in campos_ordenados:
-		valor = getattr(examen, campo.name)
-		items.append({
-			'nombre': campo.name.replace('_', ' ').title(),
-			'valor': valor if valor else '—',
-		})
-
-	return render(request, 'diagnostico_2026/examen_imprimible.html', {
-		'alumno': alumno,
-		'examen': examen,
-		'materia': template_materia,
-		'items': items,
-		'fecha': datetime.now().strftime("%d/%m/%Y %H:%M"),
-	})
-

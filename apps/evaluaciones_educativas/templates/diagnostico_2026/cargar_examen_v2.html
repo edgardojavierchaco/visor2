@@ -434,9 +434,9 @@
                         </td>
                         <td>Completa correctamente los tres cuadros.</td>
                         <td class="text-center">
-                            <input type="radio" class="btn-check" name="pregunta_11" id="p11_max" value="11,5">
+                            <input type="radio" class="btn-check" name="pregunta_11" id="p11_max" value="10,5">
                             <label class="btn btn-outline-primary opcion-btn" for="p11_max">
-                                <span class="mod-a">11,5</span><span class="mod-b d-none">10,5</span>
+                                <span class="mod-a">10,5</span><span class="mod-b d-none">10,5</span>
                             </label>
                         </td>
                     </tr>
@@ -546,12 +546,13 @@
                     labelModelo.innerText = "MODELO " + selMod.value;
                 }
 
-                const p11max = document.getElementById("p11_max");
-                if (p11max) {
-                    p11max.value = isB ? "10,5" : "11,5";
-                }
+                // const p11max = document.getElementById("p11_max");
+                // if (p11max) {
+                //     p11max.value = isB ? "10,5" : "11,5";
+                // }
 
                 document.querySelectorAll(".btn-check, .select-cerrada-wrap select").forEach(r => {
+                    if (r.name === "modelo" || r.name === "asistencia") return;
                     r.disabled = isAus;
                     if (isAus) {
                         if (r.type === "radio") r.checked = false;
@@ -595,5 +596,18 @@
             update();
         });
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('form').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                // Solo deshabilitar el botón para evitar doble envío
+                form.querySelectorAll('button[type="submit"]').forEach(function (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Guardando...';
+                });
+            });
+        });
+    });
+</script>
 </body>
 </html>

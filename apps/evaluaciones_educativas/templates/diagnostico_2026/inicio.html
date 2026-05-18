@@ -72,24 +72,26 @@
                                 <th>Año</th>
                                 <th>Sección</th>
                                 <th>Turno</th>
-                                <!-- <th class="text-center">Editar</th> -->
+                                <th class="text-center">Confirmar Datos</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for alumno in alumnos %}
                             <tr>
-                                <td>{{ alumno.objeto.nombre }}</td>
-                                <td>{{ alumno.objeto.apellido }}</td>
-                                <td>{{ alumno.objeto.dni }}</td>
-                                <td>
-                                    <form method="post"
-                                        action="{% url 'evaluaciones_educativas:diagnostico_2026:actualizar_seccion' alumno.objeto.public_id %}"
-                                        class="d-flex">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="campo" value="comunidad_indigena">
-                                        <select name="comunidad_indigena" class="form-select form-select-sm select-inline" onchange="this.form.submit()">
+                                <form method="post"
+                                    action="{% url 'evaluaciones_educativas:diagnostico_2026:actualizar_seccion' alumno.objeto.public_id %}"
+                                    id="form-alumno-{{ forloop.counter }}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="cueanexo" value="{{ selected_cue }}">
+                                    <td>{{ alumno.objeto.nombre }}</td>
+                                    <td>{{ alumno.objeto.apellido }}</td>
+                                    <td>{{ alumno.objeto.dni }}</td>
+
+                                    <!-- Com. Indígena -->
+                                    <td>
+                                        <select name="comunidad_indigena" class="form-select form-select-sm select-inline">
                                             <option value="" {% if not alumno.objeto.comunidad_indigena %}selected{% endif %}>
-                                                --- Seleccionar opción ---
+                                                --- Seleccionar ---
                                             </option>
                                             {% for valor, etiqueta in opciones_comunidad_indigena %}
                                                 <option value="{{ valor }}" {% if alumno.objeto.comunidad_indigena == valor %}selected{% endif %}>
@@ -97,19 +99,13 @@
                                                 </option>
                                             {% endfor %}
                                         </select>
-                                    </form>
-                                </td>
+                                    </td>
 
-                                <!-- Discapacidad inline -->
-                                <td>
-                                    <form method="post"
-                                        action="{% url 'evaluaciones_educativas:diagnostico_2026:actualizar_seccion' alumno.objeto.public_id %}"
-                                        class="d-flex">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="campo" value="discapacidad">
-                                        <select name="discapacidad" class="form-select form-select-sm select-inline" onchange="this.form.submit()">
+                                    <!-- Discapacidad -->
+                                    <td>
+                                        <select name="discapacidad" class="form-select form-select-sm select-inline">
                                             <option value="" {% if not alumno.objeto.discapacidad %}selected{% endif %}>
-                                                --- Seleccionar opción ---
+                                                --- Seleccionar ---
                                             </option>
                                             {% for valor, etiqueta in opciones_discapacidad %}
                                                 <option value="{{ valor }}" {% if alumno.objeto.discapacidad == valor %}selected{% endif %}>
@@ -117,21 +113,15 @@
                                                 </option>
                                             {% endfor %}
                                         </select>
-                                    </form>
-                                </td>
+                                    </td>
 
-                                <td>{{ alumno.objeto.seccion.año.nombre_año|default:"2do Año/Grado"}}</td>
+                                    <td>{{ alumno.objeto.seccion.año.nombre_año|default:"2do Año/Grado" }}</td>
 
-                                <td colspan="2">
-                                    <form method="post"
-                                        action="{% url 'evaluaciones_educativas:diagnostico_2026:actualizar_seccion' alumno.objeto.public_id %}"
-                                        id="form-sec-{{ forloop.counter }}"
-                                        class="d-flex gap-2">
-                                        {% csrf_token %}
-
-                                        <select name="seccion" class="form-select form-select-sm select-inline" onchange="this.form.submit()">
+                                    <!-- Sección -->
+                                    <td>
+                                        <select name="seccion" class="form-select form-select-sm select-inline">
                                             <option value="" {% if not alumno.objeto.seccion.seccion %}selected{% endif %}>
-                                                --- Seleccionar opción ---
+                                                --- Seleccionar ---
                                             </option>
                                             {% for valor in secciones_disponibles.secciones %}
                                                 <option value="{{ valor }}" {% if alumno.objeto.seccion.seccion == valor %}selected{% endif %}>
@@ -139,10 +129,13 @@
                                                 </option>
                                             {% endfor %}
                                         </select>
+                                    </td>
 
-                                        <select name="turno" class="form-select form-select-sm select-inline" onchange="this.form.submit()">
+                                    <!-- Turno -->
+                                    <td>
+                                        <select name="turno" class="form-select form-select-sm select-inline">
                                             <option value="" {% if not alumno.objeto.seccion.turno %}selected{% endif %}>
-                                                --- Seleccionar opción ---
+                                                --- Seleccionar ---
                                             </option>
                                             {% for valor in secciones_disponibles.turnos %}
                                                 <option value="{{ valor }}" {% if alumno.objeto.seccion.turno == valor %}selected{% endif %}>
@@ -150,15 +143,15 @@
                                                 </option>
                                             {% endfor %}
                                         </select>
-                                    </form>
-                                </td>
+                                    </td>
 
-                                <!-- <td class="text-center">
-                                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_alumno' alumno.objeto.public_id %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
-                                    class="btn btn-outline-secondary btn-sm" title="Editar datos del alumno">
-                                        ✏️
-                                    </a>
-                                </td> -->
+                                    <!-- Botón confirmar -->
+                                    <td class="text-center">
+                                        <button type="submit" class="btn btn-success btn-sm" title="Confirmar datos">
+                                            ✔ Confirmar
+                                        </button>
+                                    </td>
+                                </form>
                             </tr>
                             {% empty %}
                             <tr>

@@ -78,8 +78,8 @@ class MatematicaForm(forms.ModelForm):
             'pregunta_12',
         ]
         widgets = {
-            'asistencia': forms.Select(attrs={'class': 'form-select'}),
-            'modelo': forms.Select(attrs={'class': 'form-select'}),
+            'asistencia': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+            'modelo': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
             'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
         }
 
@@ -139,8 +139,8 @@ class LenguaForm(forms.ModelForm):
             'pregunta_22_3',
         ]
         widgets = {
-            'asistencia': forms.Select(attrs={'class': 'form-select'}),
-            'modelo': forms.Select(attrs={'class': 'form-select'}),
+            'asistencia': forms.Select(attrs={'class': 'form-select',}),
+            'modelo': forms.Select(attrs={'class': 'form-select',}),
             'encargado_carga': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
         }
 
