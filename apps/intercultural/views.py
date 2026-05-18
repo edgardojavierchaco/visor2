@@ -8,7 +8,7 @@ from .models import Alumnos_Bilingue, EscuelasBilingues
 from .forms import Alumno_BilingueForm, Nivel_curso
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from apps.bnhpersonas.utils import get_ofertas_usuario
+from apps.bnhpersonas_old.utils import get_ofertas_usuario
 from .middleware import UserCueanexoMiddleware
 
 
