@@ -21,8 +21,8 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ./productionfiles:/app/productionfiles:Z
-      - production_media_visor:/app/media:Z
+      - production_static_visor:/app/productionfiles
+      - production_media_visor:/app/media
     command: /start
     restart: unless-stopped
 
