@@ -76,6 +76,26 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dniInput = document.querySelector('input[name*="dni"], input[id*="dni"]');
+
+        if (dniInput) {
+            // Forzamos a que el navegador entienda que es un campo de texto/número limitado
+            dniInput.setAttribute('maxLength', '8');
+
+            // Evento para controlar que no se peguen o escriban más de 8 caracteres
+            dniInput.addEventListener('input', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                
+                // Corta el texto si supera los 8 dígitos
+                if (this.value.length > 8) {
+                    this.value = this.value.slice(0, 8);
+                }
+            });
+        }
+    });
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
