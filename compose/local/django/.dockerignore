@@ -1,51 +1,79 @@
-# Python cache
+# =========================
+# PYTHON CACHE
+# =========================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Django local settings / env
+# =========================
+# ENV FILES
+# =========================
+.env
 *.env
 local_settings.py
 
-# Database files
+# =========================
+# DATABASE
+# =========================
 *.sqlite3
 *.db
 
-# Media and static (servidos aparte)
+# =========================
+# MEDIA / STATIC
+# =========================
 media/
 staticfiles/
 productionfiles/
 
-# Virtual environments
+# =========================
+# VIRTUAL ENVS
+# =========================
 venv/
 env/
 .venv/
 
-# Node / frontend build
+# =========================
+# NODE FRONTEND
+# =========================
 node_modules/
 build/
 dist/
 
-# Logs
+# =========================
+# LOGS
+# =========================
 *.log
 *.pot
 *.mo
 
-# Docker / IDE
+# =========================
+# IDE / OS
+# =========================
 .DS_Store
-*.swp
-*.swo
 .idea/
 .vscode/
+*.swp
+*.swo
 *.iml
 
-# Python packaging
+# =========================
+# PYTHON PACKAGING
+# =========================
 *.egg-info/
 dist/
 *.egg
 
-# Other temporary files
+# =========================
+# TEMP FILES
+# =========================
 *.bak
 *.tmp
 *.orig
+
+# =========================
+# DOCKER / DOCS
+# =========================
+Dockerfile*
+*.yml
+README.md

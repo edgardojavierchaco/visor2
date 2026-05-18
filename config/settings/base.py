@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ROOT_DIR = BASE_DIR
 
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+LOG_DIR = BASE_DIR / "logs"
+
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Cargar variables de entorno
@@ -25,7 +26,6 @@ BASE_APPS = [
     'django.contrib.admin',
     'widget_tweaks',
     'django_select2',
-    'django.forms',
     'django.contrib.gis',  
     'rest_framework',
     'ckeditor',
@@ -82,6 +82,7 @@ LOCAL_APPS = [
     'apps.asignaciones',
     'apps.padroninterno',
     'apps.bnhpersonas',
+    'apps.indicators',
 ]
 
 
@@ -152,7 +153,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public,evaluacion,cenpe,bnh,operativoschaco,indicadores,pem,pof'
+            'options': '-c search_path=indicadores,public,evaluacion,cenpe,bnh,operativoschaco,pem,pof'
         }
     },        
     'Evaluacion': {
@@ -178,6 +179,7 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
 # Ruta para guardar imágenes pegadas desde CKEditor
 CKEDITOR_UPLOAD_PATH = "ckeditor/"  # Dentro de MEDIA_ROOT
 CKEDITOR_IMAGE_BACKEND = "pillow"
+CKEDITOR_BASEPATH = "/static/ckeditor/ckeditor/"
 
 # Configuración de archivos de medios (para producción)
 MEDIA_URL = '/media/'
@@ -224,6 +226,8 @@ X_FRAME_OPTIONS = 'DENY'
 ADMIN_URL = 'admin/'
 
 # Configuración de log
+import os
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -232,8 +236,8 @@ LOGGING = {
         'verbose': {
             'format': '%(levelname)s %(asctime)s %(name)s %(message)s'
         },
-        'json': {  # 🔥 listo para ELK
-            'format': '{"level":"%(levelname)s","time":"%(asctime)s","logger":"%(name)s","message":%(message)s}'
+        'json': {
+            'format': '{"level":"%(levelname)s","time":"%(asctime)s","logger":"%(name)s","message":"%(message)s"}'
         }
     },
 
@@ -242,19 +246,11 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-
-        # 🔥 archivo exclusivo asignaciones
-        'asignaciones_file': {
-            "level": "INFO",
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_DIR, 'asignaciones.log'),
-            'formatter': 'json',
-        },
     },
 
     'loggers': {
         'asignaciones': {
-            'handlers': ['console', 'asignaciones_file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         }
