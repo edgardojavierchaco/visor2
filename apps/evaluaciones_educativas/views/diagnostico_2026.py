@@ -404,7 +404,7 @@ def examenes_lista(request, materia):
 		materia_nombre = 'Lengua'
 	else:
 		return redirect('evaluaciones_educativas:diagnostico_2026:realizar_carga')
-
+	estado_carga,numero = boton_completar_carga(selected_cue, materia_nombre)
 	alumnos_qs = Alumno2026.objects.filter(
 		seccion__año__Establecimiento__cueanexo=selected_cue
 	).select_related('seccion__año').order_by('apellido', 'nombre') if selected_cue else Alumno2026.objects.none()
@@ -444,6 +444,8 @@ def examenes_lista(request, materia):
 		})
 
 	return render(request, 'diagnostico_2026/examenes_lista.html', {
+		'estado_carga':estado_carga,
+		'numero':	numero,
 		'filas':               filas,
 		'page_obj':            page_obj,
 		'materia_nombre':      materia_nombre,
@@ -760,3 +762,38 @@ def editar_examen(request, alumno_uuid, materia):
 		'estructura_preguntas': estructura_preguntas,
 		'respuestas': _respuestas_formulario(form),
 	})
+
+def boton_completar_carga(cueanexo, materia_nombre):
+	estado_carga=None
+	lista_inicial_conteo=None
+	lista_final_conteo=None
+	numero=None
+	lista_dnis = list(
+			TablaTemporalAlumno.objects
+			.filter(cueanexo=cueanexo)
+			.values_list('numero_de_documento', flat=True)
+		)
+	lista = list(
+			Alumno2026.objects
+			.filter(~Q(dni__in=lista_dnis),seccion__año__Establecimiento__cueanexo=int(cueanexo))
+			.select_related('seccion__año', 'seccion__año__Establecimiento')
+			.values_list('dni', flat=True)
+		)
+	lista_dnis.extend(lista)
+	alumnos_qs = Alumno2026.objects.filter(dni__in=lista_dnis)
+	lista_inicial_conteo=alumnos_qs.count()
+	if materia_nombre == 'Matemática':
+		evaluaciones=Matematica2026.objects.filter(alumno__in=alumnos_qs).count()
+		#evaluaciones_materia=evaluaciones
+		lista_final_conteo=evaluaciones
+	else:
+		evaluaciones=Lengua2026.objects.filter(alumno__in=alumnos_qs).count()
+		lista_final_conteo=evaluaciones
+	#for i in alumnos_qs:
+	if lista_inicial_conteo == lista_final_conteo:
+		estado_carga=True
+	else:
+		estado_carga=False
+		numero = lista_inicial_conteo - lista_final_conteo
+	print(f'es numero{numero}')
+	return estado_carga,numero

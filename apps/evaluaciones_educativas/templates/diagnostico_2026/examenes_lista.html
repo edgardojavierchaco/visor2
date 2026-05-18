@@ -57,7 +57,12 @@
                         <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examenes' materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-light btn-sm">
                             Descargar registro de exámenes
                         </a>
-                        <button type="button" id="toggle-complete-load" class="btn btn-warning btn-sm">
+                        <button type="button" 
+                                id="toggle-complete-load" 
+                                class="btn btn-warning btn-sm"
+                                data-estado="{% if estado_carga %}true{% else %}false{% endif %}"
+                                data-numero="{{ numero }}"
+                                data-materia="{{ materia_nombre }}">>
                             Completar carga
                         </button>
                         <a href="{% url 'evaluaciones_educativas:diagnostico_2026:realizar_carga' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-outline-light btn-sm">
@@ -192,47 +197,60 @@
             </div>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toggleButton = document.getElementById('toggle-complete-load');
-            const actionButtons = Array.from(document.querySelectorAll('.action-buttons a'));
-            const storageKey = 'diagnostico2026CargaCompleta';
+   <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleButton = document.getElementById('toggle-complete-load');
+        const actionButtons = Array.from(document.querySelectorAll('.action-buttons a'));
+        const storageKey = 'diagnostico2026CargaCompleta';
 
-            function setActionButtonsDisabled(disabled) {
-                actionButtons.forEach(button => {
-                    if (disabled) {
-                        button.classList.add('disabled');
-                        button.setAttribute('aria-disabled', 'true');
-                        button.setAttribute('tabindex', '-1');
-                    } else {
-                        button.classList.remove('disabled');
-                        button.removeAttribute('aria-disabled');
-                        button.removeAttribute('tabindex');
-                    }
-                });
-                toggleButton.textContent = disabled ? 'Habilitar acciones' : 'Completar carga';
-                toggleButton.classList.toggle('btn-outline-warning', disabled);
-                toggleButton.classList.toggle('btn-warning', !disabled);
-                localStorage.setItem(storageKey, disabled ? 'true' : 'false');
+        function setActionButtonsDisabled(disabled) {
+            actionButtons.forEach(button => {
+                if (disabled) {
+                    button.classList.add('disabled');
+                    button.setAttribute('aria-disabled', 'true');
+                    button.setAttribute('tabindex', '-1');
+                } else {
+                    button.classList.remove('disabled');
+                    button.removeAttribute('aria-disabled');
+                    button.removeAttribute('tabindex');
+                }
+            });
+            toggleButton.textContent = disabled ? 'Habilitar acciones' : 'Completar carga';
+            toggleButton.classList.toggle('btn-outline-warning', disabled);
+            toggleButton.classList.toggle('btn-warning', !disabled);
+            localStorage.setItem(storageKey, disabled ? 'true' : 'false');
+        }
+
+        actionButtons.forEach(button => {
+            button.addEventListener('click', function (event) {
+                if (button.classList.contains('disabled')) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        // Modificamos este evento click para meter la validación
+        toggleButton.addEventListener('click', function () {
+            // 🌟 NUEVO: Leemos las variables enviadas por Django desde el botón
+            const esValido = toggleButton.getAttribute('data-estado') === 'true';
+            const numeroCarga = toggleButton.getAttribute('data-numero');
+            const nombreMateria = toggleButton.getAttribute('data-materia');
+
+            // 🌟 NUEVO: Si estado_carga es FALSE, mostramos la alerta y frenamos todo
+            if (!esValido) {
+                alert("No se puede completar la carga, quedan por cargar evaluaciones de " + nombreMateria +" en: " + numeroCarga +" alumnos");
+                return; // 🌟 IMPORTANTE: Este return evita que se ejecute el código de abajo
             }
 
-            actionButtons.forEach(button => {
-                button.addEventListener('click', function (event) {
-                    if (button.classList.contains('disabled')) {
-                        event.preventDefault();
-                    }
-                });
-            });
-
-            toggleButton.addEventListener('click', function () {
-                const currentlyDisabled = localStorage.getItem(storageKey) === 'true';
-                setActionButtonsDisabled(!currentlyDisabled);
-            });
-
-            const savedState = localStorage.getItem(storageKey) === 'true';
-            setActionButtonsDisabled(savedState);
+            // Si es TRUE, el código sigue su curso normal como lo tenías antes:
+            const currentlyDisabled = localStorage.getItem(storageKey) === 'true';
+            setActionButtonsDisabled(!currentlyDisabled);
         });
-    </script>
+
+        const savedState = localStorage.getItem(storageKey) === 'true';
+        setActionButtonsDisabled(savedState);
+    });
+</script>
     <script>
         document.querySelectorAll('th[data-col]').forEach(th => {
             th.addEventListener('click', function () {
