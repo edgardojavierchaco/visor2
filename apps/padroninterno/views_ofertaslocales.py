@@ -9,6 +9,7 @@ from openpyxl.utils import get_column_letter
 from django.http import HttpResponse, JsonResponse
 from datetime import datetime
 from io import BytesIO
+import re
 
 from requests import request
 
@@ -146,7 +147,16 @@ _BASE_SQL = """
     LEFT JOIN oloc_campo_prov_valor eav_o_cua ON (ol.id_oferta_local = eav_o_cua.id_oferta_local AND eav_o_cua.id_campo_prov = 1019638077)
     LEFT JOIN oloc_campo_prov_valor eav_o_cuof ON (ol.id_oferta_local = eav_o_cuof.id_oferta_local AND eav_o_cuof.id_campo_prov = 1019638017)
     LEFT JOIN oloc_campo_prov_valor eav_o_reg ON (ol.id_oferta_local = eav_o_reg.id_oferta_local AND eav_o_reg.id_campo_prov = 1019638018)
-    LEFT JOIN oloc_campo_prov_valor eav_o_cuofryc ON (ol.id_oferta_local = eav_o_cuofryc.id_oferta_local AND eav_o_cuofryc.id_campo_prov = 1019638078)
+    LEFT JOIN LATERAL (
+        SELECT STRING_AGG(valor_limpio, ' | ' ORDER BY valor_limpio) AS valor
+        FROM (
+            SELECT DISTINCT BTRIM(valor) AS valor_limpio
+            FROM oloc_campo_prov_valor
+            WHERE id_oferta_local = ol.id_oferta_local
+              AND id_campo_prov = 1019638078
+              AND COALESCE(BTRIM(valor), '') <> ''
+        ) cuofryc
+    ) eav_o_cuofryc ON TRUE
     LEFT JOIN oloc_campo_prov_valor eav_o_acr ON (ol.id_oferta_local = eav_o_acr.id_oferta_local AND eav_o_acr.id_campo_prov = 1019638044)
     
     -- Corregido: Se vuelve a añadir el cruce para Mod.Compl.Planes
@@ -205,6 +215,51 @@ OPERADOR_SQL = {
     '7': ('!=', lambda v: v),
 }
 
+_ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
+_UNACCENTED_CHARS = 'AEIOUUNaeiouun'
+_ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
+
+
+def _fold_filter_text(value):
+    return _normalize_text(value).translate(_ACCENT_TRANSLATION).lower()
+
+
+def _folded_sql(expr):
+    return f"LOWER(TRANSLATE(BTRIM(COALESCE(({expr})::text, '')), '{_ACCENTED_CHARS}', '{_UNACCENTED_CHARS}'))"
+
+
+def _filter_tokens(value):
+    folded = _fold_filter_text(value)
+    tokens = [token for token in re.split(r'[^a-z0-9]+', folded) if token]
+    return list(dict.fromkeys(tokens))
+
+
+def _build_text_search_clause(expr, value):
+    tokens = _filter_tokens(value)
+    if not tokens:
+        return '', []
+
+    folded_expr = _folded_sql(expr)
+    return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
+
+
+def _tipo_oferta_filter_clause(oper, token_count=1):
+    op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+    if oper == '0':
+        op_str = 'LIKE'
+    elif oper == '1':
+        op_str = 'NOT LIKE'
+    elif oper == '2':
+        op_str = '='
+
+    folded_expr = _folded_sql('ot.descripcion')
+    return ' AND '.join([f"{folded_expr} {op_str} %s" for _ in range(max(token_count, 1))])
+
+
+def _tipo_oferta_filter_values(oper, value):
+    folded = _fold_filter_text(value)
+    return [f'%{token}%' for token in _filter_tokens(value)] if oper in {'0', '1'} else [folded]
+
 
 def _build_where(request):
     clauses, params = [], []
@@ -225,23 +280,64 @@ def _build_where(request):
                 grouped_positive_filters.setdefault(group_key, [])
                 if valor not in grouped_positive_filters[group_key]:
                     grouped_positive_filters[group_key].append(valor)
+            elif campo == 'tipo_oferta':
+                tipo_values = _tipo_oferta_filter_values(oper, valor)
+                clauses.append(_tipo_oferta_filter_clause(oper, len(tipo_values)))
+                params.extend(tipo_values)
             else:
                 col = CAMPO_SQL[campo]
                 op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+                if oper == '0':
+                    token_clause, token_params = _build_text_search_clause(col, valor)
+                    if token_clause:
+                        clauses.append(token_clause)
+                        params.extend(token_params)
+                    continue
+
                 clauses.append(f"{col}::text {op_str} %s")
                 params.append(val_fn(valor))
 
     for (campo, oper), grouped_values in grouped_positive_filters.items():
+        if campo == 'tipo_oferta':
+            if len(grouped_values) == 1:
+                tipo_values = _tipo_oferta_filter_values(oper, grouped_values[0])
+                clauses.append(_tipo_oferta_filter_clause(oper, len(tipo_values)))
+                params.extend(tipo_values)
+                continue
+
+            or_clauses = []
+            for valor in grouped_values:
+                tipo_values = _tipo_oferta_filter_values(oper, valor)
+                or_clauses.append(_tipo_oferta_filter_clause(oper, len(tipo_values)))
+                params.extend(tipo_values)
+
+            clauses.append(f"({' OR '.join(or_clauses)})")
+            continue
+
         col = CAMPO_SQL[campo]
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
 
         if len(grouped_values) == 1:
+            if oper == '0':
+                token_clause, token_params = _build_text_search_clause(col, grouped_values[0])
+                if token_clause:
+                    clauses.append(token_clause)
+                    params.extend(token_params)
+                continue
+
             clauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(grouped_values[0]))
             continue
 
         or_clauses = []
         for valor in grouped_values:
+            if oper == '0':
+                token_clause, token_params = _build_text_search_clause(col, valor)
+                if token_clause:
+                    or_clauses.append(token_clause)
+                    params.extend(token_params)
+                continue
+
             or_clauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(valor))
 
@@ -249,10 +345,13 @@ def _build_where(request):
 
     q = request.GET.get('q', '').strip()
     if q:
-        like = f'%{q}%'
-        global_search_clauses = [f"{sql_expr} ILIKE %s" for sql_expr in CAMPO_SQL.values()]
-        clauses.append(f"({' OR '.join(global_search_clauses)})")
-        params += [like] * len(global_search_clauses)
+        token_groups = []
+        for token in _filter_tokens(q):
+            global_search_clauses = [f"{_folded_sql(sql_expr)} LIKE %s" for sql_expr in CAMPO_SQL.values()]
+            token_groups.append(f"({' OR '.join(global_search_clauses)})")
+            params += [f'%{token}%'] * len(global_search_clauses)
+        if token_groups:
+            clauses.append(f"({' AND '.join(token_groups)})")
 
     where = ('WHERE ' + ' AND '.join(clauses)) if clauses else ''
     return where, params
@@ -1139,7 +1238,7 @@ def detalle_oferta_local_json(request, id_oferta):
             COALESCE(v.matricula_total_ofertalocal::text, '') AS matricula_total,
             COALESCE(v.modalidad_basica, '') AS mod_compl_planes,
             COALESCE(v.cp_efvar4, '') AS cuof,
-            COALESCE(v.cp_cuof_ryc, '') AS cuof_ryc,
+            COALESCE(BTRIM(cuofryc_det.valor), BTRIM(v.cp_cuof_ryc), '') AS cuof_ryc,
             COALESCE(v.cp_efvar6, '') AS udt,
             COALESCE(v.cp_efvar5, '') AS regional,
             COALESCE(v.cp_acronimo, '') AS acronimo,
@@ -1164,6 +1263,16 @@ def detalle_oferta_local_json(request, id_oferta):
             COALESCE(v.c_oferta_base::text, '') AS c_oferta_base
         FROM vp_oferta_local v
         LEFT JOIN oferta_local ol ON ol.id_oferta_local = v.id_oferta_local
+        LEFT JOIN LATERAL (
+            SELECT STRING_AGG(valor_limpio, ', ' ORDER BY valor_limpio) AS valor
+            FROM (
+                SELECT DISTINCT BTRIM(valor) AS valor_limpio
+                FROM oloc_campo_prov_valor
+                WHERE id_oferta_local = v.id_oferta_local
+                  AND id_campo_prov = 1019638078
+                  AND COALESCE(BTRIM(valor), '') <> ''
+            ) valores_cuofryc
+        ) cuofryc_det ON TRUE
         LEFT JOIN responsable r ON r.id_responsable = ol.id_responsable
         WHERE v.id_oferta_local = %s
         LIMIT 1
