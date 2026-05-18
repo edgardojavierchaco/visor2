@@ -72,7 +72,8 @@
                                 <th>Año</th>
                                 <th>Sección</th>
                                 <th>Turno</th>
-                                <th class="text-center">Confirmar Datos</th>
+                                <th class="text-center">Confirmar</th>
+                                <th class="text-center">Editar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -151,6 +152,12 @@
                                             ✔ Confirmar
                                         </button>
                                     </td>
+                                    <td class="text-center">
+                                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_alumno' alumno.objeto.public_id %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}"
+                                    class="btn btn-outline-secondary btn-sm" title="Editar datos del alumno">
+                                        ✏️
+                                    </a>
+                                </td>
                                 </form>
                             </tr>
                             {% empty %}
@@ -285,7 +292,6 @@
                 // Cambiamos el texto inmediatamente al hacer clic
                 this.textContent = 'Cargando...';
                 
-                // Opcional: Le agregamos una clase de Bootstrap para que no se pueda volver a cliquear
                 this.classList.add('disabled'); 
             });
         }

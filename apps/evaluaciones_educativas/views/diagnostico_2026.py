@@ -283,7 +283,7 @@ def inicio(request):
 		)
 		lista = list(
 			Alumno2026.objects
-			.filter(seccion__año__Establecimiento__cueanexo=int(selected_cue))
+			.filter(~Q(dni__in=lista_dnis),seccion__año__Establecimiento__cueanexo=int(selected_cue))
 			.select_related('seccion__año', 'seccion__año__Establecimiento')
 			.values_list('dni', flat=True)
 		)
