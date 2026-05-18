@@ -198,21 +198,43 @@ function renderDashboard(data){
     const periods =
         data.results;
 
-    const first =
-        periods[0].indicators || [];
+    const p2023 =
+        periods.find(
+            p=>p.period==='2023_2024'
+        );
 
-    const tpe =
-        first.find(
+    const p2024 =
+        periods.find(
+            p=>p.period==='2024_2025'
+        );
+
+    const tpe23 =
+        p2023?.indicators.find(
             x=>x.tasa==='TPE'
         );
 
-    const tr =
-        first.find(
+    const tpe24 =
+        p2024?.indicators.find(
+            x=>x.tasa==='TPE'
+        );
+
+    const tr23 =
+        p2023?.indicators.find(
             x=>x.tasa==='TR'
         );
 
-    const tai =
-        first.find(
+    const tr24 =
+        p2024?.indicators.find(
+            x=>x.tasa==='TR'
+        );
+
+    const tai23 =
+        p2023?.indicators.find(
+            x=>x.tasa==='TAI'
+        );
+
+    const tai24 =
+        p2024?.indicators.find(
             x=>x.tasa==='TAI'
         );
 
@@ -220,17 +242,34 @@ function renderDashboard(data){
     `
     <div class="cards-grid">
 
+        <!-- TPE -->
+
         <div class="kpi-card tpe">
 
             <div class="kpi-title">
                 TPE
             </div>
 
+            <div class="kpi-period">
+                2023_2024
+            </div>
+
             <div class="kpi-value">
-                ${avg(tpe).toFixed(1)}%
+                ${avg(tpe23).toFixed(1)}%
+            </div>
+
+            <div class="kpi-period second">
+                2024_2025
+            </div>
+
+            <div class="kpi-value small">
+                ${avg(tpe24).toFixed(1)}%
             </div>
 
         </div>
+
+
+        <!-- TR -->
 
         <div class="kpi-card tr">
 
@@ -238,11 +277,26 @@ function renderDashboard(data){
                 TR
             </div>
 
+            <div class="kpi-period">
+                2023_2024
+            </div>
+
             <div class="kpi-value">
-                ${avg(tr).toFixed(1)}%
+                ${avg(tr23).toFixed(1)}%
+            </div>
+
+            <div class="kpi-period second">
+                2024_2025
+            </div>
+
+            <div class="kpi-value small">
+                ${avg(tr24).toFixed(1)}%
             </div>
 
         </div>
+
+
+        <!-- TAI -->
 
         <div class="kpi-card tai">
 
@@ -250,8 +304,20 @@ function renderDashboard(data){
                 TAI
             </div>
 
+            <div class="kpi-period">
+                2023_2024
+            </div>
+
             <div class="kpi-value">
-                ${avg(tai).toFixed(1)}%
+                ${avg(tai23).toFixed(1)}%
+            </div>
+
+            <div class="kpi-period second">
+                2024_2025
+            </div>
+
+            <div class="kpi-value small">
+                ${avg(tai24).toFixed(1)}%
             </div>
 
         </div>
@@ -424,7 +490,7 @@ function drawChart(periods){
 
             data:
                 labels.map(
-                    l=>tpe[l]
+                    l=>Number(tpe[l])
                 ),
 
             backgroundColor:
@@ -432,14 +498,15 @@ function drawChart(periods){
                 ? '#2563eb'
                 : '#60a5fa',
 
-            borderRadius:14,
+            borderRadius:0,
             borderSkipped:false,
 
-            categoryPercentage:.82,
-            barPercentage:.95,
+            categoryPercentage:.70,
+            barPercentage:.90,
 
-            maxBarThickness:42
+            maxBarThickness:50
         });
+
 
         /* TR */
 
@@ -452,7 +519,7 @@ function drawChart(periods){
 
             data:
                 labels.map(
-                    l=>tr[l]
+                    l=>Number(tr[l])
                 ),
 
             backgroundColor:
@@ -460,53 +527,50 @@ function drawChart(periods){
                 ? '#dc2626'
                 : '#f87171',
 
-            borderRadius:14,
+            borderRadius:0,
             borderSkipped:false,
 
-            categoryPercentage:.82,
-            barPercentage:.95,
+            categoryPercentage:.70,
+            barPercentage:.90,
 
-            maxBarThickness:42
+            maxBarThickness:50
         });
+
 
         /* TAI */
 
         datasets.push({
 
-            type:'line',
+            type:'bar',
 
             label:
                 `TAI ${period.period}`,
 
             data:
                 labels.map(
-                    l=>tai[l]
+                    l=>Number(tai[l])
                 ),
-
-            borderColor:
-                index===0
-                ? '#059669'
-                : '#34d399',
 
             backgroundColor:
                 index===0
                 ? '#059669'
                 : '#34d399',
 
-            tension:.35,
+            borderRadius:0,
+            borderSkipped:false,
 
-            borderWidth:4,
+            categoryPercentage:.70,
+            barPercentage:.90,
 
-            pointRadius:6,
-            pointHoverRadius:8,
-
-            fill:false
+            maxBarThickness:50
         });
 
     });
 
     chart =
         new Chart(ctx,{
+
+            type:'bar',
 
             data:{
                 labels,
@@ -516,20 +580,11 @@ function drawChart(periods){
             options:{
 
                 responsive:true,
-
                 maintainAspectRatio:false,
 
                 animation:{
-                    duration:1000
-                },
-
-                layout:{
-                    padding:{
-                        top:25,
-                        right:20,
-                        bottom:10,
-                        left:10
-                    }
+                    duration:1100,
+                    easing:'easeOutQuart'
                 },
 
                 interaction:{
@@ -541,10 +596,12 @@ function drawChart(periods){
 
                     legend:{
                         position:'top',
+
                         labels:{
                             usePointStyle:true,
-                            pointStyle:'circle',
-                            padding:22,
+                            pointStyle:'rect',
+                            padding:18,
+
                             font:{
                                 size:13,
                                 weight:'600'
@@ -555,7 +612,7 @@ function drawChart(periods){
                     tooltip:{
                         backgroundColor:'#111827',
                         padding:14,
-                        cornerRadius:12
+                        cornerRadius:6
                     }
                 },
 
@@ -565,17 +622,11 @@ function drawChart(periods){
 
                         beginAtZero:false,
 
-                        suggestedMin:-10,
+                        suggestedMin:-15,
                         suggestedMax:130,
 
                         grid:{
                             color:'#e5e7eb'
-                        },
-
-                        ticks:{
-                            font:{
-                                size:12
-                            }
                         },
 
                         title:{
@@ -591,7 +642,6 @@ function drawChart(periods){
                         },
 
                         ticks:{
-                            padding:10,
                             font:{
                                 size:12,
                                 weight:'600'

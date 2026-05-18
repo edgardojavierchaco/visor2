@@ -229,3 +229,20 @@ tr:hover{
     width:100% !important;
     height:100% !important;
 }
+
+.kpi-period{
+    margin-top:10px;
+    font-size:12px;
+    font-weight:600;
+    opacity:.85;
+    letter-spacing:.5px;
+}
+
+.kpi-period.second{
+    margin-top:16px;
+}
+
+.kpi-value.small{
+    font-size:30px;
+    margin-top:6px;
+}
