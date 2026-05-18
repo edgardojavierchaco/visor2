@@ -1,83 +1,248 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
+*{
+    box-sizing:border-box;
+}
 
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+body{
+    margin:0;
+    font-family:'Segoe UI',sans-serif;
+    background:#eef2f7;
+    color:#24324a;
+}
 
-<title>Dashboard Indicadores</title>
+.dashboard-container{
+    padding:35px;
+}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+/* HEADER */
 
-<link
-    rel="stylesheet"
-    href="{% static 'indicators/dashboard.css' %}">
-</head>
+.header{
+    margin-bottom:28px;
+}
 
-<body>
+.header h1{
+    margin:0;
+    font-size:34px;
+    font-weight:700;
+}
 
-<div class="dashboard-container">
+.header p{
+    margin-top:6px;
+    color:#6b7280;
+    font-size:15px;
+}
 
-    <div class="header">
-        <h1>Indicadores Educativos</h1>
-        <p>Motor de indicadores ministeriales</p>
-    </div>
+/* FILTROS */
 
-    <div class="filters-card">
+.filters-card{
+    background:white;
+    padding:28px;
+    border-radius:18px;
+    box-shadow:0 8px 25px rgba(0,0,0,.06);
+    margin-bottom:28px;
+}
 
-        <div class="form-grid">
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:22px;
+    align-items:end;
+}
 
-            <div class="form-group">
-                <label>CUEANEXO</label>
-                <input
-                    type="text"
-                    id="cueanexo"
-                    placeholder="220134300">
-            </div>
+.form-group{
+    display:flex;
+    flex-direction:column;
+}
 
-            <div class="form-group">
-                <label>Nivel</label>
-                <select id="nivel">
-                    <option value="">Seleccione</option>
-                    <option value="PRIMARIA">Primaria</option>
-                    <option value="SECUNDARIA">Secundaria</option>
-                    <option value="TECNICA">Técnica</option>
-                </select>
-            </div>
+label{
+    margin-bottom:10px;
+    font-weight:600;
+    color:#374151;
+    font-size:14px;
+}
 
-            <div
-                class="form-group"
-                id="orientacion-wrapper"
-                style="display:none;">
+input,
+select{
+    width:100%;
+    padding:14px 16px;
+    border:1px solid #dbe3ee;
+    border-radius:12px;
+    background:#f8fafc;
+    font-size:15px;
+    transition:.25s;
+}
 
-                <label>Orientación</label>
+input:focus,
+select:focus{
+    outline:none;
+    border-color:#4f7cff;
+    box-shadow:0 0 0 4px rgba(79,124,255,.12);
+}
 
-                <input
-                    type="text"
-                    id="orientacion"
-                    placeholder="EET">
-            </div>
+button{
+    margin-top:26px;
+    padding:14px 26px;
+    border:none;
+    border-radius:12px;
+    background:#3b5cff;
+    color:white;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.25s;
+}
 
-        </div>
+button:hover{
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(59,92,255,.25);
+}
 
-        <button id="consultar-btn">
-            Consultar
-        </button>
+/* KPI */
 
-    </div>
+.cards-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:22px;
+    margin-bottom:28px;
+}
 
-    <div id="dashboard-results">
+.kpi-card{
+    border-radius:18px;
+    padding:26px;
+    color:white;
+    box-shadow:0 10px 24px rgba(0,0,0,.08);
+    transition:.25s;
+}
 
-        <div class="empty-state">
-            Ingrese filtros y consulte indicadores
-        </div>
+.kpi-card:hover{
+    transform:translateY(-3px);
+}
 
-    </div>
+.kpi-card.tpe{
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #3b82f6
+    );
+}
 
-</div>
+.kpi-card.tr{
+    background:linear-gradient(
+        135deg,
+        #dc2626,
+        #ef4444
+    );
+}
 
-<script src="{% static 'indicators/dashboard.js' %}"></script>
+.kpi-card.tai{
+    background:linear-gradient(
+        135deg,
+        #059669,
+        #10b981
+    );
+}
 
-</body>
-</html>
+.kpi-title{
+    font-size:14px;
+    opacity:.9;
+}
+
+.kpi-value{
+    margin-top:14px;
+    font-size:42px;
+    font-weight:700;
+}
+
+/* PANELS */
+
+.panel{
+    background:white;
+    border-radius:18px;
+    padding:24px;
+    box-shadow:0 8px 25px rgba(0,0,0,.06);
+    margin-bottom:28px;
+}
+
+/* TABLAS */
+
+.period-title{
+    margin:0 0 18px 0;
+    font-size:18px;
+    color:#24324a;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    overflow:hidden;
+    border-radius:12px;
+    margin-bottom:25px;
+}
+
+th{
+    background:#f4f7fb;
+    color:#374151;
+    font-weight:600;
+}
+
+th,
+td{
+    padding:14px;
+    text-align:center;
+    border-bottom:1px solid #edf2f7;
+}
+
+tr:hover{
+    background:#fafcff;
+}
+
+.empty-state{
+    background:white;
+    border-radius:18px;
+    padding:60px;
+    text-align:center;
+    color:#6b7280;
+    box-shadow:0 8px 25px rgba(0,0,0,.06);
+}
+
+/* RESPONSIVE */
+
+@media(max-width:1100px){
+
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .cards-grid{
+        grid-template-columns:1fr;
+    }
+
+}
+
+/* PANEL GRAFICO */
+
+.chart-panel{
+    height:760px;
+    padding:28px;
+}
+
+.chart-panel canvas{
+    width:100% !important;
+    height:100% !important;
+}
+
+.kpi-period{
+    margin-top:10px;
+    font-size:12px;
+    font-weight:600;
+    opacity:.85;
+    letter-spacing:.5px;
+}
+
+.kpi-period.second{
+    margin-top:16px;
+}
+
+.kpi-value.small{
+    font-size:30px;
+    margin-top:6px;
+}
