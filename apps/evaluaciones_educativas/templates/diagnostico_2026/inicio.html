@@ -289,7 +289,7 @@
         document.addEventListener('DOMContentLoaded', function () {
     
     // Seleccionamos TODOS los botones que tengan la clase .btn-confirmar-alumno
-    const botonesConfirmar = document.querySelectorAll('.btn-confirmar-alumno');
+    const botonesConfirmar = document.querySelectorAll('.btn-confirmar');
     
     botonesConfirmar.forEach(function (boton) {
         boton.addEventListener('click', function () {
@@ -299,8 +299,6 @@
             // Añade el estado deshabilitado visual de Bootstrap
             this.classList.add('disabled'); 
             
-            // Si el botón no está dentro de un <form> y necesitas que envíe un formulario manual,
-            // podrías agregar aquí un: this.closest('form').submit();
         });
     });
 

@@ -487,7 +487,7 @@
 
             <div style="display: flex; align-items: center; width: 100%; justify-content: center; gap: 1.5rem; height: 100%;">
                 <div class="text-center no-print"><button type="submit" class="btn btn-success btn-lg px-5 shadow">Guardar Exámen</button></div>
-                <a  href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' materia_slug %}{% if return_cueanexo %}?cueanexo={{ return_cueanexo }}{% endif %}" class="btn btn-danger btn-lg px-5 shadow" style="margin-top: 0">
+                <a  href="{% url 'evaluaciones_educativas:diagnostico_2026:examenes_lista' materia_slug %}{% if return_cueanexo %}?cueanexo={{ return_cueanexo }}{% endif %}" class="btn btn-danger btn-lg px-5 shadow btn-cancelar" style="margin-top: 0">
                     Cancelar
                 </a>
             </div>
@@ -546,11 +546,6 @@
                     labelModelo.innerText = "MODELO " + selMod.value;
                 }
 
-                // const p11max = document.getElementById("p11_max");
-                // if (p11max) {
-                //     p11max.value = isB ? "10,5" : "11,5";
-                // }
-
                 document.querySelectorAll(".btn-check, .select-cerrada-wrap select").forEach(r => {
                     if (r.name === "modelo" || r.name === "asistencia") return;
                     r.disabled = isAus;
@@ -608,6 +603,15 @@
             });
         });
     });
+    const btnCancelar = document.querySelector('.btn-cancelar');
+        if (btnCancelar) {
+            btnCancelar.addEventListener('click', function () {
+                // Cambiamos el texto a "Cancelando..." en tiempo real
+                this.textContent = 'Cancelando...';
+                
+                this.classList.add('disabled');
+            });
+        }
 </script>
 </body>
 </html>

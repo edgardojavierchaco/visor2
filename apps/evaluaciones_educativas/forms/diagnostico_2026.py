@@ -97,13 +97,30 @@ class MatematicaForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         asistencia = cleaned_data.get('asistencia')
-
+        
         if asistencia == 'AUSENTE':
             # Si está ausente, forzamos None en todas las preguntas
             for field_name in self.fields:
                 if field_name.startswith('pregunta_'):
                     cleaned_data[field_name] = None
-
+                    
+        elif asistencia == 'PRESENTE':
+            # Si está presente, todas las preguntas son obligatorias
+            campos_vacios = []
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    valor = cleaned_data.get(field_name)
+                    if not valor:
+                        # Transformamos 'pregunta_2' en 'Pregunta 2' antes de guardarlo en la lista
+                        nombre_legible = field_name.replace('_', ' ').capitalize()
+                        campos_vacios.append(nombre_legible)
+                        
+            if campos_vacios:
+                raise forms.ValidationError(
+                    f'El alumno está presente. Debe completar todas las preguntas. '
+                    f'Faltan: {", ".join(campos_vacios)}'
+                )
+                
         return cleaned_data
 
 class LenguaForm(forms.ModelForm):
@@ -158,12 +175,30 @@ class LenguaForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         asistencia = cleaned_data.get('asistencia')
-
+        
         if asistencia == 'AUSENTE':
+            # Si está ausente, forzamos None en todas las preguntas
             for field_name in self.fields:
                 if field_name.startswith('pregunta_'):
                     cleaned_data[field_name] = None
-
+                    
+        elif asistencia == 'PRESENTE':
+            # Si está presente, todas las preguntas son obligatorias
+            campos_vacios = []
+            for field_name in self.fields:
+                if field_name.startswith('pregunta_'):
+                    valor = cleaned_data.get(field_name)
+                    if not valor:
+                        # Transformamos 'pregunta_2' en 'Pregunta 2' antes de guardarlo en la lista
+                        nombre_legible = field_name.replace('_', ' ').capitalize()
+                        campos_vacios.append(nombre_legible)
+                        
+            if campos_vacios:
+                raise forms.ValidationError(
+                    f'El alumno está presente. Debe completar todas las preguntas. '
+                    f'Faltan: {", ".join(campos_vacios)}'
+                )
+                
         return cleaned_data
 
 # class MatematicaForm(forms.ModelForm):
