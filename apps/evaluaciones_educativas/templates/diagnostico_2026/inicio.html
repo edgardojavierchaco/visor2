@@ -147,7 +147,7 @@
 
                                     <!-- Botón confirmar -->
                                     <td class="text-center">
-                                        <button type="submit" class="btn btn-success btn-sm" title="Confirmar datos">
+                                        <button type="submit" id="btn-confirmar" class="btn btn-success btn-sm" title="Confirmar datos">
                                             ✔ Confirmar
                                         </button>
                                     </td>
@@ -272,6 +272,16 @@
         const btnAgregar = document.getElementById('agregar');
         if (btnAgregar) {
             btnAgregar.addEventListener('click', function () {
+                // Cambiamos el texto inmediatamente al hacer clic
+                this.textContent = 'Cargando...';
+                
+                // Opcional: Le agregamos una clase de Bootstrap para que no se pueda volver a cliquear
+                this.classList.add('disabled'); 
+            });
+        }
+        const btnConfirmar = document.getElementById('btn-confirmar');
+        if (btnConfirmar) {
+            btnConfirmar.addEventListener('click', function () {
                 // Cambiamos el texto inmediatamente al hacer clic
                 this.textContent = 'Cargando...';
                 
