@@ -2,7 +2,7 @@ from django.shortcuts import render
 from .models import FAQ, Concepto
 from django.http import JsonResponse
 from .models import FAQ
-import es_core_news_sm
+
 
 def index(request):
     return render(request, "ayudarenpe/index.html")
@@ -18,10 +18,10 @@ def glosario_list(request):
 
 
 # cargamos el modelo de spaCy
-nlp = es_core_news_sm.load()
+#nlp = es_core_news_sm.load()
 
 # API para el chatbot
-def chatbot_api(request):
+""" def chatbot_api(request):
     pregunta_usuario = request.GET.get("q", "")
     if not pregunta_usuario:
         return JsonResponse({"respuesta": "Por favor, escribí una pregunta."})
@@ -65,4 +65,4 @@ def chatbot_api(request):
 
 # Vista para renderizar el template
 def chatbot_view(request):
-    return render(request, "ayudarenpe/chatbot.html")
+    return render(request, "ayudarenpe/chatbot.html") """

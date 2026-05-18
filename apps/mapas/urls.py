@@ -3,7 +3,7 @@ from . import views
 from . import viewscueradio
 from . import views2
 from . import viewscolectivos, viewscomiarias,viewscentrossalud
-from . views_ai import filter_data, filtrado, extraer_criterios, normalizar_region
+#from . views_ai import filter_data, filtrado
 from .views_points import mapa_escuelas, escuelas_cercanas
 from apps.mapas import views_points
 
@@ -28,8 +28,8 @@ urlpatterns=[
     path('comisarias/',viewscomiarias.mapa_cueradiocomisarias, name='comisarias'),   
     path('salud/', viewscentrossalud.mapa_salud, name='salud'),
     path('api/salud/', viewscentrossalud.api_salud, name='api_salud'), 
-    path('filnat/', filtrado, name='filnat'),
-    path('ofertas/', filter_data, name='filter_data'),
+    #path('filnat/', filtrado, name='filnat'),
+    #path('ofertas/', filter_data, name='filter_data'),
     path('mapa/', views_points.mapa_escuelas, name='mapa_escuelas'),
     path('escuelas_cercanas/', views_points.escuelas_cercanas, name='escuelas_cercanas'),
     path('exportar/', views_points.exportar_escuelas, name='exportar_escuelas'),
