@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
@@ -8,12 +9,12 @@ from django.views import defaults as default_views
 from apps.dashboard.views import directores
 from apps.mapas.views2 import mapapuntos, obtenerdatos
 from apps.establecimientos.views import establecimientos
-from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
+#from apps.evaluaciones.views import cargar_respuestas, ver_puntajes
 from apps.unidadgestion import views_pers_doc_central
 from apps.operativoschaco.views import guardar_examen, examen_guardado
 from apps.bnhpersonas.views import filtrar_ceic
 
-urlpatterns = [
+urlpatterns = [    
     path('admin/', admin.site.urls),
     path('chaining/', include('smart_selects.urls')),
     path('al/',include('apps.alumnos.urls', namespace='al')),
@@ -50,9 +51,9 @@ urlpatterns = [
     path('contador/',include('apps.cuenta_regresiva.urls',namespace='contador')),
     path('organica/',include('apps.pof.urls',namespace='organica')),
     path('select2/', include('django_select2.urls')),       
-    path('evaluacion/<int:alumno_id>/<int:evaluacion_id>/', cargar_respuestas, name='cargar_respuestas'),
-    path('puntajes/<int:alumno_id>/', ver_puntajes, name='ver_puntajes'),
-    path('evaluaciones/',include('apps.evaluaciones.urls',namespace='evaluaciones')),
+    #path('evaluacion/<int:alumno_id>/<int:evaluacion_id>/', cargar_respuestas, name='cargar_respuestas'),
+    #path('puntajes/<int:alumno_id>/', ver_puntajes, name='ver_puntajes'),
+    #path('evaluaciones/',include('apps.evaluaciones.urls',namespace='evaluaciones')),
     path('central/',include('apps.unidadgestion.urls',namespace='central')),
     path('uegp/',include('apps.uegp.urls',namespace='uegp')),
     path('chaco/',include('apps.funcionarios.urls',namespace='chaco')),
@@ -60,6 +61,7 @@ urlpatterns = [
     path('indigena/',include('apps.intercultural.urls',namespace='indigena')),
     path('bbl/',include('apps.biblioteca.urls',namespace='bbl')),
     path('indic/',include('apps.indicadoresie.urls',namespace='indic')),
+    path('indica/',include('apps.indicators.urls',namespace='indica')),
     path('infra/',include('apps.infraestructura.urls',namespace='infra')), 
     path('pregunta/',include('apps.operativoschaco.urls',namespace='pregunta')), 
     path('examendiag/',include('apps.operativchaco.urls',namespace='examendiag')),
