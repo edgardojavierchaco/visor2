@@ -148,7 +148,7 @@
 
                                     <!-- Botón confirmar -->
                                     <td class="text-center">
-                                        <button type="submit" id="btn-confirmar" class="btn btn-success btn-sm" title="Confirmar datos">
+                                        <button type="submit" class="btn btn-success btn-sm btn-confirmar" title="Confirmar datos">
                                             ✔ Confirmar
                                         </button>
                                     </td>
@@ -286,15 +286,25 @@
                 this.classList.add('disabled'); 
             });
         }
-        const btnConfirmar = document.getElementById('btn-confirmar');
-        if (btnConfirmar) {
-            btnConfirmar.addEventListener('click', function () {
-                // Cambiamos el texto inmediatamente al hacer clic
-                this.textContent = 'Cargando...';
-                
-                this.classList.add('disabled'); 
-            });
-        }
+        document.addEventListener('DOMContentLoaded', function () {
+    
+    // Seleccionamos TODOS los botones que tengan la clase .btn-confirmar-alumno
+    const botonesConfirmar = document.querySelectorAll('.btn-confirmar-alumno');
+    
+    botonesConfirmar.forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            // 'this' hace referencia exactamente al botón específico que fue cliqueado
+            this.textContent = 'Cargando...';
+            
+            // Añade el estado deshabilitado visual de Bootstrap
+            this.classList.add('disabled'); 
+            
+            // Si el botón no está dentro de un <form> y necesitas que envíe un formulario manual,
+            // podrías agregar aquí un: this.closest('form').submit();
+        });
+    });
+
+});
     </script>
     
     
