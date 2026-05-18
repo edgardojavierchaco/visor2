@@ -54,7 +54,7 @@
                         <p class="mb-0 small">CUEANEXO seleccionado: <strong>{{ selected_cue|default:"-" }}</strong></p>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examenes' materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-light btn-sm">
+                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examenes' materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-light btn-sm btn-cargando">
                             Descargar registro de exámenes
                         </a>
                         <button type="button" 
@@ -65,7 +65,7 @@
                                 data-materia="{{ materia_nombre }}">>
                             Completar carga
                         </button>
-                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:realizar_carga' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-outline-light btn-sm">
+                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:realizar_carga' %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-outline-light btn-sm btn-cargando">
                             Volver a seleccionar evaluación
                         </a>
                     </div>
@@ -125,12 +125,12 @@
                                         <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-sm">
                                             Editar examen
                                         </a>
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:eliminar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-danger btn-sm">
+                                        <!-- <a href="{% url 'evaluaciones_educativas:diagnostico_2026:eliminar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-danger btn-sm">
                                             Eliminar examen
-                                        </a>
+                                        </a> -->
                                         {% else %}
                                         <button type="button" class="btn btn-outline-primary btn-sm" disabled>Editar examen</button>
-                                        <button type="button" class="btn btn-outline-danger btn-sm" disabled>Eliminar examen</button>
+                                        <!-- <button type="button" class="btn btn-outline-danger btn-sm" disabled>Eliminar examen</button> -->
                                         {% endif %}
                                     </div>
                                 </td>
@@ -244,19 +244,13 @@
             setActionButtonsDisabled(!currentlyDisabled);
         });
 
-        // ==========================================
-        // 🌟 LÓGICA DE CONTROL AL RE-ENTRAR A LA PÁGINA
-        // ==========================================
-        
         // 1. Leemos el estado real actual que nos manda Django
         const esValidoAlCargar = toggleButton.getAttribute('data-estado') === 'true';
         
         // 2. Leemos lo que el navegador recordaba
         let savedState = localStorage.getItem(storageKey) === 'true';
 
-        // 3. ¡VALIDACIÓN INTELIGENTE!
-        // Si Django dice que NO es válido (quedan alumnos por cargar),
-        // obligamos a la página a volver al estado original (false), limpiando el localStorage.
+
         if (!esValidoAlCargar) {
             savedState = false; 
         }
@@ -292,6 +286,12 @@
                 filas.forEach(fila => tbody.appendChild(fila));
             });
         });
+        document.querySelectorAll('.btn-cargando, #btn-realizar-carga').forEach(function (enlace) {
+        enlace.addEventListener('click', function () {
+            this.textContent = 'Cargando...';
+            this.classList.add('disabled'); // Bloquea visualmente nuevos clics en Bootstrap
+        });
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
