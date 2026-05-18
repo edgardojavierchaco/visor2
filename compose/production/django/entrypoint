@@ -35,7 +35,7 @@ done
 >&2 echo "PostgreSQL está disponible"
 
 # 🔥 FIX permisos (evita futuros errores silenciosos)
-chown -R django:django /app/productionfiles || true
-chmod -R 775 /app/productionfiles || true
+# chown -R django:django /app/productionfiles || true
+# chmod -R 775 /app/productionfiles || true
 
 exec "$@"
