@@ -118,11 +118,11 @@
                                 {% endfor %}
                                 <td class="action-buttons">
                                     <div class="d-flex flex-wrap gap-1 justify-content-center">
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:cargar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-success btn-sm">
+                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:cargar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-success btn-sm btn-realizar-carga-fila">
                                             Realizar carga
                                         </a>
                                         {% if fila.examen %}
-                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-sm">
+                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-sm btn-editar-examen-fila">
                                             Editar examen
                                         </a>
                                         <!-- <a href="{% url 'evaluaciones_educativas:diagnostico_2026:eliminar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-danger btn-sm">
@@ -292,6 +292,25 @@
             this.classList.add('disabled'); // Bloquea visualmente nuevos clics en Bootstrap
         });
     });
+    document.addEventListener('DOMContentLoaded', function () {
+    
+    // 1. Lógica para los enlaces de "Realizar carga" en la fila
+    document.querySelectorAll('.btn-realizar-carga-fila').forEach(function (enlace) {
+        enlace.addEventListener('click', function () {
+            this.textContent = 'Cargando...';
+            this.classList.add('disabled'); // Deshabilita visualmente en Bootstrap
+        });
+    });
+
+    // 2. Lógica para los enlaces de "Editar examen" en la fila
+    document.querySelectorAll('.btn-editar-examen-fila').forEach(function (enlace) {
+        enlace.addEventListener('click', function () {
+            this.textContent = 'Cargando...';
+            this.classList.add('disabled'); // Deshabilita visualmente en Bootstrap
+        });
+    });
+
+});
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
