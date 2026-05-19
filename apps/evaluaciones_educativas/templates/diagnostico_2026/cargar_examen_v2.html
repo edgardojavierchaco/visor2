@@ -542,6 +542,20 @@
                 document.querySelectorAll(".mod-a").forEach(el => el.classList.toggle("d-none", isB));
                 document.querySelectorAll(".mod-b").forEach(el => el.classList.toggle("d-none", !isB));
 
+                document.querySelectorAll(".mod-a, .mod-b").forEach(block => {
+                    const hidden = block.classList.contains("d-none");
+                    block.querySelectorAll("input, select").forEach(control => {
+                        if (control.name === "modelo" || control.name === "asistencia") return;
+                        control.disabled = hidden || isAus;
+                        if (hidden && control.type === "radio") {
+                            control.checked = false;
+                        }
+                        if (hidden && control.tagName === "SELECT") {
+                            control.selectedIndex = 0;
+                        }
+                    });
+                });
+
                 if (labelModelo && selMod) {
                     labelModelo.innerText = "MODELO " + selMod.value;
                 }

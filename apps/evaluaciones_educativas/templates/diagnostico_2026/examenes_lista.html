@@ -125,12 +125,12 @@
                                         <a href="{% url 'evaluaciones_educativas:diagnostico_2026:editar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-primary btn-sm btn-editar-examen-fila">
                                             Editar examen
                                         </a>
-                                        <!-- <a href="{% url 'evaluaciones_educativas:diagnostico_2026:eliminar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-danger btn-sm">
+                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:eliminar_examen' fila.alumno.public_id materia %}{% if selected_cue %}?cueanexo={{ selected_cue }}{% endif %}" class="btn btn-danger btn-sm">
                                             Eliminar examen
-                                        </a> -->
+                                        </a>
                                         {% else %}
                                         <button type="button" class="btn btn-outline-primary btn-sm" disabled>Editar examen</button>
-                                        <!-- <button type="button" class="btn btn-outline-danger btn-sm" disabled>Eliminar examen</button> -->
+                                        <button type="button" class="btn btn-outline-danger btn-sm" disabled>Eliminar examen</button>
                                         {% endif %}
                                     </div>
                                 </td>
