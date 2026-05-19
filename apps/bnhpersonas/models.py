@@ -432,7 +432,21 @@ class RegistroActividades(AuditoriaModel):
     ], default='CARGO')
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
-
+    
+    grado_anio = models.CharField(max_length=2)
+    
+    turno=models.CharField(max_length=20, choices=[
+        ('MAÑANA', 'MAÑANA'),
+        ('TARDE', 'TARDE'),
+        ('NOCHE', 'NOCHE'),
+        ('VESPERTINO', 'VESPERTINO'),
+        default='MAÑANA'
+    ])
+    
+    secciones=models.CharField(max_length=2, null=False, blank=False)
+    
+    espacios=models.CharField(max_length=150, null=False, blank=False)
+    
     f_desde = models.DateField()
     f_hasta = models.DateField()
     carga_horaria = models.DecimalField(max_digits=4, decimal_places=2)
