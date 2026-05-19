@@ -1,48 +1,28 @@
-version: "3.9"
-
-volumes:
-  visor_local_postgres_data:
-  visor_local_postgres_data_backups:
-  redis_data:
-
 services:
 
-  # =========================================================
-  # DJANGO
-  # =========================================================
   django:
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
-      target: runtime
-
-      args:
-        BUILD_ENVIRONMENT: local
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
+      target: python-run-stage
 
     image: visor_local_django
     container_name: visor_local_django
 
     depends_on:
       postgres:
-        condition: service_healthy
-
+        condition: service_started
       redis:
         condition: service_healthy
 
     volumes:
       - .:/app:cached
-      - ./logs:/app/logs
-      - ./media:/app/media
-      - ./productionfiles:/app/productionfiles
 
     env_file:
       - ./.env
 
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.local
-      PYTHONUNBUFFERED: 1
+      - DJANGO_SETTINGS_MODULE=config.settings.local
 
     ports:
       - "8000:8000"
@@ -51,15 +31,18 @@ services:
 
     restart: unless-stopped
 
-    stdin_open: true
-    tty: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-    # =========================================================
-  # POSTGRES
-  # =========================================================
   postgres:
-    image: postgres:16-bookworm
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
 
+    image: visor_production_postgres
     container_name: visor_local_postgres
 
     volumes:
@@ -76,24 +59,24 @@ services:
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
 
-  # =========================================================
-  # REDIS
-  # =========================================================
   redis:
     image: redis:7-alpine
     container_name: visor_local_redis
-
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
 
     ports:
       - "6379:6379"
 
     volumes:
       - redis_data:/data
+
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
 
     restart: unless-stopped
 
@@ -103,64 +86,103 @@ services:
       timeout: 3s
       retries: 10
 
-  # =========================================================
-  # CELERY WORKER
-  # =========================================================
   celery:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+      target: python-run-stage
+
     image: visor_local_django
     container_name: visor_local_celery
 
-    command: celery -A config worker -l info
-
     depends_on:
-      postgres:
-        condition: service_healthy
-
       redis:
         condition: service_healthy
+      django:
+        condition: service_started
 
     env_file:
       - ./.env
 
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.local
-      PYTHONUNBUFFERED: 1
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+
+    command: >
+      celery -A config worker
+      -l info
+      --concurrency=4
 
     volumes:
       - .:/app:cached
-      - ./logs:/app/logs
-      - ./media:/app/media
-      - ./productionfiles:/app/productionfiles
 
     restart: unless-stopped
 
-  # =========================================================
-  # CELERY BEAT
-  # =========================================================
   celery-beat:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+      target: python-run-stage
+
     image: visor_local_django
     container_name: visor_local_celery_beat
 
-    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-
     depends_on:
-      postgres:
-        condition: service_healthy
-
       redis:
         condition: service_healthy
+      django:
+        condition: service_started
 
     env_file:
       - ./.env
 
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.local
-      PYTHONUNBUFFERED: 1
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+
+    command: >
+      celery -A config beat
+      -l info
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
     volumes:
       - .:/app:cached
-      - ./logs:/app/logs
-      - ./media:/app/media
-      - ./productionfiles:/app/productionfiles
 
     restart: unless-stopped
+
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+      target: python-run-stage
+
+    image: visor_local_django
+    container_name: visor_local_flower
+
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery:
+        condition: service_started
+
+    env_file:
+      - ./.env
+
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+
+    command: >
+      celery -A config flower
+      --port=5555
+      --persistent=True
+
+    ports:
+      - "5555:5555"
+
+    volumes:
+      - .:/app:cached
+
+    restart: unless-stopped
+
+volumes:
+  visor_local_postgres_data:
+  visor_local_postgres_data_backups:
+  redis_data:

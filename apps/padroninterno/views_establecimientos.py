@@ -57,7 +57,6 @@ TIPO_OFERTAS_SQL = "COALESCE(BTRIM(otipos.tipo_ofertas), '')"
 
 CAMPO_SQL = {
     'cue': 've.cue::text',
-    'cantidad_localizaciones': 'COALESCE(ve.cantidad_localizaciones, 0)',
     'codigo_jurisdiccional': "COALESCE(BTRIM(ve.codigo_jurisdiccional_sede), '')",
     'nombre': "COALESCE(BTRIM(ve.nombre), '')",
     'sector': "COALESCE(BTRIM(ve.sector), '')",
@@ -83,7 +82,6 @@ CAMPO_SQL = {
 
 VISIBLE_NAME_MAP = {
     'cue': 'Cue',
-    'cantidad_localizaciones': 'Cantidad de Localizaciones',
     'codigo_jurisdiccional': 'Codigo Jurisdiccional',
     'nombre': 'Nombre',
     'sector': 'Sector',
@@ -109,7 +107,6 @@ VISIBLE_NAME_MAP = {
 
 COLUMNAS_EXPORTACION = [
     ('Cue', 'cue'),
-    ('Cantidad de Localizaciones', 'cantidad_localizaciones'),
     ('Codigo Jurisdiccional', 'codigo_jurisdiccional'),
     ('Nombre', 'nombre'),
     ('Sector', 'sector'),
@@ -137,7 +134,6 @@ _SELECT_FIELDS = f"""
     SELECT
         ve.id_establecimiento AS id,
         COALESCE(BTRIM(ve.cue::text), '') AS cue,
-        COALESCE(ve.cantidad_localizaciones, 0) AS cantidad_localizaciones,
         COALESCE(BTRIM(ve.codigo_jurisdiccional_sede), '') AS codigo_jurisdiccional,
         COALESCE(BTRIM(ve.nombre), '') AS nombre,
         COALESCE(BTRIM(ve.sector), '') AS sector,
@@ -163,19 +159,9 @@ _SELECT_FIELDS = f"""
 
 _BASE_SQL = """
     FROM vp_establecimientos ve
-    LEFT JOIN LATERAL (
-        SELECT STRING_AGG(valor_limpio, ', ' ORDER BY orden_obs) AS valor
-        FROM (
-            SELECT
-                BTRIM(valor) AS valor_limpio,
-                MIN(id_est_campo_prov_valor) AS orden_obs
-            FROM est_campo_prov_valor
-            WHERE id_establecimiento = ve.id_establecimiento
-              AND id_campo_prov = 1019638050
-              AND COALESCE(BTRIM(valor), '') <> ''
-            GROUP BY BTRIM(valor)
-        ) obs
-    ) est_obs ON TRUE
+    LEFT JOIN est_campo_prov_valor est_obs
+        ON est_obs.id_establecimiento = ve.id_establecimiento
+       AND est_obs.id_campo_prov = 1019638050
     LEFT JOIN LATERAL (
         SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, l.anexo, ol.id_oferta_local) AS tipo_ofertas
         FROM localizacion l
@@ -228,48 +214,10 @@ OPERADOR_SQL = {
 }
 
 _REPEATED_PAIR_RE = re.compile(r'^(.+)-\1$')
-_ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
-_UNACCENTED_CHARS = 'AEIOUUNaeiouun'
-_ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
 
 
-def _fold_filter_text(value):
-    return _normalize_text(value).translate(_ACCENT_TRANSLATION).lower()
-
-
-def _folded_sql(expr):
-    return f"LOWER(TRANSLATE(BTRIM(COALESCE(({expr})::text, '')), '{_ACCENTED_CHARS}', '{_UNACCENTED_CHARS}'))"
-
-
-def _filter_tokens(value):
-    folded = _fold_filter_text(value)
-    tokens = [token for token in re.split(r'[^a-z0-9]+', folded) if token]
-    return list(dict.fromkeys(tokens))
-
-
-def _like_token_values(value):
-    return [f'%{token}%' for token in _filter_tokens(value)]
-
-
-def _tipo_ofertas_filter_values(oper, value):
-    folded = _fold_filter_text(value)
-    return _like_token_values(value) if oper in {'0', '1'} else [folded]
-
-
-def _build_text_search_clause(expr, value):
-    tokens = _filter_tokens(value)
-    if not tokens:
-        return '', []
-
-    folded_expr = _folded_sql(expr)
-    return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
-
-
-def _build_tipo_ofertas_clause(oper, token_count=1):
-    descripcion = _folded_sql('otf.descripcion')
-
+def _build_tipo_ofertas_clause(oper):
     if oper == '1':
-        token_checks = ' AND '.join([f"{descripcion} LIKE %s" for _ in range(max(token_count, 1))])
         return (
             "NOT EXISTS ("
             "SELECT 1 "
@@ -277,7 +225,7 @@ def _build_tipo_ofertas_clause(oper, token_count=1):
             "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
             "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
             "WHERE ltf.id_establecimiento = ve.id_establecimiento "
-            f"AND {token_checks}"
+            "AND BTRIM(otf.descripcion)::text ILIKE %s"
             ")"
         )
 
@@ -289,14 +237,11 @@ def _build_tipo_ofertas_clause(oper, token_count=1):
             "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
             "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
             "WHERE ltf.id_establecimiento = ve.id_establecimiento "
-            f"AND {descripcion} = %s"
+            "AND BTRIM(otf.descripcion)::text = %s"
             ")"
         )
 
     op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-    if oper in {'0', '2'}:
-        op_str = 'LIKE' if oper == '0' else '='
-    token_checks = ' AND '.join([f"{descripcion} {op_str} %s" for _ in range(max(token_count, 1))])
     return (
         "EXISTS ("
         "SELECT 1 "
@@ -304,7 +249,7 @@ def _build_tipo_ofertas_clause(oper, token_count=1):
         "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
         "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
         "WHERE ltf.id_establecimiento = ve.id_establecimiento "
-        f"AND {token_checks}"
+        f"AND BTRIM(otf.descripcion)::text {op_str} %s"
         ")"
     )
 
@@ -551,20 +496,6 @@ def _build_where(request):
         if not campo or not valor or campo not in CAMPO_SQL:
             continue
 
-        if campo == 'cantidad_localizaciones':
-            if oper in {'0', '1'}:
-                oper = '2'
-            if oper not in {'2', '3', '4', '5', '6', '7'}:
-                continue
-            try:
-                valor_int = int(valor)
-            except ValueError:
-                continue
-            op_str = OPERADOR_SQL.get(oper, OPERADOR_SQL['2'])[0]
-            clauses.append(f"{CAMPO_SQL[campo]} {op_str} %s")
-            params.append(valor_int)
-            continue
-
         if oper in {'0', '2'}:
             grouped_positive_filters.setdefault((campo, oper), [])
             if valor not in grouped_positive_filters[(campo, oper)]:
@@ -572,20 +503,13 @@ def _build_where(request):
             continue
 
         if campo == 'tipo_ofertas' and oper in {'1', '7'}:
-            tipo_values = _tipo_ofertas_filter_values(oper, valor)
-            clauses.append(_build_tipo_ofertas_clause(oper, len(tipo_values)))
-            params.extend(tipo_values)
+            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+            clauses.append(_build_tipo_ofertas_clause(oper))
+            params.append(val_fn(valor))
             continue
 
         col = CAMPO_SQL[campo]
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-        if oper == '0':
-            token_clause, token_params = _build_text_search_clause(col, valor)
-            if token_clause:
-                clauses.append(token_clause)
-                params.extend(token_params)
-            continue
-
         clauses.append(f"{col}::text {op_str} %s")
         params.append(val_fn(valor))
 
@@ -595,17 +519,17 @@ def _build_where(request):
             continue
 
         if campo == 'tipo_ofertas':
+            _, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
+
             if len(values) == 1:
-                tipo_values = _tipo_ofertas_filter_values(oper, values[0])
-                clauses.append(_build_tipo_ofertas_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
+                clauses.append(_build_tipo_ofertas_clause(oper))
+                params.append(val_fn(values[0]))
                 continue
 
             subclauses = []
             for value in values:
-                tipo_values = _tipo_ofertas_filter_values(oper, value)
-                subclauses.append(_build_tipo_ofertas_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
+                subclauses.append(_build_tipo_ofertas_clause(oper))
+                params.append(val_fn(value))
             clauses.append(f"({' OR '.join(subclauses)})")
             continue
 
@@ -613,26 +537,12 @@ def _build_where(request):
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
 
         if len(values) == 1:
-            if oper == '0':
-                token_clause, token_params = _build_text_search_clause(col, values[0])
-                if token_clause:
-                    clauses.append(token_clause)
-                    params.extend(token_params)
-                continue
-
             clauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(values[0]))
             continue
 
         subclauses = []
         for value in values:
-            if oper == '0':
-                token_clause, token_params = _build_text_search_clause(col, value)
-                if token_clause:
-                    subclauses.append(token_clause)
-                    params.extend(token_params)
-                continue
-
             subclauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(value))
         clauses.append(f"({' OR '.join(subclauses)})")
@@ -645,13 +555,6 @@ def _build_where(request):
             op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
 
             for value in values:
-                if oper == '0':
-                    token_clause, token_params = _build_text_search_clause(col, value)
-                    if token_clause:
-                        geo_subclauses.append(token_clause)
-                        params.extend(token_params)
-                    continue
-
                 geo_subclauses.append(f"{col}::text {op_str} %s")
                 params.append(val_fn(value))
 
@@ -660,13 +563,10 @@ def _build_where(request):
 
     q = request.GET.get('q', '').strip()
     if q:
-        token_groups = []
-        for token in _filter_tokens(q):
-            global_search_clauses = [f"{_folded_sql(sql_expr)} LIKE %s" for sql_expr in CAMPO_SQL.values()]
-            token_groups.append(f"({' OR '.join(global_search_clauses)})")
-            params.extend([f'%{token}%'] * len(global_search_clauses))
-        if token_groups:
-            clauses.append(f"({' AND '.join(token_groups)})")
+        like = f'%{q}%'
+        global_search_clauses = [f"{sql_expr} ILIKE %s" for sql_expr in CAMPO_SQL.values()]
+        clauses.append(f"({' OR '.join(global_search_clauses)})")
+        params.extend([like] * len(global_search_clauses))
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ''
     return where, params

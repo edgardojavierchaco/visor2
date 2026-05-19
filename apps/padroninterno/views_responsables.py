@@ -254,33 +254,6 @@ OPERADOR_SQL = {
     '7': ('!=', lambda value: value),
 }
 
-_ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
-_UNACCENTED_CHARS = 'AEIOUUNaeiouun'
-_ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
-
-
-def _fold_filter_text(value):
-    return _normalize_text(value).translate(_ACCENT_TRANSLATION).lower()
-
-
-def _folded_sql(expr):
-    return f"LOWER(TRANSLATE(BTRIM(COALESCE(({expr})::text, '')), '{_ACCENTED_CHARS}', '{_UNACCENTED_CHARS}'))"
-
-
-def _filter_tokens(value):
-    folded = _fold_filter_text(value)
-    tokens = [token for token in re.split(r'[^a-z0-9]+', folded) if token]
-    return list(dict.fromkeys(tokens))
-
-
-def _build_text_search_clause(expr, value):
-    tokens = _filter_tokens(value)
-    if not tokens:
-        return '', []
-
-    folded_expr = _folded_sql(expr)
-    return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
-
 
 def _build_where(request):
     clauses = []
@@ -307,13 +280,6 @@ def _build_where(request):
 
         col = CAMPO_SQL[campo]
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-        if oper == '0':
-            token_clause, token_params = _build_text_search_clause(col, valor)
-            if token_clause:
-                clauses.append(token_clause)
-                params.extend(token_params)
-            continue
-
         clauses.append(f"{col}::text {op_str} %s")
         params.append(val_fn(valor))
 
@@ -322,39 +288,22 @@ def _build_where(request):
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
 
         if len(values) == 1:
-            if oper == '0':
-                token_clause, token_params = _build_text_search_clause(col, values[0])
-                if token_clause:
-                    clauses.append(token_clause)
-                    params.extend(token_params)
-                continue
-
             clauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(values[0]))
             continue
 
         subclauses = []
         for value in values:
-            if oper == '0':
-                token_clause, token_params = _build_text_search_clause(col, value)
-                if token_clause:
-                    subclauses.append(token_clause)
-                    params.extend(token_params)
-                continue
-
             subclauses.append(f"{col}::text {op_str} %s")
             params.append(val_fn(value))
         clauses.append(f"({' OR '.join(subclauses)})")
 
     q = request.GET.get('q', '').strip()
     if q:
-        token_groups = []
-        for token in _filter_tokens(q):
-            global_search_clauses = [f"{_folded_sql(sql_expr)} LIKE %s" for sql_expr in CAMPO_SQL.values()]
-            token_groups.append(f"({' OR '.join(global_search_clauses)})")
-            params.extend([f'%{token}%'] * len(global_search_clauses))
-        if token_groups:
-            clauses.append(f"({' AND '.join(token_groups)})")
+        like = f'%{q}%'
+        global_search_clauses = [f"{sql_expr} ILIKE %s" for sql_expr in CAMPO_SQL.values()]
+        clauses.append(f"({' OR '.join(global_search_clauses)})")
+        params.extend([like] * len(global_search_clauses))
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ''
     return where, params
@@ -487,9 +436,7 @@ def _exportar_excel(datos_exportar, formato, request):
     wb.save(output)
     output.seek(0)
 
-    fecha_archivo = datetime.now().strftime('%Y%m%d_%H%M')
-    sufijo = 'Filtros' if formato == 'excel_pagina' else 'Todo'
-    filename = f'Responsables_{sufijo}_{fecha_archivo}.xlsx'
+    filename = 'responsables.xlsx' if formato == 'excel_todo' else 'responsables_filtros.xlsx'
     response = HttpResponse(
         output.getvalue(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

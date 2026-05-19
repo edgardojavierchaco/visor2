@@ -25,7 +25,7 @@ SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True').lower() ==
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', 31536000))
+SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', 3600))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
@@ -67,7 +67,6 @@ CACHES = {
 }
 
 CACHE_TTL = 60 * 5  # 5 minutos
-DJANGO_REDIS_IGNORE_EXCEPTIONS = True
 
 # ============================
 # 🧠 DATABASE PERFORMANCE TUNING
@@ -86,8 +85,6 @@ CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_TRACK_STARTED = True
-
-CELERY_WORKER_MAX_MEMORY_PER_CHILD = 300000
 
 # ============================
 # 📦 STATIC FILES
@@ -176,26 +173,3 @@ DATABASES['Padron'] = {
     'HOST': os.environ.get('PADRON_DB_HOST', 'visoreducativochaco.com.ar'),
     'PORT': os.environ.get('PADRON_DB_PORT', '5432'),
 }
-
-
-CORS_ALLOW_ALL_ORIGINS = False
-
-CORS_ALLOWED_ORIGINS = [
-    "https://visoreducativochaco.com.ar",
-    "https://www.visoreducativochaco.com.ar",
-]
-
-SESSION_COOKIE_AGE = 60 * 60 * 8
-
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-
-SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
-
-SECURE_CROSS_ORIGIN_RESOURCE_POLICY = "same-origin"
-
-SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
-
-ADMIN_URL = os.getenv(
-    "DJANGO_ADMIN_URL",
-    "gestion-interna-visor/"
-)
