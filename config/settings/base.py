@@ -82,6 +82,7 @@ LOCAL_APPS = [
     'apps.asignaciones',
     'apps.padroninterno',
     'apps.bnhpersonas',
+    'apps.indicators',
 ]
 
 
