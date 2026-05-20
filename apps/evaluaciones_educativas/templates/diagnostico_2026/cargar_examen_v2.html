@@ -590,9 +590,21 @@
             const respuestasEl = document.getElementById("respuestas-guardadas");
             if (respuestasEl) {
                 const respuestas = JSON.parse(respuestasEl.textContent);
+                const modeloActual = selMod ? selMod.value : null;
                 Object.entries(respuestas).forEach(([name, value]) => {
                     if (!value) return;
-                    const radio = document.querySelector(`input[name="${name}"][value="${CSS.escape(value)}"]`);
+                    const radios = Array.from(document.querySelectorAll(`input[name="${name}"][value="${CSS.escape(value)}"]`));
+                    let radio = null;
+                    if (radios.length > 0) {
+                        if (modeloActual === "B") {
+                            radio = radios.find(r => r.closest(".mod-b"));
+                        } else if (modeloActual === "A") {
+                            radio = radios.find(r => r.closest(".mod-a"));
+                        }
+                        if (!radio) {
+                            radio = radios.find(r => !r.closest(".d-none")) || radios[0];
+                        }
+                    }
                     if (radio) radio.checked = true;
                     const select = document.querySelector(`select[name="${name}"]`);
                     if (select) {
