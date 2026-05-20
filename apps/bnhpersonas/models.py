@@ -440,8 +440,9 @@ class RegistroActividades(AuditoriaModel):
         ('TARDE', 'TARDE'),
         ('NOCHE', 'NOCHE'),
         ('VESPERTINO', 'VESPERTINO'),
+    ],
         default='MAÑANA'
-    ])
+    )
     
     secciones=models.CharField(max_length=2, null=False, blank=False)
     
