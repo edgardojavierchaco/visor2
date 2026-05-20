@@ -149,7 +149,6 @@ function guardarEstadoGlobal(extra = {}) {
 let ultimoTotal = {{ float_total_activas|default:0 }};
 
 function actualizarNotificaciones() {
-
     fetch("{% url 'consultasge:notificaciones_consultas' %}")
         .then(r => r.json())
         .then(data => {
@@ -157,91 +156,29 @@ function actualizarNotificaciones() {
             const btn = document.getElementById("floatBtn");
             const badge = document.getElementById("floatBadge");
 
-            // Si la página no tiene widgets de notificaciones
-            // salir sin romper
-            if (!btn || !badge) {
-                return;
-            }
-
-            // Badge
             if (data.activas > 0) {
-
                 badge.style.display = "inline-block";
                 badge.innerText = data.activas;
-
             } else {
-
                 badge.style.display = "none";
-
             }
 
-            // Colores
-            btn.classList.remove(
-                "bg-danger",
-                "bg-warning",
-                "bg-success",
-                "pulse-danger"
-            );
+            btn.classList.remove("bg-danger","bg-warning","bg-success","pulse-danger");
 
-            if (data.vencidas > 0) {
+            if (data.vencidas > 0) btn.classList.add("bg-danger","pulse-danger");
+            else if (data.activas > 0) btn.classList.add("bg-warning");
+            else btn.classList.add("bg-success");
 
-                btn.classList.add(
-                    "bg-danger",
-                    "pulse-danger"
-                );
+            document.getElementById("resPend").innerText = data.pendientes;
+            document.getElementById("resProceso").innerText = data.en_proceso;
+            document.getElementById("resVencidas").innerText = data.vencidas;
 
-            } else if (data.activas > 0) {
-
-                btn.classList.add("bg-warning");
-
-            } else {
-
-                btn.classList.add("bg-success");
-
-            }
-
-            // Resumen
-            const resPend = document.getElementById("resPend");
-            const resProceso = document.getElementById("resProceso");
-            const resVencidas = document.getElementById("resVencidas");
-
-            if (resPend) {
-                resPend.innerText = data.pendientes;
-            }
-
-            if (resProceso) {
-                resProceso.innerText = data.en_proceso;
-            }
-
-            if (resVencidas) {
-                resVencidas.innerText = data.vencidas;
-            }
-
-            // Toast
-            const toastEl = document.getElementById("consultaToast");
-
-            if (
-                toastEl &&
-                data.activas > ultimoTotal
-            ) {
-
-                new bootstrap.Toast(toastEl).show();
-
+            if (data.activas > ultimoTotal) {
+                new bootstrap.Toast(document.getElementById("consultaToast")).show();
             }
 
             ultimoTotal = data.activas;
-
-        })
-
-        .catch(error => {
-
-            console.error(
-                "Error actualizando notificaciones:",
-                error
-            );
-
         });
-
 }
 
 actualizarNotificaciones();

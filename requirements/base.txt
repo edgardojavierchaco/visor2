@@ -204,3 +204,4 @@ django-ckeditor
 django-celery-beat
 django-smart-selects
 flower==2.0.1
+

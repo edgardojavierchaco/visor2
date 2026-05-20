@@ -29,155 +29,108 @@
     </div>
 
     <!-- TABLA -->
-<div class="card shadow border-0">
+    <div class="card shadow border-0">
 
-    <div class="card-header bg-dark text-white">
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">
+                Personal Registrado
+            </h4>
+        </div>
 
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="card-body">
 
-            <div>
+            <table id="tablaPersonas"
+                   class="table table-hover table-striped align-middle">
 
-                <h4 class="mb-0">
-                    Personal Registrado
-                </h4>
+                <thead class="table-primary">
 
-                <small class="text-light opacity-75">
-                    Gestión de personas y actividades
-                </small>
+                    <tr>
+                        <th>DNI</th>
+                        <th>Apellido y Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Localidad</th>
+                        <th>Estado</th>
+                        <th>Actividades</th>
+                        <th></th>
+                    </tr>
 
-            </div>
+                </thead>
 
-            <div>
+                <tbody>
 
-                <a href="{% url 'bnhpersonas:carga_personal' %}"
-                   class="btn btn-success">
+                    {% for p in personas %}
 
-                    <i class="fa fa-user-plus me-1"></i>
+                    <tr>
 
-                    Nuevo Registro
+                        <td>
+                            {{ p.dni }}
+                        </td>
 
-                </a>
+                        <td>
+                            <strong>
+                                {{ p.apellido }},
+                                {{ p.nombre }}
+                            </strong>
+                        </td>
 
-            </div>
+                        <td>
+                            {{ p.telefono_display }}
+                        </td>
+
+                        <td>
+                            {{ p.localidad }}
+                        </td>
+
+                        <td>
+
+                            {% if p.estado == 'ACTIVO' %}
+
+                                <span class="badge bg-success">
+                                    ACTIVO
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-danger">
+                                    PASIVO
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <span class="badge bg-primary">
+
+                                {{ p.total_actividades }}
+
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            <a href="{% url 'bnhpersonas:personas_detail' p.id %}"
+                               class="btn btn-dark btn-sm">
+
+                                Ver Detalle
+
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
 
         </div>
 
     </div>
-
-    <div class="card-body">
-
-        <table id="tablaPersonas"
-               class="table table-hover table-striped align-middle">
-
-            <thead class="table-primary">
-
-                <tr>
-                    <th>DNI</th>
-                    <th>Apellido y Nombre</th>
-                    <th>Teléfono</th>
-                    <th>Localidad</th>
-                    <th>Estado</th>
-                    <th>Actividades</th>
-                    <th width="160"></th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                {% for p in personas %}
-
-                <tr>
-
-                    <td>
-                        {{ p.dni }}
-                    </td>
-
-                    <td>
-
-                        <strong>
-                            {{ p.apellido }},
-                            {{ p.nombre }}
-                        </strong>
-
-                    </td>
-
-                    <td>
-                        {{ p.telefono_display }}
-                    </td>
-
-                    <td>
-                        {{ p.localidad }}
-                    </td>
-
-                    <td>
-
-                        {% if p.estado == 'ACTIVO' %}
-
-                            <span class="badge bg-success">
-                                ACTIVO
-                            </span>
-
-                        {% else %}
-
-                            <span class="badge bg-danger">
-                                PASIVO
-                            </span>
-
-                        {% endif %}
-
-                    </td>
-
-                    <td>
-
-                        <span class="badge bg-primary">
-
-                            {{ p.total_actividades }}
-
-                        </span>
-
-                    </td>
-
-                    <td>
-
-                        <a href="{% url 'bnhpersonas:personas_detail' p.id %}"
-                           class="btn btn-dark btn-sm">
-
-                            <i class="fa fa-eye me-1"></i>
-
-                            Ver Detalle
-
-                        </a>
-
-                    </td>
-
-                </tr>
-
-                {% empty %}
-
-                <tr>
-
-                    <td colspan="7" class="text-center py-4">
-
-                        <div class="text-muted">
-
-                            No hay personas registradas.
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-                {% endfor %}
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
 
 </div>
 

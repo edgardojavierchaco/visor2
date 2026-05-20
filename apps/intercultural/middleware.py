@@ -1,5 +1,5 @@
 # middleware.py
-from apps.bnhpersonas_old.utils import get_ofertas_usuario
+from apps.bnhpersonas.utils import get_ofertas_usuario
 
 
 class UserCueanexoMiddleware:

@@ -1,14 +1,8 @@
-﻿{% extends 'archivos/base/layout.html' %}
+{% extends 'archivos/base/layout.html' %}
 {% load mis_filtros %}
 {% block content %}
 <script>
-(function() {
-    if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
-        document.documentElement.classList.add('padron-sidebar-initial-collapsed');
-    } else {
-        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
-    }
-})();
+document.documentElement.classList.add('padron-sidebar-initial-collapsed');
 </script>
 <style id="padron-layout-stability">
     @import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css");
@@ -28,36 +22,43 @@
 </style>
 <script>
 (function() {
-    function syncPadronSidebar() {
+    var userTouchedSystemSidebar = false;
+
+    function collapsePadronSidebar() {
+        if (userTouchedSystemSidebar) {
+            return;
+        }
+
         if (!document.body) {
             return;
         }
 
-        if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
-            document.documentElement.classList.add('padron-sidebar-initial-collapsed');
-            document.body.classList.add('sidebar-collapse');
-            document.body.classList.remove('sidebar-open', 'sidebar-expanded');
-            return;
-        }
-
-        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
-        document.body.classList.remove('sidebar-collapse', 'sidebar-closed');
-        document.body.classList.add('sidebar-open', 'sidebar-expanded');
+        document.body.classList.add('sidebar-collapse');
+        document.body.classList.remove(
+            'sidebar-open',
+            'sidebar-expanded',
+            'menu-open',
+            'aside-menu-show',
+            'layout-menu-expanded',
+            'sb-sidenav-toggled'
+        );
     }
 
-    syncPadronSidebar();
-    window.setTimeout(syncPadronSidebar, 120);
-    window.setTimeout(syncPadronSidebar, 420);
-    document.addEventListener('DOMContentLoaded', syncPadronSidebar);
-    window.addEventListener('pageshow', syncPadronSidebar);
-    window.addEventListener('load', syncPadronSidebar);
+    collapsePadronSidebar();
+    window.setTimeout(collapsePadronSidebar, 120);
+    window.setTimeout(collapsePadronSidebar, 420);
+    document.addEventListener('DOMContentLoaded', collapsePadronSidebar);
+    window.addEventListener('pageshow', collapsePadronSidebar);
+    window.addEventListener('load', collapsePadronSidebar);
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('.padron-module-nav a')) {
+            collapsePadronSidebar();
+        }
+    }, true);
     document.addEventListener('click', function(event) {
         if (event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
-            window.setTimeout(function() {
-                var isClosed = document.body && document.body.classList.contains('sidebar-collapse');
-                sessionStorage.setItem('padron_sidebar_state', isClosed ? 'closed' : 'open');
-                syncPadronSidebar();
-            }, 80);
+            userTouchedSystemSidebar = true;
+            document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
         }
     }, true);
 })();
@@ -681,7 +682,7 @@ html {
     .table-padron thead th a:hover { 
         color: #e0e0e0 !important; 
     }
-    
+
     .table-padron tbody tr { font-size: .82rem; }
 
     .table-loading-overlay {
@@ -707,76 +708,6 @@ html {
     .table-loading-overlay.is-visible {
         opacity: 1;
         visibility: visible;
-    }
-
-    /* =========================================================
-   MINI LOADER NO BLOQUEANTE DE TABLA
-   Aparece como pastilla/botón visual a la izquierda.
-   No tapa la tabla, no cambia el layout, no retrasa resultados.
-   ========================================================= */
-
-    .table-shell {
-        position: relative;
-    }
-
-    .padron-mini-table-loader {
-        position: absolute;
-        top: calc(var(--table-overlay-top, 44px) + 0.55rem);
-        left: 0.75rem;
-        z-index: 12;
-
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-
-        height: 30px;
-        padding: 0 0.75rem;
-        border-radius: 999px;
-
-        border: 1px solid rgba(46, 123, 212, 0.20);
-        background: rgba(255, 255, 255, 0.97);
-        color: #1a4f8a;
-
-        font-size: 0.78rem;
-        font-weight: 800;
-        line-height: 1;
-        white-space: nowrap;
-
-        box-shadow: 0 8px 18px rgba(26, 79, 138, 0.12);
-
-        opacity: 0;
-        transform: translateX(-4px);
-        pointer-events: none;
-        visibility: hidden;
-
-        transition:
-            opacity 0.06s linear,
-            transform 0.06s linear,
-            visibility 0.06s linear;
-    }
-
-    .padron-mini-table-loader.is-visible {
-        opacity: 1;
-        transform: translateX(0);
-        visibility: visible;
-    }
-
-    .padron-mini-table-loader__spinner {
-        width: 15px;
-        height: 15px;
-        border-radius: 50%;
-        border: 2px solid #cfe0f8;
-        border-top-color: var(--padron-secondary, #2e7bd4);
-        animation: padronMiniLoaderSpin 0.65s linear infinite;
-    }
-
-    .padron-mini-table-loader__text {
-        display: inline-block;
-    }
-
-    @keyframes padronMiniLoaderSpin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
     }
 
     .table-loading-card {
@@ -1385,7 +1316,6 @@ html {
 
     #dialog_filtro {
         max-width: calc(100vw - 24px);
-        border-color: #9fb6d1 !important;
     }
 
     .filter-dialog-help {
@@ -1397,20 +1327,12 @@ html {
     .filter-dialog-select,
     .filter-dialog-text {
         width: 100%;
-        border-color: #9fb6d1 !important;
-    }
-
-    #dialog_filtro #operador_filtro,
-    #dialog_filtro .filter-dialog-select,
-    #dialog_filtro .filter-dialog-text {
-        border-color: #8da5c1 !important;
-        box-shadow: inset 0 0 0 1px rgba(26, 79, 138, 0.12) !important;
     }
 
     .filter-dialog-checklist {
         max-height: 280px;
         overflow-y: auto;
-        border: 1px solid #9fb6d1;
+        border: 1px solid #d8e2ef;
         border-radius: 0.55rem;
         background: #fbfdff;
         padding: 0.7rem 0.8rem;
@@ -1423,13 +1345,13 @@ html {
     }
 
     #dialog_filtro .filter-dialog-check:hover {
-        background: #d9e9ff !important;
+        background: #f8fbff !important;
         box-shadow: none !important;
     }
 
     /* Solo marcar visualmente si realmente está seleccionado */
     #dialog_filtro .filter-dialog-check:has(.filter-dialog-option:checked) {
-        background: #d6e8ff !important;
+        background: #eef5ff !important;
         box-shadow: none !important;
     }
 
@@ -1445,7 +1367,7 @@ html {
     }
 
     #dialog_filtro .filter-dialog-option:not(:checked):focus {
-        border-color: #9fb6d1 !important;
+        border-color: #d8e2ef !important;
         background-color: #fff !important;
     }
 
@@ -1493,14 +1415,6 @@ html {
         flex: 0 0 auto !important;
         justify-self: start !important;
         align-self: start !important;
-    }
-
-    #dialog_filtro .filter-dialog-check .form-check-input:not(:checked),
-    .filter-dialog .filter-dialog-check .form-check-input:not(:checked),
-    #dialog_filtro .filter-dialog-check input[type="checkbox"]:not(:checked),
-    .filter-dialog .filter-dialog-check input[type="checkbox"]:not(:checked) {
-        border-color: #8da5c1 !important;
-        border-width: 2px !important;
     }
 
     #dialog_filtro .filter-dialog-check span,
@@ -2874,7 +2788,6 @@ $(document).ready(function() {
                 { value: 'Común - Trayecto técnico profesional', label: 'Común - Trayecto tecnico profesional' },
                 'Común - Cursos y Talleres de Artística',
                 'Común - Itinerario formativo',
-                'Común - Primaria de 7 años',
                 'Común - Secundaria Completa req. 7 años',
                 'Sin Información',
                 'Común - Domiciliaria-hospitalaria. Nivel Inicial',
@@ -2943,30 +2856,6 @@ $(document).ready(function() {
         regional_hasta_2020: { label: FILTER_FIELD_LABELS.regional_hasta_2020, operators: 'exact', mode: 'checklist', dialogWidth: '520px', options: buildServerDialogOptions('regional_hasta_2020') }
     };
 
-    var FILTER_DIALOG_SYNC_FIELDS = {
-        ambito: true,
-        sede: true,
-        sede_adm: true,
-        periodo_funcionamiento: true,
-        sector: true,
-        dependencia: true,
-        estado: true,
-        tipo_oferta: true,
-        localidad: true,
-        departamento: true,
-        domicilio_ppal: true,
-        modalidades_complementarias: true,
-        microregion: true,
-        udt: true,
-        regional_actual: true,
-        zona_provincial: true,
-        anterior_regional: true,
-        patrimonio_edilicio: true,
-        tipo_albergue: true,
-        regional_hasta_2015: true,
-        regional_hasta_2020: true
-    };
-
     function getFilterFieldLabel(field) {
         return FILTER_FIELD_LABELS[field] || field;
     }
@@ -2993,62 +2882,6 @@ $(document).ready(function() {
         };
     }
 
-    function normalizeFilterMatchValue(value) {
-        return value === undefined || value === null ? '' : String(value).trim();
-    }
-
-    function collectActiveFilterValuesForField(params, field) {
-        var activeValues = {};
-
-        function collect(fieldParam, valueParam) {
-            var fields = params.getAll(fieldParam);
-            var values = params.getAll(valueParam);
-
-            fields.forEach(function(activeField, index) {
-                var activeValue = normalizeFilterMatchValue(values[index]);
-
-                if (activeField === field && activeValue) {
-                    activeValues[activeValue] = true;
-                }
-            });
-        }
-
-        if (!FILTER_DIALOG_SYNC_FIELDS[field]) {
-            return activeValues;
-        }
-
-        collect('campo_filtro', 'valor_filtro');
-        collect('f', 'v');
-
-        return activeValues;
-    }
-
-    function getActiveFilterValuesForField(field) {
-        return collectActiveFilterValuesForField(new URLSearchParams(window.location.search), field);
-    }
-
-    function hasActiveFilterValue(params, field, value, operator) {
-        var normalizedValue = normalizeFilterMatchValue(value);
-
-        function hasMatch(fieldParam, operatorParam, valueParam) {
-            var fields = params.getAll(fieldParam);
-            var operators = params.getAll(operatorParam);
-            var values = params.getAll(valueParam);
-
-            return fields.some(function(activeField, index) {
-                return activeField === field &&
-                    normalizeFilterMatchValue(values[index]) === normalizedValue &&
-                    (operator === undefined || operators[index] === operator);
-            });
-        }
-
-        if (!FILTER_DIALOG_SYNC_FIELDS[field] || !normalizedValue) {
-            return false;
-        }
-
-        return hasMatch('campo_filtro', 'operador_filtro', 'valor_filtro') || hasMatch('f', 'o', 'v');
-    }
-
     function buildFilterOperatorOptionsHtml(operators) {
         return operators.map(function(operator) {
             return '<option value="' + escapeHtml(operator.value) + '">' + escapeHtml(operator.label) + '</option>';
@@ -3056,16 +2889,13 @@ $(document).ready(function() {
     }
 
     function buildFilterChecklistOptionsHtml(options, field, groupIndex) {
-        var activeValues = getActiveFilterValuesForField(field);
-
         return options.map(function(option, optionIndex) {
             var normalizedOption = normalizeFilterOption(option);
             var inputId = 'filter_' + field + '_' + groupIndex + '_' + optionIndex;
-            var checkedAttr = activeValues[normalizeFilterMatchValue(normalizedOption.value)] ? ' checked' : '';
 
             return '' +
                 '<label class="filter-dialog-check" for="' + escapeHtml(inputId) + '">' +
-                    '<input type="checkbox" class="form-check-input filter-dialog-option" id="' + escapeHtml(inputId) + '" value="' + escapeHtml(normalizedOption.value) + '" data-label="' + escapeHtml(normalizedOption.label) + '"' + checkedAttr + '>' +
+                    '<input type="checkbox" class="form-check-input filter-dialog-option" id="' + escapeHtml(inputId) + '" value="' + escapeHtml(normalizedOption.value) + '" data-label="' + escapeHtml(normalizedOption.label) + '">' +
                     '<span>' + escapeHtml(normalizedOption.label) + '</span>' +
                 '</label>';
         }).join('');
@@ -4990,11 +4820,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
         $('head').append(`
             <style id="custom-highlight">
                 .highlight-search {
-                    --bs-table-bg: #dfe8e3 !important;
-                    --bs-table-striped-bg: #dfe8e3 !important;
-                    --bs-table-hover-bg: #d8e2dd !important;
-                    background-color: #dfe8e3 !important;
-                    box-shadow: inset 0 0 0 9999px rgba(25, 135, 84, 0.025);
+                    background-color: rgba(25, 135, 84, 0.05) !important;
                 }
                 .filter-toggle-btn { transition: all 0.2s ease; }
             </style>
@@ -5439,11 +5265,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
         targetUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
         refreshTableFromUrl(targetUrl, {
             useFade: false,
-            enableSoftDim: true,
-            softDimDelayMs: 0,
-            softDimOpacity: 0.38,
-            showMiniLoader: false,
-            showOverlay: false
+            overlayDelayMs: 180
         });
     }
 
@@ -5495,30 +5317,14 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
     }
 
     function reapplyHighlights() {
-        var activeFilters = syncServerFiltersFromUrl();
-
         $('.table-padron td').removeClass('highlight-search');
 
-        activeFilters.forEach(function(filter) {
-            var normalizedField = normalizeColumnMatchText(filter.valF);
+        window.serverFilters.forEach(function(filter) {
             var cIdx = fuzzyMatchCol(filter.valF);
-
-            if (normalizedField === 'todas' || normalizedField.indexOf('accion') === 0) {
-                return;
-            }
 
             if (cIdx !== -1) {
                 $('.table-padron tbody tr').find('td:eq(' + cIdx + ')').addClass('highlight-search');
             }
-        });
-    }
-
-    function scheduleReapplyHighlights() {
-        reapplyHighlights();
-        window.requestAnimationFrame(function() {
-            window.requestAnimationFrame(function() {
-                reapplyHighlights();
-            });
         });
     }
 
@@ -5554,7 +5360,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
     }
 
     renderServerBadges(syncServerFiltersFromUrl());
-    scheduleReapplyHighlights();
+    reapplyHighlights();
 
     function toggleLiveSearchClear(isVisible) {
         $('#liveSearchClear').css('display', isVisible ? 'inline-flex' : 'none');
@@ -5576,18 +5382,10 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
         return getTableShell().children('.table-responsive').first();
     }
 
-        function ensureCompactTableTrack() {
-        /* TYAGO_PATCH_CONTRAER_COLUMNAS_TOGGLE */
+    function ensureCompactTableTrack() {
         var $viewport = getTableViewport();
-        var $track;
-        var $table;
-
-        if (!$viewport || !$viewport.length) {
-            return $();
-        }
-
-        $track = $viewport.children('.compact-table-track').first();
-        $table = $viewport.children('.table-padron').first();
+        var $track = $viewport.children('.compact-table-track').first();
+        var $table = $viewport.children('.table-padron').first();
 
         if (!$track.length) {
             $track = $viewport.find('> .compact-table-track, .compact-table-track').first();
@@ -5602,10 +5400,6 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
             $track = $viewport.children('.compact-table-track').first();
         }
 
-        if ($track.length && $table.length && !$track.children('.table-padron').length) {
-            $track.append($table);
-        }
-
         return $track;
     }
 
@@ -5613,33 +5407,16 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
         return localStorage.getItem('contraer_localizaciones') === 'true';
     }
 
-        function setCompactTableButtonState(isActive) {
-        /* TYAGO_PATCH_COMPACT_BUTTON_PULSE_V3 */
-        var button = document.getElementById('btnContraerTabla');
-        var previousActive;
+    function setCompactTableButtonState(isActive) {
+        var $btn = $('#btnContraerTabla');
 
-        if (!button) {
+        if (!$btn.length) {
             return;
         }
 
-        previousActive = button.classList.contains('is-active');
-        button.classList.toggle('is-active', isActive);
-        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        button.setAttribute('title', isActive ? 'Volver al tamaño normal de la tabla' : 'Ajustar la tabla al ancho visible');
-        button.innerHTML = isActive
-            ? '<i class="fa-solid fa-expand me-1"></i>Expandir Columnas'
-            : '<i class="fa-solid fa-compress me-1"></i>Contraer Columnas';
-
-        if (button.dataset.tyagoCompactReady === 'true' && previousActive !== isActive) {
-            button.classList.remove('tyago-compact-btn-pulse');
-            void button.offsetWidth;
-            button.classList.add('tyago-compact-btn-pulse');
-            window.setTimeout(function() {
-                button.classList.remove('tyago-compact-btn-pulse');
-            }, 160);
-        }
-
-        button.dataset.tyagoCompactReady = 'true';
+        $btn.toggleClass('is-active', isActive);
+        $btn.attr('aria-pressed', isActive ? 'true' : 'false');
+        $btn.attr('title', isActive ? 'Volver al tamaÃ±o normal de la tabla' : 'Ajustar la tabla al ancho visible');
     }
 
     function applyCompactTableLayout(options) {
@@ -5787,9 +5564,6 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
     var tableLoadingOverlayTimer = null;
     var tableLoadingOverlayTicket = 0;
     var tableSoftDimTimer = null;
-    var tableSoftDimNextToken = 0;
-    var tableSoftDimActiveToken = 0;
-    var activeTableRequest = null;
 
     function cancelDeferredTableLoadingOverlay(keepVisible) {
         var $overlay = getTableShell().children('.table-loading-overlay');
@@ -5807,78 +5581,25 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
     }
 
     function scheduleTableSoftDim(delayMs, opacity) {
-        var token = tableSoftDimNextToken + 1;
-        tableSoftDimNextToken = token;
-        tableSoftDimActiveToken = token;
-
         if (tableSoftDimTimer) {
             clearTimeout(tableSoftDimTimer);
             tableSoftDimTimer = null;
         }
 
-        hideTableOverlay();
         tableSoftDimTimer = setTimeout(function() {
-            if (token !== tableSoftDimActiveToken) {
-                return;
-            }
-
             tableSoftDimTimer = null;
             getTableViewport().css('opacity', String(opacity != null ? opacity : 0.78));
         }, Math.max(0, delayMs || 0));
-
-        return token;
     }
 
-    function restoreTableViewportOpacity() {
-        var $viewports = $('.table-shell .table-responsive');
-
-        $('.table-shell').removeClass('has-table-overlay');
-        $('.table-loading-overlay').removeClass('is-visible is-empty is-loading').attr('aria-hidden', 'true');
-
-        if (!$viewports.length) {
-            return;
-        }
-
-        $viewports.removeClass('compact-instant').css('transition', 'none').css('opacity', '1');
-        $viewports[0].offsetHeight;
-        window.requestAnimationFrame(function() {
-            $('.table-shell .table-responsive').css('transition', '');
-        });
-    }
-
-    function queueTableVisualCleanup() {
-        [80, 240, 700].forEach(function(delayMs) {
-            setTimeout(function() {
-                if (tableSoftDimActiveToken === 0) {
-                    restoreTableViewportOpacity();
-                }
-            }, delayMs);
-        });
-    }
-
-    function abortActiveTableRequest() {
-        if (activeTableRequest && activeTableRequest.readyState !== 4) {
-            activeTableRequest.abort();
-        }
-        activeTableRequest = null;
-    }
-
-    function cancelTableSoftDim(restoreOpacity, token) {
-        if (token && token !== tableSoftDimActiveToken) {
-            return;
-        }
-
+    function cancelTableSoftDim(restoreOpacity) {
         if (tableSoftDimTimer) {
             clearTimeout(tableSoftDimTimer);
             tableSoftDimTimer = null;
         }
 
         if (restoreOpacity !== false) {
-            tableSoftDimActiveToken = 0;
-            restoreTableViewportOpacity();
-            queueTableVisualCleanup();
-        } else if (!token || token === tableSoftDimActiveToken) {
-            tableSoftDimActiveToken = 0;
+            getTableViewport().css('opacity', '1');
         }
     }
 
@@ -5990,8 +5711,8 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
         activeServerFilters = syncServerFiltersFromUrl();
         ensureColumnsVisibleForActiveServerFilters(activeServerFilters);
         renderServerBadges(activeServerFilters);
+        reapplyHighlights();
         applyColumnsLogic(opts);
-        scheduleReapplyHighlights();
         normalizeInlineActions();
         initPagination();
         syncTableEmptyOverlay();
@@ -6015,125 +5736,36 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
             $('.results-bar').html($parsed.find('.results-bar').html());
             updateTableOverlayOffset();
             refreshDynamicUI({ instant: compactActive });
-            restoreTableViewportOpacity();
+            window.requestAnimationFrame(function() {
+                window.requestAnimationFrame(function() {
+                    getTableViewport().removeClass('compact-instant').css('opacity', '1');
+                });
+            });
         };
 
         if (compactActive && !useFade) {
             getTableViewport().addClass('compact-instant');
             applyFragments();
         } else if (useFade) {
-            getTableViewport().css('opacity', '0.82');
-            applyFragments();
+            getTableViewport().css('opacity', '0');
+            setTimeout(applyFragments, 150);
         } else {
             applyFragments();
         }
     }
 
-    var miniTableLoaderTimer = null;
-
-function ensureMiniTableLoader() {
-    var shell = document.querySelector('.table-shell');
-    var loader;
-
-    if (!shell) {
-        return null;
-    }
-
-    loader = shell.querySelector('.padron-mini-table-loader');
-
-    if (!loader) {
-        loader = document.createElement('div');
-        loader.className = 'padron-mini-table-loader';
-        loader.setAttribute('aria-hidden', 'true');
-        loader.setAttribute('role', 'status');
-        loader.innerHTML = [
-            '<span class="padron-mini-table-loader__spinner" aria-hidden="true"></span>',
-            '<span class="padron-mini-table-loader__text">Cargando...</span>'
-        ].join('');
-
-        shell.appendChild(loader);
-    }
-
-    return loader;
-}
-
-    function showMiniTableLoader(text) {
-        var loader = ensureMiniTableLoader();
-        var label;
-
-        if (!loader) {
-            return;
-        }
-
-        if (typeof updateTableOverlayOffset === 'function') {
-            updateTableOverlayOffset();
-        }
-
-        label = loader.querySelector('.padron-mini-table-loader__text');
-
-        if (label) {
-            label.textContent = text || 'Cargando...';
-        }
-
-        loader.classList.add('is-visible');
-        loader.setAttribute('aria-hidden', 'false');
-    }
-
-    function scheduleMiniTableLoader(text, delayMs) {
-        clearTimeout(miniTableLoaderTimer);
-
-        miniTableLoaderTimer = setTimeout(function() {
-            showMiniTableLoader(text || 'Cargando...');
-        }, delayMs == null ? 120 : delayMs);
-    }
-
-    function hideMiniTableLoader() {
-        var shell = document.querySelector('.table-shell');
-        var loader = shell ? shell.querySelector('.padron-mini-table-loader') : null;
-
-        clearTimeout(miniTableLoaderTimer);
-        miniTableLoaderTimer = null;
-
-        if (!loader) {
-            return;
-        }
-
-        loader.classList.remove('is-visible');
-        loader.setAttribute('aria-hidden', 'true');
-    }
-
     function refreshTableFromUrl(url, options) {
         var opts = options || {};
         var targetUrl = typeof url === 'string' ? url : url.toString();
-        var allowHardReload = opts.allowHardReload === true;
-
-        /*
-        * Antes era "opts.enableSoftDim !== false", o sea: por defecto oscurecía.
-        * Ahora solo oscurece si lo pedís explícitamente con enableSoftDim: true.
-        * Para búsqueda rápida queremos agilidad visual, no opacidad.
-        */
-        var enableSoftDim = opts.enableSoftDim === true;
-
-        var visualToken = null;
+        var allowHardReload = opts.allowHardReload !== false;
+        var enableSoftDim = opts.enableSoftDim !== false;
         var request;
 
-        abortActiveTableRequest();
         hideTableOverlay();
         cancelDeferredTableLoadingOverlay(false);
 
-        /*
-        * Loader liviano, no bloqueante.
-        * Tiene delay para no parpadear en consultas rápidas.
-        */
-        if (opts.showMiniLoader !== false) {
-            scheduleMiniTableLoader(
-                opts.miniLoaderText || 'Cargando...',
-                opts.miniLoaderDelayMs == null ? 120 : opts.miniLoaderDelayMs
-            );
-        }
-
         if (enableSoftDim) {
-            visualToken = scheduleTableSoftDim(
+            scheduleTableSoftDim(
                 opts.softDimDelayMs != null ? opts.softDimDelayMs : 90,
                 opts.softDimOpacity != null ? opts.softDimOpacity : 0.8
             );
@@ -6144,55 +5776,30 @@ function ensureMiniTableLoader() {
         request = $.ajax({
             url: targetUrl,
             method: 'GET',
-
             success: function(data) {
-                if (activeTableRequest !== request) {
-                    return;
-                }
-
+                cancelTableSoftDim(false);
                 cancelDeferredTableLoadingOverlay(false);
                 window.history.pushState({}, '', targetUrl);
                 replaceTableFragments($(data), !!opts.useFade);
-                cancelTableSoftDim(true, visualToken);
-                hideMiniTableLoader();
             },
-
-            error: function(xhr, textStatus) {
-                if (activeTableRequest !== request && textStatus === 'abort') {
-                    return;
-                }
-
-                cancelTableSoftDim(textStatus === 'abort' ? false : true, visualToken);
+            error: function() {
+                cancelTableSoftDim(true);
                 cancelDeferredTableLoadingOverlay(false);
-
-                if (textStatus === 'abort') {
-                    hideMiniTableLoader();
-                    return;
-                }
 
                 if (allowHardReload) {
                     window.location.href = targetUrl;
                     return;
                 }
 
-                hideMiniTableLoader();
                 getTableViewport().css('opacity', '1');
                 syncTableEmptyOverlay();
             },
-
-            complete: function(xhr, textStatus) {
-                if (activeTableRequest !== request) {
-                    return;
-                }
-
-                activeTableRequest = null;
-                cancelTableSoftDim(textStatus === 'abort' ? false : true, visualToken);
+            complete: function() {
+                cancelTableSoftDim(false);
                 cancelDeferredTableLoadingOverlay(false);
-                hideMiniTableLoader();
             }
         });
 
-        activeTableRequest = request;
         return request;
     }
 
@@ -6215,11 +5822,7 @@ function ensureMiniTableLoader() {
 
             refreshTableFromUrl(window.location.pathname, {
                 useFade: false,
-                enableSoftDim: true,
-                softDimDelayMs: 0,
-                softDimOpacity: 0.38,
-                showMiniLoader: false,
-                showOverlay: false
+                overlayDelayMs: 180
             });
         } else if ($('#liveSearchInput').length) {
             $('#liveSearchInput').val('').trigger('input');
@@ -6306,7 +5909,7 @@ function ensureMiniTableLoader() {
 
         var debounceTimer;
         var fetchXhr = null;
-        var SEARCH_DEBOUNCE_MS = 220;
+        var SEARCH_DEBOUNCE_MS = 350;
         var LOADING_OVERLAY_DELAY_MS = 180;
         var LIVE_SEARCH_ACTION_VALUE = '__action__';
         var LIVE_SEARCH_ALL_VALUE = '__all__';
@@ -6544,21 +6147,6 @@ if (formato === 'excel_pagina') {
             return url.toString();
         }
 
-function getFilenameFromContentDisposition(response, fallbackFilename) {
-    var disposition = response.headers.get('Content-Disposition') || '';
-    var utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-    var asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
-    var filename = '';
-
-    if (utf8Match && utf8Match[1]) {
-        filename = decodeURIComponent(utf8Match[1]);
-    } else if (asciiMatch && asciiMatch[1]) {
-        filename = asciiMatch[1];
-    }
-
-    return filename || fallbackFilename;
-}
-
 function descargarExcelLocalizaciones(url, $btn, filename) {
     if ($btn.data('exporting') === true) {
         return;
@@ -6579,21 +6167,15 @@ function descargarExcelLocalizaciones(url, $btn, filename) {
             throw new Error('Error del servidor al generar el Excel (' + response.status + ')');
         }
 
-        var downloadFilename = getFilenameFromContentDisposition(response, filename);
-        return response.blob().then(function(blob) {
-            return {
-                blob: blob,
-                filename: downloadFilename
-            };
-        });
+        return response.blob();
     })
-    .then(function(payload) {
-        var blobUrl = URL.createObjectURL(payload.blob);
+    .then(function(blob) {
+        var blobUrl = URL.createObjectURL(blob);
         var tempA = document.createElement('a');
 
         tempA.style.display = 'none';
         tempA.href = blobUrl;
-        tempA.download = payload.filename;
+        tempA.download = filename;
 
         document.body.appendChild(tempA);
         tempA.click();
@@ -6672,10 +6254,6 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
             ensureColumnVisibleForFilter(activeField);
             syncSmartParamsToUrl(url);
             selectedValues.forEach(function(selection) {
-                if (hasActiveFilterValue(url.searchParams, activeField, selection.value, activeOperator)) {
-                    return;
-                }
-
                 url.searchParams.append('campo_filtro', activeField);
                 url.searchParams.append('operador_filtro', activeOperator);
                 url.searchParams.append('valor_filtro', selection.value);
@@ -6683,11 +6261,8 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
             closeFilterDialog();
             refreshTableFromUrl(url.toString(), {
                 useFade: false,
-                enableSoftDim: true,
-                softDimDelayMs: 0,
-                softDimOpacity: 0.38,
-                showMiniLoader: false,
-                showOverlay: false
+                overlayDelayMs: 120,
+                overlayTitle: 'Consultando Datos...'
             });
         });
 
@@ -6913,23 +6488,11 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                     });
                 }
 
-                cancelDeferredTableLoadingOverlay(false);
-                scheduleTableSoftDim(0, 0.38);
-                scheduleTableLoadingOverlay(
-                    120,
-                    'Consultando datos...',
-                    'Actualizando resultados definitivos...',
-                    'fa-circle-notch'
-                );
-                abortActiveTableRequest();
-                if (fetchXhr) {
-                    fetchXhr.abort();
-                    fetchXhr = null;
-                }
+                hideTableOverlay();
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(function() {
                     var url = new URL(window.location.href);
-                    var shouldDimServerSearch = getTableDataRows().filter(':visible').length === 0;
+                    var visibleMatches = getTableDataRows().filter(':visible').length;
 
                     removeSmartParams(url);
                     if (isAllColumnsSearch) {
@@ -6947,14 +6510,17 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
 
                     window.history.pushState({}, '', url.toString());
                     syncServerFiltersFromUrl();
+
+                    if (fetchXhr) {
+                        fetchXhr.abort();
+                    }
+
                     fetchXhr = refreshTableFromUrl(url.toString(), {
                         useFade: false,
                         allowHardReload: false,
-                        enableSoftDim: true,
-                        softDimDelayMs: 0,
-                        softDimOpacity: 0.38,
-                        showMiniLoader: false,
-                        showOverlay: false
+                        enableSoftDim: visibleMatches === 0,
+                        softDimDelayMs: 110,
+                        softDimOpacity: 0.82
                     });
                 }, SEARCH_DEBOUNCE_MS);
             } else {
@@ -6985,11 +6551,8 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                 fetchXhr = refreshTableFromUrl(url.toString(), {
                     useFade: false,
                     allowHardReload: false,
-                    enableSoftDim: true,
-                    softDimDelayMs: 0,
-                    softDimOpacity: 0.38,
-                    showMiniLoader: false,
-                    showOverlay: false
+                    softDimDelayMs: 85,
+                    softDimOpacity: 0.82
                 });
             }
         });
@@ -7053,12 +6616,9 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                 url.searchParams.set('page', 1);
                 refreshTableFromUrl(url.toString(), {
                     useFade: false,
-                    allowHardReload: false,
-                    enableSoftDim: true,
-                    softDimDelayMs: 0,
-                    softDimOpacity: 0.38,
-                    showMiniLoader: false,
-                    showOverlay: false
+                    overlayDelayMs: 120,
+                    overlayTitle: 'Actualizando cantidad de registros...',
+                    allowHardReload: false
                 });
             });
         }
@@ -7116,11 +6676,8 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
             e.preventDefault();
             refreshTableFromUrl(url, {
                 useFade: false,
-                enableSoftDim: true,
-                softDimDelayMs: 0,
-                softDimOpacity: 0.38,
-                showMiniLoader: false,
-                showOverlay: false
+                overlayDelayMs: 120,
+                overlayTitle: 'Cambiando página...'
             });
         });
 
@@ -7170,761 +6727,4 @@ $(document).on('change', '#dialog_filtro .filter-dialog-option', function() {
 });
 </script>
 </div>
-
-<!-- PADRON_FIX_X_SIN_RELOAD_START -->
-<script id="padron-fix-x-sin-reload-script">
-(function() {
-    "use strict";
-
-    /*
-     * Fix seguro para la X del buscador:
-     * - No llama directamente a refreshTableFromUrl.
-     * - No usa window.location.href.
-     * - Limpia primero la URL.
-     * - Luego dispara un evento input normal, para que el handler original del HTML
-     *   haga la actualizacion AJAX desde su propio scope.
-     */
-
-    var PATCH_FLAG = "__padronFixXSinReload";
-
-    if (window[PATCH_FLAG]) {
-        return;
-    }
-
-    window[PATCH_FLAG] = true;
-
-    function qs(selector, root) {
-        return (root || document).querySelector(selector);
-    }
-
-    function normalizeValue(value) {
-        return String(value || "").trim().toLowerCase();
-    }
-
-    function getInput() {
-        return qs("#liveSearchInput");
-    }
-
-    function getClearButton() {
-        return qs("#liveSearchClear");
-    }
-
-    function getBadge() {
-        return qs("#smartSearchBadge");
-    }
-
-    function getBadgesContainer() {
-        return qs("#serverBadgesContainer");
-    }
-
-    function isClearTarget(target) {
-        if (!target || !target.closest) {
-            return false;
-        }
-
-        return !!(
-            target.closest("#liveSearchClear") ||
-            target.closest("#smartSearchBadge .close-filter-btn") ||
-            target.closest("#removeSmartSearch")
-        );
-    }
-
-    function removeSmartBadgeDom() {
-        var badge = getBadge();
-        var container = getBadgesContainer();
-
-        if (badge && badge.parentNode) {
-            badge.parentNode.removeChild(badge);
-        }
-
-        if (container && !container.querySelector(".badge")) {
-            container.style.display = "none";
-        }
-    }
-
-    function showClearButton(show) {
-        var clearButton = getClearButton();
-
-        if (!clearButton) {
-            return;
-        }
-
-        clearButton.style.display = show ? "inline-flex" : "none";
-    }
-
-    function cleanSmartParamsFromUrl() {
-        var url = new URL(window.location.href);
-        var params = url.searchParams;
-
-        var smartVal = normalizeValue(params.get("smart_ui_val"));
-        var campos = params.getAll("campo_filtro");
-        var opers = params.getAll("operador_filtro");
-        var valores = params.getAll("valor_filtro");
-
-        var keepCampos = [];
-        var keepOpers = [];
-        var keepValores = [];
-
-        var removedOneSmartFilter = false;
-
-        params.delete("smart_ui_col");
-        params.delete("smart_ui_val");
-        params.delete("q");
-        params.delete("page");
-
-        params.delete("campo_filtro");
-        params.delete("operador_filtro");
-        params.delete("valor_filtro");
-
-        for (var i = 0; i < campos.length; i += 1) {
-            var op = opers[i] || "0";
-            var value = normalizeValue(valores[i]);
-
-            /*
-             * Quita solo el filtro rapido asociado al valor del buscador.
-             * Conserva otros filtros manuales.
-             */
-            if (!removedOneSmartFilter && smartVal && op === "0" && value === smartVal) {
-                removedOneSmartFilter = true;
-                continue;
-            }
-
-            keepCampos.push(campos[i]);
-            keepOpers.push(op);
-            keepValores.push(valores[i] || "");
-        }
-
-        keepCampos.forEach(function(item) {
-            params.append("campo_filtro", item);
-        });
-
-        keepOpers.forEach(function(item) {
-            params.append("operador_filtro", item);
-        });
-
-        keepValores.forEach(function(item) {
-            params.append("valor_filtro", item);
-        });
-
-        window.history.replaceState({}, "", url.toString());
-    }
-
-    function dispatchNativeInput(input) {
-        var event;
-
-        if (!input) {
-            return;
-        }
-
-        event = new Event("input", {
-            bubbles: true,
-            cancelable: true
-        });
-
-        input.dispatchEvent(event);
-    }
-
-    function clearSearchWithoutReload(event) {
-        var input = getInput();
-
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            if (typeof event.stopImmediatePropagation === "function") {
-                event.stopImmediatePropagation();
-            }
-        }
-
-        cleanSmartParamsFromUrl();
-
-        if (input) {
-            input.value = "";
-        }
-
-        removeSmartBadgeDom();
-        showClearButton(false);
-
-        /*
-         * Esto deja que el handler original del HTML actualice la tabla.
-         * No llamamos refreshTableFromUrl desde este patch porque puede estar
-         * en scope local y no global.
-         */
-        dispatchNativeInput(input);
-    }
-
-    document.addEventListener("click", function(event) {
-        if (!isClearTarget(event.target)) {
-            return;
-        }
-
-        clearSearchWithoutReload(event);
-    }, true);
-
-})();
-</script>
-<!-- PADRON_FIX_X_SIN_RELOAD_END -->
-
-<!-- PADRON_FIX_LOADER_DENTRO_TABLA_SUPERPUESTO_START -->
-<style id="padron-fix-loader-dentro-tabla-superpuesto-style">
-/* =========================================================
-   FIX: LOADER DENTRO DE LA TABLA, SUPERPUESTO Y LIVIANO
-   No ocupa layout, no empuja filas, no oscurece resultados.
-   ========================================================= */
-
-.table-shell {
-    position: relative !important;
-}
-
-/* El loader debe vivir dentro de .table-shell, flotando sobre la tabla. */
-.table-shell > .padron-mini-table-loader {
-    position: absolute !important;
-
-    /*
-       Queda dentro de la tabla, debajo del encabezado.
-       Usa --table-overlay-top si existe para respetar la altura del thead.
-    */
-    top: calc(var(--table-overlay-top, 44px) + 0.55rem) !important;
-    left: 0.85rem !important;
-
-    z-index: 18 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.45rem !important;
-
-    width: auto !important;
-    max-width: max-content !important;
-    height: 30px !important;
-    margin: 0 !important;
-    padding: 0 0.75rem !important;
-    border-radius: 999px !important;
-
-    border: 1px solid rgba(46, 123, 212, 0.20) !important;
-    background: rgba(255, 255, 255, 0.97) !important;
-    color: #1a4f8a !important;
-
-    font-size: 0.78rem !important;
-    font-weight: 800 !important;
-    line-height: 1 !important;
-    white-space: nowrap !important;
-
-    box-shadow: 0 8px 18px rgba(26, 79, 138, 0.12) !important;
-
-    opacity: 0 !important;
-    visibility: hidden !important;
-    transform: translateY(-3px) !important;
-
-    /*
-       Clave: no bloquea clicks sobre filas/botones.
-    */
-    pointer-events: none !important;
-
-    /*
-       Transicion minima, no pesada.
-    */
-    transition:
-        opacity 0.05s linear,
-        transform 0.05s linear,
-        visibility 0.05s linear !important;
-}
-
-.table-shell > .padron-mini-table-loader.is-visible {
-    opacity: 1 !important;
-    visibility: visible !important;
-    transform: translateY(0) !important;
-}
-
-/* No debe quedar en results-bar. Si algun patch viejo lo movio ahi, se oculta. */
-.results-bar > .padron-mini-table-loader {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-}
-
-/* Blindaje: nunca dentro del table/thead/tbody como si fuera fila/celda. */
-.table-responsive .padron-mini-table-loader,
-.compact-table-track .padron-mini-table-loader,
-.table-padron .padron-mini-table-loader,
-.table-padron thead .padron-mini-table-loader,
-.table-padron tbody .padron-mini-table-loader {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-}
-
-/* No se oscurece la tabla por culpa del loader. */
-.table-shell.has-mini-loader-active .table-responsive {
-    opacity: 1 !important;
-}
-</style>
-
-<script id="padron-fix-loader-dentro-tabla-superpuesto-script">
-(function() {
-    "use strict";
-
-    /*
-     * Este fix:
-     * - No cambia backend.
-     * - No cambia la consulta.
-     * - No cambia filtros.
-     * - Solo controla donde vive el loader y cuando se apaga.
-     */
-
-    var PATCH_FLAG = "__padronFixLoaderDentroTablaSuperpuesto";
-    var FETCH_WRAP_FLAG = "__padronFixLoaderDentroTablaFetchWrapped";
-    var JQ_BIND_FLAG = "__padronFixLoaderDentroTablaJqBound";
-
-    if (window[PATCH_FLAG]) {
-        return;
-    }
-
-    window[PATCH_FLAG] = true;
-
-    var activeAjaxCount = 0;
-    var activeFetchCount = 0;
-    var cleanupTimer = null;
-    var tableObserver = null;
-
-    function qs(selector, root) {
-        return (root || document).querySelector(selector);
-    }
-
-    function qsa(selector, root) {
-        return Array.prototype.slice.call((root || document).querySelectorAll(selector));
-    }
-
-    function hasActiveRequest() {
-        return (activeAjaxCount + activeFetchCount) > 0;
-    }
-
-    function getShell() {
-        return qs(".table-shell");
-    }
-
-    function getLoader() {
-        return qs(".padron-mini-table-loader");
-    }
-
-    function isLoader(node) {
-        return node &&
-               node.nodeType === 1 &&
-               node.classList &&
-               node.classList.contains("padron-mini-table-loader");
-    }
-
-    function updateOffsetIfAvailable() {
-        try {
-            if (typeof updateTableOverlayOffset === "function") {
-                updateTableOverlayOffset();
-            }
-        } catch (e) {}
-    }
-
-    function moveLoaderInsideTableShell() {
-        var shell = getShell();
-        var loader = getLoader();
-
-        if (!shell || !loader) {
-            return;
-        }
-
-        /*
-         * Si algun patch anterior lo llevo a results-bar,
-         * lo devolvemos a .table-shell.
-         */
-        if (loader.parentNode !== shell) {
-            try {
-                shell.appendChild(loader);
-            } catch (e) {}
-        }
-
-        updateOffsetIfAvailable();
-    }
-
-    function hideLoaderOnly() {
-        var shell = getShell();
-
-        qsa(".padron-mini-table-loader").forEach(function(loader) {
-            loader.classList.remove("is-visible");
-            loader.setAttribute("aria-hidden", "true");
-
-            /*
-             * Si hay duplicados por patches viejos, dejamos solo el primero.
-             */
-            if (shell && loader.parentNode !== shell && loader.parentNode) {
-                loader.parentNode.removeChild(loader);
-            }
-        });
-
-        if (shell) {
-            shell.classList.remove("has-mini-loader-active");
-        }
-
-        try {
-            if (typeof hideMiniTableLoader === "function") {
-                hideMiniTableLoader();
-            }
-        } catch (e) {}
-    }
-
-    function hardHideLoader() {
-        clearTimeout(cleanupTimer);
-        cleanupTimer = null;
-
-        hideLoaderOnly();
-
-        try {
-            if (typeof cancelDeferredTableLoadingOverlay === "function") {
-                cancelDeferredTableLoadingOverlay(false);
-            }
-        } catch (e) {}
-
-        try {
-            if (typeof cancelTableSoftDim === "function") {
-                cancelTableSoftDim(true);
-            }
-        } catch (e) {}
-
-        try {
-            if (typeof restoreTableViewportOpacity === "function") {
-                restoreTableViewportOpacity();
-            }
-        } catch (e) {}
-    }
-
-    function hideAfterResultsPaint() {
-        clearTimeout(cleanupTimer);
-
-        cleanupTimer = setTimeout(function() {
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    hardHideLoader();
-                });
-            });
-        }, 0);
-    }
-
-    function markLoaderActiveIfVisible() {
-        var shell = getShell();
-        var loader = getLoader();
-
-        if (!shell || !loader) {
-            return;
-        }
-
-        moveLoaderInsideTableShell();
-
-        if (loader.classList.contains("is-visible")) {
-            shell.classList.add("has-mini-loader-active");
-
-            /*
-             * Si aparece visible pero no hay request activa,
-             * es un timer viejo: apagar inmediatamente.
-             */
-            if (!hasActiveRequest()) {
-                hardHideLoader();
-            }
-        } else {
-            shell.classList.remove("has-mini-loader-active");
-        }
-    }
-
-    function nodeLooksLikeTableResult(node) {
-        if (!node || node.nodeType !== 1) {
-            return false;
-        }
-
-        if (isLoader(node)) {
-            return false;
-        }
-
-        if (
-            node.matches &&
-            node.matches(".table-responsive, .compact-table-track, .table-padron, tbody, tr, #pagination-container, .pagination")
-        ) {
-            return true;
-        }
-
-        return !!(
-            node.querySelector &&
-            node.querySelector(".table-responsive, .compact-table-track, .table-padron, tbody, tr, .padron-table-empty-row, #pagination-container, .pagination")
-        );
-    }
-
-    function observeTableChanges() {
-        var shell = getShell();
-
-        if (!shell || tableObserver) {
-            return;
-        }
-
-        /*
-         * Observador acotado a la tabla, no a todo el body.
-         * Es liviano y solo sirve para apagar el loader cuando ya cambio el resultado.
-         */
-        tableObserver = new MutationObserver(function(mutations) {
-            var sawResultChange = false;
-            var sawLoaderChange = false;
-
-            mutations.forEach(function(mutation) {
-                if (mutation.type === "attributes") {
-                    if (isLoader(mutation.target)) {
-                        sawLoaderChange = true;
-                    }
-                    return;
-                }
-
-                Array.prototype.forEach.call(mutation.addedNodes || [], function(node) {
-                    if (isLoader(node)) {
-                        sawLoaderChange = true;
-                        return;
-                    }
-
-                    if (nodeLooksLikeTableResult(node)) {
-                        sawResultChange = true;
-                    }
-                });
-            });
-
-            if (sawResultChange) {
-                hideAfterResultsPaint();
-                return;
-            }
-
-            if (sawLoaderChange) {
-                requestAnimationFrame(markLoaderActiveIfVisible);
-            }
-        });
-
-        tableObserver.observe(shell, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ["class", "aria-hidden"]
-        });
-    }
-
-    function bindJqueryAjaxEvents() {
-        if (!window.jQuery || window[JQ_BIND_FLAG]) {
-            return;
-        }
-
-        window[JQ_BIND_FLAG] = true;
-
-        window.jQuery(document)
-            .on("ajaxSend.padronLoaderDentroTabla", function() {
-                activeAjaxCount += 1;
-                moveLoaderInsideTableShell();
-            })
-            .on("ajaxSuccess.padronLoaderDentroTabla", function() {
-                /*
-                 * El success local ya reemplazo fragmentos.
-                 * Apagamos luego de pintar.
-                 */
-                hideAfterResultsPaint();
-            })
-            .on("ajaxComplete.padronLoaderDentroTabla ajaxError.padronLoaderDentroTabla", function() {
-                activeAjaxCount = Math.max(0, activeAjaxCount - 1);
-                hideAfterResultsPaint();
-            });
-    }
-
-    function wrapFetchForResponsables() {
-        var originalFetch;
-
-        if (window[FETCH_WRAP_FLAG] || typeof window.fetch !== "function") {
-            return;
-        }
-
-        window[FETCH_WRAP_FLAG] = true;
-        originalFetch = window.fetch;
-
-        window.fetch = function() {
-            activeFetchCount += 1;
-            moveLoaderInsideTableShell();
-
-            return originalFetch.apply(this, arguments).then(function(response) {
-                if (response && typeof response.text === "function" && !response.__padronLoaderDentroTablaTextWrapped) {
-                    var originalText = response.text.bind(response);
-
-                    response.text = function() {
-                        return originalText().then(function(text) {
-                            /*
-                             * Devolvemos el texto primero para que el .then(html)
-                             * propio del modulo pueda pintar los resultados.
-                             * Luego, en frames siguientes, apagamos.
-                             */
-                            requestAnimationFrame(function() {
-                                requestAnimationFrame(function() {
-                                    activeFetchCount = Math.max(0, activeFetchCount - 1);
-                                    hardHideLoader();
-                                });
-                            });
-
-                            return text;
-                        }).catch(function(error) {
-                            activeFetchCount = Math.max(0, activeFetchCount - 1);
-                            hardHideLoader();
-                            throw error;
-                        });
-                    };
-
-                    response.__padronLoaderDentroTablaTextWrapped = true;
-                    return response;
-                }
-
-                activeFetchCount = Math.max(0, activeFetchCount - 1);
-                hideAfterResultsPaint();
-                return response;
-            }).catch(function(error) {
-                activeFetchCount = Math.max(0, activeFetchCount - 1);
-                hardHideLoader();
-                throw error;
-            });
-        };
-    }
-
-    function cleanupOldResultsBarLoader() {
-        var shell = getShell();
-
-        qsa(".results-bar > .padron-mini-table-loader").forEach(function(loader) {
-            if (shell) {
-                shell.appendChild(loader);
-            } else if (loader.parentNode) {
-                loader.parentNode.removeChild(loader);
-            }
-        });
-
-        moveLoaderInsideTableShell();
-    }
-
-    function boot() {
-        cleanupOldResultsBarLoader();
-        observeTableChanges();
-        bindJqueryAjaxEvents();
-        wrapFetchForResponsables();
-        markLoaderActiveIfVisible();
-
-        /*
-         * Limpieza defensiva contra timers viejos.
-         */
-        setTimeout(function() {
-            if (!hasActiveRequest()) {
-                hardHideLoader();
-            }
-        }, 260);
-
-        setTimeout(function() {
-            if (!hasActiveRequest()) {
-                hardHideLoader();
-            }
-        }, 700);
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", boot);
-    } else {
-        boot();
-    }
-
-    window.addEventListener("pageshow", boot);
-})();
-</script>
-<!-- PADRON_FIX_LOADER_DENTRO_TABLA_SUPERPUESTO_END -->
-
-
-<style id="tyago-compact-btn-anim-final-style">
-/* TYAGO_PATCH_CONTRAER_BTN_ANIM_FINAL */
-.filter-collapse-btn {
-    min-height: 31px;
-    min-width: 108px;
-    white-space: nowrap;
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease;
-}
-.filter-collapse-btn.is-active {
-    background: var(--padron-primary) !important;
-    border-color: var(--padron-primary) !important;
-    color: #fff !important;
-    box-shadow: 0 8px 20px rgba(26, 79, 138, 0.16);
-}
-.filter-collapse-btn.tyago-compact-btn-pulse {
-    transform: none !important;
-}
-</style>
-<script id="tyago-compact-btn-anim-final-script">
-(function() {
-    "use strict";
-
-    var STORAGE_KEY = "
-contraer_localizaciones
-";
-
-    function syncCompactButton(animate) {
-        var button = document.getElementById("btnContraerTabla");
-        var active;
-
-        if (!button) {
-            return;
-        }
-
-        active = localStorage.getItem(STORAGE_KEY) === "true";
-        button.classList.toggle("is-active", active);
-        button.setAttribute("aria-pressed", active ? "true" : "false");
-        button.setAttribute("title", active ? "Volver al tamaño normal de la tabla" : "Ajustar la tabla al ancho visible");
-        button.innerHTML = active ? "<i class=\"fa-solid fa-expand me-1\"></i>Expandir Columnas" : "<i class=\"fa-solid fa-compress me-1\"></i>Contraer Columnas";
-
-        if (animate) {
-            button.classList.add("tyago-compact-btn-pulse");
-            window.setTimeout(function() {
-                button.classList.remove("tyago-compact-btn-pulse");
-            }, 150);
-        }
-    }
-
-    function scheduleSync(animate) {
-        window.setTimeout(function() { syncCompactButton(animate); }, 0);
-        window.setTimeout(function() { syncCompactButton(false); }, 80);
-        window.setTimeout(function() { syncCompactButton(false); }, 220);
-    }
-
-    document.addEventListener("click", function(event) {
-        if (event.target.closest("#btnContraerTabla")) {
-            scheduleSync(true);
-        }
-    }, true);
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", function() { syncCompactButton(false); });
-    } else {
-        syncCompactButton(false);
-    }
-
-    window.addEventListener("pageshow", function() { syncCompactButton(false); });
-}());
-</script>
-
-
-<style id="tyago-compact-button-pulse-v3-style">
-/* TYAGO_PATCH_COMPACT_BUTTON_PULSE_V3 */
-.filter-collapse-btn {
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease !important;
-}
-.filter-collapse-btn.is-active {
-    background: var(--padron-primary) !important;
-    border-color: var(--padron-primary) !important;
-    color: #fff !important;
-    box-shadow: 0 8px 20px rgba(26, 79, 138, 0.16) !important;
-}
-.filter-collapse-btn.tyago-compact-btn-pulse {
-    transform: none !important;
-}
-</style>
-
 {% endblock %}
-<!-- TYAGO_PATCH_BUSQUEDA_ATOMICA_PADRON -->
-<!-- TYAGO_PATCH_DIFUMINADO_SIN_CARGANDO_REFRESH_TABLA -->
-
-
-
-
