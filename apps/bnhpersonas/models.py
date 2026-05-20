@@ -385,7 +385,7 @@ class SituacionServicio(models.Model):
     descrip_sitrev=models.CharField(max_length=50)
     
     class Meta:
-        managed=True
+        managed=False
         db_table='situacion_revista'
     
     def __str__(self):
@@ -400,11 +400,26 @@ class CondicionActividad(models.Model):
     descrip_condicion=models.CharField(max_length=50)
     
     class Meta:
-        managed=True
-        db_table='condicion_actividad'
+        managed=False
+        db_table='condicion_actividad_bnh'
     
     def __str__(self):
         return self.descrip_condicion
+
+
+#########################
+# TITULOS DE ESPACIOS
+#########################
+class TitulosEspacios(models.Model):
+    cod_titulo=models.IntegerField(primary_key=True)
+    descrip_titulo=models.CharField(max_length=255)
+    
+    class Meta:
+        managed=False
+        db_table='titulos_docentes'
+    
+    def __str__(self):
+        return self.descrip_titulo
 
 
 ###############################
@@ -446,7 +461,7 @@ class RegistroActividades(AuditoriaModel):
     
     secciones=models.CharField(max_length=2, null=False, blank=False)
     
-    espacios=models.CharField(max_length=150, null=False, blank=False)
+    espacios=models.ForeignKey('TitulosEspacios', on_delete=models.PROTECT)
     
     f_desde = models.DateField()
     f_hasta = models.DateField()
