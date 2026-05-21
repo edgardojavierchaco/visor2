@@ -82,6 +82,7 @@ LOCAL_APPS = [
     'apps.asignaciones',
     'apps.padroninterno',
     'apps.bnhpersonas',
+    'apps.indicators',
 ]
 
 
@@ -152,7 +153,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public,evaluacion,cenpe,bnh,operativoschaco,indicadores,pem,pof'
+            'options': '-c search_path=bnh,public,evaluacion,cenpe,operativoschaco,indicadores,pem,pof'
         }
     },        
     'Evaluacion': {

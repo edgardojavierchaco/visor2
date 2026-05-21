@@ -72,6 +72,7 @@ urlpatterns = [
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     path('padron/', include('apps.padroninterno.urls')),
     path('bnh/', include('apps.bnhpersonas.urls', namespace='bnhpersonas')),
+    path('indica/', include('apps.indicators.urls', namespace='indica')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
