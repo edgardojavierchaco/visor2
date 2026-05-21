@@ -19,17 +19,29 @@ def filtrar_ceic(request):
     modalidad = request.GET.get("modalidad")
     nivel = request.GET.get("nivel")
 
+    print("MODALIDAD:", modalidad)
+    print("NIVEL:", nivel)
+
     qs = NomencladorCeic.objects.all()
 
-    if modalidad:
-        modalidad = int(modalidad)
-
+    if nivel:
         qs = qs.filter(
-            t_nivel="Nivel" if modalidad == 1 else "Modalidad",
-            c_niv=nivel if modalidad == 1 and nivel else modalidad
+            t_nivel="Nivel",
+            c_niv=int(nivel)
         )
-    
-    data = list(qs.values("c_ceic", "descripcion"))
+
+    elif modalidad:
+        qs = qs.filter(
+            t_nivel="Modalidad",
+            c_niv=int(modalidad)
+        )
+
+    print("SQL:", qs.query)
+    print("COUNT:", qs.count())
+
+    data = list(
+        qs.values("c_ceic", "descripcion")
+    )
 
     return JsonResponse(data, safe=False)
 
@@ -43,6 +55,26 @@ def carga_personal(request):
     if request.method == "POST":
         
         print("POST DATA:", request.POST)
+        
+        print("===================================")
+        print("POST DATA RAW")
+        print(request.POST)
+        print("===================================")
+
+        # 🔥 DEBUG FK
+        print("POST NIVELES / MODALIDAD / CEIC / ESPACIOS")
+
+        for k, v in request.POST.items():
+
+            if (
+                "niveles" in k
+                or "modalidad" in k
+                or "ceic" in k
+                or "espacios" in k
+                or "sit_revista" in k
+                or "cond_actividad" in k
+            ):
+                print(k, "=", v)
         
         form = PersonaForm(request.POST)
         
@@ -69,7 +101,10 @@ def carga_personal(request):
                 # =========================
                 # 🔥 TODO EL NEGOCIO SE VA AL SERVICE
                 # =========================
-                persona = RegistroService.upsert_persona(form)
+                persona = RegistroService.upsert_persona(
+                    form,
+                    request.user
+                )
 
                 RegistroService.crear_actividades(
                     persona=persona,
@@ -107,22 +142,73 @@ def buscar_persona(request):
     if not cuil:
         return JsonResponse({}, status=400)
 
-    persona = Personas.objects.filter(cuil=cuil).first()
+    persona = Personas.objects.filter(
+        cuil=cuil
+    ).first()
 
     if not persona:
-        return JsonResponse({"existe": False})
+        return JsonResponse({
+            "existe": False
+        })
+
+    codigo_area = getattr(
+        persona,
+        "codigo_area",
+        None
+    )
 
     return JsonResponse({
+
         "existe": True,
-        "dni": persona.dni,
-        "apellido": persona.apellido,
-        "nombre": persona.nombre,
-        "sexo": persona.sexo_id,
-        "f_nac": getattr(persona, "f_nac", None),
-        "provincia": persona.provincia_id,
-        "localidad": persona.localidad_id,
-        "telefono": persona.telefono_normalizado,
+
+        "dni":
+            persona.dni,
+
+        "apellido":
+            persona.apellido,
+
+        "nombre":
+            persona.nombre,
+
+        "sexo":
+            persona.sexo_id,
+
+        "f_nac":
+            getattr(
+                persona,
+                "f_nac",
+                None
+            ),
+
+        "provincia":
+            persona.provincia_id,
+
+        "localidad":
+            persona.localidad_id,
+
+        "telefono":
+            persona.telefono or "",
+
+        "whatsapp":
+            bool(
+                getattr(
+                    persona,
+                    "whatsapp",
+                    False
+                )
+            ),
+
+        "codigo_area":
+            codigo_area.id
+            if codigo_area
+            else "",
+
+        "codigo_area_label":
+            str(codigo_area)
+            if codigo_area
+            else "",
     })
+    
     
 
 def filtrar_localidades(request):

@@ -273,6 +273,68 @@ tbody td{
     }
 }
 
+/* =========================================================
+   ACTIVIDADES - DISEÑO MODERNO EN SOLAPAS
+========================================================= */
+
+.actividad-card {
+    border: 1px solid #e6e6e6;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+
+/* Tabs header */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.tab-btn {
+    padding: 8px 14px;
+    border: none;
+    background: #f4f6f9;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    transition: 0.2s;
+}
+
+.tab-btn.active {
+    background: #3b5bcc;
+    color: white;
+}
+
+/* Contenido tabs */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+/* campo dentro de card */
+.tab-content .field {
+    display: flex;
+    flex-direction: column;
+}
+
+/* acciones */
+.actividad-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
 </style>
 </head>
 
@@ -463,86 +525,129 @@ tbody td{
 
 <div class="card">
 
-    <div class="section-title">
-        📚 Actividades Laborales
-    </div>
+    <div class="section-title">📚 Actividades</div>
 
-    {{ formset.management_form }}
+        {{ formset.management_form }}
 
-    <div class="table-card">
+        <div id="formset-body">
 
-        <table id="tabla">
+        {% for f in formset %}
 
-            <thead>
-                <tr>
+        <div class="actividad-card">
 
-                    <th>CUE</th>
-                    <th>Categoría</th>
-                    <th>Modalidad</th>
-                    <th>Nivel</th>
-                    <th>CEIC</th>
-                    <th>Situación</th>
-                    <th>Condición</th>
-                    <th>Designación</th>
-                    <th>Grado/Año</th>
-                    <th>Turno</th>
-                    <th>Sección</th>
-                    <th>Espacio</th>
-                    <th>Desde</th>
-                    <th>Hasta</th>
-                    <th>Horas</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+            <!-- TABS -->
+            <div class="tabs">
+                <button type="button" class="tab-btn active">Institución - Cargo</button>
+                <button type="button" class="tab-btn">Condición Actividad</button>
+                <button type="button" class="tab-btn">Asignación</button>
+            </div>
 
-                </tr>
-            </thead>
+            <!-- TAB 1 -->
+            <div class="tab-content active">
 
-            <tbody id="formset-body">
+                <div class="field">
+                    <label>CUE</label>
+                    {{ f.cueanexo }}
+                </div>
 
-            {% for f in formset %}
+                <div class="field">
+                    <label>Categoría</label>
+                    {{ f.categoria }}
+                </div>
 
-                <tr class="fila">
+                <div class="field">
+                    <label>Modalidad</label>
+                    {{ f.modalidad }}
+                </div>
 
-                    <td>{{ f.cueanexo }}</td>
-                    <td>{{ f.categoria }}</td>
-                    <td>{{ f.modalidad }}</td>
-                    <td>{{ f.niveles }}</td>
-                    <td>{{ f.ceic }}</td>
-                    <td>{{ f.sit_revista }}</td>
-                    <td>{{ f.cond_actividad }}</td>
-                    <td>{{ f.designacion }}</td>
-                    <td>{{ f.grado_anio }}</td>
-                    <td>{{ f.turno }}</td>
-                    <td>{{ f.secciones }}</td>
-                    <td>{{ f.espacios }}</td>
-                    <td>{{ f.f_desde }}</td>
-                    <td>{{ f.f_hasta }}</td>
-                    <td>{{ f.carga_horaria }}</td>
-                    <td>{{ f.estado }}</td>
+                <div class="field">
+                    <label>Nivel</label>
+                    {{ f.niveles }}
+                </div>
 
-                    <td>
+                <div class="field">
+                    <label>CEIC</label>
+                    {{ f.ceic }}
+                </div>
 
-                        {{ f.DELETE }}
+                <div class="field">
+                    <label>Turno</label>
+                    {{ f.turno }}
+                </div>
 
-                        <button
-                            type="button"
-                            class="btn delete">
+                <div class="field">
+                    <label>Estado</label>
+                    {{ f.estado }}
+                </div>
 
-                            ❌
+            </div>
 
-                        </button>
+            <!-- TAB 2 -->
+            <div class="tab-content">
 
-                    </td>
+                <div class="field">
+                    <label>Situación</label>
+                    {{ f.sit_revista }}
+                </div>
 
-                </tr>
+                <div class="field">
+                    <label>Condición</label>
+                    {{ f.cond_actividad }}
+                </div>
 
-            {% endfor %}
+                <div class="field">
+                    <label>Designación</label>
+                    {{ f.designacion }}
+                </div>
 
-            </tbody>
+                <div class="field">
+                    <label>Desde</label>
+                    {{ f.f_desde }}
+                </div>
 
-        </table>
+                <div class="field">
+                    <label>Hasta</label>
+                    {{ f.f_hasta }}
+                </div>
 
-    </div>
+                <div class="field">
+                    <label>Horas</label>
+                    {{ f.carga_horaria }}
+                </div>
+
+            </div>
+
+            <!-- TAB 3 -->
+            <div class="tab-content">
+
+                <div class="field">
+                    <label>Grado/Año</label>
+                    {{ f.grado_anio }}
+                </div>
+
+                <div class="field">
+                    <label>Sección</label>
+                    {{ f.secciones }}
+                </div>
+
+                <div class="field">
+                    <label>Espacio</label>
+                    {{ f.espacios }}
+                </div>
+
+            </div>
+
+            <!-- DELETE -->
+            <div class="actividad-actions">
+                {{ f.DELETE }}
+                <button type="button" class="btn delete">❌ Eliminar</button>
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+        </div>
 
 
     <!-- BOTONES -->
@@ -579,26 +684,150 @@ tbody td{
 
 <template id="empty-form-template">
 
-<tr class="fila">
+<div class="actividad-card">
 
-    <td>{{ formset.empty_form.cueanexo }}</td>
-    <td>{{ formset.empty_form.categoria }}</td>
-    <td>{{ formset.empty_form.modalidad }}</td>
-    <td>{{ formset.empty_form.niveles }}</td>
-    <td>{{ formset.empty_form.ceic }}</td>
-    <td>{{ formset.empty_form.sit_revista }}</td>
-    <td>{{ formset.empty_form.cond_actividad }}</td>
-    <td>{{ formset.empty_form.designacion }}</td>
-    <td>{{ formset.empty_form.grado_anio }}</td>
-    <td>{{ formset.empty_form.turno }}</td>
-    <td>{{ formset.empty_form.secciones }}</td>
-    <td>{{ formset.empty_form.espacios }}</td>
-    <td>{{ formset.empty_form.f_desde }}</td>
-    <td>{{ formset.empty_form.f_hasta }}</td>
-    <td>{{ formset.empty_form.carga_horaria }}</td>
-    <td>{{ formset.empty_form.estado }}</td>
+    <!-- TABS -->
+    <div class="tabs">
 
-    <td>
+        <button
+            type="button"
+            class="tab-btn active">
+
+            Institucional
+
+        </button>
+
+        <button
+            type="button"
+            class="tab-btn">
+
+            Laboral
+
+        </button>
+
+        <button
+            type="button"
+            class="tab-btn">
+
+            Académico
+
+        </button>
+
+    </div>
+
+
+    <!-- =========================================
+         TAB 1
+    ========================================== -->
+
+    <div class="tab-content active">
+
+        <div class="field">
+            <label>CUE</label>
+            {{ formset.empty_form.cueanexo }}
+        </div>
+
+        <div class="field">
+            <label>Categoría</label>
+            {{ formset.empty_form.categoria }}
+        </div>
+
+        <div class="field">
+            <label>Modalidad</label>
+            {{ formset.empty_form.modalidad }}
+        </div>
+
+        <div class="field">
+            <label>Nivel</label>
+            {{ formset.empty_form.niveles }}
+        </div>
+
+        <div class="field">
+            <label>CEIC</label>
+            {{ formset.empty_form.ceic }}
+        </div>
+
+        <div class="field">
+            <label>Turno</label>
+            {{ formset.empty_form.turno }}
+        </div>
+
+        <div class="field">
+            <label>Estado</label>
+            {{ formset.empty_form.estado }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         TAB 2
+    ========================================== -->
+
+    <div class="tab-content">
+
+        <div class="field">
+            <label>Situación</label>
+            {{ formset.empty_form.sit_revista }}
+        </div>
+
+        <div class="field">
+            <label>Condición</label>
+            {{ formset.empty_form.cond_actividad }}
+        </div>
+
+        <div class="field">
+            <label>Designación</label>
+            {{ formset.empty_form.designacion }}
+        </div>
+
+        <div class="field">
+            <label>Desde</label>
+            {{ formset.empty_form.f_desde }}
+        </div>
+
+        <div class="field">
+            <label>Hasta</label>
+            {{ formset.empty_form.f_hasta }}
+        </div>
+
+        <div class="field">
+            <label>Horas</label>
+            {{ formset.empty_form.carga_horaria }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         TAB 3
+    ========================================== -->
+
+    <div class="tab-content">
+
+        <div class="field">
+            <label>Grado / Año</label>
+            {{ formset.empty_form.grado_anio }}
+        </div>
+
+        <div class="field">
+            <label>Sección</label>
+            {{ formset.empty_form.secciones }}
+        </div>
+
+        <div class="field">
+            <label>Espacio</label>
+            {{ formset.empty_form.espacios }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         DELETE
+    ========================================== -->
+
+    <div class="actividad-actions">
 
         {{ formset.empty_form.DELETE }}
 
@@ -606,568 +835,366 @@ tbody td{
             type="button"
             class="btn delete">
 
-            ❌
+            ❌ Eliminar
 
         </button>
 
-    </td>
+    </div>
 
-</tr>
+</div>
 
 </template>
 
 
 <script>
 
-/* =========================================================
-   AUTOCOMPLETE CODIGO AREA
-========================================================= */
-
 document.addEventListener("DOMContentLoaded", function () {
 
-    const input =
+    /* =========================================================
+       AUTOCOMPLETE CODIGO AREA
+    ========================================================= */
+
+    const codigoInput =
         document.getElementById(
             "codigo-area-autocomplete"
         );
 
-    const hidden =
+    const codigoHidden =
         document.getElementById(
             "id_codigo_area"
         );
 
-    const list =
+    const codigoList =
         document.getElementById(
             "codigo-area-list"
         );
 
-    if (!input) return;
+    if (codigoInput) {
 
-    let timeout;
+        let timeout;
 
-    input.addEventListener(
-        "input",
-        function () {
+        codigoInput.addEventListener(
+            "input",
+            function () {
 
-            let value =
-                this.value.replace(/\D/g, '');
+                let value =
+                    this.value.replace(
+                        /\D/g,
+                        ''
+                    );
 
-            this.value = value;
+                this.value = value;
 
-            if (value.length < 2) {
+                if (
+                    value.length < 2
+                ) {
 
-                list.innerHTML = "";
+                    codigoList.innerHTML =
+                        "";
 
-                return;
+                    return;
+                }
 
-            }
+                clearTimeout(
+                    timeout
+                );
 
-            clearTimeout(timeout);
+                timeout =
+                    setTimeout(() => {
 
-            timeout = setTimeout(() => {
+                    fetch(
+                        `/bnh/buscar-codigos-area/?q=${value}`
+                    )
+                        .then(
+                            r => r.json()
+                        )
+                        .then(data => {
 
-                fetch(
-                    `/bnh/buscar-codigos-area/?q=${value}`
-                )
-                    .then(r => r.json())
-                    .then(data => {
+                            codigoList.innerHTML =
+                                "";
 
-                        list.innerHTML = "";
+                            data.forEach(item => {
 
-                        data.forEach(item => {
+                                const div =
+                                    document.createElement(
+                                        "div"
+                                    );
 
-                            const div =
-                                document.createElement(
-                                    "div"
-                                );
+                                div.className =
+                                    "autocomplete-item";
 
-                            div.classList.add(
-                                "autocomplete-item"
-                            );
+                                div.textContent =
+                                    item.label;
 
-                            div.textContent =
-                                item.label;
+                                div.addEventListener(
+                                    "click",
+                                    function(){
 
-                            div.addEventListener(
-                                "click",
-                                function () {
-
-                                    input.value =
+                                    codigoInput.value =
                                         item.label;
 
-                                    hidden.value =
+                                    codigoHidden.value =
                                         item.id;
 
-                                    list.innerHTML =
+                                    codigoList.innerHTML =
                                         "";
 
                                     actualizarPreview();
 
-                                }
-                            );
+                                });
 
-                            list.appendChild(div);
+                                codigoList.appendChild(
+                                    div
+                                );
+
+                            });
 
                         });
 
-                    });
+                },250);
 
-            }, 250);
+            }
+        );
 
+        document.addEventListener(
+            "click",
+            function(e){
+
+                if(
+                    !codigoInput.contains(
+                        e.target
+                    )
+                ){
+
+                    codigoList.innerHTML =
+                        "";
+
+                }
+
+            }
+        );
+    }
+
+
+    /* =========================================================
+       PREVIEW TELEFONO
+    ========================================================= */
+
+    function actualizarPreview(){
+
+        const tel =
+            document.getElementById(
+                "id_telefono"
+            );
+
+        const codigo =
+            document.getElementById(
+                "codigo-area-autocomplete"
+            );
+
+        const preview =
+            document.getElementById(
+                "preview-telefono"
+            );
+
+        if(
+            !tel ||
+            !codigo ||
+            !preview
+        ) return;
+
+        const numero =
+            tel.value.replace(
+                /\D/g,
+                ''
+            );
+
+        const match =
+            codigo.value.match(
+                /^(\d+)/
+            );
+
+        if(
+            !numero ||
+            !match
+        ){
+
+            preview.value =
+                "";
+
+            return;
         }
-    );
 
+        preview.value =
+            `+54${match[1]}${numero}`;
+    }
 
     document.addEventListener(
-        "click",
-        function (e) {
+        "input",
+        function(e){
 
-            if (
-                !input.contains(
-                    e.target
-                )
-            ) {
+            if(
+                e.target.id ===
+                "id_telefono"
+            ){
 
-                list.innerHTML = "";
+                actualizarPreview();
 
             }
 
         }
     );
 
-});
 
+    /* =========================================================
+       PROVINCIA -> LOCALIDAD
+    ========================================================= */
 
-/* =========================================================
-   TELEFONO PREVIEW
-========================================================= */
-
-function actualizarPreview() {
-
-    const telefono =
+    const provincia =
         document.getElementById(
-            "id_telefono"
+            "id_provincia"
         );
 
-    const codigo =
+    const localidad =
         document.getElementById(
-            "codigo-area-autocomplete"
+            "id_localidad"
         );
 
-    const preview =
-        document.getElementById(
-            "preview-telefono"
-        );
-
-    if (
-        !telefono ||
-        !codigo ||
-        !preview
-    ) return;
-
-    const numero =
-        telefono.value.replace(
-            /\D/g,
-            ''
-        );
-
-    const match =
-        codigo.value.match(
-            /^(\d+)/
-        );
-
-    if (
-        !numero ||
-        !match
-    ) {
-
-        preview.value = "";
-
-        return;
-
-    }
-
-    preview.value =
-        `+54${match[1]}${numero}`;
-
-}
-
-
-document.addEventListener(
-    "input",
-    function (e) {
-
-        if (
-            e.target.id ===
-            "id_telefono"
-        ) {
-
-            actualizarPreview();
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   PROVINCIA -> LOCALIDAD
-========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        const provincia =
-            document.getElementById(
-                "id_provincia"
-            );
-
-        const localidad =
-            document.getElementById(
-                "id_localidad"
-            );
-
-        if (!provincia) return;
+    if(provincia){
 
         provincia.addEventListener(
             "change",
-            function () {
+            function(){
 
                 fetch(
                     `{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${this.value}`
                 )
-                    .then(r => r.json())
-                    .then(data => {
+                .then(r=>r.json())
+                .then(data=>{
 
-                        localidad.innerHTML =
-                            "<option value=''>----</option>";
+                    localidad.innerHTML =
+                        "<option value=''>----</option>";
 
-                        data.forEach(item => {
+                    data.forEach(item=>{
 
-                            const opt =
-                                document.createElement(
-                                    "option"
-                                );
-
-                            opt.value =
-                                item.c_localidad;
-
-                            opt.textContent =
-                                item.descrip_localidad;
-
-                            localidad.appendChild(
-                                opt
+                        const opt =
+                            document.createElement(
+                                "option"
                             );
 
-                        });
+                        opt.value =
+                            item.c_localidad;
+
+                        opt.textContent =
+                            item.descrip_localidad;
+
+                        localidad.appendChild(
+                            opt
+                        );
 
                     });
 
+                });
+
             }
         );
-
     }
-);
 
 
-/* =========================================================
-   FORMSET DINAMICO
-========================================================= */
+    /* =========================================================
+       VALIDAR CUIL
+    ========================================================= */
 
-document
-    .getElementById("add")
-    ?.addEventListener(
-        "click",
-        function () {
+    function validarCUIL(cuil){
 
-            const total =
-                document.querySelector(
-                    '[name$="-TOTAL_FORMS"]'
-                );
+        cuil =
+            cuil.replace(
+                /\D/g,
+                ''
+            );
 
-            if (!total) {
+        if(
+            cuil.length !== 11
+        ) return false;
 
-                console.error(
-                    "TOTAL_FORMS inexistente"
-                );
+        const coef =
+            [5,4,3,2,7,6,5,4,3,2];
 
-                return;
+        let suma = 0;
 
-            }
+        for(
+            let i=0;
+            i<10;
+            i++
+        ){
 
-            const index =
-                parseInt(
-                    total.value
-                );
-
-            const template =
-                document
-                    .getElementById(
-                        "empty-form-template"
-                    )
-                    .innerHTML
-                    .replace(
-                        /__prefix__/g,
-                        index
-                    );
-
-            document
-                .getElementById(
-                    "formset-body"
-                )
-                .insertAdjacentHTML(
-                    "beforeend",
-                    template
-                );
-
-            total.value =
-                index + 1;
-
-        }
-    );
-
-
-document.addEventListener(
-    "click",
-    function (e) {
-
-        if (
-            e.target.classList.contains(
-                "delete"
-            )
-        ) {
-
-            const row =
-                e.target.closest(
-                    "tr"
-                );
-
-            const del =
-                row.querySelector(
-                    'input[name$="-DELETE"]'
-                );
-
-            if (del) {
-
-                del.checked = true;
-
-            }
-
-            row.style.display =
-                "none";
-
+            suma +=
+                parseInt(cuil[i]) *
+                coef[i];
         }
 
+        let resto =
+            suma % 11;
+
+        let dv =
+            11 - resto;
+
+        if(dv===11) dv=0;
+        if(dv===10) dv=9;
+
+        return (
+            dv ===
+            parseInt(cuil[10])
+        );
     }
-);
 
+    function extraerDNI(cuil){
 
-/* =========================================================
-   CEIC DINAMICO
-========================================================= */
+        cuil =
+            cuil.replace(
+                /\D/g,
+                ''
+            );
 
-function cargarCEIC(
-    modalidad,
-    nivel,
-    select
-) {
+        if(
+            cuil.length !== 11
+        ) return "";
 
-    fetch(
-        `{% url 'bnhpersonas:filtrar_ceic' %}?modalidad=${modalidad}&nivel=${nivel || ""}`
-    )
-        .then(r => r.json())
-        .then(data => {
-
-            select.innerHTML =
-                "<option value=''>----</option>";
-
-            data.forEach(e => {
-
-                const opt =
-                    document.createElement(
-                        "option"
-                    );
-
-                opt.value =
-                    e.c_ceic;
-
-                opt.textContent =
-                    e.descripcion;
-
-                select.appendChild(
-                    opt
-                );
-
-            });
-
-        });
-
-}
-
-
-document.addEventListener(
-    "change",
-    function (e) {
-
-        if (
-            e.target.name &&
-            (
-                e.target.name.includes(
-                    "modalidad"
-                ) ||
-                e.target.name.includes(
-                    "niveles"
-                )
-            )
-        ) {
-
-            const row =
-                e.target.closest(
-                    "tr"
-                );
-
-            const mod =
-                row.querySelector(
-                    '[name$="modalidad"]'
-                )?.value;
-
-            const niv =
-                row.querySelector(
-                    '[name$="niveles"]'
-                )?.value;
-
-            const ceic =
-                row.querySelector(
-                    '[name$="ceic"]'
-                );
-
-            if (ceic) {
-
-                cargarCEIC(
-                    mod,
-                    niv,
-                    ceic
-                );
-
-            }
-
-        }
-
+        return cuil.substring(
+            2,
+            10
+        );
     }
-);
-/* =========================================================
-   VALIDAR CUIL
-========================================================= */
 
-function validarCUIL(cuil) {
 
-    cuil =
-        cuil.replace(
-            /\D/g,
-            ''
+    /* =========================================================
+       BUSCAR PERSONA
+    ========================================================= */
+
+    const cuilInput =
+        document.getElementById(
+            "id_cuil"
         );
 
-    if (
-        cuil.length !== 11
-    ) {
-        return false;
-    }
-
-    const coef =
-        [5,4,3,2,7,6,5,4,3,2];
-
-    let suma = 0;
-
-    for (
-        let i = 0;
-        i < 10;
-        i++
-    ) {
-
-        suma +=
-            parseInt(cuil[i]) *
-            coef[i];
-
-    }
-
-    let resto =
-        suma % 11;
-
-    let dv =
-        11 - resto;
-
-    if (dv === 11) dv = 0;
-    if (dv === 10) dv = 9;
-
-    return (
-        dv ===
-        parseInt(cuil[10])
-    );
-
-}
-
-
-/* =========================================================
-   EXTRAER DNI DESDE CUIL
-========================================================= */
-
-function extraerDNI(cuil) {
-
-    cuil =
-        cuil.replace(
-            /\D/g,
-            ''
+    const dniInput =
+        document.getElementById(
+            "id_dni"
         );
 
-    if (
-        cuil.length !== 11
-    ) {
+    const estado =
+        document.getElementById(
+            "estado-persona"
+        );
 
-        return "";
+    if(cuilInput){
 
-    }
-
-    return cuil.substring(
-        2,
-        10
-    );
-
-}
-
-
-/* =========================================================
-   BUSCAR PERSONA
-========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        const cuilInput =
-            document.getElementById(
-                "id_cuil"
-            );
-
-        const dniInput =
-            document.getElementById(
-                "id_dni"
-            );
-
-        const estado =
-            document.getElementById(
-                "estado-persona"
-            );
-
-        if (!cuilInput) return;
-
-
-        /* ===================================
-           INPUT CUIL
-        =================================== */
+        /* =====================================
+        INPUT + VALIDACION CUIL
+        ===================================== */
 
         cuilInput.addEventListener(
             "input",
-            function () {
+            function(){
 
                 this.value =
                     this.value.replace(
@@ -1178,12 +1205,11 @@ document.addEventListener(
                 const cuil =
                     this.value;
 
-                estado.innerHTML =
-                    "";
+                estado.innerHTML = "";
 
-                if (
+                if(
                     cuil.length < 11
-                ) {
+                ){
 
                     estado.innerHTML =
                         "⚠️ CUIL incompleto";
@@ -1195,14 +1221,13 @@ document.addEventListener(
                         "";
 
                     return;
-
                 }
 
-                if (
+                if(
                     !validarCUIL(
                         cuil
                     )
-                ) {
+                ){
 
                     estado.innerHTML =
                         "❌ CUIL inválido";
@@ -1214,7 +1239,6 @@ document.addEventListener(
                         "";
 
                     return;
-
                 }
 
                 dniInput.value =
@@ -1227,18 +1251,17 @@ document.addEventListener(
 
                 estado.className =
                     "estado-box success";
-
             }
         );
 
 
-        /* ===================================
-           BUSCAR PERSONA EN BD
-        =================================== */
+        /* =====================================
+        BUSCAR PERSONA EN BD
+        ===================================== */
 
         cuilInput.addEventListener(
             "blur",
-            function () {
+            function(){
 
                 const cuil =
                     this.value.replace(
@@ -1246,11 +1269,11 @@ document.addEventListener(
                         ''
                     );
 
-                if (
+                if(
                     cuil.length !== 11
                 ) return;
 
-                if (
+                if(
                     !validarCUIL(
                         cuil
                     )
@@ -1259,266 +1282,555 @@ document.addEventListener(
                 fetch(
                     `{% url 'bnhpersonas:buscar_persona' %}?cuil=${cuil}`
                 )
-                    .then(r => r.json())
-                    .then(data => {
+                .then(
+                    r => r.json()
+                )
+                .then(data => {
 
-                        if (
-                            !data.existe
-                        ) {
+                    /* ==========================
+                    PERSONA NUEVA
+                    ========================== */
 
-                            estado.innerHTML =
-                                "🟢 Persona nueva";
-
-                            estado.className =
-                                "estado-box success";
-
-                            dniInput.value =
-                                extraerDNI(
-                                    cuil
-                                );
-
-                            document.getElementById(
-                                "id_apellido"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_nombre"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_sexo"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_provincia"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_telefono"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_localidad"
-                            ).innerHTML =
-                                "<option value=''>----</option>";
-
-                            document.getElementById(
-                                "codigo-area-autocomplete"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_codigo_area"
-                            ).value = "";
-
-                            document.getElementById(
-                                "preview-telefono"
-                            ).value = "";
-
-                            document.getElementById(
-                                "id_whatsapp"
-                            ).checked = false;
-
-                            return;
-
-                        }
-
+                    if(
+                        !data.existe
+                    ){
 
                         estado.innerHTML =
-                            "🔵 Persona encontrada";
+                            "🟢 Persona nueva";
 
                         estado.className =
-                            "estado-box info";
+                            "estado-box success";
 
-                        document.getElementById(
-                            "id_dni"
-                        ).value =
-                            data.dni || "";
+                        dniInput.value =
+                            extraerDNI(
+                                cuil
+                            );
 
                         document.getElementById(
                             "id_apellido"
-                        ).value =
-                            data.apellido || "";
+                        ).value = "";
 
                         document.getElementById(
                             "id_nombre"
-                        ).value =
-                            data.nombre || "";
+                        ).value = "";
 
                         document.getElementById(
                             "id_sexo"
-                        ).value =
-                            data.sexo || "";
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_provincia"
+                        ).value = "";
 
                         document.getElementById(
                             "id_telefono"
-                        ).value =
-                            data.telefono || "";
+                        ).value = "";
 
-                        actualizarPreview();
+                        document.getElementById(
+                            "id_localidad"
+                        ).innerHTML =
+                            "<option value=''>----</option>";
 
-                        const provincia =
+                        document.getElementById(
+                            "codigo-area-autocomplete"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_codigo_area"
+                        ).value = "";
+
+                        document.getElementById(
+                            "preview-telefono"
+                        ).value = "";
+
+                        const whatsapp =
                             document.getElementById(
-                                "id_provincia"
+                                "id_whatsapp"
                             );
 
-                        provincia.value =
-                            data.provincia || "";
+                        if(whatsapp){
+                            whatsapp.checked =
+                                false;
+                        }
 
+                        return;
+                    }
+
+
+                    /* ==========================
+                    PERSONA EXISTENTE
+                    ========================== */
+
+                    estado.innerHTML =
+                        "🔵 Persona encontrada";
+
+                    estado.className =
+                        "estado-box info";
+
+                    /* DATOS BASICOS */
+
+                    document.getElementById(
+                        "id_dni"
+                    ).value =
+                        data.dni || "";
+
+                    document.getElementById(
+                        "id_apellido"
+                    ).value =
+                        data.apellido || "";
+
+                    document.getElementById(
+                        "id_nombre"
+                    ).value =
+                        data.nombre || "";
+
+                    document.getElementById(
+                        "id_sexo"
+                    ).value =
+                        data.sexo || "";
+
+                    /* TELEFONO */
+
+                    document.getElementById(
+                        "id_telefono"
+                    ).value =
+                        data.telefono || "";
+
+                    /* CODIGO AREA */
+
+                    const codigoInput =
+                        document.getElementById(
+                            "codigo-area-autocomplete"
+                        );
+
+                    const codigoHidden =
+                        document.getElementById(
+                            "id_codigo_area"
+                        );
+
+                    if(codigoInput){
+
+                        codigoInput.value =
+                            data.codigo_area_label || "";
+
+                    }
+
+                    if(codigoHidden){
+
+                        codigoHidden.value =
+                            data.codigo_area || "";
+
+                    }
+
+                    /* WHATSAPP */
+
+                    const whatsapp =
+                        document.getElementById(
+                            "id_whatsapp"
+                        );
+
+                    if(whatsapp){
+
+                        whatsapp.checked =
+                            Boolean(
+                                data.whatsapp
+                            );
+
+                    }
+
+                    /* PREVIEW TELEFONO */
+
+                    actualizarPreview();
+
+                    /* PROVINCIA */
+
+                    const provincia =
+                        document.getElementById(
+                            "id_provincia"
+                        );
+
+                    provincia.value =
+                        data.provincia || "";
+
+
+                    /* ==========================
+                    LOCALIDADES
+                    ========================== */
+
+                    if(data.provincia){
 
                         fetch(
                             `{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${data.provincia}`
                         )
-                            .then(r => r.json())
-                            .then(localidades => {
+                        .then(
+                            r => r.json()
+                        )
+                        .then(localidades => {
 
-                                const localidad =
-                                    document.getElementById(
-                                        "id_localidad"
+                            const localidad =
+                                document.getElementById(
+                                    "id_localidad"
+                                );
+
+                            localidad.innerHTML =
+                                "<option value=''>----</option>";
+
+                            localidades.forEach(item => {
+
+                                const opt =
+                                    document.createElement(
+                                        "option"
                                     );
 
-                                localidad.innerHTML =
-                                    "<option value=''>----</option>";
+                                opt.value =
+                                    item.c_localidad;
 
-                                localidades.forEach(item => {
+                                opt.textContent =
+                                    item.descrip_localidad;
 
-                                    const opt =
-                                        document.createElement(
-                                            "option"
-                                        );
+                                if(
+                                    String(
+                                        item.c_localidad
+                                    ) ===
+                                    String(
+                                        data.localidad
+                                    )
+                                ){
 
-                                    opt.value =
-                                        item.c_localidad;
+                                    opt.selected =
+                                        true;
+                                }
 
-                                    opt.textContent =
-                                        item.descrip_localidad;
-
-                                    if (
-                                        String(
-                                            item.c_localidad
-                                        ) ===
-                                        String(
-                                            data.localidad
-                                        )
-                                    ) {
-
-                                        opt.selected =
-                                            true;
-
-                                    }
-
-                                    localidad.appendChild(
-                                        opt
-                                    );
+                                localidad.appendChild(
+                                    opt
+                                );
 
                                 });
 
-                            });
+                                });
 
-                    })
-                    .catch(err => {
+                                }
 
-                        console.error(
-                            err
-                        );
+                                /* FIN PERSONA EXISTENTE */
 
-                        estado.innerHTML =
-                            "🔴 Error buscando persona";
+                                })
+                                .catch(err => {
 
-                        estado.className =
-                            "estado-box error";
+                                    console.error(
+                                        err
+                                    );
 
-                    });
+                                    estado.innerHTML =
+                                        "🔴 Error buscando persona";
+
+                                    estado.className =
+                                        "estado-box error";
+
+                                }); 
+
+                                        } // FIN blur
+                                    ); // FIN addEventListener blur
+
+                                } // FIN if(cuilInput)
+
+
+    /* =========================================================
+       TABS ACTIVIDAD
+    ========================================================= */
+
+    document.addEventListener(
+        "click",
+        function(e){
+
+            if(
+                !e.target.classList.contains(
+                    "tab-btn"
+                )
+            ) return;
+
+            const card =
+                e.target.closest(
+                    ".actividad-card"
+                );
+
+            if(!card) return;
+
+            const botones =
+                card.querySelectorAll(
+                    ".tab-btn"
+                );
+
+            const tabs =
+                card.querySelectorAll(
+                    ".tab-content"
+                );
+
+            botones.forEach(
+                b=>b.classList.remove(
+                    "active"
+                )
+            );
+
+            tabs.forEach(
+                t=>t.classList.remove(
+                    "active"
+                )
+            );
+
+            e.target.classList.add(
+                "active"
+            );
+
+            const index =
+                [...botones].indexOf(
+                    e.target
+                );
+
+            tabs[index]
+                ?.classList
+                .add(
+                    "active"
+                );
+        }
+    );
+
+
+    /* =========================================================
+       AGREGAR ACTIVIDAD
+    ========================================================= */
+
+    const addBtn =
+        document.getElementById(
+            "add"
+        );
+
+    if(addBtn){
+
+        addBtn.addEventListener(
+            "click",
+            function(){
+
+                const total =
+                    document.querySelector(
+                        '[name$="-TOTAL_FORMS"]'
+                    );
+
+                const index =
+                    parseInt(
+                        total.value
+                    );
+
+                const template =
+                    document.getElementById(
+                        "empty-form-template"
+                    );
+
+                let html =
+                    template.innerHTML
+                    .replace(
+                        /__prefix__/g,
+                        index
+                    );
+
+                document
+                    .getElementById(
+                        "formset-body"
+                    )
+                    .insertAdjacentHTML(
+                        "beforeend",
+                        html
+                    );
+
+                total.value =
+                    index + 1;
 
             }
         );
-
     }
-);
 
 
-/* =========================================================
-   NORMALIZACION
-========================================================= */
+    /* =========================================================
+       DELETE FORMSET
+    ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
+    document.addEventListener(
+        "click",
+        function(e){
 
-        const apellido =
-            document.getElementById(
-                "id_apellido"
-            );
-
-        const nombre =
-            document.getElementById(
-                "id_nombre"
-            );
-
-        function normalizarTexto(
-            valor
-        ) {
-
-            if (!valor)
-                return "";
-
-            return valor
-                .toUpperCase()
-                .replace(
-                    /[^A-ZÁÉÍÓÚÜÑ\s]/g,
-                    ''
+            if(
+                !e.target.classList.contains(
+                    "delete"
                 )
-                .replace(
-                    /\s+/g,
-                    ' '
-                )
-                .trimStart();
+            ) return;
+
+            const card =
+                e.target.closest(
+                    ".actividad-card"
+                );
+
+            if(!card) return;
+
+            const del =
+                card.querySelector(
+                    'input[name$="-DELETE"]'
+                );
+
+            if(del){
+
+                del.checked =
+                    true;
+            }
+
+            card.style.display =
+                "none";
 
         }
+    );
 
-        function aplicar(
-            input
-        ) {
 
-            if (!input)
-                return;
+    /* =========================================================
+       CEIC DINAMICO
+    ========================================================= */
 
-            input.addEventListener(
-                "input",
-                function () {
+    function cargarCEIC(
+        modalidad,
+        nivel,
+        select
+    ){
 
-                    const cursor =
-                        this.selectionStart;
+        fetch(
+            `{% url 'bnhpersonas:filtrar_ceic' %}?modalidad=${modalidad}&nivel=${nivel||""}`
+        )
+        .then(r=>r.json())
+        .then(data=>{
 
-                    this.value =
-                        normalizarTexto(
-                            this.value
-                        );
+            select.innerHTML =
+                "<option value=''>----</option>";
 
-                    this.setSelectionRange(
-                        cursor,
-                        cursor
+            data.forEach(item=>{
+
+                const opt =
+                    document.createElement(
+                        "option"
+                    );
+
+                opt.value =
+                    item.c_ceic;
+
+                opt.textContent =
+                    item.descripcion;
+
+                select.appendChild(
+                    opt
+                );
+
+            });
+
+        });
+
+    }
+
+    document.addEventListener(
+        "change",
+        function(e){
+
+            if(
+                !e.target.name
+            ) return;
+
+            if(
+                e.target.name.includes(
+                    "modalidad"
+                ) ||
+                e.target.name.includes(
+                    "niveles"
+                )
+            ){
+
+                const card =
+                    e.target.closest(
+                        ".actividad-card"
+                    );
+
+                if(!card) return;
+
+                const mod =
+                    card.querySelector(
+                        '[name$="modalidad"]'
+                    )?.value;
+
+                const niv =
+                    card.querySelector(
+                        '[name$="niveles"]'
+                    )?.value;
+
+                const ceic =
+                    card.querySelector(
+                        '[name$="ceic"]'
+                    );
+
+                if(
+                    ceic &&
+                    mod
+                ){
+
+                    cargarCEIC(
+                        mod,
+                        niv,
+                        ceic
                     );
 
                 }
-            );
 
-            input.addEventListener(
-                "blur",
-                function () {
-
-                    this.value =
-                        this.value.trim();
-
-                }
-            );
+            }
 
         }
+    );
 
-        aplicar(apellido);
-        aplicar(nombre);
 
+    /* =========================================================
+       NORMALIZACION
+    ========================================================= */
+
+    function normalizar(
+        input
+    ){
+
+        if(!input) return;
+
+        input.addEventListener(
+            "input",
+            function(){
+
+                this.value =
+                    this.value
+                        .toUpperCase()
+                        .replace(
+                            /[^A-ZÁÉÍÓÚÜÑ\s]/g,
+                            ''
+                        )
+                        .replace(
+                            /\s+/g,
+                            ' '
+                        );
+
+            }
+        );
     }
-);
+
+    normalizar(
+        document.getElementById(
+            "id_apellido"
+        )
+    );
+
+    normalizar(
+        document.getElementById(
+            "id_nombre"
+        )
+    );
+
+});
 
 </script>
 

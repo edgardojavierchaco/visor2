@@ -183,6 +183,7 @@ class NomencladorCeic(models.Model):
         verbose_name='nomenclador ceic'
         verbose_name_plural='nomencladores ceic'
         db_table='nomenclador_ceic'
+        ordering=['descripcion']
         indexes = [
             models.Index(fields=['t_nivel', 'c_niv']),
         ]
@@ -417,6 +418,7 @@ class TitulosEspacios(models.Model):
     class Meta:
         managed=False
         db_table='titulos_docentes'
+        ordering=['descrip_titulo']
     
     def __str__(self):
         return self.descrip_titulo
@@ -461,7 +463,11 @@ class RegistroActividades(AuditoriaModel):
     
     secciones=models.CharField(max_length=2, null=False, blank=False)
     
-    espacios=models.ForeignKey('TitulosEspacios', on_delete=models.PROTECT)
+    espacios = models.ForeignKey(
+        'TitulosEspacios',
+        on_delete=models.PROTECT,
+        db_column='espacios'
+    )
     
     f_desde = models.DateField()
     f_hasta = models.DateField()
