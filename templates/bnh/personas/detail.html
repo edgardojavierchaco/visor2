@@ -1,59 +1,397 @@
 {% extends 'dashboard/bodydirector.html' %}
+{% load static %}
 
 {% block content %}
 
-<div class="container-fluid mt-4">
+<style>
 
-    <div class="card shadow border-0">
+.detail-page{
+    padding:24px;
+}
 
-        <div class="card-header bg-primary text-white">
+/* HEADER */
+.person-header{
+    background:linear-gradient(135deg,#163d77,#2f5fb3);
+    color:white;
+    border-radius:18px;
+    padding:28px;
+    box-shadow:0 10px 30px rgba(0,0,0,.10);
+    margin-bottom:22px;
+}
 
-            <h4 class="mb-0">
+.person-header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:15px;
+}
 
-                {{ persona.apellido }},
-                {{ persona.nombre }}
+.person-name{
+    font-size:28px;
+    font-weight:700;
+    margin:0;
+}
 
-            </h4>
+.person-sub{
+    opacity:.9;
+    margin-top:4px;
+}
 
-        </div>
+.person-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
 
-        <div class="card-body">
+/* KPI */
+.kpi-row{
+    margin-bottom:22px;
+}
 
-            <!-- DATOS -->
-            <div class="row mb-4">
+.kpi-card{
+    background:white;
+    border:none;
+    border-radius:16px;
+    box-shadow:0 8px 25px rgba(0,0,0,.07);
+    transition:.25s;
+    height:100%;
+}
 
-                <div class="col-md-3">
-                    <strong>DNI:</strong>
-                    {{ persona.dni }}
-                </div>
+.kpi-card:hover{
+    transform:translateY(-4px);
+}
 
-                <div class="col-md-3">
-                    <strong>CUIL:</strong>
-                    {{ persona.cuil }}
-                </div>
+.kpi-body{
+    padding:20px;
+}
 
-                <div class="col-md-3">
-                    <strong>Teléfono:</strong>
-                    {{ persona.telefono_display }}
-                </div>
+.kpi-title{
+    font-size:13px;
+    color:#6c757d;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+}
 
-                <div class="col-md-3">
-                    <strong>Localidad:</strong>
-                    {{ persona.localidad }}
+.kpi-value{
+    font-size:28px;
+    font-weight:700;
+    color:#163d77;
+}
+
+/* INFO */
+.info-card{
+    border:none;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 25px rgba(0,0,0,.07);
+    margin-bottom:24px;
+}
+
+.info-header{
+    background:#163d77;
+    color:white;
+    padding:16px 22px;
+    font-weight:600;
+}
+
+.info-body{
+    padding:24px;
+}
+
+.info-grid{
+    display:grid;
+    grid-template-columns:
+        repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+}
+
+.info-box{
+    background:#f7f9fc;
+    border:1px solid #edf1f6;
+    border-radius:14px;
+    padding:14px;
+}
+
+.info-label{
+    font-size:12px;
+    color:#6c757d;
+    text-transform:uppercase;
+    margin-bottom:6px;
+}
+
+.info-value{
+    font-size:15px;
+    font-weight:600;
+    color:#2b2b2b;
+}
+
+/* ACTIVIDADES */
+.activity-card{
+    border:none;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 25px rgba(0,0,0,.07);
+}
+
+.activity-header{
+    background:#0f172a;
+    color:white;
+    padding:16px 22px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+}
+
+.activity-title{
+    font-weight:600;
+    margin:0;
+}
+
+.table-wrapper{
+    overflow:auto;
+}
+
+.table-modern{
+    margin:0;
+    min-width:900px;
+}
+
+.table-modern thead th{
+    background:#f1f5fb;
+    border:none;
+    color:#32455c;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    position:sticky;
+    top:0;
+}
+
+.table-modern td{
+    vertical-align:middle;
+}
+
+/* BADGES */
+.badge-soft-success{
+    background:#d1f7df;
+    color:#117a3a;
+    padding:7px 12px;
+    border-radius:30px;
+    font-weight:600;
+}
+
+.badge-soft-danger{
+    background:#ffe1e1;
+    color:#b42318;
+    padding:7px 12px;
+    border-radius:30px;
+    font-weight:600;
+}
+
+.empty-state{
+    text-align:center;
+    padding:40px;
+    color:#6c757d;
+}
+
+.empty-icon{
+    font-size:46px;
+    margin-bottom:10px;
+}
+
+</style>
+
+<div class="container-fluid detail-page">
+
+    <!-- HEADER -->
+
+    <div class="person-header">
+
+        <div class="person-header-top">
+
+            <div>
+
+                <h2 class="person-name">
+                    {{ persona.apellido }},
+                    {{ persona.nombre }}
+                </h2>
+
+                <div class="person-sub">
+                    Registro integral de personal docente
                 </div>
 
             </div>
 
-            <hr>
+            <div class="person-actions">
 
-            <!-- ACTIVIDADES -->
-            <h5 class="mb-3">
+                <a href="{% url 'bnhpersonas:personas_list' %}"
+                   class="btn btn-light">
+
+                    ← Volver
+
+                </a>
+
+                <a href="{% url 'bnhpersonas:personas_update' persona.id %}"
+                   class="btn btn-warning">
+
+                    ✏ Editar
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- KPIs -->
+
+    <div class="row kpi-row">
+
+        <div class="col-lg-3 col-md-6 mb-3">
+
+            <div class="kpi-card">
+
+                <div class="kpi-body">
+
+                    <div class="kpi-title">
+                        Actividades
+                    </div>
+
+                    <div class="kpi-value">
+                        {{ persona.actividades.count }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+
+            <div class="kpi-card">
+
+                <div class="kpi-body">
+
+                    <div class="kpi-title">
+                        Estado Persona
+                    </div>
+
+                    <div class="kpi-value">
+
+                        {% if persona.estado == 'ACTIVO' %}
+                            Activo
+                        {% else %}
+                            Pasivo
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- DATOS PERSONALES -->
+
+    <div class="card info-card">
+
+        <div class="info-header">
+            Datos Personales
+        </div>
+
+        <div class="info-body">
+
+            <div class="info-grid">
+
+                <div class="info-box">
+                    <div class="info-label">DNI</div>
+                    <div class="info-value">
+                        {{ persona.dni }}
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-label">CUIL</div>
+                    <div class="info-value">
+                        {{ persona.cuil }}
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-label">Teléfono</div>
+                    <div class="info-value">
+                        {{ persona.telefono_display }}
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-label">Localidad</div>
+                    <div class="info-value">
+                        {{ persona.localidad }}
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-label">Provincia</div>
+                    <div class="info-value">
+                        {{ persona.provincia }}
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-label">WhatsApp</div>
+                    <div class="info-value">
+
+                        {% if persona.whatsapp %}
+                            Sí
+                        {% else %}
+                            No
+                        {% endif %}
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ACTIVIDADES -->
+
+    <div class="card activity-card">
+
+        <div class="activity-header">
+
+            <h5 class="activity-title mb-0">
                 Actividades Registradas
             </h5>
 
-            <table class="table table-bordered table-hover">
+            <span class="badge bg-light text-dark">
 
-                <thead class="table-dark">
+                {{ persona.actividades.count }}
+                actividad/es
+
+            </span>
+
+        </div>
+
+        <div class="table-wrapper">
+
+            <table class="table table-hover align-middle table-modern">
+
+                <thead>
 
                     <tr>
                         <th>Categoría</th>
@@ -101,13 +439,13 @@
 
                             {% if act.estado == 'ACTIVO' %}
 
-                                <span class="badge bg-success">
+                                <span class="badge-soft-success">
                                     ACTIVO
                                 </span>
 
                             {% else %}
 
-                                <span class="badge bg-danger">
+                                <span class="badge-soft-danger">
                                     INACTIVO
                                 </span>
 
@@ -120,9 +458,23 @@
                     {% empty %}
 
                     <tr>
+
                         <td colspan="7">
-                            Sin actividades registradas
+
+                            <div class="empty-state">
+
+                                <div class="empty-icon">
+                                    📄
+                                </div>
+
+                                <div>
+                                    Sin actividades registradas
+                                </div>
+
+                            </div>
+
                         </td>
+
                     </tr>
 
                     {% endfor %}

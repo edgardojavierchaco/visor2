@@ -19,19 +19,53 @@ class RegistroService:
 
         persona = None
 
+        # =========================
+        # BUSQUEDA
+        # =========================
         if cuil:
-            persona = Personas.objects.filter(cuil=cuil).first()
+            persona = Personas.objects.filter(
+                cuil=cuil
+            ).first()
 
-        if persona is None and dni:
-            persona = Personas.objects.filter(dni=dni).first()
+        if (
+            persona is None and dni
+        ):
+            persona = Personas.objects.filter(
+                dni=dni
+            ).first()
 
+        # =========================
+        # EXISTE
+        # =========================
         if persona:
             for k, v in form.cleaned_data.items():
-                if v and not getattr(persona, k):
-                    setattr(persona, k, v)
+                if v not in (
+                    None,
+                    "",
+                ):
+                    setattr(persona, 
+                            k, 
+                            v
+                        )
+            
+            # AUDITORIA
+            persona.usuario_modificacion = user
+            
             persona.save()
+        
+        # =========================
+        # NUEVA
+        # =========================
         else:
-            persona = form.save()
+            persona = form.save(
+                commit=False
+            )
+
+            # AUDITORIA
+            persona.usuario_creacion = user
+            persona.usuario_modificacion = user
+
+            persona.save()
 
         return persona
 
@@ -78,5 +112,7 @@ class RegistroService:
 
         return BulkService.safe_bulk_create(
             RegistroActividades,
-            actividades
+            actividades,
+            user=user,
+            source='carga_personal'
         )
