@@ -4,6 +4,7 @@ from datetime import date, datetime
 from functools import lru_cache
 from io import BytesIO
 from .permisos import padron_interno_admin_o_gestor_required
+from .views_fecha import get_contexto_fecha_padron
 import openpyxl
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
@@ -11,7 +12,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
-
+from .views_fecha import get_contexto_fecha_padron
 from .views_establecimientos import (
     OBSERVACIONES_SQL as EST_OBSERVACIONES_SQL,
     TIPO_OFERTAS_SQL as EST_TIPO_OFERTAS_SQL,
@@ -681,4 +682,5 @@ def listar_responsables(request):
         'request': request,
         'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
     }
+    context.update(get_contexto_fecha_padron(request))
     return render(request, 'padroninterno/listadoresponsables.html', context)

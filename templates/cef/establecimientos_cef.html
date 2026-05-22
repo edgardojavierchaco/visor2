@@ -1,0 +1,101 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .cef-visualizacion-wrapper { max-width: 1240px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    .cef-visualizacion-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .cef-visualizacion-title h1 { margin: 0; color: #1a4f8a; font-size: 1.45rem; font-weight: 800; }
+    .cef-visualizacion-title p { margin: .25rem 0 0; color: #60758a; font-size: .9rem; font-weight: 600; }
+    .cef-visualizacion-nav { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1rem; }
+    .cef-visualizacion-nav .btn { font-weight: 700; font-size: .84rem; }
+    .cef-v-card { border: 1px solid #d8e4f2; border-radius: .85rem; background: #fff; box-shadow: 0 10px 24px rgba(18, 52, 86, .07); overflow: hidden; margin-bottom: 1rem; }
+    .cef-v-card-header { padding: .85rem 1rem; background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%); border-bottom: 1px solid #d8e4f2; color: #20364d; font-weight: 800; }
+    .cef-v-card-body { padding: 1rem; }
+    .cef-v-status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+    .cef-v-status-card { border: 1px solid #d8e4f2; border-radius: .75rem; background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%); padding: .85rem 1rem; }
+    .cef-v-status-card span { display: block; color: #60758a; font-size: .76rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+    .cef-v-status-card strong { display: block; margin-top: .25rem; color: #20364d; font-size: 1.15rem; font-weight: 800; }
+    .cef-v-empty { border: 1px dashed #b7c9df; border-radius: .75rem; background: #f8fbff; padding: 1rem; color: #45607d; }
+    @media (max-width: 768px) { .cef-visualizacion-wrapper { padding: .85rem .55rem 2rem; } }
+</style>
+
+<main class="cef-visualizacion-wrapper">
+    <section class="cef-visualizacion-header">
+        <div class="cef-visualizacion-title">
+            <h1>{{ title|default:"Establecimientos CEF" }}</h1>
+            <p>Datos institucionales de CEF oficiales desde Padron.</p>
+        </div>
+    </section>
+
+    <nav class="cef-visualizacion-nav" aria-label="Menu interno Visualizacion CEF">
+        <a href="{% url 'cef:visualizacion_inicio' %}" class="btn {% if active_menu == 'inicio' %}btn-primary{% else %}btn-outline-primary{% endif %}">Inicio</a>
+        <a href="{% url 'cef:visualizacion_establecimientos' %}" class="btn {% if active_menu == 'establecimientos' %}btn-primary{% else %}btn-outline-primary{% endif %}">Establecimientos</a>
+        <a href="{% url 'cef:visualizacion_localizaciones' %}" class="btn {% if active_menu == 'localizaciones' %}btn-primary{% else %}btn-outline-primary{% endif %}">Localizaciones</a>
+        <a href="{% url 'cef:visualizacion_responsables' %}" class="btn {% if active_menu == 'responsables' %}btn-primary{% else %}btn-outline-primary{% endif %}">Responsables</a>
+    </nav>
+
+    {% include 'cef/selector_cef_multiple.html' %}
+
+    <section class="cef-v-status-grid">
+        <article class="cef-v-status-card">
+            <span>Establecimientos encontrados</span>
+            <strong>{{ total_establecimientos }}</strong>
+        </article>
+        <article class="cef-v-status-card">
+            <span>CEF visibles</span>
+            <strong>{{ total_cefs_visibles }}</strong>
+        </article>
+        <article class="cef-v-status-card">
+            <span>CEF seleccionados</span>
+            <strong>{{ total_cefs_seleccionados }}</strong>
+        </article>
+    </section>
+
+    <section class="cef-v-card">
+        <div class="cef-v-card-header">Establecimientos CEF desde Padron</div>
+        <div class="cef-v-card-body">
+            {% if establecimientos %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>CUE-Anexo</th>
+                                <th>Nombre</th>
+                                <th>Oferta</th>
+                                <th>Acronimo</th>
+                                <th>Region</th>
+                                <th>Localidad</th>
+                                <th>Departamento</th>
+                                <th>Sector</th>
+                                <th>Ambito</th>
+                                <th>Estado establecimiento</th>
+                                <th>Estado oferta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cef in establecimientos %}
+                                <tr>
+                                    <td><strong>{{ cef.cueanexo|default:"Sin dato" }}</strong></td>
+                                    <td>{{ cef.nom_est|default:"Sin dato" }}</td>
+                                    <td>{{ cef.oferta|default:"Sin dato" }}</td>
+                                    <td>{{ cef.acronimo|default:"Sin dato" }}</td>
+                                    <td>{{ cef.region_loc|default:"Sin dato" }}</td>
+                                    <td>{{ cef.localidad|default:"Sin dato" }}</td>
+                                    <td>{{ cef.departamento|default:"Sin dato" }}</td>
+                                    <td>{{ cef.sector|default:"Sin dato" }}</td>
+                                    <td>{{ cef.ambito|default:"Sin dato" }}</td>
+                                    <td>{{ cef.estado_est|default:"Sin dato" }}</td>
+                                    <td>{{ cef.est_oferta|default:"Sin dato" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="cef-v-empty">No se encontraron establecimientos CEF para la seleccion actual.</div>
+            {% endif %}
+        </div>
+    </section>
+</main>
+{% endblock %}

@@ -83,6 +83,8 @@ LOCAL_APPS = [
     'apps.padroninterno',
     'apps.bnhpersonas',
     'apps.indicators',
+    "apps.cef.apps.CefConfig",
+    "apps.bnhalumnos.apps.BnhalumnosConfig",
 ]
 
 

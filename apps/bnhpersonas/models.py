@@ -69,7 +69,7 @@ class DocumentoTipo(models.Model):
         managed=False
         verbose_name='Tipo Documento'
         verbose_name_plural='Tipos Documentos'
-        db_table='documento_tipo'
+        db_table='documento_tipo_bnh'
         
     def __str__(self):
         return self.descrip_doc
@@ -87,7 +87,7 @@ class Provincias(models.Model):
         managed=False
         verbose_name='provincia'
         verbose_name_plural='provincias'
-        db_table='provincia_tipo'
+        db_table='provincia_tipo_bnh'
     
     def __str__(self):
         return self.descrip_provincia
@@ -111,7 +111,7 @@ class Localidades(models.Model):
         managed=False
         verbose_name='Localidad'
         verbose_name_plural='Localidades'
-        db_table='localidad_tipo'
+        db_table='localidad_tipo_bnh'
         ordering=['descrip_localidad']
     
     def __str__(self):
@@ -147,7 +147,7 @@ class Nacionalidad(models.Model):
         managed=False
         verbose_name='Nacionalidad'
         verbose_name_plural='Nacionalidades'
-        db_table='nacionalidad_tipo'
+        db_table='nacionalidad_tipo_bnh'
     
     def __str__(self):
         return self.descrip_nac
@@ -202,7 +202,7 @@ class Pais(models.Model):
         managed=False
         verbose_name='pais'
         verbose_name_plural='paices'
-        db_table='pais_tipo'
+        db_table='pais_tipo_bnh'
     
     def __str__(self):
         return self.descrip_pais
@@ -220,7 +220,7 @@ class Sexo(models.Model):
         managed=False 
         verbose_name='sexo'
         verbose_name_plural='sexos'
-        db_table='sexo_tipo'
+        db_table='sexo_tipo_bnh'
     
     def __str__(self):
         return self.descrip_sexo
@@ -432,21 +432,7 @@ class RegistroActividades(AuditoriaModel):
     ], default='CARGO')
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
-    
-    grado_anio = models.CharField(max_length=2)
-    
-    turno=models.CharField(max_length=20, choices=[
-        ('MAÑANA', 'MAÑANA'),
-        ('TARDE', 'TARDE'),
-        ('NOCHE', 'NOCHE'),
-        ('VESPERTINO', 'VESPERTINO'),
-        default='MAÑANA'
-    ])
-    
-    secciones=models.CharField(max_length=2, null=False, blank=False)
-    
-    espacios=models.CharField(max_length=150, null=False, blank=False)
-    
+
     f_desde = models.DateField()
     f_hasta = models.DateField()
     carga_horaria = models.DecimalField(max_digits=4, decimal_places=2)
@@ -564,7 +550,7 @@ class TipoDiscapacidad(models.Model):
         managed=False
         verbose_name='Tipo Discapacidad'
         verbose_name_plural='Tipos Discapacidad'
-        db_table='tipo_discapacidad'
+        db_table='tipo_discapacidad_bnh'
     
     def __str__(self):
         return self.descrip_tipo_discapacidad
@@ -593,7 +579,7 @@ class TipoComunidadOriginaria(models.Model):
         managed=False
         verbose_name='Tipo Comunidad Originaria'
         verbose_name_plural='Tipos Comunidad Originaria'
-        db_table='tipo_comunidad_originaria'
+        db_table='tipo_comunidad_originaria_bnh'
     
     def __str__(self):
         return self.descrip_tipo_comunidad_originaria
@@ -607,7 +593,7 @@ class TipoLenguaOriginaria(models.Model):
         managed=False
         verbose_name='Tipo Lengua Originaria'
         verbose_name_plural='Tipos Lengua Originaria'
-        db_table='tipo_lengua_originaria'
+        db_table='tipo_lengua_originaria_bnh'
     
     def __str__(self):
         return self.descrip_tipo_lengua_originaria
@@ -621,7 +607,7 @@ class TipoPlanesSociales(models.Model):
         managed=False
         verbose_name='Tipo Plan Social'
         verbose_name_plural='Tipos Planes Sociales'
-        db_table='tipo_planes_sociales'
+        db_table='tipo_planes_sociales_bnh'
     
     def __str__(self):
         return self.descrip_tipo_planes_sociales
@@ -643,14 +629,14 @@ class NivelFormacion(models.Model):
 
 
 class TipoOS(models.Model):
-    c_tipo_os=models.IntegerField(primary_key=True)
+    c_os =models.IntegerField(primary_key=True)
     descrip_os=models.CharField(max_length=50)
     
     class Meta:
         managed=False
         verbose_name='Tipo OS'
         verbose_name_plural='Tipos OS'
-        db_table='tipo_obra_social'
+        db_table='tipo_obra_social_bnh'
     
     def __str__(self):
         return self.descrip_os

@@ -1,4 +1,4 @@
-﻿{% extends 'archivos/base/layout.html' %}
+{% extends 'archivos/base/layout.html' %}
 {% load mis_filtros %}
 {% block content %}
 <script>
@@ -88,26 +88,47 @@ html {
         }
 
     .filter-btn-field {
-        font-size: .75rem; 
-        font-weight: 600; 
-        padding: .35rem .55rem;
-        border: 1px solid #aec6e8; 
-        border-radius: .35rem;
-        background: #fff; 
-        color: #1a4f8a; 
-        cursor: pointer; 
-        transition: none !important;
+        min-height: 42px;
+        font-size: .82rem;
+        font-weight: 700;
+        line-height: 1.2;
+        padding: .5rem .75rem;
+        border: 1px solid #9dbbea;
+        border-left: 4px solid #4f86c6;
+        border-radius: .45rem;
+        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+        color: #0f3f73;
+        cursor: pointer;
+        transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease, transform .12s ease !important;
         width: 100%;
-        text-align: center;
+        text-align: left;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .filter-btn-field:hover { 
-        background: var(--padron-primary); 
-        color: #fff; 
-        border-color: var(--padron-primary); 
+    .filter-btn-field:hover,
+    .filter-btn-field:focus {
+        background: #eaf3ff;
+        color: #073966;
+        border-color: #6096d4;
+        box-shadow: inset 0 0 0 1px rgba(26, 79, 138, 0.12);
+        outline: none;
+    }
+
+    .filter-btn-field:active {
+        transform: translateY(1px);
+    }
+
+    #pnlFiltros .row {
+        --bs-gutter-x: .65rem;
+        --bs-gutter-y: .55rem;
+    }
+
+    @media (min-width: 992px) and (max-width: 1599.98px) {
+        #pnlFiltros .row-cols-lg-4 > * {
+            width: 33.333333%;
+        }
     }
 
         /* Mejor usabilidad para activar/desactivar columnas */
@@ -163,6 +184,67 @@ html {
 
     #pnlColumnas .form-check-input:checked + .form-check-label {
         color: var(--padron-primary) !important;
+    }
+
+    #pnlColumnas .row {
+        --bs-gutter-x: .65rem;
+        --bs-gutter-y: .55rem;
+    }
+
+    #pnlColumnas .form-check {
+        grid-template-columns: 1.35rem minmax(0, 1fr) !important;
+        align-items: center !important;
+        min-height: 42px !important;
+        padding: .54rem .72rem !important;
+        border-color: #9dbbea !important;
+        border-left: 4px solid #4f86c6 !important;
+        border-radius: .48rem !important;
+        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%) !important;
+        transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease !important;
+    }
+
+    #pnlColumnas .form-check:hover {
+        background: #eef6ff !important;
+        border-color: #6096d4 !important;
+        box-shadow: inset 0 0 0 1px rgba(26, 79, 138, 0.12) !important;
+    }
+
+    #pnlColumnas .form-check-input {
+        width: 1.14rem !important;
+        height: 1.14rem !important;
+        margin-top: 0 !important;
+        border-color: #6f8fb5 !important;
+        border-width: 2px !important;
+    }
+
+    #pnlColumnas .form-check-input:checked {
+        background-color: var(--padron-primary) !important;
+        border-color: var(--padron-primary) !important;
+    }
+
+    #pnlColumnas .form-check-label {
+        color: #173f66 !important;
+        font-size: .78rem !important;
+        font-weight: 700 !important;
+        line-height: 1.28 !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    #pnlColumnas .form-check:has(.form-check-input:checked) {
+        border-color: #6096d4 !important;
+        border-left-color: var(--padron-primary) !important;
+        background: #eaf3ff !important;
+    }
+
+    #pnlColumnas .form-check-input:checked + .form-check-label {
+        color: #0c3e70 !important;
+        font-weight: 700 !important;
+    }
+
+    @media (min-width: 992px) and (max-width: 1599.98px) {
+        #pnlColumnas .row-cols-lg-4 > * {
+            width: 33.333333%;
+        }
     }
 
     #liveSearchContainer {
@@ -949,6 +1031,12 @@ html {
     .padron-module-nav { background-color: var(--padron-primary) !important; border-radius: .55rem; margin-bottom: .85rem; box-shadow: 0 .35rem 1rem rgba(10, 38, 70, .12); }
     .padron-module-nav .navbar-brand { font-weight: 800; letter-spacing: .5px; font-size: 1.05rem; }
     .padron-module-nav .nav-link { font-weight: 600; font-size: .875rem; }
+
+    .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; }
+    .fecha-badge i { font-size: 0.85rem; color: #3b82f6; }
+    .fecha-badge .edit-icon { cursor: pointer; transition: transform 0.2s, color 0.2s; margin-left: 4px; font-size: 0.8rem; color: #64748b; }
+    .fecha-badge .edit-icon:hover { color: #2563eb; transform: scale(1.1); }
+    .fecha-badge-nav { margin: .25rem 0; }
 
     .page-heading { border-left: 4px solid var(--padron-secondary); padding-left: .75rem; }
     .page-heading h2 { font-size: 1.3rem; font-weight: 800; color: var(--padron-primary); margin: 0; }
@@ -1917,6 +2005,12 @@ html {
                         <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
                     </ul>
                 </li>
+                <li class="nav-item d-flex align-items-center">
+                    <span class="fecha-badge fecha-badge-nav">
+                        <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}
+                        {% if padron_is_admin %}<i class="fa-solid fa-edit edit-icon" id="padronEditFechaBtn" title="Editar fecha"></i>{% endif %}
+                    </span>
+                </li>
 
             </ul>
             <ul class="navbar-nav ms-auto">
@@ -1929,6 +2023,43 @@ html {
         </div>
     </div>
 </nav>
+
+{% if padron_is_admin %}
+<div class="modal fade" id="padronFechaModal" tabindex="-1" aria-labelledby="padronFechaModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none; padding: 1.4rem 1.6rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-calendar-alt" style="color: #fff; font-size: 1rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="padronFechaModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem;">Actualizar fecha</h5>
+                        <p style="color: rgba(255,255,255,0.7); font-size: 0.78rem; margin: 0; font-weight: 500;">Solo visible para administradores</p>
+                    </div>
+                </div>
+                <button type="button" id="padronFechaModalCloseBtn" class="ms-auto" aria-label="Cerrar" style="background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 32px; height: 32px; color: #fff; cursor: pointer;"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 1.6rem;">
+                {% csrf_token %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 1rem 1.2rem; margin-bottom: 1.2rem;">
+                    <label for="padronNuevaFecha" style="display: block; font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                        <i class="fa-solid fa-calendar-alt me-1 text-primary"></i> Fecha de actualizacion
+                    </label>
+                    <input type="datetime-local" id="padronNuevaFecha" class="form-control" style="border: 1.5px solid #cbd5e1; border-radius: 0.5rem; font-weight: 600; color: #1e293b;">
+                </div>
+                <div id="padronFechaModalError" style="display: none; align-items: center; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.85rem; font-weight: 600;">
+                    <i class="fa-solid fa-exclamation-circle me-2"></i><span id="padronFechaModalErrorText"></span>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; background: #f8fafc;">
+                <button type="button" id="padronFechaModalCancelBtn" class="btn btn-light" style="border: 1.5px solid #cbd5e1; font-weight: 600;">Cancelar</button>
+                <button type="button" id="padronGuardarFechaBtn" class="btn btn-primary" style="font-weight: 700;"><i class="fa-solid fa-save me-1"></i> Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="card border-0 shadow-sm rounded-3">
 <div class="card-body p-4">
@@ -2305,6 +2436,126 @@ html {
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% if padron_is_admin %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function getCsrfToken() {
+        var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (tokenInput) {
+            return tokenInput.value;
+        }
+
+        var cookieValue = '';
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(function (cookie) {
+                var trimmed = cookie.trim();
+                if (trimmed.substring(0, 10) === 'csrftoken=') {
+                    cookieValue = decodeURIComponent(trimmed.substring(10));
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    var modalElement = document.getElementById('padronFechaModal');
+    if (!modalElement || typeof bootstrap === 'undefined') {
+        return;
+    }
+
+    var fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+    var editBtn = document.getElementById('padronEditFechaBtn');
+    var guardarBtn = document.getElementById('padronGuardarFechaBtn');
+    var nuevaFechaInput = document.getElementById('padronNuevaFecha');
+
+    function mostrarErrorModal(msg) {
+        var errDiv = document.getElementById('padronFechaModalError');
+        var errText = document.getElementById('padronFechaModalErrorText');
+        if (!errDiv || !errText) {
+            return;
+        }
+        if (msg) {
+            errText.textContent = msg;
+            errDiv.style.display = 'flex';
+        } else {
+            errText.textContent = '';
+            errDiv.style.display = 'none';
+        }
+    }
+
+    function cerrarModal() {
+        mostrarErrorModal('');
+        fechaModalBS.hide();
+    }
+
+    if (editBtn) {
+        editBtn.addEventListener('click', function () {
+            mostrarErrorModal('');
+            if (nuevaFechaInput) {
+                {% if padron_ultima_fecha %}
+                nuevaFechaInput.value = '{{ padron_ultima_fecha|date:"Y-m-d H:i:s" }}'.replace(' ', 'T').slice(0, 16);
+                {% else %}
+                nuevaFechaInput.value = '';
+                {% endif %}
+            }
+            fechaModalBS.show();
+        });
+    }
+
+    var closeBtn = document.getElementById('padronFechaModalCloseBtn');
+    if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
+
+    var cancelBtn = document.getElementById('padronFechaModalCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
+
+    if (guardarBtn) {
+        guardarBtn.addEventListener('click', function () {
+            var nuevaFecha = nuevaFechaInput ? nuevaFechaInput.value : '';
+            if (!nuevaFecha) {
+                mostrarErrorModal('Debes seleccionar una fecha y hora.');
+                return;
+            }
+
+            guardarBtn.disabled = true;
+            guardarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+
+            fetch('{% url "padroninterno:actualizar_fecha_padron" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ fecha: nuevaFecha })
+            })
+                .then(function (response) {
+                    return response.json().catch(function () {
+                        return {};
+                    }).then(function (data) {
+                        if (!response.ok) {
+                            throw new Error(data.message || 'HTTP ' + response.status);
+                        }
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    if (data.status === 'success') {
+                        fechaModalBS.hide();
+                        location.reload();
+                    } else {
+                        mostrarErrorModal(data.message || 'No se pudo actualizar la fecha.');
+                    }
+                })
+                .catch(function (error) {
+                    mostrarErrorModal(error.message || 'No se pudo actualizar la fecha.');
+                })
+                .finally(function () {
+                    guardarBtn.disabled = false;
+                    guardarBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Guardar cambios';
+                });
+        });
+    }
+});
+</script>
+{% endif %}
 
 <!-- Modal Guia de Uso -->
 <div class="modal fade padron-modal" id="guiaUsoModal" tabindex="-1" aria-hidden="true">
@@ -2862,6 +3113,10 @@ $(document).ready(function() {
 
     var TIPO_OFERTA_GROUPS = [
         {
+            title: 'Estado de la oferta',
+            options: ['Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes']
+        },
+        {
             title: 'Común',
             options: [
                 'Común - Ciclos de Enseñanza Artística',
@@ -3047,6 +3302,52 @@ $(document).ready(function() {
         }
 
         return hasMatch('campo_filtro', 'operador_filtro', 'valor_filtro') || hasMatch('f', 'o', 'v');
+    }
+
+    function replaceFilterValuesForField(params, field, operator, selections) {
+        var selectedValues = [];
+        var selectedMap = {};
+
+        function rebuild(fieldParam, operatorParam, valueParam) {
+            var fields = params.getAll(fieldParam);
+            var operators = params.getAll(operatorParam);
+            var values = params.getAll(valueParam);
+
+            params.delete(fieldParam);
+            params.delete(operatorParam);
+            params.delete(valueParam);
+
+            fields.forEach(function(activeField, index) {
+                if (activeField === field) {
+                    return;
+                }
+
+                params.append(fieldParam, activeField);
+                params.append(operatorParam, operators[index] || '0');
+                params.append(valueParam, values[index] || '');
+            });
+        }
+
+        (selections || []).forEach(function(selection) {
+            var value = (selection.value || '').trim();
+            var normalizedValue = normalizeFilterMatchValue(value);
+
+            if (!value || selectedMap[normalizedValue]) {
+                return;
+            }
+
+            selectedMap[normalizedValue] = true;
+            selectedValues.push(value);
+        });
+
+        rebuild('campo_filtro', 'operador_filtro', 'valor_filtro');
+        rebuild('f', 'o', 'v');
+
+        selectedValues.forEach(function(value) {
+            params.append('campo_filtro', field);
+            params.append('operador_filtro', operator);
+            params.append('valor_filtro', value);
+        });
     }
 
     function buildFilterOperatorOptionsHtml(operators) {
@@ -3244,10 +3545,82 @@ $(document).ready(function() {
         return 'filtrado por';
     }
 
+    var TIPO_OFERTA_BADGE_FIELD = 'tipo_oferta';
+    var TIPO_OFERTA_ESTADO_VALUES = ['Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes'];
+
+    function normalizeTipoOfertaBadgeText(value) {
+        var normalized = String(value || '').trim().toLowerCase();
+
+        if (typeof normalized.normalize === 'function') {
+            normalized = normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        return normalized;
+    }
+
+    function isTipoOfertaBadgeFilter(filter) {
+        return filter && !filter.isSmart && filter.valF === TIPO_OFERTA_BADGE_FIELD;
+    }
+
+    function isTipoOfertaEstadoValue(value) {
+        var normalizedValue = normalizeTipoOfertaBadgeText(value);
+
+        return TIPO_OFERTA_ESTADO_VALUES.some(function(option) {
+            return normalizeTipoOfertaBadgeText(option) === normalizedValue;
+        });
+    }
+
+    function groupTipoOfertaFiltersForBadges(filters) {
+        var groupedFilters = [];
+        var tipoOfertaEstadoGroup = null;
+
+        (filters || []).forEach(function(filter) {
+            if (isTipoOfertaBadgeFilter(filter) && isTipoOfertaEstadoValue(filter.valV)) {
+                if (!tipoOfertaEstadoGroup) {
+                    tipoOfertaEstadoGroup = { isTipoOfertaGroup: true, tipoOfertaBadgeKind: 'estados', filters: [] };
+                    groupedFilters.push(tipoOfertaEstadoGroup);
+                }
+
+                tipoOfertaEstadoGroup.filters.push(filter);
+                return;
+            }
+
+            groupedFilters.push(filter);
+        });
+
+        return groupedFilters.filter(function(filter) {
+            return !filter.isTipoOfertaGroup || filter.filters.length;
+        });
+    }
+
+    function buildTipoOfertaGroupBadgeText(groupFilter) {
+        var filters = groupFilter.filters || [];
+        var operatorLabel = getFilterOperatorLabel(filters[0] ? filters[0].valO : '2');
+        var values = [];
+
+        filters.forEach(function(filter) {
+            var valueLabel = findFilterOptionLabel(filter.valF, filter.valV);
+
+            if (values.indexOf(valueLabel) === -1) {
+                values.push(valueLabel);
+            }
+        });
+
+        if (groupFilter.tipoOfertaBadgeKind === 'estados') {
+            return 'Estado de oferta/s ' + operatorLabel + ': ' + values.join(', ');
+        }
+
+        return getFilterFieldLabel(TIPO_OFERTA_BADGE_FIELD) + ' ' + operatorLabel + ': ' + values.join(', ');
+    }
+
     function buildFilterBadgeText(filter) {
         var fieldLabel;
         var operatorLabel;
         var valueLabel;
+
+        if (filter.isTipoOfertaGroup) {
+            return buildTipoOfertaGroupBadgeText(filter);
+        }
 
         if (filter.isSmart) {
             return 'Búsqueda rápida en ' + filter.valF + ': ' + filter.valV;
@@ -5426,14 +5799,54 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
                 $('#serverBadgesContainer').hide();
             }
         } else {
-            var arrF = params.getAll(filterObj.pf);
-            var arrO = params.getAll(filterObj.po);
-            var arrV = params.getAll(filterObj.pv);
-            arrF.splice(filterObj.idx, 1); arrO.splice(filterObj.idx, 1); arrV.splice(filterObj.idx, 1);
-            params.delete(filterObj.pf); params.delete(filterObj.po); params.delete(filterObj.pv);
-            arrF.forEach(v => params.append(filterObj.pf, v));
-            arrO.forEach(v => params.append(filterObj.po, v));
-            arrV.forEach(v => params.append(filterObj.pv, v));
+            if (filterObj.isTipoOfertaGroup) {
+                var groupedField = TIPO_OFERTA_BADGE_FIELD;
+                var groupedParamNames = {};
+
+                filterObj.filters.forEach(function(groupedFilter) {
+                    var groupedKey = groupedFilter.pf + '|' + groupedFilter.po + '|' + groupedFilter.pv;
+
+                    if (!groupedParamNames[groupedKey]) {
+                        groupedParamNames[groupedKey] = {
+                            filter: groupedFilter,
+                            indexes: {}
+                        };
+                    }
+
+                    groupedParamNames[groupedKey].indexes[groupedFilter.idx] = true;
+                });
+
+                Object.keys(groupedParamNames).forEach(function(groupedKey) {
+                    var groupedEntry = groupedParamNames[groupedKey];
+                    var groupedFilter = groupedEntry.filter;
+                    var arrF = params.getAll(groupedFilter.pf);
+                    var arrO = params.getAll(groupedFilter.po);
+                    var arrV = params.getAll(groupedFilter.pv);
+
+                    params.delete(groupedFilter.pf);
+                    params.delete(groupedFilter.po);
+                    params.delete(groupedFilter.pv);
+
+                    arrF.forEach(function(value, index) {
+                        if (value === groupedField && groupedEntry.indexes[index]) {
+                            return;
+                        }
+
+                        params.append(groupedFilter.pf, value);
+                        params.append(groupedFilter.po, arrO[index]);
+                        params.append(groupedFilter.pv, arrV[index]);
+                    });
+                });
+            } else {
+                var arrF = params.getAll(filterObj.pf);
+                var arrO = params.getAll(filterObj.po);
+                var arrV = params.getAll(filterObj.pv);
+                arrF.splice(filterObj.idx, 1); arrO.splice(filterObj.idx, 1); arrV.splice(filterObj.idx, 1);
+                params.delete(filterObj.pf); params.delete(filterObj.po); params.delete(filterObj.pv);
+                arrF.forEach(v => params.append(filterObj.pf, v));
+                arrO.forEach(v => params.append(filterObj.po, v));
+                arrV.forEach(v => params.append(filterObj.pv, v));
+            }
         }
         params.delete('page');
         targetUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
@@ -5524,6 +5937,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
 
     function renderServerBadges(filters) {
         var activeFilters = filters || syncServerFiltersFromUrl();
+        var badgeFilters = groupTipoOfertaFiltersForBadges(activeFilters);
         var badgesContainer = getBadgesContainer();
 
         badgesContainer.empty();
@@ -5533,7 +5947,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
             return;
         }
 
-        activeFilters.forEach(function(filter) {
+        badgeFilters.forEach(function(filter) {
             var badgeText = buildFilterBadgeText(filter);
             var safeBadgeText = escapeHtml(badgeText);
             var eyeIcon = filter.isSmart ? 'fa-magnifying-glass text-primary' : 'fa-filter';
@@ -5577,7 +5991,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
     }
 
         function ensureCompactTableTrack() {
-        /* TYAGO_PATCH_CONTRAER_COLUMNAS_TOGGLE */
+        /* PADRON_PATCH_CONTRAER_COLUMNAS_TOGGLE */
         var $viewport = getTableViewport();
         var $track;
         var $table;
@@ -5614,7 +6028,7 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
     }
 
         function setCompactTableButtonState(isActive) {
-        /* TYAGO_PATCH_COMPACT_BUTTON_PULSE_V3 */
+        /* PADRON_PATCH_COMPACT_BUTTON_PULSE_V3 */
         var button = document.getElementById('btnContraerTabla');
         var previousActive;
 
@@ -5630,16 +6044,16 @@ window.abrirModalLocalizacion = function(idLocalizacion) {
             ? '<i class="fa-solid fa-expand me-1"></i>Expandir Columnas'
             : '<i class="fa-solid fa-compress me-1"></i>Contraer Columnas';
 
-        if (button.dataset.tyagoCompactReady === 'true' && previousActive !== isActive) {
-            button.classList.remove('tyago-compact-btn-pulse');
+        if (button.dataset.padronCompactReady === 'true' && previousActive !== isActive) {
+            button.classList.remove('padron-compact-btn-pulse');
             void button.offsetWidth;
-            button.classList.add('tyago-compact-btn-pulse');
+            button.classList.add('padron-compact-btn-pulse');
             window.setTimeout(function() {
-                button.classList.remove('tyago-compact-btn-pulse');
+                button.classList.remove('padron-compact-btn-pulse');
             }, 160);
         }
 
-        button.dataset.tyagoCompactReady = 'true';
+        button.dataset.padronCompactReady = 'true';
     }
 
     function applyCompactTableLayout(options) {
@@ -6109,8 +6523,8 @@ function ensureMiniTableLoader() {
 
         /*
         * Antes era "opts.enableSoftDim !== false", o sea: por defecto oscurecía.
-        * Ahora solo oscurece si lo pedís explícitamente con enableSoftDim: true.
-        * Para búsqueda rápida queremos agilidad visual, no opacidad.
+        * Ahora solo oscurece si una llamada lo pide explícitamente.
+        * Las recargas de listado usan un difuminado leve y sin pastilla de carga.
         */
         var enableSoftDim = opts.enableSoftDim === true;
 
@@ -6151,6 +6565,8 @@ function ensureMiniTableLoader() {
                 }
 
                 cancelDeferredTableLoadingOverlay(false);
+                cancelTableSoftDim(true, visualToken);
+                hideMiniTableLoader();
                 window.history.pushState({}, '', targetUrl);
                 replaceTableFragments($(data), !!opts.useFade);
                 cancelTableSoftDim(true, visualToken);
@@ -6656,33 +7072,29 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
 });
 
         $('#filtros_form').off('submit.preserveSearch').on('submit.preserveSearch', function(e) {
+            e.preventDefault();
+
             var activeField = $('#campo_filtro_activo').val();
             var activeOperator = $(this).find('select[name="operador_filtro"]').val() || '0';
-            var selectedValues = collectFilterDialogSelections();
+            var selectedValues;
             var url;
 
-            if (!activeField || !selectedValues.length) {
+            if (!activeField) {
+                closeFilterDialog();
                 return;
             }
 
-            e.preventDefault();
+            selectedValues = collectFilterDialogSelections();
             url = new URL(window.location.href);
             url.searchParams.delete('page');
 
             ensureColumnVisibleForFilter(activeField);
             syncSmartParamsToUrl(url);
-            selectedValues.forEach(function(selection) {
-                if (hasActiveFilterValue(url.searchParams, activeField, selection.value, activeOperator)) {
-                    return;
-                }
-
-                url.searchParams.append('campo_filtro', activeField);
-                url.searchParams.append('operador_filtro', activeOperator);
-                url.searchParams.append('valor_filtro', selection.value);
-            });
+            replaceFilterValuesForField(url.searchParams, activeField, activeOperator, selectedValues);
             closeFilterDialog();
             refreshTableFromUrl(url.toString(), {
                 useFade: false,
+                allowHardReload: false,
                 enableSoftDim: true,
                 softDimDelayMs: 0,
                 softDimOpacity: 0.38,
@@ -6736,13 +7148,10 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                 });
 
                 if ($dataRows.filter(':visible').length === 0) {
-                    showTableOverlay(
-                        'Cargando...',
-                        'Buscando en todo el padrón',
-                        'No hay coincidencias en esta página. Estamos consultando más registros...',
-                        'fa-circle-notch'
-                    );
+                    cancelDeferredTableLoadingOverlay(false);
+                    scheduleTableSoftDim(0, 0.38);
                 } else {
+                    cancelTableSoftDim(true);
                     hideTableOverlay();
                 }
 
@@ -6765,18 +7174,24 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                         fetchXhr.abort();
                     }
 
-                    showTableOverlay(
-                        'Consultando Datos...',
-                       /* 'Buscando ofertas locales', */   
-                       /*  'Actualizando los resultados de la tabla. Esto puede tardar un instante...',*/ 
-                        'fa-circle-notch'
-                    );
+                    cancelDeferredTableLoadingOverlay(false);
+                    if (getTableDataRows().filter(':visible').length === 0) {
+                        scheduleTableSoftDim(0, 0.38);
+                    } else {
+                        hideTableOverlay();
+                        cancelTableSoftDim(true);
+                    }
 
                     var currentRequest = $.ajax({
                         url: url.toString(),
                         method: 'GET',
                         success: function(data) {
-                            replaceTableFragments($(data), true);
+                            cancelDeferredTableLoadingOverlay(false);
+                            cancelTableSoftDim(true);
+                            hideMiniTableLoader();
+                            replaceTableFragments($(data), false);
+                            cancelTableSoftDim(true);
+                            hideTableOverlay();
                         },
                         error: function(xhr, textStatus) {
                             if (textStatus !== 'abort') {
@@ -6819,18 +7234,24 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                     fetchXhr.abort();
                 }
 
-                showTableOverlay(
-                    'Cargando...',
-                    'Actualizando la tabla',
-                    'Quitando la bÃºsqueda para restaurar los resultados completos...',
-                    'fa-circle-notch'
-                );
+                cancelDeferredTableLoadingOverlay(false);
+                if (getTableDataRows().filter(':visible').length === 0) {
+                    scheduleTableSoftDim(0, 0.38);
+                } else {
+                    hideTableOverlay();
+                    cancelTableSoftDim(true);
+                }
 
                 var resetRequest = $.ajax({
                     url: url.toString(),
                     method: 'GET',
                     success: function(data) {
+                        cancelDeferredTableLoadingOverlay(false);
+                        cancelTableSoftDim(true);
+                        hideMiniTableLoader();
                         replaceTableFragments($(data), false);
+                        cancelTableSoftDim(true);
+                        hideTableOverlay();
                     },
                     error: function(xhr, textStatus) {
                         if (textStatus !== 'abort') {
@@ -6914,13 +7335,12 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                 }
 
                 cancelDeferredTableLoadingOverlay(false);
-                scheduleTableSoftDim(0, 0.38);
-                scheduleTableLoadingOverlay(
-                    120,
-                    'Consultando datos...',
-                    'Actualizando resultados definitivos...',
-                    'fa-circle-notch'
-                );
+                if (getTableDataRows().filter(':visible').length === 0) {
+                    scheduleTableSoftDim(0, 0.38);
+                } else {
+                    hideTableOverlay();
+                    cancelTableSoftDim(true);
+                }
                 abortActiveTableRequest();
                 if (fetchXhr) {
                     fetchXhr.abort();
@@ -6950,7 +7370,7 @@ $('#btnExcelTodo').off('click.exportExcel').on('click.exportExcel', function(e) 
                     fetchXhr = refreshTableFromUrl(url.toString(), {
                         useFade: false,
                         allowHardReload: false,
-                        enableSoftDim: true,
+                        enableSoftDim: shouldDimServerSearch,
                         softDimDelayMs: 0,
                         softDimOpacity: 0.38,
                         showMiniLoader: false,
@@ -7834,8 +8254,8 @@ $(document).on('change', '#dialog_filtro .filter-dialog-option', function() {
 <!-- PADRON_FIX_LOADER_DENTRO_TABLA_SUPERPUESTO_END -->
 
 
-<style id="tyago-compact-btn-anim-final-style">
-/* TYAGO_PATCH_CONTRAER_BTN_ANIM_FINAL */
+<style id="padron-compact-btn-anim-final-style">
+/* PADRON_PATCH_CONTRAER_BTN_ANIM_FINAL */
 .filter-collapse-btn {
     min-height: 31px;
     min-width: 108px;
@@ -7848,11 +8268,11 @@ $(document).on('change', '#dialog_filtro .filter-dialog-option', function() {
     color: #fff !important;
     box-shadow: 0 8px 20px rgba(26, 79, 138, 0.16);
 }
-.filter-collapse-btn.tyago-compact-btn-pulse {
+.filter-collapse-btn.padron-compact-btn-pulse {
     transform: none !important;
 }
 </style>
-<script id="tyago-compact-btn-anim-final-script">
+<script id="padron-compact-btn-anim-final-script">
 (function() {
     "use strict";
 
@@ -7875,9 +8295,9 @@ contraer_localizaciones
         button.innerHTML = active ? "<i class=\"fa-solid fa-expand me-1\"></i>Expandir Columnas" : "<i class=\"fa-solid fa-compress me-1\"></i>Contraer Columnas";
 
         if (animate) {
-            button.classList.add("tyago-compact-btn-pulse");
+            button.classList.add("padron-compact-btn-pulse");
             window.setTimeout(function() {
-                button.classList.remove("tyago-compact-btn-pulse");
+                button.classList.remove("padron-compact-btn-pulse");
             }, 150);
         }
     }
@@ -7905,8 +8325,8 @@ contraer_localizaciones
 </script>
 
 
-<style id="tyago-compact-button-pulse-v3-style">
-/* TYAGO_PATCH_COMPACT_BUTTON_PULSE_V3 */
+<style id="padron-compact-button-pulse-v3-style">
+/* PADRON_PATCH_COMPACT_BUTTON_PULSE_V3 */
 .filter-collapse-btn {
     transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease !important;
 }
@@ -7916,14 +8336,14 @@ contraer_localizaciones
     color: #fff !important;
     box-shadow: 0 8px 20px rgba(26, 79, 138, 0.16) !important;
 }
-.filter-collapse-btn.tyago-compact-btn-pulse {
+.filter-collapse-btn.padron-compact-btn-pulse {
     transform: none !important;
 }
 </style>
 
 {% endblock %}
-<!-- TYAGO_PATCH_BUSQUEDA_ATOMICA_PADRON -->
-<!-- TYAGO_PATCH_DIFUMINADO_SIN_CARGANDO_REFRESH_TABLA -->
+<!-- PADRON_PATCH_BUSQUEDA_ATOMICA_PADRON -->
+<!-- PADRON_PATCH_DIFUMINADO_SIN_CARGANDO_REFRESH_TABLA -->
 
 
 

@@ -1,0 +1,144 @@
+<style id="cef-selector-multiple-base-style">
+    .cef-selector-shell {
+        background: #f5f8ff;
+        border: 1px solid #c9d8ef;
+        border-radius: .6rem;
+        padding: .85rem .95rem;
+    }
+
+    .cef-selector-layout {
+        display: grid;
+        grid-template-columns: minmax(190px, 260px) minmax(300px, 1fr) auto;
+        gap: .8rem;
+        align-items: end;
+    }
+
+    .cef-selector-copy {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .cef-selector-kicker {
+        color: #2e7bd4;
+        font-size: .72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .cef-selector-copy strong {
+        color: #1a4f8a;
+        font-size: .95rem;
+        font-weight: 800;
+    }
+
+    .cef-selector-copy small {
+        color: #60758a;
+        font-size: .77rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .cef-selector-control label {
+        display: flex;
+        align-items: center;
+        color: #29435a;
+        font-size: .76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: .3rem;
+    }
+
+    .cef-selector-select {
+        min-height: 2.3rem;
+        font-size: .86rem;
+    }
+
+    .cef-selector-actions {
+        display: flex;
+        gap: .45rem;
+        justify-content: flex-end;
+    }
+
+    .cef-selector-actions .btn {
+        min-height: 31px;
+        font-size: .8rem !important;
+        font-weight: 800 !important;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 991.98px) {
+        .cef-selector-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .cef-selector-actions {
+            justify-content: flex-start;
+        }
+    }
+</style>
+
+<section id="cefSelectorShell" class="cef-selector-shell mb-3">
+    <form method="get" id="cefSelectorForm" class="cef-selector-form">
+        {% for key, values in request.GET.lists %}
+            {% if key != "cefs" and key != "page" and key != "formato" %}
+                {% for value in values %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+
+        <div class="cef-selector-layout">
+            <div class="cef-selector-copy">
+                <span class="cef-selector-kicker">CEF</span>
+                <strong>
+                    {% if selector_cef_usa_explicitos %}
+                        {% if seleccion_cef_explicita %}
+                            {{ total_cefs_seleccionados|default:0 }} seleccionados
+                        {% else %}
+                            Todos los CEF
+                        {% endif %}
+                    {% else %}
+                        {{ total_cefs_seleccionados|default:0 }} seleccionados
+                    {% endif %}
+                </strong>
+                <small>Sin seleccion manual se muestran todos los CEF disponibles.</small>
+            </div>
+
+            <div class="cef-selector-control">
+                <label for="cefSelectorSelect">
+                    <i class="fa-solid fa-school me-1"></i> CEF
+                </label>
+                <select id="cefSelectorSelect" name="cefs" multiple="multiple" class="form-select cef-selector-select" data-placeholder="Todos los CEF">
+                    {% if cef_selector_options %}
+                        {% for cef in cef_selector_options %}
+                            <option value="{{ cef.cueanexo }}" {% if selector_cef_usa_explicitos %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados_explicitos %}selected{% endif %}{% else %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados %}selected{% endif %}{% endif %}>
+                                {{ cef.cueanexo }} - {{ cef.nom_est|default:"CEF sin nombre" }}
+                            </option>
+                        {% endfor %}
+                    {% else %}
+                        {% for cef in cefs_visualizacion %}
+                            <option value="{{ cef.cueanexo }}" {% if selector_cef_usa_explicitos %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados_explicitos %}selected{% endif %}{% else %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados %}selected{% endif %}{% endif %}>
+                                {{ cef.cueanexo }} - {{ cef.nom_est|default:"CEF sin nombre" }}
+                            </option>
+                        {% empty %}
+                            <option value="" disabled>No hay CEF disponibles</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+
+            {% if not selector_cef_usa_explicitos %}
+            <div class="cef-selector-actions">
+                <button type="submit" class="btn btn-primary btn-sm cef-selector-submit">
+                    <i class="fa-solid fa-filter me-1"></i>Aplicar
+                </button>
+                <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm cef-selector-clear">
+                    Todos
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+</section>

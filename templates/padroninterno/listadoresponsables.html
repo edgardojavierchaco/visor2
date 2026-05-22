@@ -1,4 +1,4 @@
-﻿{% extends 'archivos/base/layout.html' %}
+{% extends 'archivos/base/layout.html' %}
 {% load mis_filtros %}
 {% block content %}
 <script>
@@ -157,6 +157,12 @@ html {
         font-size: .875rem;
     }
 
+    .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; }
+    .fecha-badge i { font-size: 0.85rem; color: #3b82f6; }
+    .fecha-badge .edit-icon { cursor: pointer; transition: transform 0.2s, color 0.2s; margin-left: 4px; font-size: 0.8rem; color: #64748b; }
+    .fecha-badge .edit-icon:hover { color: #2563eb; transform: scale(1.1); }
+    .fecha-badge-nav { margin: .25rem 0; }
+
     #headerActions,
     .filter-toolbar {
         min-height: 31px;
@@ -181,26 +187,47 @@ html {
     }
 
     .filter-btn-field {
-        font-size: 0.75rem;
+        min-height: 42px;
+        font-size: 0.82rem;
         font-weight: 700;
-        padding: 0.38rem 0.55rem;
-        border: 1px solid #aec6e8;
-        border-radius: 0.4rem;
-        background: #fff;
-        color: #1a4f8a;
+        line-height: 1.2;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #9dbbea;
+        border-left: 4px solid #4f86c6;
+        border-radius: 0.45rem;
+        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+        color: #0f3f73;
         cursor: pointer;
-        transition: none !important;
+        transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease, transform .12s ease !important;
         width: 100%;
-        text-align: center;
+        text-align: left;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .filter-btn-field:hover {
-        background: var(--padron-primary);
-        color: #fff;
-        border-color: var(--padron-primary);
+    .filter-btn-field:hover,
+    .filter-btn-field:focus {
+        background: #eaf3ff;
+        color: #073966;
+        border-color: #6096d4;
+        box-shadow: inset 0 0 0 1px rgba(26, 79, 138, 0.12);
+        outline: none;
+    }
+
+    .filter-btn-field:active {
+        transform: translateY(1px);
+    }
+
+    #pnlFiltros .row {
+        --bs-gutter-x: .65rem;
+        --bs-gutter-y: .55rem;
+    }
+
+    @media (min-width: 992px) and (max-width: 1599.98px) {
+        #pnlFiltros .row-cols-lg-4 > * {
+            width: 33.333333%;
+        }
     }
 
         /* Mejor usabilidad para activar/desactivar columnas */
@@ -256,6 +283,67 @@ html {
 
     #pnlColumnas .form-check-input:checked + .form-check-label {
         color: var(--padron-primary) !important;
+    }
+
+    #pnlColumnas .row {
+        --bs-gutter-x: .65rem;
+        --bs-gutter-y: .55rem;
+    }
+
+    #pnlColumnas .form-check {
+        grid-template-columns: 1.35rem minmax(0, 1fr) !important;
+        align-items: center !important;
+        min-height: 42px !important;
+        padding: .54rem .72rem !important;
+        border-color: #9dbbea !important;
+        border-left: 4px solid #4f86c6 !important;
+        border-radius: .48rem !important;
+        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%) !important;
+        transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease !important;
+    }
+
+    #pnlColumnas .form-check:hover {
+        background: #eef6ff !important;
+        border-color: #6096d4 !important;
+        box-shadow: inset 0 0 0 1px rgba(26, 79, 138, 0.12) !important;
+    }
+
+    #pnlColumnas .form-check-input {
+        width: 1.14rem !important;
+        height: 1.14rem !important;
+        margin-top: 0 !important;
+        border-color: #6f8fb5 !important;
+        border-width: 2px !important;
+    }
+
+    #pnlColumnas .form-check-input:checked {
+        background-color: var(--padron-primary) !important;
+        border-color: var(--padron-primary) !important;
+    }
+
+    #pnlColumnas .form-check-label {
+        color: #173f66 !important;
+        font-size: .78rem !important;
+        font-weight: 700 !important;
+        line-height: 1.28 !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    #pnlColumnas .form-check:has(.form-check-input:checked) {
+        border-color: #6096d4 !important;
+        border-left-color: var(--padron-primary) !important;
+        background: #eaf3ff !important;
+    }
+
+    #pnlColumnas .form-check-input:checked + .form-check-label {
+        color: #0c3e70 !important;
+        font-weight: 700 !important;
+    }
+
+    @media (min-width: 992px) and (max-width: 1599.98px) {
+        #pnlColumnas .row-cols-lg-4 > * {
+            width: 33.333333%;
+        }
     }
 
     .btn-excel,
@@ -1750,6 +1838,12 @@ html {
                         <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
                     </ul>
                 </li>
+                <li class="nav-item d-flex align-items-center">
+                    <span class="fecha-badge fecha-badge-nav">
+                        <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}
+                        {% if padron_is_admin %}<i class="fa-solid fa-edit edit-icon" id="padronEditFechaBtn" title="Editar fecha"></i>{% endif %}
+                    </span>
+                </li>
 
             </ul>
             <ul class="navbar-nav ms-auto">
@@ -1762,6 +1856,43 @@ html {
         </div>
     </div>
 </nav>
+
+{% if padron_is_admin %}
+<div class="modal fade" id="padronFechaModal" tabindex="-1" aria-labelledby="padronFechaModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none; padding: 1.4rem 1.6rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-calendar-alt" style="color: #fff; font-size: 1rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="padronFechaModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem;">Actualizar fecha</h5>
+                        <p style="color: rgba(255,255,255,0.7); font-size: 0.78rem; margin: 0; font-weight: 500;">Solo visible para administradores</p>
+                    </div>
+                </div>
+                <button type="button" id="padronFechaModalCloseBtn" class="ms-auto" aria-label="Cerrar" style="background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 32px; height: 32px; color: #fff; cursor: pointer;"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 1.6rem;">
+                {% csrf_token %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 1rem 1.2rem; margin-bottom: 1.2rem;">
+                    <label for="padronNuevaFecha" style="display: block; font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                        <i class="fa-solid fa-calendar-alt me-1 text-primary"></i> Fecha de actualizacion
+                    </label>
+                    <input type="datetime-local" id="padronNuevaFecha" class="form-control" style="border: 1.5px solid #cbd5e1; border-radius: 0.5rem; font-weight: 600; color: #1e293b;">
+                </div>
+                <div id="padronFechaModalError" style="display: none; align-items: center; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.85rem; font-weight: 600;">
+                    <i class="fa-solid fa-exclamation-circle me-2"></i><span id="padronFechaModalErrorText"></span>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; background: #f8fafc;">
+                <button type="button" id="padronFechaModalCancelBtn" class="btn btn-light" style="border: 1.5px solid #cbd5e1; font-weight: 600;">Cancelar</button>
+                <button type="button" id="padronGuardarFechaBtn" class="btn btn-primary" style="font-weight: 700;"><i class="fa-solid fa-save me-1"></i> Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-4">
@@ -2104,6 +2235,126 @@ html {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% if padron_is_admin %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function getCsrfToken() {
+        var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (tokenInput) {
+            return tokenInput.value;
+        }
+
+        var cookieValue = '';
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(function (cookie) {
+                var trimmed = cookie.trim();
+                if (trimmed.substring(0, 10) === 'csrftoken=') {
+                    cookieValue = decodeURIComponent(trimmed.substring(10));
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    var modalElement = document.getElementById('padronFechaModal');
+    if (!modalElement || typeof bootstrap === 'undefined') {
+        return;
+    }
+
+    var fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+    var editBtn = document.getElementById('padronEditFechaBtn');
+    var guardarBtn = document.getElementById('padronGuardarFechaBtn');
+    var nuevaFechaInput = document.getElementById('padronNuevaFecha');
+
+    function mostrarErrorModal(msg) {
+        var errDiv = document.getElementById('padronFechaModalError');
+        var errText = document.getElementById('padronFechaModalErrorText');
+        if (!errDiv || !errText) {
+            return;
+        }
+        if (msg) {
+            errText.textContent = msg;
+            errDiv.style.display = 'flex';
+        } else {
+            errText.textContent = '';
+            errDiv.style.display = 'none';
+        }
+    }
+
+    function cerrarModal() {
+        mostrarErrorModal('');
+        fechaModalBS.hide();
+    }
+
+    if (editBtn) {
+        editBtn.addEventListener('click', function () {
+            mostrarErrorModal('');
+            if (nuevaFechaInput) {
+                {% if padron_ultima_fecha %}
+                nuevaFechaInput.value = '{{ padron_ultima_fecha|date:"Y-m-d H:i:s" }}'.replace(' ', 'T').slice(0, 16);
+                {% else %}
+                nuevaFechaInput.value = '';
+                {% endif %}
+            }
+            fechaModalBS.show();
+        });
+    }
+
+    var closeBtn = document.getElementById('padronFechaModalCloseBtn');
+    if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
+
+    var cancelBtn = document.getElementById('padronFechaModalCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
+
+    if (guardarBtn) {
+        guardarBtn.addEventListener('click', function () {
+            var nuevaFecha = nuevaFechaInput ? nuevaFechaInput.value : '';
+            if (!nuevaFecha) {
+                mostrarErrorModal('Debes seleccionar una fecha y hora.');
+                return;
+            }
+
+            guardarBtn.disabled = true;
+            guardarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+
+            fetch('{% url "padroninterno:actualizar_fecha_padron" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ fecha: nuevaFecha })
+            })
+                .then(function (response) {
+                    return response.json().catch(function () {
+                        return {};
+                    }).then(function (data) {
+                        if (!response.ok) {
+                            throw new Error(data.message || 'HTTP ' + response.status);
+                        }
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    if (data.status === 'success') {
+                        fechaModalBS.hide();
+                        location.reload();
+                    } else {
+                        mostrarErrorModal(data.message || 'No se pudo actualizar la fecha.');
+                    }
+                })
+                .catch(function (error) {
+                    mostrarErrorModal(error.message || 'No se pudo actualizar la fecha.');
+                })
+                .finally(function () {
+                    guardarBtn.disabled = false;
+                    guardarBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Guardar cambios';
+                });
+        });
+    }
+});
+</script>
+{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var SERVER_FILTER_OPTIONS = {{ filter_options_json|safe }};
@@ -2837,6 +3088,8 @@ function ensureMiniTableLoader() {
                 return;
             }
 
+            cancelTableSoftDim(true, visualToken);
+            hideMiniTableLoader();
             window.history.pushState({}, '', targetUrl);
             replaceTableFragments(new window.DOMParser().parseFromString(html, 'text/html'), opts);
             syncTableEmptyOverlay();
@@ -3144,6 +3397,52 @@ function ensureMiniTableLoader() {
         return hasMatch('campo_filtro', 'operador_filtro', 'valor_filtro') || hasMatch('f', 'o', 'v');
     }
 
+    function replaceFilterValuesForField(params, field, operator, selections) {
+        var selectedValues = [];
+        var selectedMap = {};
+
+        function rebuild(fieldParam, operatorParam, valueParam) {
+            var fields = params.getAll(fieldParam);
+            var operators = params.getAll(operatorParam);
+            var values = params.getAll(valueParam);
+
+            params.delete(fieldParam);
+            params.delete(operatorParam);
+            params.delete(valueParam);
+
+            fields.forEach(function(activeField, index) {
+                if (activeField === field) {
+                    return;
+                }
+
+                params.append(fieldParam, activeField);
+                params.append(operatorParam, operators[index] || '0');
+                params.append(valueParam, values[index] || '');
+            });
+        }
+
+        (selections || []).forEach(function(selection) {
+            var value = (selection.value || '').trim();
+            var normalizedValue = normalizeFilterMatchValue(value);
+
+            if (!value || selectedMap[normalizedValue]) {
+                return;
+            }
+
+            selectedMap[normalizedValue] = true;
+            selectedValues.push(value);
+        });
+
+        rebuild('campo_filtro', 'operador_filtro', 'valor_filtro');
+        rebuild('f', 'o', 'v');
+
+        selectedValues.forEach(function(value) {
+            params.append('campo_filtro', field);
+            params.append('operador_filtro', operator);
+            params.append('valor_filtro', value);
+        });
+    }
+
     function renderFilterValueControl(field) {
         var config = FILTER_DIALOG_CONFIG[field] || FILTER_DIALOG_CONFIG.apellido;
         var html = '';
@@ -3209,26 +3508,18 @@ function ensureMiniTableLoader() {
     function applyFilterDialog() {
         var field = campoFiltroActivo.value;
         var operator = filterDialogOperator.value || '0';
-        var selections = collectFilterSelections(field);
+        var selections;
         var params;
 
-        if (!field || selections.length === 0) {
-            closeFilterDialog();
+        if (!field) {
             return;
         }
 
+        selections = collectFilterSelections(field);
         params = new URLSearchParams(window.location.search);
         params.delete('page');
         ensureColumnVisibleForSearch(field);
-        selections.forEach(function(selection) {
-            if (hasActiveFilterValue(params, field, selection.value, operator)) {
-                return;
-            }
-
-            params.append('campo_filtro', field);
-            params.append('operador_filtro', operator);
-            params.append('valor_filtro', selection.value);
-        });
+        replaceFilterValuesForField(params, field, operator, selections);
 
         closeFilterDialog();
         clearTimeout(liveSearchTimer);
@@ -3458,11 +3749,11 @@ function ensureMiniTableLoader() {
             document.getElementById('liveSearchClear').style.display = trimmedValue ? 'inline-flex' : 'none';
             clearTimeout(liveSearchTimer);
             abortActiveTableRequest();
-            if (trimmedValue) {
+            if (trimmedValue && visibleMatches === 0) {
                 scheduleTableSoftDim(0, 0.38);
-                if (typeof scheduleTableLoadingOverlay === 'function') {
-                    scheduleTableLoadingOverlay(120, 'Consultando datos...', 'Actualizando resultados definitivos...', 'fa-circle-notch');
-                }
+            } else if (trimmedValue) {
+                hideTableOverlay();
+                cancelTableSoftDim(true);
             } else {
                 hideTableOverlay();
                 cancelTableSoftDim(true);
@@ -3518,7 +3809,7 @@ function ensureMiniTableLoader() {
                 var refreshOptions = {
                     useFade: false,
                     allowHardReload: false,
-                    enableSoftDim: true,
+                    enableSoftDim: shouldDimServerSearch,
                     softDimDelayMs: 0,
                     softDimOpacity: 0.38,
                     showMiniLoader: false,
@@ -5029,18 +5320,18 @@ $(document).on('change', '#dialog_filtro .filter-dialog-option', function() {
 <!-- PADRON_FIX_LOADER_DENTRO_TABLA_SUPERPUESTO_END -->
 
 {% endblock %}
-<!-- TYAGO_PATCH_BUSQUEDA_ATOMICA_PADRON -->
-<!-- TYAGO_PATCH_RESPONSABLES_DIM_SIN_MENSAJE_FINAL -->
-<!-- TYAGO_PATCH_RESPONSABLES_CARGANDO_CHIPS -->
-<!-- TYAGO_PATCH_RESPONSABLES_LOADER_SOLO_CHIPS -->
-<!-- TYAGO_PATCH_RESPONSABLES_LOADER_COMO_OTROS -->
+<!-- PADRON_PATCH_BUSQUEDA_ATOMICA_PADRON -->
+<!-- PADRON_PATCH_RESPONSABLES_DIM_SIN_MENSAJE_FINAL -->
+<!-- PADRON_PATCH_RESPONSABLES_CARGANDO_CHIPS -->
+<!-- PADRON_PATCH_RESPONSABLES_LOADER_SOLO_CHIPS -->
+<!-- PADRON_PATCH_RESPONSABLES_LOADER_COMO_OTROS -->
 
 <!-- 
-TYAGO_PATCH_MENSAJE_SIN_RESULTADOS_RESPONSABLES_IZQUIERDA
+PADRON_PATCH_MENSAJE_SIN_RESULTADOS_RESPONSABLES_IZQUIERDA
  -->
 <style id=
 "
-tyago-mensaje-sin-resultados-responsables-izquierda
+padron-mensaje-sin-resultados-responsables-izquierda
 "
 >
 /* Alinea a la izquierda el estado vacío de Responsables, sin tocar loaders ni filtros. */
@@ -5077,5 +5368,5 @@ tyago-mensaje-sin-resultados-responsables-izquierda
     text-align: left !important;
 }
 </style>
-<!-- TYAGO_PATCH_DIFUMINADO_SIN_CARGANDO_REFRESH_TABLA -->
+<!-- PADRON_PATCH_DIFUMINADO_SIN_CARGANDO_REFRESH_TABLA -->
 

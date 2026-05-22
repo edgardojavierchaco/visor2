@@ -5,6 +5,7 @@ from . import views_establecimientos
 from . import views_localizaciones
 from . import views_ofertaslocales
 from . import views_responsables
+from . import views_fecha
 
 app_name = 'padroninterno'
 
@@ -23,6 +24,7 @@ urlpatterns = [
     path('ofertalocal/', views_ofertaslocales.listar_ofertas_locales, name='ofertaslocales'),
     path('ofertalocal/<int:id_oferta>/', views_ofertaslocales.detalle_oferta_local_json, name='detalle_oferta_local_json'),
     path('titulo/<int:id_titulo>/', views_ofertaslocales.detalle_titulo_json, name='detalle_titulo_json'),
+    path("actualizar-fecha-padron/", views_fecha.actualizar_fecha_padron, name="actualizar_fecha_padron"),
     
 ]
 

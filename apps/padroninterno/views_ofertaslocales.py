@@ -3,6 +3,7 @@ from django.db import connections
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from functools import lru_cache
 from .permisos import padron_interno_admin_o_gestor_required
+from .views_fecha import get_contexto_fecha_padron
 import openpyxl
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
@@ -17,6 +18,7 @@ from apps.padroninterno.partes import partes
 
 PADRON_DB = 'Padron'
 PAGE_SIZE = 10
+OFERTA_ESTADO_FILTER_OPTIONS = ('Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes')
 
 CAMPO_SQL = {
     'cue': 'e.cue::text',
@@ -243,22 +245,73 @@ def _build_text_search_clause(expr, value):
     return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
 
 
-def _tipo_oferta_filter_clause(oper, token_count=1):
-    op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-    if oper == '0':
-        op_str = 'LIKE'
-    elif oper == '1':
-        op_str = 'NOT LIKE'
-    elif oper == '2':
-        op_str = '='
-
-    folded_expr = _folded_sql('ot.descripcion')
-    return ' AND '.join([f"{folded_expr} {op_str} %s" for _ in range(max(token_count, 1))])
-
-
 def _tipo_oferta_filter_values(oper, value):
     folded = _fold_filter_text(value)
     return [f'%{token}%' for token in _filter_tokens(value)] if oper in {'0', '1'} else [folded]
+
+
+def _is_oferta_estado_filter_value(value):
+    folded = _fold_filter_text(value)
+    return any(folded == _fold_filter_text(option) for option in OFERTA_ESTADO_FILTER_OPTIONS)
+
+
+def _split_tipo_oferta_filter_params(oper, values):
+    tipo_param_groups = []
+    estado_params = []
+
+    for value in values:
+        filter_values = _tipo_oferta_filter_values(oper, value)
+        if _is_oferta_estado_filter_value(value):
+            estado_params.extend(filter_values)
+        else:
+            tipo_param_groups.append(filter_values)
+
+    return tipo_param_groups, estado_params
+
+
+def _tipo_oferta_clause_operator(oper):
+    if oper in {'0', '1'}:
+        return 'LIKE'
+    if oper in {'2', '7'}:
+        return '='
+    return OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])[0]
+
+
+def _tipo_oferta_filter_clause(oper, tipo_value_counts=None, estado_count=0):
+    tipo_value_counts = tipo_value_counts or []
+    tipo_expr = _folded_sql('ot.descripcion')
+    estado_expr = _folded_sql('est_of.descripcion')
+    op_str = _tipo_oferta_clause_operator(oper)
+    conditions = []
+
+    if tipo_value_counts:
+        tipo_checks = []
+        for token_count in tipo_value_counts:
+            token_checks = ' AND '.join([f"{tipo_expr} {op_str} %s" for _ in range(max(token_count, 1))])
+            tipo_checks.append(f"({token_checks})")
+        conditions.append(f"({' OR '.join(tipo_checks)})")
+
+    if estado_count:
+        estado_checks = ' OR '.join([f"{estado_expr} {op_str} %s" for _ in range(max(estado_count, 1))])
+        conditions.append(f"({estado_checks})")
+
+    clause = ' AND '.join(conditions)
+    return f"NOT ({clause})" if oper in {'1', '7'} else clause
+
+
+def _append_tipo_oferta_filter(clauses, params, oper, values):
+    tipo_param_groups, estado_params = _split_tipo_oferta_filter_params(oper, values)
+    if not tipo_param_groups and not estado_params:
+        return
+
+    clauses.append(_tipo_oferta_filter_clause(
+        oper,
+        [len(group) for group in tipo_param_groups],
+        len(estado_params),
+    ))
+    for group in tipo_param_groups:
+        params.extend(group)
+    params.extend(estado_params)
 
 
 def _build_where(request):
@@ -281,9 +334,7 @@ def _build_where(request):
                 if valor not in grouped_positive_filters[group_key]:
                     grouped_positive_filters[group_key].append(valor)
             elif campo == 'tipo_oferta':
-                tipo_values = _tipo_oferta_filter_values(oper, valor)
-                clauses.append(_tipo_oferta_filter_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
+                _append_tipo_oferta_filter(clauses, params, oper, [valor])
             else:
                 col = CAMPO_SQL[campo]
                 op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
@@ -299,19 +350,7 @@ def _build_where(request):
 
     for (campo, oper), grouped_values in grouped_positive_filters.items():
         if campo == 'tipo_oferta':
-            if len(grouped_values) == 1:
-                tipo_values = _tipo_oferta_filter_values(oper, grouped_values[0])
-                clauses.append(_tipo_oferta_filter_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
-                continue
-
-            or_clauses = []
-            for valor in grouped_values:
-                tipo_values = _tipo_oferta_filter_values(oper, valor)
-                or_clauses.append(_tipo_oferta_filter_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
-
-            clauses.append(f"({' OR '.join(or_clauses)})")
+            _append_tipo_oferta_filter(clauses, params, oper, grouped_values)
             continue
 
         col = CAMPO_SQL[campo]
@@ -1449,11 +1488,13 @@ def listar_ofertas_locales(request):
     desde = (page_obj.number - 1) * current_page_size + 1 if total else 0
     hasta = min(page_obj.number * current_page_size, total)
 
-    return render(request, 'padroninterno/ofertaslocales.html', {
+    context = {
         'lista_items': page_obj.object_list,
         'page_obj': page_obj,
         'resultado_total': total,
         'resultado_desde': desde,
         'resultado_hasta': hasta,
         'username': getattr(request.user, 'username', ''),
-    })
+    }
+    context.update(get_contexto_fecha_padron(request))
+    return render(request, 'padroninterno/ofertaslocales.html', context)

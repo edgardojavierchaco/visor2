@@ -74,7 +74,7 @@ urlpatterns = [
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     path('padron/', include('apps.padroninterno.urls')),
     path('bnh/', include('apps.bnhpersonas.urls', namespace='bnhpersonas')),
-
+    path('cef/', include('apps.cef.urls')),   
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
