@@ -201,10 +201,10 @@ def seguimiento_sie_json(request):
         if region not in datos_agrupados:
             datos_agrupados[region] = {"region": region, "total_ant": 0, "total_act": 0}
         
-        # Uso de campos correctos: inscriptos_2025 y sge_2026
+        # Uso de campos correctos: inscriptos_2025 e inscriptos_2026
         try: datos_agrupados[region]["total_ant"] += int(float(esc.inscriptos_2025))
         except: pass 
-        try: datos_agrupados[region]["total_act"] += int(float(esc.sge_2026))
+        try: datos_agrupados[region]["total_act"] += int(float(esc.inscriptos_2026))
         except: pass
 
     chart_data = []
@@ -230,7 +230,7 @@ def seguimiento_sie_niveles_json(request):
         
         try: datos_agrupados[nivel]["total_ant"] += int(float(esc.inscriptos_2025))
         except: pass
-        try: datos_agrupados[nivel]["total_act"] += int(float(esc.sge_2026))
+        try: datos_agrupados[nivel]["total_act"] += int(float(esc.inscriptos_2026))
         except: pass
 
     chart_data = []

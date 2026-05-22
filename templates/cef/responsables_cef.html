@@ -1,0 +1,117 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .cef-visualizacion-wrapper { max-width: 1240px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    .cef-visualizacion-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .cef-visualizacion-title h1 { margin: 0; color: #1a4f8a; font-size: 1.45rem; font-weight: 800; }
+    .cef-visualizacion-title p { margin: .25rem 0 0; color: #60758a; font-size: .9rem; font-weight: 600; }
+    .cef-visualizacion-nav { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1rem; }
+    .cef-visualizacion-nav .btn { font-weight: 700; font-size: .84rem; }
+    .cef-v-card { border: 1px solid #d8e4f2; border-radius: .85rem; background: #fff; box-shadow: 0 10px 24px rgba(18, 52, 86, .07); overflow: hidden; margin-bottom: 1rem; }
+    .cef-v-card-header { padding: .85rem 1rem; background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%); border-bottom: 1px solid #d8e4f2; color: #20364d; font-weight: 800; }
+    .cef-v-card-body { padding: 1rem; }
+    .cef-v-status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+    .cef-v-status-card { border: 1px solid #d8e4f2; border-radius: .75rem; background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%); padding: .85rem 1rem; }
+    .cef-v-status-card span { display: block; color: #60758a; font-size: .76rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+    .cef-v-status-card strong { display: block; margin-top: .25rem; color: #20364d; font-size: 1.15rem; font-weight: 800; }
+    .cef-v-empty { border: 1px dashed #b7c9df; border-radius: .75rem; background: #f8fbff; padding: 1rem; color: #45607d; }
+    @media (max-width: 768px) { .cef-visualizacion-wrapper { padding: .85rem .55rem 2rem; } }
+</style>
+
+<main class="cef-visualizacion-wrapper">
+    <section class="cef-visualizacion-header">
+        <div class="cef-visualizacion-title">
+            <h1>{{ title|default:"Responsables CEF" }}</h1>
+            <p>Responsables y supervisores asociados a CEF oficiales desde Padron.</p>
+        </div>
+    </section>
+
+    <nav class="cef-visualizacion-nav" aria-label="Menu interno Visualizacion CEF">
+        <a href="{% url 'cef:visualizacion_inicio' %}" class="btn {% if active_menu == 'inicio' %}btn-primary{% else %}btn-outline-primary{% endif %}">Inicio</a>
+        <a href="{% url 'cef:visualizacion_establecimientos' %}" class="btn {% if active_menu == 'establecimientos' %}btn-primary{% else %}btn-outline-primary{% endif %}">Establecimientos</a>
+        <a href="{% url 'cef:visualizacion_localizaciones' %}" class="btn {% if active_menu == 'localizaciones' %}btn-primary{% else %}btn-outline-primary{% endif %}">Localizaciones</a>
+        <a href="{% url 'cef:visualizacion_responsables' %}" class="btn {% if active_menu == 'responsables' %}btn-primary{% else %}btn-outline-primary{% endif %}">Responsables</a>
+    </nav>
+
+    {% include 'cef/selector_cef_multiple.html' %}
+
+    <section class="cef-v-status-grid">
+        <article class="cef-v-status-card">
+            <span>Responsables / CEF</span>
+            <strong>{{ total_responsables }}</strong>
+        </article>
+        <article class="cef-v-status-card">
+            <span>CEF visibles</span>
+            <strong>{{ total_cefs_visibles }}</strong>
+        </article>
+        <article class="cef-v-status-card">
+            <span>CEF seleccionados</span>
+            <strong>{{ total_cefs_seleccionados }}</strong>
+        </article>
+    </section>
+
+    <section class="cef-v-card">
+        <div class="cef-v-card-header">Responsables CEF desde Padron</div>
+        <div class="cef-v-card-body">
+            {% if responsables %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>CUE-Anexo</th>
+                                <th>Establecimiento</th>
+                                <th>Apellido</th>
+                                <th>Nombre</th>
+                                <th>CUIL/CUIT</th>
+                                <th>Documento</th>
+                                <th>Email</th>
+                                <th>Telefono</th>
+                                <th>Supervisor tecnico</th>
+                                <th>Email supervisor</th>
+                                <th>Telefono supervisor</th>
+                                <th>Region</th>
+                                <th>Localidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for responsable in responsables %}
+                                <tr>
+                                    <td><strong>{{ responsable.cueanexo|default:"Sin dato" }}</strong></td>
+                                    <td>{{ responsable.nom_est|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.apellido_resp|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.nombre_resp|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.resploc_cuitcuil|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.resploc_doc|default:"Sin dato" }}</td>
+                                    <td>
+                                        {% if responsable.resploc_email %}
+                                            <a href="mailto:{{ responsable.resploc_email }}">{{ responsable.resploc_email }}</a>
+                                        {% else %}
+                                            Sin dato
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ responsable.resploc_telefono|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.sup_tecnico|default:"Sin dato" }}</td>
+                                    <td>
+                                        {% if responsable.email_suptecnico %}
+                                            <a href="mailto:{{ responsable.email_suptecnico }}">{{ responsable.email_suptecnico }}</a>
+                                        {% else %}
+                                            Sin dato
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ responsable.tel_suptecnico|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.region_loc|default:"Sin dato" }}</td>
+                                    <td>{{ responsable.localidad|default:"Sin dato" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="cef-v-empty">No se encontraron responsables CEF para la seleccion actual.</div>
+            {% endif %}
+        </div>
+    </section>
+</main>
+{% endblock %}

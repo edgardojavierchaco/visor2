@@ -108,3 +108,18 @@ def usuario_puede_ver_padron_interno(user):
         return False
 
     return rol in ROLES_PADRON_INTERNO
+
+
+def usuario_es_admin_padron(user):
+    return obtener_rol_usuario_padron(user) == "Administrador"
+
+
+class FechaActualizacionPadronInterno(models.Model):
+    id = models.IntegerField(primary_key=True)
+    fecha = models.DateTimeField(verbose_name='Fecha de Actualización')
+
+    class Meta:
+        managed = False
+        db_table = '"indicadores"."padroninterno_fecha_actualizacion"'
+        verbose_name = 'Fecha de Actualización Padrón Interno'
+        verbose_name_plural = 'Fechas de Actualización Padrón Interno'

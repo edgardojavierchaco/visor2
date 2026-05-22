@@ -4,6 +4,7 @@ from datetime import date, datetime
 from functools import lru_cache
 from io import BytesIO
 from .permisos import padron_interno_admin_o_gestor_required
+from .views_fecha import get_contexto_fecha_padron
 import openpyxl
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
@@ -15,6 +16,7 @@ from openpyxl.utils import get_column_letter
 
 PADRON_DB = 'Padron'
 PAGE_SIZE = 10
+OFERTA_ESTADO_FILTER_OPTIONS = ('Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes')
 
 PERIODO_FUNCIONAMIENTO_OPTIONS = [
     'Común',
@@ -664,6 +666,40 @@ def _tipo_oferta_filter_values(oper, value):
     return _like_token_values(value) if oper in {'0', '1'} else [folded]
 
 
+def _is_oferta_estado_filter_value(value):
+    folded = _fold_filter_text(value)
+    return any(folded == _fold_filter_text(option) for option in OFERTA_ESTADO_FILTER_OPTIONS)
+
+
+def _split_tipo_oferta_filter_params(oper, values):
+    tipo_param_groups = []
+    estado_params = []
+
+    for value in values:
+        filter_values = _tipo_oferta_filter_values(oper, value)
+        if _is_oferta_estado_filter_value(value):
+            estado_params.extend(filter_values)
+        else:
+            tipo_param_groups.append(filter_values)
+
+    return tipo_param_groups, estado_params
+
+
+def _append_tipo_oferta_filter(clauses, params, oper, values):
+    tipo_param_groups, estado_params = _split_tipo_oferta_filter_params(oper, values)
+    if not tipo_param_groups and not estado_params:
+        return
+
+    clauses.append(_build_tipo_oferta_clause(
+        oper,
+        [len(group) for group in tipo_param_groups],
+        len(estado_params),
+    ))
+    for group in tipo_param_groups:
+        params.extend(group)
+    params.extend(estado_params)
+
+
 def _build_text_search_clause(expr, value):
     tokens = _filter_tokens(value)
     if not tokens:
@@ -673,43 +709,41 @@ def _build_text_search_clause(expr, value):
     return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
 
 
-def _build_tipo_oferta_clause(oper, token_count=1):
+def _tipo_oferta_clause_operator(oper):
+    if oper in {'0', '1'}:
+        return 'LIKE'
+    if oper in {'2', '7'}:
+        return '='
+    return OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])[0]
+
+
+def _build_tipo_oferta_clause(oper, tipo_value_counts=None, estado_count=0):
+    tipo_value_counts = tipo_value_counts or []
     descripcion = _folded_sql('otf.descripcion')
+    estado = _folded_sql('etf.descripcion')
+    op_str = _tipo_oferta_clause_operator(oper)
+    conditions = []
 
-    if oper == '1':
-        token_checks = ' AND '.join([f"{descripcion} LIKE %s" for _ in range(max(token_count, 1))])
-        return (
-            "NOT EXISTS ("
-            "SELECT 1 "
-            "FROM oferta_local olf "
-            "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
-            "WHERE olf.id_localizacion = vl.id_localizacion "
-            f"AND {token_checks}"
-            ")"
-        )
+    if tipo_value_counts:
+        tipo_checks = []
+        for token_count in tipo_value_counts:
+            token_checks = ' AND '.join([f"{descripcion} {op_str} %s" for _ in range(max(token_count, 1))])
+            tipo_checks.append(f"({token_checks})")
+        conditions.append(f"({' OR '.join(tipo_checks)})")
 
-    if oper == '7':
-        return (
-            "NOT EXISTS ("
-            "SELECT 1 "
-            "FROM oferta_local olf "
-            "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
-            "WHERE olf.id_localizacion = vl.id_localizacion "
-            f"AND {descripcion} = %s"
-            ")"
-        )
+    if estado_count:
+        estado_checks = ' OR '.join([f"{estado} {op_str} %s" for _ in range(max(estado_count, 1))])
+        conditions.append(f"({estado_checks})")
 
-    op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
-    if oper in {'0', '2'}:
-        op_str = 'LIKE' if oper == '0' else '='
-    token_checks = ' AND '.join([f"{descripcion} {op_str} %s" for _ in range(max(token_count, 1))])
+    exists_operator = 'NOT EXISTS' if oper in {'1', '7'} else 'EXISTS'
     return (
-        "EXISTS ("
+        f"{exists_operator} ("
         "SELECT 1 "
         "FROM oferta_local olf "
         "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
+        "LEFT JOIN estado_tipo etf ON etf.c_estado = olf.c_estado "
         "WHERE olf.id_localizacion = vl.id_localizacion "
-        f"AND {token_checks}"
+        f"AND {' AND '.join(conditions)}"
         ")"
     )
 
@@ -780,9 +814,7 @@ def _build_where(request):
             continue
 
         if campo == 'tipo_oferta':
-            tipo_values = _tipo_oferta_filter_values(oper, valor)
-            clauses.append(_build_tipo_oferta_clause(oper, len(tipo_values)))
-            params.extend(tipo_values)
+            _append_tipo_oferta_filter(clauses, params, oper, [valor])
             continue
 
         if campo == 'modalidades_complementarias':
@@ -809,18 +841,7 @@ def _build_where(request):
             continue
 
         if campo == 'tipo_oferta':
-            if len(values) == 1:
-                tipo_values = _tipo_oferta_filter_values(oper, values[0])
-                clauses.append(_build_tipo_oferta_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
-                continue
-
-            subclauses = []
-            for value in values:
-                tipo_values = _tipo_oferta_filter_values(oper, value)
-                subclauses.append(_build_tipo_oferta_clause(oper, len(tipo_values)))
-                params.extend(tipo_values)
-            clauses.append(f"({' OR '.join(subclauses)})")
+            _append_tipo_oferta_filter(clauses, params, oper, values)
             continue
 
         if campo == 'modalidades_complementarias':
@@ -1792,4 +1813,5 @@ def listar_localizaciones(request):
         'request': request,
         'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
     }
+    context.update(get_contexto_fecha_padron(request))
     return render(request, 'padroninterno/localizaciones.html', context)
