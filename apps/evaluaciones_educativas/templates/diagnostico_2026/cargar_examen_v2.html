@@ -381,18 +381,19 @@
                         <td rowspan="3">
                             <div class="mod-a small">
                                 Resolución: <br>
+                                Sea \(x\) = edad de Tomás. <br> Como Martina es el doble: \(2x\). <br> Suman 18 años: <br> \(x+2x=18\) <br> \(3x=18\) <br> \(x=6\) <br>
+                                Entonces: <br>
+                                <strong>Tomás = 6 años</strong> <br> <strong>Martina = 12 años</strong>
+                            </div>
+                            <div class="mod-b d-none small">
+                                Resolución: <br>
+                                Sea \(x\) = edad de Mateo. <br> Como Camila es 4 años mayor: \(x + 4\). <br> Suman 22 años: <br>
                                 𝑥 + 𝑥 + 4 = 22 
                                 <br> 2 𝑥 = 22 − 4
                                 <br> 2 𝑥 = 18
                                 <br> 𝑥 = 9 <br>
                                 Entonces: <br>
                                 <strong>Mateo = 9 años</strong> <br> <strong>Camila = 13 años</strong>
-                            </div>
-                            <div class="mod-b d-none small">
-                                Resolución: <br>
-                                Sea \(x\) = edad de Tomás. <br> Como Martina es el doble: \(2x\). <br> Suman 18 años: <br> \(x+2x=18\) <br> \(3x=18\) <br> \(x=6\) <br>
-                                Entonces: <br>
-                                <strong>Tomás = 6 años</strong> <br> <strong>Martina = 12 años</strong>
                             </div>
                         </td>
                         <td>Plantea y resuelve correctamente la ecuación.</td>
@@ -426,10 +427,10 @@
                         <td class="text-center fw-bold" rowspan="4">11)</td>
                         <td rowspan="4">
                             <div class="mod-a small">
-                                <strong>Respuestas correctas:</strong> <br> <br> <b> A) </b> Verdadero <b> (V) </b> <br> <b> B) </b> Verdadero <b> (V) </b> <br> <b> C) </b> Falso <b> (F) </b>
+                                <strong>Respuestas correctas:</strong> <br><b> A) </b> Falso <b> (F) </b> <br> <b> B) </b> Verdadero <b> (V) </b> <br> <b> C) </b> Falso <b> (F) </b>
                             </div>
                             <div class="mod-b d-none small">
-                                <strong>Respuestas correctas:</strong> <br><b> A) </b> Falso <b> (F) </b> <br> <b> B) </b> Verdadero <b> (V) </b> <br> <b> C) </b> Falso <b> (F) </b>
+                                <strong>Respuestas correctas:</strong> <br> <br> <b> A) </b> Verdadero <b> (V) </b> <br> <b> B) </b> Verdadero <b> (V) </b> <br> <b> C) </b> Falso <b> (F) </b>
                             </div>
                         </td>
                         <td>Completa correctamente los tres cuadros.</td>
@@ -542,6 +543,20 @@
                 document.querySelectorAll(".mod-a").forEach(el => el.classList.toggle("d-none", isB));
                 document.querySelectorAll(".mod-b").forEach(el => el.classList.toggle("d-none", !isB));
 
+                document.querySelectorAll(".mod-a, .mod-b").forEach(block => {
+                    const hidden = block.classList.contains("d-none");
+                    block.querySelectorAll("input, select").forEach(control => {
+                        if (control.name === "modelo" || control.name === "asistencia") return;
+                        control.disabled = hidden || isAus;
+                        if (hidden && control.type === "radio") {
+                            control.checked = false;
+                        }
+                        if (hidden && control.tagName === "SELECT") {
+                            control.selectedIndex = 0;
+                        }
+                    });
+                });
+
                 if (labelModelo && selMod) {
                     labelModelo.innerText = "MODELO " + selMod.value;
                 }
@@ -576,9 +591,21 @@
             const respuestasEl = document.getElementById("respuestas-guardadas");
             if (respuestasEl) {
                 const respuestas = JSON.parse(respuestasEl.textContent);
+                const modeloActual = selMod ? selMod.value : null;
                 Object.entries(respuestas).forEach(([name, value]) => {
                     if (!value) return;
-                    const radio = document.querySelector(`input[name="${name}"][value="${CSS.escape(value)}"]`);
+                    const radios = Array.from(document.querySelectorAll(`input[name="${name}"][value="${CSS.escape(value)}"]`));
+                    let radio = null;
+                    if (radios.length > 0) {
+                        if (modeloActual === "B") {
+                            radio = radios.find(r => r.closest(".mod-b"));
+                        } else if (modeloActual === "A") {
+                            radio = radios.find(r => r.closest(".mod-a"));
+                        }
+                        if (!radio) {
+                            radio = radios.find(r => !r.closest(".d-none")) || radios[0];
+                        }
+                    }
                     if (radio) radio.checked = true;
                     const select = document.querySelector(`select[name="${name}"]`);
                     if (select) {
