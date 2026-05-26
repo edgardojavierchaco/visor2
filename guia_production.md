@@ -69,3 +69,25 @@ docker compose -f production.yml exec django python manage.py migrate --settings
 
 docker compose -f production.yml exec django python manage.py collectstatic --noinput --settings=config.settings.production
 
+##################################
+# ACTIVAR MANTENIMIENTO
+##################################
+nano .env
+DJANGO_ENABLED=false
+MAINTENANCE_ENABLED=true
+
+docker compose -f production.yml up -d
+
+docker compose -f production.yml stop django celery celery-beat
+
+
+################################
+# VOLVER AL SITIO
+################################
+nano .env
+DJANGO_ENABLED=true
+MAINTENANCE_ENABLED=false
+
+docker compose -f production.yml up -d
+
+docker compose -f production.yml start django celery celery-beat

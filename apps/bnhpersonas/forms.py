@@ -201,72 +201,16 @@ class ActividadForm(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
 
-        # ==========================================
-        # CSS
-        # ==========================================
-        for field in self.fields.values():
+        if not user:
+            return
 
-            if isinstance(field.widget, forms.Select):
+        qs = get_ofertas_usuario(user)
 
-                field.widget.attrs["class"] = (
-                    "form-select"
-                )
-
-            else:
-
-                field.widget.attrs["class"] = (
-                    "form-control"
-                )
-
-        # ==========================================
-        # FECHAS
-        # ==========================================
-        self.fields["f_desde"].widget.attrs.update({
-            "type": "date"
-        })
-
-        self.fields["f_hasta"].widget.attrs.update({
-            "type": "date"
-        })
-
-        # ==========================================
-        # USER
-        # ==========================================
-        if user:
-
-            qs = get_ofertas_usuario(user)
-
-            self.fields["cueanexo"].choices = [
-
-                (str(x.cueanexo), str(x.cueanexo))
-
-                for x in qs
-            ]
-
-        # ==========================================
-        # VALOR INICIAL EDICION
-        # ==========================================
-        if self.instance and self.instance.pk:
-
-            self.initial["cueanexo"] = (
-                str(self.instance.cueanexo)
-            )
-
-            if self.instance.f_desde:
-
-                self.initial["f_desde"] = (
-                    self.instance.f_desde.strftime(
-                        "%Y-%m-%d"
-                    )
-                )
-
-            if self.instance.f_hasta:
-
-                self.initial["f_hasta"] = (
-                    self.instance.f_hasta.strftime(
-                        "%Y-%m-%d"
-                    )
-                )
+        self.fields["cueanexo"].choices = [
+            (x.cueanexo, x.cueanexo)
+            for x in qs
+        ]
+    
     
 
 
