@@ -1,5 +1,6 @@
-from apps.evaluaciones_educativas.models.diagnostico_2026 import Año2026
-
+from apps import evaluaciones
+from apps.evaluaciones.models import Alumno
+from apps.evaluaciones_educativas.models.diagnostico_2026 import Establecimientos2026, EvaluacionDiagnostica2026, Año2026
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
@@ -797,3 +798,61 @@ def boton_completar_carga(cueanexo, materia_nombre):
 		numero = lista_inicial_conteo - lista_final_conteo
 	print(f'es numero{numero}')
 	return estado_carga,numero
+
+
+def monitoreo_evaluaciones_educativas(request):
+	selected_dni = request.GET.get('dni')
+	# establecimientos_cueanexo = Establecimientos2026.objects.values_list('cueanexo', flat=True)
+	establecimientos_cueanexo = Establecimientos2026.objects.all()
+	#alumnos_total= Alumno2026.objects.values_list('dni','nombre','apellido','seccion__seccion','seccion__año__cueanexo')
+	if selected_dni:
+		alumnos_query=EvaluacionDiagnostica2026.objects.filter(alumno__dni__icontains=selected_dni)
+	else:
+		alumnos_query=EvaluacionDiagnostica2026.objects.all()
+
+	print(alumnos_query)
+	alumnos_total = alumnos_query.values_list(
+        'alumno__dni',
+        'alumno__nombre',
+        'alumno__apellido',
+        'alumno__seccion__seccion',
+        'alumno__seccion__año__cueanexo',
+		'matematica2026',
+		'lengua2026'
+    )
+	establecimientos_region= Establecimientos2026.objects.values_list('region', flat=True)
+	monitoreo_total = []
+	for i in establecimientos_cueanexo:
+		lista_dnis = list(
+			TablaTemporalAlumno.objects
+			.filter(cueanexo=i.cueanexo)
+			.values_list('numero_de_documento', flat=True)
+		)
+		lista = list(
+			Alumno2026.objects
+			.filter(~Q(dni__in=lista_dnis),seccion__año__Establecimiento__cueanexo=int(i.cueanexo))
+			.select_related('seccion__año', 'seccion__año__Establecimiento')
+			.values_list('dni', flat=True)
+		)
+		lista_dnis.extend(lista) 
+		alumnos=Alumno2026.objects.filter(seccion__año__cueanexo=i)
+		alumnos_conteo=len(lista_dnis)
+		alumno_examen_matematica=Matematica2026.objects.filter(alumno__in=alumnos).count()
+		alumno_examen_lengua= Lengua2026.objects.filter(alumno__in=alumnos).count()
+		monitoreo_total.append({
+					'cueanexo': i.cueanexo,
+					'escuela': i.escuela,
+					'region': i.region,
+					'localidad': i.localidad,
+					'departamento': i.departamento,
+					'ambito':i.ambito,
+					'sector': i.sector,
+					'alumnos': alumnos_conteo,
+					'matematica': alumno_examen_matematica,
+					'lengua': alumno_examen_lengua
+				})
+		#print(f'cueanexo{i.cueanexo},Escuela:{i.escuela},Region:{i.region},Localidad{i.localidad},Departamento:{i.departamento}alumnos{alumnos_conteo},matematica{alumno_examen_matematica},lengua{alumno_examen_lengua}')
+	contexto={'lista':monitoreo_total,
+		   'regiones':establecimientos_region,
+		   'alumnos_total':alumnos_total}
+	return render(request, 'diagnostico_2026/monitoreo_diagnostico.html', contexto)
