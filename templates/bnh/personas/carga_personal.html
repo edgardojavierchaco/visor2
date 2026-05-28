@@ -20,6 +20,7 @@
     --border:#d9e1ea;
     --shadow:0 10px 30px rgba(0,0,0,.08);
     --radius:18px;
+    --warning:#ff9800;
 }
 
 *{
@@ -335,6 +336,11 @@ tbody td{
     margin-top: 10px;
 }
 
+.back{
+    background:var(--warning);
+    color:white;
+}
+
 </style>
 </head>
 
@@ -354,6 +360,17 @@ tbody td{
 
     <div class="badge">
         Registro Premium
+    </div>
+    <div class="person-actions">
+
+        <a
+            href="{% url 'director:institucional' %}"
+            class="btn back btn-action">
+
+            <i class="fa-solid fa-arrow-left me-2"></i>
+                Volver
+
+        </a>
     </div>
 
 </div>
