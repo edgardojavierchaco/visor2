@@ -96,7 +96,7 @@ def get_flags_ofertas_director(user):
 
     # Secundaria: EES / EET / EET-A
     if any(
-        a.startswith(("EES", "EET", "EET-A"))
+        a.startswith(("EES", "EET", "EET-A", "EFA"))
         for a in acronimos
     ):
         flags.add("tiene_secundaria")
