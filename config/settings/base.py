@@ -155,7 +155,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=indicadores,public,evaluacion,cenpe,bnh,operativoschaco,pem,pof'
+            'options': '-c search_path=public,evaluacion,cenpe,bnh,indicadores,operativoschaco,pem,pof'
         }
     },        
     'Evaluacion': {
