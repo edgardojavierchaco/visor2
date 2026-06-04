@@ -7,6 +7,7 @@ from django.core.validators import RegexValidator
 from .middleware import get_current_user
 from smart_selects.db_fields import ChainedForeignKey
 from django.utils import timezone
+from datetime import date
 
 
 #################
@@ -656,12 +657,11 @@ class RegistroActividades(AuditoriaModel):
     funciones = models.ForeignKey(
         'TipoFunciones',
         on_delete=models.PROTECT,
-        to_field='funciones_descripcion',
-        db_column='funciones_descripcion'
+        db_column='c_funciones',
     )
     
-    f_desde_funciones = models.DateField()
-    f_hasta_funciones = models.DateField()
+    f_desde_funciones = models.DateField(default=date.today)
+    f_hasta_funciones = models.DateField(default=date.today)
 
     class Meta:
         db_table = "registro_actividades"
