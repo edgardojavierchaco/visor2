@@ -1,7 +1,7 @@
 from django.utils import timezone
-
 from django.db import models
 from django.core.exceptions import ValidationError
+from .managers import ActivosManager
 
 
 class EscuelaCapaOfertas(models.Model):
@@ -32,14 +32,12 @@ class AsignacionSupervisorEscuela(models.Model):
     # =========================
     BORRADOR = "BORRADOR"
     ENVIADO = "ENVIADO"
-    REVISION = "REVISION_REGIONAL"
     OBSERVADO = "OBSERVADO"
     APROBADO = "APROBADO"
 
     ESTADOS = [
         (BORRADOR, "Borrador"),
         (ENVIADO, "Enviado"),
-        (REVISION, "En revisión regional"),
         (OBSERVADO, "Observado"),
         (APROBADO, "Aprobado"),
     ]
@@ -66,6 +64,9 @@ class AsignacionSupervisorEscuela(models.Model):
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    
+    objects = ActivosManager()
+    all_objects = models.Manager()
 
     class Meta:
         db_table = "asignacion_supervisores"
@@ -75,14 +76,21 @@ class AsignacionSupervisorEscuela(models.Model):
                 name="uq_supervisor_escuela_oferta"
             )
         ]
+        indexes = [
+            models.Index(fields=["estado"]),
+            models.Index(fields=["region_loc"]),
+            models.Index(fields=["created_at"]),
+        ]
 
-    def delete(self, using=None, keep_parents=False):
+    def delete(self, *args, **kwargs):
         self.deleted_at = timezone.now()
-        self.save()
+        self.save(update_fields=["deleted_at"])
 
     def clean(self):
-        if self.estado == self.APROBADO and self.deleted_at:
-            raise ValidationError("No se puede modificar aprobado")
+        if self.pk:
+            old = AsignacionSupervisorEscuela.all_objects.filter(pk=self.pk).first()
+            if old and old.estado == self.APROBADO:
+                raise ValidationError("Asignación aprobada no editable")
         
     def __str__(self):
         return f"{self.cueanexo} - {self.estado}"

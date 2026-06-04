@@ -4,14 +4,7 @@ from django.views.generic import ListView, DetailView
 from django.db.models import (
     Count,
     Prefetch,
-    CharField,
-    Value,
     Q
-)
-
-from django.db.models.functions import (
-    Cast,
-    Replace
 )
 
 from .models import (
@@ -19,13 +12,7 @@ from .models import (
     RegistroActividades
 )
 
-from apps.consultasge.models_padron import (
-    CapaUnicaOfertas
-)
-
-from apps.bnhpersonas.helpers import (
-    get_cueanexos_usuario
-)
+from .utils import get_cueanexos_usuario
 
 
 ###################################
@@ -164,7 +151,8 @@ class PersonasListView(
                     "actividades",
                     filter=Q(
                         actividades__cueanexo__in=self.cueanexos_usuario
-                    )
+                    ),
+                    distinct=True
                 )
             )
 
@@ -179,21 +167,33 @@ class PersonasListView(
     def get_context_data(self, **kwargs):
 
         context = super().get_context_data(**kwargs)
+        
+        actividades = RegistroActividades.objects.filter(
+            cueanexo__in=self.cueanexos_usuario
+        )
 
         context["total_personas"] = (
             context["paginator"].count
         )
 
         context["total_actividades"] = (
-            RegistroActividades.objects
-            .filter(
-                cueanexo__in=self.cueanexos_usuario
-            )
+            actividades.count()
+        )
+
+        context["total_activos"] = (
+            actividades
+            .filter(estado="ACTIVO")
+            .values("persona")
+            .distinct()
             .count()
         )
 
-        context["cueanexos_usuario"] = (
-            self.cueanexos_usuario
+        context["total_pasivos"] = (
+            actividades
+            .exclude(estado="ACTIVO")
+            .values("persona")
+            .distinct()
+            .count()
         )
 
         return context
@@ -218,7 +218,7 @@ class PersonaDetailView(
     # =====================================================
     def dispatch(self, request, *args, **kwargs):
 
-        self.cueanexos_usuario = (
+        self.cueanexos_usuario = list(
             get_cueanexos_usuario(
                 request.user
             )
@@ -254,7 +254,7 @@ class PersonaDetailView(
             .order_by("-f_desde")
         )
 
-        queryset = (
+        return (
 
             Personas.objects
 
@@ -277,6 +277,11 @@ class PersonaDetailView(
                     queryset=actividades_qs
                 )
             )
-        )
 
-        return queryset
+            .annotate(
+                total_actividades=Count(
+                    "actividades",
+                    distinct=True
+                )
+            )
+        )

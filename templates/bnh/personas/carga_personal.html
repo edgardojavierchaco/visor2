@@ -341,6 +341,69 @@ tbody td{
     color:white;
 }
 
+/* ==========================
+   SWITCH WHATSAPP
+========================== */
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 58px;
+    height: 32px;
+    cursor: pointer;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background: #d7dde5;
+    border-radius: 999px;
+    transition: .25s;
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    top: 4px;
+    background: white;
+    border-radius: 50%;
+    transition: .25s;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+
+.switch input:checked + .slider {
+    background: #25D366; /* WhatsApp */
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.switch input:focus + .slider {
+    box-shadow: 0 0 0 4px rgba(37,211,102,.15);
+}
+
+.switch-wrapper{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-height:46px;
+}
+
+#whatsapp-text{
+    font-weight:600;
+    color:#526274;
+}
+
 </style>
 </head>
 
@@ -528,7 +591,18 @@ tbody td{
 
             <label>WhatsApp</label>
 
-            {{ form.whatsapp }}
+            <div class="switch-wrapper">
+
+                <label class="switch">
+                    {{ form.whatsapp }}
+                    <span class="slider"></span>
+                </label>
+
+                <span id="whatsapp-text">
+                    No
+                </span>
+
+            </div>
 
         </div>
 
@@ -557,6 +631,7 @@ tbody td{
                 <button type="button" class="tab-btn active">Institución - Cargo</button>
                 <button type="button" class="tab-btn">Condición Actividad</button>
                 <button type="button" class="tab-btn">Asignación</button>
+                <button type="button" class="tab-btn">Funciones</button>
             </div>
 
             <!-- TAB 1 -->
@@ -654,6 +729,22 @@ tbody td{
 
             </div>
 
+            <!-- TAB 4 -->
+            <div class="tab-content">
+                <div class="field">
+                    <label>Funciones</label>
+                    {{ f.funciones }}
+                </div>
+                <div class="field">
+                    <label>Desde</label>
+                    {{ f.f_desde_funciones }}
+                </div>
+                <div class="field">
+                    <label>Hasta</label>
+                    {{ f.f_hasta_funciones }}
+                </div>
+            </div>
+
             <!-- DELETE -->
             <div class="actividad-actions">
                 {{ f.DELETE }}
@@ -727,6 +818,14 @@ tbody td{
             class="tab-btn">
 
             Académico
+
+        </button>
+
+        <button
+            type="button"
+            class="tab-btn">
+
+            Funciones
 
         </button>
 
@@ -834,6 +933,39 @@ tbody td{
 
         <div class="field">
             <label>Espacio</label>
+            {{ formset.empty_form.espacios }}
+        </div>
+
+    </div>
+
+    <!-- =========================================
+         TAB 4
+    ========================================== -->
+
+    <div class="tab-content">
+
+        <div class="field">
+            <label>Funciones</label>
+            {{ formset.empty_form.funciones }}
+        </div>
+
+        <div class="field">
+            <label>Desde</label>
+            {{ formset.empty_form.f_desde_funciones }}
+        </div>
+
+        <div class="field">
+            <label>Hasta</label>
+            {{ formset.empty_form.f_hasta_funciones }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         DELETE
+    ========================================== -->
+
             {{ formset.empty_form.espacios }}
         </div>
 
@@ -1114,6 +1246,31 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
             }
+        );
+    }
+
+
+    /* =========================================================
+         SWITCH WHATSAPP
+    ========================================================= */
+    const whatsapp =
+        document.getElementById("id_whatsapp");
+
+    const whatsappText =
+        document.getElementById("whatsapp-text");
+
+    if (whatsapp && whatsappText){
+
+        function actualizarWhatsapp(){
+            whatsappText.textContent =
+                whatsapp.checked ? "Sí" : "No";
+        }
+
+        actualizarWhatsapp();
+
+        whatsapp.addEventListener(
+            "change",
+            actualizarWhatsapp
         );
     }
 

@@ -573,7 +573,7 @@ class CondicionActividad(models.Model):
 #########################
 class TitulosEspacios(models.Model):
     cod_titulo=models.IntegerField(primary_key=True)
-    descrip_titulo=models.CharField(max_length=255)
+    descrip_titulo=models.CharField(max_length=255, unique=True)
     
     class Meta:
         managed=False
@@ -582,6 +582,21 @@ class TitulosEspacios(models.Model):
     
     def __str__(self):
         return self.descrip_titulo
+
+
+#############################
+# TIPO DE FUNCIONES
+#############################
+class TipoFunciones(models.Model):
+    c_funciones=models.IntegerField(primary_key=True)
+    funciones_descripcion=models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        managed=False
+        db_table='funciones_tipo_bnh'
+    
+    def __str__(self):
+        return self.funciones_descripcion
 
 
 ###############################
@@ -626,9 +641,9 @@ class RegistroActividades(AuditoriaModel):
     espacios = models.ForeignKey(
         'TitulosEspacios',
         on_delete=models.PROTECT,
-        db_column='espacios'
-    )
-    
+        to_field='descrip_titulo',
+        db_column='descrip_titulo'
+    )    
     f_desde = models.DateField()
     f_hasta = models.DateField()
     carga_horaria = models.DecimalField(max_digits=4, decimal_places=2)
@@ -637,6 +652,16 @@ class RegistroActividades(AuditoriaModel):
         ('ACTIVO', 'Activo'),
         ('INACTIVO', 'Inactivo'),
     ])
+    
+    funciones = models.ForeignKey(
+        'TipoFunciones',
+        on_delete=models.PROTECT,
+        to_field='funciones_descripcion',
+        db_column='funciones_descripcion'
+    )
+    
+    f_desde_funciones = models.DateField()
+    f_hasta_funciones = models.DateField()
 
     class Meta:
         db_table = "registro_actividades"
@@ -660,6 +685,17 @@ class RegistroActividades(AuditoriaModel):
         if self.f_desde and self.f_hasta:
             if self.f_hasta < self.f_desde:
                 errors["f_hasta"] = "La fecha 'hasta' no puede ser menor a 'desde'"
+                
+        if self.f_desde_funciones:
+
+            if self.f_desde_funciones > hoy:
+                errors["f_desde_funciones"] = (
+                    "La fecha 'desde' no puede ser posterior a la fecha actual"
+                )
+        
+        if self.f_desde_funciones and self.f_hasta_funciones:
+            if self.f_hasta_funciones < self.f_desde_funciones:
+                errors["f_hasta_funciones"] = "La fecha 'hasta' no puede ser menor a 'desde'"
 
         if not self.cueanexo:
             errors["cueanexo"] = "CUEANEXO es obligatorio"

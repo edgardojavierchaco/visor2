@@ -45,7 +45,14 @@ REGLAS_MENU = {
     "ocultar_ministro_subsecretario": lambda user: not (
     getattr(getattr(user, "perfil", None), "rol", None) and
     getattr(user.perfil.rol, "nombre", None) in ["Ministro", "Subsecretario"]
-)
+),
+    "ocultar_evaluacion": lambda user: not (
+    getattr(getattr(user, "perfil", None), "rol", None) and
+    getattr(user.perfil.rol, "nombre", None) in ["Evaluacion"]
+),
+    "evaluacion": lambda user: (
+        getattr(user.perfil.rol, "nombre", None) == "Evaluacion"
+    ),
     
 }
 

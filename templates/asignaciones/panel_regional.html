@@ -2,35 +2,72 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container-fluid mt-4">
 
-<h3>🏢 Panel Regional PRO</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
 
-<!-- CARDS -->
-<div class="row mb-4 text-center">
-    <div class="col"><div class="card bg-secondary text-white"><div class="card-body"><h5>Borrador</h5><h3 id="c-borrador">0</h3></div></div></div>
-    <div class="col"><div class="card bg-primary text-white"><div class="card-body"><h5>Enviado</h5><h3 id="c-enviado">0</h3></div></div></div>
-    <div class="col"><div class="card bg-danger text-white"><div class="card-body"><h5>Rechazado</h5><h3 id="c-rechazado">0</h3></div></div></div>
-    <div class="col"><div class="card bg-success text-white"><div class="card-body"><h5>Aprobado</h5><h3 id="c-aprobado">0</h3></div></div></div>
+    <h3 class="mb-0">
+        🏛 Panel Regional
+    </h3>
+
 </div>
 
-<!-- FILTROS -->
-<div class="mb-3">
-    <button class="btn btn-outline-dark filtro" data-estado="ALL">Todos</button>
-    <button class="btn btn-outline-secondary filtro" data-estado="BORRADOR">Borrador</button>
-    <button class="btn btn-outline-primary filtro" data-estado="ENVIADO">Enviado</button>
-    <button class="btn btn-outline-danger filtro" data-estado="RECHAZADO">Rechazado</button>
-    <button class="btn btn-outline-success filtro" data-estado="APROBADO">Aprobado</button>
+<!-- KPI -->
+<div class="row g-3 mb-4 text-center">
+
+    <div class="col-md-3">
+        <div class="card shadow bg-secondary text-white h-100">
+            <div class="card-body">
+                <h6>Borrador</h6>
+                <h3>{{ resumen.BORRADOR }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow bg-primary text-white h-100">
+            <div class="card-body">
+                <h6>Enviado</h6>
+                <h3>{{ resumen.ENVIADO }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow bg-warning text-dark h-100">
+            <div class="card-body">
+                <h6>Observado</h6>
+                <h3>{{ resumen.OBSERVADO }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow bg-success text-white h-100">
+            <div class="card-body">
+                <h6>Aprobado</h6>
+                <h3>{{ resumen.APROBADO }}</h3>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<table id="tabla" class="table table-bordered table-striped">
+<!-- TABLA -->
+<div class="card shadow-sm">
+
+<div class="card-body">
+
+<table id="tablaRegional"
+       class="table table-hover table-bordered align-middle">
 
 <thead class="table-dark">
 <tr>
     <th>ID</th>
-    <th>Escuela</th>
     <th>Supervisor</th>
+    <th>Escuela</th>
     <th>Región</th>
+    <th>Oferta</th>
     <th>Estado</th>
     <th>Observación</th>
     <th>Acciones</th>
@@ -40,194 +77,370 @@
 <tbody>
 
 {% for a in asignaciones %}
+
 <tr>
-    <td>{{ a.id }}</td>
-    <td>{{ a.nom_est }}</td>
-    <td>{{ a.supervisor.usuario }}</td>
-    <td>{{ a.region_loc }}</td>
 
-    <td data-estado="{{ a.estado }}">
-        <span class="badge 
-        {% if a.estado == "BORRADOR" %}bg-secondary
-        {% elif a.estado == "ENVIADO" %}bg-primary
-        {% elif a.estado == "RECHAZADO" %}bg-danger
-        {% elif a.estado == "APROBADO" %}bg-success
-        {% endif %}">
-        {{ a.estado }}
-        </span>
-    </td>
+<td>{{ a.id }}</td>
 
-    <td class="obs">
-        {{ a.observacion|default:"-" }}
-    </td>
+<td>
+    {{ a.supervisor.usuario.apellido }},
+    {{ a.supervisor.usuario.nombres }}
+</td>
 
-    <td>
-        {% if a.estado == "ENVIADO" %}
-            <button class="btn btn-success btn-sm aprobar" data-id="{{ a.id }}">✔</button>
-            <button class="btn btn-danger btn-sm rechazar" data-id="{{ a.id }}">✖</button>
-        {% endif %}
-    </td>
+<td>
+    <strong>{{ a.nom_est }}</strong><br>
+    <small class="text-muted">
+        {{ a.cueanexo }}
+    </small>
+</td>
+
+<td>{{ a.region_loc }}</td>
+
+<td>{{ a.oferta }}</td>
+
+<!-- ESTADO -->
+<td>
+
+{% if a.estado == "BORRADOR" %}
+
+<span class="badge bg-secondary">
+BORRADOR
+</span>
+
+{% elif a.estado == "ENVIADO" %}
+
+<span class="badge bg-primary">
+ENVIADO
+</span>
+
+{% elif a.estado == "OBSERVADO" %}
+
+<span class="badge bg-warning text-dark">
+OBSERVADO
+</span>
+
+{% elif a.estado == "APROBADO" %}
+
+<span class="badge bg-success">
+APROBADO
+</span>
+
+{% endif %}
+
+</td>
+
+<!-- OBSERVACION -->
+<td>
+
+{% if a.observacion %}
+
+<div class="alert alert-warning p-2 m-0 small">
+    {{ a.observacion }}
+</div>
+
+{% else %}
+<span class="text-muted">-</span>
+{% endif %}
+
+</td>
+
+<!-- ACCIONES -->
+<td>
+
+{% if a.estado == "ENVIADO" %}
+
+<button
+    class="btn btn-success btn-sm aprobar-btn"
+    data-id="{{ a.id }}">
+    ✔ Aprobar
+</button>
+
+<button
+    class="btn btn-warning btn-sm observar-btn"
+    data-id="{{ a.id }}">
+    ⚠ Observar
+</button>
+
+{% else %}
+
+<span class="text-muted">
+—
+</span>
+
+{% endif %}
+
+</td>
 
 </tr>
+
 {% endfor %}
 
 </tbody>
-
 </table>
 
 </div>
-
-<!-- MODAL -->
-<div class="modal fade" id="modalRechazo">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header"><h5>Motivo de rechazo</h5></div>
-      <div class="modal-body">
-        <textarea id="obs" class="form-control"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-danger" id="confirmarRechazo">Confirmar</button>
-      </div>
-    </div>
-  </div>
 </div>
 
-<!-- LIBS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<!-- PAGINACION -->
+{% if page_obj.has_other_pages %}
+
+<nav class="mt-4">
+
+<ul class="pagination justify-content-center">
+
+{% if page_obj.has_previous %}
+<li class="page-item">
+    <a class="page-link"
+       href="?page={{ page_obj.previous_page_number }}">
+       Anterior
+    </a>
+</li>
+{% endif %}
+
+<li class="page-item active">
+<span class="page-link">
+    {{ page_obj.number }}
+    /
+    {{ page_obj.paginator.num_pages }}
+</span>
+</li>
+
+{% if page_obj.has_next %}
+<li class="page-item">
+    <a class="page-link"
+       href="?page={{ page_obj.next_page_number }}">
+       Siguiente
+    </a>
+</li>
+{% endif %}
+
+</ul>
+
+</nav>
+
+{% endif %}
+
+</div>
+
+<!-- MODAL OBSERVACION -->
+<div class="modal fade"
+     id="modalObs"
+     tabindex="-1">
+
+<div class="modal-dialog">
+
+<div class="modal-content">
+
+<div class="modal-header">
+
+<h5 class="modal-title">
+Observación Regional
+</h5>
+
+<button type="button"
+        class="btn-close"
+        data-bs-dismiss="modal">
+</button>
+
+</div>
+
+<div class="modal-body">
+
+<input type="hidden"
+       id="obs_id">
+
+<textarea
+    id="obs_texto"
+    class="form-control"
+    rows="5"
+    placeholder="Detalle observación...">
+</textarea>
+
+</div>
+
+<div class="modal-footer">
+
+<button
+    class="btn btn-secondary"
+    data-bs-dismiss="modal">
+    Cancelar
+</button>
+
+<button
+    id="guardarObs"
+    class="btn btn-warning">
+    Guardar Observación
+</button>
+
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div class="position-fixed bottom-0 end-0 p-3"
+     style="z-index:9999">
+
+<div id="toast"
+     class="toast text-white border-0">
+
+<div id="toastMsg"
+     class="toast-body">
+</div>
+
+</div>
+</div>
+
+<link rel="stylesheet"
+href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 
-let table;
-let filtroEstado = "ALL";
-let idRechazo = null;
+const urlAprobar =
+"{% url 'asignacionesuperv:aprobar_asignacion' %}";
 
-const urlAprobar = "{% url 'asignacionesuperv:aprobar_asignacion' %}";
-const urlRechazar = "{% url 'asignacionesuperv:rechazar_asignacion' %}";
+const urlObservar =
+"{% url 'asignacionesuperv:rechazar_asignacion' %}";
 
-// INIT
-$(document).ready(function () {
+function showToast(msg, ok=true){
 
-    table = $("#tabla").DataTable({
-        language: {
-            url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+    let toast =
+        document.getElementById("toast");
+
+    let msgEl =
+        document.getElementById("toastMsg");
+
+    toast.classList.remove(
+        "bg-success",
+        "bg-danger"
+    );
+
+    toast.classList.add(
+        ok ?
+        "bg-success"
+        :
+        "bg-danger"
+    );
+
+    msgEl.innerHTML = msg;
+
+    new bootstrap.Toast(
+        toast
+    ).show();
+}
+
+$(document).ready(function(){
+
+    $("#tablaRegional").DataTable({
+        pageLength:25,
+        responsive:true,
+        language:{
+            url:
+"https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
         }
     });
 
-    initFiltro();
-    actualizarContadores();
 });
 
-// FILTRO
-function initFiltro() {
+$(document).on(
+    "click",
+    ".aprobar-btn",
+    function(){
 
-    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        let id =
+            $(this).data("id");
 
-        let row = table.row(dataIndex).node();
-        let estado = $(row).find("td:eq(4)").data("estado");
+        $.post(
+            urlAprobar,
+            {
+                id:id,
+                csrfmiddlewaretoken:
+                    "{{ csrf_token }}"
+            },
+            function(res){
 
-        if (filtroEstado === "ALL") return true;
+                if(!res.ok){
 
-        return estado === filtroEstado;
-    });
+                    showToast(
+                        res.error ||
+                        "Error",
+                        false
+                    );
+                    return;
+                }
 
-    $(".filtro").click(function () {
-        filtroEstado = $(this).data("estado");
-        table.draw();
-    });
-}
+                showToast(
+                    "✔ Aprobado"
+                );
 
-// CONTADORES
-function actualizarContadores() {
-
-    let c = {BORRADOR:0, ENVIADO:0, RECHAZADO:0, APROBADO:0};
-
-    table.rows().every(function () {
-
-        let row = this.node();
-        let estado = $(row).find("td:eq(4)").data("estado");
-
-        if (c[estado] !== undefined) c[estado]++;
-
-    });
-
-    $("#c-borrador").text(c.BORRADOR);
-    $("#c-enviado").text(c.ENVIADO);
-    $("#c-rechazado").text(c.RECHAZADO);
-    $("#c-aprobado").text(c.APROBADO);
-}
-
-// BADGE
-function badge(e) {
-    let c = "bg-secondary";
-    if (e==="ENVIADO") c="bg-primary";
-    if (e==="RECHAZADO") c="bg-danger";
-    if (e==="APROBADO") c="bg-success";
-    return `<span class="badge ${c}">${e}</span>`;
-}
-
-// APROBAR
-$(document).on("click", ".aprobar", function () {
-
-    let row = $(this).closest("tr");
-    let id = $(this).data("id");
-
-    $.post(urlAprobar, {
-        id: id,
-        csrfmiddlewaretoken: "{{ csrf_token }}"
-    }, function () {
-
-        let td = row.find("td:eq(4)");
-
-        td.attr("data-estado", "APROBADO")
-          .html(badge("APROBADO"));
-
-        row.find(".obs").text("-");
-        row.find("td:eq(6)").html("");
-
-        table.row(row).invalidate().draw(false);
-        actualizarContadores();
-
-    });
+                setTimeout(
+                    ()=>location.reload(),
+                    600
+                );
+            }
+        );
 
 });
 
-// RECHAZAR
-$(document).on("click", ".rechazar", function () {
-    idRechazo = $(this).data("id");
-    new bootstrap.Modal("#modalRechazo").show();
+$(document).on(
+    "click",
+    ".observar-btn",
+    function(){
+
+        $("#obs_id").val(
+            $(this).data("id")
+        );
+
+        $("#obs_texto").val("");
+
+        new bootstrap.Modal(
+            document.getElementById(
+                "modalObs"
+            )
+        ).show();
 });
 
-$("#confirmarRechazo").click(function () {
+$("#guardarObs").click(function(){
 
-    let obs = $("#obs").val();
+    $.post(
+        urlObservar,
+        {
+            id:
+                $("#obs_id").val(),
 
-    $.post(urlRechazar, {
-        id: idRechazo,
-        observacion: obs,
-        csrfmiddlewaretoken: "{{ csrf_token }}"
-    }, function () {
+            observacion:
+                $("#obs_texto").val(),
 
-        let row = $(`button[data-id='${idRechazo}']`).closest("tr");
+            csrfmiddlewaretoken:
+                "{{ csrf_token }}"
+        },
+        function(res){
 
-        let td = row.find("td:eq(4)");
+            if(!res.ok){
 
-        td.attr("data-estado", "RECHAZADO")
-          .html(badge("RECHAZADO"));
+                showToast(
+                    res.error ||
+                    "Error",
+                    false
+                );
+                return;
+            }
 
-        row.find(".obs").text(obs);
-        row.find("td:eq(6)").html("");
+            showToast(
+                "✔ Observación registrada"
+            );
 
-        table.row(row).invalidate().draw(false);
-        actualizarContadores();
-
-        $("#modalRechazo").modal("hide");
-        $("#obs").val("");
-
-    });
+            setTimeout(
+                ()=>location.reload(),
+                700
+            );
+        }
+    );
 
 });
 

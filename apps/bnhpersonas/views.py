@@ -58,7 +58,15 @@ def carga_personal(request, pk=None):
     # CASO 2 y 3: existe persona
     # =========================
     if pk:
-        persona = get_object_or_404(Personas, pk=pk)
+        persona = get_object_or_404(
+            Personas.objects.select_related(
+                "sexo",
+                "provincia",
+                "localidad",
+                "codigo_area"
+            ),
+            pk=pk
+        )
 
     if request.method == "POST":
 
@@ -82,7 +90,9 @@ def carga_personal(request, pk=None):
                 # ==================================================
                 persona_obj = form.save(commit=False)
 
-                if not persona_obj.pk:
+                es_nueva_persona = not persona_obj.pk
+                
+                if es_nueva_persona:
                     persona_obj.usuario_creacion = request.user
 
                 persona_obj.usuario_modificacion = request.user
@@ -127,9 +137,17 @@ def buscar_persona(request):
     if not cuil:
         return JsonResponse({}, status=400)
 
-    persona = Personas.objects.filter(
-        cuil=cuil
-    ).first()
+    persona = (
+        Personas.objects
+        .select_related(
+            "sexo",
+            "provincia",
+            "localidad",
+            "codigo_area"
+        )
+        .filter(cuil=cuil)
+        .first()
+    )
 
     if not persona:
         return JsonResponse({
@@ -203,9 +221,13 @@ def filtrar_localidades(request):
     if not provincia_id:
         return JsonResponse([], safe=False)
 
-    qs = Localidades.objects.filter(
+    qs = (Localidades.objects.filter(
         c_provincia_id=provincia_id
-    ).values("c_localidad", "descrip_localidad")
+    )
+    .order_by("descrip_localidad")
+    
+    .values("c_localidad", "descrip_localidad")
+    )
 
     return JsonResponse(list(qs), safe=False)
 

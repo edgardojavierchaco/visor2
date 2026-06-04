@@ -8,8 +8,6 @@ from .models import (
     CodAreasTelefonos
 )
 
-from apps.consultasge.models_padron import CapaUnicaOfertas
-
 from .utils import get_ofertas_usuario
 
 
@@ -194,23 +192,15 @@ class ActividadForm(forms.ModelForm):
             "f_hasta": forms.DateInput(attrs={
                 "type": "date"
             }),
+            "f_desde_funciones": forms.DateInput(attrs={
+                "type": "date"
+            }),
 
-        }
+            "f_hasta_funciones": forms.DateInput(attrs={
+                "type": "date"
+            }),
 
-    def __init__(self, *args, user=None, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        if not user:
-            return
-
-        qs = get_ofertas_usuario(user)
-
-        self.fields["cueanexo"].choices = [
-            (x.cueanexo, x.cueanexo)
-            for x in qs
-        ]
-    
+        }    
     
 
 
@@ -224,32 +214,25 @@ class BaseActividadFormSet(BaseInlineFormSet):
         self.user = kwargs.pop("user", None)
 
         super().__init__(*args, **kwargs)
+        
+        self._cue_choices = []
+        
+        if self.user:
 
-    # =================================================
-    # QUERYSET
-    # =================================================
-    def get_queryset_cueanexo(self):
+            self._cue_choices = [
+                (x.cueanexo, x.cueanexo)
+                for x in get_ofertas_usuario(self.user)
+            ]
 
-        if not self.user:
-            return CapaUnicaOfertas.objects.none()
-
-        return get_ofertas_usuario(self.user)
-
+    
     # =================================================
     # CONSTRUCT FORM
     # =================================================
     def _construct_form(self, i, **kwargs):
 
-        kwargs["user"] = self.user
-
         form = super()._construct_form(i, **kwargs)
 
-        qs = self.get_queryset_cueanexo()
-
-        form.fields["cueanexo"].choices = [
-            (x.cueanexo, x.cueanexo)
-            for x in qs
-        ]
+        form.fields["cueanexo"].choices = self._cue_choices
 
         return form
 
@@ -261,12 +244,7 @@ class BaseActividadFormSet(BaseInlineFormSet):
 
         form = super().empty_form
 
-        qs = self.get_queryset_cueanexo()
-
-        form.fields["cueanexo"].choices = [
-            (x.cueanexo, x.cueanexo)
-            for x in qs
-        ]
+        form.fields["cueanexo"].choices = self._cue_choices
 
         return form
 

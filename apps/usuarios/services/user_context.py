@@ -85,7 +85,7 @@ def get_redirect_url(user):
     if not ctx.rol:
         return None
 
-    if ctx.rol in ['Administrador', 'Gestor']:
+    if ctx.rol in ['Administrador', 'Gestor', 'Evaluacion']:
         return 'archivos:portada_gestor'
 
     if ctx.rol in ['Ministro', 'Subsecretario', 'Director General']:
