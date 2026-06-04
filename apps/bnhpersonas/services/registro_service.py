@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from apps.bnhpersonas.models import RegistroActividades
 from apps.bnhpersonas.utils import get_ofertas_usuario
 from .bulk_service import BulkService
+from .pipeline import PipelineContext
 
 
 class RegistroService:
@@ -59,20 +60,24 @@ class RegistroService:
 
                 if obj.persona_id != persona.id:
                     raise ValidationError("No autorizado")
+                
+                context = PipelineContext(
+                    user=user,
+                    source="update_actividad",
+                )
 
-                obj.usuario_modificacion = user
-                obj.full_clean()
+                obj = BulkService.PIPELINE.run(
+                    obj,
+                    context=context,
+                )
+
                 obj.save()
 
             # =========================
             # CREATE
             # =========================
             else:
-
-                obj.usuario_creacion = user
-                obj.usuario_modificacion = user
-                obj.full_clean()
-
+                
                 nuevas.append(obj)
 
         if nuevas:

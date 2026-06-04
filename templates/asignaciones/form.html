@@ -1,253 +1,445 @@
 {% extends "archivos/base/layout.html" %}
+{% load static %}
 
 {% block content %}
 
 <div class="container mt-4">
 
-<h3>
-    {% if modo == "editar" %}
-        Editar asignaciones
-    {% else %}
-        Asignación tipo Excel
-    {% endif %}
-</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
 
-<label>Buscar escuelas</label>
-<select id="escuelas" style="width:100%"></select>
+    <h3>
 
-<br><br>
+        {% if modo == "crear" %}
+            ➕ Nueva Asignación
+        {% else %}
+            ✏ Editar Asignación
+        {% endif %}
 
-<table class="table table-bordered table-striped" id="tabla">
-    <thead class="table-dark">
-        <tr>
-            <th>Cueanexo</th>
-            <th>Nombre</th>
-            <th>Fecha desde</th>
-            <th>Fecha hasta</th>
-            <th>Estado</th>
-            <th>Acción</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+    </h3>
 
-<button id="btnGuardar" class="btn btn-success">
-    {% if modo == "editar" %}
-        Actualizar asignaciones
-    {% else %}
-        Guardar asignaciones
-    {% endif %}
+    <a href="{% url 'asignacionesuperv:panel' %}"
+       class="btn btn-outline-secondary">
+
+        ← Volver
+
+    </a>
+
+</div>
+
+<!-- ALERT -->
+<div id="alerta"></div>
+
+<!-- FORM -->
+<div class="card shadow-sm">
+
+<div class="card-body">
+
+<div class="row g-3">
+
+<div class="col-md-6">
+
+<label class="form-label">
+Escuela
+</label>
+
+<select
+    id="escuelaSelect"
+    class="form-select">
+</select>
+
+</div>
+
+<div class="col-md-3">
+
+<label class="form-label">
+Desde
+</label>
+
+<input
+    type="date"
+    id="fecha_desde"
+    class="form-control">
+
+</div>
+
+<div class="col-md-3">
+
+<label class="form-label">
+Hasta
+</label>
+
+<input
+    type="date"
+    id="fecha_hasta"
+    class="form-control">
+
+</div>
+
+</div>
+
+<div class="mt-3">
+
+<button
+    id="agregarFila"
+    class="btn btn-primary">
+
+    + Agregar
+
 </button>
 
 </div>
 
-<!-- TOAST -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
-    <div id="toast" class="toast align-items-center text-white bg-success border-0">
-        <div class="d-flex">
-            <div class="toast-body" id="toastMsg"></div>
-        </div>
-    </div>
 </div>
 
-{{ data_inicial|json_script:"data-inicial" }}
+</div>
 
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<!-- TABLA -->
+<div class="card shadow-sm mt-4">
+
+<div class="card-body">
+
+<table
+    id="tablaAsignaciones"
+    class="table table-bordered table-hover align-middle">
+
+<thead class="table-dark">
+
+<tr>
+
+<th>CUEANEXO</th>
+<th>Escuela</th>
+<th>Desde</th>
+<th>Hasta</th>
+<th>Acciones</th>
+
+</tr>
+
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+</div>
+
+<!-- BOTON -->
+<div class="mt-4">
+
+<button
+    id="guardarBtn"
+    class="btn btn-success btn-lg">
+
+    💾 Guardar Asignaciones
+
+</button>
+
+</div>
+
+</div>
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+rel="stylesheet"/>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 
-const ajaxUrl = "{% url 'asignacionesuperv:ajax_escuelas' %}";
-const saveUrl = "{% url 'asignacionesuperv:ajax_asignar' %}";
-const panelUrl = "{% url 'asignacionesuperv:panel' %}";
-const modo = "{{ modo }}";
+const urlAjaxEscuelas =
+"{% url 'asignacionesuperv:ajax_escuelas' %}";
 
-const dataInicial = JSON.parse(
-    document.getElementById("data-inicial").textContent || "[]"
-);
+const urlGuardar =
+"{% url 'asignacionesuperv:ajax_asignar' %}";
 
-// =========================
-// TOAST
-// =========================
-function showToast(msg, ok=true) {
-    let toastEl = document.getElementById("toast");
-    let msgEl = document.getElementById("toastMsg");
+let dataInicial =
+{{ data_inicial|safe }};
 
-    toastEl.classList.remove("bg-success", "bg-danger");
+function showAlert(msg, ok=true){
 
-    toastEl.classList.add(ok ? "bg-success" : "bg-danger");
-    msgEl.innerHTML = msg;
+    $("#alerta").html(
+        `
+        <div class="alert alert-${
+            ok ? "success":"danger"
+        } alert-dismissible fade show">
 
-    new bootstrap.Toast(toastEl).show();
+            ${msg}
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+
+        </div>
+        `
+    );
 }
 
-// =========================
-// SELECT2
-// =========================
-$("#escuelas").select2({
-    ajax: {
-        url: ajaxUrl,
-        dataType: "json",
-        delay: 250,
-        data: params => ({ q: params.term }),
-        processResults: data => ({ results: data.results })
-    },
-    minimumInputLength: 2,
-    placeholder: "Buscar escuela..."
-});
+$(document).ready(function(){
 
-// =========================
-// INIT
-// =========================
-$(document).ready(function () {
-    if (modo === "editar") cargarDatos();
-});
+    // SELECT2
+    $("#escuelaSelect").select2({
 
-// =========================
-// FECHA
-// =========================
-function formatDate(d) {
-    if (!d) return "";
-    return new Date(d).toISOString().split("T")[0];
-}
+        width:"100%",
 
-// =========================
-// CARGAR EDIT
-// =========================
-function cargarDatos() {
+        placeholder:
+            "Buscar escuela",
 
-    $("#tabla tbody").empty();
+        ajax:{
 
-    dataInicial.forEach(item => {
+            url:
+                urlAjaxEscuelas,
 
-        $("#tabla tbody").append(`
-        <tr data-id="${item.cueanexo}">
-            <td>${item.cueanexo}</td>
-            <td>${item.nom_est || ""}</td>
-            <td><input type="date" class="fd form-control" value="${formatDate(item.fecha_desde)}"></td>
-            <td><input type="date" class="fh form-control" value="${formatDate(item.fecha_hasta)}"></td>
-            <td><span class="badge ${colorEstado(item.estado)}">${item.estado}</span></td>
-            <td><button class="btn btn-danger btn-sm eliminar">X</button></td>
-        </tr>
-        `);
-    });
-}
+            dataType:
+                "json",
 
-// =========================
-// AGREGAR FILA
-// =========================
-$("#escuelas").on("select2:select", function (e) {
+            delay:
+                250,
 
-    let d = e.params.data;
+            data:
+                params => ({
+                    q:
+                        params.term
+                }),
 
-    if ($(`#tabla tbody tr[data-id='${d.id}']`).length) return;
-
-    $("#tabla tbody").append(`
-    <tr data-id="${d.id}">
-        <td>${d.id}</td>
-        <td>${d.text}</td>
-        <td><input type="date" class="fd form-control"></td>
-        <td><input type="date" class="fh form-control"></td>
-        <td><span class="badge bg-secondary">BORRADOR</span></td>
-        <td><button class="btn btn-danger btn-sm eliminar">X</button></td>
-    </tr>
-    `);
-
-    $("#escuelas").val(null).trigger("change");
-});
-
-// =========================
-// ELIMINAR
-// =========================
-$(document).on("click", ".eliminar", function () {
-    $(this).closest("tr").remove();
-});
-
-// =========================
-// GUARDAR PRO
-// =========================
-$("#btnGuardar").click(function () {
-
-    let btn = $(this);
-    btn.prop("disabled", true).text("Guardando...");
-
-    let data = [];
-    let error = false;
-
-    $("#tabla tbody tr").each(function () {
-
-        let fd = $(this).find(".fd").val();
-        let fh = $(this).find(".fh").val();
-
-        if (!fd || !fh) {
-            error = true;
-            return false;
+            processResults:
+                data => ({
+                    results:
+                        data.results
+                })
         }
-
-        data.push({
-            cueanexo: $(this).data("id"),
-            fecha_desde: fd,
-            fecha_hasta: fh
-        });
     });
 
-    if (error) {
-        showToast("Completá todas las fechas", false);
-        btn.prop("disabled", false).text("Guardar asignaciones");
+    // DATA INICIAL
+    if(dataInicial.length){
+
+        dataInicial.forEach(
+            addRow
+        );
+    }
+
+});
+
+function addRow(item){
+
+    let html = `
+    <tr>
+
+        <td>
+            ${item.cueanexo}
+        </td>
+
+        <td>
+            ${item.nom_est}
+        </td>
+
+        <td>
+            ${item.fecha_desde}
+        </td>
+
+        <td>
+            ${item.fecha_hasta}
+        </td>
+
+        <td>
+
+            <button
+                class="btn btn-danger btn-sm remove">
+
+                🗑
+
+            </button>
+
+        </td>
+
+    </tr>
+    `;
+
+    $("#tablaAsignaciones tbody")
+        .append(html);
+}
+
+$("#agregarFila").click(function(){
+
+    let escuela =
+        $("#escuelaSelect").select2(
+            "data"
+        )[0];
+
+    let desde =
+        $("#fecha_desde").val();
+
+    let hasta =
+        $("#fecha_hasta").val();
+
+    if(!escuela){
+
+        showAlert(
+            "Seleccione escuela",
+            false
+        );
+
         return;
     }
 
-    $.ajax({
-        url: saveUrl,
-        type: "POST",
-        data: {
-            data: JSON.stringify(data),
-            csrfmiddlewaretoken: "{{ csrf_token }}"
-        },
-        success: function (res) {
+    if(!desde || !hasta){
 
-            if (!res.ok) {
-                showToast(res.error || "Error", false);
-                btn.prop("disabled", false).text("Guardar asignaciones");
-                return;
-            }
+        showAlert(
+            "Complete fechas",
+            false
+        );
 
-            let total = (res.creadas || 0) + (res.actualizadas || 0);
+        return;
+    }
 
-            if (res.errores && res.errores.length > 0) {
-                showToast(`Procesadas: ${total} (con errores)`, false);
-                btn.prop("disabled", false).text("Guardar asignaciones");
-                return;
-            }
+    if(hasta < desde){
 
-            showToast(`✔ ${total} asignaciones guardadas`);
+        showAlert(
+            "Fecha hasta inválida",
+            false
+        );
 
-            // 🔥 REDIRECCIÓN LIMPIA
-            setTimeout(() => {
-                window.location.href = panelUrl + "?ok=1";
-            }, 800);
-        },
+        return;
+    }
 
-        error: function () {
-            showToast("Error del servidor", false);
-            btn.prop("disabled", false).text("Guardar asignaciones");
-        }
+    addRow({
+
+        cueanexo:
+            escuela.id,
+
+        nom_est:
+            escuela.text,
+
+        fecha_desde:
+            desde,
+
+        fecha_hasta:
+            hasta
+
     });
+
 });
 
-// =========================
-// ESTADOS
-// =========================
-function colorEstado(e) {
-    if (e === "APROBADO") return "bg-success";
-    if (e === "RECHAZADO") return "bg-danger";
-    if (e === "ENVIADO") return "bg-primary";
-    return "bg-secondary";
-}
+$(document).on(
+    "click",
+    ".remove",
+    function(){
+
+        $(this)
+            .closest("tr")
+            .remove();
+});
+
+$("#guardarBtn").click(function(){
+
+    let data = [];
+
+    $("#tablaAsignaciones tbody tr")
+        .each(function(){
+
+        let td =
+            $(this).find("td");
+
+        data.push({
+
+            cueanexo:
+                td.eq(0).text().trim(),
+
+            fecha_desde:
+                td.eq(2).text().trim(),
+
+            fecha_hasta:
+                td.eq(3).text().trim()
+
+        });
+
+    });
+
+    if(!data.length){
+
+        showAlert(
+            "Sin datos",
+            false
+        );
+
+        return;
+    }
+
+    $.post(
+
+        urlGuardar,
+
+        {
+
+            data:
+                JSON.stringify(
+                    data
+                ),
+
+            csrfmiddlewaretoken:
+                "{{ csrf_token }}"
+
+        },
+
+        function(res){
+
+            if(!res.ok){
+
+                showAlert(
+                    res.error ||
+                    "Error",
+                    false
+                );
+                return;
+            }
+
+            let msg = `
+                ✔ Guardado
+
+                <br>
+
+                Creadas:
+                <strong>
+                ${res.creadas}
+                </strong>
+
+                <br>
+
+                Actualizadas:
+                <strong>
+                ${res.actualizadas}
+                </strong>
+            `;
+
+            if(
+                res.errores &&
+                res.errores.length
+            ){
+
+                msg +=
+                "<hr><b>Errores:</b><br>" +
+                res.errores.join(
+                    "<br>"
+                );
+            }
+
+            showAlert(
+                msg
+            );
+
+            setTimeout(
+                ()=>{
+                    location.href =
+                    "{% url 'asignacionesuperv:panel' %}";
+                },
+                1500
+            );
+        }
+
+    );
+
+});
 
 </script>
 

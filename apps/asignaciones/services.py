@@ -1,4 +1,4 @@
-from .models import EscuelaCapaOfertas
+from .models import EscuelaCapaOfertas, AuditLog
 
 
 def escuelas_permitidas(supervisor):
@@ -9,4 +9,13 @@ def escuelas_permitidas(supervisor):
     return EscuelaCapaOfertas.objects.filter(
         region_loc__in=regiones,
         oferta__in=ofertas,
+    )
+
+
+def registrar_auditoria(usuario, accion, objeto, ip=None):
+    AuditLog.objects.create(
+        usuario=usuario,
+        accion=accion,
+        objeto=objeto,
+        ip=ip
     )

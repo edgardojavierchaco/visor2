@@ -135,10 +135,17 @@ class Pipeline:
                     4
                 )
 
-                context.stats[step.__name__] = {
-                    "status": "success",
-                    "time": elapsed,
-                }
+                context.stats.setdefault(
+                    step.__name__,
+                    {
+                        "success": 0,
+                        "errors": 0,
+                        "time": 0,
+                    }
+                )
+
+                context.stats[step.__name__]["success"] += 1
+                context.stats[step.__name__]["time"] += elapsed
 
                 if self.log_steps:
 
@@ -158,10 +165,16 @@ class Pipeline:
 
                 context.errors.append(error_data)
 
-                context.stats[step.__name__] = {
-                    "status": "error",
-                    "error": str(e),
-                }
+                context.stats.setdefault(
+                    step.__name__,
+                    {
+                        "success": 0,
+                        "errors": 0,
+                        "time": 0,
+                    }
+                )
+
+                context.stats[step.__name__]["errors"] += 1
 
                 logger.exception(
                     f"[PIPELINE] ERROR {step.__name__}"
