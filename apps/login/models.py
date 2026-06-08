@@ -61,6 +61,10 @@ class DispositivoUsuario(models.Model):
     intentos_envio = models.PositiveIntegerField(
         default=0
     )
+    
+    bloqueado = models.BooleanField(
+        default=False
+    )
 
     ultimo_error_envio = models.TextField(
         null=True,
