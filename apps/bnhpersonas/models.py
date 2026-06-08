@@ -545,6 +545,10 @@ def validar_cuil(cuil):
 class SituacionServicio(models.Model):
     cod_sitrev=models.IntegerField(primary_key=True)
     descrip_sitrev=models.CharField(max_length=50)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
     
     class Meta:
         managed=False
@@ -560,6 +564,10 @@ class SituacionServicio(models.Model):
 class CondicionActividad(models.Model):
     cod_condicion=models.IntegerField(primary_key=True)
     descrip_condicion=models.CharField(max_length=50)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
     
     class Meta:
         managed=False
@@ -591,6 +599,10 @@ class TitulosEspacios(models.Model):
 class TipoFunciones(models.Model):
     c_funciones=models.IntegerField(primary_key=True)
     funciones_descripcion=models.CharField(max_length=100, unique=True)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
     
     class Meta:
         managed=False
@@ -598,6 +610,25 @@ class TipoFunciones(models.Model):
     
     def __str__(self):
         return self.funciones_descripcion
+    
+    
+#################################
+# TIPO DE DESIGNACIÓN / FUNCIÓN
+#################################
+class TipoDesigFunc(models.Model):
+    c_desigfunc=models.IntegerField(primary_key=True)
+    desigfunc_descripcion=models.CharField(max_length=100, unique=True)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=True
+        db_table='desigfunc_tipo_bnh'
+    
+    def __str__(self):
+        return self.desigfunc_descripcion
 
 
 ###############################
