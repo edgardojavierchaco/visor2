@@ -404,6 +404,58 @@ tbody td{
     color:#526274;
 }
 
+/* =====================================
+   AYUDA CONTEXTUAL RENPE
+===================================== */
+
+.help-icon{
+    color:#3b5bcc;
+    cursor:pointer;
+    margin-left:6px;
+    font-size:13px;
+}
+
+.help-icon:hover{
+    color:#1f3c88;
+}
+
+.assistant-box{
+    margin-top:15px;
+    padding:18px;
+    border-radius:14px;
+    background:#f5f9ff;
+    border-left:5px solid #3b5bcc;
+}
+
+.assistant-title{
+    font-weight:700;
+    margin-bottom:8px;
+    color:#1f3c88;
+}
+
+.assistant-content{
+    font-size:14px;
+    line-height:1.5;
+}
+
+.assistant-warning{
+    margin-top:10px;
+    background:#fff5d6;
+    border:1px solid #ffd76b;
+    padding:10px;
+    border-radius:10px;
+}
+
+.assistant-section{
+    margin-bottom:18px;
+    padding-bottom:12px;
+    border-bottom:1px solid #d8e0ef;
+}
+
+.assistant-section:last-child{
+    border-bottom:none;
+}
+
 </style>
 </head>
 
@@ -678,12 +730,18 @@ tbody td{
             <div class="tab-content">
 
                 <div class="field">
-                    <label>Situación</label>
+                    <label>
+                        Situación de Revista
+                        <span class="help-icon">❓</span>
+                    </label>
                     {{ f.sit_revista }}
                 </div>
 
                 <div class="field">
-                    <label>Condición</label>
+                    <label>
+                        Condición de Actividad
+                        <span class="help-icon">❓</span>
+                    </label>
                     {{ f.cond_actividad }}
                 </div>
 
@@ -732,7 +790,10 @@ tbody td{
             <!-- TAB 4 -->
             <div class="tab-content">
                 <div class="field">
-                    <label>Funciones</label>
+                    <label>
+                        Funciones
+                        <span class="help-icon">❓</span>
+                    </label>
                     {{ f.funciones }}
                 </div>
                 <div class="field">
@@ -745,6 +806,19 @@ tbody td{
                 </div>
             </div>
 
+            <div class="assistant-box">
+
+                <div class="assistant-title">
+                    🤖 Asistente BNH Personas
+                </div>
+
+                <div class="assistant-content">
+                    Seleccione una opción para recibir orientación.
+                </div>
+
+            </div>
+
+            
             <!-- DELETE -->
             <div class="actividad-actions">
                 {{ f.DELETE }}
@@ -2004,7 +2078,144 @@ document.addEventListener("DOMContentLoaded", function () {
         )
     );
 
-});
+    /* =====================================
+    ASISTENTE RENPE
+    ===================================== */
+
+    async function actualizarAsistente(card){
+
+        const asistente =
+            card.querySelector(
+                ".assistant-content"
+            );
+
+        if(!asistente)
+            return;
+
+        const condicion =
+            card.querySelector(
+                '[name*="cond_actividad"]'
+            );
+
+        const revista =
+            card.querySelector(
+                '[name*="sit_revista"]'
+            );
+
+        const funcion =
+            card.querySelector(
+                '[name*="funciones"]'
+            );
+
+        let html = '';
+
+        /* CONDICION */
+
+        if(condicion && condicion.value){
+
+            const r =
+                await fetch(
+                    `/bnh/obtener-ayuda-renpe/?tipo=condicion&id=${condicion.value}`
+                );
+
+            const data =
+                await r.json();
+
+            if(data.ok){
+
+                html += `
+                    <div class="assistant-section">
+                        <h5>📋 Condición de Actividad</h5>
+                        <strong>${data.titulo}</strong>
+                        <p>${data.ayuda}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /* SITUACION */
+
+        if(revista && revista.value){
+
+            const r =
+                await fetch(
+                    `/bnh/obtener-ayuda-renpe/?tipo=situacion&id=${revista.value}`
+                );
+
+            const data =
+                await r.json();
+
+            if(data.ok){
+
+                html += `
+                    <div class="assistant-section">
+                        <h5>📑 Situación de Revista</h5>
+                        <strong>${data.titulo}</strong>
+                        <p>${data.ayuda}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /* FUNCION */
+
+        if(funcion && funcion.value){
+
+            const r =
+                await fetch(
+                    `/bnh/obtener-ayuda-renpe/?tipo=funcion&id=${funcion.value}`
+                );
+
+            const data =
+                await r.json();
+
+            if(data.ok){
+
+                html += `
+                    <div class="assistant-section">
+                        <h5>👨‍🏫 Función</h5>
+                        <strong>${data.titulo}</strong>
+                        <p>${data.ayuda}</p>
+                    </div>
+                `;
+            }
+        }
+
+        asistente.innerHTML =
+            html ||
+            "Seleccione una opción para recibir orientación.";
+
+    }
+
+    document.addEventListener(
+        "change",
+        function(e){
+
+            const card =
+                e.target.closest(
+                    ".actividad-card"
+                );
+
+            if(!card)
+                return;
+
+            actualizarAsistente(
+                card
+            );
+
+        }
+    );
+
+    /* inicializar actividades ya cargadas */
+
+    document
+        .querySelectorAll('.actividad-card')
+        .forEach(card => {
+
+            actualizarAsistente(card);
+
+        });
+    });
 
 </script>
 

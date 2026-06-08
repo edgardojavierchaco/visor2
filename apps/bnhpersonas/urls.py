@@ -12,6 +12,8 @@ from .views_list import (
     PersonaDetailView,
 )
 
+from . import views_ayudas
+
 app_name='bnhpersonas'
 
 urlpatterns = [
@@ -49,4 +51,14 @@ urlpatterns = [
         PersonaDetailView.as_view(),
         name='personas_detail'
     ),
+    
+    #############################
+    # AYUDAS
+    #############################
+    path(
+        'obtener-ayuda-renpe/',
+        views_ayudas.obtener_ayuda_renpe,
+        name='obtener_ayuda_renpe'
+    ),
+    
 ]

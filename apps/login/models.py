@@ -48,13 +48,36 @@ class DispositivoUsuario(models.Model):
     ultimo_uso = models.DateTimeField(
         auto_now=True
     )
+    
+    fecha_envio_email = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    
+    email_enviado = models.BooleanField(
+        default=False
+    )
+
+    intentos_envio = models.PositiveIntegerField(
+        default=0
+    )
+
+    ultimo_error_envio = models.TextField(
+        null=True,
+        blank=True
+    )
+
+    fecha_ultimo_intento = models.DateTimeField(
+        null=True,
+        blank=True
+    )
 
     def save(self, *args, **kwargs):
 
         if not self.expira:
             self.expira = (
                 timezone.now() +
-                timedelta(minutes=30)
+                timedelta(days=2)
             )
 
         super().save(

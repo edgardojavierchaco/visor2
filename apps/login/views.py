@@ -32,6 +32,9 @@ from django.contrib.auth import (
     logout
 )
 
+from django.utils import timezone
+from datetime import timedelta
+
 
 class LoginFormView(LoginView):
     template_name = 'login/login.html'
@@ -175,39 +178,102 @@ class LoginFormView(LoginView):
             if not dispositivo:
 
                 dispositivo = (
-                    DispositivoUsuario.objects.create(
+                    DispositivoUsuario.objects.filter(
                         usuario=user,
                         fingerprint=fingerprint,
-                        ip=ip,
-                        user_agent=user_agent,
                         confirmado=False
-                    )
+                    ).first()
                 )
                 
-                if user.correo:
-
-                    enviar_email_dispositivo(
-                        self.request,
-                        user,
-                        dispositivo
+                if not dispositivo:
+                
+                    dispositivo = (
+                        DispositivoUsuario.objects.create(
+                            usuario=user,
+                            fingerprint=fingerprint,
+                            ip=ip,
+                            user_agent=user_agent,
+                            confirmado=False
+                        )
                     )
+                
+                dispositivo.ip = ip
+                dispositivo.user_agent = user_agent
+                dispositivo.save()
+                
+                if not user.correo:
+
+                    return JsonResponse({
+                        'success': False,
+                        'message': (
+                            'Tu usuario no tiene'
+                            'correo configurado. '
+                        )
+                    })
+                
+                hace_5_minutos = (
+                    timezone.now() -
+                    timedelta(minutes=5)
+                )
+
+                fecha_control = getattr(
+                    dispositivo,
+                    'fecha_envio_email',
+                    None
+                )
+                
+                if (
+                    fecha_control and
+                    fecha_control > hace_5_minutos
+                ):
 
                     return JsonResponse({
                         'success': False,
                         'nuevo_dispositivo': True,
                         'message': (
-                            'Detectamos un nuevo '
-                            'dispositivo. '
-                            'Revisá tu correo '
-                            'para autorizarlo.'
+                            'Ya se envió un coreo de '
+                            'autorización recientemente. '
+                            'Revisa tu bandeja de entrada.'
+                        )
+                    })
+                    
+                enviado = enviar_email_dispositivo(
+                    self.request,
+                    user,
+                    dispositivo
+                )
+
+                if not enviado:
+
+                    return JsonResponse({
+                        'success': False,
+                        'message': (
+                            'Tu solicitud fue registrada. '
+                            'El correo de autorización será '
+                            'enviado automáticamente cuando '
+                            'el servicio de correo vuelva '
+                            'a estar disponible.'
                         )
                     })
 
+                dispositivo.fecha_envio_email = (
+                    timezone.now()
+                )
+
+                dispositivo.save(
+                    update_fields=[
+                        'fecha_envio_email'
+                    ]
+                )
+
                 return JsonResponse({
                     'success': False,
+                    'nuevo_dispositivo': True,
                     'message': (
-                        'Tu usuario no tiene '
-                        'correo configurado.'
+                        'Detectamos un nuevo '
+                        'dispositivo. '
+                        'Revisá tu correo '
+                        'para autorizarlo.'
                     )
                 })
 
