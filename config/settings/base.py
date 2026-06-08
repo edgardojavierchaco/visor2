@@ -279,14 +279,14 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 
 # 🔑 Cuenta principal (usa USER1 del .env)
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER2')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD2')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER3')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD3')
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # 🔁 Cuenta alternativa (opcional)
-EMAIL_HOST_USER_ALT = os.environ.get('EMAIL_HOST_USER2')
-EMAIL_HOST_PASSWORD_ALT = os.environ.get('EMAIL_HOST_PASSWORD2')
+EMAIL_HOST_USER_ALT = os.environ.get('EMAIL_HOST_USER1')
+EMAIL_HOST_PASSWORD_ALT = os.environ.get('EMAIL_HOST_PASSWORD1')
 
 # 📩 Opcional: enviar mail cuando sync OK
 SYNC_SEND_SUCCESS_EMAIL = False
