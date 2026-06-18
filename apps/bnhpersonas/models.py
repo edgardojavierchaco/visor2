@@ -190,7 +190,7 @@ class NomencladorCeic(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.descripcion} - {self.c_niv}'
+        return f'{self.descripcion}'
 
 
 ##########
@@ -386,6 +386,45 @@ class TipoOS(models.Model):
     
     def __str__(self):
         return self.descrip_os
+
+
+##########################
+# GRADO / AÑO
+##########################
+class Grado_anio(models.Model):
+    c_grado_anio=models.BigAutoField(primary_key=True)
+    nombre_grado_anio=models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    estado=models.BooleanField(default=True)
+    c_niv_grado=models.IntegerField()
+    t_niv_grado=models.CharField(max_length=100,null=True, blank=True)
+    
+    class Meta:
+        verbose_name="Grado_Anio"
+        verbose_name_plural="Grados_Anios"
+        db_table="grado_anio"
+        
+    def __str__(self):
+        return self.nombre_grado_anio
+
+
+##########################
+# SECCION
+##########################
+class Secciones(models.Model):
+    c_seccion=models.BigAutoField(primary_key=True)
+    nombre_seccion=models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    estado=models.BooleanField(default=True)
+    c_niv_seccion=models.IntegerField()
+    t_niv_seccion=models.CharField(max_length=100,null=True, blank=True)
+    
+    class Meta:
+        verbose_name="Seccion"
+        verbose_name_plural="Secciones"
+        db_table="Secciones"
+    
+    def __str__(self):
+        return self.nombre_seccion
+
 
 
 ##########################
@@ -657,7 +696,7 @@ class RegistroActividades(AuditoriaModel):
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
     
-    grado_anio = models.CharField(max_length=2)
+    grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT)
     
     turno=models.CharField(max_length=20, choices=[
         ('MAÑANA', 'MAÑANA'),
@@ -668,7 +707,7 @@ class RegistroActividades(AuditoriaModel):
         default='MAÑANA'
     )
     
-    secciones=models.CharField(max_length=2, null=False, blank=False)
+    secciones=models.ForeignKey('Secciones', on_delete=models.PROTECT)
     
     espacios = models.ForeignKey(
         'TitulosEspacios',

@@ -5,8 +5,12 @@ from .models import (
     Personas,
     RegistroActividades,
     Localidades,
-    CodAreasTelefonos
+    CodAreasTelefonos,
+    Grado_anio,
+    Secciones
 )
+
+from .models import NomencladorCeic
 
 from .utils import get_ofertas_usuario
 
@@ -260,3 +264,175 @@ ActividadFormSet = inlineformset_factory(
     extra=1,
     can_delete=True
 )
+
+
+# =====================================================
+# FORM DIRECTOR
+# SOLO DATOS LABORALES
+# =====================================================
+class ActividadDirectorForm(forms.ModelForm):
+
+    class Meta:
+
+        model = RegistroActividades
+
+        fields = [
+            "cueanexo",
+            "categoria",
+            "modalidad",
+            "niveles",            
+            "sit_revista",
+            "cond_actividad",
+            "designacion",
+            "ceic",
+            "grado_anio",
+            "turno",
+            "secciones",
+            "espacios",
+            "f_desde",
+            "f_hasta",
+            "carga_horaria",
+            "estado",
+            "funciones",
+            "f_desde_funciones",
+            "f_hasta_funciones",
+        ]
+
+        widgets = {
+
+            "f_desde": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
+
+            "f_hasta": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
+            
+            "f_desde_funciones": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
+
+            "f_hasta_funciones": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
+
+
+        }
+
+        labels = {
+
+            "cueanexo": "Institución",
+            "ceic": "Cargo (CEIC)",
+            "sit_revista": "Situación de Revista",
+            "cond_actividad": "Condición de Actividad",
+            "grado_anio": "Grado / Año",
+            "turno": "Turno",
+            "secciones": "Secciones",
+            "carga_horaria": "Carga Horaria",
+            "funciones": "Funciones",
+            "f_desde_funciones": "Desde",
+            "f_hasta_funciones": "Hasta",
+
+        }
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        
+        if self.instance.pk:
+
+            modalidad = self.instance.modalidad_id
+            nivel = self.instance.niveles_id
+
+            ################
+            # CEIC
+            ################
+            qs = NomencladorCeic.objects.all()
+
+            if nivel:
+                qs = qs.filter(
+                    t_nivel="Nivel",
+                    c_niv=nivel
+                )
+
+            elif modalidad:
+                qs = qs.filter(
+                    t_nivel="Modalidad",
+                    c_niv=modalidad
+                )
+
+            self.fields["ceic"].queryset = qs
+            
+            
+            ####################
+            # GRADO / AÑO
+            ####################
+            qs_grado = Grado_anio.objects.all()
+
+            if nivel:
+                qs_grado = qs_grado.filter(
+                    t_niv_grado="Nivel",
+                    c_niv_grado=nivel
+                )
+            elif modalidad:
+                qs_grado = qs_grado.filter(
+                    t_niv_grado="Modalidad",
+                    c_niv_grado=modalidad
+                )
+
+            self.fields["grado_anio"].queryset = qs_grado
+
+            ###############
+            # SECCIONES
+            ###############
+            qs_sec = Secciones.objects.all()
+
+            if nivel:
+                qs_sec = qs_sec.filter(
+                    t_niv_seccion="Nivel",
+                    c_niv_seccion=nivel
+                )
+            elif modalidad:
+                qs_sec = qs_sec.filter(
+                    t_niv_seccion="Modalidad",
+                    c_niv_seccion=modalidad
+                )
+
+            self.fields["secciones"].queryset = qs_sec
+
+        for field_name, field in self.fields.items():
+
+            widget = field.widget
+
+            current = widget.attrs.get(
+                "class",
+                ""
+            )
+
+            if "select" in widget.__class__.__name__.lower():
+
+                widget.attrs["class"] = (
+                    f"{current} form-select select2"
+                ).strip()
+
+            else:
+
+                widget.attrs["class"] = (
+                    f"{current} form-control"
+                ).strip()

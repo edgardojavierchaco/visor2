@@ -1,0 +1,73 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<div class="card shadow">
+
+<div class="card-header">
+
+Alta Supervisor
+
+</div>
+
+<div class="card-body">
+
+<form method="post">
+
+{% csrf_token %}
+
+<div class="row">
+
+<div class="col-md-4">
+{{ form.cuil.label_tag }}
+{{ form.cuil }}
+</div>
+
+<div class="col-md-4">
+{{ form.apellido.label_tag }}
+{{ form.apellido }}
+</div>
+
+<div class="col-md-4">
+{{ form.nombres.label_tag }}
+{{ form.nombres }}
+</div>
+
+</div>
+
+<hr>
+
+{{ form.telefono.label_tag }}
+{{ form.telefono }}
+
+{{ form.email.label_tag }}
+{{ form.email }}
+
+<div class="mt-3">
+
+{{ form.activo }}
+
+<label>Activo</label>
+
+</div>
+
+<hr>
+
+<button
+class="btn btn-success">
+
+Guardar
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
