@@ -140,7 +140,7 @@ class EvaluacionFluidezLectoraFluidez2026(models.Model):
 class TablaTemporalAplicadores(models.Model):
 	cuil = models.CharField(max_length=20, primary_key=True)
 	cueanexo = models.CharField(max_length=15, null=True, blank=True)
-	nombre_institucion = models.CharField(max_length=255, null=True, blank=True)
+	escuela = models.CharField(max_length=255, null=True, blank=True)
 	localidad = models.CharField(max_length=50, null=True, blank=True)
 	departamento = models.CharField(max_length=100, null=True, blank=True)
 	region = models.CharField(max_length=100, null=True, blank=True)

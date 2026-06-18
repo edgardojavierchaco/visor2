@@ -19,13 +19,15 @@ class CueanexoFluidez2026ViewForm(forms.Form):
 		super().__init__(*args, **kwargs)
 		if cuil:
 			#cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
-			qs =TablaTemporalAplicadores.objects.filter(cuil=cuil).only('cueanexo').distinct()
-			#print(qs)
+			qs =TablaTemporalAplicadores.objects.filter(cuil=cuil).values_list('cueanexo','escuela').distinct()
+			print(qs)
 			choices_cueanexo = [
 					('', '---SELECCIONE UN CUEANEXO-----'),
 					]
 			for i in qs:
-				choices_cueanexo.append((i.cueanexo, i.cueanexo))
+				print(i)
+				var=(f'{i[0]}-{i[1]}')
+				choices_cueanexo.append((i[0],var))
 				#print(choices_cueanexo)
 			self.fields['cueanexo'].choices = choices_cueanexo
 
