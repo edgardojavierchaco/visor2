@@ -330,9 +330,10 @@
                         <i class="bi bi-display"></i> Visor
                     </a>
                 {% if grado.public_id %}
-                <a href="{% url 'evaluaciones_educativas:fluidez_2026:excel' grado_public_id=grado.public_id %}" class="btn btn-success px-3 fw-semibold shadow-sm text-white" style="border-radius: 10px;">
+                <a id="btn-exportar-excel" href="{% url 'evaluaciones_educativas:fluidez_2026:excel' grado_public_id=grado.public_id %}" class="btn btn-success px-3 fw-semibold shadow-sm text-white" style="border-radius: 10px;">
                   <i class="bi bi-file-earmark-excel me-1"></i> Exportar
                 </a>
+                
                 
                 <button 
                     type="button" 
@@ -486,7 +487,10 @@ document.addEventListener("DOMContentLoaded", function () {
     radiosGrado.forEach(r => r.addEventListener("change", validarFiltros));
     validarFiltros();
 
-    // 2. LÓGICA DE BLOQUEO Y SPINNER
+    // =========================================================
+    // LÓGICA DE CONTROL DE CARGA (SPINNER Y BLOQUEO)
+    // =========================================================
+
     function activarEstadoDeCarga(elementoActivo) {
         document.body.classList.add('cargando');
 
@@ -513,6 +517,29 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Nueva función para restablecer toda la interfaz a su estado normal
+    function desactivarEstadoDeCarga() {
+        document.body.classList.remove('cargando');
+
+        document.querySelectorAll('select, input').forEach(input => {
+            input.style.pointerEvents = 'auto';
+            input.style.opacity = '1';
+        });
+
+        document.querySelectorAll('button, a.btn').forEach(elem => {
+            if (elem.tagName === 'BUTTON') elem.disabled = false;
+            if (elem.tagName === 'A') {
+                elem.classList.remove('disabled');
+                elem.style.pointerEvents = 'auto';
+            }
+            if (elem.dataset.htmlOriginal) {
+                elem.innerHTML = elem.dataset.htmlOriginal;
+                elem.style.width = '';
+            }
+        });
+        validarFiltros();
+    }
+
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function () {
             const btnSubmitLocal = this.querySelector('button[type="submit"]');
@@ -522,46 +549,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.querySelectorAll('a.btn').forEach(link => {
         link.addEventListener('click', function (e) {
-            // Excluir botones de sidebar y enlaces de tabla (acción por fila)
             if (
                 this.classList.contains('disabled') ||
                 document.body.classList.contains('cargando') ||
                 this.hasAttribute('data-bs-dismiss') ||
                 this.id === 'btn-mobile-toggle' ||
                 this.id === 'btn-close-sidebar' ||
-                this.classList.contains('btn-custom')  // botones de acción por fila no muestran spinner global
+                this.classList.contains('btn-custom')
             ) {
                 if (this.id !== 'btn-mobile-toggle' && this.id !== 'btn-close-sidebar') {
                     if (!this.classList.contains('btn-custom')) e.preventDefault();
                 }
                 return;
             }
+
             activarEstadoDeCarga(this);
+
+            // CONTROL ESPECÍFICO PARA DESCARGAS: Evita que quede bloqueado infinitamente
+            if (this.id === 'btn-exportar-excel') {
+                setTimeout(() => {
+                    desactivarEstadoDeCarga();
+                }, 3000); // Se desbloquea automáticamente a los 3 segundos
+            }
         });
     });
 
-    // 3. BOTÓN "ATRÁS" — restaurar estado
+    // 3. BOTÓN "ATRÁS" — Usamos la nueva función limpia
     window.addEventListener('pageshow', function (event) {
         if (event.persisted) {
-            document.body.classList.remove('cargando');
-
-            document.querySelectorAll('select, input').forEach(input => {
-                input.style.pointerEvents = 'auto';
-                input.style.opacity = '1';
-            });
-
-            document.querySelectorAll('button, a.btn').forEach(elem => {
-                if (elem.tagName === 'BUTTON') elem.disabled = false;
-                if (elem.tagName === 'A') {
-                    elem.classList.remove('disabled');
-                    elem.style.pointerEvents = 'auto';
-                }
-                if (elem.dataset.htmlOriginal) {
-                    elem.innerHTML = elem.dataset.htmlOriginal;
-                    elem.style.width = '';
-                }
-            });
-            validarFiltros();
+            desactivarEstadoDeCarga();
         }
     });
 
@@ -610,7 +626,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 let valorA = a.getAttribute(`data-${columna}`) || "";
                 let valorB = b.getAttribute(`data-${columna}`) || "";
 
-                // Columnas numéricas
                 if (columna === "dni" || columna === "fluidez") {
                     const numA = parseFloat(valorA) || 0;
                     const numB = parseFloat(valorB) || 0;
@@ -635,45 +650,37 @@ document.addEventListener("DOMContentLoaded", function () {
             const btn = this;
             const contenidoOriginal = btn.innerHTML;
 
-            // Bloqueamos el botón principal mientras procesa
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             btn.disabled = true;
 
             fetch(url)
                 .then(response => response.json()) 
                 .then(data => {
-                    // Validamos si se permitió hacer el cambio de estado
                     if (!data.es_valido) {
                         alert(`No se puede cerrar la carga. Faltan evaluar a ${data.faltantes} alumno(s).`);
-                        btn.innerHTML = contenidoOriginal; // Restauramos el botón
-                        return; // Cortamos la ejecución acá
+                        btn.innerHTML = contenidoOriginal;
+                        return;
                     }
 
-                    // Seleccionamos todos los botones o enlaces de acción dentro de la tabla
                     const botonesTabla = document.querySelectorAll("#tabla-alumnos .btn, #tabla-alumnos a.btn-custom");
 
-                    // Si el cambio fue válido, verificamos si quedó Cerrado (True) o Abierto (False)
                     if (data.nuevo_estado === true) {
-                        // 1. Botón principal a modo CERRADO
                         btn.classList.remove('btn-secondary');
                         btn.classList.add('btn-success');
                         btn.innerHTML = '<i class="bi bi-lock-fill"></i> Carga Completada';
 
-                        // 2. Apagar y poner en gris todos los botones de la tabla
                         botonesTabla.forEach(boton => {
                             boton.classList.add('disabled');
                             boton.style.pointerEvents = 'none';
-                            boton.style.filter = 'grayscale(100%)'; // Lo vuelve gris visualmente
+                            boton.style.filter = 'grayscale(100%)';
                             boton.style.opacity = '0.5';
                         });
 
                     } else {
-                        // 1. Botón principal a modo ABIERTO
                         btn.classList.remove('btn-success');
                         btn.classList.add('btn-secondary');
                         btn.innerHTML = '<i class="bi bi-unlock-fill"></i> Carga Abierta';
 
-                        // 2. Reactivar los botones de la tabla
                         botonesTabla.forEach(boton => {
                             boton.classList.remove('disabled');
                             boton.style.pointerEvents = 'auto';

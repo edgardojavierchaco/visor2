@@ -43,10 +43,12 @@ from urllib.parse import urlencode # Necesario para armar los parámetros de la 
 # 		   'grado':grado
 # 		   }
 # 	return render(request, "fluidez_2026/inicio.html",contexto)
-
+@login_required
 def lista(request,fid_actual=None):
-	cuil = 20422632264
 	
+	usuario= request.user
+	cuil = usuario.username
+	#print(cuil)
 	if not fid_actual:
 	# 1. Variables por defecto
 		fid_actual = request.GET.get('fid')
@@ -160,7 +162,7 @@ def lista(request,fid_actual=None):
 	return render(request, "fluidez_2026/lista.html", contexto)
 
 #-----------logica de actualizar seccion-------------------
-#@login_required
+@login_required
 def actualizar_seccion(request, alumno_public_id):
 	"""Actualiza la sección, turno, comunidad_indigena y discapacidad de un alumno."""
 	if request.method == 'POST':
@@ -221,10 +223,11 @@ def actualizar_seccion(request, alumno_public_id):
 
 
 
-#TODO HACER DOS VISTA LISTA UNA QUE FUNCIONE CON PUBLIC_ID Y LA INICIAL SIN PUBLIC_ID
-# @login_required
+@login_required
 def lista_examen(request,fid_actual=None):
-	cuil = 20422632264
+	
+	usuario= request.user
+	cuil = usuario.username
 	if not fid_actual:
 	# 1. Variables por defecto
 		fid_actual = request.GET.get('fid')
@@ -332,10 +335,11 @@ def lista_examen(request,fid_actual=None):
 	
 	return render(request, "fluidez_2026/lista_examen.html", contexto)
 
-#TODO MEJORAR LOGICA
+@login_required
 def carga_alumno(request,fid_actual,grado_public_id):
-	cuil = 20422632264
-	print(grado_public_id)
+	usuario= request.user
+	cuil = usuario.username
+	#print(grado_public_id)
 	grado=get_object_or_404(GradoFluidez2026, public_id=grado_public_id)
 	alumno_form = AlumnoFluidez2026Form()
 	grado_form = GradoFluidez2026Form(instance=grado)
@@ -371,9 +375,9 @@ def carga_alumno(request,fid_actual,grado_public_id):
 			   }
 	return render(request, "fluidez_2026/alumno.html", context)
 
-# @login_required
+@login_required
 def editar_alumno(request,alumno_public_id, fid_actual):
-	print(fid_actual)
+	#print(fid_actual)
 	instancia_alumno=get_object_or_404(AlumnoFluidez2026,public_id=alumno_public_id)
 	print(instancia_alumno)
 	if not instancia_alumno.seccion.grado.cueanexo:
@@ -383,8 +387,8 @@ def editar_alumno(request,alumno_public_id, fid_actual):
 	cueanexo=instancia_alumno.seccion.grado.cueanexo
 	anio=instancia_alumno.seccion.grado.nombre_grado
 	seccion=instancia_alumno.seccion.id
-	print(seccion)
-	print(anio)
+	#print(seccion)
+	#print(anio)
 	# print(alumno_datos.cueanexo)
 	# print(alumno_datos.anio)
 	# if anio == '2do Grado/Año':
@@ -396,23 +400,23 @@ def editar_alumno(request,alumno_public_id, fid_actual):
 	instancia_grado=get_object_or_404(GradoFluidez2026,cueanexo=cueanexo,nombre_grado=anio)
 	# instancia_grado=get_object_or_404(GradoFluidez2026,id=instancia_seccion.grado_id)
 	alumno_form = AlumnoFluidez2026Form(instance=instancia_alumno)
-	print('hola')
+	#print('hola')
 	seccion_form = SeccionFluidez2026Form(cueanexo=instancia_grado.cueanexo,nombre_grado=instancia_grado.nombre_grado,initial={'seccion_turno':seccion})
 	grado_form = GradoFluidez2026Form(instance=instancia_grado)
 	if request.method == 'POST':
 		alumno_form = AlumnoFluidez2026Form(request.POST, instance=instancia_alumno)
 		grado_form = GradoFluidez2026Form(request.POST, instance=instancia_grado)
-		seccion_form = SeccionFluidez2026Form(request.POST, cueanexo=cueanexo,nombre_grado=nombre_grado)
+		seccion_form = SeccionFluidez2026Form(request.POST, cueanexo=cueanexo,nombre_grado=instancia_grado.nombre_grado)
 		if alumno_form.is_valid() and grado_form.is_valid() and seccion_form.is_valid():
 			with transaction.atomic():
 				#nombre_grado=grado_form.cleaned_data["nombre_grado"]
 				#cueanexo_grado=grado_form.cleaned_data["cueanexo"]
 				instancia_grado, creado_grado=GradoFluidez2026.objects.get_or_create(
-					nombre_grado=nombre_grado,
+					nombre_grado=instancia_grado.nombre_grado,
 					cueanexo=cueanexo
 					)
 				seccion_turno_id=seccion_form.cleaned_data["seccion_turno"]
-				print(seccion_turno_id)
+				#print(seccion_turno_id)
 				instancia_seccion, creado_seccion = SeccionFluidez2026.objects.get_or_create(
 				id=seccion_turno_id,
 				grado=instancia_grado
@@ -568,7 +572,7 @@ def editar_alumno(request,alumno_public_id, fid_actual):
 # 	return render(request,"fluidez_2026/grados.html", contexto)
 
 	
-# @login_required
+@login_required
 def carga_evaluacion(request, alumno_public_id, fid_actual):
 	#fid_actual = request.POST.get('fid')
 	print(fid_actual)
@@ -600,6 +604,11 @@ def carga_evaluacion(request, alumno_public_id, fid_actual):
 				evaluacion = form.save(commit=False)
 				evaluacion.alumno = alumno_id
 				evaluacion.encargado_carga='DIRECTOR'
+				if form.cleaned_data["asistencia"] == 'AUSENTE':
+					evaluacion=ausentismo_evaluacion(evaluacion)
+				else:
+					evaluacion.asistencia='PRESENTE'
+
 				evaluacion.save()
 			return redirect("evaluaciones_educativas:fluidez_2026:lista_examen", fid_actual=fid_actual)
 	else:
@@ -612,7 +621,7 @@ def carga_evaluacion(request, alumno_public_id, fid_actual):
 			   }
 	return render(request, "fluidez_2026/evaluacion.html", context)
 
-# @login_required
+@login_required
 def editar_evaluacion(request, alumno_public_id, fid_actual):
 	alumno_id=get_object_or_404(AlumnoFluidez2026,public_id=alumno_public_id)
 	instancia_seccion=get_object_or_404(SeccionFluidez2026,id=alumno_id.seccion_id)
@@ -671,7 +680,7 @@ def editar_evaluacion(request, alumno_public_id, fid_actual):
 # 			   }
 # 	return render(request,"fluidez_2026/asistencia.html",context)
 
-# @login_required
+@login_required
 def editar_asistencia(request,alumno_public_id):
 	#INSTANCIAS
 	alumno_id=get_object_or_404(AlumnoFluidez2026, public_id=alumno_public_id)
@@ -698,7 +707,7 @@ def editar_asistencia(request,alumno_public_id):
 	context = {'form': asistencia_form}
 	return render(request,"fluidez_2026/asistencia.html",context)
 
-# @login_required
+@login_required
 def borrar_registro_alumno(request,alumno_public_id):
 	alumno_id=get_object_or_404(AlumnoFluidez2026, public_id=alumno_public_id)
 	instancia_seccion=get_object_or_404(SeccionFluidez2026,id=alumno_id.seccion_id)
@@ -723,7 +732,7 @@ def borrar_registro_alumno(request,alumno_public_id):
 			   }
 	return render(request,"fluidez_2026/borrar_registro_alumno.html",context)
 #DESCARGAR EXCEL
-#@login_required
+@login_required
 def descargar_excel(request,grado_public_id):
 	instancia_grado=get_object_or_404(GradoFluidez2026,public_id=grado_public_id)
 	instancia_seccion=SeccionFluidez2026.objects.filter(grado_id=instancia_grado)
@@ -776,7 +785,7 @@ def descargar_excel(request,grado_public_id):
 	# 5. Retornar la respuesta al navegador
 	return response
 
-
+@login_required
 def completar_carga(request,grado_public_id):
 	#instancia_grado=get_object_or_404(GradoFluidez2026,public_id=grado_public_id)
 	estado_carga=True
