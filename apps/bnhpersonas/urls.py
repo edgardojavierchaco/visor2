@@ -10,18 +10,36 @@ from .views import (
 from .views_list import (
     PersonasListView,
     PersonaDetailView,
-    ActividadUpdateView,
-    ActividadDeleteView
 )
+
+from . import views_ayudas
 
 app_name='bnhpersonas'
 
 urlpatterns = [
+    # =========================
+    # AJAX / UTILIDADES
+    # =========================
     path('filtrar-ceic/', filtrar_ceic, name='filtrar_ceic'),
-    path('carga-personal/', carga_personal, name='carga_personal'),
-    path('buscar-persona/', buscar_persona, name='buscar_persona'),
     path('filtrar-localidades/', filtrar_localidades, name='filtrar_localidades'),
     path('buscar-codigos-area/', buscar_codigos_area, name='buscar_codigos_area'),
+
+    # =========================
+    # PERSONA CORE
+    # =========================
+    path('carga-personal/', carga_personal, name='carga_personal'),
+
+    path(
+        "personas/<int:pk>/carga-personal/",
+        carga_personal,
+        name="carga_personal_edit"
+    ),
+
+    path('buscar-persona/', buscar_persona, name='buscar_persona'),
+
+    # =========================
+    # LISTADO / DETALLE
+    # =========================
     path(
         'personas/',
         PersonasListView.as_view(),
@@ -29,20 +47,18 @@ urlpatterns = [
     ),
 
     path(
-        'personas/<int:pk>/',
+        'personas/<int:pk>/detalle/',
         PersonaDetailView.as_view(),
         name='personas_detail'
     ),
+    
+    #############################
+    # AYUDAS
+    #############################
     path(
-        'actividades/<int:pk>/update/',
-        ActividadUpdateView.as_view(),
-        name='actividad_update'
+        'obtener-ayuda-renpe/',
+        views_ayudas.obtener_ayuda_renpe,
+        name='obtener_ayuda_renpe'
     ),
-
-    path(
-        'actividades/<int:pk>/delete/',
-        ActividadDeleteView.as_view(),
-        name='actividad_delete'
-    ),
+    
 ]
-

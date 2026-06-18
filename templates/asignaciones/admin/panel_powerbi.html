@@ -1,265 +1,432 @@
 {% extends "archivos/base/layout.html" %}
+{% load static %}
+
 {% block content %}
 
-<div class="container-fluid mt-3">
+<div class="container-fluid mt-4">
 
-<h2>🚨 Sala de Monitoreo Ministerial (LIVE CONTROL)</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
 
-<!-- ================= FILTROS ================= -->
-<div class="row mb-3">
+    <h3 class="mb-0">
+        📡 Sala de Situación Ministerial
+    </h3>
 
-    <div class="col">
-        <select id="region" class="form-control">
-            <option value="">Todas las regiones</option>
-        </select>
-    </div>
+    <button
+        id="exportPdf"
+        class="btn btn-danger">
 
-    <div class="col">
-        <select id="supervisor" class="form-control">
-            <option value="">Todos los supervisores</option>
-        </select>
-    </div>
+        📄 Exportar PDF
 
-    <div class="col">
-        <select id="oferta" class="form-control">
-            <option value="">Todas las ofertas</option>
-        </select>
-    </div>
-
-    <!-- 🔥 BOTÓN EXPORT PDF -->
-    <div class="col d-flex align-items-center">
-        <button class="btn btn-danger w-100" onclick="exportPDF()">
-            📄 Exportar PDF
-        </button>
-    </div>
+    </button>
 
 </div>
 
-<!-- ================= MAP TOGGLE ================= -->
-<div class="mb-2">
-    <button class="btn btn-dark btn-sm" onclick="setSatellite()">🛰 Satélite</button>
-    <button class="btn btn-light btn-sm" onclick="setCarto()">🗺 Carto</button>
-</div>
+<!-- FILTROS -->
+<div class="card shadow-sm mb-4">
 
-<!-- ================= KPI ================= -->
-<div class="row text-center mb-3">
+<div class="card-body">
 
-    <div class="col card p-3">🟦 BORRADOR <h2 id="b">0</h2></div>
-    <div class="col card p-3">🟡 ENVIADO <h2 id="e">0</h2></div>
-    <div class="col card p-3">🔴 RECHAZADO <h2 id="r">0</h2></div>
-    <div class="col card p-3">🟢 APROBADO <h2 id="a">0</h2></div>
+<div class="row g-3">
 
-</div>
+<div class="col-md-4">
 
-<!-- ================= MAPA ================= -->
-<div class="card p-3 mb-3">
-    <h5>🛰 Mapa en tiempo real</h5>
-    <div id="map" style="height:520px;"></div>
-</div>
+<label class="form-label">
+Región
+</label>
 
-<!-- ================= LOGS ================= -->
-<div class="card p-3">
-    <h5>📜 Auditoría en vivo</h5>
-    <table class="table table-striped">
-        <tbody id="logs"></tbody>
-    </table>
-</div>
+<select
+    id="regionFilter"
+    class="form-select">
+
+<option value="">
+Todas
+</option>
+
+</select>
 
 </div>
 
-<!-- ================= LEAFLET ================= -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<div class="col-md-4">
+
+<label class="form-label">
+Supervisor
+</label>
+
+<select
+    id="supervisorFilter"
+    class="form-select">
+
+<option value="">
+Todos
+</option>
+
+</select>
+
+</div>
+
+<div class="col-md-4">
+
+<label class="form-label">
+Oferta
+</label>
+
+<select
+    id="ofertaFilter"
+    class="form-select">
+
+<option value="">
+Todas
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+<!-- KPI -->
+<div class="row g-3 mb-4 text-center">
+
+<div class="col-md-3">
+<div class="card bg-secondary text-white shadow">
+<div class="card-body">
+<h6>Borrador</h6>
+<h2 id="kpiBorrador">0</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card bg-primary text-white shadow">
+<div class="card-body">
+<h6>Enviado</h6>
+<h2 id="kpiEnviado">0</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card bg-warning text-dark shadow">
+<div class="card-body">
+<h6>Observado</h6>
+<h2 id="kpiObservado">0</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card bg-success text-white shadow">
+<div class="card-body">
+<h6>Aprobado</h6>
+<h2 id="kpiAprobado">0</h2>
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- MAPA -->
+<div class="card shadow-sm mb-4">
+
+<div class="card-header">
+🗺 Distribución Territorial
+</div>
+
+<div class="card-body p-0">
+
+<div id="map"
+     style="height:500px;">
+</div>
+
+</div>
+</div>
+
+<!-- LOGS -->
+<div class="card shadow-sm">
+
+<div class="card-header">
+📝 Auditoría Reciente
+</div>
+
+<div class="card-body">
+
+<table
+    class="table table-striped"
+    id="tablaLogs">
+
+<thead>
+
+<tr>
+<th>Usuario</th>
+<th>Acción</th>
+<th>Objeto</th>
+<th>Fecha</th>
+</tr>
+
+</thead>
+
+<tbody id="logsBody">
+</tbody>
+
+</table>
+
+</div>
+</div>
+
+</div>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
 
-let map;
-let cluster = L.markerClusterGroup();
+const dashboardURL =
+"{% url 'asignacionesuperv:dashboard_realtime_api' %}";
 
-let baseSatellite;
-let baseCarto;
+const filtrosURL =
+"{% url 'asignacionesuperv:filtros_catalogo' %}";
 
-let filtersInitialized = false;
+const exportURL =
+"{% url 'asignacionesuperv:export_pdf_admin' %}";
 
-// ================= INIT MAP =================
-function initMap() {
+let map = L.map('map').setView(
+    [-27.45,-58.98],
+    7
+);
 
-    map = L.map('map').setView([-27.45, -58.98], 7);
-
-    baseSatellite = L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: "Esri Satellite" }
-    );
-
-    baseCarto = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        { attribution: "CARTO" }
-    );
-
-    baseSatellite.addTo(map);
-}
-
-// ================= EXPORT PDF 🔥 =================
-function exportPDF() {
-
-    const f = getFilters();
-
-    const url = `/asignacionesuperv/admin/export/pdf/` +
-        `?supervisor=${encodeURIComponent(f.supervisor || "")}` +
-        `&region=${encodeURIComponent(f.region || "")}` +
-        `&oferta=${encodeURIComponent(f.oferta || "")}`;
-
-    window.open(url, "_blank");
-}
-
-// ================= CAMBIO CAPAS =================
-function setSatellite() {
-    if (map.hasLayer(baseCarto)) map.removeLayer(baseCarto);
-    map.addLayer(baseSatellite);
-}
-
-function setCarto() {
-    if (map.hasLayer(baseSatellite)) map.removeLayer(baseSatellite);
-    map.addLayer(baseCarto);
-}
-
-// ================= ICONOS =================
-function getIcon(estado) {
-
-    let color = "gray";
-
-    if (estado === "RECHAZADO") color = "red";
-    else if (estado === "ENVIADO") color = "orange";
-    else if (estado === "APROBADO") color = "green";
-    else if (estado === "BORRADOR") color = "blue";
-
-    return L.divIcon({
-        className: "",
-        html: `<div style="
-            width:12px;
-            height:12px;
-            border-radius:50%;
-            background:${color};
-            box-shadow:0 0 8px ${color};
-        "></div>`
-    });
-}
-
-// ================= FILTROS =================
-function getFilters() {
-    return {
-        region: document.getElementById("region").value,
-        supervisor: document.getElementById("supervisor").value,
-        oferta: document.getElementById("oferta").value
-    };
-}
-
-// ================= MAPA =================
-function drawMap(escuelas) {
-
-    cluster.clearLayers();
-
-    escuelas.forEach(e => {
-
-        if (!e.lat || !e.long) return;
-
-        const marker = L.marker(
-            [e.lat, e.long],
-            { icon: getIcon(e.estado) }
-        ).bindPopup(`
-            <b>${e.nom_est || ""}</b><br>
-            Estado: ${e.estado || ""}<br>
-            Región: ${e.region_loc || ""}<br>
-            Oferta: ${e.oferta || ""}
-        `);
-
-        cluster.addLayer(marker);
-    });
-
-    map.addLayer(cluster);
-}
-
-// ================= LOAD DATA =================
-async function load() {
-
-    const f = getFilters();
-
-    const url = `/asignacionesuperv/admin/realtime/?region=${f.region}&supervisor=${f.supervisor}&oferta=${f.oferta}`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    document.getElementById("b").innerText = data.resumen?.BORRADOR || 0;
-    document.getElementById("e").innerText = data.resumen?.ENVIADO || 0;
-    document.getElementById("r").innerText = data.resumen?.RECHAZADO || 0;
-    document.getElementById("a").innerText = data.resumen?.APROBADO || 0;
-
-    document.getElementById("logs").innerHTML =
-        (data.logs || []).map(l => `
-            <tr>
-                <td>${l.usuario || ""}</td>
-                <td>${l.accion || ""}</td>
-                <td>${l.objeto || ""}</td>
-                <td>${l.timestamp || ""}</td>
-            </tr>
-        `).join("");
-
-    drawMap(data.escuelas || []);
-    fillFilters(data);
-}
-
-// ================= FILTROS =================
-function fillFilters(data) {
-
-    const s = document.getElementById("supervisor");
-    const r = document.getElementById("region");
-    const o = document.getElementById("oferta");
-
-    const current = {
-        supervisor: s.value,
-        region: r.value,
-        oferta: o.value
-    };
-
-    if (!filtersInitialized) {
-
-        s.innerHTML = `<option value="">Todos los supervisores</option>`;
-        r.innerHTML = `<option value="">Todas las regiones</option>`;
-        o.innerHTML = `<option value="">Todas las ofertas</option>`;
-
-        (data.supervisores || []).forEach(x => {
-            s.innerHTML += `<option value="${x.supervisor_id}">${x.label}</option>`;
-        });
-
-        (data.regiones || []).forEach(x => {
-            r.innerHTML += `<option value="${x}">${x}</option>`;
-        });
-
-        (data.ofertas || []).forEach(x => {
-            o.innerHTML += `<option value="${x}">${x}</option>`;
-        });
-
-        filtersInitialized = true;
+L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        attribution:'OSM'
     }
+).addTo(map);
 
-    s.value = current.supervisor;
-    r.value = current.region;
-    o.value = current.oferta;
+let markers = [];
+
+function limpiarMapa(){
+
+    markers.forEach(
+        m => map.removeLayer(m)
+    );
+
+    markers = [];
 }
 
-// ================= EVENTS =================
-document.querySelectorAll("select").forEach(el => {
-    el.addEventListener("change", load);
+function colorEstado(estado){
+
+    if(estado==="APROBADO")
+        return "green";
+
+    if(estado==="OBSERVADO")
+        return "orange";
+
+    if(estado==="ENVIADO")
+        return "blue";
+
+    return "gray";
+}
+
+function cargarFiltros(){
+
+    $.get(
+        filtrosURL,
+        function(res){
+
+            res.regiones.forEach(
+                r=>{
+                    $("#regionFilter").append(
+                        `<option>${r}</option>`
+                    );
+                }
+            );
+
+            res.ofertas.forEach(
+                o=>{
+                    $("#ofertaFilter").append(
+                        `<option>${o}</option>`
+                    );
+                }
+            );
+
+            res.supervisores.forEach(
+                s=>{
+                    $("#supervisorFilter").append(
+                        `
+                        <option value="${s.supervisor_id}">
+                        ${s.label}
+                        </option>
+                        `
+                    );
+                }
+            );
+        }
+    );
+}
+
+function cargarDashboard(){
+
+    $.get(
+        dashboardURL,
+        {
+            region:
+                $("#regionFilter").val(),
+
+            supervisor:
+                $("#supervisorFilter").val(),
+
+            oferta:
+                $("#ofertaFilter").val()
+        },
+
+        function(res){
+
+            $("#kpiBorrador")
+                .text(
+                    res.resumen.BORRADOR
+                );
+
+            $("#kpiEnviado")
+                .text(
+                    res.resumen.ENVIADO
+                );
+
+            $("#kpiObservado")
+                .text(
+                    res.resumen.OBSERVADO
+                );
+
+            $("#kpiAprobado")
+                .text(
+                    res.resumen.APROBADO
+                );
+
+            limpiarMapa();
+
+            res.escuelas.forEach(
+                e=>{
+
+                if(
+                    !e.lat ||
+                    !e.long
+                ) return;
+
+                let marker =
+                    L.circleMarker(
+                    [
+                        e.lat,
+                        e.long
+                    ],
+                    {
+                        radius:8,
+                        color:
+                            colorEstado(
+                                e.estado
+                            )
+                    })
+                    .addTo(map);
+
+                marker.bindPopup(
+                    `
+                    <b>${e.nom_est}</b>
+                    <br>
+                    ${e.cueanexo}
+                    <br>
+                    ${e.estado}
+                    `
+                );
+
+                markers.push(
+                    marker
+                );
+
+            });
+
+            $("#logsBody").empty();
+
+            res.logs.forEach(
+                l=>{
+
+                $("#logsBody").append(
+                    `
+                    <tr>
+                    <td>${l.usuario}</td>
+                    <td>${l.accion}</td>
+                    <td>${l.objeto}</td>
+                    <td>${l.timestamp}</td>
+                    </tr>
+                    `
+                );
+
+            });
+
+        }
+
+    ).fail(function(xhr){
+
+        if(
+            xhr.status===403
+            ||
+            xhr.status===401
+        ){
+
+            alert(
+                "Sesión expirada o sin permisos"
+            );
+
+            location.reload();
+        }
+    });
+}
+
+$("#regionFilter,#supervisorFilter,#ofertaFilter")
+.change(
+    cargarDashboard
+);
+
+$("#exportPdf").click(function(){
+
+    let url =
+        exportURL
+        +
+        "?"
+        +
+        $.param({
+
+            region:
+                $("#regionFilter").val(),
+
+            supervisor:
+                $("#supervisorFilter").val(),
+
+            oferta:
+                $("#ofertaFilter").val()
+
+        });
+
+    window.open(
+        url,
+        "_blank"
+    );
 });
 
-// ================= INIT =================
-initMap();
-load();
-setInterval(load, 8000);
+$(document).ready(function(){
+
+    cargarFiltros();
+    cargarDashboard();
+
+    setInterval(
+        cargarDashboard,
+        60000
+    );
+
+});
 
 </script>
 

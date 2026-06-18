@@ -8,8 +8,6 @@ from .models import (
     CodAreasTelefonos
 )
 
-from apps.consultasge.models_padron import CapaUnicaOfertas
-
 from .utils import get_ofertas_usuario
 
 
@@ -194,79 +192,15 @@ class ActividadForm(forms.ModelForm):
             "f_hasta": forms.DateInput(attrs={
                 "type": "date"
             }),
+            "f_desde_funciones": forms.DateInput(attrs={
+                "type": "date"
+            }),
 
-        }
+            "f_hasta_funciones": forms.DateInput(attrs={
+                "type": "date"
+            }),
 
-    def __init__(self, *args, user=None, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        # ==========================================
-        # CSS
-        # ==========================================
-        for field in self.fields.values():
-
-            if isinstance(field.widget, forms.Select):
-
-                field.widget.attrs["class"] = (
-                    "form-select"
-                )
-
-            else:
-
-                field.widget.attrs["class"] = (
-                    "form-control"
-                )
-
-        # ==========================================
-        # FECHAS
-        # ==========================================
-        self.fields["f_desde"].widget.attrs.update({
-            "type": "date"
-        })
-
-        self.fields["f_hasta"].widget.attrs.update({
-            "type": "date"
-        })
-
-        # ==========================================
-        # USER
-        # ==========================================
-        if user:
-
-            qs = get_ofertas_usuario(user)
-
-            self.fields["cueanexo"].choices = [
-
-                (str(x.cueanexo), str(x.cueanexo))
-
-                for x in qs
-            ]
-
-        # ==========================================
-        # VALOR INICIAL EDICION
-        # ==========================================
-        if self.instance and self.instance.pk:
-
-            self.initial["cueanexo"] = (
-                str(self.instance.cueanexo)
-            )
-
-            if self.instance.f_desde:
-
-                self.initial["f_desde"] = (
-                    self.instance.f_desde.strftime(
-                        "%Y-%m-%d"
-                    )
-                )
-
-            if self.instance.f_hasta:
-
-                self.initial["f_hasta"] = (
-                    self.instance.f_hasta.strftime(
-                        "%Y-%m-%d"
-                    )
-                )
+        }    
     
 
 
@@ -280,32 +214,25 @@ class BaseActividadFormSet(BaseInlineFormSet):
         self.user = kwargs.pop("user", None)
 
         super().__init__(*args, **kwargs)
+        
+        self._cue_choices = []
+        
+        if self.user:
 
-    # =================================================
-    # QUERYSET
-    # =================================================
-    def get_queryset_cueanexo(self):
+            self._cue_choices = [
+                (x.cueanexo, x.cueanexo)
+                for x in get_ofertas_usuario(self.user)
+            ]
 
-        if not self.user:
-            return CapaUnicaOfertas.objects.none()
-
-        return get_ofertas_usuario(self.user)
-
+    
     # =================================================
     # CONSTRUCT FORM
     # =================================================
     def _construct_form(self, i, **kwargs):
 
-        kwargs["user"] = self.user
-
         form = super()._construct_form(i, **kwargs)
 
-        qs = self.get_queryset_cueanexo()
-
-        form.fields["cueanexo"].choices = [
-            (x.cueanexo, x.cueanexo)
-            for x in qs
-        ]
+        form.fields["cueanexo"].choices = self._cue_choices
 
         return form
 
@@ -317,12 +244,7 @@ class BaseActividadFormSet(BaseInlineFormSet):
 
         form = super().empty_form
 
-        qs = self.get_queryset_cueanexo()
-
-        form.fields["cueanexo"].choices = [
-            (x.cueanexo, x.cueanexo)
-            for x in qs
-        ]
+        form.fields["cueanexo"].choices = self._cue_choices
 
         return form
 

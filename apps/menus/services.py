@@ -3,6 +3,10 @@ from .models import MenuItem
 from apps.usuarios.services import get_user_context
 from django.urls import reverse, NoReverseMatch
 
+import re
+from django.db.models import Func, F, Value
+from apps.consultasge.models_padron import CapaUnicaOfertas
+
 CACHE_TTL = 60 * 5
 
 
@@ -41,9 +45,72 @@ REGLAS_MENU = {
     "ocultar_ministro_subsecretario": lambda user: not (
     getattr(getattr(user, "perfil", None), "rol", None) and
     getattr(user.perfil.rol, "nombre", None) in ["Ministro", "Subsecretario"]
-)
+),
+    "ocultar_evaluacion": lambda user: not (
+    getattr(getattr(user, "perfil", None), "rol", None) and
+    getattr(user.perfil.rol, "nombre", None) in ["Evaluacion"]
+),
+    "evaluacion": lambda user: (
+        getattr(user.perfil.rol, "nombre", None) == "Evaluacion"
+    ),
     
 }
+
+
+def get_flags_ofertas_director(user):
+    flags = set()
+
+    perfil = getattr(user, "perfil", None)
+    rol = getattr(perfil, "rol", None)
+
+    # Solo Director
+    if not rol or rol.nombre != "Director":
+        return flags
+
+    usuario_limpio = re.sub(r"\D", "", user.username)
+
+    ofertas = (
+        CapaUnicaOfertas.objects
+        .annotate(
+            cuit_limpio=Func(
+                F("resploc_cuitcuil"),
+                Value(r"\D"),
+                Value(""),
+                Value("g"),
+                function="regexp_replace"
+            )
+        )
+        .filter(cuit_limpio=usuario_limpio)
+        .values_list("acronimo", flat=True)
+        .distinct()
+    )
+
+    acronimos = {
+        a.strip().upper()
+        for a in ofertas
+        if a
+    }
+
+    print("📚 Acrónimos Director:", acronimos)
+
+    # BI%
+    if any(a.startswith("BI") for a in acronimos):
+        flags.add("tiene_biblioteca")
+
+    # Primaria
+    if any(a.startswith("EEP") for a in acronimos):
+        flags.add("tiene_primaria")
+
+    # Secundaria: EES / EET / EET-A
+    if any(
+        a.startswith(("EES", "EET", "EET-A", "EFA"))
+        for a in acronimos
+    ):
+        flags.add("tiene_secundaria")
+
+    print("🚩 Flags ofertas:", flags)
+
+    return flags
 
 
 def evaluar_clave(clave, user, request):
@@ -143,6 +210,14 @@ def get_menu_for_user(user, request):
         return []
 
     flags = getattr(request, "flags_menu", set())
+    
+    # Flags según ofertas del Director
+    flags.update(
+        get_flags_ofertas_director(user)
+    )
+    
+    request.flags_menu = flags
+    
     cache_key = get_menu_cache_key(rol, categoria, flags)
     
     print("🧠 CACHE KEY:", cache_key)  # ✅ ACÁ

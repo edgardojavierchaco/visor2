@@ -1,13 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.views.generic import (
-    ListView,
-    DetailView,
-    UpdateView,
-    DeleteView
-)
+from django.views.generic import ListView, DetailView
 
 from django.db.models import (
     Count,
@@ -20,11 +12,57 @@ from .models import (
     RegistroActividades
 )
 
-from .forms import ActividadForm
+from .utils import get_cueanexos_usuario
 
-from apps.bnhpersonas.helpers import (
-    get_cueanexos_usuario
-)
+
+###################################
+# HELPER
+###################################
+def get_cueanexos_usuario(user):
+
+    """
+    Obtiene los cueanexos asociados
+    al usuario logueado.
+
+    resploc_cuitcuil:
+    20-12345678-3
+
+    username:
+    20123456783
+    """
+
+    return (
+        CapaUnicaOfertas.objects
+
+        # 🔥 normaliza CUIL
+        .annotate(
+            cuil_limpio=Replace(
+                Replace(
+                    'resploc_cuitcuil',
+                    Value('-'),
+                    Value('')
+                ),
+                Value(' '),
+                Value('')
+            ),
+
+            # 🔥 convierte cueanexo a string
+            cueanexo_str=Cast(
+                'cueanexo',
+                output_field=CharField()
+            )
+        )
+
+        # 🔥 compara con username
+        .filter(
+            cuil_limpio=user.username
+        )
+
+        .values_list(
+            'cueanexo_str',
+            flat=True
+        )
+    )
 
 
 # =========================================================
@@ -48,7 +86,7 @@ class PersonasListView(
     # =====================================================
     def dispatch(self, request, *args, **kwargs):
 
-        self.cueanexos_usuario = list(
+        self.cueanexos_usuario = (
             get_cueanexos_usuario(
                 request.user
             )
@@ -104,8 +142,7 @@ class PersonasListView(
             .prefetch_related(
                 Prefetch(
                     "actividades",
-                    queryset=actividades_qs,
-                    to_attr="actividades_filtradas"
+                    queryset=actividades_qs
                 )
             )
 
@@ -114,7 +151,8 @@ class PersonasListView(
                     "actividades",
                     filter=Q(
                         actividades__cueanexo__in=self.cueanexos_usuario
-                    )
+                    ),
+                    distinct=True
                 )
             )
 
@@ -129,16 +167,32 @@ class PersonasListView(
     def get_context_data(self, **kwargs):
 
         context = super().get_context_data(**kwargs)
+        
+        actividades = RegistroActividades.objects.filter(
+            cueanexo__in=self.cueanexos_usuario
+        )
 
         context["total_personas"] = (
             context["paginator"].count
         )
 
         context["total_actividades"] = (
-            RegistroActividades.objects
-            .filter(
-                cueanexo__in=self.cueanexos_usuario
-            )
+            actividades.count()
+        )
+
+        context["total_activos"] = (
+            actividades
+            .filter(estado="ACTIVO")
+            .values("persona")
+            .distinct()
+            .count()
+        )
+
+        context["total_pasivos"] = (
+            actividades
+            .exclude(estado="ACTIVO")
+            .values("persona")
+            .distinct()
             .count()
         )
 
@@ -200,7 +254,7 @@ class PersonaDetailView(
             .order_by("-f_desde")
         )
 
-        queryset = (
+        return (
 
             Personas.objects
 
@@ -220,104 +274,14 @@ class PersonaDetailView(
             .prefetch_related(
                 Prefetch(
                     "actividades",
-                    queryset=actividades_qs,
-                    to_attr="actividades_filtradas"
+                    queryset=actividades_qs
+                )
+            )
+
+            .annotate(
+                total_actividades=Count(
+                    "actividades",
+                    distinct=True
                 )
             )
         )
-
-        return queryset
-
-
-# =========================================================
-# UPDATE ACTIVIDAD
-# =========================================================
-class ActividadUpdateView(
-    LoginRequiredMixin,
-    UpdateView
-):
-
-    model = RegistroActividades
-
-    form_class = ActividadForm
-
-    template_name = 'bnh/personas/modal_update.html'
-
-    # =====================================================
-    # QUERYSET
-    # =====================================================
-    def get_queryset(self):
-
-        cueanexos_usuario = list(
-            get_cueanexos_usuario(
-                self.request.user
-            )
-        )
-
-        return RegistroActividades.objects.filter(
-            cueanexo__in=cueanexos_usuario
-        )
-
-    # =====================================================
-    # PASAR USER AL FORM
-    # =====================================================
-    def get_form_kwargs(self):
-
-        kwargs = super().get_form_kwargs()
-
-        kwargs["user"] = self.request.user
-
-        return kwargs
-
-    # =====================================================
-    # VALID
-    # =====================================================
-    def form_valid(self, form):
-
-        self.object = form.save()
-
-        return JsonResponse({
-            'success': True
-        })
-
-    # =====================================================
-    # INVALID
-    # =====================================================
-    def form_invalid(self, form):
-
-        return self.render_to_response(
-            self.get_context_data(form=form)
-        )
-        
-
-# =========================================================
-# DELETE ACTIVIDAD
-# =========================================================
-class ActividadDeleteView(
-    LoginRequiredMixin,
-    DeleteView
-):
-
-    model = RegistroActividades
-
-    def get_queryset(self):
-
-        cueanexos_usuario = list(
-            get_cueanexos_usuario(
-                self.request.user
-            )
-        )
-
-        return RegistroActividades.objects.filter(
-            cueanexo__in=cueanexos_usuario
-        )
-
-    def post(self, request, *args, **kwargs):
-
-        self.object = self.get_object()
-
-        self.object.delete()
-
-        return JsonResponse({
-            'success': True
-        })

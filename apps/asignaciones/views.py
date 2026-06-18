@@ -1,80 +1,90 @@
 import json
-
+from io import BytesIO
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q, F
+from django.db.models import Count, Q, F, Value
+from django.db.models.functions import Concat
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
-from .models import (
-    EscuelaCapaOfertas,
-    AsignacionSupervisorEscuela,
-    AuditLog,
-)
-
-from .services import escuelas_permitidas
-from .validators import validar_asignacion
-
-from apps.supervisa2.models.supervisor import Supervisor2, RegionalUsuario
-from apps.usuarios.models import UsuariosVisualizador
-
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, 
     Table, TableStyle, PageBreak
 )
 
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
+from .models import AsignacionSupervisorEscuela, EscuelaCapaOfertas, AuditLog
+
+from .services import escuelas_permitidas, registrar_auditoria
+from .validators import validar_asignacion
+from .permissions import es_regional 
+
 
 from apps.supervisa2.models.supervisor import Supervisor2, RegionalUsuario
+from apps.usuarios.models import UsuariosVisualizador
 
-from django.db.models import Value
-from django.db.models.functions import Concat
 
-from .models import AsignacionSupervisorEscuela
+# =========================
+# HELPERS
+# =========================
+def safe_date(v):
+    return parse_date(str(v)) if v else None
+
+def puede_transicionar(estado_actual, nuevo_estado):
+
+    transiciones = {
+        "BORRADOR": ["ENVIADO"],
+        "ENVIADO": ["OBSERVADO", "APROBADO"],
+        "OBSERVADO": ["BORRADOR"],
+        "APROBADO": [],
+    }
+
+    return nuevo_estado in transiciones.get(
+        estado_actual,
+        []
+    )
 
 # =========================
 # AJAX SELECT2
 # =========================
+@login_required
 def ajax_escuelas(request):
-    supervisor = request.user.supervisores.get()
-    term = request.GET.get("q", "")
+    supervisor = get_object_or_404(Supervisor2, usuario=request.user.username)
+    term = request.GET.get("q", "").strip()
 
-    qs = escuelas_permitidas(supervisor)
+    qs = escuelas_permitidas(supervisor).exclude(cueanexo__isnull=True)
 
     if term:
-        qs = qs.filter(cueanexo__icontains=term)
+        qs = qs.filter(
+            Q(cueanexo__istartswith=term) |
+            Q(nom_est__icontains=term)
+        )
 
-    results = qs[:20]
-
+    qs = qs.order_by("cueanexo")[:20]
+    
     return JsonResponse({
         "results": [
             {
                 "id": e.cueanexo,
                 "text": f"{e.cueanexo} - {e.nom_est}"
             }
-            for e in results
+            for e in qs[:20]
         ]
     })
 
 
 # =========================
-# HELPER FECHA
-# =========================
-def safe_date(value):
-    if not value:
-        return None
-    return parse_date(str(value))
-
-
-# =========================
 # 🚀 UPSERT (CREATE + UPDATE)
 # =========================
+@login_required
 @require_POST
 def ajax_asignar(request):
 
-    supervisor = Supervisor2.objects.get(usuario=request.user.username)
+    supervisor = get_object_or_404(Supervisor2, usuario=request.user.username)
 
     try:
         data = json.loads(request.POST.get("data", "[]"))
@@ -114,6 +124,7 @@ def ajax_asignar(request):
                     obj, created = AsignacionSupervisorEscuela.objects.update_or_create(
                         supervisor=supervisor,
                         cueanexo=cueanexo,
+                        oferta=escuela.oferta,
                         defaults={
                             "nom_est": escuela.nom_est,
                             "region_loc": escuela.region_loc,
@@ -128,8 +139,21 @@ def ajax_asignar(request):
 
                     if created:
                         creadas += 1
+                        
+                        registrar_auditoria(
+                            request.user.username,
+                            "CREADA",
+                            cueanexo
+                        )
+                        
                     else:
                         actualizadas += 1
+                        
+                        registrar_auditoria(
+                            request.user.username,
+                            "ACTUALIZADA",
+                            cueanexo
+                        )
 
                 except EscuelaCapaOfertas.DoesNotExist:
                     errores.append(f"Fila {i}: escuela no existe")
@@ -155,6 +179,7 @@ def ajax_asignar(request):
 # =========================
 # VISTA CREAR
 # =========================
+@login_required
 def crear_asignacion(request):
     return render(request, "asignaciones/form.html", {
         "modo": "crear",
@@ -165,9 +190,18 @@ def crear_asignacion(request):
 # =========================
 # VISTA EDITAR
 # =========================
+@login_required
 def editar_asignacion(request, pk):
 
     asignacion = get_object_or_404(AsignacionSupervisorEscuela, pk=pk)
+    
+    if asignacion.estado == "APROBADO":
+
+        return JsonResponse({
+            "ok": False,
+            "error":
+            "Asignación aprobada no editable"
+        }, status=403)
 
     return render(request, "asignaciones/form.html", {
         "modo": "editar",
@@ -184,24 +218,42 @@ def editar_asignacion(request, pk):
 # =========================
 # ENVIAR
 # =========================
+@login_required
 @require_POST
 def enviar_asignacion(request):
 
-    obj = AsignacionSupervisorEscuela.objects.get(
-        id=request.POST.get("id")
-    )
+    obj = get_object_or_404(AsignacionSupervisorEscuela, id=request.POST.get("id"))
+    
+    if obj.supervisor.usuario != request.user.username:
+        return JsonResponse({
+            "ok": False,
+            "error": "Sin permisos"
+        }, status=403)
 
-    if obj.estado in ["ENVIADO", "APROBADO"]:
-        return JsonResponse({"ok": False})
+    if not puede_transicionar(
+        obj.estado,
+        "ENVIADO"
+    ):
+        return JsonResponse({
+            "ok": False,
+            "error":
+                "Transición inválida"
+        })
 
     obj.estado = "ENVIADO"
-    obj.save()
-
+    obj.save(update_fields=["estado"])
+    registrar_auditoria(request.user.username,"ENVIADA",obj.cueanexo)
     return JsonResponse({"ok": True})
 
+
+
+#################################################   
+# LISTAR ASIGNACIONES (ENDPOINT PARA DATATABLES)
+#################################################
+@login_required
 def listar_asignaciones(request):
 
-    supervisor = Supervisor2.objects.get(usuario=request.user.username)
+    supervisor = get_object_or_404(Supervisor2, usuario=request.user.username)
 
     data = AsignacionSupervisorEscuela.objects.filter(
         supervisor=supervisor
@@ -211,15 +263,22 @@ def listar_asignaciones(request):
         "nom_est",
         "fecha_desde",
         "fecha_hasta",
-        "estado"
-    )
+        "estado",
+        "observacion"
+    ).order_by("-id")
 
     return JsonResponse(list(data), safe=False)
 
+
+
+############################
+# PANEL ASIGNACIONES
+############################
+@login_required
 def panel_asignaciones(request):
 
-    supervisor = Supervisor2.objects.get(usuario=request.user.username)
-    
+    supervisor = get_object_or_404(Supervisor2, usuario=request.user.username)
+
     # 🔥 TRAER DATOS PERSONALES
     try:
         usuario_extra = UsuariosVisualizador.objects.get(
@@ -228,34 +287,85 @@ def panel_asignaciones(request):
     except UsuariosVisualizador.DoesNotExist:
         usuario_extra = None
 
-    asignaciones = AsignacionSupervisorEscuela.objects.filter(
+    asignaciones_qs = AsignacionSupervisorEscuela.objects.filter(
         supervisor=supervisor
     ).order_by("-id")
+    
+    # =====================================================
+    # PAGINACIÓN
+    # =====================================================
+    paginator = Paginator(asignaciones_qs, 25)
+    page_number = request.GET.get("page")
+    
+    asignaciones = paginator.get_page(page_number)
 
-    # 🔥 RESUMEN PRO
-    resumen_qs = asignaciones.values("estado").annotate(total=Count("id"))
+    # 🔥 RESUMEN KPI
+    resumen_qs = asignaciones_qs.values("estado").annotate(total=Count("id"))
 
     resumen = {
         "BORRADOR": 0,
         "ENVIADO": 0,
-        "RECHAZADO": 0,
+        "OBSERVADO": 0,
         "APROBADO": 0
     }
 
     for r in resumen_qs:
-        resumen[r["estado"]] = r["total"]
+        estado = (
+            r["estado"]
+            or "BORRADOR"
+        ).upper()
 
-    # 🔥 DETECTAR RECHAZOS CON OBSERVACIÓN
-    rechazadas = asignaciones.filter(
-        estado="RECHAZADO"
-    ).exclude(observacion__isnull=True).exclude(observacion="")
+        resumen[estado] = (
+            r["total"]
+        )
 
+    ##################################
+    # 🔥 DETECTAR OBSERVADAS
+    ################################## 
+    observadas = (
+        asignaciones_qs
+        .filter(
+            estado="OBSERVADO"
+        )
+        .exclude(
+            Q(
+                observacion__isnull=True
+            ) |
+            Q(
+                observacion=""
+            )
+        )
+    )
+
+    # =====================================================
+    # ESTADÍSTICAS EXTRA
+    # =====================================================
+    total = asignaciones_qs.count()
+
+    porcentaje_aprobado = 0
+
+    if total > 0:
+
+        porcentaje_aprobado = round(
+            (
+                resumen["APROBADO"]
+                / total
+            ) * 100,
+            1
+        )
+        
+    # =====================================================
+    # RENDER
+    # =====================================================
     return render(request, "asignaciones/panel.html", {
         "asignaciones": asignaciones,
+        "page_obj": asignaciones,
         "supervisor": supervisor,
         "usuario_extra": usuario_extra,
         "resumen": resumen,
-        "rechazadas": rechazadas
+        "observadas": observadas,
+        "total": total,
+        "porcentaje_aprobado": porcentaje_aprobado
     })
 
 
@@ -263,51 +373,165 @@ def panel_asignaciones(request):
 # =========================================================
 # 🏢 PANEL REGIONAL
 # =========================================================
+@login_required
 def panel_regional(request):
+    
+    if not es_regional(request.user):
 
-    regiones = RegionalUsuario.objects.filter(
+        return JsonResponse({
+            "ok": False,
+            "error": "Sin permisos"
+        }, status=403)
+
+    regiones = (RegionalUsuario.objects.filter(
         usuario=request.user.username
-    ).values_list("region_loc", flat=True)
+    ).values_list("region_loc", flat=True))
 
-    asignaciones = AsignacionSupervisorEscuela.objects.filter(
-        region_loc__in=regiones
-    ).select_related("supervisor").order_by("-id")
+    asignaciones_qs = (
+        AsignacionSupervisorEscuela.objects
+        .select_related(
+            "supervisor"
+        )
+        .filter(
+            region_loc__in=regiones
+        )
+        .order_by("-id")
+    )
+    
+    paginator = Paginator(
+        asignaciones_qs,
+        40
+    )
+
+    page_number = request.GET.get(
+        "page"
+    )
+
+    asignaciones = paginator.get_page(
+        page_number
+    )
+
+    resumen_qs = (
+        asignaciones_qs
+        .values("estado")
+        .annotate(
+            total=Count("id")
+        )
+    )
+
+    resumen = {
+        "BORRADOR": 0,
+        "ENVIADO": 0,
+        "OBSERVADO": 0,
+        "APROBADO": 0,
+    }
+
+    for r in resumen_qs:
+
+        estado = (
+            r["estado"]
+            or "BORRADOR"
+        ).upper()
+
+        resumen[estado] = r["total"]
 
     return render(request, "asignaciones/panel_regional.html", {
-        "asignaciones": asignaciones
+        "asignaciones": asignaciones,
+        "page_obj": asignaciones,
+        "resumen": resumen
     })
 
 
 # =========================================================
 # ✔️ APROBAR ASIGNACIÓN
 # =========================================================
+@login_required
 @require_POST
 def aprobar_asignacion(request):
+    
+    if not es_regional(request.user):
 
-    obj = AsignacionSupervisorEscuela.objects.get(
-        id=request.POST.get("id")
-    )
+        return JsonResponse({
+            "ok": False,
+            "error": "Sin permisos"
+        }, status=403)
+
+
+    obj = get_object_or_404(AsignacionSupervisorEscuela, id=request.POST.get("id"))
+
+    if not puede_transicionar(
+        obj.estado,
+        "APROBADO"
+    ):
+        return JsonResponse({
+            "ok": False,
+            "error":
+                "Transición inválida"
+        })
 
     obj.estado = "APROBADO"
     obj.observacion = ""
-    obj.save()
+    obj.save(
+        update_fields=[
+            "estado",
+            "observacion"
+        ]
+    )
+
+    registrar_auditoria(
+        request.user.username,
+        "APROBADA",
+        obj.cueanexo
+    )
 
     return JsonResponse({"ok": True})
 
 
 # =========================================================
-# ❌ RECHAZAR ASIGNACIÓN
+# ❌ OBSERVAR ASIGNACIÓN
 # =========================================================
+@login_required
 @require_POST
 def rechazar_asignacion(request):
+    
+    if not es_regional(request.user):
 
-    obj = AsignacionSupervisorEscuela.objects.get(
-        id=request.POST.get("id")
+        return JsonResponse({
+            "ok": False,
+            "error": "Sin permisos"
+        }, status=403)
+
+    obj = get_object_or_404(AsignacionSupervisorEscuela, id=request.POST.get("id"))
+    
+    if not puede_transicionar(
+        obj.estado,
+        "OBSERVADO"
+    ):
+        return JsonResponse({
+            "ok": False,
+            "error":
+                "Transición inválida"
+        })
+
+    observacion = request.POST.get(
+        "observacion",
+        ""
+    ).strip()
+
+    obj.estado = "OBSERVADO"
+    obj.observacion = request.POST.get("observacion", "")
+    obj.save(
+        update_fields=[
+            "estado",
+            "observacion"
+        ]
     )
 
-    obj.estado = "RECHAZADO"
-    obj.observacion = request.POST.get("observacion", "")
-    obj.save()
+    registrar_auditoria(
+        request.user.username,
+        "OBSERVADA",
+        obj.cueanexo
+    )
 
     return JsonResponse({"ok": True})
 
@@ -315,6 +539,7 @@ def rechazar_asignacion(request):
 # =========================================================
 # 🏛 PANEL ADMIN POWERBI
 # =========================================================
+@login_required
 def panel_admin_powerbi(request):
     return render(request, "asignaciones/admin/panel_powerbi.html")
 
@@ -322,6 +547,7 @@ def panel_admin_powerbi(request):
 # =========================================================
 # 📡 REALTIME API (SALA DE SITUACIÓN MINISTERIAL)
 # =========================================================
+@login_required
 def dashboard_realtime_api(request):
 
     region = request.GET.get("region")
@@ -353,7 +579,7 @@ def dashboard_realtime_api(request):
     resumen = {
         "BORRADOR": 0,
         "ENVIADO": 0,
-        "RECHAZADO": 0,
+        "OBSERVADO": 0,
         "APROBADO": 0,
     }
 
@@ -370,7 +596,7 @@ def dashboard_realtime_api(request):
     )
 
     # =========================
-    # ESCUELAS IDS
+    # ESCUELAS MAPA
     # =========================
     escuelas_ids = list(qs.values_list("cueanexo", flat=True))
     escuelas_ids = [str(x) for x in escuelas_ids if x is not None]
@@ -419,21 +645,23 @@ def dashboard_realtime_api(request):
     )
 
     supervisores = list(
-        qs.values(
+        qs.annotate(
+            label=Concat(
+                F(
+                    "supervisor__usuario__apellido"
+                ),
+                Value(", "),
+                F(
+                    "supervisor__usuario__nombres"
+                )
+            )
+        )
+        .values(
             "supervisor_id",
-            "supervisor__usuario__apellido",
-            "supervisor__usuario__nombres",
-        ).distinct()
+            "label"
+        )
+        .distinct()
     )
-
-    supervisores_formateados = [
-        {
-            "supervisor_id": s["supervisor_id"],
-            "label": f"{s['supervisor__usuario__apellido']}, {s['supervisor__usuario__nombres']}"
-        }
-        for s in supervisores
-        if s["supervisor_id"]
-    ]
 
     # =========================
     # RESPONSE FINAL
@@ -442,17 +670,16 @@ def dashboard_realtime_api(request):
         "resumen": resumen,
         "logs": logs,
         "escuelas": escuelas,
-
-        # 🔥 ESTO ES LO QUE TE FALTABA
         "regiones": regiones,
         "ofertas": ofertas,
-        "supervisores": supervisores_formateados,
+        "supervisores": supervisores,
     })
 
 
 # =========================================================
 # 📄 EXPORT PDF
 # =========================================================
+@login_required
 def export_pdf_admin(request):
 
     supervisor_id = request.GET.get("supervisor")
@@ -468,10 +695,10 @@ def export_pdf_admin(request):
     # =========================================================
     # 🔵 QUERY BASE (CORREGIDA)
     # =========================================================
-    qs = AsignacionSupervisorEscuela.objects.select_related(
+    qs = (AsignacionSupervisorEscuela.objects.select_related(
         "supervisor",
-        "supervisor__usuario"   # ✅ CORRECTO (no usuariosvisualizador)
-    )
+        "supervisor__usuario"   
+    ))
 
     if supervisor_id:
         qs = qs.filter(supervisor_id=supervisor_id)
@@ -481,6 +708,24 @@ def export_pdf_admin(request):
 
     if oferta:
         qs = qs.filter(oferta=oferta)
+    
+    
+    # =====================================================
+    # PDF MEMORY BUFFER
+    # =====================================================
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        rightMargin=25,
+        leftMargin=25,
+        topMargin=30,
+        bottomMargin=30
+    )
+
+    styles = getSampleStyleSheet()
+    story = []
+    
 
     # =========================================================
     # 🔵 VALIDACIÓN
@@ -488,7 +733,12 @@ def export_pdf_admin(request):
     if not qs.exists():
         story.append(Paragraph("Sin datos para el reporte", styles["Title"]))
         doc.build(story)
-        return FileResponse(open(file_path, "rb"), as_attachment=True)
+        buffer.seek(0)
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename="reporte_supervision.pdf"
+        )
 
     # =========================================================
     # 🔵 SUPERVISOR + PERFIL REAL
@@ -496,7 +746,7 @@ def export_pdf_admin(request):
     first_row = qs.first()
     supervisor = first_row.supervisor
 
-    perfil = getattr(supervisor, "usuario", None)  # ✅ CORRECTO
+    perfil = getattr(supervisor, "usuario", None) 
 
     nombre_completo = " ".join(filter(None, [
         getattr(perfil, "apellido", "") if perfil else "",
@@ -544,7 +794,8 @@ def export_pdf_admin(request):
     # 🔵 TABLA PROFESIONAL
     # =========================================================
     table_data = [[
-        "ESCUELA (CUEANEXO)",
+        "CUEANEXO",
+        "ESCUELA",
         "REGIÓN",
         "OFERTA",
         "ESTADO"
@@ -553,6 +804,7 @@ def export_pdf_admin(request):
     for d in qs:
         table_data.append([
             d.cueanexo or "-",
+            d.nom_est or "-",
             d.region_loc or "-",
             d.oferta or "-",
             d.estado or "-"
@@ -576,6 +828,15 @@ def export_pdf_admin(request):
     story.append(table)
 
     doc.build(story)
+    
+    buffer.seek(0)
+    
+    registrar_auditoria(
+        request.user.username,
+        "EXPORT_PDF",
+        "REPORTE_SUPERVISION"
+    )
+
 
     return FileResponse(open(file_path, "rb"), as_attachment=True)
 

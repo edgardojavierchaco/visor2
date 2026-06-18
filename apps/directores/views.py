@@ -124,20 +124,33 @@ def filtrar_tablas_view_directores(request):
             o['es_privado'] = normalize(o.get('sector')) == 'privado'
 
 
-        # Flags base
-        tiene_bibliotecas = any(o.get('es_biblioteca', False) for o in ofertas)
-
-        comun_primaria = any(
-            "primaria" in normalize(o.get('oferta'))
+        # ============================================
+        # 🔤 ACRÓNIMOS
+        # ============================================
+        acronimos = {
+            str(o.get("acronimo_oferta") or "").strip().upper()
             for o in ofertas
-        )
+            if o.get("acronimo_oferta")
+        }
+
+        print("\n📚 Acrónimos VIEW:", acronimos)
+        
+        # ============================================
+        # FLAGS SEGÚN ACRÓNIMO
+        # ============================================
+        tiene_bibliotecas = any(a.startswith("BI") for a in acronimos)
+
+        comun_primaria = "EEP" in acronimos
 
         comun_secundaria = any(
-            "secundaria" in normalize(o.get('oferta'))
-            for o in ofertas
+            a in {"EES", "EET", "EET-A"}
+            for a in acronimos
         )
 
-        privado = any(o.get('es_privado', False) for o in ofertas)
+        privado = any(
+            o.get('es_privado', False)
+            for o in ofertas
+        )
 
         # ============================================
         # 🔥 FLAGS PARA MENÚ DINÁMICO
@@ -145,12 +158,17 @@ def filtrar_tablas_view_directores(request):
         flags_menu = set()
 
         # 👉 FLUIDEZ
-        if comun_primaria or comun_secundaria:
-            flags_menu.add("fluidez")
+        if comun_primaria:
+            flags_menu.add("tiene_primaria")
+            
+        
+        # 👉 DIAGNÓSTICO
+        if comun_secundaria:
+            flags_menu.add("tiene_secundaria")
 
         # 👉 BIBLIOTECAS
         if tiene_bibliotecas:
-            flags_menu.add("bibliotecas")
+            flags_menu.add("tiene_biblioteca")
 
         # 🔥 🔥 ESTA LÍNEA ES LA CLAVE QUE TE FALTA
         request.flags_menu = flags_menu

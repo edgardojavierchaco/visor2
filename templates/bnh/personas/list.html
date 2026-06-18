@@ -3,57 +3,211 @@
 
 {% block content %}
 
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+.page-header{
+    background:linear-gradient(135deg,#183153,#2457a7);
+    color:white;
+    border-radius:18px;
+    padding:28px;
+    box-shadow:0 10px 25px rgba(0,0,0,.12);
+}
+
+.page-title{
+    font-size:28px;
+    font-weight:700;
+    margin-bottom:6px;
+}
+
+.page-subtitle{
+    opacity:.9;
+    font-size:14px;
+}
+
+.kpi-card{
+    border:none;
+    border-radius:18px;
+    overflow:hidden;
+    transition:.25s;
+    box-shadow:0 5px 18px rgba(0,0,0,.08);
+}
+
+.kpi-card:hover{
+    transform:translateY(-4px);
+}
+
+.kpi-icon{
+    width:56px;
+    height:56px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    color:white;
+}
+
+.kpi-number{
+    font-size:28px;
+    font-weight:700;
+    line-height:1;
+}
+
+.kpi-label{
+    font-size:13px;
+    color:#6c757d;
+}
+
+.toolbar-card{
+    border:none;
+    border-radius:18px;
+    box-shadow:0 5px 18px rgba(0,0,0,.06);
+}
+
+.table-card{
+    border:none;
+    border-radius:20px;
+    overflow:visible;
+    box-shadow:0 8px 25px rgba(0,0,0,.07);
+}
+
+.table thead th{
+    background:#eef4ff;
+    border:none;
+    font-size:13px;
+    font-weight:700;
+    color:#183153;
+    padding:16px;
+}
+
+.table tbody td{
+    padding:15px;
+    vertical-align:middle;
+    border-color:#edf0f5;
+}
+
+.table tbody tr{
+    transition:.20s;
+}
+
+.table tbody tr:hover{
+    background:#f8fbff;
+}
+
+.persona-cell{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.avatar{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#2457a7,#3e79d6);
+    color:white;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.persona-name{
+    font-weight:600;
+    color:#1f2937;
+}
+
+.persona-meta{
+    font-size:12px;
+    color:#6b7280;
+}
+
+.badge-soft-success{
+    background:#dff7e8;
+    color:#1d7f45;
+    font-weight:600;
+    padding:8px 10px;
+    border-radius:10px;
+}
+
+.badge-soft-danger{
+    background:#ffe5e5;
+    color:#b42318;
+    font-weight:600;
+    padding:8px 10px;
+    border-radius:10px;
+}
+
+.badge-acts-low{
+    background:#eef2ff;
+    color:#3b5bcc;
+}
+
+.badge-acts-mid{
+    background:#dbeafe;
+    color:#2563eb;
+}
+
+.badge-acts-high{
+    background:#fff4e5;
+    color:#d97706;
+}
+
+.search-box{
+    border-radius:14px;
+    border:1px solid #dce3ee;
+    padding:11px 16px;
+}
+
+.btn-premium{
+    border-radius:12px;
+    padding:10px 16px;
+    font-weight:600;
+}
+
+.dropdown-menu{
+    border:none;
+    border-radius:14px;
+    box-shadow:0 10px 25px rgba(0,0,0,.12);
+}
+
+.table-responsive{
+    overflow-x:auto;
+}
+
+</style>
+
 <div class="container-fluid mt-4">
 
-    <!-- KPIs -->
-    <div class="row mb-4">
+    <!-- HEADER -->
 
-        <div class="col-md-3">
-            <div class="card shadow border-0 bg-primary text-white">
-                <div class="card-body">
-                    <h6>Total Personas</h6>
-                    <h2>{{ total_personas }}</h2>
-                </div>
-            </div>
-        </div>
+    <div class="page-header mb-4">
 
-        <div class="col-md-3">
-            <div class="card shadow border-0 bg-success text-white">
-                <div class="card-body">
-                    <h6>Total Actividades</h6>
-                    <h2>{{ total_actividades }}</h2>
-                </div>
-            </div>
-        </div>
+        <div class="row align-items-center">
 
-    </div>
+            <div class="col-lg-8">
 
-    <!-- TABLA -->
-<div class="card shadow border-0">
-
-    <div class="card-header bg-dark text-white">
-
-        <div class="d-flex justify-content-between align-items-center">
-
-            <div>
-
-                <h4 class="mb-0">
+                <div class="page-title">
+                    <i class="fa-solid fa-users me-2"></i>
                     Personal Registrado
-                </h4>
+                </div>
 
-                <small class="text-light opacity-75">
-                    Gestión de personas y actividades
-                </small>
+                <div class="page-subtitle">
+                    Gestión integral de personas y actividades docentes
+                </div>
 
             </div>
 
-            <div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
 
                 <a href="{% url 'bnhpersonas:carga_personal' %}"
-                   class="btn btn-success">
+                   class="btn btn-light btn-premium">
 
-                    <i class="fa fa-user-plus me-1"></i>
-
+                    <i class="fa-solid fa-plus me-2"></i>
                     Nuevo Registro
 
                 </a>
@@ -64,121 +218,502 @@
 
     </div>
 
-    <div class="card-body">
+    <!-- KPIS -->
 
-        <table id="tablaPersonas"
-               class="table table-hover table-striped align-middle">
+    <div class="row g-3 mb-4">
 
-            <thead class="table-primary">
+        <div class="col-md-3">
 
-                <tr>
-                    <th>DNI</th>
-                    <th>Apellido y Nombre</th>
-                    <th>Teléfono</th>
-                    <th>Localidad</th>
-                    <th>Estado</th>
-                    <th>Actividades</th>
-                    <th width="160"></th>
-                </tr>
+            <div class="card kpi-card">
 
-            </thead>
+                <div class="card-body d-flex justify-content-between align-items-center">
 
-            <tbody>
+                    <div>
 
-                {% for p in personas %}
-
-                <tr>
-
-                    <td>
-                        {{ p.dni }}
-                    </td>
-
-                    <td>
-
-                        <strong>
-                            {{ p.apellido }},
-                            {{ p.nombre }}
-                        </strong>
-
-                    </td>
-
-                    <td>
-                        {{ p.telefono_display }}
-                    </td>
-
-                    <td>
-                        {{ p.localidad }}
-                    </td>
-
-                    <td>
-
-                        {% if p.estado == 'ACTIVO' %}
-
-                            <span class="badge bg-success">
-                                ACTIVO
-                            </span>
-
-                        {% else %}
-
-                            <span class="badge bg-danger">
-                                PASIVO
-                            </span>
-
-                        {% endif %}
-
-                    </td>
-
-                    <td>
-
-                        <span class="badge bg-primary">
-
-                            {{ p.total_actividades }}
-
-                        </span>
-
-                    </td>
-
-                    <td>
-
-                        <a href="{% url 'bnhpersonas:personas_detail' p.id %}"
-                           class="btn btn-dark btn-sm">
-
-                            <i class="fa fa-eye me-1"></i>
-
-                            Ver Detalle
-
-                        </a>
-
-                    </td>
-
-                </tr>
-
-                {% empty %}
-
-                <tr>
-
-                    <td colspan="7" class="text-center py-4">
-
-                        <div class="text-muted">
-
-                            No hay personas registradas.
-
+                        <div class="kpi-label">
+                            Total Personas
                         </div>
 
-                    </td>
+                        <div class="kpi-number">
+                            {{ total_personas }}
+                        </div>
 
-                </tr>
+                    </div>
 
-                {% endfor %}
+                    <div class="kpi-icon bg-primary">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
 
-            </tbody>
+                </div>
 
-        </table>
+            </div>
+
+        </div>
+
+        <div class="col-md-3">
+
+            <div class="card kpi-card">
+
+                <div class="card-body d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <div class="kpi-label">
+                            Actividades
+                        </div>
+
+                        <div class="kpi-number">
+                            {{ total_actividades }}
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-icon bg-success">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-md-3">
+
+            <div class="card kpi-card">
+
+                <div class="card-body d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <div class="kpi-label">
+                            Activos
+                        </div>
+
+                        <div class="kpi-number">
+                            {{ total_activos }}
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-icon bg-info">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-md-3">
+
+            <div class="card kpi-card">
+
+                <div class="card-body d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <div class="kpi-label">
+                            Pasivos
+                        </div>
+
+                        <div class="kpi-number">
+                            {{ total_pasivos }}
+                        </div>
+
+                    </div>
+
+                    <div class="kpi-icon bg-danger">
+                        <i class="fa-solid fa-user-xmark"></i>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- TOOLBAR -->
+
+    <div class="card toolbar-card mb-4">
+
+        <div class="card-body">
+
+            <div class="row g-3 align-items-center">
+
+                <div class="col-lg-4">
+
+                    <input type="text"
+                           id="buscarPersona"
+                           class="form-control search-box"
+                           placeholder="Buscar por DNI, apellido o nombre">
+
+                </div>
+
+                <div class="col-lg-8 text-lg-end">
+
+                    <button class="btn btn-outline-success btn-premium">
+                        <i class="fa-solid fa-file-excel me-2"></i>
+                        Excel
+                    </button>
+
+                    <button class="btn btn-outline-danger btn-premium">
+                        <i class="fa-solid fa-file-pdf me-2"></i>
+                        PDF
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- TABLA -->
+
+    <div class="card table-card">
+
+        <div class="card-header bg-white border-0 py-3 px-4">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+
+                    <h5 class="mb-0 fw-bold text-dark">
+
+                        <i class="fa-solid fa-table me-2"></i>
+                        Nómina de Personal
+
+                    </h5>
+
+                    <small class="text-muted">
+
+                        {{ total_personas }} registros
+
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table
+                id="tablaPersonas"
+                class="table align-middle mb-0">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Persona</th>
+                        <th>Teléfono</th>
+                        <th>Localidad</th>
+                        <th>Estado</th>
+                        <th>Actividades</th>
+                        <th class="text-center">
+                            Acciones
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for p in personas %}
+
+                    <tr class="fila-persona">
+
+                        <!-- PERSONA -->
+
+                        <td>
+
+                            <div class="persona-cell">
+
+                                <div class="avatar">
+
+                                    {{ p.apellido|slice:":1"|upper }}
+
+                                </div>
+
+                                <div>
+
+                                    <div class="persona-name">
+
+                                        {{ p.apellido }},
+                                        {{ p.nombre }}
+
+                                    </div>
+
+                                    <div class="persona-meta">
+
+                                        DNI {{ p.dni }}
+                                        ·
+                                        {{ p.cuil }}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                        <!-- TEL -->
+
+                        <td>
+
+                            {% if p.telefono_display %}
+
+                                <i class="fa-solid fa-phone text-success me-2"></i>
+
+                                {{ p.telefono_display }}
+
+                            {% else %}
+
+                                <span class="text-muted">
+                                    Sin teléfono
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <!-- LOCALIDAD -->
+
+                        <td>
+
+                            <i class="fa-solid fa-location-dot text-danger me-2"></i>
+
+                            {{ p.localidad }}
+
+                        </td>
+
+                        <!-- ESTADO -->
+
+                        <td>
+
+                            {% if p.estado == 'ACTIVO' %}
+
+                                <span class="badge-soft-success">
+
+                                    <i class="fa-solid fa-circle-check me-1"></i>
+
+                                    ACTIVO
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge-soft-danger">
+
+                                    <i class="fa-solid fa-circle-xmark me-1"></i>
+
+                                    PASIVO
+
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <!-- ACTIVIDADES -->
+
+                        <td>
+
+                            {% if p.total_actividades == 0 %}
+
+                                <span class="badge rounded-pill badge-acts-low">
+
+                                    {{ p.total_actividades }}
+
+                                </span>
+
+                            {% elif p.total_actividades <= 2 %}
+
+                                <span class="badge rounded-pill badge-acts-mid">
+
+                                    {{ p.total_actividades }}
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge rounded-pill badge-acts-high">
+
+                                    {{ p.total_actividades }}
+
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <!-- ACCIONES -->
+
+                        
+
+                            <td class="text-center position-relative">
+
+                            <div class="dropdown">
+
+                                <button
+                                    class="btn btn-light border rounded-circle shadow-sm"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+
+                                    <i class="fa-solid fa-ellipsis"></i>
+
+                                </button>
+
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+
+                                    <li>
+
+                                        <a
+                                            class="dropdown-item"
+                                            href="{% url 'bnhpersonas:personas_detail' p.id %}">
+
+                                            <i class="fa-solid fa-eye me-2"></i>
+                                            Ver detalle
+
+                                        </a>
+
+                                    </li>
+
+                                    <li>
+
+                                        <a
+                                            class="dropdown-item"
+                                            href="{% url 'bnhpersonas:carga_personal_edit' p.id %}">
+
+                                            <i class="fa-solid fa-pen me-2"></i>
+                                            Editar
+
+                                        </a>
+
+                                    </li>
+
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+
+                                    <li>
+
+                                        <a
+                                            class="dropdown-item"
+                                            href="#">
+
+                                            <i class="fa-solid fa-file-pdf me-2"></i>
+                                            Exportar PDF
+
+                                        </a>
+
+                                    </li>
+
+                                </ul>
+
+                            </div>
+                            </td>
+                        
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td colspan="6" class="text-center py-5">
+
+                            <div class="text-muted">
+
+                                <i class="fa-solid fa-users-slash fa-2x mb-3"></i>
+
+                                <div>
+
+                                    No existen registros cargados
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </div>
 
 </div>
 
-</div>
+<!-- BUSQUEDA LIVE -->
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    const buscador =
+        document.getElementById("buscarPersona");
+
+    const filas =
+        document.querySelectorAll(".fila-persona");
+
+    buscador.addEventListener("keyup", function(){
+
+        const valor =
+            this.value.toLowerCase();
+
+        filas.forEach(function(fila){
+
+            const texto =
+                fila.innerText.toLowerCase();
+
+            fila.style.display =
+                texto.includes(valor)
+                ? ""
+                : "none";
+
+        });
+
+    });
+
+});
+
+</script>
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        document
+            .querySelectorAll(
+                '[data-bs-toggle="dropdown"]'
+            )
+            .forEach(function(el){
+
+                new bootstrap.Dropdown(el);
+
+            });
+
+    }
+);
+
+</script>
 
 {% endblock %}

@@ -3,7 +3,9 @@
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("bnhpersonas", "0004_alter_documentotipo_table_alter_localidades_table_and_more"),
+        ("bnhpersonas",
+	"0005_alter_documentotipo_table_alter_estadosciviles_table_and_more",
+	),
     ]
 
     operations = [

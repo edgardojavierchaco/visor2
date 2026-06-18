@@ -7,6 +7,7 @@ from django.core.validators import RegexValidator
 from .middleware import get_current_user
 from smart_selects.db_fields import ChainedForeignKey
 from django.utils import timezone
+from datetime import date
 
 
 #################
@@ -183,6 +184,7 @@ class NomencladorCeic(models.Model):
         verbose_name='nomenclador ceic'
         verbose_name_plural='nomencladores ceic'
         db_table='nomenclador_ceic'
+        ordering=['descripcion']
         indexes = [
             models.Index(fields=['t_nivel', 'c_niv']),
         ]
@@ -224,6 +226,166 @@ class Sexo(models.Model):
     
     def __str__(self):
         return self.descrip_sexo
+
+
+#############################
+# OTROS CATÁLOGOS
+#############################
+class TipoTelefono(models.Model):
+    c_tipo_telefono=models.IntegerField(primary_key=True)
+    descrip_tipo_telefono=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Telefono'
+        verbose_name_plural='Tipos Telefonos'
+        db_table='tipo_telefono'
+    
+    def __str__(self):
+        return self.descrip_tipo_telefono
+    
+
+class EstadosCiviles(models.Model):
+    c_estado_civil=models.IntegerField(primary_key=True)
+    descrip_estado_civil=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Estado Civil'
+        verbose_name_plural='Estados Civiles'
+        db_table='estado_civil_tipo_bnh'
+    
+    def __str__(self):
+        return self.descrip_estado_civil
+
+
+class TipoEmail(models.Model):
+    c_tipo_email=models.IntegerField(primary_key=True)
+    descrip_tipo_email=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Email'
+        verbose_name_plural='Tipos Email'
+        db_table='tipo_email_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_email
+
+
+class RelacionParentesco(models.Model):
+    c_relacion_parentesco=models.IntegerField(primary_key=True)
+    descrip_relacion_parentesco=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Relacion Parentesco'
+        verbose_name_plural='Relaciones Parentesco'
+        db_table='relacion_parentesco_tipo'
+    
+    def __str__(self):
+        return self.descrip_relacion_parentesco
+
+
+
+class TipoDiscapacidad(models.Model):
+    c_tipo_discapacidad=models.IntegerField(primary_key=True)
+    descrip_tipo_discapacidad=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Discapacidad'
+        verbose_name_plural='Tipos Discapacidad'
+        db_table='tipo_discapacidad_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_discapacidad
+
+
+class TipoDocenteIntegrador(models.Model):
+    c_tipo_docente_integrador=models.IntegerField(primary_key=True)
+    descrip_tipo_docente_integrador=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Docente Integrador'
+        verbose_name_plural='Tipos Docente Integrador'
+        db_table='tipo_docente_integrador'
+    
+    def __str__(self):
+        return self.descrip_tipo_docente_integrador
+
+
+
+class TipoComunidadOriginaria(models.Model):
+    c_tipo_comunidad_originaria=models.IntegerField(primary_key=True)
+    descrip_tipo_comunidad_originaria=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Comunidad Originaria'
+        verbose_name_plural='Tipos Comunidad Originaria'
+        db_table='tipo_comunidad_originaria_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_comunidad_originaria
+
+
+class TipoLenguaOriginaria(models.Model):
+    c_tipo_lengua_originaria=models.IntegerField(primary_key=True)
+    descrip_tipo_lengua_originaria=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Lengua Originaria'
+        verbose_name_plural='Tipos Lengua Originaria'
+        db_table='tipo_lengua_originaria_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_lengua_originaria
+
+
+class TipoPlanesSociales(models.Model):
+    c_tipo_planes_sociales=models.IntegerField(primary_key=True)
+    descrip_tipo_planes_sociales=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Plan Social'
+        verbose_name_plural='Tipos Planes Sociales'
+        db_table='tipo_planes_sociales_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_planes_sociales
+
+
+
+class NivelFormacion(models.Model):
+    c_nivel_formacion=models.IntegerField(primary_key=True)
+    descrip_nivel_formacion=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Nivel Formación'
+        verbose_name_plural='Niveles Formación'
+        db_table='nivel_formacion'
+    
+    def __str__(self):
+        return self.descrip_nivel_formacion
+
+
+class TipoOS(models.Model):
+    c_tipo_os=models.IntegerField(primary_key=True)
+    descrip_os=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo OS'
+        verbose_name_plural='Tipos OS'
+        db_table='tipo_obra_social'
+    
+    def __str__(self):
+        return self.descrip_os
 
 
 ##########################
@@ -383,9 +545,13 @@ def validar_cuil(cuil):
 class SituacionServicio(models.Model):
     cod_sitrev=models.IntegerField(primary_key=True)
     descrip_sitrev=models.CharField(max_length=50)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
     
     class Meta:
-        managed=True
+        managed=False
         db_table='situacion_revista'
     
     def __str__(self):
@@ -398,13 +564,71 @@ class SituacionServicio(models.Model):
 class CondicionActividad(models.Model):
     cod_condicion=models.IntegerField(primary_key=True)
     descrip_condicion=models.CharField(max_length=50)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
     
     class Meta:
-        managed=True
-        db_table='condicion_actividad'
+        managed=False
+        db_table='condicion_actividad_bnh'
     
     def __str__(self):
         return self.descrip_condicion
+
+
+#########################
+# TITULOS DE ESPACIOS
+#########################
+class TitulosEspacios(models.Model):
+    cod_titulo=models.IntegerField(primary_key=True)
+    descrip_titulo=models.CharField(max_length=255, unique=True)
+    
+    class Meta:
+        managed=False
+        db_table='titulos_docentes'
+        ordering=['descrip_titulo']
+    
+    def __str__(self):
+        return self.descrip_titulo
+
+
+#############################
+# TIPO DE FUNCIONES
+#############################
+class TipoFunciones(models.Model):
+    c_funciones=models.IntegerField(primary_key=True)
+    funciones_descripcion=models.CharField(max_length=100, unique=True)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=False
+        db_table='funciones_tipo_bnh'
+    
+    def __str__(self):
+        return self.funciones_descripcion
+    
+    
+#################################
+# TIPO DE DESIGNACIÓN / FUNCIÓN
+#################################
+class TipoDesigFunc(models.Model):
+    c_desigfunc=models.IntegerField(primary_key=True)
+    desigfunc_descripcion=models.CharField(max_length=100, unique=True)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=True
+        db_table='desigfunc_tipo_bnh'
+    
+    def __str__(self):
+        return self.desigfunc_descripcion
 
 
 ###############################
@@ -432,7 +656,26 @@ class RegistroActividades(AuditoriaModel):
     ], default='CARGO')
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
-
+    
+    grado_anio = models.CharField(max_length=2)
+    
+    turno=models.CharField(max_length=20, choices=[
+        ('MAÑANA', 'MAÑANA'),
+        ('TARDE', 'TARDE'),
+        ('NOCHE', 'NOCHE'),
+        ('VESPERTINO', 'VESPERTINO'),
+    ],
+        default='MAÑANA'
+    )
+    
+    secciones=models.CharField(max_length=2, null=False, blank=False)
+    
+    espacios = models.ForeignKey(
+        'TitulosEspacios',
+        on_delete=models.PROTECT,
+        to_field='descrip_titulo',
+        db_column='descrip_titulo'
+    )    
     f_desde = models.DateField()
     f_hasta = models.DateField()
     carga_horaria = models.DecimalField(max_digits=4, decimal_places=2)
@@ -441,6 +684,15 @@ class RegistroActividades(AuditoriaModel):
         ('ACTIVO', 'Activo'),
         ('INACTIVO', 'Inactivo'),
     ])
+    
+    funciones = models.ForeignKey(
+        'TipoFunciones',
+        on_delete=models.PROTECT,
+        db_column='c_funciones',
+    )
+    
+    f_desde_funciones = models.DateField(default=date.today)
+    f_hasta_funciones = models.DateField(default=date.today)
 
     class Meta:
         db_table = "registro_actividades"
@@ -464,6 +716,17 @@ class RegistroActividades(AuditoriaModel):
         if self.f_desde and self.f_hasta:
             if self.f_hasta < self.f_desde:
                 errors["f_hasta"] = "La fecha 'hasta' no puede ser menor a 'desde'"
+                
+        if self.f_desde_funciones:
+
+            if self.f_desde_funciones > hoy:
+                errors["f_desde_funciones"] = (
+                    "La fecha 'desde' no puede ser posterior a la fecha actual"
+                )
+        
+        if self.f_desde_funciones and self.f_hasta_funciones:
+            if self.f_hasta_funciones < self.f_desde_funciones:
+                errors["f_hasta_funciones"] = "La fecha 'hasta' no puede ser menor a 'desde'"
 
         if not self.cueanexo:
             errors["cueanexo"] = "CUEANEXO es obligatorio"
@@ -480,163 +743,3 @@ class RegistroActividades(AuditoriaModel):
         """
         if self.cueanexo:
             self.cueanexo = str(self.cueanexo).strip()
-            
-            
-#############################
-# OTROS CATÁLOGOS
-#############################
-class TipoTelefono(models.Model):
-    c_tipo_telefono=models.IntegerField(primary_key=True)
-    descrip_tipo_telefono=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Telefono'
-        verbose_name_plural='Tipos Telefonos'
-        db_table='tipo_telefono'
-    
-    def __str__(self):
-        return self.descrip_tipo_telefono
-    
-
-class EstadosCiviles(models.Model):
-    c_estado_civil=models.IntegerField(primary_key=True)
-    descrip_estado_civil=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Estado Civil'
-        verbose_name_plural='Estados Civiles'
-        db_table='estado_civil_tipo'
-    
-    def __str__(self):
-        return self.descrip_estado_civil
-
-
-class TipoEmail(models.Model):
-    c_tipo_email=models.IntegerField(primary_key=True)
-    descrip_tipo_email=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Email'
-        verbose_name_plural='Tipos Email'
-        db_table='tipo_email'
-    
-    def __str__(self):
-        return self.descrip_tipo_email
-
-
-class RelacionParentesco(models.Model):
-    c_relacion_parentesco=models.IntegerField(primary_key=True)
-    descrip_relacion_parentesco=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Relacion Parentesco'
-        verbose_name_plural='Relaciones Parentesco'
-        db_table='relacion_parentesco_tipo'
-    
-    def __str__(self):
-        return self.descrip_relacion_parentesco
-
-
-
-class TipoDiscapacidad(models.Model):
-    c_tipo_discapacidad=models.IntegerField(primary_key=True)
-    descrip_tipo_discapacidad=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Discapacidad'
-        verbose_name_plural='Tipos Discapacidad'
-        db_table='tipo_discapacidad_bnh'
-    
-    def __str__(self):
-        return self.descrip_tipo_discapacidad
-
-
-class TipoDocenteIntegrador(models.Model):
-    c_tipo_docente_integrador=models.IntegerField(primary_key=True)
-    descrip_tipo_docente_integrador=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Docente Integrador'
-        verbose_name_plural='Tipos Docente Integrador'
-        db_table='tipo_docente_integrador'
-    
-    def __str__(self):
-        return self.descrip_tipo_docente_integrador
-
-
-
-class TipoComunidadOriginaria(models.Model):
-    c_tipo_comunidad_originaria=models.IntegerField(primary_key=True)
-    descrip_tipo_comunidad_originaria=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Comunidad Originaria'
-        verbose_name_plural='Tipos Comunidad Originaria'
-        db_table='tipo_comunidad_originaria_bnh'
-    
-    def __str__(self):
-        return self.descrip_tipo_comunidad_originaria
-
-
-class TipoLenguaOriginaria(models.Model):
-    c_tipo_lengua_originaria=models.IntegerField(primary_key=True)
-    descrip_tipo_lengua_originaria=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Lengua Originaria'
-        verbose_name_plural='Tipos Lengua Originaria'
-        db_table='tipo_lengua_originaria_bnh'
-    
-    def __str__(self):
-        return self.descrip_tipo_lengua_originaria
-
-
-class TipoPlanesSociales(models.Model):
-    c_tipo_planes_sociales=models.IntegerField(primary_key=True)
-    descrip_tipo_planes_sociales=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo Plan Social'
-        verbose_name_plural='Tipos Planes Sociales'
-        db_table='tipo_planes_sociales_bnh'
-    
-    def __str__(self):
-        return self.descrip_tipo_planes_sociales
-
-
-
-class NivelFormacion(models.Model):
-    c_nivel_formacion=models.IntegerField(primary_key=True)
-    descrip_nivel_formacion=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Nivel Formación'
-        verbose_name_plural='Niveles Formación'
-        db_table='nivel_formacion'
-    
-    def __str__(self):
-        return self.descrip_nivel_formacion
-
-
-class TipoOS(models.Model):
-    c_os =models.IntegerField(primary_key=True)
-    descrip_os=models.CharField(max_length=50)
-    
-    class Meta:
-        managed=False
-        verbose_name='Tipo OS'
-        verbose_name_plural='Tipos OS'
-        db_table='tipo_obra_social_bnh'
-    
-    def __str__(self):
-        return self.descrip_os

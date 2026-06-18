@@ -25,6 +25,24 @@ services:
       - production_media_visor:/app/media
     command: /start
     restart: unless-stopped
+    labels:
+      - "traefik.enable=${DJANGO_ENABLED:-true}"
+      - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls.certresolver=le"
+      - "traefik.http.services.django.loadbalancer.server.port=5000"
+  
+  maintenance:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./maintenance:/usr/share/nginx/html:ro
+    labels:
+      - "traefik.enable=${MAINTENANCE_ENABLED:-false}"
+      - "traefik.http.routers.maintenance.rule=Host(`visoreducativochaco.com.ar`)"
+      - "traefik.http.routers.maintenance.entrypoints=websecure"
+      - "traefik.http.routers.maintenance.tls.certresolver=le"
+      - "traefik.http.services.maintenance.loadbalancer.server.port=80"
 
   postgres:
     build:
@@ -62,12 +80,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    labels:
-      - "traefik.http.routers.django.rule=Host(`visoreducativochaco.com.ar`)"
-      - "traefik.http.routers.django.entrypoints=websecure"
-      - "traefik.http.routers.django.tls.certresolver=le"
-      - "traefik.http.services.django.loadbalancer.server.port=5000"
-    restart: unless-stopped
+    restart: unless-stopped    
 
   celery:
     build:
