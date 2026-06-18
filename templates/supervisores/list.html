@@ -1,0 +1,81 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<div class="d-flex justify-content-between">
+
+<h3>
+Supervisores
+</h3>
+
+<a
+href="{% url 'supervisor_buscar' %}"
+class="btn btn-primary">
+
+Nuevo Supervisor
+
+</a>
+
+</div>
+
+<hr>
+
+<table
+class="table table-striped table-hover">
+
+<thead>
+
+<tr>
+
+<th>CUIL</th>
+<th>Apellido</th>
+<th>Nombres</th>
+<th></th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for supervisor in supervisores %}
+
+<tr>
+
+<td>
+{{ supervisor.usuario.username }}
+</td>
+
+<td>
+{{ supervisor.usuario.apellido }}
+</td>
+
+<td>
+{{ supervisor.usuario.nombres }}
+</td>
+
+<td>
+
+<a
+href="{% url 'supervisor_detail' supervisor.id %}"
+class="btn btn-sm btn-info">
+
+Ver
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

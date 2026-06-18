@@ -224,14 +224,14 @@
 
                 <!-- CORREGIDO -->
 
-                <a
+                {% comment %} <a
                     href="{% url 'bnhpersonas:carga_personal_edit' persona.id %}"
                     class="btn btn-warning btn-action">
 
                     <i class="fa-solid fa-pen me-2"></i>
                     Editar
 
-                </a>
+                </a> {% endcomment %}
 
             </div>
 
@@ -376,6 +376,7 @@
                         <th>Desde</th>
                         <th>Hasta</th>
                         <th>Estado</th>
+                        <th width="120">Acciones</th>
                     </tr>
 
                 </thead>
@@ -406,6 +407,17 @@
                             {% endif %}
 
                         </td>
+                        <td>
+
+                            <a
+                                href="{% url 'bnhpersonas:editar_actividad' act.id %}"
+                                class="btn btn-sm btn-warning">
+
+                                <i class="fa-solid fa-pen"></i>
+
+                            </a>
+
+                        </td>
 
                     </tr>
 
@@ -413,7 +425,7 @@
 
                     <tr>
 
-                        <td colspan="7">
+                        <td colspan="8">
 
                             <div class="empty-state">
 

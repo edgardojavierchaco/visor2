@@ -1,10 +1,13 @@
 from django.urls import path
 from .views import (
     filtrar_ceic, 
+    filtrar_grado_anio,
+    filtrar_secciones,
     carga_personal, 
     buscar_persona, 
     filtrar_localidades, 
-    buscar_codigos_area
+    buscar_codigos_area,
+    editar_actividad
 )
 
 from .views_list import (
@@ -23,6 +26,9 @@ urlpatterns = [
     path('filtrar-ceic/', filtrar_ceic, name='filtrar_ceic'),
     path('filtrar-localidades/', filtrar_localidades, name='filtrar_localidades'),
     path('buscar-codigos-area/', buscar_codigos_area, name='buscar_codigos_area'),
+    path('filtrar-grado-anio/', filtrar_grado_anio, name='filtrar_grado_anio'),
+    path('filtrar-secciones/', filtrar_secciones, name='filtrar_secciones'),
+    
 
     # =========================
     # PERSONA CORE
@@ -61,4 +67,12 @@ urlpatterns = [
         name='obtener_ayuda_renpe'
     ),
     
+    #############################
+    # EDITAR ACTIVIDADES
+    #############################
+    path(
+        "actividad/<int:pk>/editar/",
+        editar_actividad,
+        name="editar_actividad"
+    ),
 ]
