@@ -7,6 +7,34 @@ from apps.usuarios.models import EstadoUsuario
 from typing import cast
 from apps.usuarios.models import UsuariosVisualizador
 from django.urls import resolve, reverse
+from .models import DispositivoUsuario
+from .utils_dispositivo import generar_fingerprint, get_client_ip
+from .email_dispositivo import (
+    enviar_email_dispositivo
+)
+from django.shortcuts import (
+    get_object_or_404,
+    redirect,
+    render
+)
+
+from .models_session import (
+    SesionUsuario
+)
+
+from django.contrib.sessions.models import (
+    Session
+)
+
+from django.contrib.auth import (
+    authenticate,
+    login,
+    logout
+)
+
+from django.utils import timezone
+from datetime import timedelta
+
 
 class LoginFormView(LoginView):
     template_name = 'login/login.html'
@@ -85,7 +113,7 @@ class LoginFormView(LoginView):
         user = request.user
 
         if not user.is_authenticated or not user.is_staff:
-            return reverse('login')
+            return reverse('logueo:login')
         
         # =========================
         # 🔥 RESTAURAR ESTADO
@@ -117,14 +145,185 @@ class LoginFormView(LoginView):
         )
 
         if user is not None:
-            user=form.get_user()
+            user=form.get_user()            
+            
+            # =====================
+            # DETECCIÓN DISPOSITIVO
+            # =====================
+
+            fingerprint = generar_fingerprint(
+                self.request
+            )
+
+            ip = get_client_ip(
+                self.request
+            )
+
+            user_agent = self.request.META.get(
+                'HTTP_USER_AGENT',
+                ''
+            )
+
+            dispositivo = (
+                DispositivoUsuario.objects.filter(
+                    usuario=user,
+                    fingerprint=fingerprint,
+                    confirmado=True
+                ).first()
+            )
+
+            # ---------------------
+            # NUEVO DISPOSITIVO
+            # ---------------------
+            if not dispositivo:
+
+                dispositivo = (
+                    DispositivoUsuario.objects.filter(
+                        usuario=user,
+                        fingerprint=fingerprint,
+                        confirmado=False
+                    ).first()
+                )
+                
+                if not dispositivo:
+                
+                    dispositivo = (
+                        DispositivoUsuario.objects.create(
+                            usuario=user,
+                            fingerprint=fingerprint,
+                            ip=ip,
+                            user_agent=user_agent,
+                            confirmado=False
+                        )
+                    )
+                
+                dispositivo.ip = ip
+                dispositivo.user_agent = user_agent
+                dispositivo.save()
+                
+                if not user.correo:
+
+                    return JsonResponse({
+                        'success': False,
+                        'message': (
+                            'Tu usuario no tiene'
+                            'correo configurado. '
+                        )
+                    })
+                
+                hace_5_minutos = (
+                    timezone.now() -
+                    timedelta(minutes=5)
+                )
+
+                fecha_control = getattr(
+                    dispositivo,
+                    'fecha_envio_email',
+                    None
+                )
+                
+                if (
+                    fecha_control and
+                    fecha_control > hace_5_minutos
+                ):
+
+                    return JsonResponse({
+                        'success': False,
+                        'nuevo_dispositivo': True,
+                        'message': (
+                            'Ya se envió un coreo de '
+                            'autorización recientemente. '
+                            'Revisa tu bandeja de entrada.'
+                        )
+                    })
+                    
+                enviado = enviar_email_dispositivo(
+                    self.request,
+                    user,
+                    dispositivo
+                )
+
+                if not enviado:
+
+                    return JsonResponse({
+                        'success': False,
+                        'message': (
+                            'Tu solicitud fue registrada. '
+                            'El correo de autorización será '
+                            'enviado automáticamente cuando '
+                            'el servicio de correo vuelva '
+                            'a estar disponible.'
+                        )
+                    })
+
+                dispositivo.fecha_envio_email = (
+                    timezone.now()
+                )
+
+                dispositivo.save(
+                    update_fields=[
+                        'fecha_envio_email'
+                    ]
+                )
+
+                return JsonResponse({
+                    'success': False,
+                    'nuevo_dispositivo': True,
+                    'message': (
+                        'Detectamos un nuevo '
+                        'dispositivo. '
+                        'Revisá tu correo '
+                        'para autorizarlo.'
+                    )
+                })
+
+            # ---------------------
+            # DISPOSITIVO CONOCIDO
+            # ---------------------
             login(self.request, user)
+            
+            dispositivo.ip = ip
+            dispositivo.user_agent = user_agent
+            dispositivo.save()
+            
+            session_key = (
+                self.request.session.session_key
+            )
+
+            SesionUsuario.objects.update_or_create(
+                session_key=session_key,
+                defaults={
+                    'usuario': user,
+                    'ip': ip,
+                    'user_agent': user_agent,
+                    'activa': True
+                }
+            )
+
+            # ------------------
+            # OTRAS SESIONES
+            # ------------------
+
+            otras_sesiones = (
+                SesionUsuario.objects.filter(
+                    usuario=user,
+                    activa=True
+                )
+                .exclude(
+                    session_key=session_key
+                )
+            )
 
             if user.is_staff:
                 return JsonResponse({
                     'success': True,
-                    'redirect_url': self.get_success_url()
-                })
+                    'redirect_url': self.get_success_url(),
+                    'otras_sesiones':
+                        otras_sesiones.exists(),
+
+                    'cantidad_sesiones':
+                        otras_sesiones.count()
+                    })
             else:
                 return JsonResponse({
                     'success': False,
@@ -135,7 +334,10 @@ class LoginFormView(LoginView):
             'success': False,
             'message': 'Credenciales incorrectas.'
         })
-
+        
+    # --------------------------
+    # INVALID
+    # --------------------------
     def form_invalid(self, form):
         return JsonResponse({
             'success': False,
@@ -143,6 +345,9 @@ class LoginFormView(LoginView):
             'template': 'login/login.html'
         })
 
+    # --------------------------
+    # AJAX
+    # --------------------------
     def post(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             form = self.get_form()
@@ -150,9 +355,119 @@ class LoginFormView(LoginView):
         return super().post(request, *args, **kwargs)
 
 
-class CustomLogoutView(LogoutView):
-    next_page = reverse_lazy('dash:portada')
+# ==========================
+# CONFIRMAR DISPOSITIVO
+# ==========================
+def confirmar_dispositivo(
+    request,
+    token
+):
+
+    dispositivo = (
+        get_object_or_404(
+            DispositivoUsuario,
+            token=token
+        )
+    )
+
+    if (
+        not dispositivo
+        .token_valido()
+    ):
+
+        return render(
+            request,
+            'login/token_expirado.html'
+        )
+
+    dispositivo.confirmado = True
+    dispositivo.save()
+
+    return render(
+        request,
+        'login/dispositivo_confirmado.html'
+    )
     
-    # Permitir GET además de POST
-    def get(self, request, *args, **kwargs):
-        return self.post(request, *args, **kwargs)
+    
+# ==========================
+# CERRAR OTRAS SESIONES
+# ==========================
+def cerrar_otras_sesiones(
+    request
+):
+
+    if not request.user.is_authenticated:
+
+        return JsonResponse({
+            'success': False
+        })
+
+    actual = (
+        request.session.session_key
+    )
+
+    sesiones = (
+        SesionUsuario.objects.filter(
+            usuario=request.user,
+            activa=True
+        )
+        .exclude(
+            session_key=actual
+        )
+    )
+
+    for s in sesiones:
+
+        Session.objects.filter(
+            session_key=s.session_key
+        ).delete()
+
+        s.activa = False
+        s.save()
+
+    return JsonResponse({
+        'success': True
+    })
+
+
+class CustomLogoutView(LogoutView):
+
+    next_page = reverse_lazy(
+        'dash:portada'
+    )
+
+    def post(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+
+        # marcar sesión cerrada
+        if request.session.session_key:
+
+            SesionUsuario.objects.filter(
+                session_key=
+                    request.session.session_key
+            ).update(
+                activa=False
+            )
+
+        logout(request)
+
+        return redirect(
+            self.next_page
+        )
+
+    # permitir GET
+    def get(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+        return self.post(
+            request,
+            *args,
+            **kwargs
+        )

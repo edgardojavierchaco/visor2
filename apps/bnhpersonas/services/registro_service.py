@@ -1,82 +1,91 @@
+# services/registro_service.py
 from django.core.exceptions import ValidationError
 
-from apps.bnhpersonas.models import Personas, RegistroActividades
-from .bulk_service import BulkService
-from apps.consultasge.models_padron import CapaUnicaOfertas
+from apps.bnhpersonas.models import RegistroActividades
 from apps.bnhpersonas.utils import get_ofertas_usuario
+from .bulk_service import BulkService
+from .pipeline import PipelineContext
 
 
 class RegistroService:
 
     # =========================
-    # PERSONA UPSERT
+    # SOLO ACTIVIDADES (CRUD)
     # =========================
     @staticmethod
-    def upsert_persona(form):
-
-        dni = form.cleaned_data.get("dni")
-        cuil = form.cleaned_data.get("cuil")
-
-        persona = None
-
-        if cuil:
-            persona = Personas.objects.filter(cuil=cuil).first()
-
-        if persona is None and dni:
-            persona = Personas.objects.filter(dni=dni).first()
-
-        if persona:
-            for k, v in form.cleaned_data.items():
-                if v and not getattr(persona, k):
-                    setattr(persona, k, v)
-            persona.save()
-        else:
-            persona = form.save()
-
-        return persona
-
-
-    # =========================
-    # ACTIVIDADES
-    # =========================
-    @staticmethod
-    def crear_actividades(persona, forms, user):
+    def sync_actividades(persona, forms, user):
 
         cueanexos = set(
             str(x)
             for x in get_ofertas_usuario(user)
             .values_list("cueanexo", flat=True)
-        )    
-        
-        print("USER:", user.username)
-        print("CUES USUARIO:", cueanexos)
+        )
 
-        actividades = []
+        nuevas = []
 
         for f in forms:
 
             cd = getattr(f, "cleaned_data", None)
-
-            if not cd or cd.get("DELETE"):
+            if not cd:
                 continue
 
-            cue = cd.get("cueanexo")
-            ceic = cd.get("ceic")
-            
-            print("USER:", user.username)
-            print("CUES USUARIO:", list(cueanexos))
-            print("CUE FORM:", cue)
-            
+            # =========================
+            # DELETE
+            # =========================
+            if cd.get("DELETE"):
+
+                if f.instance.pk:
+
+                    if f.instance.persona_id != persona.id:
+                        raise ValidationError("No autorizado")
+
+                    f.instance.delete()
+
+                continue
+
+            cue = str(cd.get("cueanexo"))
+
             if cue not in cueanexos:
-                raise ValidationError(f"CUE {cue} no autorizado para este usuario")
+                raise ValidationError(f"CUE {cue} no autorizado")
 
             obj = f.save(commit=False)
+
             obj.persona = persona
             obj.cueanexo = cue
 
-            actividades.append(obj)
+            # =========================
+            # UPDATE
+            # =========================
+            if obj.pk:
 
-        return BulkService.safe_bulk_create(
-            RegistroActividades,
-            actividades
-        )
+                if obj.persona_id != persona.id:
+                    raise ValidationError("No autorizado")
+                
+                context = PipelineContext(
+                    user=user,
+                    source="update_actividad",
+                )
+
+                obj = BulkService.PIPELINE.run(
+                    obj,
+                    context=context,
+                )
+
+                obj.save()
+
+            # =========================
+            # CREATE
+            # =========================
+            else:
+                
+                nuevas.append(obj)
+
+        if nuevas:
+            return BulkService.safe_bulk_create(
+                RegistroActividades,
+                nuevas,
+                user=user,
+                source="carga_personal"
+            )
+
+        return {"created": [], "errors": []}
