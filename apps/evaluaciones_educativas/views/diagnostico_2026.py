@@ -1,10 +1,8 @@
-from apps import evaluaciones
-from apps.evaluaciones.models import Alumno
 from apps.evaluaciones_educativas.models.diagnostico_2026 import Establecimientos2026, EvaluacionDiagnostica2026, Año2026
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
-from django.http import FileResponse
+from django.http import FileResponse, JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 import io
@@ -856,3 +854,605 @@ def monitoreo_evaluaciones_educativas(request):
 		   'regiones':establecimientos_region,
 		   'alumnos_total':alumnos_total}
 	return render(request, 'diagnostico_2026/monitoreo_diagnostico.html', contexto)
+
+	#========================== Análisis evaluativos =============================
+
+# def analisis_evaluacion(request):
+# 	usuario = request.user
+# 	name = usuario.username
+# 	cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+# 	#--- logica para no permitir ingreso a no autorizados--------------
+# 	if not CapaUnicaOfertas.objects.filter(resploc_cuitcuil=cuil_con_caracter, oferta__icontains='Secundaria Completa req. 7 años').exists():
+# 		raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+# 	user_cueanexos = utilidades.obtener_cueanexos(usuario.username)
+# 	selected_cue = request.GET.get('cueanexo')
+# 	if not selected_cue and user_cueanexos:
+# 		selected_cue = str(user_cueanexos[0])
+
+# 	if selected_cue not in [str(c) for c in user_cueanexos]:
+# 		selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+
+# 	anios = Seccion2026.objects.filter(año_cueanexo=selected_cue).values('añoid', 'año_nombre_año').distinct()
+
+# 	anio_id = request.GET.get('anio_id')
+# 	secciones = Seccion2026.objects.filter(año__cueanexo=selected_cue, año_id=anio_id).values_list('seccion', flat=True).distinct()
+
+# 	anio_id = request.GET.get('anio_id')
+# 	seccion = request.GET.get('seccion')
+# 	turnos = Seccion2026.objects.filter(
+# 					año__cueanexo=selected_cue, 
+# 					año_id=anio_id, 
+# 					seccion=seccion
+# 			).values_list('turno', flat=True).distinct()
+
+# 	context = {
+# 		'user_cueanexos': user_cueanexos,
+# 		'cueanexo': selected_cue,
+# 	}
+
+# 	return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
+
+#========================= Nueva vista para diagnóstico 2026 =========================
+@login_required
+def analisis_evaluacion(request):
+	usuario = request.user
+	name = usuario.username
+	cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+	
+	lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+	rol_dennied = 'Director/a'
+	rol_usuario = usuario.nivelacceso_id  
+	
+	# ── PROTECCIÓN DE ACCESO ─────────────────────────────────────
+
+	if rol_usuario == rol_dennied:
+		raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+	if rol_usuario not in lista_usuarios_jerarquicos:
+			has_oferta = CapaUnicaOfertas.objects.filter(
+					resploc_cuitcuil=cuil_con_caracter, 
+					offer__icontains='Secundaria Completa req. 7 años'
+			).exists()
+			if not has_oferta:
+					raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+				
+	# ── 1. DETERMINACIÓN DEL UNIVERSO DE CUEs PERMITIDOS ────────────────────
+	filtro_sector = request.GET.get('sector', '').strip()
+	filtro_ambito = request.GET.get('ambito', '').strip()
+	filtro_region = request.GET.get('region', '').strip()
+
+	user_cueanexos = []
+
+	if rol_usuario in lista_usuarios_jerarquicos:
+			filtros_establecimiento = Q()
+			if filtro_sector and filtro_sector != 'TODOS':
+					filtros_establecimiento &= Q(sector=filtro_sector)
+			if filtro_ambito and filtro_ambito != 'TODOS':
+					filtros_establecimiento &= Q(ambito=filtro_ambito)
+			if filtro_region and filtro_region != 'TODOS':
+					filtros_establecimiento &= Q(region=filtro_region)
+					
+			cues_permitidos = Establecimientos2026.objects.filter(filtros_establecimiento).values_list('cueanexo', flat=True).distinct()
+			user_cueanexos = [str(c) for c in cues_permitidos]
+	else:
+			user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
+			user_cueanexos = [str(c) for c in user_cueanexos_raw]
+
+	# Determinación del CUE seleccionado por defecto
+	selected_cue = request.GET.get('cueanexo')
+	if not selected_cue and user_cueanexos:
+			selected_cue = str(user_cueanexos[0])
+
+	if selected_cue not in user_cueanexos:
+			selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+	selected_cue_int = None
+	if selected_cue and selected_cue.isdigit():
+			selected_cue_int = int(selected_cue)
+
+	escuelas_objs = Establecimientos2026.objects.filter(cueanexo__in=user_cueanexos).values('cueanexo', 'escuela')
+	mapa_escuelas = {str(e['cueanexo']): e['escuela'] for e in escuelas_objs}
+	
+	lista_escuelas = []
+	for cue in user_cueanexos:
+			nombre_escuela = mapa_escuelas.get(cue, "Establecimiento sin nombre")
+			lista_escuelas.append({
+					'cue': cue,
+					'label': f"{cue} - {nombre_escuela}"
+			})
+
+	# ── 2. PETICIONES AJAX PARA CASCADA DINÁMICA ─────────────────────────────
+	action = request.GET.get('action')
+	if action and selected_cue_int is not None:
+			if action == 'cargar_anios':
+					anios = Seccion2026.objects.filter(año__cueanexo=selected_cue_int).values('año__id', 'año__nombre_año').distinct()
+					return JsonResponse(list(anios), safe=False)
+					
+			# Trae Sección y Turno combinados
+			elif action == 'cargar_secciones_turnos':
+					anio_id = request.GET.get('anio_id', 0) or 0
+					combinaciones = Seccion2026.objects.filter(
+							año__cueanexo=selected_cue_int, 
+							año_id=int(str(anio_id).strip() or 0)
+					).values('seccion', 'turno').distinct().order_by('seccion', 'turno')
+					
+					resultados = [
+							{
+									'id': f"{c['seccion']}|{c['turno']}", 
+									'label': f"Sección: {c['seccion']} - Turno: {str(c['turno']).upper()}"
+							} 
+							for c in combinaciones
+					]
+					return JsonResponse(resultados, safe=False)
+
+	# ── 3. CAPTURA DE FILTROS PEDAGÓGICOS ────────────────────────────────────
+	filtro_anio = request.GET.get('anio')
+	filtro_seccion = request.GET.get('seccion')
+	filtro_turno = request.GET.get('turno')
+	filtro_materia = request.GET.get('materia')
+
+	anio_nombre_sel = filtro_anio
+	if filtro_anio and filtro_anio.isdigit():
+			seccion_ref = Seccion2026.objects.filter(año_id=int(filtro_anio)).select_related('año').first()
+			if seccion_ref:
+					anio_nombre_sel = seccion_ref.año.nombre_año
+
+	alumnos_con_examenes = []
+	columnas_preguntas = []
+	total_presentes = total_ausentes = 0
+	desempenos = {}
+
+	presentes_indigena = 0
+	presentes_discapacidad = 0
+	presentes_ambas = 0
+	presentes_ninguna = 0
+
+	# ── 4. PROCESAMIENTO DE EXÁMENES Y CAPACIDADES ───────────────────────────
+	if selected_cue_int and filtro_anio and filtro_seccion and filtro_turno and filtro_materia:
+			if filtro_materia == 'matematica':
+					ModeloExamen = Matematica2026
+					desempenos = {
+							'general': [0, 0, 0, 0], 'reconocimiento': [0, 0, 0, 0],
+							'comunicacion': [0, 0, 0, 0], 'resolucion': [0, 0, 0, 0]
+					}
+			elif filtro_materia == 'lengua':
+					ModeloExamen = Lengua2026
+					desempenos = {
+							'general': [0, 0, 0, 0], 'extraer': [0, 0, 0, 0],
+							'interpretar': [0, 0, 0, 0], 'reflexionar': [0, 0, 0, 0],
+							'escribir': [0, 0, 0, 0]
+					}
+			else:
+					ModeloExamen = None
+
+			if ModeloExamen:
+					examenes = ModeloExamen.objects.filter(
+							alumno__seccion__año__cueanexo=selected_cue_int,
+							alumno__seccion__año_id=int(filtro_anio),
+							alumno__seccion__seccion=filtro_seccion,
+							alumno__seccion__turno=filtro_turno
+					).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+
+					campos_preguntas = [f for f in ModeloExamen._meta.fields if f.name.startswith('pregunta_')]
+					
+					def ordenar_por_numero(campo):
+							numeros = re.findall(r'\d+', campo.name)
+							return [int(n) for n in numeros]
+					
+					campos_preguntas.sort(key=ordenar_por_numero)
+					columnas_preguntas = [f.name.replace('pregunta_', 'P').replace('_', '.') for f in campos_preguntas]
+
+					for ex in examenes:
+							asistencia_status = str(ex.asistencia).upper() if ex.asistencia else 'AUSENTE'
+							
+							if asistencia_status == 'PRESENTE':
+									total_presentes += 1
+
+									val_ind = str(ex.alumno.comunidad_indigena).strip().upper() if ex.alumno.comunidad_indigena else 'NO'
+									val_disc = str(ex.alumno.discapacidad).strip().upper() if ex.alumno.discapacidad else 'NO'
+									
+									es_indigena = val_ind not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+									es_discapacitado = val_disc not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+									
+									if es_indigena and es_discapacitado:
+											presentes_ambas += 1
+									elif es_indigena:
+											presentes_indigena += 1
+									elif es_discapacitado:
+											presentes_discapacidad += 1
+									else:
+											presentes_ninguna += 1
+
+									if not es_discapacitado:
+											tp = ex.total_puntaje or 0.0
+											if tp < 40: desempenos['general'][0] += 1
+											elif tp < 67: desempenos['general'][1] += 1
+											elif tp < 90: desempenos['general'][2] += 1
+											else: desempenos['general'][3] += 1
+
+											if filtro_materia == 'matematica':
+													rec = ex.correcion_reconocimiento or 0.0
+													if rec < 12.8: desempenos['reconocimiento'][0] += 1
+													elif rec < 21.4: desempenos['reconocimiento'][1] += 1
+													elif rec < 28.8: desempenos['reconocimiento'][2] += 1
+													else: desempenos['reconocimiento'][3] += 1
+													
+													com = ex.correcion_comunicacion or 0.0
+													if com < 13.2: desempenos['comunicacion'][0] += 1
+													elif com < 22.1: desempenos['comunicacion'][1] += 1
+													elif com < 29.7: desempenos['comunicacion'][2] += 1
+													else: desempenos['comunicacion'][3] += 1
+													
+													res = ex.correcion_resolucion or 0.0
+													if res < 14: desempenos['resolucion'][0] += 1
+													elif res < 23.4: desempenos['resolucion'][1] += 1
+													elif res < 31.4: desempenos['resolucion'][2] += 1
+													else: desempenos['resolucion'][3] += 1
+
+											elif filtro_materia == 'lengua':
+													ext = ex.correcion_extraccion or 0.0
+													if ext < 8.4: desempenos['extraer'][0] += 1
+													elif ext < 14.4: desempenos['extraer'][1] += 1
+													elif ext < 19.3: desempenos['extraer'][2] += 1
+													else: desempenos['extraer'][3] += 1
+													
+													intp = ex.correcion_interpretacion or 0.0
+													if intp < 10.1: desempenos['interpretar'][0] += 1
+													elif intp < 17.1: desempenos['interpretar'][1] += 1
+													elif intp < 22.9: desempenos['interpretar'][2] += 1
+													else: desempenos['interpretar'][3] += 1
+													
+													ref = ex.correcion_reflexion or 0.0
+													if ref < 11.4: desempenos['reflexionar'][0] += 1
+													elif ref < 19.1: desempenos['reflexionar'][1] += 1
+													elif ref < 25.6: desempenos['reflexionar'][2] += 1
+													else: desempenos['reflexionar'][3] += 1
+													
+													esc = ex.correcion_escritura or 0.0
+													if esc < 9.8: desempenos['escribir'][0] += 1
+													elif esc < 16.4: desempenos['escribir'][1] += 1
+													elif esc < 22: desempenos['escribir'][2] += 1
+													else: desempenos['escribir'][3] += 1
+							else:
+									total_ausentes += 1
+
+							datos_alumno = {
+									'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
+									'seccion': ex.alumno.seccion.seccion, 'turno': ex.alumno.seccion.turno,
+									'modelo': ex.modelo, 'asistencia': ex.asistencia,
+									'respuestas': [getattr(ex, f.name) for f in campos_preguntas], 'total_puntaje': ex.total_puntaje,
+							}
+
+							if filtro_materia == 'matematica':
+									datos_alumno.update({
+											'nota_reconocimiento': ex.correcion_reconocimiento,
+											'nota_comunicacion': ex.correcion_comunicacion, 'nota_resolucion': ex.correcion_resolucion,
+									})
+							elif filtro_materia == 'lengua':
+									datos_alumno.update({
+											'nota_extraer': ex.correcion_extraccion, 'nota_interpretar': ex.correcion_interpretacion,
+											'nota_reflexionar': ex.correcion_reflexion, 'nota_escribir': ex.correcion_escritura,
+									})
+							alumnos_con_examenes.append(datos_alumno)
+
+	SECTORES_CHOICES = ['TODOS', 'Estatal', 'Gestión social/cooperativa', 'Privado']
+	AMBITOS_CHOICES = ['TODOS', 'Rural Aglomerado', 'Rural Disperso', 'Urbano']
+	REGIONES_CHOICES = ['TODOS', 'R.E. 1', 'SUB. R.E. 1-A', 'SUB. R.E. 1-B', 'R.E. 2', 'SUB. R.E. 2', 'R.E. 3', 'SUB. R.E. 3', 'R.E. 4-A', 'R.E. 4-B', 'R.E. 5', 'SUB. R.E. 5', 'R.E. 6', 'R.E. 7', 'R.E. 8-A', 'R.E. 8-B', 'R.E. 9', 'R.E. 10-A', 'R.E. 10-B', 'R.E. 10-C']
+
+	context = {
+			'rol': rol_usuario,
+			'lista_escuelas': lista_escuelas,
+			'cueanexo': selected_cue,
+			'alumnos': alumnos_con_examenes,
+			'columnas_preguntas': columnas_preguntas,
+			'anio_sel': filtro_anio,
+			'anio_nombre_sel': anio_nombre_sel,
+			'seccion_sel': filtro_seccion,
+			'turno_sel': filtro_turno,
+			'materia_sel': filtro_materia,
+			'asistencia_presentes': total_presentes,
+			'asistencia_ausentes': total_ausentes,
+			'desempenos': desempenos,
+			'sector_sel': filtro_sector or 'TODOS',
+			'ambito_sel': filtro_ambito or 'TODOS',
+			'region_sel': filtro_region or 'TODOS',
+			'sectores_opciones': SECTORES_CHOICES,
+			'ambitos_opciones': AMBITOS_CHOICES,
+			'regiones_opciones': REGIONES_CHOICES,
+			'presentes_indigena': presentes_indigena,
+			'presentes_discapacidad': presentes_discapacidad,
+			'presentes_ambas': presentes_ambas,
+			'presentes_ninguna': presentes_ninguna,
+	}
+	return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
+
+@login_required
+def descargar_examen_individual(request, materia):
+    usuario = request.user
+    name = usuario.username
+    cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+    rol_usuario = usuario.nivelacceso_id  
+    
+    # ── 1. SEGURIDAD Y PERMISOS ───────────────────────────────────────────────
+    if rol_usuario not in lista_usuarios_jerarquicos:
+        has_oferta = CapaUnicaOfertas.objects.filter(
+            resploc_cuitcuil=cuil_con_caracter, 
+            oferta__icontains='Secundaria Completa req. 7 años'
+        ).exists()
+        if not has_oferta:
+            raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+    selected_cue = request.GET.get('cueanexo')
+    dni_alumno = request.GET.get('dni')
+    
+    if not selected_cue or not dni_alumno:
+        raise Http404("Faltan parámetros requeridos (CUE o DNI).")
+
+    if rol_usuario not in lista_usuarios_jerarquicos:
+        user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
+        user_cueanexos = [str(c) for c in user_cueanexos_raw]
+        if selected_cue not in user_cueanexos:
+            raise PermissionDenied("No tienes acceso a los registros de este establecimiento.")
+
+    # ── 2. CONFIGURACIÓN DE LA MATERIA ────────────────────────────────────────
+    if materia == 'matematica':
+        examen_model = Matematica2026
+        materia_nombre = 'Matemática'
+    elif materia == 'lengua':
+        examen_model = Lengua2026
+        materia_nombre = 'Lengua'
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    # ── 3. FILTRADO DEL ALUMNO ESPECÍFICO ─────────────────────────────────────
+    alumno = get_object_or_404(Alumno2026, dni=dni_alumno, seccion__año__Establecimiento__cueanexo=selected_cue)
+    examen = examen_model.objects.filter(alumno=alumno).first()
+
+    if not examen:
+        messages.warning(request, "El alumno no tiene este examen cargado.")
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    # ── 4. CONSTRUCCIÓN DEL BOLETÍN PDF EN FORMATO VERTICAL ───────────────────
+    buffer = io.BytesIO()
+    # Usamos A4 vertical (portrait) para que se lea mejor como una ficha
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Título Principal
+    story.append(Paragraph(f"Ficha Individual de Examen: {materia_nombre}", styles['Title']))
+    story.append(Spacer(1, 15))
+
+    # Tabla 1: Datos Personales
+    datos_alumno = [
+        [Paragraph("<b>DNI:</b>"), alumno.dni],
+        [Paragraph("<b>Alumno:</b>"), f"{alumno.apellido}, {alumno.nombre}"],
+        [Paragraph("<b>Establecimiento CUE:</b>"), selected_cue],
+        [Paragraph("<b>Sección y Turno:</b>"), f"{alumno.seccion.seccion} - {alumno.seccion.turno.upper()}" if alumno.seccion else "N/A"],
+        [Paragraph("<b>Asistencia:</b>"), examen.asistencia or "N/A"],
+        [Paragraph("<b>Modelo Rendido:</b>"), examen.modelo or "-"],
+    ]
+    
+    t_datos = Table(datos_alumno, colWidths=[130, 350])
+    t_datos.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E9ECEF')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t_datos)
+    story.append(Spacer(1, 20))
+
+    if str(examen.asistencia).upper() == 'PRESENTE':
+        # Tabla 2: Detalle de TODAS las Preguntas Individuales
+        story.append(Paragraph("<b>Detalle de Respuestas Individuales:</b>", styles['Heading3']))
+        story.append(Spacer(1, 10))
+        
+        data_respuestas = [['Ítem / Pregunta', 'Respuesta Seleccionada']]
+        
+        # Filtramos y ordenamos los campos que empiezan con 'pregunta_'
+        pregunta_campos = [f for f in examen_model._meta.get_fields() if f.name.startswith('pregunta_')]
+        pregunta_campos.sort(key=_orden_pregunta_field)
+
+        for campo in pregunta_campos:
+            nombre_limpio = campo.name.replace('pregunta_', 'P').replace('_', '.')
+            respuesta = getattr(examen, campo.name)
+            data_respuestas.append([nombre_limpio, str(respuesta) if respuesta else '-'])
+
+        t_resp = Table(data_respuestas, colWidths=[130, 350])
+        t_resp.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('PADDING', (0, 0), (-1, -1), 5),
+        ]))
+        story.append(t_resp)
+        story.append(Spacer(1, 20))
+
+        # Tabla 3: Resultados Generales y Puntos de Corte
+        # story.append(Paragraph("<b>Resultados y Puntos de Corte por Capacidad:</b>", styles['Heading3']))
+        # story.append(Spacer(1, 10))
+        
+        # if materia == 'matematica':
+        #     data_puntajes = [
+        #         ['Capacidad Evaluada', 'Puntaje Obtenido'],
+        #         ['Reconocimiento de Conceptos', round(float(examen.correcion_reconocimiento or 0), 2)],
+        #         ['Comunicación en Matemática', round(float(examen.correcion_comunicacion or 0), 2)],
+        #         ['Resolución de Situaciones', round(float(examen.correcion_resolucion or 0), 2)],
+        #         ['PUNTAJE FINAL TOTAL', round(float(examen.total_puntaje or 0), 2)]
+        #     ]
+        # else:
+        #     data_puntajes = [
+        #         ['Capacidad Evaluada', 'Puntaje Obtenido'],
+        #         ['Extraer', round(float(examen.correcion_extraccion or 0), 2)],
+        #         ['Interpretar', round(float(examen.correcion_interpretacion or 0), 2)],
+        #         ['Reflexionar y Evaluar', round(float(examen.correcion_reflexion or 0), 2)],
+        #         ['Escribir', round(float(examen.correcion_escritura or 0), 2)],
+        #         ['PUNTAJE FINAL TOTAL', round(float(examen.total_puntaje or 0), 2)]
+        #     ]
+            
+        # t_punt = Table(data_puntajes, colWidths=[280, 200])
+        # t_punt.setStyle(TableStyle([
+        #     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
+        #     ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        #     ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        #     ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        #     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        #     ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'), # Pone la fila TOTAL en negrita
+        #     ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4e6f1')), # Color de fondo para el Total
+        #     ('PADDING', (0, 0), (-1, -1), 6),
+        # ]))
+        # story.append(t_punt)
+
+    # Construimos el PDF y lo preparamos para descarga
+    doc.build(story)
+    buffer.seek(0)
+
+    filename = f"Ficha_Examen_{materia}_{alumno.dni}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=filename)
+
+@login_required
+def descargar_reporte_listado(request, materia):
+    usuario = request.user
+    name = usuario.username
+    cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+    rol_usuario = usuario.nivelacceso_id  
+    
+    # ── 1. SEGURIDAD Y PERMISOS ───────────────────────────────────────────────
+    if rol_usuario not in lista_usuarios_jerarquicos:
+        has_oferta = CapaUnicaOfertas.objects.filter(
+            resploc_cuitcuil=cuil_con_caracter, 
+            oferta__icontains='Secundaria Completa req. 7 años'
+        ).exists()
+        if not has_oferta:
+            raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+    selected_cue = request.GET.get('cueanexo')
+    filtro_anio = request.GET.get('anio')
+    filtro_seccion = request.GET.get('seccion')
+    filtro_turno = request.GET.get('turno')
+
+    if not all([selected_cue, filtro_anio, filtro_seccion, filtro_turno]):
+        messages.warning(request, "Faltan filtros para generar el reporte.")
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    # ── 2. CONFIGURACIÓN DE LA MATERIA ────────────────────────────────────────
+    if materia == 'matematica':
+        examen_model = Matematica2026
+        materia_nombre = 'Matemática'
+    elif materia == 'lengua':
+        examen_model = Lengua2026
+        materia_nombre = 'Lengua'
+    else:
+        return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    # ── 3. CONSULTA DE EXÁMENES ───────────────────────────────────────────────
+    examenes = examen_model.objects.filter(
+        alumno__seccion__año__cueanexo=int(selected_cue),
+        alumno__seccion__año_id=int(filtro_anio),
+        alumno__seccion__seccion=filtro_seccion,
+        alumno__seccion__turno=filtro_turno
+    ).select_related('alumno', 'alumno__seccion').order_by('alumno__apellido', 'alumno__nombre')
+
+    # ── 4. FUNCIÓN AUXILIAR DE DESEMPEÑOS ─────────────────────────────────────
+    def evaluar(nota, cortes):
+        if nota is None: return "-"
+        try:
+            val = float(nota)
+            if val < cortes[0]: return "D. Básico"
+            elif val < cortes[1]: return "Básico"
+            elif val < cortes[2]: return "Satisfac."
+            else: return "Avanzado"
+        except:
+            return "-"
+
+    # ── 5. ARMADO DE LA TABLA PDF (CON AJUSTE DE SALTOS DE LÍNEA) ─────────────
+    # Inicializamos el estilo para que el texto haga salto de línea automático
+    styles = getSampleStyleSheet()
+    style_celda = styles['Normal']
+    style_celda.fontSize = 7
+    style_celda.leading = 8 # Espaciado entre las líneas si el nombre salta
+
+    data = []
+    
+    if materia == 'matematica':
+        cabeceras = ['DNI', 'Alumno', 'Asist.', 'Reconoc.', 'Des. Rec.', 'Comunic.', 'Des. Com.', 'Resoluc.', 'Des. Res.', 'Nota Gral', 'Desempeño Gral']
+        data.append(cabeceras)
+        for ex in examenes:
+            al = ex.alumno
+            # Envolvemos el nombre en Paragraph para forzar el salto de línea
+            nombre_alumno = Paragraph(f"{al.apellido}, {al.nombre}", style_celda)
+            
+            row = [
+                al.dni, nombre_alumno, ex.asistencia or "-",
+                round(float(ex.correcion_reconocimiento or 0), 2) if ex.correcion_reconocimiento != None else "-",
+                evaluar(ex.correcion_reconocimiento, [12.8, 21.4, 28.8]),
+                round(float(ex.correcion_comunicacion or 0), 2) if ex.correcion_comunicacion != None else "-",
+                evaluar(ex.correcion_comunicacion, [13.2, 22.1, 29.7]),
+                round(float(ex.correcion_resolucion or 0), 2) if ex.correcion_resolucion != None else "-",
+                evaluar(ex.correcion_resolucion, [14, 23.4, 31.4]),
+                round(float(ex.total_puntaje or 0), 2) if ex.total_puntaje != None else "-",
+                evaluar(ex.total_puntaje, [40, 67, 90])
+            ]
+            data.append(row)
+        # Se aumentó el ancho de la columna 1 (Alumno) de 120 a 160
+        col_widths = [55, 160, 45, 55, 60, 55, 60, 55, 60, 55, 65]
+        
+    else: # LENGUA
+        cabeceras = ['DNI', 'Alumno', 'Asist.', 'Extraer', 'Des. Ext.', 'Interpret.', 'Des. Int.', 'Reflex.', 'Des. Ref.', 'Escribir', 'Des. Esc.', 'Nota Gral', 'Desemp Gral.']
+        data.append(cabeceras)
+        for ex in examenes:
+            al = ex.alumno
+            # Envolvemos el nombre en Paragraph para forzar el salto de línea
+            nombre_alumno = Paragraph(f"{al.apellido}, {al.nombre}", style_celda)
+            
+            row = [
+                al.dni, nombre_alumno, ex.asistencia or "-",
+                round(float(ex.correcion_extraccion or 0), 2) if ex.correcion_extraccion != None else "-",
+                evaluar(ex.correcion_extraccion, [8.4, 14.4, 19.3]),
+                round(float(ex.correcion_interpretacion or 0), 2) if ex.correcion_interpretacion != None else "-",
+                evaluar(ex.correcion_interpretacion, [10.1, 17.1, 22.9]),
+                round(float(ex.correcion_reflexion or 0), 2) if ex.correcion_reflexion != None else "-",
+                evaluar(ex.correcion_reflexion, [11.4, 19.1, 25.6]),
+                round(float(ex.correcion_escritura or 0), 2) if ex.correcion_escritura != None else "-",
+                evaluar(ex.correcion_escritura, [9.8, 16.4, 22]),
+                round(float(ex.total_puntaje or 0), 2) if ex.total_puntaje != None else "-",
+                evaluar(ex.total_puntaje, [40, 67, 90])
+            ]
+            data.append(row)
+        # Se aumentó el ancho de la columna 1 (Alumno) de 110 a 140
+        col_widths = [50, 140, 40, 45, 55, 45, 55, 45, 55, 45, 55, 40, 55]
+
+    # ── 6. CONSTRUCCIÓN DEL PDF ───────────────────────────────────────────────
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=15, rightMargin=15, topMargin=20, bottomMargin=20)
+    story = []
+
+    story.append(Paragraph(f"Reporte de Desempeños - {materia_nombre}", styles['Title']))
+    story.append(Paragraph(f"CUE: {selected_cue} | Sección: {filtro_seccion} | Turno: {filtro_turno.upper()}", styles['Normal']))
+    story.append(Spacer(1, 15))
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('PADDING', (0, 0), (-1, -1), 3),
+    ]))
+
+    story.append(table)
+    doc.build(story)
+    buffer.seek(0)
+
+    filename = f"Reporte_Desempenos_{materia}_{filtro_seccion}_{filtro_turno}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=filename)
