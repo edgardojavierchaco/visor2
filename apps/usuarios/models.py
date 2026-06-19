@@ -308,3 +308,25 @@ class EstadoUsuario(models.Model):
 
     def __str__(self):
         return f"Estado de {self.usuario.username}"
+
+
+#####################################################
+# MODELO INTERMEDIO PARA GENEARAR USUARIOS APLICADOR
+#####################################################
+class UsuarioIntermedia(models.Model):
+
+    apellido = models.CharField(max_length=150)
+    nombres = models.CharField(max_length=150)
+    cuil = models.CharField(max_length=20)
+    dni = models.CharField(max_length=20)
+    correo = models.CharField(max_length=150)
+    telefono = models.CharField(max_length=50)
+
+
+    class Meta:
+        managed = False
+        db_table = "intermediausuarios"
+
+
+    def __str__(self):
+        return self.cuil
