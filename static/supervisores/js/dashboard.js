@@ -36,6 +36,8 @@ const API = {
     nivel_update: "/supreg/api/expediente/nivel/",
 
     oferta_update: "/supreg/api/expediente/oferta/",
+
+    listado_supervisores: "/supreg/api/supervisores/listado/",
 };
 
 // ===============================
@@ -259,6 +261,81 @@ async function buscarSupervisor() {
         // NO permite crear supervisor
         document.getElementById("createBox").classList.add("d-none");
         document.getElementById("expediente").classList.add("d-none");
+    }
+}
+
+// ===============================
+// LISTADO DE MIS SUPERVISORES
+// ===============================
+async function listarMisSupervisores() {
+
+    try {
+
+        const res =
+            await get(
+                API.listado_supervisores
+            );
+
+        const tbody =
+            document.getElementById(
+                "tablaSupervisores"
+            );
+
+        tbody.innerHTML = "";
+
+        if (!res.results.length) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6"
+                        class="text-center">
+
+                        No hay supervisores asignados
+
+                    </td>
+                </tr>
+            `;
+        }
+
+        res.results.forEach(s => {
+
+            tbody.innerHTML += `
+                <tr>
+
+                    <td>${s.cuil}</td>
+
+                    <td>${s.apellido}</td>
+
+                    <td>${s.nombres}</td>
+
+                    <td>${s.email || "-"}</td>
+
+                    <td>${s.telefono || "-"}</td>
+
+                    <td>
+                        ${s.regionales.join(", ")}
+                    </td>
+
+                </tr>
+            `;
+        });
+
+        const modal =
+            new bootstrap.Modal(
+                document.getElementById(
+                    "modalListadoSupervisores"
+                )
+            );
+
+        modal.show();
+
+    } catch(error) {
+
+        console.error(error);
+
+        msgError(
+            "No se pudo cargar el listado"
+        );
     }
 }
 
@@ -1049,44 +1126,93 @@ async function editarOferta(id) {
     );
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-    document
-        .querySelectorAll('[data-bs-toggle="tab"]')
-        .forEach(btn => {
+        // Tabs
+        document
+            .querySelectorAll(
+                '[data-bs-toggle="tab"]'
+            )
+            .forEach(btn => {
 
-            btn.addEventListener("click", function() {
+                btn.addEventListener(
+                    "click",
+                    function() {
 
-                document
-                    .querySelectorAll(".tab-pane")
-                    .forEach(p =>
-                        p.classList.remove(
-                            "show",
+                        document
+                            .querySelectorAll(
+                                ".tab-pane"
+                            )
+                            .forEach(p =>
+                                p.classList.remove(
+                                    "show",
+                                    "active"
+                                )
+                            );
+
+                        document
+                            .querySelectorAll(
+                                ".nav-link"
+                            )
+                            .forEach(t =>
+                                t.classList.remove(
+                                    "active"
+                                )
+                            );
+
+                        this.classList.add(
                             "active"
-                        )
-                    );
+                        );
 
-                document
-                    .querySelectorAll(".nav-link")
-                    .forEach(t =>
-                        t.classList.remove(
-                            "active"
-                        )
-                    );
+                        const target =
+                            this.dataset.bsTarget;
 
-                this.classList.add("active");
-
-                const target =
-                    this.dataset.bsTarget;
-
-                document
-                    .querySelector(target)
-                    .classList.add(
-                        "show",
-                        "active"
-                    );
+                        document
+                            .querySelector(
+                                target
+                            )
+                            .classList.add(
+                                "show",
+                                "active"
+                            );
+                    }
+                );
             });
 
-        });
+        // Filtro listado supervisores
+        const filtro =
+            document.getElementById(
+                "filtroSupervisores"
+            );
 
-});
+        if (filtro) {
+
+            filtro.addEventListener(
+                "keyup",
+                function() {
+
+                    const texto =
+                        this.value
+                            .toLowerCase();
+
+                    document
+                        .querySelectorAll(
+                            "#tablaSupervisores tr"
+                        )
+                        .forEach(tr => {
+
+                            tr.style.display =
+                                tr.innerText
+                                    .toLowerCase()
+                                    .includes(texto)
+                                ? ""
+                                : "none";
+
+                        });
+                }
+            );
+        }
+    }
+);

@@ -22,6 +22,15 @@
             <button class="btn btn-primary" onclick="buscarSupervisor()">
                 Buscar
             </button>
+
+            <button
+                class="btn btn-success"
+                onclick="listarMisSupervisores()">
+
+                Mis Supervisores
+
+            </button>
+
         </div>
 
         <div id="resultadoSupervisor" class="mt-3"></div>
@@ -254,6 +263,89 @@
 
     </div>
   </div>
+</div>
+
+
+
+<!-- ===================================== -->
+<!-- MODAL LISTADO SUPERVISORES -->
+<!-- ===================================== -->
+<div
+    class="modal fade"
+    id="modalListadoSupervisores"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-xl">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Mis Supervisores
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+
+                    <input
+                        type="text"
+                        id="filtroSupervisores"
+                        class="form-control"
+                        placeholder="Filtrar supervisor...">
+
+                </div>
+
+                <div class="table-responsive">
+
+                    <table class="table table-bordered table-hover">
+
+                        <thead>
+
+                            <tr>
+                                <th>CUIL</th>
+                                <th>Apellido</th>
+                                <th>Nombres</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Regionales</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="tablaSupervisores">
+
+                            <tr>
+                                <td colspan="6"
+                                    class="text-center">
+
+                                    Sin datos
+
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
 
 {% endblock %}

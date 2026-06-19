@@ -70,4 +70,9 @@ urlpatterns = [
         expediente.update_oferta,
         name="update_oferta"
     ),
+    path(
+        "api/supervisores/listado/",
+        supervisor.listado_supervisores,
+        name="listado_supervisores"
+    ),
 ]
