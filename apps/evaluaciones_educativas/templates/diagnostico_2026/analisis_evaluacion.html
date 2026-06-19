@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evaluaciones Educativas</title>
     {% extends 'dashboard/bodydirector.html' %}
     {% load static %}
@@ -32,7 +33,7 @@
     .filter-list li a { color: #ecf0f1; text-decoration: none; font-size: 0.9rem; display: block; padding: 5px 0; }
 
     /* Panel Principal */
-    .dashboard-main { padding: 30px; background-color: #f4f7f6; }
+    .dashboard-main { padding: 30px; background-color: #f4f7f6; min-width: 0; max-width: 100vw; overflow-x: hidden; }
     .section-title { color: #2c3e50; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; font-size: 1.4rem; }
 
     /* Gráficos, Cards y Tablas */
@@ -41,13 +42,32 @@
     .charts-grid { display: flex; flex-wrap: wrap; gap: 25px; }
     .chart-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); flex: 1; min-width: 400px; text-align: center; }
     .chart-card canvas { width: 100% !important; max-height: 400px !important; }
-    .listado-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow-x: auto; }
-    .data-table { width: 100%; border-collapse: collapse; }
+    
+    .listado-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); width: 100%; margin-bottom: 30px;}
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    
+    .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
     .data-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-size: 0.85rem; }
     .data-table td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
     .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; text-align: center; }
     
     .alert-warning { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba; }
+
+    /* =========================================
+       REGLAS RESPONSIVAS
+       ========================================= */
+    @media (max-width: 1024px) {
+        .layout-container { grid-template-columns: 250px 1fr; }
+        .chart-card { min-width: 100%; }
+    }
+
+    @media (max-width: 768px) {
+        .layout-container { grid-template-columns: 1fr; }
+        .sidebar { position: relative; height: auto; border-right: none; border-bottom: 4px solid #3498db; }
+        .dashboard-main { padding: 15px; }
+        .chart-card { min-width: 100%; padding: 15px; }
+        .flecha-responsiva { transform: rotate(90deg); margin: 15px 0; }
+    }
 </style>
 
 <div class="layout-container">
@@ -77,6 +97,14 @@
                     <option value="{{ reg }}" {% if reg == region_sel %}selected{% endif %}>{{ reg }}</option>
                 {% endfor %}
             </select>
+
+            <label style="margin-top:15px; color:#e1b12c;">Alumno con condición (Opcional)</label>
+            <select id="select-condicion">
+                <option value="">--- Ninguno ---</option>
+                <option value="discapacidad" {% if condicion_sel == 'discapacidad' %}selected{% endif %}>Alumnos con discapacidad</option>
+                <option value="descendencia" {% if condicion_sel == 'descendencia' %}selected{% endif %}>Comunidad Indígena</option>
+                <!-- <option value="ambos" {% if condicion_sel == 'ambos' %}selected{% endif %}>Ambos</option> -->
+            </select>
         </div>
         {% elif rol == 'Regional' %}
         <h3>Sector y Ámbito</h3>
@@ -94,13 +122,21 @@
                     <option value="{{ amb }}" {% if amb == ambito_sel %}selected{% endif %}>{{ amb }}</option>
                 {% endfor %}
             </select>
+
+            <label style="margin-top:15px; color:#e1b12c;">Alumno con condición (Opcional)</label>
+            <select id="select-condicion">
+                <option value="">--- Ninguno ---</option>
+                <option value="discapacidad" {% if condicion_sel == 'discapacidad' %}selected{% endif %}>Alumnos con discapacidad</option>
+                <option value="descendencia" {% if condicion_sel == 'descendencia' %}selected{% endif %}>Comunidad Indígena</option>
+                <option value="ambos" {% if condicion_sel == 'ambos' %}selected{% endif %}>Ambos</option>
+            </select>
         </div>
         {% endif %}
 
         <h3>Filtros de Búsqueda</h3>
         <div class="sidebar-form-container">
             <label>Establecimiento</label>
-            <select id="select-cue">
+            <select id="select-cue" {% if condicion_sel %}disabled{% endif %}>
                 <option value="" {% if not request.GET.cueanexo %}selected{% endif %}>--- Seleccione Establecimiento ---</option>
                 
                 {% for esc in lista_escuelas %}
@@ -109,13 +145,13 @@
             </select>
 
             <label>Año</label>
-            <select id="select-anio" {% if not anio_sel %}disabled{% endif %}>
+            <select id="select-anio" {% if not anio_sel or condicion_sel %}disabled{% endif %}>
                 <option value="">--- Seleccione Año ---</option>
                 {% if anio_sel %}<option value="{{ anio_sel }}" selected>{{ anio_nombre_sel }}</option>{% endif %}
             </select>
 
             <label>Sección y Turno</label>
-            <select id="select-seccion-turno" {% if not seccion_sel or not turno_sel %}disabled{% endif %}>
+            <select id="select-seccion-turno" {% if not seccion_sel or not turno_sel or condicion_sel %}disabled{% endif %}>
                 <option value="">--- Seleccione Sección y Turno ---</option>
                 {% if seccion_sel and turno_sel %}
                     <option value="{{ seccion_sel }}|{{ turno_sel }}" selected>Sección: {{ seccion_sel }} - Turno: {{ turno_sel|upper }}</option>
@@ -146,7 +182,12 @@
             <h1>Panel de Gestión - Departamento de Evaluación Educativa</h1>
             <p class="text-muted" id="header-detalle">
                 {% if alumnos %}
-                    Mostrando resultados para: <strong>{{ materia_sel|title }}</strong> | Sección: <strong>{{ seccion_sel }}</strong> ({{ turno_sel|upper }})
+                    Mostrando resultados para: <strong>{{ materia_sel|title }}</strong> | 
+                    {% if condicion_sel %}
+                        Filtro Activo: <strong>{{ condicion_sel|title }}</strong>
+                    {% else %}
+                        Sección: <strong>{{ seccion_sel }}</strong> ({{ turno_sel|upper }})
+                    {% endif %}
                 {% else %}
                     <span style="color: #e67e22; font-weight: bold;">⚠️ Por favor, elija los filtros correspondientes en la barra lateral para empezar.</span>
                 {% endif %}
@@ -163,7 +204,7 @@
                         <canvas id="GraficoAsistenciaPie"></canvas>
                     </div>
                 </div>
-                <div style="font-size: 3rem; color: #bdc3c7; display: flex; align-items: center; justify-content: center; padding: 10px;">
+                <div class="flecha-responsiva" style="font-size: 3rem; color: #bdc3c7; display: flex; align-items: center; justify-content: center; padding: 10px;">
                     &#10142; 
                 </div>
                 <div style="width: 100%; max-width: 300px; text-align: center;">
@@ -175,7 +216,7 @@
             </div>
 
             <div class="charts-grid">
-                <div class="chart-card" style="flex: 2; min-width: 400px;">
+                <div class="chart-card" style="flex: 2; min-width: 0;">
                     <h4>Desempeño General</h4>
                     <canvas id="GraficoGeneralBar"></canvas>
                 </div>
@@ -183,26 +224,26 @@
 
             <div class="charts-grid" style="margin-top: 25px;">
                 {% if materia_sel == 'matematica' %}
-                    <div class="chart-card"><h4>Reconocimiento de Conceptos</h4><canvas id="CanvasMatReconocimiento"></canvas></div>
-                    <div class="chart-card"><h4>Comunicación en Matemática</h4><canvas id="CanvasMatComunicacion"></canvas></div>
-                    <div class="chart-card"><h4>Resolución de Situaciones</h4><canvas id="CanvasMatResolucion"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Reconocimiento de Conceptos</h4><canvas id="CanvasMatReconocimiento"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Comunicación en Matemática</h4><canvas id="CanvasMatComunicacion"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Resolución de Situaciones</h4><canvas id="CanvasMatResolucion"></canvas></div>
                 {% elif materia_sel == 'lengua' %}
-                    <div class="chart-card"><h4>Extraer</h4><canvas id="CanvasLenExtraer"></canvas></div>
-                    <div class="chart-card"><h4>Interpretar</h4><canvas id="CanvasLenInterpretar"></canvas></div>
-                    <div class="chart-card"><h4>Reflexionar y Evaluar</h4><canvas id="CanvasLenReflexionar"></canvas></div>
-                    <div class="chart-card"><h4>Escribir</h4><canvas id="CanvasLenEscribir"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Extraer</h4><canvas id="CanvasLenExtraer"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Interpretar</h4><canvas id="CanvasLenInterpretar"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Reflexionar y Evaluar</h4><canvas id="CanvasLenReflexionar"></canvas></div>
+                    <div class="chart-card" style="min-width: 0;"><h4>Escribir</h4><canvas id="CanvasLenEscribir"></canvas></div>
                 {% endif %}
             </div>
         </div>
         
         <div id="vista_listado" class="listado-container" style="display: {% if alumnos %}block{% else %}none{% endif %};">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; margin-bottom: 20px; padding-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; margin-bottom: 20px; padding-bottom: 10px; flex-wrap: wrap; gap: 15px;">
                 <h3 class="section-title" style="border: none; margin: 0; padding: 0;">Detalle de Alumnos - {{ materia_sel|title|default:"Materia no seleccionada" }}</h3>
                 
                 {% if alumnos %}
                     <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_reporte_listado' materia_sel %}?cueanexo={{ cueanexo }}&anio={{ anio_sel }}&seccion={{ seccion_sel }}&turno={{ turno_sel }}" 
-                       style="background: #e74c3c; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: 0.3s;"
+                       style="background: #e74c3c; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: 0.3s; white-space: nowrap;"
                        onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
                        📄 Descargar Reporte en PDF
                     </a>
@@ -210,141 +251,143 @@
             </div>
              
             {% if alumnos %}
-                <table id="tablaAlumnos" class="data-table">
-                    <thead>
-                        <tr>
-                            <th>DNI</th>
-                            <th>Alumno</th>
-                            <th>Asistencia</th>
-                            
-                            {% if materia_sel == 'matematica' %}
-                                <th style="text-align: center; color: #2c3e50;">Reconocimiento</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Rec.</th>
-                                <th style="text-align: center; color: #2c3e50;">Comunicación</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Com.</th>
-                                <th style="text-align: center; color: #2c3e50;">Resolución</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Res.</th>
-                            {% elif materia_sel == 'lengua' %}
-                                <th style="text-align: center; color: #2c3e50;">Extraer</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Ext.</th>
-                                <th style="text-align: center; color: #2c3e50;">Interpretar</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Int.</th>
-                                <th style="text-align: center; color: #2c3e50;">Reflexionar</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Ref.</th>
-                                <th style="text-align: center; color: #2c3e50;">Escribir</th>
-                                <th style="text-align: center; color: #2c3e50;">Desempeño Esc.</th>
-                            {% endif %}
-                            
-                            <th style="text-align: center; color: #2980b9;">Nota Final</th>
-                            <th style="text-align: center; color: #2980b9;">Desempeño General</th>
-                            <th style="text-align: center; color: #2980b9;">Examen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for alumno in alumnos %}
-                        <tr>
-                            <td>{{ alumno.dni }}</td>
-                            <td><strong>{{ alumno.apellido }}, {{ alumno.nombre }}</strong></td>
-                            <td>
-                                {% if alumno.asistencia == 'PRESENTE' or alumno.asistencia == 'Presente' %}
-                                    <span class="badge" style="background: #2ecc71; color: white;">Presente</span>
-                                {% else %}
-                                    <span class="badge" style="background: #e74c3c; color: white;">Ausente</span>
+                <div class="table-responsive">
+                    <table id="tablaAlumnos" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>DNI</th>
+                                <th>Alumno</th>
+                                <th>Asistencia</th>
+                                
+                                {% if materia_sel == 'matematica' %}
+                                    <th style="text-align: center; color: #2c3e50;">Reconocimiento</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Rec.</th>
+                                    <th style="text-align: center; color: #2c3e50;">Comunicación</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Com.</th>
+                                    <th style="text-align: center; color: #2c3e50;">Resolución</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Res.</th>
+                                {% elif materia_sel == 'lengua' %}
+                                    <th style="text-align: center; color: #2c3e50;">Extraer</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Ext.</th>
+                                    <th style="text-align: center; color: #2c3e50;">Interpretar</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Int.</th>
+                                    <th style="text-align: center; color: #2c3e50;">Reflexionar</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Ref.</th>
+                                    <th style="text-align: center; color: #2c3e50;">Escribir</th>
+                                    <th style="text-align: center; color: #2c3e50;">Desempeño Esc.</th>
                                 {% endif %}
-                            </td>
-                            
-                            {% if materia_sel == 'matematica' %}
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_reconocimiento|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_reconocimiento != None %}
-                                        {% if alumno.nota_reconocimiento < 12.8 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_reconocimiento < 21.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_reconocimiento < 28.8 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
+                                
+                                <th style="text-align: center; color: #2980b9;">Nota Final</th>
+                                <th style="text-align: center; color: #2980b9;">Desempeño General</th>
+                                <th style="text-align: center; color: #2980b9;">Examen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alumno in alumnos %}
+                            <tr>
+                                <td>{{ alumno.dni }}</td>
+                                <td><strong>{{ alumno.apellido }}, {{ alumno.nombre }}</strong></td>
+                                <td>
+                                    {% if alumno.asistencia == 'PRESENTE' or alumno.asistencia == 'Presente' %}
+                                        <span class="badge" style="background: #2ecc71; color: white;">Presente</span>
+                                    {% else %}
+                                        <span class="badge" style="background: #e74c3c; color: white;">Ausente</span>
+                                    {% endif %}
                                 </td>
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_comunicacion|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_comunicacion != None %}
-                                        {% if alumno.nota_comunicacion < 13.2 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_comunicacion < 22.1 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_comunicacion < 29.7 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_resolucion|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_resolucion != None %}
-                                        {% if alumno.nota_resolucion < 14 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_resolucion < 23.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_resolucion < 31.4 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
+                                
+                                {% if materia_sel == 'matematica' %}
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_reconocimiento|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_reconocimiento != None %}
+                                            {% if alumno.nota_reconocimiento < 12.8 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_reconocimiento < 21.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_reconocimiento < 28.8 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_comunicacion|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_comunicacion != None %}
+                                            {% if alumno.nota_comunicacion < 13.2 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_comunicacion < 22.1 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_comunicacion < 29.7 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_resolucion|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_resolucion != None %}
+                                            {% if alumno.nota_resolucion < 14 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_resolucion < 23.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_resolucion < 31.4 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
 
-                            {% elif materia_sel == 'lengua' %}
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_extraer|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_extraer != None %}
-                                        {% if alumno.nota_extraer < 8.4 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_extraer < 14.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_extraer < 19.3 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_interpretar|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_interpretar != None %}
-                                        {% if alumno.nota_interpretar < 10.1 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_interpretar < 17.1 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_interpretar < 22.9 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_reflexionar|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_reflexionar != None %}
-                                        {% if alumno.nota_reflexionar < 11.4 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_reflexionar < 19.1 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_reflexionar < 25.6 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
-                                <td style="text-align: center; font-weight: 500;">{{ alumno.nota_escribir|floatformat:2|default:"-" }}</td>
-                                <td style="text-align: center;">
-                                    {% if alumno.nota_escribir != None %}
-                                        {% if alumno.nota_escribir < 9.8 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                        {% elif alumno.nota_escribir < 16.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                        {% elif alumno.nota_escribir < 22 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
-                            {% endif %}
+                                {% elif materia_sel == 'lengua' %}
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_extraer|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_extraer != None %}
+                                            {% if alumno.nota_extraer < 8.4 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_extraer < 14.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_extraer < 19.3 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_interpretar|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_interpretar != None %}
+                                            {% if alumno.nota_interpretar < 10.1 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_interpretar < 17.1 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_interpretar < 22.9 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_reflexionar|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_reflexionar != None %}
+                                            {% if alumno.nota_reflexionar < 11.4 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_reflexionar < 19.1 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_reflexionar < 25.6 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td style="text-align: center; font-weight: 500;">{{ alumno.nota_escribir|floatformat:2|default:"-" }}</td>
+                                    <td style="text-align: center;">
+                                        {% if alumno.nota_escribir != None %}
+                                            {% if alumno.nota_escribir < 9.8 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                            {% elif alumno.nota_escribir < 16.4 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                            {% elif alumno.nota_escribir < 22 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                            {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                {% endif %}
 
-                            <td style="text-align: center; font-weight: bold; font-size: 1.1rem; color: #2980b9;">{{ alumno.total_puntaje|floatformat:2|default:"-" }}</td>
-                            
-                            <td style="text-align: center;">
-                                {% if alumno.total_puntaje != None %}
-                                    {% if alumno.total_puntaje < 40 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
-                                    {% elif alumno.total_puntaje < 67 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
-                                    {% elif alumno.total_puntaje < 90 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
-                                    {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            
-                            <td style="text-align: center;">
-                                {% if alumno.total_puntaje != None %}
-                                    <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examen_individual' materia_sel %}?cueanexo={{ cueanexo }}&dni={{ alumno.dni }}" class="btn-sidebar btn-primary" style="padding: 5px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto; margin: 0;" title="Descargar PDF del Alumno">📥 PDF</a>
-                                {% else %}
-                                    <span style="color: #bdc3c7;">-</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <td style="text-align: center; font-weight: bold; font-size: 1.1rem; color: #2980b9;">{{ alumno.total_puntaje|floatformat:2|default:"-" }}</td>
+                                
+                                <td style="text-align: center;">
+                                    {% if alumno.total_puntaje != None %}
+                                        {% if alumno.total_puntaje < 40 %}<span class="badge" style="background: #e74c3c; color: white;">Debajo Básico</span>
+                                        {% elif alumno.total_puntaje < 67 %}<span class="badge" style="background: #e67e22; color: white;">Básico</span>
+                                        {% elif alumno.total_puntaje < 90 %}<span class="badge" style="background: #f1c40f; color: white;">Satisfactorio</span>
+                                        {% else %}<span class="badge" style="background: #2ecc71; color: white;">Avanzado</span>{% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                
+                                <td style="text-align: center;">
+                                    {% if alumno.total_puntaje != None %}
+                                        <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_examen_individual' materia_sel %}?cueanexo={{ cueanexo }}&dni={{ alumno.dni }}" class="btn-sidebar btn-primary" style="padding: 5px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto; margin: 0;" title="Descargar PDF del Alumno">📥 PDF</a>
+                                    {% else %}
+                                        <span style="color: #bdc3c7;">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
                 <div class="alert-warning">
                     No se encontraron alumnos para los filtros seleccionados, o aún no ha realizado una búsqueda.
@@ -413,6 +456,7 @@
         const selectAnio = document.getElementById('select-anio');
         const selectSeccionTurno = document.getElementById('select-seccion-turno'); 
         const selectMateria = document.getElementById('select-materia');
+        const selectCondicion = document.getElementById('select-condicion');
         const btnFiltrar = document.getElementById('btn-filtrar');
         const URL_ACTUAL = window.location.pathname;
 
@@ -497,6 +541,46 @@
             selectMateria.disabled = false;
         });
 
+        if (selectCondicion) {
+            selectCondicion.addEventListener('change', function() {
+                if (this.value !== "") {
+                    // Bloqueo inmediato de la cascada
+                    $j('#select-cue').prop('disabled', true);
+                    selectAnio.disabled = true;
+                    selectSeccionTurno.disabled = true;
+                    
+                    selectMateria.disabled = false;
+                } else {
+                    // Libero el buscador principal
+                    $j('#select-cue').prop('disabled', false);
+                    
+                    // Restauro el flujo normal de la cascada
+                    if (!$j('#select-cue').val()) {
+                        resetearSelectores([selectAnio, selectSeccionTurno, selectMateria]);
+                    } else {
+                        selectAnio.disabled = false;
+                        if (selectAnio.value) {
+                            selectSeccionTurno.disabled = false;
+                        }
+                        if (!selectSeccionTurno.value) {
+                            selectMateria.disabled = true;
+                            selectMateria.value = "";
+                        }
+                    }
+                }
+                
+                if (btnFiltrar) btnFiltrar.disabled = !selectMateria.value;
+            });
+
+            // Si al recargar ya venía con Condición desde la URL
+            if (selectCondicion.value !== "") {
+                $j('#select-cue').prop('disabled', true);
+                selectAnio.disabled = true;
+                selectSeccionTurno.disabled = true;
+                selectMateria.disabled = false;
+            }
+        }
+
         selectMateria.addEventListener('change', function () {
             if (btnFiltrar) { btnFiltrar.disabled = !this.value; }
         });
@@ -507,17 +591,21 @@
             const sec = document.getElementById('select-management-sector');
             const amb = document.getElementById('select-management-ambito');
             const reg = document.getElementById('select-management-region');
+            const cond = document.getElementById('select-condicion');
+            
             if (sec) url.searchParams.append('sector', sec.value);
             if (amb) url.searchParams.append('ambito', amb.value);
             if (reg) url.searchParams.append('region', reg.value);
+            if (cond && cond.value) url.searchParams.append('condicion', cond.value);
 
-            url.searchParams.append('cueanexo', selectCue.value);
-            url.searchParams.append('anio', selectAnio.value);
-            
-            if (selectSeccionTurno.value) {
-                const [seccion, turno] = selectSeccionTurno.value.split('|');
-                url.searchParams.append('seccion', seccion);
-                url.searchParams.append('turno', turno);
+            if (!cond || !cond.value) {
+                url.searchParams.append('cueanexo', selectCue.value);
+                url.searchParams.append('anio', selectAnio.value);
+                if (selectSeccionTurno.value) {
+                    const [seccion, turno] = selectSeccionTurno.value.split('|');
+                    url.searchParams.append('seccion', seccion);
+                    url.searchParams.append('turno', turno);
+                }
             }
             
             url.searchParams.append('materia', selectMateria.value);
