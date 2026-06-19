@@ -101,7 +101,7 @@ def lista(request,fid_actual=None):
 				# 1. Extraemos los datos CRUDOS directamente de la memoria
 				cueanexo_id = datos_guardados.get('cueanexo')
 				grado_public_id = datos_guardados.get('grado')
-				print(f'cue:{cueanexo_id}, grado{grado_public_id}')
+				#print(f'cue:{cueanexo_id}, grado{grado_public_id}')
 				# 2. Pasamos los datos a los formularios SOLO para que el HTML 
 				# mantenga visualmente seleccionadas las opciones correctas.
 				cueanexo_form = CueanexoFluidez2026ViewForm(datos_guardados, cuil=cuil)
@@ -127,20 +127,20 @@ def lista(request,fid_actual=None):
 			.filter(cueanexo=cueanexo_id, anio=nombre_grado)
 			.values_list('numero_de_documento', flat=True)
 		)
-		print(lista_dnis)
-		print(cueanexo_id)
-		print(nombre_grado)
+		# print(lista_dnis)
+		# print(cueanexo_id)
+		# print(nombre_grado)
 		lista = list(
 			AlumnoFluidez2026.objects
 			.filter(~Q(dni__in=lista_dnis), seccion__grado__cueanexo=int(cueanexo_id),seccion__grado__nombre_grado=grado.nombre_grado)
 			.values_list('dni', flat=True)
 		)
-		print('-'*50)
-		print(lista)
+		# print('-'*50)
+		# print(lista)
 		
 		lista_dnis.extend(lista)
 		alumnos_qs = AlumnoFluidez2026.objects.filter(dni__in=lista_dnis)
-		print(alumnos_qs)
+		# print(alumnos_qs)
 		
 		qs_secciones = SeccionFluidez2026.objects.filter(
 			grado__public_id=grado.public_id
@@ -274,7 +274,7 @@ def lista_examen(request,fid_actual=None):
 	# LÓGICA DE RECUPERACIÓN (GET)
 	# ==========================================
 	else:
-		print(fid_actual)
+		#print(fid_actual)
 		if fid_actual:
 			datos_guardados = request.session.get(f"filtro_{fid_actual}")
 			
@@ -354,7 +354,7 @@ def carga_alumno(request,fid_actual,grado_public_id):
 		   #una instancia a la vez
 			with transaction.atomic():
 				seccion_turno_id=seccion_form.cleaned_data["seccion_turno"]
-				print(seccion_turno_id)
+				#print(seccion_turno_id)
 				instancia_seccion, creado_seccion = SeccionFluidez2026.objects.get_or_create(
 				id=seccion_turno_id,
 				grado=grado
@@ -379,7 +379,7 @@ def carga_alumno(request,fid_actual,grado_public_id):
 def editar_alumno(request,alumno_public_id, fid_actual):
 	#print(fid_actual)
 	instancia_alumno=get_object_or_404(AlumnoFluidez2026,public_id=alumno_public_id)
-	print(instancia_alumno)
+	#print(instancia_alumno)
 	if not instancia_alumno.seccion.grado.cueanexo:
 		alumno_datos=get_object_or_404(TablaTemporalAlumnoFluidez2026,numero_de_documento=instancia_alumno.dni)
 		cueanexo=alumno_datos.cueanexo
@@ -575,7 +575,7 @@ def editar_alumno(request,alumno_public_id, fid_actual):
 @login_required
 def carga_evaluacion(request, alumno_public_id, fid_actual):
 	#fid_actual = request.POST.get('fid')
-	print(fid_actual)
+	#print(fid_actual)
 	alumno_id=get_object_or_404(AlumnoFluidez2026, public_id=alumno_public_id)
 	instancia_seccion=get_object_or_404(SeccionFluidez2026,id=alumno_id.seccion_id)
 	instancia_grado=get_object_or_404(GradoFluidez2026,id=instancia_seccion.grado_id)
@@ -830,7 +830,7 @@ def completar_carga(request,grado_public_id):
 			# Faltan alumnos, cancelamos la acción.
 			estado_carga = False
 			numero = lista_inicial_conteo - lista_final_conteo
-	print(f'es numero{numero}')
+	#print(f'es numero{numero}')
 	return JsonResponse({
         'es_valido': estado_carga,
         'nuevo_estado': instancia_grado.estado_carga,

@@ -63,90 +63,137 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const form = document.getElementById("form-carga-alumno");
-        const btnSubmit = document.getElementById("btn-submit");
-        const btnVolver = document.getElementById("btn-volver");
+   <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("form-carga-alumno");
+    const btnSubmit = document.getElementById("btn-submit");
+    const btnVolver = document.getElementById("btn-volver");
 
-        // --- Funcionalidad de Loading ---
-        function activarLoading(elemento) {
-            if (elemento.dataset.htmlOriginal) return; // Ya está cargando
-            elemento.dataset.htmlOriginal = elemento.innerHTML;
-            elemento.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Cargando...';
-            elemento.classList.add('disabled');
-            elemento.style.pointerEvents = 'none';
+    // Seleccionamos los inputs fuera del submit para poder usarlos al cargar
+    const inputNombre = document.querySelector('input[name="nombre"]');
+    const inputApellido = document.querySelector('input[name="apellido"]');
+    const inputDni = document.querySelector('input[name="dni"]');
+
+    // Si al cargar la página ya hay texto (porque estamos editando), lo pasamos a mayúscula.
+    if (inputNombre && inputNombre.value) inputNombre.value = inputNombre.value.toUpperCase();
+    if (inputApellido && inputApellido.value) inputApellido.value = inputApellido.value.toUpperCase();
+
+    // --- Funcionalidad de Loading ---
+    function activarLoading(elemento) {
+        if (elemento.dataset.htmlOriginal) return;
+        elemento.dataset.htmlOriginal = elemento.innerHTML;
+        elemento.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Cargando...';
+        elemento.classList.add('disabled');
+        elemento.style.pointerEvents = 'none';
+    }
+
+    // --- VALIDACIÓN Y ENVÍO DEL FORMULARIO ---
+    form.addEventListener("submit", function(event) {
+        let esValido = true;
+        let errores = []; 
+        
+        // 1. Validar Selects (Turno y Sección)
+        const selects = form.querySelectorAll("select");
+        selects.forEach(select => {
+            const opcionTexto = select.options[select.selectedIndex].text;
+            if (opcionTexto.includes("SELECCIONE TURNO Y SECCIÓN") || select.value === "") {
+                esValido = false;
+                select.classList.add("is-invalid");
+                if (!errores.includes("Debe seleccionar un Turno y Sección válido.")) {
+                    errores.push("Debe seleccionar un Turno y Sección válido.");
+                }
+            } else {
+                select.classList.remove("is-invalid");
+            }
+        });
+
+        // 2. Validar Nombre (Mayúsculas y Mínimo 3 letras)
+        if (inputNombre) {
+            if (inputNombre.value !== inputNombre.value.toUpperCase()) {
+                esValido = false;
+                inputNombre.classList.add("is-invalid");
+                errores.push("El Nombre debe estar completamente en MAYÚSCULAS.");
+            } else if (inputNombre.value.trim().length < 3) {
+                esValido = false;
+                inputNombre.classList.add("is-invalid");
+                errores.push("El Nombre debe tener al menos 3 letras.");
+            } else {
+                inputNombre.classList.remove("is-invalid");
+            }
         }
 
-        // --- VALIDACIÓN Y ENVÍO DEL FORMULARIO ---
-        form.addEventListener("submit", function(event) {
-            let esValido = true;
-            
-            // Busca todos los selects dentro del formulario (generados por Django)
-            const selects = form.querySelectorAll("select");
-            
-            selects.forEach(select => {
-                const opcionTexto = select.options[select.selectedIndex].text;
-                
-                // Si el texto de la opción incluye la frase prohibida o si su valor está en blanco (opción por defecto de Django)
-                if (opcionTexto.includes("SELECCIONE TURNO Y SECCIÓN") || select.value === "") {
-                    esValido = false;
-                    select.classList.add("is-invalid"); // Resalta el borde en rojo (Bootstrap)
-                } else {
-                    select.classList.remove("is-invalid");
+        // 3. Validar Apellido (Mayúsculas y Mínimo 3 letras)
+        if (inputApellido) {
+            if (inputApellido.value !== inputApellido.value.toUpperCase()) {
+                esValido = false;
+                inputApellido.classList.add("is-invalid");
+                errores.push("El Apellido debe estar completamente en MAYÚSCULAS.");
+            } else if (inputApellido.value.trim().length < 3) {
+                esValido = false;
+                inputApellido.classList.add("is-invalid");
+                errores.push("El Apellido debe tener al menos 3 letras.");
+            } else {
+                inputApellido.classList.remove("is-invalid");
+            }
+        }
+
+        // 💡 NUEVO: 4. Validar DNI (No menos de 8 caracteres)
+        if (inputDni) {
+            if (inputDni.value.trim().length < 8) {
+                esValido = false;
+                inputDni.classList.add("is-invalid");
+                errores.push("El DNI debe tener exactamente 8 números.");
+            } else {
+                inputDni.classList.remove("is-invalid");
+            }
+        }
+
+        // Si hay errores, frenamos el envío y mostramos la alerta
+        if (!esValido) {
+            event.preventDefault(); // Detiene el POST
+            alert("Por favor, corrija lo siguiente antes de guardar:\n\n- " + errores.join("\n- "));
+            return; // Corta la ejecución para que NO se active el loading
+        }
+
+        // Si pasó la validación, activa el loading
+        activarLoading(btnSubmit);
+    });
+
+    btnVolver.addEventListener("click", (e) => {
+        activarLoading(btnVolver);
+    });
+
+    // --- Restaurar estado si el usuario usa el botón "Atrás" ---
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            [btnSubmit, btnVolver].forEach(btn => {
+                if (btn.dataset.htmlOriginal) {
+                    btn.innerHTML = btn.dataset.htmlOriginal;
+                    btn.classList.remove('disabled');
+                    btn.style.pointerEvents = 'auto';
+                    delete btn.dataset.htmlOriginal;
                 }
             });
-
-            // Si encontró la opción por defecto, frena el envío
-            if (!esValido) {
-                event.preventDefault(); // Detiene el POST
-                alert("Por favor, seleccione un Turno y Sección válido antes de guardar.");
-                return; // Corta la ejecución para que NO se active el loading
-            }
-
-            // Si pasó la validación, activa el loading
-            activarLoading(btnSubmit);
-        });
-
-        btnVolver.addEventListener("click", (e) => {
-            activarLoading(btnVolver);
-        });
-
-        // --- Restaurar estado si el usuario usa el botón "Atrás" ---
-        window.addEventListener('pageshow', function (event) {
-            if (event.persisted) {
-                [btnSubmit, btnVolver].forEach(btn => {
-                    if (btn.dataset.htmlOriginal) {
-                        btn.innerHTML = btn.dataset.htmlOriginal;
-                        btn.classList.remove('disabled');
-                        btn.style.pointerEvents = 'auto';
-                        delete btn.dataset.htmlOriginal;
-                    }
-                });
-            }
-        });
-
-        // --- Validaciones de campos (DNI y Mayúsculas) ---
-        const inputDni = document.querySelector('input[name="dni"]');
-        const inputNombre = document.querySelector('input[name="nombre"]');
-        const inputApellido = document.querySelector('input[name="apellido"]');
-
-        if (inputDni) {
-            inputDni.setAttribute("inputmode", "numeric");
-            inputDni.addEventListener("input", function () {
-                this.value = this.value.replace(/\D/g, '').substring(0, 8);
-            });
         }
+    });
 
-        function forzarMayusculas() {
-            const pos = this.selectionStart;
-            this.value = this.value.toUpperCase();
-            this.setSelectionRange(pos, pos);
-        }
+    // --- Validaciones de campos (DNI y Mayúsculas al escribir) ---
+    if (inputDni) {
+        inputDni.setAttribute("inputmode", "numeric");
+        inputDni.addEventListener("input", function () {
+            this.value = this.value.replace(/\D/g, '').substring(0, 8);
+        });
+    }
 
-        if (inputNombre) inputNombre.addEventListener("input", forzarMayusculas);
-        if (inputApellido) inputApellido.addEventListener("input", forzarMayusculas);
-      });
-    </script>
+    function forzarMayusculas() {
+        const pos = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        this.setSelectionRange(pos, pos);
+    }
+
+    if (inputNombre) inputNombre.addEventListener("input", forzarMayusculas);
+    if (inputApellido) inputApellido.addEventListener("input", forzarMayusculas);
+  });
+</script>
   </body>
 </html>
