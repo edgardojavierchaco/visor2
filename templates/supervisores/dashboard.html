@@ -1,0 +1,279 @@
+{% extends "archivos/base/dashboard.html" %}
+{% load static %}
+
+{% block content %}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet">
+
+<div class="container mt-4">
+
+    <h3>📊 Sistema ABM de Supervisores</h3>
+
+    <!-- ========================= -->
+    <!-- BUSCADOR CUIL -->
+    <!-- ========================= -->
+    <div class="card p-3 mt-3">
+
+        <label>CUIL Supervisor</label>
+
+        <div class="input-group">
+            <input id="cuilInput" class="form-control" placeholder="Ingrese CUIL">
+            <button class="btn btn-primary" onclick="buscarSupervisor()">
+                Buscar
+            </button>
+        </div>
+
+        <div id="resultadoSupervisor" class="mt-3"></div>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- CREAR SUPERVISOR -->
+    <!-- ========================= -->
+    <div class="card p-3 mt-3 d-none" id="createBox">
+
+        <h5>Crear Supervisor</h5>
+
+        <input id="apellido" class="form-control mb-2" placeholder="Apellido">
+        <input id="nombres" class="form-control mb-2" placeholder="Nombres">
+        <input id="email" class="form-control mb-2" placeholder="Email">
+        <input id="telefono" class="form-control mb-2" placeholder="Teléfono">
+
+        <button class="btn btn-success" onclick="crearSupervisor()">
+            Crear
+        </button>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- EXPEDIENTE -->
+    <!-- ========================= -->
+    <div id="expediente" class="d-none mt-4">
+
+        <ul class="nav nav-tabs">
+
+            <li class="nav-item">
+                <button class="nav-link active"
+                        data-bs-toggle="tab"
+                        data-bs-target="#sit">
+                    Situación
+                </button>
+            </li>
+
+            <li class="nav-item">
+                <button class="nav-link"
+                        data-bs-toggle="tab"
+                        data-bs-target="#reg">
+                    Regionales
+                </button>
+            </li>
+
+            <li class="nav-item">
+                <button class="nav-link"
+                        data-bs-toggle="tab"
+                        data-bs-target="#niv">
+                    Niveles
+                </button>
+            </li>
+
+            <li class="nav-item">
+                <button class="nav-link"
+                        data-bs-toggle="tab"
+                        data-bs-target="#ofe">
+                    Ofertas
+                </button>
+            </li>
+
+        </ul>
+
+        <div class="tab-content border p-3">
+
+            <!-- ====================== -->
+            <!-- SITUACIONES -->
+            <!-- ====================== -->
+            <div class="tab-pane fade show active" id="sit">
+
+                <div class="row mb-3">
+
+                    <div class="col-md-4">
+                        <select id="situacionSelect" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input id="fechaDesde" type="date" class="form-control">
+                    </div>
+
+                    <div class="col-md-3">
+                        <input id="fechaHasta" type="date" class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-success w-100"
+                                onclick="agregarSituacion()">
+                            Agregar
+                        </button>
+                    </div>
+
+                </div>
+
+                <div id="sitListado"></div>
+
+            </div>
+
+            <!-- ====================== -->
+            <!-- REGIONALES -->
+            <!-- ====================== -->
+            <div class="tab-pane fade" id="reg">
+
+                <div class="row mb-3">
+
+                    <div class="col-md-8">
+                        <select id="regionSelect" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100"
+                                onclick="agregarRegional()">
+                            Agregar Regional
+                        </button>
+                    </div>
+
+                </div>
+
+                <div id="regListado"></div>
+
+            </div>
+
+            <!-- ====================== -->
+            <!-- NIVELES -->
+            <!-- ====================== -->
+            <div class="tab-pane fade" id="niv">
+
+                <div class="row mb-3">
+
+                    <div class="col-md-5">
+                        <select id="nivelRegionalSelect" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-5">
+                        <select id="nivelSelect" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-success w-100"
+                                onclick="agregarNivel()">
+                            Agregar Nivel
+                        </button>
+                    </div>
+
+                </div>
+
+                <div id="nivListado"></div>
+
+            </div>
+
+            <!-- ====================== -->
+            <!-- OFERTAS -->
+            <!-- ====================== -->
+            <div class="tab-pane fade" id="ofe">
+
+                <div class="row mb-3">
+
+                    <div class="col-md-3">
+                        <select id="ofertaRegionalSelect" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <input id="cueanexo"
+                               class="form-control"
+                               placeholder="Cueanexo"
+                               onkeyup="buscarCue()">
+                    </div>
+
+                    <div class="col-md-4">
+                        <input id="nomEst"
+                               class="form-control"
+                               placeholder="Establecimiento"
+                               readonly>
+                    </div>
+
+                    <div class="col-md-3">
+                        <select id="ofertaSelect" class="form-select"></select>
+                    </div>
+
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <button class="btn btn-success w-100"
+                                onclick="agregarOferta()">
+                            Agregar Oferta
+                        </button>
+                    </div>
+                </div>
+
+                <div id="ofeListado"></div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL EDITAR SITUACION -->
+<div class="modal fade" id="modalEditarSituacion" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Situación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <input type="hidden" id="editSituacionId">
+
+        <label>Situación</label>
+        <select id="editSituacionSelect" class="form-select mb-2"></select>
+
+        <label>Fecha desde</label>
+        <input type="date" id="editFechaDesde" class="form-control mb-2">
+
+        <label>Fecha hasta</label>
+        <input type="date" id="editFechaHasta" class="form-control mb-2">
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarEdicionSituacion()">Guardar</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+/* =========================
+   GLOBAL SAFE STATE
+========================= */
+window.supervisorId = null;
+
+/* CSRF limpio para fetch/ajax */
+window.CSRF_TOKEN = "{{ csrf_token }}";
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="/static/supervisores/js/dashboard.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endblock %}

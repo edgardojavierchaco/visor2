@@ -85,6 +85,7 @@ LOCAL_APPS = [
     'apps.indicators',
     "apps.cef.apps.CefConfig",
     "apps.bnhalumnos.apps.BnhalumnosConfig",
+    "apps.supervisor_registro.apps.SupervisorRegistroConfig",
 ]
 
 
@@ -155,7 +156,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=bnh,public,evaluacion,cenpe,indicadores,operativoschaco,pem,pof'
+            'options': '-c search_path=bnh,supervisores,public,evaluacion,cenpe,indicadores,operativoschaco,pem,pof'
         }
     },        
     'Evaluacion': {

@@ -1937,7 +1937,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* =========================================================
-       CEIC DINAMICO
+       CEIC + GRADO/AÑO + SECCIONES DINAMICO
     ========================================================= */
 
     function cargarCEIC(
@@ -1967,6 +1967,82 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 opt.textContent =
                     item.descripcion;
+
+                select.appendChild(
+                    opt
+                );
+
+            });
+
+        });
+
+    }
+
+    function cargarGradoAnio(
+        modalidad,
+        nivel,
+        select
+    ){
+
+        fetch(
+            `/bnh/filtrar-grado-anio/?modalidad=${modalidad}&nivel=${nivel || ""}`
+        )
+        .then(r => r.json())
+        .then(data => {
+
+            select.innerHTML =
+                "<option value=''>----</option>";
+
+            data.forEach(item => {
+
+                const opt =
+                    document.createElement(
+                        "option"
+                    );
+
+                opt.value =
+                    item.c_grado_anio;
+
+                opt.textContent =
+                    item.nombre_grado_anio;
+
+                select.appendChild(
+                    opt
+                );
+
+            });
+
+        });
+
+    }
+
+    function cargarSecciones(
+        modalidad,
+        nivel,
+        select
+    ){
+
+        fetch(
+            `/bnh/filtrar-secciones/?modalidad=${modalidad}&nivel=${nivel || ""}`
+        )
+        .then(r => r.json())
+        .then(data => {
+
+            select.innerHTML =
+                "<option value=''>----</option>";
+
+            data.forEach(item => {
+
+                const opt =
+                    document.createElement(
+                        "option"
+                    );
+
+                opt.value =
+                    item.c_seccion;
+
+                opt.textContent =
+                    item.nombre_seccion;
 
                 select.appendChild(
                     opt
@@ -2017,16 +2093,47 @@ document.addEventListener("DOMContentLoaded", function () {
                         '[name$="ceic"]'
                     );
 
-                if(
-                    ceic &&
-                    mod
-                ){
-
-                    cargarCEIC(
-                        mod,
-                        niv,
-                        ceic
+                const grado =
+                    card.querySelector(
+                        '[name$="grado_anio"]'
                     );
+
+                const seccion =
+                    card.querySelector(
+                        '[name$="secciones"]'
+                    );
+
+                if(mod){
+
+                    if(ceic){
+
+                        cargarCEIC(
+                            mod,
+                            niv,
+                            ceic
+                        );
+
+                    }
+
+                    if(grado){
+
+                        cargarGradoAnio(
+                            mod,
+                            niv,
+                            grado
+                        );
+
+                    }
+
+                    if(seccion){
+
+                        cargarSecciones(
+                            mod,
+                            niv,
+                            seccion
+                        );
+
+                    }
 
                 }
 
