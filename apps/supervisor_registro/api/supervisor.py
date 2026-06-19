@@ -9,7 +9,7 @@ from ..models import (
     SupervisorSituacionRevista
 )
 
-from ..services.permission_service import assert_responsable
+from ..services.permission_service import assert_responsable, get_regiones_usuario
 from ..services.supervisor_service import build
 
 @login_required
@@ -171,4 +171,59 @@ def toggle_supervisor(request):
 
     return JsonResponse({
         "ok": True
+    })
+
+
+@login_required
+def listado_supervisores(request):
+
+    assert_responsable(request.user)
+
+    regiones = get_regiones_usuario(
+        request.user
+    )
+
+    supervisores = (
+        ABMSupervisores.objects
+        .filter(
+            activo=True,
+            asignaciones_regionales__activo=True,
+            asignaciones_regionales__region_id__in=regiones
+        )
+        .distinct()
+        .select_related("usuario")
+        .order_by(
+            "usuario__apellido",
+            "usuario__nombres"
+        )
+    )
+
+    data = []
+
+    for supervisor in supervisores:
+
+        regionales = list(
+            supervisor.asignaciones_regionales
+            .filter(
+                activo=True,
+                region_id__in=regiones
+            )
+            .values_list(
+                "region__nombre",
+                flat=True
+            )
+        )
+
+        data.append({
+            "id": supervisor.id,
+            "cuil": supervisor.usuario.username,
+            "apellido": supervisor.usuario.apellido,
+            "nombres": supervisor.usuario.nombres,
+            "email": supervisor.email or "",
+            "telefono": supervisor.telefono or "",
+            "regionales": regionales
+        })
+
+    return JsonResponse({
+        "results": data
     })
