@@ -1,10 +1,14 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView
+from apps.consultasge.models_padron import CapaUnicaOfertas
+from django.db.models.functions import Replace, Cast
 
 from django.db.models import (
     Count,
     Prefetch,
-    Q
+    Q,
+    Value,
+    CharField
 )
 
 from .models import (

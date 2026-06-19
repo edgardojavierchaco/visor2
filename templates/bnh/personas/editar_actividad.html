@@ -1,0 +1,269 @@
+{% extends "dashboard/bodydirector.html" %}
+{% load static %}
+
+{% block content %}
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+      rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+      rel="stylesheet">
+
+<style>
+
+.card-edit{
+    border:none;
+    border-radius:18px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+
+.card-header-custom{
+    background:linear-gradient(135deg,#183153,#2457a7);
+    color:white;
+    padding:20px;
+}
+
+.info-box{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:15px;
+}
+
+.form-label{
+    font-weight:600;
+}
+
+.select2-container--bootstrap-5
+.select2-selection{
+    min-height:38px;
+}
+
+</style>
+
+<div class="container-fluid mt-4">
+
+    <div class="card card-edit">
+
+        <div class="card-header card-header-custom">
+
+            <h4 class="mb-1">
+                <i class="fa-solid fa-briefcase me-2"></i>
+                Editar Actividad Laboral
+            </h4>
+
+            <small>
+                Modificación exclusiva de datos laborales
+            </small>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="row mb-4">
+
+                <div class="col-md-6">
+
+                    <div class="info-box">
+
+                        <strong>Persona</strong>
+
+                        <div>
+                            {{ actividad.persona.apellido }},
+                            {{ actividad.persona.nombre }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="info-box">
+
+                        <strong>CUIL</strong>
+
+                        <div>
+                            {{ actividad.persona.cuil }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <form method="post">
+
+                {% csrf_token %}
+
+                <div class="row">
+
+                    {% for field in form %}
+
+                    <div class="col-md-6 mb-3">
+
+                        <label
+                            class="form-label"
+                            for="{{ field.id_for_label }}">
+
+                            {{ field.label }}
+
+                        </label>
+
+                        {{ field }}
+
+                        {% if field.help_text %}
+
+                            <small class="text-muted">
+                                {{ field.help_text }}
+                            </small>
+
+                        {% endif %}
+
+                        {% for error in field.errors %}
+
+                            <div class="text-danger small">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+                <hr>
+
+                <div class="d-flex gap-2">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+
+                        <i class="fa-solid fa-floppy-disk me-2"></i>
+                        Guardar
+
+                    </button>
+
+                    <a
+                        href="{% url 'bnhpersonas:personas_detail' actividad.persona.pk %}"
+                        class="btn btn-secondary">
+
+                        <i class="fa-solid fa-arrow-left me-2"></i>
+                        Cancelar
+
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+<script>
+
+$(document).ready(function(){
+
+    $(".select2").select2({
+
+        theme: "bootstrap-5",
+        width: "100%",
+
+        language: {
+            noResults: function(){
+                return "Sin resultados";
+            }
+        }
+
+    });
+
+    function cargarCeic(){
+
+        let modalidad = $("#id_modalidad").val();
+        let nivel = $("#id_niveles").val();
+
+        if(!modalidad && !nivel){
+            return;
+        }
+
+        let ceicActual = $("#id_ceic").val();
+
+        $.ajax({
+
+            url: "{% url 'bnhpersonas:filtrar_ceic' %}",
+
+            data: {
+                modalidad: modalidad,
+                nivel: nivel
+            },
+
+            success: function(data){
+
+                let select = $("#id_ceic");
+
+                select.empty();
+
+                $.each(data, function(index, item){
+
+                    let selected =
+                        String(item.c_ceic) === String(ceicActual);
+
+                    select.append(
+                        new Option(
+                            item.descripcion,
+                            item.c_ceic,
+                            selected,
+                            selected
+                        )
+                    );
+
+                });
+
+                select.trigger("change");
+
+            },
+
+            error: function(xhr){
+
+                console.log(
+                    "Error cargando CEIC",
+                    xhr.responseText
+                );
+
+            }
+
+        });
+
+    }
+
+    $("#id_modalidad").on(
+        "change",
+        cargarCeic
+    );
+
+    $("#id_niveles").on(
+        "change",
+        cargarCeic
+    );
+
+});
+
+</script>
+
+{% endblock %}

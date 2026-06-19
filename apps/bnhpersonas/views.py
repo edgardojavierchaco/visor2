@@ -3,13 +3,29 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.db import transaction
 
-from .models import Personas, RegistroActividades, NomencladorCeic, Localidades, CodAreasTelefonos
-from .forms import PersonaForm, ActividadFormSet
+from .models import (
+    Personas, 
+    RegistroActividades, 
+    NomencladorCeic, 
+    Localidades, 
+    CodAreasTelefonos,
+    Grado_anio,
+    Secciones
+)
+from .forms import (
+    PersonaForm, 
+    ActividadFormSet,
+    ActividadDirectorForm
+)
+
 from .utils import get_ofertas_usuario
 from apps.consultasge.models_padron import CapaUnicaOfertas
 
 from .services.registro_service import RegistroService
 from django.shortcuts import get_object_or_404
+
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 
 
 # =========================
@@ -42,6 +58,82 @@ def filtrar_ceic(request):
 
     data = list(
         qs.values("c_ceic", "descripcion")
+    )
+
+    return JsonResponse(data, safe=False)
+
+
+# =========================
+# FILTRO GRADO / AÑO
+# =========================
+def filtrar_grado_anio(request):
+
+    modalidad = request.GET.get("modalidad")
+    nivel = request.GET.get("nivel")
+
+    print("MODALIDAD:", modalidad)
+    print("NIVEL:", nivel)
+
+    qs = Grado_anio.objects.all()
+
+    if nivel:
+        qs = qs.filter(
+            t_niv_grado="Nivel",
+            c_niv_grado=int(nivel)
+        )
+
+    elif modalidad:
+        qs = qs.filter(
+            t_niv_grado="Modalidad",
+            c_niv_grado=int(modalidad)
+        )
+
+    print("SQL:", qs.query)
+    print("COUNT:", qs.count())
+
+    data = list(
+        qs.values("c_grado_anio", "nombre_grado_anio")
+    .order_by(
+        "nombre_grado_anio"
+        )
+    )
+
+    return JsonResponse(data, safe=False)
+
+
+# =========================
+# FILTRO SECCIONES
+# =========================
+def filtrar_secciones(request):
+
+    modalidad = request.GET.get("modalidad")
+    nivel = request.GET.get("nivel")
+
+    print("MODALIDAD:", modalidad)
+    print("NIVEL:", nivel)
+
+    qs = Secciones.objects.all()
+
+    if nivel:
+        qs = qs.filter(
+            t_niv_seccion="Nivel",
+            c_niv_seccion=int(nivel)
+        )
+
+    elif modalidad:
+        qs = qs.filter(
+            t_niv_seccion="Modalidad",
+            c_niv_seccion=int(modalidad)
+        )
+
+    print("SQL:", qs.query)
+    print("COUNT:", qs.count())
+
+    data = list(
+        qs.values("c_seccion", "nombre_seccion")
+    .order_by(
+        "nombre_seccion"
+        )
     )
 
     return JsonResponse(data, safe=False)
@@ -252,3 +344,66 @@ def buscar_codigos_area(request):
     ]
 
     return JsonResponse(data, safe=False)
+
+
+# =====================================================
+# EDITAR ACTIVIDAD (DIRECTOR)
+# =====================================================
+def editar_actividad(request, pk):
+
+    actividad = get_object_or_404(
+        RegistroActividades,
+        pk=pk
+    )
+
+    cueanexos_usuario = [
+        str(x.cueanexo)
+        for x in get_ofertas_usuario(request.user)
+    ]
+
+    if str(actividad.cueanexo) not in cueanexos_usuario:
+        raise PermissionDenied(
+            "No tiene permisos para editar esta actividad."
+        )
+
+    if request.method == "POST":
+
+        form = ActividadDirectorForm(
+            request.POST,
+            instance=actividad
+        )
+
+        if form.is_valid():
+
+            obj = form.save(commit=False)
+
+            obj.usuario_modificacion = request.user
+
+            obj.full_clean()
+
+            obj.save()
+
+            messages.success(
+                request,
+                "Actividad actualizada correctamente."
+            )
+
+            return redirect(
+                "bnhpersonas:personas_detail",
+                pk=actividad.persona.pk
+            )
+
+    else:
+
+        form = ActividadDirectorForm(
+            instance=actividad
+        )
+
+    return render(
+        request,
+        "bnh/personas/editar_actividad.html",
+        {
+            "actividad": actividad,
+            "form": form,
+        }
+    )
