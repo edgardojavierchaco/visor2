@@ -58,7 +58,7 @@ class LoginFormView(LoginView):
         'Supervisor': 'archivos:portada_gestor',
         #'Renpe': 'archivos:portada_gestor_renpe',
         #'Evaluacion': 'oplectura:portada_eval',
-        #'Aplicador': 'oplectura:evaluacion',
+        'Aplicador': 'directores:institucional',
         #'Director_Privada': 'directores:institucional',
         #'DirGral_Privada': 'privada:dashboard',
     }
