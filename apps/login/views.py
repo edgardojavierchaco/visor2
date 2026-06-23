@@ -95,7 +95,7 @@ class LoginFormView(LoginView):
 
             # caso especial Aplicador (querystring)
             if rol == 'Aplicador':
-                return reverse(url_name) + '?cueanexo=0&grado=TERCERO&seccion=A'
+                return reverse(url_name)
 
             return reverse(url_name)
 
