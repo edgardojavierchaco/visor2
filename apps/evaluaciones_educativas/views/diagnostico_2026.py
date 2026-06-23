@@ -894,6 +894,879 @@ def monitoreo_evaluaciones_educativas(request):
 # 	return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
 
 #========================= Nueva vista para diagnóstico 2026 =========================
+# @login_required
+# def analisis_evaluacion(request):
+#     usuario = request.user
+#     name = usuario.username
+#     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+    
+#     lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+#     rol_dennied = 'Director/a'
+#     rol_usuario = usuario.nivelacceso_id
+    
+#     # ── PROTECCIÓN DE ACCESO ─────────────────────────────────────
+#     if rol_usuario == rol_dennied:
+#         raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+#     if rol_usuario not in lista_usuarios_jerarquicos:
+#         has_oferta = CapaUnicaOfertas.objects.filter(
+#             resploc_cuitcuil=cuil_con_caracter, 
+#             offer__icontains='Secundaria Completa req. 7 años'
+#         ).exists()
+#         if not has_oferta:
+#             raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+          
+#     # ── 1. DETERMINACIÓN DEL UNIVERSO DE CUEs PERMITIDOS ────────────────────
+#     filtro_sector = request.GET.get('sector', '').strip()
+#     filtro_ambito = request.GET.get('ambito', '').strip()
+#     filtro_region = request.GET.get('region', '').strip()
+    
+#     # NUEVO FILTRO CONDICIONAL
+#     filtro_condicion = request.GET.get('condicion', '').strip()
+
+#     user_cueanexos = []
+
+#     if rol_usuario in lista_usuarios_jerarquicos:
+#         filtros_establecimiento = Q()
+#         if filtro_sector and filtro_sector != 'TODOS':
+#             filtros_establecimiento &= Q(sector=filtro_sector)
+#         if filtro_ambito and filtro_ambito != 'TODOS':
+#             filtros_establecimiento &= Q(ambito=filtro_ambito)
+#         if filtro_region and filtro_region != 'TODOS':
+#             filtros_establecimiento &= Q(region=filtro_region)
+            
+#         cues_permitidos = Establecimientos2026.objects.filter(filtros_establecimiento).values_list('cueanexo', flat=True).distinct()
+#         user_cueanexos = [str(c) for c in cues_permitidos]
+#     else:
+#         user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
+#         user_cueanexos = [str(c) for c in user_cueanexos_raw]
+
+#     selected_cue = request.GET.get('cueanexo')
+#     if not selected_cue and user_cueanexos:
+#         selected_cue = str(user_cueanexos[0])
+
+#     if selected_cue not in user_cueanexos:
+#         selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+#     selected_cue_int = None
+#     if selected_cue and selected_cue.isdigit():
+#         selected_cue_int = int(selected_cue)
+
+#     escuelas_objs = Establecimientos2026.objects.filter(cueanexo__in=user_cueanexos).values('cueanexo', 'escuela')
+#     mapa_escuelas = {str(e['cueanexo']): e['escuela'] for e in escuelas_objs}
+    
+#     lista_escuelas = []
+#     for cue in user_cueanexos:
+#         nombre_escuela = mapa_escuelas.get(cue, "Establecimiento sin nombre")
+#         lista_escuelas.append({
+#             'cue': cue,
+#             'label': f"{cue} - {nombre_escuela}"
+#         })
+
+#     # ── 2. PETICIONES AJAX PARA CASCADA DINÁMICA ─────────────────────────────
+#     action = request.GET.get('action')
+#     if action and selected_cue_int is not None:
+#         if action == 'cargar_anios':
+#             anios = Seccion2026.objects.filter(año__cueanexo=selected_cue_int).values('año__id', 'año__nombre_año').distinct()
+#             return JsonResponse(list(anios), safe=False)
+            
+#         elif action == 'cargar_secciones_turnos':
+#             anio_id = request.GET.get('anio_id', 0) or 0
+#             combinaciones = Seccion2026.objects.filter(
+#                 año__cueanexo=selected_cue_int, 
+#                 año_id=int(str(anio_id).strip() or 0)
+#             ).values('seccion', 'turno').distinct().order_by('seccion', 'turno')
+            
+#             resultados = [
+#                 {
+#                     'id': f"{c['seccion']}|{c['turno']}", 
+#                     'label': f"Sección: {c['seccion']} - Turno: {str(c['turno']).upper()}"
+#                 } 
+#                 for c in combinaciones
+#             ]
+#             return JsonResponse(resultados, safe=False)
+
+#     # ── 3. CAPTURA DE FILTROS PEDAGÓGICOS ────────────────────────────────────
+#     filtro_anio = request.GET.get('anio')
+#     filtro_seccion = request.GET.get('seccion')
+#     filtro_turno = request.GET.get('turno')
+#     filtro_materia = request.GET.get('materia')
+
+#     anio_nombre_sel = filtro_anio
+#     if filtro_anio and filtro_anio.isdigit():
+#         seccion_ref = Seccion2026.objects.filter(año_id=int(filtro_anio)).select_related('año').first()
+#         if seccion_ref:
+#             anio_nombre_sel = seccion_ref.año.nombre_año
+
+#     alumnos_con_examenes = []
+#     columnas_preguntas = []
+#     total_presentes = total_ausentes = 0
+#     desempenos = {}
+
+#     presentes_indigena = 0
+#     presentes_discapacidad = 0
+#     presentes_ambas = 0
+#     presentes_ninguna = 0
+
+#     # ── 4. PROCESAMIENTO DE EXÁMENES Y CAPACIDADES ───────────────────────────
+#     if filtro_materia and (filtro_condicion or (selected_cue_int and filtro_anio and filtro_seccion and filtro_turno)):
+#         if filtro_materia == 'matematica':
+#             ModeloExamen = Matematica2026
+#             desempenos = {
+#                 'general': [0, 0, 0, 0], 'reconocimiento': [0, 0, 0, 0],
+#                 'comunicacion': [0, 0, 0, 0], 'resolucion': [0, 0, 0, 0]
+#             }
+#         elif filtro_materia == 'lengua':
+#             ModeloExamen = Lengua2026
+#             desempenos = {
+#                 'general': [0, 0, 0, 0], 'extraer': [0, 0, 0, 0],
+#                 'interpretar': [0, 0, 0, 0], 'reflexionar': [0, 0, 0, 0],
+#                 'escribir': [0, 0, 0, 0]
+#             }
+#         else:
+#             ModeloExamen = None
+
+#         if ModeloExamen:
+#             if filtro_condicion:
+#                 q_objs = Q(alumno__seccion__año__cueanexo__in=user_cueanexos)
+                
+#                 if filtro_condicion == 'discapacidad':
+#                     q_objs &= ~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)
+#                 elif filtro_condicion == 'descendencia':
+#                     q_objs &= ~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False)
+#                 elif filtro_condicion == 'ambos':
+#                     q_objs &= ~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)
+#                     q_objs &= ~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False)
+                    
+#                 examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+#             else:
+#                 examenes = ModeloExamen.objects.filter(
+#                     alumno__seccion__año__cueanexo=selected_cue_int,
+#                     alumno__seccion__año_id=int(filtro_anio),
+#                     alumno__seccion__seccion=filtro_seccion,
+#                     alumno__seccion__turno=filtro_turno
+#                 ).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+
+#             campos_preguntas = [f for f in ModeloExamen._meta.fields if f.name.startswith('pregunta_')]
+            
+#             def ordenar_por_numero(campo):
+#                 numeros = re.findall(r'\d+', campo.name)
+#                 return [int(n) for n in numeros]
+            
+#             campos_preguntas.sort(key=ordenar_por_numero)
+#             columnas_preguntas = [f.name.replace('pregunta_', 'P').replace('_', '.') for f in campos_preguntas]
+
+#             for ex in examenes:
+#                 asistencia_status = str(ex.asistencia).upper() if ex.asistencia else 'AUSENTE'
+                
+#                 if asistencia_status == 'PRESENTE':
+#                     total_presentes += 1
+
+#                     val_ind = str(ex.alumno.comunidad_indigena).strip().upper() if ex.alumno.comunidad_indigena else 'NO'
+#                     val_disc = str(ex.alumno.discapacidad).strip().upper() if ex.alumno.discapacidad else 'NO'
+                    
+#                     es_indigena = val_ind not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+#                     es_discapacitado = val_disc not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+                    
+#                     if es_indigena and es_discapacitado:
+#                         presentes_ambas += 1
+#                     elif es_indigena:
+#                         presentes_indigena += 1
+#                     elif es_discapacitado:
+#                         presentes_discapacidad += 1
+#                     else:
+#                         presentes_ninguna += 1
+
+#                     # Solo omite del gráfico a los discapacitados si NO se filtró explícitamente por ellos
+#                     if not es_discapacitado or filtro_condicion:
+#                         tp = ex.total_puntaje or 0.0
+#                         if tp < 40: desempenos['general'][0] += 1
+#                         elif tp < 67: desempenos['general'][1] += 1
+#                         elif tp < 90: desempenos['general'][2] += 1
+#                         else: desempenos['general'][3] += 1
+
+#                         if filtro_materia == 'matematica':
+#                             rec = ex.correcion_reconocimiento or 0.0
+#                             if rec < 12.8: desempenos['reconocimiento'][0] += 1
+#                             elif rec < 21.4: desempenos['reconocimiento'][1] += 1
+#                             elif rec < 28.8: desempenos['reconocimiento'][2] += 1
+#                             else: desempenos['reconocimiento'][3] += 1
+                            
+#                             com = ex.correcion_comunicacion or 0.0
+#                             if com < 13.2: desempenos['comunicacion'][0] += 1
+#                             elif com < 22.1: desempenos['comunicacion'][1] += 1
+#                             elif com < 29.7: desempenos['comunicacion'][2] += 1
+#                             else: desempenos['comunicacion'][3] += 1
+                            
+#                             res = ex.correcion_resolucion or 0.0
+#                             if res < 14: desempenos['resolucion'][0] += 1
+#                             elif res < 23.4: desempenos['resolucion'][1] += 1
+#                             elif res < 31.4: desempenos['resolucion'][2] += 1
+#                             else: desempenos['resolucion'][3] += 1
+
+#                         elif filtro_materia == 'lengua':
+#                             ext = ex.correcion_extraccion or 0.0
+#                             if ext < 8.4: desempenos['extraer'][0] += 1
+#                             elif ext < 14.4: desempenos['extraer'][1] += 1
+#                             elif ext < 19.3: desempenos['extraer'][2] += 1
+#                             else: desempenos['extraer'][3] += 1
+                            
+#                             intp = ex.correcion_interpretacion or 0.0
+#                             if intp < 10.1: desempenos['interpretar'][0] += 1
+#                             elif intp < 17.1: desempenos['interpretar'][1] += 1
+#                             elif intp < 22.9: desempenos['interpretar'][2] += 1
+#                             else: desempenos['interpretar'][3] += 1
+                            
+#                             ref = ex.correcion_reflexion or 0.0
+#                             if ref < 11.4: desempenos['reflexionar'][0] += 1
+#                             elif ref < 19.1: desempenos['reflexionar'][1] += 1
+#                             elif ref < 25.6: desempenos['reflexionar'][2] += 1
+#                             else: desempenos['reflexionar'][3] += 1
+                            
+#                             esc = ex.correcion_escritura or 0.0
+#                             if esc < 9.8: desempenos['escribir'][0] += 1
+#                             elif esc < 16.4: desempenos['escribir'][1] += 1
+#                             elif esc < 22: desempenos['escribir'][2] += 1
+#                             else: desempenos['escribir'][3] += 1
+#                 else:
+#                     total_ausentes += 1
+
+#                 datos_alumno = {
+#                     'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
+#                     'seccion': ex.alumno.seccion.seccion, 'turno': ex.alumno.seccion.turno,
+#                     'modelo': ex.modelo, 'asistencia': ex.asistencia,
+#                     'respuestas': [getattr(ex, f.name) for f in campos_preguntas], 'total_puntaje': ex.total_puntaje,
+#                 }
+
+#                 if filtro_materia == 'matematica':
+#                     datos_alumno.update({
+#                         'nota_reconocimiento': ex.correcion_reconocimiento,
+#                         'nota_comunicacion': ex.correcion_comunicacion, 'nota_resolucion': ex.correcion_resolucion,
+#                     })
+#                 elif filtro_materia == 'lengua':
+#                     datos_alumno.update({
+#                         'nota_extraer': ex.correcion_extraccion, 'nota_interpretar': ex.correcion_interpretacion,
+#                         'nota_reflexionar': ex.correcion_reflexion, 'nota_escribir': ex.correcion_escritura,
+#                     })
+#                 alumnos_con_examenes.append(datos_alumno)
+
+#     SECTORES_CHOICES = ['TODOS', 'Estatal', 'Gestión social/cooperativa', 'Privado']
+#     AMBITOS_CHOICES = ['TODOS', 'Rural Aglomerado', 'Rural Disperso', 'Urbano']
+#     REGIONES_CHOICES = ['TODOS', 'R.E. 1', 'SUB. R.E. 1-A', 'SUB. R.E. 1-B', 'R.E. 2', 'SUB. R.E. 2', 'R.E. 3', 'SUB. R.E. 3', 'R.E. 4-A', 'R.E. 4-B', 'R.E. 5', 'SUB. R.E. 5', 'R.E. 6', 'R.E. 7', 'R.E. 8-A', 'R.E. 8-B', 'R.E. 9', 'R.E. 10-A', 'R.E. 10-B', 'R.E. 10-C']
+
+#     context = {
+#         'rol': rol_usuario,
+#         'lista_escuelas': lista_escuelas,
+#         'cueanexo': selected_cue,
+#         'alumnos': alumnos_con_examenes,
+#         'columnas_preguntas': columnas_preguntas,
+#         'anio_sel': filtro_anio,
+#         'anio_nombre_sel': anio_nombre_sel,
+#         'seccion_sel': filtro_seccion,
+#         'turno_sel': filtro_turno,
+#         'materia_sel': filtro_materia,
+#         'condicion_sel': filtro_condicion,
+#         'asistencia_presentes': total_presentes,
+#         'asistencia_ausentes': total_ausentes,
+#         'desempenos': desempenos,
+#         'sector_sel': filtro_sector or 'TODOS',
+#         'ambito_sel': filtro_ambito or 'TODOS',
+#         'region_sel': filtro_region or 'TODOS',
+#         'sectores_opciones': SECTORES_CHOICES,
+#         'ambitos_opciones': AMBITOS_CHOICES,
+#         'regiones_opciones': REGIONES_CHOICES,
+#         'presentes_indigena': presentes_indigena,
+#         'presentes_discapacidad': presentes_discapacidad,
+#         'presentes_ambas': presentes_ambas,
+#         'presentes_ninguna': presentes_ninguna,
+#     }
+#     return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
+
+# @login_required
+# def analisis_evaluacion(request):
+#     usuario = request.user
+#     name = usuario.username
+#     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+    
+#     lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+#     rol_dennied = 'Director/a'
+#     rol_usuario = usuario.nivelacceso_id
+    
+#     # ── PROTECCIÓN DE ACCESO ─────────────────────────────────────
+#     if rol_usuario == rol_dennied:
+#         raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+#     if rol_usuario not in lista_usuarios_jerarquicos:
+#         has_oferta = CapaUnicaOfertas.objects.filter(
+#             resploc_cuitcuil=cuil_con_caracter, 
+#             offer__icontains='Secundaria Completa req. 7 años'
+#         ).exists()
+#         if not has_oferta:
+#             raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+          
+#     # ── 1. DETERMINACIÓN DEL UNIVERSO DE CUEs PERMITIDOS ────────────────────
+#     filtro_sector = request.GET.get('sector', '').strip()
+#     filtro_ambito = request.GET.get('ambito', '').strip()
+#     filtro_region = request.GET.get('region', '').strip()
+    
+#     filtro_condicion = request.GET.get('condicion', '').strip()
+
+#     user_cueanexos = []
+
+#     if rol_usuario in lista_usuarios_jerarquicos:
+#         filtros_establecimiento = Q()
+#         if filtro_sector and filtro_sector != 'TODOS':
+#             filtros_establecimiento &= Q(sector=filtro_sector)
+#         if filtro_ambito and filtro_ambito != 'TODOS':
+#             filtros_establecimiento &= Q(ambito=filtro_ambito)
+#         if filtro_region and filtro_region != 'TODOS':
+#             filtros_establecimiento &= Q(region=filtro_region)
+            
+#         cues_permitidos = Establecimientos2026.objects.filter(filtros_establecimiento).values_list('cueanexo', flat=True).distinct()
+#         user_cueanexos = [str(c) for c in cues_permitidos]
+#     else:
+#         user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
+#         user_cueanexos = [str(c) for c in user_cueanexos_raw]
+
+#     selected_cue = request.GET.get('cueanexo')
+#     if not selected_cue and user_cueanexos:
+#         selected_cue = str(user_cueanexos[0])
+
+#     if selected_cue not in user_cueanexos and selected_cue != 'TODOS':
+#         selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+#     selected_cue_int = None
+#     if selected_cue and selected_cue.isdigit():
+#         selected_cue_int = int(selected_cue)
+
+#     # Convertimos los CUEs permitidos a enteros para que Postgres no falle en consultas masivas
+#     cues_permitidos_int = [int(c) for c in user_cueanexos if c.isdigit()]
+
+#     escuelas_objs = Establecimientos2026.objects.filter(cueanexo__in=user_cueanexos).values('cueanexo', 'escuela')
+#     mapa_escuelas = {str(e['cueanexo']): e['escuela'] for e in escuelas_objs}
+    
+#     lista_escuelas = []
+#     for cue in user_cueanexos:
+#         nombre_escuela = mapa_escuelas.get(cue, "Establecimiento sin nombre")
+#         lista_escuelas.append({
+#             'cue': cue,
+#             'label': f"{cue} - {nombre_escuela}"
+#         })
+
+#     # ── 2. PETICIONES AJAX PARA CASCADA DINÁMICA ─────────────────────────────
+#     action = request.GET.get('action')
+#     if action and selected_cue_int is not None:
+#         if action == 'cargar_anios':
+#             anios = Seccion2026.objects.filter(año__cueanexo=selected_cue_int).values('año__id', 'año__nombre_año').distinct()
+#             return JsonResponse(list(anios), safe=False)
+            
+#         elif action == 'cargar_secciones_turnos':
+#             anio_id = request.GET.get('anio_id', 0) or 0
+#             combinaciones = Seccion2026.objects.filter(
+#                 año__cueanexo=selected_cue_int, 
+#                 año_id=int(str(anio_id).strip() or 0)
+#             ).values('seccion', 'turno').distinct().order_by('seccion', 'turno')
+            
+#             resultados = [
+#                 {
+#                     'id': f"{c['seccion']}|{c['turno']}", 
+#                     'label': f"Sección: {c['seccion']} - Turno: {str(c['turno']).upper()}"
+#                 } 
+#                 for c in combinaciones
+#             ]
+#             return JsonResponse(resultados, safe=False)
+
+#     # ── 3. CAPTURA DE FILTROS PEDAGÓGICOS ────────────────────────────────────
+#     filtro_anio = request.GET.get('anio')
+#     filtro_seccion = request.GET.get('seccion')
+#     filtro_turno = request.GET.get('turno')
+#     filtro_materia = request.GET.get('materia')
+
+#     anio_nombre_sel = filtro_anio
+#     if filtro_anio and filtro_anio.isdigit():
+#         seccion_ref = Seccion2026.objects.filter(año_id=int(filtro_anio)).select_related('año').first()
+#         if seccion_ref:
+#             anio_nombre_sel = seccion_ref.año.nombre_año
+
+#     alumnos_con_examenes = []
+#     columnas_preguntas = []
+#     total_presentes = total_ausentes = 0
+#     desempenos = {}
+
+#     presentes_indigena = 0
+#     presentes_discapacidad = 0
+#     presentes_ambas = 0
+#     presentes_ninguna = 0
+
+#     # ── 4. PROCESAMIENTO DE EXÁMENES Y CAPACIDADES ───────────────────────────
+#     es_masivo = (filtro_condicion != "") or (selected_cue == 'TODOS')
+#     es_individual = (selected_cue_int is not None and filtro_anio and filtro_seccion and filtro_turno)
+
+#     if filtro_materia and (es_masivo or es_individual):
+#         if filtro_materia == 'matematica':
+#             ModeloExamen = Matematica2026
+#             desempenos = {
+#                 'general': [0, 0, 0, 0], 'reconocimiento': [0, 0, 0, 0],
+#                 'comunicacion': [0, 0, 0, 0], 'resolucion': [0, 0, 0, 0]
+#             }
+#         elif filtro_materia == 'lengua':
+#             ModeloExamen = Lengua2026
+#             desempenos = {
+#                 'general': [0, 0, 0, 0], 'extraer': [0, 0, 0, 0],
+#                 'interpretar': [0, 0, 0, 0], 'reflexionar': [0, 0, 0, 0],
+#                 'escribir': [0, 0, 0, 0]
+#             }
+#         else:
+#             ModeloExamen = None
+
+#         if ModeloExamen:
+#             if es_masivo:
+#                 q_objs = Q(alumno__seccion__año__cueanexo__in=cues_permitidos_int)
+                
+#                 if filtro_condicion == 'discapacidad':
+#                     q_objs &= ~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)
+#                 elif filtro_condicion == 'descendencia':
+#                     q_objs &= ~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False)
+#                 elif filtro_condicion == 'ambos':
+#                     q_objs &= (
+#                         (~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)) |
+#                         (~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False))
+#                     )
+                    
+#                 examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+#             else:
+#                 examenes = ModeloExamen.objects.filter(
+#                     alumno__seccion__año__cueanexo=selected_cue_int,
+#                     alumno__seccion__año_id=int(filtro_anio),
+#                     alumno__seccion__seccion=filtro_seccion,
+#                     alumno__seccion__turno=filtro_turno
+#                 ).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+
+#             campos_preguntas = [f for f in ModeloExamen._meta.fields if f.name.startswith('pregunta_')]
+            
+#             def ordenar_por_numero(campo):
+#                 numeros = re.findall(r'\d+', campo.name)
+#                 return [int(n) for n in numeros]
+            
+#             campos_preguntas.sort(key=ordenar_por_numero)
+#             columnas_preguntas = [f.name.replace('pregunta_', 'P').replace('_', '.') for f in campos_preguntas]
+
+#             for ex in examenes:
+#                 asistencia_status = str(ex.asistencia).upper() if ex.asistencia else 'AUSENTE'
+                
+#                 if asistencia_status == 'PRESENTE':
+#                     total_presentes += 1
+
+#                     val_ind = str(ex.alumno.comunidad_indigena).strip().upper() if ex.alumno.comunidad_indigena else 'NO'
+#                     val_disc = str(ex.alumno.discapacidad).strip().upper() if ex.alumno.discapacidad else 'NO'
+                    
+#                     es_indigena = val_ind not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+#                     es_discapacitado = val_disc not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+                    
+#                     if es_indigena and es_discapacitado:
+#                         presentes_ambas += 1
+#                     elif es_indigena:
+#                         presentes_indigena += 1
+#                     elif es_discapacitado:
+#                         presentes_discapacidad += 1
+#                     else:
+#                         presentes_ninguna += 1
+
+#                     if not es_discapacitado or filtro_condicion:
+#                         tp = ex.total_puntaje or 0.0
+#                         if tp < 40: desempenos['general'][0] += 1
+#                         elif tp < 67: desempenos['general'][1] += 1
+#                         elif tp < 90: desempenos['general'][2] += 1
+#                         else: desempenos['general'][3] += 1
+
+#                         if filtro_materia == 'matematica':
+#                             rec = ex.correcion_reconocimiento or 0.0
+#                             if rec < 12.8: desempenos['reconocimiento'][0] += 1
+#                             elif rec < 21.4: desempenos['reconocimiento'][1] += 1
+#                             elif rec < 28.8: desempenos['reconocimiento'][2] += 1
+#                             else: desempenos['reconocimiento'][3] += 1
+                            
+#                             com = ex.correcion_comunicacion or 0.0
+#                             if com < 13.2: desempenos['comunicacion'][0] += 1
+#                             elif com < 22.1: desempenos['comunicacion'][1] += 1
+#                             elif com < 29.7: desempenos['comunicacion'][2] += 1
+#                             else: desempenos['comunicacion'][3] += 1
+                            
+#                             res = ex.correcion_resolucion or 0.0
+#                             if res < 14: desempenos['resolucion'][0] += 1
+#                             elif res < 23.4: desempenos['resolucion'][1] += 1
+#                             elif res < 31.4: desempenos['resolucion'][2] += 1
+#                             else: desempenos['resolucion'][3] += 1
+
+#                         elif filtro_materia == 'lengua':
+#                             ext = ex.correcion_extraccion or 0.0
+#                             if ext < 8.4: desempenos['extraer'][0] += 1
+#                             elif ext < 14.4: desempenos['extraer'][1] += 1
+#                             elif ext < 19.3: desempenos['extraer'][2] += 1
+#                             else: desempenos['extraer'][3] += 1
+                            
+#                             intp = ex.correcion_interpretacion or 0.0
+#                             if intp < 10.1: desempenos['interpretar'][0] += 1
+#                             elif intp < 17.1: desempenos['interpretar'][1] += 1
+#                             elif intp < 22.9: desempenos['interpretar'][2] += 1
+#                             else: desempenos['interpretar'][3] += 1
+                            
+#                             ref = ex.correcion_reflexion or 0.0
+#                             if ref < 11.4: desempenos['reflexionar'][0] += 1
+#                             elif ref < 19.1: desempenos['reflexionar'][1] += 1
+#                             elif ref < 25.6: desempenos['reflexionar'][2] += 1
+#                             else: desempenos['reflexionar'][3] += 1
+                            
+#                             esc = ex.correcion_escritura or 0.0
+#                             if esc < 9.8: desempenos['escribir'][0] += 1
+#                             elif esc < 16.4: desempenos['escribir'][1] += 1
+#                             elif esc < 22: desempenos['escribir'][2] += 1
+#                             else: desempenos['escribir'][3] += 1
+#                 else:
+#                     total_ausentes += 1
+
+#                 datos_alumno = {
+#                     'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
+#                     'seccion': ex.alumno.seccion.seccion, 'turno': ex.alumno.seccion.turno,
+#                     'modelo': ex.modelo, 'asistencia': ex.asistencia,
+#                     'respuestas': [getattr(ex, f.name) for f in campos_preguntas], 'total_puntaje': ex.total_puntaje,
+#                 }
+
+#                 if filtro_materia == 'matematica':
+#                     datos_alumno.update({
+#                         'nota_reconocimiento': ex.correcion_reconocimiento,
+#                         'nota_comunicacion': ex.correcion_comunicacion, 'nota_resolucion': ex.correcion_resolucion,
+#                     })
+#                 elif filtro_materia == 'lengua':
+#                     datos_alumno.update({
+#                         'nota_extraer': ex.correcion_extraccion, 'nota_interpretar': ex.correcion_interpretacion,
+#                         'nota_reflexionar': ex.correcion_reflexion, 'nota_escribir': ex.correcion_escritura,
+#                     })
+#                 alumnos_con_examenes.append(datos_alumno)
+
+#     SECTORES_CHOICES = ['TODOS', 'Estatal', 'Gestión social/cooperativa', 'Privado']
+#     AMBITOS_CHOICES = ['TODOS', 'Rural Aglomerado', 'Rural Disperso', 'Urbano']
+#     REGIONES_CHOICES = ['TODOS', 'R.E. 1', 'SUB. R.E. 1-A', 'SUB. R.E. 1-B', 'R.E. 2', 'SUB. R.E. 2', 'R.E. 3', 'SUB. R.E. 3', 'R.E. 4-A', 'R.E. 4-B', 'R.E. 5', 'SUB. R.E. 5', 'R.E. 6', 'R.E. 7', 'R.E. 8-A', 'R.E. 8-B', 'R.E. 9', 'R.E. 10-A', 'R.E. 10-B', 'R.E. 10-C']
+
+#     context = {
+#         'rol': rol_usuario,
+#         'lista_escuelas': lista_escuelas,
+#         'cueanexo': selected_cue,
+#         'alumnos': alumnos_con_examenes,
+#         'columnas_preguntas': columnas_preguntas,
+#         'anio_sel': filtro_anio,
+#         'anio_nombre_sel': anio_nombre_sel,
+#         'seccion_sel': filtro_seccion,
+#         'turno_sel': filtro_turno,
+#         'materia_sel': filtro_materia,
+#         'condicion_sel': filtro_condicion,
+#         'asistencia_presentes': total_presentes,
+#         'asistencia_ausentes': total_ausentes,
+#         'desempenos': desempenos,
+#         'sector_sel': filtro_sector or 'TODOS',
+#         'ambito_sel': filtro_ambito or 'TODOS',
+#         'region_sel': filtro_region or 'TODOS',
+#         'sectores_opciones': SECTORES_CHOICES,
+#         'ambitos_opciones': AMBITOS_CHOICES,
+#         'regiones_opciones': REGIONES_CHOICES,
+#         'presentes_indigena': presentes_indigena,
+#         'presentes_discapacidad': presentes_discapacidad,
+#         'presentes_ambas': presentes_ambas,
+#         'presentes_ninguna': presentes_ninguna,
+#     }
+#     return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
+
+# @login_required
+# def analisis_evaluacion(request):
+#     usuario = request.user
+#     name = usuario.username
+#     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+    
+#     lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+#     rol_dennied = 'Director/a'
+#     rol_usuario = usuario.nivelacceso_id
+    
+#     if rol_usuario == rol_dennied:
+#         raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+#     if rol_usuario not in lista_usuarios_jerarquicos:
+#         has_oferta = CapaUnicaOfertas.objects.filter(
+#             resploc_cuitcuil=cuil_con_caracter, 
+#             offer__icontains='Secundaria Completa req. 7 años'
+#         ).exists()
+#         if not has_oferta:
+#             raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+          
+#     # ── 1. DETERMINACIÓN DEL UNIVERSO DE CUEs PERMITIDOS ────────────────────
+#     filtro_sector = request.GET.get('sector', '').strip()
+#     filtro_ambito = request.GET.get('ambito', '').strip()
+#     filtro_region = request.GET.get('region', '').strip()
+#     filtro_condicion = request.GET.get('condicion', '').strip()
+
+#     filtros_establecimiento = Q()
+#     if rol_usuario in lista_usuarios_jerarquicos:
+#         if filtro_sector and filtro_sector != 'TODOS':
+#             filtros_establecimiento &= Q(sector=filtro_sector)
+#         if filtro_ambito and filtro_ambito != 'TODOS':
+#             filtros_establecimiento &= Q(ambito=filtro_ambito)
+#         if filtro_region and filtro_region != 'TODOS':
+#             filtros_establecimiento &= Q(region=filtro_region)
+        
+#         cues_permitidos_qs = Establecimientos2026.objects.filter(filtros_establecimiento).values_list('cueanexo', flat=True).distinct()
+#     else:
+#         user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
+#         cues_permitidos_qs = list(user_cueanexos_raw)
+
+#     user_cueanexos = [str(c) for c in cues_permitidos_qs]
+
+#     selected_cue = request.GET.get('cueanexo')
+#     if not selected_cue and user_cueanexos:
+#         selected_cue = str(user_cueanexos[0])
+
+#     if selected_cue not in user_cueanexos and selected_cue != 'TODOS':
+#         selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
+
+#     selected_cue_int = None
+#     if selected_cue and selected_cue.isdigit():
+#         selected_cue_int = int(selected_cue)
+
+#     cues_permitidos_int = [int(c) for c in user_cueanexos if c.isdigit()]
+
+#     escuelas_objs = Establecimientos2026.objects.filter(cueanexo__in=cues_permitidos_int).values('cueanexo', 'escuela')
+#     mapa_escuelas = {str(e['cueanexo']): e['escuela'] for e in escuelas_objs}
+    
+#     lista_escuelas = []
+#     for cue in user_cueanexos:
+#         nombre_escuela = mapa_escuelas.get(cue, "Establecimiento sin nombre")
+#         lista_escuelas.append({
+#             'cue': cue,
+#             'label': f"{cue} - {nombre_escuela}"
+#         })
+
+#     # ── 2. PETICIONES AJAX PARA CASCADA DINÁMICA ─────────────────────────────
+#     action = request.GET.get('action')
+#     if action and selected_cue_int is not None:
+#         if action == 'cargar_anios':
+#             anios = Seccion2026.objects.filter(año__cueanexo=selected_cue_int).values('año__id', 'año__nombre_año').distinct()
+#             return JsonResponse(list(anios), safe=False)
+            
+#         elif action == 'cargar_secciones_turnos':
+#             anio_id = request.GET.get('anio_id', 0) or 0
+#             combinaciones = Seccion2026.objects.filter(
+#                 año__cueanexo=selected_cue_int, 
+#                 año_id=int(str(anio_id).strip() or 0)
+#             ).values('seccion', 'turno').distinct().order_by('seccion', 'turno')
+            
+#             resultados = [
+#                 {
+#                     'id': f"{c['seccion']}|{c['turno']}", 
+#                     'label': f"Sección: {c['seccion']} - Turno: {str(c['turno']).upper()}"
+#                 } 
+#                 for c in combinaciones
+#             ]
+#             return JsonResponse(resultados, safe=False)
+
+#     # ── 3. CAPTURA DE FILTROS PEDAGÓGICOS ────────────────────────────────────
+#     filtro_anio = request.GET.get('anio')
+#     filtro_seccion = request.GET.get('seccion')
+#     filtro_turno = request.GET.get('turno')
+#     filtro_materia = request.GET.get('materia')
+
+#     anio_nombre_sel = filtro_anio
+#     if filtro_anio and filtro_anio.isdigit():
+#         seccion_ref = Seccion2026.objects.filter(año_id=int(filtro_anio)).select_related('año').first()
+#         if seccion_ref:
+#             anio_nombre_sel = seccion_ref.año.nombre_año
+
+#     alumnos_con_examenes = []
+#     columnas_preguntas = []
+#     total_presentes = total_ausentes = 0
+#     desempenos = {}
+
+#     presentes_indigena = presentes_discapacidad = presentes_ambas = presentes_ninguna = 0
+
+#     # ── 4. PROCESAMIENTO DE EXÁMENES Y CAPACIDADES ───────────────────────────
+#     es_masivo = (filtro_condicion != "") or (selected_cue == 'TODOS')
+#     es_individual = (selected_cue_int is not None and filtro_anio and filtro_seccion and filtro_turno)
+
+#     if filtro_materia and (es_masivo or es_individual):
+#         if filtro_materia == 'matematica':
+#             ModeloExamen = Matematica2026
+#             desempenos = {
+#                 'general': [0, 0, 0, 0], 'reconocimiento': [0, 0, 0, 0],
+#                 'comunicacion': [0, 0, 0, 0], 'resolucion': [0, 0, 0, 0]
+#             }
+#         elif filtro_materia == 'lengua':
+#             ModeloExamen = Lengua2026
+#             desempenos = {
+#                 'general': [0, 0, 0, 0], 'extraer': [0, 0, 0, 0],
+#                 'interpretar': [0, 0, 0, 0], 'reflexionar': [0, 0, 0, 0],
+#                 'escribir': [0, 0, 0, 0]
+#             }
+#         else:
+#             ModeloExamen = None
+
+#         if ModeloExamen:
+#             if es_masivo:
+#                 q_objs = Q(alumno__seccion__año__cueanexo__in=cues_permitidos_int)
+                
+#                 if filtro_condicion == 'discapacidad':
+#                     q_objs &= ~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)
+#                 elif filtro_condicion == 'descendencia':
+#                     q_objs &= ~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False)
+#                 elif filtro_condicion == 'ambos':
+#                     q_objs &= (
+#                         (~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)) |
+#                         (~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False))
+#                     )
+                
+#                 # OPTIMIZACIÓN: Si es masivo, quitamos el order_by para que SQL vuele.
+#                 examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año')
+#             else:
+#                 examenes = ModeloExamen.objects.filter(
+#                     alumno__seccion__año__cueanexo=selected_cue_int,
+#                     alumno__seccion__año_id=int(filtro_anio),
+#                     alumno__seccion__seccion=filtro_seccion,
+#                     alumno__seccion__turno=filtro_turno
+#                 ).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+
+#             campos_preguntas = [f for f in ModeloExamen._meta.fields if f.name.startswith('pregunta_')]
+#             def ordenar_por_numero(campo):
+#                 numeros = re.findall(r'\d+', campo.name)
+#                 return [int(n) for n in numeros]
+            
+#             campos_preguntas.sort(key=ordenar_por_numero)
+#             columnas_preguntas = [f.name.replace('pregunta_', 'P').replace('_', '.') for f in campos_preguntas]
+
+#             for ex in examenes:
+#                 asistencia_status = str(ex.asistencia).upper() if ex.asistencia else 'AUSENTE'
+                
+#                 if asistencia_status == 'PRESENTE':
+#                     total_presentes += 1
+
+#                     val_ind = str(ex.alumno.comunidad_indigena).strip().upper() if ex.alumno.comunidad_indigena else 'NO'
+#                     val_disc = str(ex.alumno.discapacidad).strip().upper() if ex.alumno.discapacidad else 'NO'
+                    
+#                     es_indigena = val_ind not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+#                     es_discapacitado = val_disc not in ['NO', 'NINGUNA', 'NINGUNO', 'FALSE', '']
+                    
+#                     if es_indigena and es_discapacitado:
+#                         presentes_ambas += 1
+#                     elif es_indigena:
+#                         presentes_indigena += 1
+#                     elif es_discapacitado:
+#                         presentes_discapacidad += 1
+#                     else:
+#                         presentes_ninguna += 1
+
+#                     if not es_discapacitado or filtro_condicion:
+#                         tp = ex.total_puntaje or 0.0
+#                         if tp < 40: desempenos['general'][0] += 1
+#                         elif tp < 67: desempenos['general'][1] += 1
+#                         elif tp < 90: desempenos['general'][2] += 1
+#                         else: desempenos['general'][3] += 1
+
+#                         if filtro_materia == 'matematica':
+#                             rec = ex.correcion_reconocimiento or 0.0
+#                             if rec < 12.8: desempenos['reconocimiento'][0] += 1
+#                             elif rec < 21.4: desempenos['reconocimiento'][1] += 1
+#                             elif rec < 28.8: desempenos['reconocimiento'][2] += 1
+#                             else: desempenos['reconocimiento'][3] += 1
+                            
+#                             com = ex.correcion_comunicacion or 0.0
+#                             if com < 13.2: desempenos['comunicacion'][0] += 1
+#                             elif com < 22.1: desempenos['comunicacion'][1] += 1
+#                             elif com < 29.7: desempenos['comunicacion'][2] += 1
+#                             else: desempenos['comunicacion'][3] += 1
+                            
+#                             res = ex.correcion_resolucion or 0.0
+#                             if res < 14: desempenos['resolucion'][0] += 1
+#                             elif res < 23.4: desempenos['resolucion'][1] += 1
+#                             elif res < 31.4: desempenos['resolucion'][2] += 1
+#                             else: desempenos['resolucion'][3] += 1
+
+#                         elif filtro_materia == 'lengua':
+#                             ext = ex.correcion_extraccion or 0.0
+#                             if ext < 8.4: desempenos['extraer'][0] += 1
+#                             elif ext < 14.4: desempenos['extraer'][1] += 1
+#                             elif ext < 19.3: desempenos['extraer'][2] += 1
+#                             else: desempenos['extraer'][3] += 1
+                            
+#                             intp = ex.correcion_interpretacion or 0.0
+#                             if intp < 10.1: desempenos['interpretar'][0] += 1
+#                             elif intp < 17.1: desempenos['interpretar'][1] += 1
+#                             elif intp < 22.9: desempenos['interpretar'][2] += 1
+#                             else: desempenos['interpretar'][3] += 1
+                            
+#                             ref = ex.correcion_reflexion or 0.0
+#                             if ref < 11.4: desempenos['reflexionar'][0] += 1
+#                             elif ref < 19.1: desempenos['reflexionar'][1] += 1
+#                             elif ref < 25.6: desempenos['reflexionar'][2] += 1
+#                             else: desempenos['reflexionar'][3] += 1
+                            
+#                             esc = ex.correcion_escritura or 0.0
+#                             if esc < 9.8: desempenos['escribir'][0] += 1
+#                             elif esc < 16.4: desempenos['escribir'][1] += 1
+#                             elif esc < 22: desempenos['escribir'][2] += 1
+#                             else: desempenos['escribir'][3] += 1
+#                 else:
+#                     total_ausentes += 1
+
+#                 # OPTIMIZACIÓN: Solo armamos el diccionario y lo agregamos si NO es masivo.
+#                 if not es_masivo:
+#                     datos_alumno = {
+#                         'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
+#                         'seccion': ex.alumno.seccion.seccion, 'turno': ex.alumno.seccion.turno,
+#                         'modelo': ex.modelo, 'asistencia': ex.asistencia,
+#                         'respuestas': [getattr(ex, f.name) for f in campos_preguntas], 'total_puntaje': ex.total_puntaje,
+#                     }
+
+#                     if filtro_materia == 'matematica':
+#                         datos_alumno.update({
+#                             'nota_reconocimiento': ex.correcion_reconocimiento,
+#                             'nota_comunicacion': ex.correcion_comunicacion, 'nota_resolucion': ex.correcion_resolucion,
+#                         })
+#                     elif filtro_materia == 'lengua':
+#                         datos_alumno.update({
+#                             'nota_extraer': ex.correcion_extraccion, 'nota_interpretar': ex.correcion_interpretacion,
+#                             'nota_reflexionar': ex.correcion_reflexion, 'nota_escribir': ex.correcion_escritura,
+#                         })
+#                     alumnos_con_examenes.append(datos_alumno)
+
+#     SECTORES_CHOICES = ['TODOS', 'Estatal', 'Gestión social/cooperativa', 'Privado']
+#     AMBITOS_CHOICES = ['TODOS', 'Rural Aglomerado', 'Rural Disperso', 'Urbano']
+#     REGIONES_CHOICES = ['TODOS', 'R.E. 1', 'SUB. R.E. 1-A', 'SUB. R.E. 1-B', 'R.E. 2', 'SUB. R.E. 2', 'R.E. 3', 'SUB. R.E. 3', 'R.E. 4-A', 'R.E. 4-B', 'R.E. 5', 'SUB. R.E. 5', 'R.E. 6', 'R.E. 7', 'R.E. 8-A', 'R.E. 8-B', 'R.E. 9', 'R.E. 10-A', 'R.E. 10-B', 'R.E. 10-C']
+
+#     context = {
+#         'rol': rol_usuario,
+#         'lista_escuelas': lista_escuelas,
+#         'cueanexo': selected_cue,
+#         'alumnos': alumnos_con_examenes, # Estará vacía si es masivo
+#         'es_masivo': es_masivo, # Nueva bandera para el HTML
+#         'hay_datos': (total_presentes + total_ausentes) > 0, # Verifica si hubo resultados, aun sin la lista
+#         'columnas_preguntas': columnas_preguntas,
+#         'anio_sel': filtro_anio,
+#         'anio_nombre_sel': anio_nombre_sel,
+#         'seccion_sel': filtro_seccion,
+#         'turno_sel': filtro_turno,
+#         'materia_sel': filtro_materia,
+#         'condicion_sel': filtro_condicion,
+#         'asistencia_presentes': total_presentes,
+#         'asistencia_ausentes': total_ausentes,
+#         'desempenos': desempenos,
+#         'sector_sel': filtro_sector or 'TODOS',
+#         'ambito_sel': filtro_ambito or 'TODOS',
+#         'region_sel': filtro_region or 'TODOS',
+#         'sectores_opciones': SECTORES_CHOICES,
+#         'ambitos_opciones': AMBITOS_CHOICES,
+#         'regiones_opciones': REGIONES_CHOICES,
+#         'presentes_indigena': presentes_indigena,
+#         'presentes_discapacidad': presentes_discapacidad,
+#         'presentes_ambas': presentes_ambas,
+#         'presentes_ninguna': presentes_ninguna,
+#     }
+#     return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
+
 @login_required
 def analisis_evaluacion(request):
     usuario = request.user
@@ -920,8 +1793,6 @@ def analisis_evaluacion(request):
     filtro_sector = request.GET.get('sector', '').strip()
     filtro_ambito = request.GET.get('ambito', '').strip()
     filtro_region = request.GET.get('region', '').strip()
-    
-    # NUEVO FILTRO CONDICIONAL
     filtro_condicion = request.GET.get('condicion', '').strip()
 
     user_cueanexos = []
@@ -945,12 +1816,14 @@ def analisis_evaluacion(request):
     if not selected_cue and user_cueanexos:
         selected_cue = str(user_cueanexos[0])
 
-    if selected_cue not in user_cueanexos:
+    if selected_cue not in user_cueanexos and selected_cue != 'TODOS':
         selected_cue = str(user_cueanexos[0]) if user_cueanexos else None
 
     selected_cue_int = None
     if selected_cue and selected_cue.isdigit():
         selected_cue_int = int(selected_cue)
+
+    cues_permitidos_int = [int(c) for c in user_cueanexos if c.isdigit()]
 
     escuelas_objs = Establecimientos2026.objects.filter(cueanexo__in=user_cueanexos).values('cueanexo', 'escuela')
     mapa_escuelas = {str(e['cueanexo']): e['escuela'] for e in escuelas_objs}
@@ -1002,14 +1875,18 @@ def analisis_evaluacion(request):
     columnas_preguntas = []
     total_presentes = total_ausentes = 0
     desempenos = {}
-
-    presentes_indigena = 0
-    presentes_discapacidad = 0
-    presentes_ambas = 0
-    presentes_ninguna = 0
+    presentes_indigena = presentes_discapacidad = presentes_ambas = presentes_ninguna = 0
 
     # ── 4. PROCESAMIENTO DE EXÁMENES Y CAPACIDADES ───────────────────────────
-    if filtro_materia and (filtro_condicion or (selected_cue_int and filtro_anio and filtro_seccion and filtro_turno)):
+    # Desacoplamos la lógica: Una cosa es buscar por Condición, otra por TODOS, otra Individual
+    es_busqueda_condicion = filtro_condicion != ""
+    es_busqueda_todos = selected_cue == 'TODOS'
+    es_busqueda_individual = selected_cue_int is not None and filtro_anio and filtro_seccion and filtro_turno
+
+    # La única combinación donde ocultamos la tabla es si pide TODOS sin ninguna Condición extra
+    ocultar_listado = es_busqueda_todos and not es_busqueda_condicion
+
+    if filtro_materia and (es_busqueda_condicion or es_busqueda_todos or es_busqueda_individual):
         if filtro_materia == 'matematica':
             ModeloExamen = Matematica2026
             desempenos = {
@@ -1027,18 +1904,24 @@ def analisis_evaluacion(request):
             ModeloExamen = None
 
         if ModeloExamen:
-            if filtro_condicion:
-                q_objs = Q(alumno__seccion__año__cueanexo__in=user_cueanexos)
+            if es_busqueda_condicion or es_busqueda_todos:
+                q_objs = Q(alumno__seccion__año__cueanexo__in=cues_permitidos_int)
                 
                 if filtro_condicion == 'discapacidad':
                     q_objs &= ~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)
                 elif filtro_condicion == 'descendencia':
                     q_objs &= ~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False)
                 elif filtro_condicion == 'ambos':
-                    q_objs &= ~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)
-                    q_objs &= ~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False)
-                    
-                examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+                    q_objs &= (
+                        (~Q(alumno__discapacidad__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__discapacidad__isnull=False)) |
+                        (~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False))
+                    )
+                
+                # Si vamos a armar el listado (condición activa), mantenemos el order_by
+                if not ocultar_listado:
+                    examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+                else:
+                    examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año')
             else:
                 examenes = ModeloExamen.objects.filter(
                     alumno__seccion__año__cueanexo=selected_cue_int,
@@ -1048,7 +1931,6 @@ def analisis_evaluacion(request):
                 ).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
 
             campos_preguntas = [f for f in ModeloExamen._meta.fields if f.name.startswith('pregunta_')]
-            
             def ordenar_por_numero(campo):
                 numeros = re.findall(r'\d+', campo.name)
                 return [int(n) for n in numeros]
@@ -1077,7 +1959,6 @@ def analisis_evaluacion(request):
                     else:
                         presentes_ninguna += 1
 
-                    # Solo omite del gráfico a los discapacitados si NO se filtró explícitamente por ellos
                     if not es_discapacitado or filtro_condicion:
                         tp = ex.total_puntaje or 0.0
                         if tp < 40: desempenos['general'][0] += 1
@@ -1131,24 +2012,26 @@ def analisis_evaluacion(request):
                 else:
                     total_ausentes += 1
 
-                datos_alumno = {
-                    'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
-                    'seccion': ex.alumno.seccion.seccion, 'turno': ex.alumno.seccion.turno,
-                    'modelo': ex.modelo, 'asistencia': ex.asistencia,
-                    'respuestas': [getattr(ex, f.name) for f in campos_preguntas], 'total_puntaje': ex.total_puntaje,
-                }
+                # ARMADO DEL LISTADO (Se activa para Colegios o Condiciones)
+                if not ocultar_listado:
+                    datos_alumno = {
+                        'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
+                        'seccion': ex.alumno.seccion.seccion, 'turno': ex.alumno.seccion.turno,
+                        'modelo': ex.modelo, 'asistencia': ex.asistencia,
+                        'respuestas': [getattr(ex, f.name) for f in campos_preguntas], 'total_puntaje': ex.total_puntaje,
+                    }
 
-                if filtro_materia == 'matematica':
-                    datos_alumno.update({
-                        'nota_reconocimiento': ex.correcion_reconocimiento,
-                        'nota_comunicacion': ex.correcion_comunicacion, 'nota_resolucion': ex.correcion_resolucion,
-                    })
-                elif filtro_materia == 'lengua':
-                    datos_alumno.update({
-                        'nota_extraer': ex.correcion_extraccion, 'nota_interpretar': ex.correcion_interpretacion,
-                        'nota_reflexionar': ex.correcion_reflexion, 'nota_escribir': ex.correcion_escritura,
-                    })
-                alumnos_con_examenes.append(datos_alumno)
+                    if filtro_materia == 'matematica':
+                        datos_alumno.update({
+                            'nota_reconocimiento': ex.correcion_reconocimiento,
+                            'nota_comunicacion': ex.correcion_comunicacion, 'nota_resolucion': ex.correcion_resolucion,
+                        })
+                    elif filtro_materia == 'lengua':
+                        datos_alumno.update({
+                            'nota_extraer': ex.correcion_extraccion, 'nota_interpretar': ex.correcion_interpretacion,
+                            'nota_reflexionar': ex.correcion_reflexion, 'nota_escribir': ex.correcion_escritura,
+                        })
+                    alumnos_con_examenes.append(datos_alumno)
 
     SECTORES_CHOICES = ['TODOS', 'Estatal', 'Gestión social/cooperativa', 'Privado']
     AMBITOS_CHOICES = ['TODOS', 'Rural Aglomerado', 'Rural Disperso', 'Urbano']
@@ -1159,6 +2042,8 @@ def analisis_evaluacion(request):
         'lista_escuelas': lista_escuelas,
         'cueanexo': selected_cue,
         'alumnos': alumnos_con_examenes,
+        'ocultar_listado': ocultar_listado, 
+        'hay_datos': (total_presentes + total_ausentes) > 0,
         'columnas_preguntas': columnas_preguntas,
         'anio_sel': filtro_anio,
         'anio_nombre_sel': anio_nombre_sel,
