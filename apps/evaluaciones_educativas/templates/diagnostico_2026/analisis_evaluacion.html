@@ -53,9 +53,6 @@
     
     .alert-warning { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba; }
 
-    /* =========================================
-       REGLAS RESPONSIVAS
-       ========================================= */
     @media (max-width: 1024px) {
         .layout-container { grid-template-columns: 250px 1fr; }
         .chart-card { min-width: 100%; }
@@ -128,7 +125,7 @@
                 <option value="">--- Ninguno ---</option>
                 <option value="discapacidad" {% if condicion_sel == 'discapacidad' %}selected{% endif %}>Alumnos con discapacidad</option>
                 <option value="descendencia" {% if condicion_sel == 'descendencia' %}selected{% endif %}>Comunidad Indígena</option>
-                <option value="ambos" {% if condicion_sel == 'ambos' %}selected{% endif %}>Ambos</option>
+                <!-- <option value="ambos" {% if condicion_sel == 'ambos' %}selected{% endif %}>Ambos</option> -->
             </select>
         </div>
         {% endif %}
@@ -138,6 +135,7 @@
             <label>Establecimiento</label>
             <select id="select-cue" {% if condicion_sel %}disabled{% endif %}>
                 <option value="" {% if not request.GET.cueanexo %}selected{% endif %}>--- Seleccione Establecimiento ---</option>
+                <option value="TODOS" {% if cueanexo == 'TODOS' %}selected{% endif %}>--- TODOS ---</option>
                 
                 {% for esc in lista_escuelas %}
                     <option value="{{ esc.cue }}" {% if esc.cue == cueanexo and request.GET.cueanexo %}selected{% endif %}>{{ esc.label }}</option>
@@ -145,13 +143,13 @@
             </select>
 
             <label>Año</label>
-            <select id="select-anio" {% if not anio_sel or condicion_sel %}disabled{% endif %}>
+            <select id="select-anio" {% if not anio_sel or condicion_sel or cueanexo == 'TODOS' %}disabled{% endif %}>
                 <option value="">--- Seleccione Año ---</option>
                 {% if anio_sel %}<option value="{{ anio_sel }}" selected>{{ anio_nombre_sel }}</option>{% endif %}
             </select>
 
             <label>Sección y Turno</label>
-            <select id="select-seccion-turno" {% if not seccion_sel or not turno_sel or condicion_sel %}disabled{% endif %}>
+            <select id="select-seccion-turno" {% if not seccion_sel or not turno_sel or condicion_sel or cueanexo == 'TODOS' %}disabled{% endif %}>
                 <option value="">--- Seleccione Sección y Turno ---</option>
                 {% if seccion_sel and turno_sel %}
                     <option value="{{ seccion_sel }}|{{ turno_sel }}" selected>Sección: {{ seccion_sel }} - Turno: {{ turno_sel|upper }}</option>
@@ -165,14 +163,18 @@
                 <option value="lengua" {% if materia_sel == 'lengua' %}selected{% endif %}>Lengua</option>
             </select>
 
-            <button id="btn-filtrar" class="btn-sidebar btn-primary" {% if not materia_sel %}disabled{% endif %}>Filtrar Alumnos</button>
+            <button id="btn-filtrar" class="btn-sidebar btn-primary" {% if not materia_sel %}disabled{% endif %}>Filtrar</button>
         </div>
 
         <h3>Visualización</h3>
         <div class="filter-header" onclick="toggleFilter('grafico_view')">CAMBIAR VISTA <span>▼</span></div>
         <ul id="grafico_view" class="filter-list active">
             <li><a href="javascript:void(0)" onclick="cambiarVista('grafico')">📊 Ver Gráficos</a></li>
-            <li><a href="javascript:void(0)" onclick="cambiarVista('listado')">📋 Ver Listado</a></li>
+            
+            <li id="menu-listado" style="display: {% if ocultar_listado %}none{% else %}block{% endif %};">
+                <a href="javascript:void(0)" onclick="cambiarVista('listado')">📋 Ver Listado</a>
+            </li>
+            
             <li><a href="javascript:void(0)" onclick="cambiarVista('lectura')">📖 Leer Material</a></li>
         </ul>
     </aside>
@@ -181,10 +183,12 @@
         <header class="dashboard-header">
             <h1>Panel de Gestión - Departamento de Evaluación Educativa</h1>
             <p class="text-muted" id="header-detalle">
-                {% if alumnos %}
+                {% if hay_datos %}
                     Mostrando resultados para: <strong>{{ materia_sel|title }}</strong> | 
                     {% if condicion_sel %}
                         Filtro Activo: <strong>{{ condicion_sel|title }}</strong>
+                    {% elif cueanexo == 'TODOS' %}
+                        Establecimientos: <strong>TODOS LOS PERMITIDOS EN ESTA REGIÓN</strong>
                     {% else %}
                         Sección: <strong>{{ seccion_sel }}</strong> ({{ turno_sel|upper }})
                     {% endif %}
@@ -194,7 +198,7 @@
             </p>
         </header>
 
-        <div id="vista_graficos" style="display: {% if alumnos %}none{% else %}block{% endif %};">
+        <div id="vista_graficos" style="display: {% if ocultar_listado or not alumnos %}block{% else %}none{% endif %};">
             <h3 class="section-title">Análisis General y por Capacidades - {{ materia_sel|title|default:"Materia no seleccionada" }}</h3>
             
             <div class="chart-card" style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 20px; margin-bottom: 25px;">
@@ -236,12 +240,12 @@
             </div>
         </div>
         
-        <div id="vista_listado" class="listado-container" style="display: {% if alumnos %}block{% else %}none{% endif %};">
+        <div id="vista_listado" class="listado-container" style="display: {% if alumnos and not ocultar_listado %}block{% else %}none{% endif %};">
             
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; margin-bottom: 20px; padding-bottom: 10px; flex-wrap: wrap; gap: 15px;">
                 <h3 class="section-title" style="border: none; margin: 0; padding: 0;">Detalle de Alumnos - {{ materia_sel|title|default:"Materia no seleccionada" }}</h3>
                 
-                {% if alumnos %}
+                {% if alumnos and not ocultar_listado %}
                     <a href="{% url 'evaluaciones_educativas:diagnostico_2026:descargar_reporte_listado' materia_sel %}?cueanexo={{ cueanexo }}&anio={{ anio_sel }}&seccion={{ seccion_sel }}&turno={{ turno_sel }}" 
                        style="background: #e74c3c; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: 0.3s; white-space: nowrap;"
                        onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
@@ -250,7 +254,11 @@
                 {% endif %}
             </div>
              
-            {% if alumnos %}
+            {% if ocultar_listado %}
+                <div class="alert-warning">
+                    ⚠️ El listado de alumnos está deshabilitado para las consultas regionales masivas por motivos de rendimiento. Por favor, seleccione un establecimiento específico si desea ver el detalle alumno por alumno.
+                </div>
+            {% elif alumnos %}
                 <div class="table-responsive">
                     <table id="tablaAlumnos" class="data-table">
                         <thead>
@@ -390,7 +398,7 @@
                 </div>
             {% else %}
                 <div class="alert-warning">
-                    No se encontraron alumnos para los filtros seleccionados, o aún no ha realizado una búsqueda.
+                    No se encontraron resultados para los filtros seleccionados, o aún no ha realizado una búsqueda.
                 </div>
             {% endif %}
         </div>
@@ -458,21 +466,19 @@
         const selectMateria = document.getElementById('select-materia');
         const selectCondicion = document.getElementById('select-condicion');
         const btnFiltrar = document.getElementById('btn-filtrar');
+        const menuListado = document.getElementById('menu-listado');
         const URL_ACTUAL = window.location.pathname;
 
         $j('#select-cue').select2({ 
             placeholder: "Buscar establecimiento...", 
             width: '100%',
             language: {
-                noResults: function() {
-                    return "No se encontraron resultados";
-                }
+                noResults: function() { return "No se encontraron resultados"; }
             }
         }).on('select2:select', function(e) { 
             selectCue.dispatchEvent(new Event('change')); 
         });
 
-        // Automatización de selectores jerárquicos
         document.querySelectorAll('.management-filter').forEach(select => {
             select.addEventListener('change', function() {
                 const url = new URL(window.location.origin + URL_ACTUAL);
@@ -497,12 +503,72 @@
             if (btnFiltrar) btnFiltrar.disabled = true;
         }
 
+        function actualizarEstadosUI() {
+            const condicionActiva = selectCondicion && selectCondicion.value !== "";
+            const todosActivo = selectCue.value === "TODOS";
+
+            if (condicionActiva) {
+                // Hay Condición: Bloquea escuela, muestra listado (son pocos)
+                $j('#select-cue').prop('disabled', true);
+                selectAnio.disabled = true;
+                selectSeccionTurno.disabled = true;
+                selectMateria.disabled = false;
+                if(menuListado) menuListado.style.display = 'block'; 
+            } else if (todosActivo) {
+                // TODOS puro: Habilita escuela, oculta listado (son demasiados)
+                $j('#select-cue').prop('disabled', false);
+                selectAnio.disabled = true;
+                selectSeccionTurno.disabled = true;
+                selectMateria.disabled = false;
+                if(menuListado) menuListado.style.display = 'none';
+            } else {
+                // Flujo individual normal
+                $j('#select-cue').prop('disabled', false);
+                if(menuListado) menuListado.style.display = 'block';
+                
+                const tieneEscuela = selectCue.value !== "";
+                selectAnio.disabled = !tieneEscuela;
+                
+                if (!tieneEscuela) {
+                    selectSeccionTurno.disabled = true;
+                    selectMateria.disabled = true;
+                } else {
+                    selectSeccionTurno.disabled = !selectAnio.value;
+                    selectMateria.disabled = !selectSeccionTurno.value;
+                }
+            }
+            if (btnFiltrar) btnFiltrar.disabled = !selectMateria.value;
+        }
+
+        if (selectCondicion) {
+            selectCondicion.addEventListener('change', function() {
+                if (this.value !== "") {
+                    $j('#select-cue').val("").trigger('change.select2');
+                    selectAnio.innerHTML = '<option value="">--- Seleccione Año ---</option>';
+                    selectSeccionTurno.innerHTML = '<option value="">--- Seleccione Sección y Turno ---</option>';
+                } else {
+                    if (!$j('#select-cue').val() || $j('#select-cue').val() === 'TODOS') {
+                        selectAnio.innerHTML = '<option value="">--- Seleccione Año ---</option>';
+                        selectSeccionTurno.innerHTML = '<option value="">--- Seleccione Sección y Turno ---</option>';
+                    }
+                }
+                actualizarEstadosUI();
+            });
+        }
+
         selectCue.addEventListener('change', function () {
-            resetearSelectores([selectAnio, selectSeccionTurno, selectMateria]);
-            if (!this.value) return;
+            if (this.value === 'TODOS' || !this.value) {
+                if (!this.value) resetearSelectores([selectAnio, selectSeccionTurno, selectMateria]);
+                actualizarEstadosUI();
+                return;
+            }
 
             selectAnio.innerHTML = '<option value="">⏳ Cargando años...</option>';
             selectAnio.disabled = true;
+            selectSeccionTurno.innerHTML = '<option value="">--- Seleccione Sección y Turno ---</option>';
+            selectSeccionTurno.disabled = true;
+            selectMateria.value = "";
+            selectMateria.disabled = true;
 
             fetch(`${URL_ACTUAL}?action=cargar_anios&cueanexo=${this.value}`)
                 .then(response => response.json())
@@ -514,14 +580,17 @@
                     selectAnio.disabled = false;
                 })
                 .catch(error => { selectAnio.innerHTML = '<option value="">❌ Error al cargar</option>'; });
+            
+            actualizarEstadosUI();
         });
 
         selectAnio.addEventListener('change', function () {
-            resetearSelectores([selectSeccionTurno, selectMateria]);
-            if (!this.value) return;
-
             selectSeccionTurno.innerHTML = '<option value="">⏳ Cargando secciones...</option>';
             selectSeccionTurno.disabled = true;
+            selectMateria.value = "";
+            selectMateria.disabled = true;
+            
+            if (!this.value) return;
 
             fetch(`${URL_ACTUAL}?action=cargar_secciones_turnos&cueanexo=${selectCue.value}&anio_id=${this.value}`)
                 .then(response => response.json())
@@ -536,54 +605,15 @@
         });
 
         selectSeccionTurno.addEventListener('change', function () {
-            resetearSelectores([selectMateria]);
-            if (!this.value) return;
-            selectMateria.disabled = false;
+            selectMateria.value = "";
+            actualizarEstadosUI();
         });
-
-        if (selectCondicion) {
-            selectCondicion.addEventListener('change', function() {
-                if (this.value !== "") {
-                    // Bloqueo inmediato de la cascada
-                    $j('#select-cue').prop('disabled', true);
-                    selectAnio.disabled = true;
-                    selectSeccionTurno.disabled = true;
-                    
-                    selectMateria.disabled = false;
-                } else {
-                    // Libero el buscador principal
-                    $j('#select-cue').prop('disabled', false);
-                    
-                    // Restauro el flujo normal de la cascada
-                    if (!$j('#select-cue').val()) {
-                        resetearSelectores([selectAnio, selectSeccionTurno, selectMateria]);
-                    } else {
-                        selectAnio.disabled = false;
-                        if (selectAnio.value) {
-                            selectSeccionTurno.disabled = false;
-                        }
-                        if (!selectSeccionTurno.value) {
-                            selectMateria.disabled = true;
-                            selectMateria.value = "";
-                        }
-                    }
-                }
-                
-                if (btnFiltrar) btnFiltrar.disabled = !selectMateria.value;
-            });
-
-            // Si al recargar ya venía con Condición desde la URL
-            if (selectCondicion.value !== "") {
-                $j('#select-cue').prop('disabled', true);
-                selectAnio.disabled = true;
-                selectSeccionTurno.disabled = true;
-                selectMateria.disabled = false;
-            }
-        }
 
         selectMateria.addEventListener('change', function () {
             if (btnFiltrar) { btnFiltrar.disabled = !this.value; }
         });
+
+        actualizarEstadosUI();
 
         btnFiltrar.addEventListener('click', function () {
             const url = new URL(window.location.origin + URL_ACTUAL);
@@ -600,11 +630,13 @@
 
             if (!cond || !cond.value) {
                 url.searchParams.append('cueanexo', selectCue.value);
-                url.searchParams.append('anio', selectAnio.value);
-                if (selectSeccionTurno.value) {
-                    const [seccion, turno] = selectSeccionTurno.value.split('|');
-                    url.searchParams.append('seccion', seccion);
-                    url.searchParams.append('turno', turno);
+                if (selectCue.value !== 'TODOS') {
+                    url.searchParams.append('anio', selectAnio.value);
+                    if (selectSeccionTurno.value) {
+                        const [seccion, turno] = selectSeccionTurno.value.split('|');
+                        url.searchParams.append('seccion', seccion);
+                        url.searchParams.append('turno', turno);
+                    }
                 }
             }
             
