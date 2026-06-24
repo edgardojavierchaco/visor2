@@ -1,3 +1,4 @@
+from typing import Any
 import uuid
 from datetime import timedelta
 
@@ -75,7 +76,18 @@ class DispositivoUsuario(models.Model):
         null=True,
         blank=True
     )
+    
+    modelo = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
 
+    ubicacion = models.JSONField(
+        null=True,
+        blank=True
+    )
+    
     def save(self, *args, **kwargs):
 
         if not self.expira:
