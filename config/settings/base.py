@@ -86,6 +86,7 @@ LOCAL_APPS = [
     "apps.cef.apps.CefConfig",
     "apps.bnhalumnos.apps.BnhalumnosConfig",
     "apps.supervisor_registro.apps.SupervisorRegistroConfig",
+    "apps.monitoreo_login",
 ]
 
 
@@ -346,3 +347,7 @@ CELERY_RESULT_EXPIRES = 3600
 # 🔥 límites tareas
 CELERY_TASK_SOFT_TIME_LIMIT = 300
 CELERY_TASK_TIME_LIMIT = 600
+
+
+# Geolocalización de Usuarios
+GEOIP_PATH = os.path.join(BASE_DIR, "geoip")

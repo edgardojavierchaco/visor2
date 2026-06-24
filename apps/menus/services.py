@@ -55,7 +55,7 @@ REGLAS_MENU = {
 ),
     "aplicador": lambda user: (
         getattr(user.perfil.rol, "nombre", None) == "Aplicador"
-),
+    ),
     
 }
 
