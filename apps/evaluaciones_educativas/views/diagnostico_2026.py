@@ -1851,12 +1851,15 @@ def analisis_evaluacion(request):
             ).values('seccion', 'turno').distinct().order_by('seccion', 'turno')
             
             resultados = [
+                {'id': 'TODOS|TODOS', 'label': '--- TODOS ---'},
+            ]
+            resultados.extend([
                 {
                     'id': f"{c['seccion']}|{c['turno']}", 
                     'label': f"Sección: {c['seccion']} - Turno: {str(c['turno']).upper()}"
                 } 
                 for c in combinaciones
-            ]
+            ])
             return JsonResponse(resultados, safe=False)
 
     # ── 3. CAPTURA DE FILTROS PEDAGÓGICOS ────────────────────────────────────
@@ -1865,11 +1868,34 @@ def analisis_evaluacion(request):
     filtro_turno = request.GET.get('turno')
     filtro_materia = request.GET.get('materia')
 
+    if filtro_seccion == 'TODOS':
+        filtro_turno = filtro_turno or 'TODOS'
+
     anio_nombre_sel = filtro_anio
     if filtro_anio and filtro_anio.isdigit():
         seccion_ref = Seccion2026.objects.filter(año_id=int(filtro_anio)).select_related('año').first()
         if seccion_ref:
             anio_nombre_sel = seccion_ref.año.nombre_año
+
+    lista_secciones_turnos = []
+    if selected_cue_int is not None and filtro_anio and str(filtro_anio).isdigit():
+        combinaciones = Seccion2026.objects.filter(
+            año__cueanexo=selected_cue_int,
+            año_id=int(filtro_anio),
+        ).values('seccion', 'turno').distinct().order_by('seccion', 'turno')
+        lista_secciones_turnos.append({
+            'id': 'TODOS|TODOS',
+            'label': '--- TODOS ---',
+            'seccion': 'TODOS',
+            'turno': 'TODOS',
+        })
+        for c in combinaciones:
+            lista_secciones_turnos.append({
+                'id': f"{c['seccion']}|{c['turno']}",
+                'label': f"Sección: {c['seccion']} - Turno: {str(c['turno']).upper()}",
+                'seccion': c['seccion'],
+                'turno': c['turno'],
+            })
 
     alumnos_con_examenes = []
     columnas_preguntas = []
@@ -1878,15 +1904,17 @@ def analisis_evaluacion(request):
     presentes_indigena = presentes_discapacidad = presentes_ambas = presentes_ninguna = 0
 
     # ── 4. PROCESAMIENTO DE EXÁMENES Y CAPACIDADES ───────────────────────────
-    # Desacoplamos la lógica: Una cosa es buscar por Condición, otra por TODOS, otra Individual
     es_busqueda_condicion = filtro_condicion != ""
     es_busqueda_todos = selected_cue == 'TODOS'
-    es_busqueda_individual = selected_cue_int is not None and filtro_anio and filtro_seccion and filtro_turno
+    
+    # NUEVAS EVALUACIONES DE ESTADO
+    es_busqueda_seccion_todos = selected_cue_int is not None and filtro_anio and filtro_seccion == 'TODOS'
+    es_busqueda_individual = selected_cue_int is not None and filtro_anio and filtro_seccion and filtro_turno and filtro_seccion != 'TODOS'
 
-    # La única combinación donde ocultamos la tabla es si pide TODOS sin ninguna Condición extra
+    # La tabla solo se oculta si es consulta regional masiva por TODOS los establecimientos
     ocultar_listado = es_busqueda_todos and not es_busqueda_condicion
 
-    if filtro_materia and (es_busqueda_condicion or es_busqueda_todos or es_busqueda_individual):
+    if filtro_materia and (es_busqueda_condicion or es_busqueda_todos or es_busqueda_seccion_todos or es_busqueda_individual):
         if filtro_materia == 'matematica':
             ModeloExamen = Matematica2026
             desempenos = {
@@ -1917,11 +1945,18 @@ def analisis_evaluacion(request):
                         (~Q(alumno__comunidad_indigena__in=['', 'NO', 'NINGUNA', 'NINGUNO', 'FALSE']) & Q(alumno__comunidad_indigena__isnull=False))
                     )
                 
-                # Si vamos a armar el listado (condición activa), mantenemos el order_by
                 if not ocultar_listado:
                     examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
                 else:
                     examenes = ModeloExamen.objects.filter(q_objs).select_related('alumno', 'alumno__seccion__año')
+            
+            # NUEVA CONDICIÓN: Traer todas las secciones y turnos de una escuela y año específicos
+            elif es_busqueda_seccion_todos:
+                examenes = ModeloExamen.objects.filter(
+                    alumno__seccion__año__cueanexo=selected_cue_int,
+                    alumno__seccion__año_id=int(filtro_anio)
+                ).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
+                
             else:
                 examenes = ModeloExamen.objects.filter(
                     alumno__seccion__año__cueanexo=selected_cue_int,
@@ -1931,6 +1966,7 @@ def analisis_evaluacion(request):
                 ).select_related('alumno', 'alumno__seccion__año').order_by('alumno__apellido', 'alumno__nombre')
 
             campos_preguntas = [f for f in ModeloExamen._meta.fields if f.name.startswith('pregunta_')]
+            
             def ordenar_por_numero(campo):
                 numeros = re.findall(r'\d+', campo.name)
                 return [int(n) for n in numeros]
@@ -2012,7 +2048,6 @@ def analisis_evaluacion(request):
                 else:
                     total_ausentes += 1
 
-                # ARMADO DEL LISTADO (Se activa para Colegios o Condiciones)
                 if not ocultar_listado:
                     datos_alumno = {
                         'dni': ex.alumno.dni, 'apellido': ex.alumno.apellido, 'nombre': ex.alumno.nombre,
@@ -2047,6 +2082,7 @@ def analisis_evaluacion(request):
         'columnas_preguntas': columnas_preguntas,
         'anio_sel': filtro_anio,
         'anio_nombre_sel': anio_nombre_sel,
+        'lista_secciones_turnos': lista_secciones_turnos,
         'seccion_sel': filtro_seccion,
         'turno_sel': filtro_turno,
         'materia_sel': filtro_materia,
@@ -2252,12 +2288,17 @@ def descargar_reporte_listado(request, materia):
         return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
 
     # ── 3. CONSULTA DE EXÁMENES ───────────────────────────────────────────────
-    examenes = examen_model.objects.filter(
-        alumno__seccion__año__cueanexo=int(selected_cue),
-        alumno__seccion__año_id=int(filtro_anio),
-        alumno__seccion__seccion=filtro_seccion,
-        alumno__seccion__turno=filtro_turno
-    ).select_related('alumno', 'alumno__seccion').order_by('alumno__apellido', 'alumno__nombre')
+    filtros_examen = {
+        'alumno__seccion__año__cueanexo': int(selected_cue),
+        'alumno__seccion__año_id': int(filtro_anio),
+    }
+    if filtro_seccion != 'TODOS':
+        filtros_examen['alumno__seccion__seccion'] = filtro_seccion
+        filtros_examen['alumno__seccion__turno'] = filtro_turno
+
+    examenes = examen_model.objects.filter(**filtros_examen).select_related(
+        'alumno', 'alumno__seccion'
+    ).order_by('alumno__apellido', 'alumno__nombre')
 
     # ── 4. FUNCIÓN AUXILIAR DE DESEMPEÑOS ─────────────────────────────────────
     def evaluar(nota, cortes):
