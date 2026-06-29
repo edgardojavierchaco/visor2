@@ -2035,7 +2035,7 @@ def analisis_evaluacion(request):
 
     SECTORES_CHOICES = ['TODOS', 'Estatal', 'Gestión social/cooperativa', 'Privado']
     AMBITOS_CHOICES = ['TODOS', 'Rural Aglomerado', 'Rural Disperso', 'Urbano']
-    REGIONES_CHOICES = ['TODOS', 'R.E. 1', 'SUB. R.E. 1-A', 'SUB. R.E. 1-B', 'R.E. 2', 'SUB. R.E. 2', 'R.E. 3', 'SUB. R.E. 3', 'R.E. 4-A', 'R.E. 4-B', 'R.E. 5', 'SUB. R.E. 5', 'R.E. 6', 'R.E. 7', 'R.E. 8-A', 'R.E. 8-B', 'R.E. 9', 'R.E. 10-A', 'R.E. 10-B', 'R.E. 10-C']
+    REGIONES_CHOICES = ['TODOS', 'R.E. 1', 'SUB. R.E. 1-A', 'SUB. R.E. 1-B', 'R.E. 2', 'SUB. R.E. 2', 'R.E. 3', 'SUB. R.E. 3', 'R.E. 4-A', 'R.E. 4-B', 'R.E. 5', 'SUB. R.E. 5', 'R.E. 6', 'R.E. 7', 'R.E. 8-A', 'R.E. 8-B', 'R.E. 9', 'R.E. 10-C', 'R.E. 10-AB']
 
     context = {
         'rol': rol_usuario,
