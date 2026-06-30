@@ -19,6 +19,11 @@ class SesionUsuario(models.Model):
         null=True,
         blank=True
     )
+    
+    ubicacion = models.JSONField(
+        null=True,
+        blank=True
+    )
 
     user_agent = models.TextField()
 
