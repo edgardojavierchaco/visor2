@@ -1,21 +1,16 @@
 from django.urls import reverse, reverse_lazy
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import JsonResponse
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
-from apps.usuarios.models import EstadoUsuario
-from typing import cast
-from apps.usuarios.models import UsuariosVisualizador
-from django.urls import resolve, reverse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.urls import resolve
+from datetime import timedelta
 from .models import DispositivoUsuario
-from .utils_dispositivo import generar_fingerprint, get_client_ip
+from .utils_dispositivo import generar_fingerprint, get_client_ip, obtener_geolocalizacion
 from .email_dispositivo import (
     enviar_email_dispositivo
-)
-from django.shortcuts import (
-    get_object_or_404,
-    redirect,
-    render
 )
 
 from .models_session import (
@@ -25,15 +20,6 @@ from .models_session import (
 from django.contrib.sessions.models import (
     Session
 )
-
-from django.contrib.auth import (
-    authenticate,
-    login,
-    logout
-)
-
-from django.utils import timezone
-from datetime import timedelta
 
 
 class LoginFormView(LoginView):
@@ -71,7 +57,7 @@ class LoginFormView(LoginView):
         'regional': 'archivos:portada_gestor',
         'propio': 'directores:institucional',
         'nivel': 'archivos:portada_gestor',
-        'supervisor': 'archivos:portada_gestor',
+        'supervisor': 'archivos:portada_gestor',        
     }
 
     def get_context_data(self, **kwargs):
@@ -93,10 +79,7 @@ class LoginFormView(LoginView):
         if rol in self.ROLE_REDIRECTS:
             url_name = self.ROLE_REDIRECTS[rol]
 
-            # caso especial Aplicador (querystring)
-            if rol == 'Aplicador':
-                return reverse(url_name)
-
+            
             return reverse(url_name)
 
         # 🧠 2. FALLBACK: CATEGORÍA
@@ -113,7 +96,8 @@ class LoginFormView(LoginView):
         user = request.user
 
         if not user.is_authenticated or not user.is_staff:
-            return reverse('logueo:login')
+            return reverse('logueo:login')       
+        
         
         # =========================
         # 🔥 RESTAURAR ESTADO
@@ -144,205 +128,119 @@ class LoginFormView(LoginView):
             password=form.cleaned_data['password']
         )
 
-        if user is not None:
-            user=form.get_user()            
+        if not user:
+            return JsonResponse({
+                'success': False,
+                'message': 'Credenciales incorrectas.'
+            })
+        
+        login(self.request, user)   
+        # =========================
+        # DEVICE INFO
+        # =========================
+        fingerprint = generar_fingerprint(self.request)
+        ip = get_client_ip(self.request)
+        user_agent = self.request.META.get('HTTP_USER_AGENT', '')
+
+        geo = obtener_geolocalizacion(ip) or {}
+
+        ubicacion = {
+            "pais": geo.get("pais", "Desconocido"),
+            "provincia": geo.get("provincia", "Desconocido"),
+            "ciudad": geo.get("ciudad", "Desconocido"),
+            "lat": float(geo.get("lat") or -27.451),
+            "lon": float(geo.get("lon") or -58.986),
+        }
+
+        dispositivo = DispositivoUsuario.objects.filter(
+            usuario=user,
+            fingerprint=fingerprint,
+            confirmado=True
+        ).first()
+
+        # ---------------------
+        # NUEVO DISPOSITIVO
+        # ---------------------
+        if not dispositivo:
+            dispositivo, _ = DispositivoUsuario.objects.get_or_create(
+            usuario=user,
+            fingerprint=fingerprint,
+            defaults={
+                "ip": ip,
+                "ubicacion": ubicacion,
+                "user_agent": user_agent,
+                "confirmado": False
+                }
+            )
+                                
+            dispositivo.ip = ip
+            dispositivo.ubicacion = ubicacion
+            dispositivo.user_agent = user_agent
+            dispositivo.save()
             
-            # =====================
-            # DETECCIÓN DISPOSITIVO
-            # =====================
+            # 🔴 SI NO ESTÁ CONFIRMADO, BLOQUEAR LOGIN
+            if not dispositivo.confirmado:
 
-            fingerprint = generar_fingerprint(
-                self.request
-            )
-
-            ip = get_client_ip(
-                self.request
-            )
-
-            user_agent = self.request.META.get(
-                'HTTP_USER_AGENT',
-                ''
-            )
-
-            dispositivo = (
-                DispositivoUsuario.objects.filter(
-                    usuario=user,
-                    fingerprint=fingerprint,
-                    confirmado=True
-                ).first()
-            )
-
-            # ---------------------
-            # NUEVO DISPOSITIVO
-            # ---------------------
-            if not dispositivo:
-
-                dispositivo = (
-                    DispositivoUsuario.objects.filter(
-                        usuario=user,
-                        fingerprint=fingerprint,
-                        confirmado=False
-                    ).first()
-                )
-                
-                if not dispositivo:
-                
-                    dispositivo = (
-                        DispositivoUsuario.objects.create(
-                            usuario=user,
-                            fingerprint=fingerprint,
-                            ip=ip,
-                            user_agent=user_agent,
-                            confirmado=False
-                        )
-                    )
-                
-                dispositivo.ip = ip
-                dispositivo.user_agent = user_agent
-                dispositivo.save()
-                
+                # email control
                 if not user.correo:
-
                     return JsonResponse({
                         'success': False,
-                        'message': (
-                            'Tu usuario no tiene'
-                            'correo configurado. '
-                        )
+                        'message': 'Usuario sin correo configurado'
                     })
-                
-                hace_5_minutos = (
-                    timezone.now() -
-                    timedelta(minutes=5)
-                )
 
-                fecha_control = getattr(
-                    dispositivo,
-                    'fecha_envio_email',
-                    None
-                )
-                
-                if (
-                    fecha_control and
-                    fecha_control > hace_5_minutos
-                ):
+                hace_5_min = timezone.now() - timedelta(minutes=5)
 
+                if dispositivo.fecha_envio_email and dispositivo.fecha_envio_email > hace_5_min:
                     return JsonResponse({
                         'success': False,
-                        'nuevo_dispositivo': True,
-                        'message': (
-                            'Ya se envió un coreo de '
-                            'autorización recientemente. '
-                            'Revisa tu bandeja de entrada.'
-                        )
-                    })
-                    
-                enviado = enviar_email_dispositivo(
-                    self.request,
-                    user,
-                    dispositivo
-                )
-
-                if not enviado:
-
-                    return JsonResponse({
-                        'success': False,
-                        'message': (
-                            'Tu solicitud fue registrada. '
-                            'El correo de autorización será '
-                            'enviado automáticamente cuando '
-                            'el servicio de correo vuelva '
-                            'a estar disponible.'
-                        )
+                        'message': 'Ya se envió un correo recientemente'
                     })
 
-                dispositivo.fecha_envio_email = (
-                    timezone.now()
-                )
+                enviar_email_dispositivo(self.request, user, dispositivo)
 
-                dispositivo.save(
-                    update_fields=[
-                        'fecha_envio_email'
-                    ]
-                )
+                dispositivo.fecha_envio_email = timezone.now()
+                dispositivo.save(update_fields=['fecha_envio_email'])
 
                 return JsonResponse({
                     'success': False,
                     'nuevo_dispositivo': True,
-                    'message': (
-                        'Detectamos un nuevo '
-                        'dispositivo. '
-                        'Revisá tu correo '
-                        'para autorizarlo.'
-                    )
+                    'message': 'Dispositivo no autorizado, revisá tu correo'
                 })
 
-            # ---------------------
-            # DISPOSITIVO CONOCIDO
-            # ---------------------
-            login(self.request, user)
-            
-            dispositivo.ip = ip
-            dispositivo.user_agent = user_agent
-            dispositivo.save()
-            
-            session_key = (
-                self.request.session.session_key
-            )
+                
+            # =====================================================
+        # DISPOSITIVO OK → LOGIN OK
+        # =====================================================
+        session_key = self.request.session.session_key
 
-            SesionUsuario.objects.update_or_create(
-                session_key=session_key,
-                defaults={
-                    'usuario': user,
-                    'ip': ip,
-                    'user_agent': user_agent,
-                    'activa': True
-                }
-            )
+        SesionUsuario.objects.update_or_create(
+            session_key=session_key,
+            defaults={
+                "usuario": user,
+                "ip": ip,
+                "ubicacion": ubicacion,
+                "user_agent": user_agent,
+                "activa": True
+            }
+        )
 
-            # ------------------
-            # OTRAS SESIONES
-            # ------------------
-
-            otras_sesiones = (
-                SesionUsuario.objects.filter(
-                    usuario=user,
-                    activa=True
-                )
-                .exclude(
-                    session_key=session_key
-                )
-            )
-
-            if user.is_staff:
-                return JsonResponse({
-                    'success': True,
-                    'redirect_url': self.get_success_url(),
-                    'otras_sesiones':
-                        otras_sesiones.exists(),
-
-                    'cantidad_sesiones':
-                        otras_sesiones.count()
-                    })
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Aún no estás autorizado.'
-                })
+        otras = SesionUsuario.objects.filter(
+            usuario=user,
+            activa=True
+        ).exclude(session_key=session_key)
 
         return JsonResponse({
-            'success': False,
-            'message': 'Credenciales incorrectas.'
+            "success": True,
+            "redirect_url": self.get_success_url(),
+            "otras_sesiones": otras.exists(),
+            "cantidad_sesiones": otras.count()
         })
-        
-    # --------------------------
-    # INVALID
+
     # --------------------------
     def form_invalid(self, form):
         return JsonResponse({
             'success': False,
-            'message': 'Credenciales incorrectas.',
-            'template': 'login/login.html'
+            'message': 'Credenciales incorrectas.'
         })
 
     # --------------------------

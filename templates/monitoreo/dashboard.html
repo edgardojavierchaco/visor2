@@ -1,0 +1,353 @@
+{% extends "archivos/base/dashboard.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <h3>
+        🌎 Centro de monitoreo
+    </h3>
+
+
+    <!-- FILTROS -->
+
+    <form method="GET">
+
+        <a class="btn btn-secondary" href="?rapido=hoy">
+            Hoy
+        </a>
+
+        <a class="btn btn-secondary" href="?rapido=7">
+            7 días
+        </a>
+
+        <a class="btn btn-secondary" href="?rapido=30">
+            30 días
+        </a>
+
+
+        <div class="row mt-3">
+
+            <div class="col-md-3">
+                <input
+                    type="date"
+                    name="desde"
+                    class="form-control"
+                    value="{{ desde }}">
+            </div>
+
+
+            <div class="col-md-3">
+                <input
+                    type="date"
+                    name="hasta"
+                    class="form-control"
+                    value="{{ hasta }}">
+            </div>
+
+
+            <div class="col-md-2">
+                <button class="btn btn-primary">
+                    Filtrar
+                </button>
+            </div>
+
+
+            <div class="col-md-2">
+
+                <a class="btn btn-success"
+                   href="{% url 'monitoreo:exportar' %}">
+                    CSV
+                </a>
+
+            </div>
+
+
+        </div>
+
+    </form>
+
+
+
+    <hr>
+
+
+    <!-- CARDS -->
+
+
+    <div class="row">
+
+
+        <div class="col-md-4">
+
+            <div class="card">
+
+                <div class="card-body">
+
+                    <h5>
+                        🟢 Conectados
+                    </h5>
+
+                    <h2>
+                        {{ conectados.count }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="col-md-4">
+
+            <div class="card">
+
+                <div class="card-body">
+
+                    <h5>
+                        📌 Accesos
+                    </h5>
+
+                    <h2>
+                        {{ ultimos.count }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="col-md-4">
+
+            <div class="card">
+
+                <div class="card-body">
+
+                    <h5>
+                        ⚠️ Sospechosos
+                    </h5>
+
+                    <h2>
+                        {{ sospechosos|length }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+
+    <hr>
+
+
+
+    <h4>
+        🗺️ Mapa
+    </h4>
+
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+
+    <script
+        src="https://unpkg.com/leaflet/dist/leaflet.js">
+    </script>
+
+
+
+    <div id="map"
+         style="height:500px;">
+    </div>
+
+
+
+    <hr>
+
+
+
+    <h4>
+        🟢 Usuarios conectados
+    </h4>
+
+
+    <table class="table">
+
+        <tr>
+
+            <th>
+                Usuario
+            </th>
+
+            <th>
+                IP
+            </th>
+
+            <th>
+                Actividad
+            </th>
+
+        </tr>
+
+
+
+        {% for c in conectados %}
+
+        <tr>
+
+            <td>
+                {{ c.usuario.username }}
+            </td>
+
+
+            <td>
+                {{ c.ip }}
+            </td>
+
+
+            <td>
+                {{ c.ultima_actividad }}
+            </td>
+
+        </tr>
+
+
+        {% endfor %}
+
+
+    </table>
+
+
+
+    <h4>
+        ⚠️ Sospechosos
+    </h4>
+
+
+    <table class="table table-danger">
+
+
+        {% for s in sospechosos %}
+
+        <tr>
+
+            <td>
+                {{ s.usuario }}
+            </td>
+
+            <td>
+                {{ s.motivo }}
+            </td>
+
+            <td>
+                {{ s.anterior }}
+            </td>
+
+            <td>
+                {{ s.actual }}
+            </td>
+
+        </tr>
+
+
+        {% endfor %}
+
+
+    </table>
+
+
+</div>
+
+
+
+
+<script>
+
+
+let puntos =
+    JSON.parse('{{ puntos|escapejs }}');
+
+
+
+let map = L.map('map')
+    .setView(
+        [-26.8, -60.4],
+        6
+    );
+
+
+
+L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    {
+        attribution:
+        '&copy; OpenStreetMap contributors &copy; CARTO'
+    }
+)
+.addTo(map);
+
+
+
+let bounds = [];
+
+
+
+puntos.forEach(p => {
+
+
+    L.marker(
+        [
+            p.lat,
+            p.lon
+        ]
+    )
+    .addTo(map)
+    .bindPopup(
+            "<b>Usuario:</b> " + p.username + "<br>" +
+            "<b>Nombre:</b> " + p.nombre + "<br>" +
+            "<b>Rol:</b> " + p.rol + "<br>" +
+            "<b>Fecha:</b> " + p.fecha + "<br>" +
+            "<b>IP:</b> " + p.ip + "<br>" +
+            "<b>Ciudad:</b> " + p.ciudad + "<br>" +
+            "<b>Provincia:</b> " + p.provincia
+    );
+
+
+
+    bounds.push(
+        [
+            p.lat,
+            p.lon
+        ]
+    );
+
+
+});
+
+
+
+if(bounds.length){
+
+    map.fitBounds(
+        bounds
+    );
+
+}
+
+
+</script>
+
+
+
+{% endblock %}

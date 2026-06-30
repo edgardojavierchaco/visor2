@@ -76,6 +76,7 @@ urlpatterns = [
     path('bnh/', include('apps.bnhpersonas.urls', namespace='bnhpersonas')),
     path('cef/', include('apps.cef.urls')),   
     path('supreg/', include('apps.supervisor_registro.urls', namespace='supervisor_registro')),
+    path('monitoreo/',include('apps.monitoreo_login.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
