@@ -1,0 +1,528 @@
+<style>
+    /* ============================================================
+       MODAL BÚSQUEDA DE PERSONA
+       ============================================================ */
+    .cef-overlay {
+        align-items: center;
+        background: rgba(7, 26, 51, .55);
+        backdrop-filter: blur(3px);
+        bottom: 0;
+        display: none;
+        justify-content: center;
+        left: 0;
+        overflow-y: auto;
+        padding: 24px 18px;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 1080;
+        transition: opacity .2s ease;
+    }
+
+    .cef-overlay.is-open {
+        display: flex;
+    }
+
+    .cef-modal {
+        animation: cef-modal-in .22s cubic-bezier(.22,1,.36,1) both;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(7,26,51,.28), 0 8px 20px rgba(7,26,51,.12);
+        color: #0f172a;
+        max-width: 1100px;
+        max-height: calc(100vh - 48px);
+        min-height: 420px;
+        overflow: hidden;
+        width: min(1100px, 90vw);
+        display: flex;
+        flex-direction: column;
+    }
+
+    @keyframes cef-modal-in {
+        from { opacity: 0; transform: translateY(-18px) scale(.98); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .cef-modal-head {
+        align-items: center;
+        background: linear-gradient(135deg, #0d2748 0%, #071a33 100%);
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+    }
+
+    .cef-modal-title {
+        color: #fff;
+        font-size: 1.2rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .cef-modal-title span {
+        color: rgba(255,255,255,.55);
+        font-size: 1rem;
+        font-weight: 400;
+    }
+
+    .cef-modal-close {
+        align-items: center;
+        background: rgba(255,255,255,.1);
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px;
+        color: rgba(255,255,255,.7);
+        cursor: pointer;
+        display: inline-flex;
+        font-size: 1.1rem;
+        height: 34px;
+        justify-content: center;
+        text-decoration: none;
+        transition: all .15s ease;
+        width: 34px;
+    }
+
+    .cef-modal-close:hover {
+        background: rgba(255,255,255,.18);
+        color: #fff;
+    }
+
+    .cef-modal-body {
+        overflow-y: auto;
+        padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+    /* Search bar */
+    .cef-modal-search {
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        display: flex;
+        gap: .5rem;
+        padding: .75rem 1rem;
+        position: relative;
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .cef-modal-search:focus-within {
+        background: #fff;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+    }
+
+    .cef-modal-search i.fa-search {
+        color: #64748b;
+        font-size: 1.1rem;
+    }
+
+    .cef-modal-search input {
+        background: transparent;
+        border: none;
+        color: #0f172a;
+        flex: 1;
+        font-size: 1.05rem;
+        font-weight: 600;
+        min-width: 0;
+        outline: none;
+    }
+
+    .cef-modal-search input::placeholder {
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .cef-modal-search .btn-search {
+        background: #2563eb;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        font-size: .85rem;
+        font-weight: 700;
+        padding: .4rem 1rem;
+        transition: background .15s ease;
+    }
+
+    .cef-modal-search .btn-search:hover {
+        background: #1d4ed8;
+    }
+
+    /* Result area */
+    .cef-modal-result {
+        margin-top: 1.25rem;
+    }
+
+    .cef-person-card {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(15,23,42,.03);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .cef-person-header {
+        align-items: center;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+
+    .cef-person-avatar {
+        align-items: center;
+        background: #e0e7ff;
+        border-radius: 50%;
+        color: #4338ca;
+        display: flex;
+        flex: 0 0 auto;
+        font-size: 1.5rem;
+        height: 54px;
+        justify-content: center;
+        width: 54px;
+    }
+
+    .cef-person-name {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cef-person-name h3 {
+        color: #0f172a;
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cef-person-name span {
+        color: #64748b;
+        display: block;
+        font-size: .85rem;
+        font-weight: 600;
+        margin-top: .15rem;
+    }
+
+    .cef-person-details {
+        display: grid;
+        gap: 1px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        background: #e2e8f0;
+    }
+
+    .cef-person-detail {
+        background: #fff;
+        padding: 1rem 1.25rem;
+    }
+
+    .cef-person-detail label {
+        color: #64748b;
+        display: block;
+        font-size: .7rem;
+        font-weight: 800;
+        letter-spacing: .05em;
+        margin-bottom: .25rem;
+        text-transform: uppercase;
+    }
+
+    .cef-person-detail strong {
+        color: #1e293b;
+        display: block;
+        font-size: .95rem;
+        font-weight: 600;
+    }
+
+    /* Actions */
+    .cef-modal-actions {
+        background: #f1f5f9;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        gap: .75rem;
+        justify-content: flex-end;
+        padding: 1rem 1.5rem;
+    }
+
+    .cef-modal-actions .btn {
+        align-items: center;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        font-size: .9rem;
+        font-weight: 700;
+        gap: .4rem;
+        height: 38px;
+        justify-content: center;
+        padding: 0 1.25rem;
+        text-decoration: none;
+        transition: all .15s ease;
+    }
+
+    .cef-modal-actions .btn-cancel {
+        background: transparent;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+    }
+
+    .cef-modal-actions .btn-cancel:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .cef-modal-actions .btn-action {
+        background: #10b981;
+        border: 1px solid #059669;
+        color: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    }
+
+    .cef-modal-actions .btn-action:hover {
+        background: #059669;
+        transform: translateY(-1px);
+    }
+
+    .cef-modal-actions .btn-edit {
+        background: #fff;
+        border: 1px solid #3b82f6;
+        color: #2563eb;
+    }
+
+    .cef-modal-actions .btn-edit:hover {
+        background: #eff6ff;
+        border-color: #2563eb;
+        color: #1d4ed8;
+    }
+
+    /* Empty state */
+    .cef-modal-empty {
+        align-items: center;
+        color: #64748b;
+        display: flex;
+        flex-direction: column;
+        font-size: .95rem;
+        font-weight: 500;
+        justify-content: center;
+        min-height: 200px;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .cef-modal-empty i {
+        color: #cbd5e1;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .cef-modal-empty strong {
+        color: #334155;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: .25rem;
+    }
+
+    .cef-modal-error {
+        color: #ef4444;
+        font-size: .85rem;
+        font-weight: 600;
+        margin-top: .5rem;
+        padding: 0 1rem;
+    }
+
+    /* Message card for already enrolled */
+    .cef-msg-card {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding: 1rem 1.25rem;
+    }
+
+    .cef-msg-card i {
+        color: #3b82f6;
+        font-size: 1.5rem;
+        margin-top: .1rem;
+    }
+
+    .cef-msg-card div {
+        flex: 1;
+    }
+
+    .cef-msg-card h4 {
+        color: #1e3a8a;
+        font-size: .95rem;
+        font-weight: 800;
+        margin: 0 0 .25rem;
+    }
+
+    .cef-msg-card p {
+        color: #1e40af;
+        font-size: .85rem;
+        margin: 0;
+    }
+
+    .cef-msg-card.is-warning {
+        background: #fef3c7;
+        border-color: #fde68a;
+    }
+
+    .cef-msg-card.is-warning i { color: #d97706; }
+    .cef-msg-card.is-warning h4 { color: #92400e; }
+    .cef-msg-card.is-warning p { color: #b45309; }
+</style>
+
+<div class="cef-overlay {% if modal_alumno_abierto %}is-open{% endif %}" id="cefPersonModal" role="dialog" aria-modal="true" aria-labelledby="cefModalTitle">
+    <div class="cef-modal">
+        <div class="cef-modal-head">
+            <h2 class="cef-modal-title" id="cefModalTitle">
+                <i class="fa-solid fa-user-magnifying-glass me-2"></i>Buscar Alumno
+                {% if modal_tiene_seccion %}
+                    <span>/ Inscripción a Sección</span>
+                {% endif %}
+            </h2>
+            <a href="{{ modal_volver_url }}" class="cef-modal-close" aria-label="Cerrar modal">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+        </div>
+
+        <div class="cef-modal-body">
+            <form method="post" action="{{ modal_action_url }}" id="cefPersonSearchForm">
+                {% csrf_token %}
+                <div class="cef-modal-search">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" name="cuil" id="modalCuilInput" placeholder="Ingresá el CUIL del alumno..." value="{{ cuil_buscado|default:'' }}" autocomplete="off" autofocus>
+                    <button type="submit" class="btn-search">Buscar</button>
+                </div>
+                {% if cuil_error %}
+                    <div class="cef-modal-error"><i class="fa-solid fa-circle-exclamation me-1"></i> {{ cuil_error }}</div>
+                {% endif %}
+            </form>
+
+            <div class="cef-modal-result">
+                {% if alumno %}
+                    <div class="cef-person-card">
+                        <div class="cef-person-header">
+                            <div class="cef-person-avatar">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div class="cef-person-name">
+                                <h3>{{ alumno.apellidos }}, {{ alumno.nombres }}</h3>
+                                <span><i class="fa-regular fa-id-card me-1"></i> {{ alumno_row.tipo_doc|default:"DOC" }} {{ alumno_row.nro_doc|default:"—" }}</span>
+                            </div>
+                        </div>
+                        <div class="cef-person-details">
+                            <div class="cef-person-detail">
+                                <label>CUIL</label>
+                                <strong>{{ alumno_row.cuil|default:"—" }}</strong>
+                            </div>
+                            <div class="cef-person-detail">
+                                <label>Fecha de Nacimiento</label>
+                                <strong>{{ alumno_row.fecha_nac|date:"d/m/Y"|default:"—" }}</strong>
+                            </div>
+                            <div class="cef-person-detail">
+                                <label>Sexo</label>
+                                <strong>{{ alumno_row.sexo|default:"—" }}</strong>
+                            </div>
+                            <div class="cef-person-detail">
+                                <label>Lugar de Nacimiento</label>
+                                <strong>{{ alumno_row.lugar_nac|default:"—" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if modal_tiene_seccion %}
+                        {% if inscripcion_abierta %}
+                            <div class="cef-msg-card is-warning">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <div>
+                                    <h4>Alumno ya inscripto</h4>
+                                    <p>Este alumno ya se encuentra inscripto en la sección en estado <strong>{{ inscripcion_abierta.get_estado_display|upper }}</strong>. No podés volver a inscribirlo.</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="cef-msg-card">
+                                <i class="fa-solid fa-circle-info"></i>
+                                <div>
+                                    <h4>Alumno listo para inscripción</h4>
+                                    <p>Verificá los datos del alumno y si son correctos hacé clic en "Inscribir a sección". Si faltan datos podés editarlos primero en el Padrón.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="cef-msg-card">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <div>
+                                <h4>Alumno encontrado en Padrón</h4>
+                                <p>Podés editar sus datos filiatorios si es necesario usando el botón correspondiente.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% elif request.method == "POST" or request.GET.cuil %}
+                    {% if not cuil_error %}
+                        <div class="cef-modal-empty">
+                            <i class="fa-regular fa-face-frown-open"></i>
+                            <strong>No encontramos a este alumno en el padrón provincial</strong>
+                            <span>Verificá que el número de CUIL ({{ cuil_buscado }}) sea correcto. Si es correcto, deberás darlo de alta.</span>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="cef-modal-empty">
+                        <i class="fa-solid fa-users-viewfinder"></i>
+                        <strong>Buscar en Padrón</strong>
+                        <span>Ingresá el número de CUIL completo (sin guiones o con guiones) y presioná Buscar para continuar.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="cef-modal-actions">
+            {% if alumno %}
+                <a href="{{ url_editar_alumno }}" class="btn btn-edit" target="_blank" title="Se abrirá en una nueva pestaña">
+                    <i class="fa-solid fa-pen"></i> Editar datos filiatorios
+                </a>
+            {% elif cuil_buscado and not cuil_error and request.method == "POST" %}
+                <a href="{{ url_carga_alumno }}" class="btn btn-action" target="_blank">
+                    <i class="fa-solid fa-user-plus"></i> Dar de alta nuevo alumno
+                </a>
+            {% endif %}
+
+            <div style="flex: 1;"></div>
+
+            <a href="{{ modal_volver_url }}" class="btn btn-cancel">Cancelar</a>
+
+            {% if alumno and modal_tiene_seccion and not inscripcion_abierta %}
+                <form method="post" action="{{ modal_action_url }}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
+                    <button type="submit" class="btn btn-action">
+                        <i class="fa-solid fa-check"></i> Inscribir a sección
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var overlay = document.getElementById("cefPersonModal");
+    if (!overlay) return;
+
+    var triggers = document.querySelectorAll("[data-open-personas-modal]");
+    var inputCuil = document.getElementById("modalCuilInput");
+
+    triggers.forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            overlay.classList.add("is-open");
+            if (inputCuil) {
+                setTimeout(function () { inputCuil.focus(); }, 100);
+            }
+        });
+    });
+});
+</script>

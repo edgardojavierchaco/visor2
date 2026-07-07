@@ -1,62 +1,118 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
-from . import views_alumnos
-from . import views_configuracion
-from . import views_establecimientos
-from . import views_inicio
-from . import views_localizaciones
-from . import views_responsables
-from . import views_router
+from . import (
+    views_alumnos,
+    views_carga_cueanexo,
+    views_carga_grupo,
+    views_ciclo,
+    views_inicio,
+    views_inscripcion_grupo,
+    views_inventario,
+    views_localizaciones,
+    views_docentes_grupo,
+    views_profesores,
+)
 
 
 app_name = "cef"
 
 
 urlpatterns = [
-    path("alumnos/", views_alumnos.alumnos_inicio, name="alumnos"),
+    # Entrada del modulo: pantalla de inicio operativa.
     path(
-        "establecimiento/",
-        views_establecimientos.establecimiento_director,
-        name="establecimiento",
+        "",
+        views_inicio.inicio,
+        name="inicio",
     ),
-    path(
-        "api/validar-cuil/",
-        views_alumnos.api_validar_cuil_alumno,
-        name="api_validar_cuil",
-    ),
-    path(
-        "api/seleccionar-cef-carga/",
-        views_alumnos.api_seleccionar_cef_carga,
-        name="api_seleccionar_cef_carga",
-    ),
-    path(
-        "seleccionar/<str:cueanexo>/",
-        views_router.seleccionar_servicio_por_acronimo,
-        name="seleccionar_servicio",
-    ),
+    # Compatibilidad con enlaces historicos a /visualizacion/.
     path(
         "visualizacion/",
-        views_inicio.visualizacion_inicio,
+        RedirectView.as_view(
+            pattern_name="cef:visualizacion_localizaciones",
+            permanent=False,
+        ),
         name="visualizacion_inicio",
     ),
-    path(
-        "visualizacion/establecimientos/",
-        views_establecimientos.visualizacion_establecimientos,
-        name="visualizacion_establecimientos",
-    ),
+    # Pantalla principal con tabla, filtros, selector CEF y exportacion Excel.
     path(
         "visualizacion/localizaciones/",
         views_localizaciones.visualizacion_localizaciones,
         name="visualizacion_localizaciones",
     ),
     path(
-        "visualizacion/responsables/",
-        views_responsables.visualizacion_responsables,
-        name="visualizacion_responsables",
+        "alumnos/",
+        views_alumnos.alumnos,
+        name="alumnos",
     ),
     path(
-        "configuracion/",
-        views_configuracion.configuracion_inicio,
-        name="configuracion_inicio",
+        "profesores/",
+        views_profesores.profesores,
+        name="profesores",
+    ),
+    path(
+        "carga/cueanexo/",
+        views_carga_cueanexo.carga_cueanexo,
+        name="carga_cueanexo",
+    ),
+    path(
+        "carga/cueanexo/datos/",
+        views_carga_cueanexo.editar_datos_cueanexo,
+        name="editar_datos_cueanexo",
+    ),
+    path(
+        "carga/grupos/",
+        views_carga_grupo.carga_grupo,
+        name="carga_grupo",
+    ),
+    path(
+        "carga/grupos/nuevo/",
+        views_carga_grupo.carga_grupo_form,
+        name="carga_grupo_nuevo",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/",
+        views_carga_grupo.carga_grupo_form,
+        name="carga_grupo_editar",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/gestionar/",
+        views_carga_grupo.gestionar_grupo,
+        name="gestionar_grupo",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/inscripciones/",
+        views_inscripcion_grupo.inscripcion_grupo,
+        name="inscripcion_grupo",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/inscripciones/<int:inscripcion_id>/editar/",
+        views_inscripcion_grupo.editar_inscripcion_grupo,
+        name="editar_inscripcion_grupo",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/docentes/",
+        views_docentes_grupo.docentes_grupo,
+        name="docentes_grupo",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/docentes/<int:docente_grupo_id>/editar/",
+        views_docentes_grupo.editar_docente_grupo,
+        name="editar_docente_grupo",
+    ),
+    path(
+        "carga/inventario/",
+        views_inventario.carga_inventario,
+        name="carga_inventario",
+    ),
+    path(
+        "carga/inventario/<int:item_id>/",
+        views_inventario.carga_inventario,
+        name="editar_inventario",
+    ),
+    path(
+        "carga/ciclos/",
+        views_ciclo.administrar_ciclos,
+        name="administrar_ciclos",
     ),
 ]

@@ -15,3 +15,5 @@ staticfiles/
 
 .env
 
+#BORRAR PARA SUBIR AL MAIN
+productionfiles/*

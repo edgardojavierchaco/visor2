@@ -1,0 +1,240 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Listado de cursos/grupos del CEF activo.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Gestión de Cursos</h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-primary" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-plus"></i> Agregar Curso
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if cef_context.establecimiento %}
+            <div class="mb-3">
+                <div class="cef-context-summary">
+                    <div class="cef-context-summary-item">
+                        <span>CUE-Anexo</span>
+                        <strong>{{ cef_context.cueanexo }}</strong>
+                    </div>
+                    <div class="cef-context-summary-item is-wide">
+                        <span>CEF</span>
+                        <strong>{{ cef_context.establecimiento.nom_est|default:"CEF" }}</strong>
+                    </div>
+                    {% if cef_context.ciclo %}
+                        <div class="cef-context-summary-item">
+                            <span>Ciclo</span>
+                            <strong>{{ cef_context.ciclo }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+            <div class="cef-tools-right">
+                <div class="cef-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchGrupos" type="search" placeholder="Buscar…" data-cef-table-search>
+                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if grupos %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt" data-cef-table>
+                    <thead>
+                        <tr>
+                            <th>Actividad</th>
+                            <th>N°</th>
+                            <th>Nombre</th>
+                            <th>Nivel</th>
+                            <th>Turno</th>
+                            <th>Horario</th>
+                            <th>Días</th>
+                            <th>Alumnos</th>
+                            <th>Profesores</th>
+                            <th>Cupo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grupo in grupos %}
+                            <tr>
+                                <td><strong>{{ grupo.actividad }}</strong></td>
+                                <td>{{ grupo.numero }}</td>
+                                <td>{{ grupo.nombre|default:"—" }}</td>
+                                <td>{{ grupo.nivel }}</td>
+                                <td>
+                                    <span class="badge text-bg-secondary">{{ grupo.turno }}</span>
+                                </td>
+                                <td>{{ grupo.hora_inicio|time:"H:i" }} – {{ grupo.hora_fin|time:"H:i" }}</td>
+                                <td>{{ grupo.dias_texto|default:"—" }}</td>
+                                <td>
+                                    <span class="badge text-bg-primary">{{ grupo.alumnos_activos }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-primary">{{ grupo.docentes_activos }}</span>
+                                </td>
+                                <td>{{ grupo.cupo_maximo|default:"—" }}</td>
+                                <td class="cef-act-cell">
+                                    <div class="dropdown" data-cef-row-actions>
+                                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false">
+                                            Acciones
+                                        </button>
+                                        <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'cef:gestionar_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                    <i class="fa-solid fa-clipboard-list"></i> Gestionar curso
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                    <i class="fa-solid fa-pen"></i> Editar grupo
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                    <i class="fa-solid fa-user-plus"></i> Alumnos
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                    <i class="fa-solid fa-chalkboard-user"></i> Profesores
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif cef_context.puede_operar %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-layer-group" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavía no hay grupos cargados para este CEF y ciclo.
+            </div>
+        {% else %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un CUE-Anexo y un ciclo para ver grupos.
+            </div>
+        {% endif %}
+
+        <div class="cef-tfoot">
+            <span class="cef-tfoot-count" data-cef-table-count>{{ total_grupos|default:0 }} registros</span>
+            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cef-row-actions-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 210px;
+        padding: .35rem;
+    }
+
+    .cef-row-actions-menu .dropdown-item {
+        align-items: center;
+        border-radius: var(--r-sm);
+        display: flex;
+        gap: .5rem;
+        padding: .45rem .6rem;
+    }
+
+    .cef-row-actions-menu .dropdown-item i {
+        color: var(--blue-800);
+        width: 1rem;
+    }
+</style>
+
+<script>
+(function () {
+    if (window.cefRowActionsReady) return;
+    window.cefRowActionsReady = true;
+
+    function closeMenu(dropdown) {
+        if (!dropdown) return;
+        var toggle = dropdown.querySelector("[data-cef-row-actions-toggle]");
+        var menu = dropdown.querySelector("[data-cef-row-actions-menu]");
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+        if (menu) {
+            menu.classList.remove("show");
+            menu.removeAttribute("style");
+        }
+    }
+
+    function closeOtherMenus(current) {
+        document.querySelectorAll("[data-cef-row-actions]").forEach(function(dropdown) {
+            if (dropdown !== current) closeMenu(dropdown);
+        });
+    }
+
+    function positionMenu(toggle, menu) {
+        var rect = toggle.getBoundingClientRect();
+        var tableWrap = toggle.closest(".cef-table-wrap");
+        var bounds = tableWrap ? tableWrap.getBoundingClientRect() : { left: 12, right: window.innerWidth - 12 };
+        var menuWidth = 220;
+        var left = Math.min(rect.left, bounds.right - menuWidth - 8);
+        menu.style.position = "fixed";
+        menu.style.top = (rect.bottom + 4) + "px";
+        menu.style.left = Math.max(bounds.left + 8, left) + "px";
+        menu.style.width = menuWidth + "px";
+        menu.style.zIndex = "1090";
+    }
+
+    document.addEventListener("click", function(event) {
+        var toggle = event.target.closest("[data-cef-row-actions-toggle]");
+        if (toggle) {
+            event.preventDefault();
+            var dropdown = toggle.closest("[data-cef-row-actions]");
+            var menu = dropdown ? dropdown.querySelector("[data-cef-row-actions-menu]") : null;
+            if (!dropdown || !menu) return;
+
+            var willOpen = !menu.classList.contains("show");
+            closeOtherMenus(dropdown);
+            toggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+            menu.classList.toggle("show", willOpen);
+            if (willOpen) {
+                positionMenu(toggle, menu);
+            } else {
+                menu.removeAttribute("style");
+            }
+            return;
+        }
+
+        if (!event.target.closest("[data-cef-row-actions-menu]")) {
+            closeOtherMenus(null);
+        }
+    });
+
+    window.addEventListener("scroll", function() {
+        closeOtherMenus(null);
+    }, true);
+    window.addEventListener("resize", function() {
+        closeOtherMenus(null);
+    });
+})();
+</script>
+
+{% endblock %}

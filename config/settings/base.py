@@ -67,7 +67,6 @@ LOCAL_APPS = [
     'apps.represlegales',
     'apps.intercultural',
     'apps.biblioteca',
-    'apps.especial',
     'apps.infraestructura',
     'apps.indicadoresie',
     'apps.operativoschaco',
@@ -87,6 +86,7 @@ LOCAL_APPS = [
     "apps.bnhalumnos.apps.BnhalumnosConfig",
     "apps.supervisor_registro.apps.SupervisorRegistroConfig",
     "apps.monitoreo_login",
+    "apps.especial",
 ]
 
 
@@ -157,7 +157,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public,bnh,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof'
+            'options': '-c search_path=especial,public,bnh,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof'
         }
     },        
     'Evaluacion': {

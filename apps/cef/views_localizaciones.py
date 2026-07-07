@@ -8,7 +8,6 @@ from io import BytesIO
 from django.core.cache import cache
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
-from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -16,12 +15,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
-from .models_integracion import normalizar_cueanexo
-from .permisos import (
-    cef_visualizacion_required,
+from .models import (
     get_cefs_visualizacion_usuario,
-    resolver_cueanexos_visualizacion_desde_request,
+    normalizar_cueanexo,
+    usuario_es_admin_cef,
 )
+from .permisos import cef_required
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +31,7 @@ PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 CACHE_TTL_LOCALIZACIONES_CEF = 60 * 5
 CACHE_VERSION_LOCALIZACIONES_CEF = "v3_columnas_vista_20260520"
 
+# Columnas que se leen desde Padron y se exponen en tabla, filtros y Excel.
 COLUMNAS_LOCALIZACIONES_CEF = [
     "cueanexo",
     "nom_est",
@@ -88,6 +88,7 @@ FIELD_MAP = {
     "jornada": ("jornada",),
 }
 
+# Etiquetas visibles para encabezados, filtros activos y exportaciones.
 LABELS_COLUMNAS = {
     "cueanexo": "CUE-Anexo",
     "nom_est": "Establecimiento",
@@ -116,6 +117,7 @@ LABELS_COLUMNAS = {
     "jornada": "Jornada",
 }
 
+# Subconjunto inicial que se muestra al entrar a la pantalla.
 COLUMNAS_VISIBLES_DEFAULT = [
     "cueanexo",
     "nom_est",
@@ -135,10 +137,6 @@ COLUMNAS_VISIBLES_DEFAULT = [
     "jornada",
 ]
 
-GLOBAL_SEARCH_FIELDS = list(COLUMNAS_LOCALIZACIONES_CEF)
-
-ORDER_MAP = {campo: campo for campo in FIELD_MAP}
-
 OPERADORES_TXT = {
     "0": "parecido a",
     "1": "no parecido a",
@@ -150,6 +148,7 @@ OPERADORES_TXT = {
     "7": "distinto de",
 }
 
+# Limita la consulta ORM a los campos usados por la pantalla para reducir carga.
 ONLY_FIELDS_LOCALIZACIONES_CEF = [
     "cueanexo",
     "nom_est",
@@ -234,6 +233,13 @@ def _cache_key_localizaciones_cef(request):
 
 
 def _get_items_base_cached(request):
+    """
+    Obtiene y serializa los CEF visibles una sola vez por usuario.
+
+    La pantalla filtra y ordena en memoria sobre esta lista cacheada para evitar
+    repetir consultas pesadas a Padron en cada cambio de filtros o paginacion.
+    """
+
     global _GEO_FILTER_OPTIONS_CEF_CACHE
     started = time.perf_counter()
     cache_key = _cache_key_localizaciones_cef(request)
@@ -260,6 +266,10 @@ def _get_items_base_cached(request):
 
 
 def _normalize_text(value):
+    """
+    Normaliza texto para comparar sin distinguir mayusculas ni acentos.
+    """
+
     text = _clean(value).casefold()
     text = unicodedata.normalize("NFKD", text)
     return "".join(char for char in text if not unicodedata.combining(char))
@@ -301,6 +311,13 @@ def _item_matches_operator(item, field_key, operator, value):
 
 
 def _apply_filters_list(items, request):
+    """
+    Aplica todos los filtros de la pantalla sobre la lista ya cacheada.
+
+    Combina busqueda global, busqueda rapida, filtros por columna y filtros
+    avanzados agrupados por campo/operador.
+    """
+
     started = time.perf_counter()
     q = request.GET.get("q", "").strip()
     if q:
@@ -357,6 +374,10 @@ def _sort_key_default(item):
 
 
 def _apply_order_list(items, request):
+    """
+    Ordena con un criterio geografico estable y permite cambiar columna desde la UI.
+    """
+
     started = time.perf_counter()
     orden_param = request.GET.get("orden", "region_loc").strip()
     raw_field = orden_param.lstrip("-")
@@ -572,6 +593,13 @@ def _fetch_geo_filter_values(sql, db_alias="default"):
 
 
 def _get_global_geo_filter_options(force_refresh=False):
+    """
+    Construye opciones globales para filtros geograficos.
+
+    Mezcla valores obligatorios con valores reales de las vistas/tablas de Padron
+    para que region, departamento y localidad no queden incompletos.
+    """
+
     global _GEO_FILTER_OPTIONS_CEF_CACHE
 
     if force_refresh:
@@ -675,6 +703,10 @@ def _get_global_geo_filter_options(force_refresh=False):
 
 
 def _get_filter_options_from_items(items):
+    """
+    Prepara las listas de opciones que usa el modal de filtros en el frontend.
+    """
+
     started = time.perf_counter()
 
     options = {
@@ -702,94 +734,6 @@ def _get_filter_options_from_items(items):
     return options
 
 
-def _q_for_operator(field_name, operator, value):
-    if operator == "1":
-        return ~Q(**{f"{field_name}__icontains": value})
-    if operator == "2":
-        return Q(**{f"{field_name}__iexact": value})
-    if operator == "3":
-        return Q(**{f"{field_name}__gt": value})
-    if operator == "4":
-        return Q(**{f"{field_name}__gte": value})
-    if operator == "5":
-        return Q(**{f"{field_name}__lt": value})
-    if operator == "6":
-        return Q(**{f"{field_name}__lte": value})
-    if operator == "7":
-        return ~Q(**{f"{field_name}__iexact": value})
-    return Q(**{f"{field_name}__icontains": value})
-
-
-def _build_filter_q(campo, operador, valor):
-    fields = FIELD_MAP.get(campo)
-    if not fields:
-        return Q()
-
-    q_obj = Q()
-    for field_name in fields:
-        q_obj |= _q_for_operator(field_name, operador, valor)
-    return q_obj
-
-
-def _apply_filters(qs, request):
-    q = request.GET.get("q", "").strip()
-    if q:
-        global_q = Q()
-        for field in GLOBAL_SEARCH_FIELDS:
-            global_q |= Q(**{f"{field}__icontains": q})
-        qs = qs.filter(global_q)
-
-    smart_col = request.GET.get("smart_ui_col", "").strip()
-    smart_val = request.GET.get("smart_ui_val", "").strip()
-    if smart_col in FIELD_MAP and smart_val:
-        smart_q = Q()
-        for field_name in FIELD_MAP[smart_col]:
-            smart_q |= Q(**{f"{field_name}__icontains": smart_val})
-        qs = qs.filter(smart_q)
-
-    for campo, fields in FIELD_MAP.items():
-        value = request.GET.get(campo, "").strip()
-        if not value:
-            continue
-        simple_q = Q()
-        for field_name in fields:
-            simple_q |= Q(**{f"{field_name}__icontains": value})
-        qs = qs.filter(simple_q)
-
-    campos = request.GET.getlist("campo_filtro")
-    operadores = request.GET.getlist("operador_filtro")
-    valores = request.GET.getlist("valor_filtro")
-    grouped_filters = {}
-
-    for index, campo in enumerate(campos):
-        campo = campo.strip()
-        valor = valores[index].strip() if index < len(valores) else ""
-        operador = operadores[index].strip() if index < len(operadores) else "0"
-        if not campo or not valor or campo not in FIELD_MAP:
-            continue
-        grouped_filters.setdefault((campo, operador), [])
-        if valor not in grouped_filters[(campo, operador)]:
-            grouped_filters[(campo, operador)].append(valor)
-
-    for (campo, operador), valores_grupo in grouped_filters.items():
-        group_q = Q()
-        for valor in valores_grupo:
-            group_q |= _build_filter_q(campo, operador, valor)
-        qs = qs.filter(group_q)
-
-    return qs
-
-
-def _apply_order(qs, request):
-    orden_param = request.GET.get("orden", "region_loc").strip()
-    raw_field = orden_param.lstrip("-")
-    prefix = "-" if orden_param.startswith("-") else ""
-    order_field = ORDER_MAP.get(raw_field)
-    if order_field:
-        return qs.order_by(f"{prefix}{order_field}", "departamento", "localidad", "cueanexo"), orden_param
-    return qs.order_by("region_loc", "departamento", "localidad", "cueanexo"), ""
-
-
 def _get_page_size(request):
     try:
         page_size = int(request.GET.get("page_size", PAGE_SIZE))
@@ -799,6 +743,10 @@ def _get_page_size(request):
 
 
 def _build_active_filters_text(request, cef_options=None):
+    """
+    Genera un resumen legible de los filtros aplicados para UI y Excel.
+    """
+
     partes = []
     q = request.GET.get("q", "").strip()
     if q:
@@ -834,33 +782,11 @@ def _build_active_filters_text(request, cef_options=None):
     return " | ".join(partes) if partes else "Sin filtros aplicados"
 
 
-def _distinct_options(qs, field_name, limit=250):
-    values = (
-        qs.exclude(**{f"{field_name}__isnull": True})
-        .order_by(field_name)
-        .values_list(field_name, flat=True)
-        .distinct()[:limit]
-    )
-    return [_clean(value) for value in values if _clean(value)]
-
-
-def _get_filter_options(qs):
-    options = {}
-    for campo, fields in FIELD_MAP.items():
-        options[campo] = _distinct_options(qs, fields[0])
-
-    geo_options = _get_global_geo_filter_options()
-    for campo in ("region_loc", "departamento", "localidad"):
-        options[campo] = _merge_filter_option_values(
-            GEO_FILTER_OPTIONS_CEF_REQUIRED.get(campo, []),
-            geo_options.get(campo, []),
-            options.get(campo, []),
-        )
-
-    return options
-
-
 def _get_cef_selector_options(source):
+    """
+    Arma las opciones del selector multiple de CEF, sin CUE-Anexos duplicados.
+    """
+
     started = time.perf_counter()
     options = []
     seen = set()
@@ -935,6 +861,10 @@ def _columnas_config():
 
 
 def _resolver_columnas_exportar(request, formato):
+    """
+    Decide que columnas exportar segun el formato y las columnas visibles elegidas.
+    """
+
     if formato == "excel_todo":
         return [(LABELS_COLUMNAS[col], col) for col in COLUMNAS_LOCALIZACIONES_CEF]
 
@@ -951,6 +881,10 @@ def _resolver_columnas_exportar(request, formato):
 
 
 def _exportar_excel_cef(datos, formato, request, cef_selector_options=None):
+    """
+    Genera el archivo Excel con encabezado, filtros aplicados y datos resultantes.
+    """
+
     columnas = _resolver_columnas_exportar(request, formato)
 
     wb = Workbook()
@@ -1018,7 +952,68 @@ def _base_cef_queryset(request):
     return qs
 
 
+def _get_cueanexos_visibles_usuario(user):
+    cueanexos = []
+
+    queryset = get_cefs_visualizacion_usuario(user)
+
+    for cueanexo in (
+        queryset
+        .values_list("cueanexo", flat=True)
+        .distinct()
+    ):
+        cueanexo_normalizado = normalizar_cueanexo(cueanexo)
+
+        if (
+            cueanexo_normalizado
+            and cueanexo_normalizado not in cueanexos
+        ):
+            cueanexos.append(cueanexo_normalizado)
+
+    return cueanexos
+
+
+def _resolver_cueanexos_visualizacion_desde_request(request):
+    """
+    Resuelve la seleccion de CEF desde GET y la cruza con lo permitido al usuario.
+    """
+
+    cueanexos_visibles = set(
+        _get_cueanexos_visibles_usuario(request.user)
+    )
+
+    if not cueanexos_visibles:
+        return []
+
+    seleccion_raw = list(request.GET.getlist("cefs"))
+
+    cueanexo_unico = request.GET.get("cueanexo")
+    if cueanexo_unico:
+        seleccion_raw.append(cueanexo_unico)
+
+    seleccion_normalizada = []
+
+    for cueanexo in seleccion_raw:
+        cueanexo_normalizado = normalizar_cueanexo(cueanexo)
+
+        if (
+            cueanexo_normalizado
+            and cueanexo_normalizado in cueanexos_visibles
+            and cueanexo_normalizado not in seleccion_normalizada
+        ):
+            seleccion_normalizada.append(cueanexo_normalizado)
+
+    if seleccion_normalizada:
+        return seleccion_normalizada
+
+    return sorted(cueanexos_visibles)
+
+
 def _resolver_cueanexos_seleccionados_explicitamente(request, cefs_visualizacion):
+    """
+    Distingue entre seleccion explicita del usuario y visualizacion completa.
+    """
+
     started = time.perf_counter()
     seleccion_raw = request.GET.getlist("cefs")
     cueanexo_unico = request.GET.get("cueanexo")
@@ -1045,7 +1040,7 @@ def _resolver_cueanexos_seleccionados_explicitamente(request, cefs_visualizacion
     seleccion_raw_normalizada = {normalizar_cueanexo(raw) for raw in seleccion_raw}
     seleccion_raw_normalizada.discard(None)
     seleccion_raw_normalizada.discard("")
-    seleccion_resuelta = resolver_cueanexos_visualizacion_desde_request(request)
+    seleccion_resuelta = _resolver_cueanexos_visualizacion_desde_request(request)
     seleccion_valida = [
         cueanexo
         for cueanexo in seleccion_resuelta
@@ -1056,9 +1051,18 @@ def _resolver_cueanexos_seleccionados_explicitamente(request, cefs_visualizacion
     return seleccion_valida, bool(seleccion_valida)
 
 
-@cef_visualizacion_required
+@cef_required
 @ensure_csrf_cookie
 def visualizacion_localizaciones(request):
+    """
+    Vista principal de Localizaciones CEF.
+
+    Flujo general:
+    1. carga la base cacheada de CEF visibles;
+    2. resuelve selector, filtros, orden y paginacion;
+    3. exporta Excel o renderiza la tabla HTML segun el parametro solicitado.
+    """
+
     view_started = time.perf_counter()
     formato = request.GET.get("formato")
 
@@ -1121,6 +1125,7 @@ def visualizacion_localizaciones(request):
     context = {
         "title": "Localizaciones CEF",
         "active_menu": "localizaciones",
+        "es_admin_cef": usuario_es_admin_cef(request.user),
         "cefs_visualizacion": [],
         "cef_selector_options": cef_selector_options,
         "cueanexos_seleccionados": cueanexos_selector,
