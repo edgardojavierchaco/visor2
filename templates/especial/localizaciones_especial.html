@@ -1,0 +1,239 @@
+{% extends "especial/base_operativo_especial.html" %}
+{% load static especial_filters %}
+
+{# ✅ ESTO OCULTA LA BARRA DE CONTEXTO EN ESTA PANTALLA #}
+{% with mostrar_contexto=False %}
+
+{% block especial_subtitle %}Visualización y exportación de datos de establecimientos de Educación Especial.{% endblock %}
+
+{% block especial_content %}
+    <!-- Estilos específicos -->
+    <style>
+        .select2-container--default .select2-selection--single {
+            border: 1.5px solid var(--border-strong) !important;
+            border-radius: var(--r-sm) !important; height: 38px !important;
+            display: flex !important; align-items: center !important; background: var(--surface);
+        }
+        .select2-dropdown {
+            border: 1.5px solid var(--border-strong) !important;
+            border-radius: var(--r-sm) !important; box-shadow: var(--shadow-md) !important; z-index: 1050 !important;
+        }
+        #loadingModalLoc {
+            display: none; position: fixed; inset: 0; background: rgba(7, 26, 51, .6);
+            backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;
+        }
+        .spinner-box {
+            background: var(--surface); padding: 2rem 3rem; border-radius: var(--r-xl);
+            box-shadow: var(--shadow-xl); text-align: center; border: 1px solid var(--border);
+        }
+        .filter-dropdown-menu { min-width: 320px; padding: 1rem; border: 1.5px solid var(--border); box-shadow: var(--shadow-lg); }
+    </style>
+
+    <!-- Cabecera Principal -->
+    <div class="cef-panel-head mb-3">
+        <h2 class="cef-panel-title">{{ title }}</h2>
+        <div class="cef-panel-actions">
+            <!-- Botón Ciclos SIEMPRE VISIBLE PARA ADMIN -->
+            {% if especial_context.es_admin_especial %}
+            <a href="{% url 'especial:administrar_ciclos' %}" class="btn btn-outline-primary">
+                <i class="fa-solid fa-calendar-days"></i> Ciclos
+            </a>
+            {% endif %}
+
+            <!-- Dropdown Filtros -->
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="btnFiltrosLoc" data-bs-toggle="dropdown">
+                    <i class="fa-solid fa-filter"></i> Filtros
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu" aria-labelledby="btnFiltrosLoc">
+                    <form method="get" action="{% url 'especial:visualizacion_localizaciones' %}">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase">Región</label>
+                            <select name="region_loc" class="select2-init form-select form-select-sm">
+                                <option value="">Todas</option>
+                                {% for region in opciones_regiones|default:'' %}
+                                <option value="{{ region }}" {% if request.GET.region_loc == region %}selected{% endif %}>{{ region }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase">Departamento</label>
+                            <select name="departamento" class="select2-init form-select form-select-sm">
+                                <option value="">Todos</option>
+                                {% for depto in opciones_departamentos|default:'' %}
+                                <option value="{{ depto }}" {% if request.GET.departamento == depto %}selected{% endif %}>{{ depto }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase">Localidad</label>
+                            <select name="localidad" class="select2-init form-select form-select-sm">
+                                <option value="">Todas</option>
+                                {% for loc in opciones_localidades|default:'' %}
+                                <option value="{{ loc }}" {% if request.GET.localidad == loc %}selected{% endif %}>{{ loc }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2 mt-4">
+                            <a href="{{ limpiar_filtros_url }}" class="btn btn-outline-secondary btn-sm flex-grow-1">Limpiar</a>
+                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Aplicar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Exportar Excel -->
+            <a href="?formato=excel&{{ request.GET.urlencode }}" class="btn btn-success">
+                <i class="fa-solid fa-file-excel"></i> Descargar Padrón
+            </a>
+        </div>
+    </div>
+
+    <!-- Barra de Herramientas -->
+    <div class="cef-tools mb-3">
+        <div class="cef-tools-left">
+            <span class="cef-tools-label">
+                Mostrando <strong>{{ resultado_desde }}</strong> a <strong>{{ resultado_hasta }}</strong> de <strong>{{ resultado_total }}</strong> localizaciones
+            </span>
+        </div>
+        <div class="cef-tools-right">
+            <div class="cef-search-wrap me-2" style="min-width: 180px;">
+                <i class="fa-solid fa-school"></i>
+                <form method="get" style="margin:0; width:100%;">
+                    {% for key, value in request.GET.items %}{% if key != 'cueanexo' and key != 'page' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+                    <input type="text" name="cueanexo" value="{{ request.GET.cueanexo }}" placeholder="Buscar por CUE..." autocomplete="off">
+                </form>
+            </div>
+            <div class="cef-search-wrap me-2">
+                <i class="fa-solid fa-search"></i>
+                <form method="get" style="margin:0; width:100%;">
+                    {% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+                    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Búsqueda rápida..." autocomplete="off">
+                </form>
+            </div>
+            
+            <!-- Gestor de Columnas -->
+            <div class="dropdown d-inline-block">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" id="btnToggleColumnsLoc" data-bs-toggle="dropdown">
+                    <i class="fa-solid fa-table-columns"></i> Columnas
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu" aria-labelledby="btnToggleColumnsLoc">
+                    {% for col_id in columnas %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input col-toggle-loc" type="checkbox" value="{{ col_id }}" id="col_{{ col_id }}_loc" {% if col_id in columnas_visibles_default %}checked{% endif %}>
+                        <label class="form-check-label" for="col_{{ col_id }}_loc">{{ labels_columnas|get_item:col_id|default:col_id }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="cef-table-wrap">
+        <table class="cef-dt" id="tablaLocalizacionesLoc">
+            <thead>
+                <tr>
+                    {% for col_id in columnas %}
+                    <th data-col="{{ col_id }}" class="col-{{ col_id }} {% if col_id not in columnas_visibles_default %}d-none{% endif %}">
+                        {{ labels_columnas|get_item:col_id|default:col_id }}
+                    </th>
+                    {% endfor %}
+                    <th class="text-center" style="width: 80px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loc in localizaciones %}
+                <tr>
+                    {% for col_id in columnas %}
+                    <td data-col="{{ col_id }}" class="col-{{ col_id }} {% if col_id not in columnas_visibles_default %}d-none{% endif %}">
+                        {% if col_id == 'cueanexo' %}
+                            <span style="font-weight:700; color:var(--blue-800);">{{ loc|get_item:col_id }}</span>
+                        {% elif col_id == 'nom_est' %}
+                            <div style="font-weight:600; white-space:normal; min-width:220px;">{{ loc|get_item:col_id }}</div>
+                        {% elif col_id == 'estado_loc' or col_id == 'estado_est' %}
+                            {% with estado=loc|get_item:col_id|default:""|lower %}
+                            <span class="badge text-bg-{% if 'activo' in estado %}success{% elif 'inactivo' in estado or 'clausurad' in estado or 'baja' in estado %}danger{% else %}secondary{% endif %}">
+                                {{ loc|get_item:col_id }}
+                            </span>
+                            {% endwith %}
+                        {% else %}
+                            {{ loc|get_item:col_id|default:"-" }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-center cef-act-cell">
+                        <a href="{% url 'especial:carga_cueanexo' %}?cueanexo={{ loc.cueanexo }}" class="btn-icon" title="Ver detalle"><i class="fa-solid fa-arrow-right"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="100%" class="text-center py-5 text-muted"><p>No se encontraron resultados.</p></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if paginator.num_pages > 1 %}
+    <div class="cef-tfoot mt-3">
+        <span class="cef-tfoot-count">Página {{ page_obj.number }} de {{ paginator.num_pages }}</span>
+        <div class="cef-tfoot-pagination">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-outline-secondary btn-sm" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"><i class="fa-solid fa-angles-left"></i></a>
+            <a class="btn btn-outline-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"><i class="fa-solid fa-angle-left"></i></a>
+            {% endif %}
+            {% for i in paginator.page_range %}
+                {% if page_obj.number == i %}<span class="btn btn-primary btn-sm">{{ i }}</span>
+                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                <a class="btn btn-outline-secondary btn-sm" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-outline-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"><i class="fa-solid fa-angle-right"></i></a>
+            <a class="btn btn-outline-secondary btn-sm" href="?page={{ paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"><i class="fa-solid fa-angles-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Loader Modal -->
+    <div id="loadingModalLoc">
+        <div class="spinner-box"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Generando archivo Excel...</p></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('.select2-init').select2({ width: '100%', dropdownParent: $('#btnFiltrosLoc').parent(), language: { noResults: function() { return "No se encontraron resultados"; } } });
+        
+        const STORAGE_KEY_LOC = 'especial_cols_visibles_loc';
+        let savedCols = localStorage.getItem(STORAGE_KEY_LOC);
+        if (savedCols) {
+            try {
+                savedCols = JSON.parse(savedCols);
+                $('.col-toggle-loc').each(function() {
+                    const val = $(this).val();
+                    $(this).prop('checked', savedCols.includes(val));
+                    actualizarColumnaLoc(val, savedCols.includes(val));
+                });
+            } catch (e) {}
+        }
+        $('.col-toggle-loc').on('change', function() {
+            const colId = $(this).val();
+            const isVisible = $(this).is(':checked');
+            actualizarColumnaLoc(colId, isVisible);
+            let activeCols = [];
+            $('.col-toggle-loc:checked').each(function() { activeCols.push($(this).val()); });
+            localStorage.setItem(STORAGE_KEY_LOC, JSON.stringify(activeCols));
+        });
+        function actualizarColumnaLoc(colId, show) {
+            if (show) $(`.col-${colId}`).removeClass('d-none');
+            else $(`.col-${colId}`).addClass('d-none');
+        }
+        $('#btnExportarExcelLoc').on('click', function() { $('#loadingModalLoc').css('display', 'flex'); setTimeout(function() { $('#loadingModalLoc').fadeOut(300); }, 3000); });
+    });
+    </script>
+{% endblock %}
+
+{% endwith %}

@@ -1,0 +1,161 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Ficha integral del curso/grupo seleccionado.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Gestionar curso <span>» Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span></h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a Grupos / Cursos
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-pen"></i> Editar curso
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-user-plus"></i> Inscribir alumno
+            </a>
+            <a class="btn btn-primary" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-chalkboard-user"></i> Administrar profesores
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        <div class="mb-3">
+            <span class="cef-context-pill">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span><strong>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</strong></span>
+                <span>{{ grupo.turno }}</span>
+                <span>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</span>
+                <span>{{ grupo_dias_texto|default:"Sin días cargados" }}</span>
+            </span>
+        </div>
+
+        <div class="cef-context-summary mb-3">
+            <div class="cef-context-summary-item">
+                <span>CUE-Anexo</span>
+                <strong>{{ cef_context.cueanexo }}</strong>
+            </div>
+            {% if cef_context.establecimiento %}
+                <div class="cef-context-summary-item is-wide">
+                    <span>CEF</span>
+                    <strong>{{ cef_context.establecimiento.nom_est|default:"CEF" }}</strong>
+                </div>
+            {% endif %}
+            {% if cef_context.ciclo %}
+                <div class="cef-context-summary-item">
+                    <span>Ciclo</span>
+                    <strong>{{ cef_context.ciclo }}</strong>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="cef-edit-panel">
+            <h3>Datos del curso</h3>
+            <div class="cef-info-grid">
+                <div class="cef-info-item"><span>Actividad</span><strong>{{ grupo.actividad|default:"-" }}</strong></div>
+                <div class="cef-info-item"><span>N°</span><strong>{{ grupo.numero|default:"-" }}</strong></div>
+                <div class="cef-info-item"><span>Nombre</span><strong>{{ grupo.nombre|default:"-" }}</strong></div>
+                <div class="cef-info-item"><span>Nivel</span><strong>{{ grupo.nivel|default:"-" }}</strong></div>
+                <div class="cef-info-item"><span>Rango etario</span><strong>{{ grupo.rango_etario|default:"-" }}</strong></div>
+                <div class="cef-info-item"><span>Turno</span><strong>{{ grupo.turno|default:"-" }}</strong></div>
+                <div class="cef-info-item"><span>Horario</span><strong>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</strong></div>
+                <div class="cef-info-item"><span>Días</span><strong>{{ grupo_dias_texto|default:"Sin días cargados" }}</strong></div>
+                <div class="cef-info-item"><span>Cupo</span><strong>{{ grupo.cupo_maximo|default:"-" }}</strong></div>
+                <div class="cef-info-item">
+                    <span>Estado</span>
+                    <strong>
+                        <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% elif grupo.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
+                            {{ grupo.get_estado_display }}
+                        </span>
+                    </strong>
+                </div>
+                <div class="cef-info-item"><span>Profesores activos</span><strong>{{ docentes_activos|length }}</strong></div>
+                <div class="cef-info-item"><span>Alumnos activos/en espera</span><strong>{{ inscripciones|length }}</strong></div>
+                <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ grupo.observaciones|default:"Sin observaciones" }}</strong></div>
+            </div>
+        </div>
+
+        <div class="cef-edit-panel">
+            <h3>Profesor titular activo</h3>
+            {% if docente_titular %}
+                <div class="cef-info-grid">
+                    <div class="cef-info-item span-all"><span>Profesor</span><strong>{{ docente_titular.docente_nombre_snapshot|default:docente_titular.docente_cuil }}</strong></div>
+                    <div class="cef-info-item"><span>CUIL</span><strong>{{ docente_titular.docente_cuil }}</strong></div>
+                    <div class="cef-info-item"><span>DNI</span><strong>{{ docente_titular.docente_dni_snapshot|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Estado BNH</span><strong>{{ docente_titular.docente_estado_bnh_snapshot|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Desde</span><strong>{% if docente_titular.fecha_desde %}{{ docente_titular.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="cef-info-item"><span>Hasta</span><strong>{% if docente_titular.fecha_hasta %}{{ docente_titular.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ docente_titular.observaciones|default:"Sin observaciones" }}</strong></div>
+                </div>
+            {% else %}
+                <div class="cef-empty-state">
+                    <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    No hay profesor titular activo para este curso.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="cef-edit-panel">
+            <h3>Profesor suplente activo</h3>
+            {% if docente_suplente %}
+                <div class="cef-info-grid">
+                    <div class="cef-info-item span-all"><span>Profesor</span><strong>{{ docente_suplente.docente_nombre_snapshot|default:docente_suplente.docente_cuil }}</strong></div>
+                    <div class="cef-info-item"><span>CUIL</span><strong>{{ docente_suplente.docente_cuil }}</strong></div>
+                    <div class="cef-info-item"><span>DNI</span><strong>{{ docente_suplente.docente_dni_snapshot|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Estado BNH</span><strong>{{ docente_suplente.docente_estado_bnh_snapshot|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Desde</span><strong>{% if docente_suplente.fecha_desde %}{{ docente_suplente.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="cef-info-item"><span>Hasta</span><strong>{% if docente_suplente.fecha_hasta %}{{ docente_suplente.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ docente_suplente.observaciones|default:"Sin observaciones" }}</strong></div>
+                </div>
+            {% else %}
+                <div class="cef-empty-state">
+                    <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    No hay profesor suplente activo para este curso.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="cef-edit-panel">
+            <h3>Alumnos inscriptos</h3>
+            {% if inscripciones %}
+                <div class="cef-table-wrap">
+                    <table class="cef-dt">
+                        <thead>
+                            <tr>
+                                <th>Apellido y Nombre</th>
+                                <th>Documento</th>
+                                <th>CUIL</th>
+                                <th>Fecha inscripción</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inscripcion in inscripciones %}
+                                <tr>
+                                    <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
+                                    <td>{{ inscripcion.alumno.nro_doc|default:"-" }}</td>
+                                    <td>{{ inscripcion.alumno.cuil|default:"-" }}</td>
+                                    <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge text-bg-{% if inscripcion.estado == 'activo' %}success{% else %}primary{% endif %}">
+                                            {{ inscripcion.get_estado_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="cef-empty-state">
+                    <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    Todavía no hay alumnos activos o en espera en este curso.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

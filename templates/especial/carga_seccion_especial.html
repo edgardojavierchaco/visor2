@@ -1,0 +1,173 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Listado de secciones del establecimiento activo.{% endblock %}
+
+{% block especial_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Gestión de Secciones</h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-primary" href="{% url 'especial:carga_seccion_nueva' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-plus"></i> Agregar Sección
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if especial_context.establecimiento %}
+            <div class="mb-3">
+                <div class="cef-context-summary">
+                    <div class="cef-context-summary-item">
+                        <span>CUE-Anexo</span>
+                        <strong>{{ especial_context.cueanexo }}</strong>
+                    </div>
+                    <div class="cef-context-summary-item is-wide">
+                        <span>Establecimiento</span>
+                        <strong>{{ especial_context.establecimiento.nom_est|default:"Especial" }}</strong>
+                    </div>
+                    {% if especial_context.ciclo %}
+                        <div class="cef-context-summary-item">
+                            <span>Ciclo</span>
+                            <strong>{{ especial_context.ciclo.anio }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+            <div class="cef-tools-right">
+                <div class="cef-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchSecciones" type="search" placeholder="Buscar…" data-cef-table-search>
+                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if secciones %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt" data-cef-table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Estructura</th>
+                            <th>Tipo sección</th>
+                            <th>Turno</th>
+                            <th>Rango etario</th>
+                            <th>Modalidad</th>
+                            <th>Capacidad</th>
+                            <th>Alumnos</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seccion in secciones %}
+                            <tr>
+                                <td><strong>{{ seccion.nombre_seccion }}</strong></td>
+                                <td>{{ seccion.tipo_estructura_especial }}</td>
+                                <td>{{ seccion.cd_tipo_seccion }}</td>
+                                <td>
+                                    <span class="badge text-bg-secondary">{{ seccion.turno }}</span>
+                                </td>
+                                <td>{{ seccion.rango_etario }}</td>
+                                <td>{{ seccion.modalidad }}</td>
+                                <td>{{ seccion.capacidad_total }}</td>
+                                <td>
+                                    <span class="badge text-bg-primary">{{ seccion.alumnos_activos }}</span>
+                                </td>
+                                <td>
+                                    {% if seccion.estado == 'activa' %}
+                                        <span class="badge text-bg-success">Activa</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">{{ seccion.get_estado_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="cef-act-cell">
+                                    <a title="Editar sección" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a title="Inscribir alumnos" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                        <i class="fa-solid fa-user-plus"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif especial_context.puede_operar %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-layer-group" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavía no hay secciones cargadas para este establecimiento y ciclo.
+            </div>
+        {% else %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un establecimiento y un ciclo para ver secciones.
+            </div>
+        {% endif %}
+
+        <div class="cef-tfoot">
+            <span class="cef-tfoot-count" data-cef-table-count>{{ total_secciones|default:0 }} registros</span>
+            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var table = document.querySelector("[data-cef-table]");
+    if (!table) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
+    var search = document.querySelector("[data-cef-table-search]");
+    var size   = document.querySelector("[data-cef-page-size]");
+    var count  = document.querySelector("[data-cef-table-count]");
+    var paginEl = document.querySelector("[data-cef-table-pagination]");
+    var page = 1;
+
+    function filteredRows() {
+        var term = search ? search.value.toLowerCase().trim() : "";
+        return rows.filter(function(r){ return !term || r.textContent.toLowerCase().includes(term); });
+    }
+
+    function render() {
+        var visible  = filteredRows();
+        var pageSize = parseInt(size ? size.value : "10", 10) || 10;
+        var pages    = Math.max(1, Math.ceil(visible.length / pageSize));
+        page         = Math.min(page, pages);
+        rows.forEach(function(r){ r.style.display = "none"; });
+        visible.slice((page - 1) * pageSize, page * pageSize).forEach(function(r){ r.style.display = ""; });
+        if (count) count.textContent = visible.length + " registros";
+        if (paginEl) {
+            if (pages <= 1) { paginEl.innerHTML = ""; return; }
+            var html = '<button type="button" data-page-prev>← Anterior</button>';
+            html += '<span class="page-num">' + page + ' / ' + pages + '</span>';
+            html += '<button type="button" data-page-next>Siguiente →</button>';
+            paginEl.innerHTML = html;
+        }
+    }
+
+    if (search)  search.addEventListener("input",  function(){ page = 1; render(); });
+    if (size)    size.addEventListener("change",   function(){ page = 1; render(); });
+    if (paginEl) paginEl.addEventListener("click", function(ev){
+        if (ev.target.hasAttribute("data-page-prev")) page = Math.max(1, page - 1);
+        if (ev.target.hasAttribute("data-page-next")) page = page + 1;
+        render();
+    });
+    render();
+})();
+</script>
+{% endblock %}

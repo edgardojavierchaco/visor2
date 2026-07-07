@@ -1,0 +1,138 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Administración de profesores asignados al grupo seleccionado.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Profesores asignados al grupo</h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+            </a>
+            <button class="btn btn-primary" type="button" data-open-docentes-modal>
+                <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+            </button>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if grupo %}
+            <div class="mb-3">
+                <span class="cef-context-pill">
+                    <i class="fa-solid fa-users"></i>
+                    <span><strong>{{ grupo_rotulo }}</strong></span>
+                    <span>{{ grupo.turno }}</span>
+                    <span>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</span>
+                    <span>{{ grupo_dias_texto|default:"Sin dias cargados" }}</span>
+                </span>
+            </div>
+        {% endif %}
+
+        <p class="small text-muted mb-3">
+            Desde esta pantalla podés agregar, editar o dar de baja profesores asignados a este grupo.
+        </p>
+
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+            <div class="cef-tools-right">
+                <div class="cef-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchDocentesGrupo" type="search" placeholder="Buscar..." data-cef-table-search>
+                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar busqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if docentes %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt" data-cef-table>
+                    <thead>
+                        <tr>
+                            <th>Docente</th>
+                            <th>CUIL</th>
+                            <th>DNI</th>
+                            <th>Rol</th>
+                            <th>Estado en este grupo</th>
+                            <th>Desde</th>
+                            <th>Hasta</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asignacion in docentes %}
+                            <tr>
+                                <td><strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong></td>
+                                <td>{{ asignacion.docente_cuil }}</td>
+                                <td>{{ asignacion.docente_dni_snapshot|default:"-" }}</td>
+                                <td>{{ asignacion.get_rol_display }}</td>
+                                <td>
+                                    <span class="badge text-bg-{% if asignacion.estado == 'activo' %}success{% elif asignacion.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                        {{ asignacion.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                                <td>{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                                <td>{{ asignacion.observaciones|default:"-" }}</td>
+                                <td class="cef-act-cell">
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_docente_grupo' grupo.pk asignacion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                            <i class="fa-solid fa-pen-to-square"></i> Editar
+                                        </a>
+                                        {% if asignacion.estado == 'activo' %}
+                                        <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0" data-confirm-baja-docente>
+                                            {% csrf_token %}
+                                            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                            {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                            <input type="hidden" name="accion" value="baja">
+                                            <input type="hidden" name="docente_grupo_id" value="{{ asignacion.pk }}">
+                                            <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                                <i class="fa-solid fa-user-minus"></i> Dar de baja
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavia no hay profesores asignados a este grupo.
+            </div>
+        {% endif %}
+
+        <div class="cef-tfoot">
+            <span class="cef-tfoot-count" data-cef-table-count>{{ docentes|length }} registros</span>
+            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+{% include "cef/modal_busqueda_docente_cef.html" %}
+<script>
+(function () {
+    document.addEventListener("submit", function(event) {
+        var form = event.target.closest("[data-confirm-baja-docente]");
+        if (!form) return;
+        if (!window.confirm("¿Dar de baja a este profesor del grupo?")) {
+            event.preventDefault();
+        }
+    });
+})();
+</script>
+{% endblock %}

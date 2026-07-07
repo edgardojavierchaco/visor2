@@ -1,0 +1,125 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Alta de ciclos y selección del ciclo actual. Solo disponible para Administrador.{% endblock %}
+
+{% block especial_content %}
+<div class="cef-row-grid">
+    <section class="cef-card">
+        <div class="cef-card-header">
+            <h3><i class="fa-solid fa-calendar-days me-2"></i>Ciclos disponibles</h3>
+            <span class="badge text-bg-primary">{{ ciclos_admin|length }} ciclos</span>
+        </div>
+        <div class="cef-card-body">
+            {% if ciclos_admin %}
+                <div class="cef-table-wrap">
+                    <table class="cef-dt">
+                        <thead>
+                            <tr>
+                                <th>Año</th>
+                                <th>Descripción</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Activo</th>
+                                <th>Actual</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ciclo in ciclos_admin %}
+                                <tr>
+                                    <td><strong>{{ ciclo.anio }}</strong></td>
+                                    <td>{{ ciclo.descripcion|default:"—" }}</td>
+                                    <td>{{ ciclo.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+                                    <td>{{ ciclo.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+                                    <td>
+                                        {% if ciclo.activo %}
+                                            <span class="badge text-bg-success">Sí</span>
+                                        {% else %}
+                                            <span class="badge text-bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ciclo.actual %}
+                                            <span class="badge text-bg-success">Actual</span>
+                                        {% else %}
+                                            <span class="badge text-bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="cef-act-cell">
+                                        {% if not ciclo.actual %}
+                                            <form method="post" class="m-0">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="accion" value="marcar_actual">
+                                                <input type="hidden" name="ciclo_id" value="{{ ciclo.pk }}">
+                                                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                                {% if especial_context.ciclo %}
+                                                    <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                                                {% endif %}
+                                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fa-solid fa-check"></i> Marcar actual
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="cef-empty-state">
+                    <i class="fa-solid fa-calendar-xmark" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    Todavía no hay ciclos creados.
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="cef-card">
+        <div class="cef-card-header">
+            <h3><i class="fa-solid fa-calendar-plus me-2"></i>Crear ciclo</h3>
+        </div>
+        <div class="cef-card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="crear">
+                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                {% if especial_context.ciclo %}
+                    <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="cef-form-grid is-two-col">
+                    {% for field in form %}
+                        <div class="cef-field {% if field.name == 'descripcion' %}span-2{% endif %}{% if field.field.widget.input_type == 'checkbox' %} is-checkbox-field{% endif %}">
+                            {% if field.field.widget.input_type == "checkbox" %}
+                                <label class="cef-switch-line" for="{{ field.id_for_label }}">
+                                    {{ field }}
+                                    <span>{{ field.label }}</span>
+                                </label>
+                            {% else %}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="cef-error">{{ field.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="cef-form-actions mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Guardar ciclo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+{% endblock %}

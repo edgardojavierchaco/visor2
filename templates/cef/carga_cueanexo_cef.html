@@ -1,0 +1,57 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Ficha del CEF activo y datos complementarios del ciclo seleccionado.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-row-grid">
+    <section class="cef-card">
+        <div class="cef-card-header">
+            <h3><i class="fa-solid fa-school me-2"></i>Datos del establecimiento</h3>
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-pen-to-square me-1"></i>Modificar datos adicionales
+            </a>
+        </div>
+        <div class="cef-card-body">
+            {% if establecimiento_items %}
+                <div class="cef-info-grid">
+                    {% for label, value in establecimiento_items %}
+                        <div class="cef-info-item">
+                            <span>{{ label }}</span>
+                            <strong>{{ value|default:"-" }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="cef-empty-state">No se encontraron datos de Padrón para el CUE-Anexo seleccionado.</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="cef-card">
+        <div class="cef-card-header">
+            <h3><i class="fa-solid fa-clipboard-list me-2"></i>Datos adicionales del ciclo</h3>
+            <span class="badge text-bg-primary">Ciclo {{ cef_context.ciclo|default:"-" }}</span>
+        </div>
+        <div class="cef-card-body">
+            {% if datos %}
+                <div class="cef-info-grid">
+                    <div class="cef-info-item"><span>Beneficio alimentario</span><strong>{{ datos.beneficio_alimentario_gratuito|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Fuente financiamiento</span><strong>{{ datos.fuente_financiamiento|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Prestación</span><strong>{{ datos.prestacion_tipo|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Espacio comedor</span><strong>{{ datos.espacio_comedor|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Orientación</span><strong>{{ datos.c_orientacion|default:"-" }}</strong></div>
+                    <div class="cef-info-item"><span>Nombre sección</span><strong>{{ datos.nombre_seccion|default:"-" }}</strong></div>
+                    <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ datos.observaciones|default:"Sin observaciones" }}</strong></div>
+                </div>
+            {% elif cef_context.puede_operar %}
+                <div class="cef-empty-state mb-3">Todavía no hay datos adicionales cargados para este CEF y ciclo.</div>
+                <a class="btn btn-primary" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-plus me-1"></i>Cargar datos adicionales
+                </a>
+            {% else %}
+                <div class="cef-empty-state">Seleccioná un CUE-Anexo y un ciclo para continuar.</div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}
