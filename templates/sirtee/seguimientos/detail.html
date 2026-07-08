@@ -1,0 +1,241 @@
+{% extends "sirtee/base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container mt-4">
+
+
+<div class="card shadow">
+
+
+<div class="card-header d-flex justify-content-between">
+
+
+<h4>
+Detalle seguimiento
+</h4>
+
+
+
+<span class="badge bg-primary">
+
+{{ seguimiento.get_estado_display }}
+
+</span>
+
+
+
+</div>
+
+
+
+
+<div class="card-body">
+
+
+
+<h5>
+
+Seguimiento
+
+</h5>
+
+
+
+<p>
+
+{{ seguimiento.comentario }}
+
+</p>
+
+
+
+<hr>
+
+
+
+
+<div class="row">
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Fecha
+</strong>
+
+<br>
+
+{{ seguimiento.fecha|date:"d/m/Y H:i" }}
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Usuario
+</strong>
+
+<br>
+
+{{ seguimiento.usuario }}
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Estado
+</strong>
+
+<br>
+
+{{ seguimiento.get_estado_display }}
+
+
+</div>
+
+
+
+</div>
+
+
+
+<hr>
+
+
+
+<h5>
+Relaciones
+</h5>
+
+
+
+
+<p>
+
+<strong>
+Relevamiento:
+</strong>
+
+{{ seguimiento.relevamiento }}
+
+
+</p>
+
+
+
+
+{% if seguimiento.hallazgo %}
+
+
+<p>
+
+<strong>
+Hallazgo:
+
+</strong>
+
+<a href="{% url 'sirtee:hallazgos-detail' seguimiento.hallazgo.pk %}">
+
+{{ seguimiento.hallazgo.titulo }}
+
+</a>
+
+</p>
+
+
+{% endif %}
+
+
+
+
+
+{% if seguimiento.intervencion %}
+
+
+<p>
+
+<strong>
+Intervención:
+
+</strong>
+
+<a href="{% url 'sirtee:intervenciones-detail' seguimiento.intervencion.pk %}">
+
+{{ seguimiento.intervencion.titulo }}
+
+</a>
+
+</p>
+
+
+{% endif %}
+
+
+
+
+
+
+<hr>
+
+
+
+
+<a
+href="{% url 'sirtee:seguimientos-update' seguimiento.pk %}"
+class="btn btn-warning">
+
+Editar
+
+</a>
+
+
+
+
+<a
+href="{% url 'sirtee:seguimientos-delete' seguimiento.pk %}"
+class="btn btn-danger">
+
+Eliminar
+
+</a>
+
+
+
+
+<a
+href="{% url 'sirtee:seguimientos-list' %}"
+class="btn btn-secondary">
+
+Volver
+
+</a>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% endblock %}

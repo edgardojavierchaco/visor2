@@ -1,0 +1,539 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card shadow">
+
+
+
+<!-- ================================================= -->
+<!-- HEADER -->
+<!-- ================================================= -->
+
+<div class="card-header d-flex justify-content-between align-items-center">
+
+
+<h4 class="mb-0">
+
+{{ intervencion.titulo }}
+
+</h4>
+
+
+
+<div>
+
+
+{% if intervencion.estado.codigo == "FINALIZADA" %}
+
+
+<span class="badge bg-success">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+
+{% elif intervencion.estado.codigo == "EN_EJECUCION" %}
+
+
+<span class="badge bg-warning text-dark">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+
+{% elif intervencion.estado.codigo == "PAUSADA" %}
+
+
+<span class="badge bg-secondary">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+
+{% elif intervencion.estado.codigo == "CANCELADA" %}
+
+
+<span class="badge bg-danger">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+
+{% else %}
+
+
+<span class="badge bg-primary">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+{% endif %}
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<div class="card-body">
+
+
+
+
+
+<!-- ================================================= -->
+<!-- INFORMACIÓN GENERAL -->
+<!-- ================================================= -->
+
+
+<div class="row">
+
+
+<div class="col-md-6">
+
+
+<p>
+
+<strong>
+Hallazgo:
+</strong>
+
+<br>
+
+<a href="{% url 'sirtee:hallazgos-detail' intervencion.hallazgo.pk %}">
+
+{{ intervencion.hallazgo.titulo }}
+
+</a>
+
+</p>
+
+
+
+</div>
+
+
+
+<div class="col-md-6">
+
+
+<p>
+
+<strong>
+Escuela:
+</strong>
+
+<br>
+
+{{ intervencion.hallazgo.relevamiento.cueanexo }}
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+<hr>
+
+
+
+
+
+<!-- ================================================= -->
+<!-- DESCRIPCIÓN -->
+<!-- ================================================= -->
+
+
+<h5>
+
+Descripción técnica
+
+</h5>
+
+
+
+<div class="alert alert-light">
+
+{{ intervencion.descripcion }}
+
+</div>
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- CLASIFICACIÓN -->
+<!-- ================================================= -->
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+
+<strong>
+Tipo
+</strong>
+
+
+<p>
+
+{{ intervencion.tipo.nombre|default:"-" }}
+
+</p>
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Prioridad
+</strong>
+
+
+<p>
+
+{{ intervencion.prioridad.nombre|default:"-" }}
+
+</p>
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Empresa
+</strong>
+
+
+<p>
+
+{% if intervencion.empresa %}
+
+{{ intervencion.empresa.razon_social }}
+
+{% else %}
+
+Sin asignar
+
+{% endif %}
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<hr>
+
+
+
+
+
+<!-- ================================================= -->
+<!-- SEGUIMIENTO -->
+<!-- ================================================= -->
+
+
+<h5>
+
+Seguimiento operativo
+
+</h5>
+
+
+
+<div class="progress mb-3">
+
+
+<div 
+class="progress-bar"
+role="progressbar"
+style="width:{{ intervencion.porcentaje_avance }}%;">
+
+{{ intervencion.porcentaje_avance }}%
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+
+<strong>
+Inicio
+</strong>
+
+
+<br>
+
+
+{{ intervencion.fecha_inicio|default:"-" }}
+
+
+</div>
+
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Fecha estimada fin
+</strong>
+
+
+<br>
+
+
+{{ intervencion.fecha_estimada_fin|default:"-" }}
+
+
+</div>
+
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Fin real
+</strong>
+
+
+<br>
+
+
+{{ intervencion.fecha_fin|default:"-" }}
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<hr>
+
+
+
+
+
+<!-- ================================================= -->
+<!-- COSTOS -->
+<!-- ================================================= -->
+
+
+<h5>
+
+Costos
+
+</h5>
+
+
+<div class="row">
+
+
+<div class="col-md-6">
+
+
+<strong>
+Costo estimado
+</strong>
+
+
+<p>
+
+${{ intervencion.costo_estimado|default:"0" }}
+
+</p>
+
+
+</div>
+
+
+
+
+<div class="col-md-6">
+
+
+<strong>
+Costo real
+</strong>
+
+
+<p>
+
+${{ intervencion.costo_real|default:"0" }}
+
+</p>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<hr>
+
+
+
+
+
+<!-- ================================================= -->
+<!-- ACCIONES DE ESTADO -->
+<!-- ================================================= -->
+
+
+<h5>
+
+Acciones operativas
+
+</h5>
+
+
+{% include "sirtee/intervenciones/_acciones_estado.html" %}
+
+
+
+
+
+<hr>
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- ACCIONES CRUD -->
+<!-- ================================================= -->
+
+
+<div class="mt-3">
+
+
+<a 
+href="{% url 'sirtee:intervenciones-update' intervencion.pk %}"
+class="btn btn-warning">
+
+
+<i class="bi bi-pencil"></i>
+
+Editar
+
+
+</a>
+
+
+
+<a 
+href="{% url 'sirtee:intervenciones-delete' intervencion.pk %}"
+class="btn btn-danger">
+
+
+<i class="bi bi-trash"></i>
+
+Eliminar
+
+
+</a>
+
+
+
+
+<a 
+href="{% url 'sirtee:intervenciones-list' %}"
+class="btn btn-secondary">
+
+
+Volver
+
+
+</a>
+
+
+</div>
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% endblock %}

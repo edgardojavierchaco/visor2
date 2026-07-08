@@ -1,0 +1,208 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+
+
+<div class="container mt-4">
+
+
+
+<div class="card shadow">
+
+
+
+<div class="card-header">
+
+
+<h4>
+
+{% if object %}
+
+Editar seguimiento
+
+{% else %}
+
+Nuevo seguimiento
+
+{% endif %}
+
+
+</h4>
+
+
+</div>
+
+
+
+
+
+<div class="card-body">
+
+
+<form method="post">
+
+
+{% csrf_token %}
+
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+Relevamiento
+
+</label>
+
+
+{{ form.relevamiento }}
+
+{{ form.relevamiento.errors }}
+
+
+</div>
+
+
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+Estado
+
+</label>
+
+
+{{ form.estado }}
+
+{{ form.estado.errors }}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+Hallazgo
+
+</label>
+
+
+{{ form.hallazgo }}
+
+{{ form.hallazgo.errors }}
+
+
+</div>
+
+
+
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+Intervención
+
+</label>
+
+
+{{ form.intervencion }}
+
+{{ form.intervencion.errors }}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="mb-3">
+
+
+<label class="form-label">
+
+Comentario
+
+</label>
+
+
+{{ form.comentario }}
+
+{{ form.comentario.errors }}
+
+
+</div>
+
+
+
+
+
+
+<button
+type="submit"
+class="btn btn-success">
+
+Guardar
+
+</button>
+
+
+
+
+<a
+href="{% url 'sirtee:seguimientos-list' %}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% endblock %}

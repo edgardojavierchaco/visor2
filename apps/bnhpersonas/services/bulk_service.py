@@ -1,14 +1,9 @@
 # services/bulk_service.py
-
 from django.db import transaction
-
-from apps.bnhpersonas.services.pipeline import (
-    Pipeline,
-    PipelineContext,
-)
-
+from .pipeline import Pipeline, PipelineContext
 from .steps.audit_step import AuditStep
 from .steps.normalize_step import NormalizeStep
+from .steps.permission_step import PermissionStep
 from .steps.validation_step import ValidationStep
 
 
@@ -17,6 +12,7 @@ class BulkService:
     PIPELINE = Pipeline(
         AuditStep,
         NormalizeStep,
+        PermissionStep,
         ValidationStep,
         fail_fast=True,
         log_steps=True,
@@ -24,31 +20,10 @@ class BulkService:
 
     @staticmethod
     @transaction.atomic
-    def safe_bulk_create(
-        model_class,
-        objects,
-        user=None,
-        batch_size=1000,
-        source="bulk_create",
-    ):
+    def safe_bulk_create(model, objects, user=None):
 
-        context = PipelineContext(
-            user=user,
-            source=source,
-        )
+        context = PipelineContext(user=user)
 
-        prepared = BulkService.PIPELINE.run_many(
-            objects,
-            context=context,
-        )
+        prepared = BulkService.PIPELINE.run_many(objects, context)
 
-        created = model_class.objects.bulk_create(
-            prepared,
-            batch_size=batch_size,
-        )
-
-        return {
-            "created": created,
-            "stats": context.stats,
-            "errors": context.errors,
-        }
+        return model.objects.bulk_create(prepared)

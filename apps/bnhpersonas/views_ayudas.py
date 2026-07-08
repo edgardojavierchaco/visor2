@@ -4,6 +4,7 @@ from .models import (
     SituacionServicio,
     CondicionActividad,
     TipoFunciones,
+    TipoDesigFunc
 )
 
 
@@ -50,6 +51,17 @@ def obtener_ayuda_renpe(request):
                 "ayuda": obj.ayuda or ""
             })
 
+        elif tipo == "t_designacion":
+            
+            obj = TipoDesigFunc.objects.get(
+                pk=pk
+            )
+            
+            return JsonResponse({
+                "ok": True,
+                "titulo": obj.desigfunc_descripcion,
+                "ayuda": obj.ayuda or ""
+            })
         return JsonResponse({
             "ok": False
         })

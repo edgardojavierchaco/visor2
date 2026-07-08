@@ -1,0 +1,74 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card border-danger shadow">
+
+
+<div class="card-header bg-danger text-white">
+
+<h4>
+Eliminar empresa
+</h4>
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<p>
+¿Confirma eliminar la empresa?
+</p>
+
+
+<h5>
+
+{{ object.razon_social }}
+
+</h5>
+
+
+
+<form method="post">
+
+{% csrf_token %}
+
+
+<button class="btn btn-danger">
+
+Eliminar
+
+</button>
+
+
+
+<a
+href="{% url 'sirtee:empresas-list' %}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

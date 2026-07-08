@@ -1,0 +1,20 @@
+{% extends "sirtee/base.html" %}
+
+{% block content %}
+
+<h2>Detalle</h2>
+
+<ul class="list-group">
+
+    {% for field in object._meta.fields %}
+        <li class="list-group-item">
+            <strong>{{ field.name }}:</strong>
+            {{ object|getattr:field.name }}
+        </li>
+    {% endfor %}
+
+</ul>
+
+<a href="edit/" class="btn btn-primary mt-3">Editar</a>
+
+{% endblock %}

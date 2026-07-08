@@ -1,0 +1,265 @@
+{% extends "sirtee/base.html" %}
+
+{% load static %}
+
+
+{% block content %}
+
+<div class="container mt-4">
+
+
+    <div class="card">
+
+        <div class="card-header">
+
+            <h4>
+                Nuevo Relevamiento
+            </h4>
+
+        </div>
+
+
+        <div class="card-body">
+
+
+            <form method="post">
+
+                {% csrf_token %}
+
+
+                <!-- ========================= -->
+                <!-- DATOS ESCUELA -->
+                <!-- ========================= -->
+
+
+                <h5 class="mb-3">
+                    Escuela
+                </h5>
+
+
+                <div class="row">
+
+
+                    <div class="col-md-4 mb-3">
+
+
+                        <label class="form-label">
+                            CUEANEXO
+                        </label>
+
+
+                        {{ form.cueanexo }}
+
+
+                        {{ form.cueanexo.errors }}
+
+
+                        <div
+                            id="resultadoEscuelas"
+                            class="list-group mt-1">
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="col-md-8 mb-3">
+
+
+                        <label class="form-label">
+                            Nombre escuela
+                        </label>
+
+
+                        <input
+                            type="text"
+                            id="id_nom_est"
+                            class="form-control"
+                            readonly
+                        >
+
+
+                    </div>
+
+
+                </div>
+
+
+
+                <div class="row">
+
+
+                    <div class="col-md-4 mb-3">
+
+
+                        <label class="form-label">
+                            CUI
+                        </label>
+
+
+                        {{ form.cui }}
+
+
+                        {{ form.cui.errors }}
+
+
+                    </div>
+
+
+
+                    <div class="col-md-8 mb-3">
+
+
+                        <label class="form-label">
+                            Oferta
+                        </label>
+
+
+                        {{ form.oferta }}
+
+
+                        {{ form.oferta.errors }}
+
+
+                    </div>
+
+
+                </div>
+
+
+
+                <hr>
+
+
+
+                <!-- ========================= -->
+                <!-- DATOS RELEVAMIENTO -->
+                <!-- ========================= -->
+
+
+                <h5 class="mb-3">
+                    Datos del relevamiento
+                </h5>
+
+
+
+                <div class="row">
+
+
+                    <div class="col-md-4 mb-3">
+
+
+                        <label class="form-label">
+                            Fecha
+                        </label>
+
+
+                        {{ form.fecha }}
+
+
+                        {{ form.fecha.errors }}
+
+
+                    </div>
+
+
+
+
+                    <div class="col-md-4 mb-3">
+
+
+                        <label class="form-label">
+                            Estado
+                        </label>
+
+
+                        {{ form.estado }}
+
+
+                        {{ form.estado.errors }}
+
+
+                    </div>
+
+
+
+
+                    <div class="col-md-4 mb-3">
+
+
+                        <label class="form-label">
+                            Tipo
+                        </label>
+
+
+                        {{ form.tipo_relevamiento }}
+
+
+                        {{ form.tipo_relevamiento.errors }}
+
+
+                    </div>
+
+
+                </div>
+
+
+
+
+                <div class="mb-3">
+
+
+                    <label class="form-label">
+                        Observaciones
+                    </label>
+
+
+                    {{ form.observaciones }}
+
+
+                    {{ form.observaciones.errors }}
+
+
+                </div>
+
+
+
+
+                <button
+                    type="submit"
+                    class="btn btn-success">
+
+                    Guardar relevamiento
+
+                </button>
+
+
+
+                <a
+                    href="{% url 'sirtee:relevamientos-list' %}"
+                    class="btn btn-secondary">
+
+                    Cancelar
+
+                </a>
+
+
+
+            </form>
+
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+
+<script src="{% static 'sirtee/js/buscador_escuelas.js' %}">
+</script>
+
+
+{% endblock %}

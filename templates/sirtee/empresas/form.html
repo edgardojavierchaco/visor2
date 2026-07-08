@@ -1,0 +1,300 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+<div class="container mt-4">
+
+
+<div class="card shadow">
+
+
+<div class="card-header">
+
+<h4>
+
+{% if object %}
+Editar empresa
+{% else %}
+Nueva empresa
+{% endif %}
+
+</h4>
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<form method="post">
+
+{% csrf_token %}
+
+
+
+{{ form.non_field_errors }}
+
+
+
+<div class="row">
+
+
+<div class="col-md-8 mb-3">
+
+<label class="form-label">
+Razón social *
+</label>
+
+{{ form.razon_social }}
+
+<div class="text-danger">
+{{ form.razon_social.errors }}
+</div>
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+CUIT
+</label>
+
+{{ form.cuit }}
+
+<div class="text-danger">
+{{ form.cuit.errors }}
+</div>
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Nombre fantasía
+</label>
+
+{{ form.nombre_fantasia }}
+
+{{ form.nombre_fantasia.errors }}
+
+</div>
+
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+<label class="form-label">
+Tipo
+</label>
+
+{{ form.tipo }}
+
+{{ form.tipo.errors }}
+
+</div>
+
+
+
+<div class="col-md-6 mb-3">
+
+<label class="form-label">
+Registro / Matrícula
+</label>
+
+{{ form.registro_empresa }}
+
+{{ form.registro_empresa.errors }}
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Condición fiscal
+</label>
+
+{{ form.condicion_fiscal }}
+
+</div>
+
+
+
+
+
+<hr>
+
+
+<h5>
+Contacto
+</h5>
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+<label class="form-label">
+Teléfono
+</label>
+
+{{ form.telefono }}
+
+</div>
+
+
+
+
+<div class="col-md-6 mb-3">
+
+<label class="form-label">
+Email
+</label>
+
+{{ form.email }}
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-8 mb-3">
+
+<label class="form-label">
+Domicilio
+</label>
+
+{{ form.domicilio }}
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label class="form-label">
+Localidad
+</label>
+
+{{ form.localidad }}
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Responsable
+</label>
+
+{{ form.responsable }}
+
+</div>
+
+
+
+
+
+
+
+<div class="form-check mb-3">
+
+{{ form.activa }}
+
+<label class="form-check-label">
+
+Empresa activa
+
+</label>
+
+</div>
+
+
+
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Observaciones
+</label>
+
+{{ form.observaciones }}
+
+</div>
+
+
+
+
+
+<button class="btn btn-success">
+
+Guardar
+
+</button>
+
+
+
+<a
+href="{% url 'sirtee:empresas-list' %}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+
+
+
+</form>
+
+
+</div>
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

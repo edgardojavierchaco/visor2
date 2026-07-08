@@ -1,0 +1,87 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card border-danger">
+
+
+<div class="card-header bg-danger text-white">
+
+<h4>
+
+Eliminar intervención
+
+</h4>
+
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<p>
+
+¿Confirma eliminar?
+
+</p>
+
+
+<div class="alert alert-warning">
+
+
+<strong>
+
+{{ object.titulo }}
+
+</strong>
+
+
+<br>
+
+{{ object.hallazgo.titulo }}
+
+
+</div>
+
+
+
+<form method="post">
+
+{% csrf_token %}
+
+
+<button class="btn btn-danger">
+
+Eliminar
+
+</button>
+
+
+<a href="{% url 'sirtee:intervenciones-list' %}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

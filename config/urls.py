@@ -77,6 +77,7 @@ urlpatterns = [
     path('cef/', include('apps.cef.urls')),   
     path('supreg/', include('apps.supervisor_registro.urls', namespace='supervisor_registro')),
     path('monitoreo/',include('apps.monitoreo_login.urls')),
+    path('sirtee/', include('apps.sirtee.urls', namespace='sirtee')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

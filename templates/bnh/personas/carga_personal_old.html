@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Registro de Personal - BNH Personas</title>
+
+<style>
+
+:root{
+    --primary:#1f3c88;
+    --primary2:#3b5bcc;
+    --success:#1ea672;
+    --danger:#e55353;
+    --bg:#eef3f8;
+    --card:#ffffff;
+    --text:#24364b;
+    --muted:#708090;
+    --border:#d9e1ea;
+    --shadow:0 10px 30px rgba(0,0,0,.08);
+    --radius:18px;
+    --warning:#ff9800;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
+
+.header{
+    background:linear-gradient(
+        90deg,
+        var(--primary),
+        var(--primary2)
+    );
+    color:white;
+    padding:22px 34px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 4px 20px rgba(0,0,0,.15);
+}
+
+.header-left{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.header-title{
+    font-size:26px;
+    font-weight:700;
+}
+
+.header-subtitle{
+    font-size:13px;
+    opacity:.9;
+}
+
+.badge{
+    background:rgba(255,255,255,.15);
+    padding:10px 16px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.container{
+    max-width:1500px;
+    margin:30px auto;
+    padding:0 20px;
+}
+
+.card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:26px;
+    margin-bottom:24px;
+}
+
+.section-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:18px;
+    font-weight:700;
+    margin-bottom:22px;
+    border-left:5px solid var(--primary2);
+    padding-left:12px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:
+        repeat(auto-fit,minmax(240px,1fr));
+    gap:16px;
+}
+
+.field{
+    display:flex;
+    flex-direction:column;
+    position:relative;
+}
+
+label{
+    font-size:13px;
+    font-weight:600;
+    color:#526274;
+    margin-bottom:6px;
+}
+
+input,
+select{
+    height:46px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:0 14px;
+    background:#fbfcfe;
+    font-size:14px;
+    transition:.2s;
+}
+
+input:focus,
+select:focus{
+    outline:none;
+    border-color:var(--primary2);
+    box-shadow:0 0 0 4px rgba(59,91,204,.12);
+    background:white;
+}
+
+small{
+    margin-top:4px;
+    color:var(--muted);
+}
+
+.estado-box{
+    margin-top:6px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.autocomplete-list{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:white;
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    z-index:999;
+    box-shadow:var(--shadow);
+}
+
+.autocomplete-item{
+    padding:10px 12px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.autocomplete-item:hover{
+    background:#f0f5ff;
+}
+
+.table-card{
+    border:1px solid var(--border);
+    border-radius:18px;
+    overflow:auto;
+}
+
+#tabla{
+    width:100%;
+    min-width:1700px;
+    border-collapse:collapse;
+}
+
+thead th{
+    position:sticky;
+    top:0;
+    background:#f4f7fc;
+    font-size:13px;
+    font-weight:700;
+    padding:14px;
+    border-bottom:1px solid var(--border);
+}
+
+tbody td{
+    padding:10px;
+    border-bottom:1px solid #edf2f7;
+}
+
+.fila:hover{
+    background:#f8fbff;
+}
+
+.actions{
+    display:flex;
+    gap:14px;
+    margin-top:22px;
+}
+
+.btn{
+    border:none;
+    border-radius:12px;
+    padding:12px 18px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:700;
+    transition:.2s;
+}
+
+.btn:hover{
+    transform:translateY(-1px);
+}
+
+.add{
+    background:var(--success);
+    color:white;
+}
+
+.delete{
+    background:var(--danger);
+    color:white;
+}
+
+.save{
+    background:var(--primary2);
+    color:white;
+    flex:1;
+}
+
+.alert{
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:20px;
+    font-size:14px;
+}
+
+.alert-error{
+    background:#ffe7e7;
+    color:#a32727;
+}
+
+.alert-warning{
+    background:#fff6dc;
+    color:#876400;
+}
+
+@media(max-width:768px){
+
+    .header{
+        flex-direction:column;
+        gap:12px;
+        align-items:flex-start;
+    }
+
+    .actions{
+        flex-direction:column;
+    }
+
+    .save{
+        width:100%;
+    }
+}
+
+/* =========================================================
+   ACTIVIDADES - DISEÑO MODERNO EN SOLAPAS
+========================================================= */
+
+.actividad-card {
+    border: 1px solid #e6e6e6;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+
+/* Tabs header */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.tab-btn {
+    padding: 8px 14px;
+    border: none;
+    background: #f4f6f9;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    transition: 0.2s;
+}
+
+.tab-btn.active {
+    background: #3b5bcc;
+    color: white;
+}
+
+/* Contenido tabs */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+/* campo dentro de card */
+.tab-content .field {
+    display: flex;
+    flex-direction: column;
+}
+
+/* acciones */
+.actividad-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.back{
+    background:var(--warning);
+    color:white;
+}
+
+/* ==========================
+   SWITCH WHATSAPP
+========================== */
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 58px;
+    height: 32px;
+    cursor: pointer;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background: #d7dde5;
+    border-radius: 999px;
+    transition: .25s;
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    top: 4px;
+    background: white;
+    border-radius: 50%;
+    transition: .25s;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+
+.switch input:checked + .slider {
+    background: #25D366; /* WhatsApp */
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.switch input:focus + .slider {
+    box-shadow: 0 0 0 4px rgba(37,211,102,.15);
+}
+
+.switch-wrapper{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-height:46px;
+}
+
+#whatsapp-text{
+    font-weight:600;
+    color:#526274;
+}
+
+/* =====================================
+   AYUDA CONTEXTUAL RENPE
+===================================== */
+
+.help-icon{
+    color:#3b5bcc;
+    cursor:pointer;
+    margin-left:6px;
+    font-size:13px;
+}
+
+.help-icon:hover{
+    color:#1f3c88;
+}
+
+.assistant-box{
+    margin-top:15px;
+    padding:18px;
+    border-radius:14px;
+    background:#f5f9ff;
+    border-left:5px solid #3b5bcc;
+}
+
+.assistant-title{
+    font-weight:700;
+    margin-bottom:8px;
+    color:#1f3c88;
+}
+
+.assistant-content{
+    font-size:14px;
+    line-height:1.5;
+}
+
+.assistant-warning{
+    margin-top:10px;
+    background:#fff5d6;
+    border:1px solid #ffd76b;
+    padding:10px;
+    border-radius:10px;
+}
+
+.assistant-section{
+    margin-bottom:18px;
+    padding-bottom:12px;
+    border-bottom:1px solid #d8e0ef;
+}
+
+.assistant-section:last-child{
+    border-bottom:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+
+    <div class="header-left">
+        <div class="header-title">
+            🏛 Sistema de Registro de Personal
+        </div>
+
+        <div class="header-subtitle">
+            BNH Personas · Gestión Institucional
+        </div>
+    </div>
+
+    <div class="badge">
+        Registro Premium
+    </div>
+    <div class="person-actions">
+
+        <a
+            href="{% url 'director:institucional' %}"
+            class="btn back btn-action">
+
+            <i class="fa-solid fa-arrow-left me-2"></i>
+                Volver
+
+        </a>
+    </div>
+
+</div>
+
+
+<div class="container">
+
+<form method="post">
+
+{% csrf_token %}
+
+
+<!-- ===========================
+     ERRORES FORMULARIO
+=========================== -->
+
+{% if form.errors %}
+<div class="alert alert-error">
+    <strong>Errores del formulario</strong><br>
+    {{ form.errors }}
+</div>
+{% endif %}
+
+{% if formset.errors %}
+<div class="alert alert-warning">
+    <strong>Errores en actividades</strong><br>
+    {{ formset.errors }}
+</div>
+{% endif %}
+
+
+
+<!-- ===========================
+     DATOS PERSONALES
+=========================== -->
+
+<div class="card">
+
+    <div class="section-title">
+        🧍 Datos Personales
+    </div>
+
+    <div class="grid">
+
+        <!-- CUIL -->
+        <div class="field">
+
+            <label>CUIL</label>
+
+            {{ form.cuil }}
+
+            <div
+                id="estado-persona"
+                class="estado-box">
+            </div>
+
+        </div>
+
+
+        <!-- DNI -->
+        <div class="field">
+            <label>DNI</label>
+            {{ form.dni }}
+        </div>
+
+
+        <!-- APELLIDO -->
+        <div class="field">
+            <label>Apellido</label>
+            {{ form.apellido }}
+        </div>
+
+
+        <!-- NOMBRE -->
+        <div class="field">
+            <label>Nombre</label>
+            {{ form.nombre }}
+        </div>
+
+
+        <!-- SEXO -->
+        <div class="field">
+            <label>Sexo</label>
+            {{ form.sexo }}
+        </div>
+
+
+        <!-- PROVINCIA -->
+        <div class="field">
+            <label>Provincia</label>
+            {{ form.provincia }}
+        </div>
+
+
+        <!-- LOCALIDAD -->
+        <div class="field">
+            <label>Localidad</label>
+            {{ form.localidad }}
+        </div>
+
+
+        <!-- CODIGO AREA -->
+        <div class="field">
+
+            <label>Código de Área</label>
+
+            <input
+                type="text"
+                id="codigo-area-autocomplete"
+                placeholder="Ej: 362">
+
+            <input
+                type="hidden"
+                name="codigo_area"
+                id="id_codigo_area">
+
+            <div
+                id="codigo-area-list"
+                class="autocomplete-list">
+            </div>
+
+        </div>
+
+
+        <!-- TELEFONO -->
+        <div class="field">
+
+            <label>Teléfono</label>
+
+            {{ form.telefono }}
+
+            <small>
+                Sólo número local
+            </small>
+
+        </div>
+
+
+        <!-- PREVIEW -->
+        <div class="field">
+
+            <label>Vista previa</label>
+
+            <input
+                type="text"
+                id="preview-telefono"
+                readonly
+                placeholder="+54...">
+
+        </div>
+
+
+        <!-- WHATSAPP -->
+        <div class="field">
+
+            <label>WhatsApp</label>
+
+            <div class="switch-wrapper">
+
+                <label class="switch">
+                    {{ form.whatsapp }}
+                    <span class="slider"></span>
+                </label>
+
+                <span id="whatsapp-text">
+                    No
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===========================
+     ACTIVIDADES
+=========================== -->
+
+<div class="card">
+
+    <div class="section-title">📚 Actividades</div>
+
+        {{ formset.management_form }}
+
+        <div id="formset-body">
+
+        {% for f in formset %}
+
+        <div class="actividad-card">
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button type="button" class="tab-btn active">Institución - Cargo</button>
+                <button type="button" class="tab-btn">Condición Actividad</button>
+                <button type="button" class="tab-btn">Asignación</button>
+                <button type="button" class="tab-btn">Funciones</button>
+            </div>
+
+            <!-- TAB 1 -->
+            <div class="tab-content active">
+
+                <div class="field">
+                    <label>CUE</label>
+                    {{ f.cueanexo }}
+                </div>
+
+                <div class="field">
+                    <label>Categoría</label>
+                    {{ f.categoria }}
+                </div>
+
+                <div class="field">
+                    <label>Modalidad</label>
+                    {{ f.modalidad }}
+                </div>
+
+                <div class="field">
+                    <label>Nivel</label>
+                    {{ f.niveles }}
+                </div>
+
+                <div class="field">
+                    <label>CEIC</label>
+                    {{ f.ceic }}
+                </div>
+
+                <div class="field">
+                    <label>Turno</label>
+                    {{ f.turno }}
+                </div>
+
+                <div class="field">
+                    <label>Estado</label>
+                    {{ f.estado }}
+                </div>
+
+            </div>
+
+            <!-- TAB 2 -->
+            <div class="tab-content">
+
+                <div class="field">
+                    <label>
+                        Situación de Revista
+                        <span class="help-icon">❓</span>
+                    </label>
+                    {{ f.sit_revista }}
+                </div>
+
+                <div class="field">
+                    <label>
+                        Condición de Actividad
+                        <span class="help-icon">❓</span>
+                    </label>
+                    {{ f.cond_actividad }}
+                </div>
+
+                <div class="field">
+                    <label>Designación</label>
+                    {{ f.designacion }}
+                </div>
+
+                <div class="field">
+                    <label>Desde</label>
+                    {{ f.f_desde }}
+                </div>
+
+                <div class="field">
+                    <label>Hasta</label>
+                    {{ f.f_hasta }}
+                </div>
+
+                <div class="field">
+                    <label>Horas</label>
+                    {{ f.carga_horaria }}
+                </div>
+
+            </div>
+
+            <!-- TAB 3 -->
+            <div class="tab-content">
+
+                <div class="field">
+                    <label>Grado/Año</label>
+                    {{ f.grado_anio }}
+                </div>
+
+                <div class="field">
+                    <label>Sección</label>
+                    {{ f.secciones }}
+                </div>
+
+                <div class="field">
+                    <label>Espacio</label>
+                    {{ f.espacios }}
+                </div>
+
+            </div>
+
+            <!-- TAB 4 -->
+            <div class="tab-content">
+                <div class="field">
+                    <label>
+                        Funciones
+                        <span class="help-icon">❓</span>
+                    </label>
+                    {{ f.funciones }}
+                </div>
+                <div class="field">
+                    <label>Desde</label>
+                    {{ f.f_desde_funciones }}
+                </div>
+                <div class="field">
+                    <label>Hasta</label>
+                    {{ f.f_hasta_funciones }}
+                </div>
+            </div>
+
+            <div class="assistant-box">
+
+                <div class="assistant-title">
+                    🤖 Asistente BNH Personas
+                </div>
+
+                <div class="assistant-content">
+                    Seleccione una opción para recibir orientación.
+                </div>
+
+            </div>
+
+            
+            <!-- DELETE -->
+            <div class="actividad-actions">
+                {{ f.DELETE }}
+                <button type="button" class="btn delete">❌ Eliminar</button>
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+        </div>
+
+
+    <!-- BOTONES -->
+
+    <div class="actions">
+
+        <button
+            type="button"
+            class="btn add"
+            id="add">
+
+            ➕ Agregar actividad
+
+        </button>
+
+
+        <button
+            type="submit"
+            class="btn save">
+
+            💾 Guardar Registro
+
+        </button>
+
+    </div>
+
+</div>
+
+
+
+<!-- ===========================
+     TEMPLATE FORMSET VACIO
+=========================== -->
+
+<template id="empty-form-template">
+
+<div class="actividad-card">
+
+    <!-- TABS -->
+    <div class="tabs">
+
+        <button
+            type="button"
+            class="tab-btn active">
+
+            Institucional
+
+        </button>
+
+        <button
+            type="button"
+            class="tab-btn">
+
+            Laboral
+
+        </button>
+
+        <button
+            type="button"
+            class="tab-btn">
+
+            Académico
+
+        </button>
+
+        <button
+            type="button"
+            class="tab-btn">
+
+            Funciones
+
+        </button>
+
+    </div>
+
+
+    <!-- =========================================
+         TAB 1
+    ========================================== -->
+
+    <div class="tab-content active">
+
+        <div class="field">
+            <label>CUE</label>
+            {{ formset.empty_form.cueanexo }}
+        </div>
+
+        <div class="field">
+            <label>Categoría</label>
+            {{ formset.empty_form.categoria }}
+        </div>
+
+        <div class="field">
+            <label>Modalidad</label>
+            {{ formset.empty_form.modalidad }}
+        </div>
+
+        <div class="field">
+            <label>Nivel</label>
+            {{ formset.empty_form.niveles }}
+        </div>
+
+        <div class="field">
+            <label>CEIC</label>
+            {{ formset.empty_form.ceic }}
+        </div>
+
+        <div class="field">
+            <label>Turno</label>
+            {{ formset.empty_form.turno }}
+        </div>
+
+        <div class="field">
+            <label>Estado</label>
+            {{ formset.empty_form.estado }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         TAB 2
+    ========================================== -->
+
+    <div class="tab-content">
+
+        <div class="field">
+            <label>Situación</label>
+            {{ formset.empty_form.sit_revista }}
+        </div>
+
+        <div class="field">
+            <label>Condición</label>
+            {{ formset.empty_form.cond_actividad }}
+        </div>
+
+        <div class="field">
+            <label>Designación</label>
+            {{ formset.empty_form.designacion }}
+        </div>
+
+        <div class="field">
+            <label>Desde</label>
+            {{ formset.empty_form.f_desde }}
+        </div>
+
+        <div class="field">
+            <label>Hasta</label>
+            {{ formset.empty_form.f_hasta }}
+        </div>
+
+        <div class="field">
+            <label>Horas</label>
+            {{ formset.empty_form.carga_horaria }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         TAB 3
+    ========================================== -->
+
+    <div class="tab-content">
+
+        <div class="field">
+            <label>Grado / Año</label>
+            {{ formset.empty_form.grado_anio }}
+        </div>
+
+        <div class="field">
+            <label>Sección</label>
+            {{ formset.empty_form.secciones }}
+        </div>
+
+        <div class="field">
+            <label>Espacio</label>
+            {{ formset.empty_form.espacios }}
+        </div>
+
+    </div>
+
+    <!-- =========================================
+         TAB 4
+    ========================================== -->
+
+    <div class="tab-content">
+
+        <div class="field">
+            <label>Funciones</label>
+            {{ formset.empty_form.funciones }}
+        </div>
+
+        <div class="field">
+            <label>Desde</label>
+            {{ formset.empty_form.f_desde_funciones }}
+        </div>
+
+        <div class="field">
+            <label>Hasta</label>
+            {{ formset.empty_form.f_hasta_funciones }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         DELETE
+    ========================================== -->
+
+            {{ formset.empty_form.espacios }}
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         DELETE
+    ========================================== -->
+
+    <div class="actividad-actions">
+
+        {{ formset.empty_form.DELETE }}
+
+        <button
+            type="button"
+            class="btn delete">
+
+            ❌ Eliminar
+
+        </button>
+
+    </div>
+
+</div>
+
+</template>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    /* =========================================================
+       AUTOCOMPLETE CODIGO AREA
+    ========================================================= */
+
+    const codigoInput =
+        document.getElementById(
+            "codigo-area-autocomplete"
+        );
+
+    const codigoHidden =
+        document.getElementById(
+            "id_codigo_area"
+        );
+
+    const codigoList =
+        document.getElementById(
+            "codigo-area-list"
+        );
+
+    if (codigoInput) {
+
+        let timeout;
+
+        codigoInput.addEventListener(
+            "input",
+            function () {
+
+                let value =
+                    this.value.replace(
+                        /\D/g,
+                        ''
+                    );
+
+                this.value = value;
+
+                if (
+                    value.length < 2
+                ) {
+
+                    codigoList.innerHTML =
+                        "";
+
+                    return;
+                }
+
+                clearTimeout(
+                    timeout
+                );
+
+                timeout =
+                    setTimeout(() => {
+
+                    fetch(
+                        `/bnh/buscar-codigos-area/?q=${value}`
+                    )
+                        .then(
+                            r => r.json()
+                        )
+                        .then(data => {
+
+                            codigoList.innerHTML =
+                                "";
+
+                            data.forEach(item => {
+
+                                const div =
+                                    document.createElement(
+                                        "div"
+                                    );
+
+                                div.className =
+                                    "autocomplete-item";
+
+                                div.textContent =
+                                    item.label;
+
+                                div.addEventListener(
+                                    "click",
+                                    function(){
+
+                                    codigoInput.value =
+                                        item.label;
+
+                                    codigoHidden.value =
+                                        item.id;
+
+                                    codigoList.innerHTML =
+                                        "";
+
+                                    actualizarPreview();
+
+                                });
+
+                                codigoList.appendChild(
+                                    div
+                                );
+
+                            });
+
+                        });
+
+                },250);
+
+            }
+        );
+
+        document.addEventListener(
+            "click",
+            function(e){
+
+                if(
+                    !codigoInput.contains(
+                        e.target
+                    )
+                ){
+
+                    codigoList.innerHTML =
+                        "";
+
+                }
+
+            }
+        );
+    }
+
+
+    /* =========================================================
+       PREVIEW TELEFONO
+    ========================================================= */
+
+    function actualizarPreview(){
+
+        const tel =
+            document.getElementById(
+                "id_telefono"
+            );
+
+        const codigo =
+            document.getElementById(
+                "codigo-area-autocomplete"
+            );
+
+        const preview =
+            document.getElementById(
+                "preview-telefono"
+            );
+
+        if(
+            !tel ||
+            !codigo ||
+            !preview
+        ) return;
+
+        const numero =
+            tel.value.replace(
+                /\D/g,
+                ''
+            );
+
+        const match =
+            codigo.value.match(
+                /^(\d+)/
+            );
+
+        if(
+            !numero ||
+            !match
+        ){
+
+            preview.value =
+                "";
+
+            return;
+        }
+
+        preview.value =
+            `+54${match[1]}${numero}`;
+    }
+
+    document.addEventListener(
+        "input",
+        function(e){
+
+            if(
+                e.target.id ===
+                "id_telefono"
+            ){
+
+                actualizarPreview();
+
+            }
+
+        }
+    );
+
+
+    /* =========================================================
+       PROVINCIA -> LOCALIDAD
+    ========================================================= */
+
+    const provincia =
+        document.getElementById(
+            "id_provincia"
+        );
+
+    const localidad =
+        document.getElementById(
+            "id_localidad"
+        );
+
+    if(provincia){
+
+        provincia.addEventListener(
+            "change",
+            function(){
+
+                fetch(
+                    `{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${this.value}`
+                )
+                .then(r=>r.json())
+                .then(data=>{
+
+                    localidad.innerHTML =
+                        "<option value=''>----</option>";
+
+                    data.forEach(item=>{
+
+                        const opt =
+                            document.createElement(
+                                "option"
+                            );
+
+                        opt.value =
+                            item.c_localidad;
+
+                        opt.textContent =
+                            item.descrip_localidad;
+
+                        localidad.appendChild(
+                            opt
+                        );
+
+                    });
+
+                });
+
+            }
+        );
+    }
+
+
+    /* =========================================================
+         SWITCH WHATSAPP
+    ========================================================= */
+    const whatsapp =
+        document.getElementById("id_whatsapp");
+
+    const whatsappText =
+        document.getElementById("whatsapp-text");
+
+    if (whatsapp && whatsappText){
+
+        function actualizarWhatsapp(){
+            whatsappText.textContent =
+                whatsapp.checked ? "Sí" : "No";
+        }
+
+        actualizarWhatsapp();
+
+        whatsapp.addEventListener(
+            "change",
+            actualizarWhatsapp
+        );
+    }
+
+
+    /* =========================================================
+       VALIDAR CUIL
+    ========================================================= */
+
+    function validarCUIL(cuil){
+
+        cuil =
+            cuil.replace(
+                /\D/g,
+                ''
+            );
+
+        if(
+            cuil.length !== 11
+        ) return false;
+
+        const coef =
+            [5,4,3,2,7,6,5,4,3,2];
+
+        let suma = 0;
+
+        for(
+            let i=0;
+            i<10;
+            i++
+        ){
+
+            suma +=
+                parseInt(cuil[i]) *
+                coef[i];
+        }
+
+        let resto =
+            suma % 11;
+
+        let dv =
+            11 - resto;
+
+        if(dv===11) dv=0;
+        if(dv===10) dv=9;
+
+        return (
+            dv ===
+            parseInt(cuil[10])
+        );
+    }
+
+    function extraerDNI(cuil){
+
+        cuil =
+            cuil.replace(
+                /\D/g,
+                ''
+            );
+
+        if(
+            cuil.length !== 11
+        ) return "";
+
+        return cuil.substring(
+            2,
+            10
+        );
+    }
+
+
+    /* =========================================================
+       BUSCAR PERSONA
+    ========================================================= */
+
+    const cuilInput =
+        document.getElementById(
+            "id_cuil"
+        );
+
+    const dniInput =
+        document.getElementById(
+            "id_dni"
+        );
+
+    const estado =
+        document.getElementById(
+            "estado-persona"
+        );
+
+    if(cuilInput){
+
+        /* =====================================
+        INPUT + VALIDACION CUIL
+        ===================================== */
+
+        cuilInput.addEventListener(
+            "input",
+            function(){
+
+                this.value =
+                    this.value.replace(
+                        /\D/g,
+                        ''
+                    );
+
+                const cuil =
+                    this.value;
+
+                estado.innerHTML = "";
+
+                if(
+                    cuil.length < 11
+                ){
+
+                    estado.innerHTML =
+                        "⚠️ CUIL incompleto";
+
+                    estado.className =
+                        "estado-box warning";
+
+                    dniInput.value =
+                        "";
+
+                    return;
+                }
+
+                if(
+                    !validarCUIL(
+                        cuil
+                    )
+                ){
+
+                    estado.innerHTML =
+                        "❌ CUIL inválido";
+
+                    estado.className =
+                        "estado-box error";
+
+                    dniInput.value =
+                        "";
+
+                    return;
+                }
+
+                dniInput.value =
+                    extraerDNI(
+                        cuil
+                    );
+
+                estado.innerHTML =
+                    "✅ CUIL válido";
+
+                estado.className =
+                    "estado-box success";
+            }
+        );
+
+
+        /* =====================================
+        BUSCAR PERSONA EN BD
+        ===================================== */
+
+        cuilInput.addEventListener(
+            "blur",
+            function(){
+
+                const cuil =
+                    this.value.replace(
+                        /\D/g,
+                        ''
+                    );
+
+                if(
+                    cuil.length !== 11
+                ) return;
+
+                if(
+                    !validarCUIL(
+                        cuil
+                    )
+                ) return;
+
+                fetch(
+                    `{% url 'bnhpersonas:buscar_persona' %}?cuil=${cuil}`
+                )
+                .then(
+                    r => r.json()
+                )
+                .then(data => {
+
+                    /* ==========================
+                    PERSONA NUEVA
+                    ========================== */
+
+                    if(
+                        !data.existe
+                    ){
+
+                        estado.innerHTML =
+                            "🟢 Persona nueva";
+
+                        estado.className =
+                            "estado-box success";
+
+                        dniInput.value =
+                            extraerDNI(
+                                cuil
+                            );
+
+                        document.getElementById(
+                            "id_apellido"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_nombre"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_sexo"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_provincia"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_telefono"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_localidad"
+                        ).innerHTML =
+                            "<option value=''>----</option>";
+
+                        document.getElementById(
+                            "codigo-area-autocomplete"
+                        ).value = "";
+
+                        document.getElementById(
+                            "id_codigo_area"
+                        ).value = "";
+
+                        document.getElementById(
+                            "preview-telefono"
+                        ).value = "";
+
+                        const whatsapp =
+                            document.getElementById(
+                                "id_whatsapp"
+                            );
+
+                        if(whatsapp){
+                            whatsapp.checked =
+                                false;
+                        }
+
+                        return;
+                    }
+
+
+                    /* ==========================
+                    PERSONA EXISTENTE
+                    ========================== */
+
+                    estado.innerHTML =
+                        "🔵 Persona encontrada";
+
+                    estado.className =
+                        "estado-box info";
+
+                    /* DATOS BASICOS */
+
+                    document.getElementById(
+                        "id_dni"
+                    ).value =
+                        data.dni || "";
+
+                    document.getElementById(
+                        "id_apellido"
+                    ).value =
+                        data.apellido || "";
+
+                    document.getElementById(
+                        "id_nombre"
+                    ).value =
+                        data.nombre || "";
+
+                    document.getElementById(
+                        "id_sexo"
+                    ).value =
+                        data.sexo || "";
+
+                    /* TELEFONO */
+
+                    document.getElementById(
+                        "id_telefono"
+                    ).value =
+                        data.telefono || "";
+
+                    /* CODIGO AREA */
+
+                    const codigoInput =
+                        document.getElementById(
+                            "codigo-area-autocomplete"
+                        );
+
+                    const codigoHidden =
+                        document.getElementById(
+                            "id_codigo_area"
+                        );
+
+                    if(codigoInput){
+
+                        codigoInput.value =
+                            data.codigo_area_label || "";
+
+                    }
+
+                    if(codigoHidden){
+
+                        codigoHidden.value =
+                            data.codigo_area || "";
+
+                    }
+
+                    /* WHATSAPP */
+
+                    const whatsapp =
+                        document.getElementById(
+                            "id_whatsapp"
+                        );
+
+                    if(whatsapp){
+
+                        whatsapp.checked =
+                            Boolean(
+                                data.whatsapp
+                            );
+
+                    }
+
+                    /* PREVIEW TELEFONO */
+
+                    actualizarPreview();
+
+                    /* PROVINCIA */
+
+                    const provincia =
+                        document.getElementById(
+                            "id_provincia"
+                        );
+
+                    provincia.value =
+                        data.provincia || "";
+
+
+                    /* ==========================
+                    LOCALIDADES
+                    ========================== */
+
+                    if(data.provincia){
+
+                        fetch(
+                            `{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${data.provincia}`
+                        )
+                        .then(
+                            r => r.json()
+                        )
+                        .then(localidades => {
+
+                            const localidad =
+                                document.getElementById(
+                                    "id_localidad"
+                                );
+
+                            localidad.innerHTML =
+                                "<option value=''>----</option>";
+
+                            localidades.forEach(item => {
+
+                                const opt =
+                                    document.createElement(
+                                        "option"
+                                    );
+
+                                opt.value =
+                                    item.c_localidad;
+
+                                opt.textContent =
+                                    item.descrip_localidad;
+
+                                if(
+                                    String(
+                                        item.c_localidad
+                                    ) ===
+                                    String(
+                                        data.localidad
+                                    )
+                                ){
+
+                                    opt.selected =
+                                        true;
+                                }
+
+                                localidad.appendChild(
+                                    opt
+                                );
+
+                                });
+
+                                });
+
+                                }
+
+                                /* FIN PERSONA EXISTENTE */
+
+                                })
+                                .catch(err => {
+
+                                    console.error(
+                                        err
+                                    );
+
+                                    estado.innerHTML =
+                                        "🔴 Error buscando persona";
+
+                                    estado.className =
+                                        "estado-box error";
+
+                                }); 
+
+                                        } // FIN blur
+                                    ); // FIN addEventListener blur
+
+                                } // FIN if(cuilInput)
+
+
+    /* =========================================================
+       TABS ACTIVIDAD
+    ========================================================= */
+
+    document.addEventListener(
+        "click",
+        function(e){
+
+            if(
+                !e.target.classList.contains(
+                    "tab-btn"
+                )
+            ) return;
+
+            const card =
+                e.target.closest(
+                    ".actividad-card"
+                );
+
+            if(!card) return;
+
+            const botones =
+                card.querySelectorAll(
+                    ".tab-btn"
+                );
+
+            const tabs =
+                card.querySelectorAll(
+                    ".tab-content"
+                );
+
+            botones.forEach(
+                b=>b.classList.remove(
+                    "active"
+                )
+            );
+
+            tabs.forEach(
+                t=>t.classList.remove(
+                    "active"
+                )
+            );
+
+            e.target.classList.add(
+                "active"
+            );
+
+            const index =
+                [...botones].indexOf(
+                    e.target
+                );
+
+            tabs[index]
+                ?.classList
+                .add(
+                    "active"
+                );
+        }
+    );
+
+
+    /* =========================================================
+       AGREGAR ACTIVIDAD
+    ========================================================= */
+
+    const addBtn =
+        document.getElementById(
+            "add"
+        );
+
+    if(addBtn){
+
+        addBtn.addEventListener(
+            "click",
+            function(){
+
+                const total =
+                    document.querySelector(
+                        '[name$="-TOTAL_FORMS"]'
+                    );
+
+                const index =
+                    parseInt(
+                        total.value
+                    );
+
+                const template =
+                    document.getElementById(
+                        "empty-form-template"
+                    );
+
+                let html =
+                    template.innerHTML
+                    .replace(
+                        /__prefix__/g,
+                        index
+                    );
+
+                document
+                    .getElementById(
+                        "formset-body"
+                    )
+                    .insertAdjacentHTML(
+                        "beforeend",
+                        html
+                    );
+
+                total.value =
+                    index + 1;
+
+            }
+        );
+    }
+
+
+    /* =========================================================
+       DELETE FORMSET
+    ========================================================= */
+
+    document.addEventListener(
+        "click",
+        function(e){
+
+            if(
+                !e.target.classList.contains(
+                    "delete"
+                )
+            ) return;
+
+            const card =
+                e.target.closest(
+                    ".actividad-card"
+                );
+
+            if(!card) return;
+
+            const del =
+                card.querySelector(
+                    'input[name$="-DELETE"]'
+                );
+
+            if(del){
+
+                del.checked =
+                    true;
+            }
+
+            card.style.display =
+                "none";
+
+        }
+    );
+
+
+    /* =========================================================
+       CEIC + GRADO/AÑO + SECCIONES DINAMICO
+    ========================================================= */
+
+    function cargarCEIC(
+        modalidad,
+        nivel,
+        select
+    ){
+
+        fetch(
+            `{% url 'bnhpersonas:filtrar_ceic' %}?modalidad=${modalidad}&nivel=${nivel||""}`
+        )
+        .then(r=>r.json())
+        .then(data=>{
+
+            select.innerHTML =
+                "<option value=''>----</option>";
+
+            data.forEach(item=>{
+
+                const opt =
+                    document.createElement(
+                        "option"
+                    );
+
+                opt.value =
+                    item.c_ceic;
+
+                opt.textContent =
+                    item.descripcion;
+
+                select.appendChild(
+                    opt
+                );
+
+            });
+
+        });
+
+    }
+
+    function cargarGradoAnio(
+        modalidad,
+        nivel,
+        select
+    ){
+
+        fetch(
+            `/bnh/filtrar-grado-anio/?modalidad=${modalidad}&nivel=${nivel || ""}`
+        )
+        .then(r => r.json())
+        .then(data => {
+
+            select.innerHTML =
+                "<option value=''>----</option>";
+
+            data.forEach(item => {
+
+                const opt =
+                    document.createElement(
+                        "option"
+                    );
+
+                opt.value =
+                    item.c_grado_anio;
+
+                opt.textContent =
+                    item.nombre_grado_anio;
+
+                select.appendChild(
+                    opt
+                );
+
+            });
+
+        });
+
+    }
+
+    function cargarSecciones(
+        modalidad,
+        nivel,
+        select
+    ){
+
+        fetch(
+            `/bnh/filtrar-secciones/?modalidad=${modalidad}&nivel=${nivel || ""}`
+        )
+        .then(r => r.json())
+        .then(data => {
+
+            select.innerHTML =
+                "<option value=''>----</option>";
+
+            data.forEach(item => {
+
+                const opt =
+                    document.createElement(
+                        "option"
+                    );
+
+                opt.value =
+                    item.c_seccion;
+
+                opt.textContent =
+                    item.nombre_seccion;
+
+                select.appendChild(
+                    opt
+                );
+
+            });
+
+        });
+
+    }
+
+    document.addEventListener(
+        "change",
+        function(e){
+
+            if(
+                !e.target.name
+            ) return;
+
+            if(
+                e.target.name.includes(
+                    "modalidad"
+                ) ||
+                e.target.name.includes(
+                    "niveles"
+                )
+            ){
+
+                const card =
+                    e.target.closest(
+                        ".actividad-card"
+                    );
+
+                if(!card) return;
+
+                const mod =
+                    card.querySelector(
+                        '[name$="modalidad"]'
+                    )?.value;
+
+                const niv =
+                    card.querySelector(
+                        '[name$="niveles"]'
+                    )?.value;
+
+                const ceic =
+                    card.querySelector(
+                        '[name$="ceic"]'
+                    );
+
+                const grado =
+                    card.querySelector(
+                        '[name$="grado_anio"]'
+                    );
+
+                const seccion =
+                    card.querySelector(
+                        '[name$="secciones"]'
+                    );
+
+                if(mod){
+
+                    if(ceic){
+
+                        cargarCEIC(
+                            mod,
+                            niv,
+                            ceic
+                        );
+
+                    }
+
+                    if(grado){
+
+                        cargarGradoAnio(
+                            mod,
+                            niv,
+                            grado
+                        );
+
+                    }
+
+                    if(seccion){
+
+                        cargarSecciones(
+                            mod,
+                            niv,
+                            seccion
+                        );
+
+                    }
+
+                }
+
+            }
+
+        }
+    );
+
+
+    /* =========================================================
+       NORMALIZACION
+    ========================================================= */
+
+    function normalizar(
+        input
+    ){
+
+        if(!input) return;
+
+        input.addEventListener(
+            "input",
+            function(){
+
+                this.value =
+                    this.value
+                        .toUpperCase()
+                        .replace(
+                            /[^A-ZÁÉÍÓÚÜÑ\s]/g,
+                            ''
+                        )
+                        .replace(
+                            /\s+/g,
+                            ' '
+                        );
+
+            }
+        );
+    }
+
+    normalizar(
+        document.getElementById(
+            "id_apellido"
+        )
+    );
+
+    normalizar(
+        document.getElementById(
+            "id_nombre"
+        )
+    );
+
+    /* =====================================
+    ASISTENTE RENPE
+    ===================================== */
+
+    async function actualizarAsistente(card){
+
+        const asistente =
+            card.querySelector(
+                ".assistant-content"
+            );
+
+        if(!asistente)
+            return;
+
+        const condicion =
+            card.querySelector(
+                '[name*="cond_actividad"]'
+            );
+
+        const revista =
+            card.querySelector(
+                '[name*="sit_revista"]'
+            );
+
+        const funcion =
+            card.querySelector(
+                '[name*="funciones"]'
+            );
+
+        let html = '';
+
+        /* CONDICION */
+
+        if(condicion && condicion.value){
+
+            const r =
+                await fetch(
+                    `/bnh/obtener-ayuda-renpe/?tipo=condicion&id=${condicion.value}`
+                );
+
+            const data =
+                await r.json();
+
+            if(data.ok){
+
+                html += `
+                    <div class="assistant-section">
+                        <h5>📋 Condición de Actividad</h5>
+                        <strong>${data.titulo}</strong>
+                        <p>${data.ayuda}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /* SITUACION */
+
+        if(revista && revista.value){
+
+            const r =
+                await fetch(
+                    `/bnh/obtener-ayuda-renpe/?tipo=situacion&id=${revista.value}`
+                );
+
+            const data =
+                await r.json();
+
+            if(data.ok){
+
+                html += `
+                    <div class="assistant-section">
+                        <h5>📑 Situación de Revista</h5>
+                        <strong>${data.titulo}</strong>
+                        <p>${data.ayuda}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /* FUNCION */
+
+        if(funcion && funcion.value){
+
+            const r =
+                await fetch(
+                    `/bnh/obtener-ayuda-renpe/?tipo=funcion&id=${funcion.value}`
+                );
+
+            const data =
+                await r.json();
+
+            if(data.ok){
+
+                html += `
+                    <div class="assistant-section">
+                        <h5>👨‍🏫 Función</h5>
+                        <strong>${data.titulo}</strong>
+                        <p>${data.ayuda}</p>
+                    </div>
+                `;
+            }
+        }
+
+        asistente.innerHTML =
+            html ||
+            "Seleccione una opción para recibir orientación.";
+
+    }
+
+    document.addEventListener(
+        "change",
+        function(e){
+
+            const card =
+                e.target.closest(
+                    ".actividad-card"
+                );
+
+            if(!card)
+                return;
+
+            actualizarAsistente(
+                card
+            );
+
+        }
+    );
+
+    /* inicializar actividades ya cargadas */
+
+    document
+        .querySelectorAll('.actividad-card')
+        .forEach(card => {
+
+            actualizarAsistente(card);
+
+        });
+    });
+
+</script>
+
+{{ form.media }}
+
+</form>
+</div>
+
+</body>
+</html>
