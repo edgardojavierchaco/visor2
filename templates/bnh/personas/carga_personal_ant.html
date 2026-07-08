@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+{% load dict_filters %}
+
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>
+Registro de Personal - BNH Personas
+</title>
+
+
+<style>
+
+:root{
+
+    --primary:#1f3c88;
+    --primary2:#3b5bcc;
+    --success:#1ea672;
+    --danger:#e55353;
+
+    --bg:#eef3f8;
+    --card:#ffffff;
+
+    --text:#24364b;
+    --muted:#708090;
+
+    --border:#d9e1ea;
+
+    --shadow:
+        0 10px 30px rgba(0,0,0,.08);
+
+    --radius:18px;
+
+    --warning:#ff9800;
+
+}
+
+
+
+*{
+
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+
+}
+
+
+
+body{
+
+    font-family:
+        "Segoe UI",
+        sans-serif;
+
+    background:
+        var(--bg);
+
+    color:
+        var(--text);
+
+}
+
+
+
+/* ======================
+HEADER
+====================== */
+
+
+.header{
+
+    background:
+        linear-gradient(
+            90deg,
+            var(--primary),
+            var(--primary2)
+        );
+
+    color:white;
+
+    padding:
+        22px 34px;
+
+    display:flex;
+
+    justify-content:
+        space-between;
+
+    align-items:center;
+
+    box-shadow:
+        0 4px 20px rgba(0,0,0,.15);
+
+}
+
+
+
+.header-left{
+
+    display:flex;
+
+    flex-direction:
+        column;
+
+    gap:4px;
+
+}
+
+
+
+.header-title{
+
+    font-size:26px;
+
+    font-weight:700;
+
+}
+
+
+
+.header-subtitle{
+
+    font-size:13px;
+
+    opacity:.9;
+
+}
+
+
+
+.badge{
+
+    background:
+        rgba(255,255,255,.15);
+
+    padding:
+        10px 16px;
+
+    border-radius:
+        999px;
+
+    font-size:13px;
+
+    font-weight:600;
+
+}
+
+
+
+/* ======================
+CONTENEDOR
+====================== */
+
+
+.container{
+
+    max-width:
+        1500px;
+
+    margin:
+        30px auto;
+
+    padding:
+        0 20px;
+
+}
+
+
+
+.card{
+
+    background:
+        var(--card);
+
+    border-radius:
+        var(--radius);
+
+    box-shadow:
+        var(--shadow);
+
+    padding:
+        26px;
+
+    margin-bottom:
+        24px;
+
+}
+
+
+
+/* ======================
+GRID GENERAL
+====================== */
+
+
+.grid{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(240px,1fr)
+        );
+
+    gap:
+        16px;
+
+}
+
+
+
+.field{
+
+    display:flex;
+
+    flex-direction:
+        column;
+
+}
+
+
+
+label{
+
+    font-size:13px;
+
+    font-weight:600;
+
+    color:#526274;
+
+    margin-bottom:
+        6px;
+
+}
+
+
+
+input,
+select,
+textarea{
+
+
+    min-height:
+        46px;
+
+    border:
+        1px solid var(--border);
+
+
+    border-radius:
+        12px;
+
+
+    padding:
+        10px 14px;
+
+
+    background:
+        #fbfcfe;
+
+
+    font-size:
+        14px;
+
+
+}
+
+
+
+input:focus,
+select:focus,
+textarea:focus{
+
+
+    outline:none;
+
+
+    border-color:
+        var(--primary2);
+
+
+    box-shadow:
+        0 0 0 4px rgba(59,91,204,.12);
+
+
+    background:white;
+
+}
+
+
+
+/* ======================
+ACTIVIDADES GRID
+====================== */
+
+
+.actividad-card{
+
+
+    border:
+        1px solid var(--border);
+
+
+    border-radius:
+        18px;
+
+
+    padding:
+        20px;
+
+
+    background:white;
+
+
+    box-shadow:
+        0 5px 18px rgba(0,0,0,.05);
+
+
+    margin-bottom:
+        20px;
+
+
+}
+
+
+
+/* ======================
+TABS
+====================== */
+
+
+.tabs{
+
+
+    display:flex;
+
+
+    gap:8px;
+
+
+    margin-bottom:
+        18px;
+
+
+    border-bottom:
+        1px solid #eee;
+
+
+    overflow-x:auto;
+
+
+}
+
+
+
+.tab-btn{
+
+
+    border:none;
+
+
+    background:
+        #f4f6f9;
+
+
+    padding:
+        10px 16px;
+
+
+    border-radius:
+        10px 10px 0 0;
+
+
+    cursor:pointer;
+
+
+    font-weight:600;
+
+
+    color:#444;
+
+
+}
+
+
+
+.tab-btn.active{
+
+
+    background:
+        var(--primary2);
+
+
+    color:white;
+
+
+}
+
+
+
+
+
+.tab-content{
+
+
+    display:none;
+
+
+}
+
+
+
+.tab-content.active{
+
+
+    display:grid;
+
+
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(220px,1fr)
+        );
+
+
+    gap:
+        15px;
+
+
+}
+
+
+
+/* ======================
+HORARIOS GRID
+====================== */
+
+
+.horarios-box{
+
+
+    margin-top:20px;
+
+
+    padding:18px;
+
+
+    border-radius:16px;
+
+
+    background:#f7faff;
+
+
+    border:
+        1px solid #dde6f5;
+
+
+}
+
+
+
+.horario-row{
+
+
+    display:grid;
+
+
+    grid-template-columns:
+        repeat(4,1fr);
+
+
+    gap:12px;
+
+
+    margin-bottom:12px;
+
+
+}
+
+
+
+
+
+/* ======================
+BOTONES
+====================== */
+
+
+.btn{
+
+
+    border:none;
+
+
+    padding:
+        12px 18px;
+
+
+    border-radius:
+        12px;
+
+
+    cursor:pointer;
+
+
+    font-weight:700;
+
+
+}
+
+
+
+.add{
+
+    background:
+        var(--success);
+
+    color:white;
+
+}
+
+
+
+.delete{
+
+    background:
+        var(--danger);
+
+    color:white;
+
+}
+
+
+
+.save{
+
+    background:
+        var(--primary2);
+
+    color:white;
+
+    flex:1;
+
+}
+
+
+
+.back{
+
+    background:
+        var(--warning);
+
+    color:white;
+
+}
+
+
+
+.actions{
+
+
+    display:flex;
+
+
+    gap:15px;
+
+
+    margin-top:20px;
+
+
+}
+
+
+
+
+
+/* ======================
+ASISTENTE
+====================== */
+
+
+.assistant-box{
+
+
+    margin-top:18px;
+
+
+    padding:18px;
+
+
+    border-radius:14px;
+
+
+    background:#f5f9ff;
+
+
+    border-left:
+        5px solid var(--primary2);
+
+
+}
+
+
+
+.assistant-title{
+
+
+    font-weight:700;
+
+
+    color:
+        var(--primary);
+
+
+}
+
+
+
+/* ======================
+RESPONSIVE
+====================== */
+
+
+@media(max-width:768px){
+
+
+    .header{
+
+        flex-direction:
+            column;
+
+        gap:
+            15px;
+
+    }
+
+
+
+    .horario-row{
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+
+    .actions{
+
+        flex-direction:
+            column;
+
+    }
+
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<div class="header">
+
+
+    <div class="header-left">
+
+        <div class="header-title">
+
+            🏛 Sistema de Registro de Personal
+
+        </div>
+
+
+        <div class="header-subtitle">
+
+            BNH Personas · Gestión Institucional
+
+        </div>
+
+
+    </div>
+
+
+    <div class="badge">
+
+        Registro Premium
+
+    </div>
+
+
+    <a
+        href="{% url 'director:institucional' %}"
+        class="btn back">
+
+        ⬅ Volver
+
+    </a>
+
+
+</div>
+
+
+
+
+<div class="container">
+
+
+
+<form method="post">
+
+
+{% csrf_token %}
+
+
+
+
+
+{% if form.errors %}
+
+<div class="alert alert-error">
+
+<strong>
+Errores del formulario
+</strong>
+
+<br>
+
+{{ form.errors }}
+
+</div>
+
+{% endif %}
+
+
+
+
+{% if formset.errors %}
+
+<div class="alert alert-warning">
+
+<strong>
+Errores actividades
+</strong>
+
+<br>
+
+{{ formset.errors }}
+
+</div>
+
+{% endif %}
+
+
+
+
+
+<!-- =============================
+ DATOS PERSONALES
+============================== -->
+
+
+<div class="card">
+
+
+<div class="section-title">
+
+🧍 Datos Personales
+
+</div>
+
+
+
+<div class="grid">
+
+
+
+<div class="field">
+
+<label>
+CUIL
+</label>
+
+
+{{ form.cuil }}
+
+
+<div
+id="estado-persona"
+class="estado-box">
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+DNI
+</label>
+
+{{ form.dni }}
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+Apellido
+</label>
+
+{{ form.apellido }}
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+Nombre
+</label>
+
+{{ form.nombre }}
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+Sexo
+</label>
+
+{{ form.sexo }}
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+Provincia
+</label>
+
+{{ form.provincia }}
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+Localidad
+</label>
+
+{{ form.localidad }}
+
+</div>
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Código Área
+
+</label>
+
+
+<input
+
+type="text"
+
+id="codigo-area-autocomplete"
+
+placeholder="Ej: 362">
+
+
+<input
+
+type="hidden"
+
+name="codigo_area"
+
+id="id_codigo_area">
+
+
+
+<div
+
+id="codigo-area-list"
+
+class="autocomplete-list">
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Teléfono
+
+</label>
+
+
+{{ form.telefono }}
+
+
+</div>
+
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+Vista previa
+
+</label>
+
+
+<input
+
+id="preview-telefono"
+
+readonly
+
+placeholder="+54...">
+
+
+</div>
+
+
+
+
+
+<div class="field">
+
+
+<label>
+
+WhatsApp
+
+</label>
+
+
+<div class="switch-wrapper">
+
+
+<label class="switch">
+
+
+{{ form.whatsapp }}
+
+
+<span class="slider"></span>
+
+
+</label>
+
+
+
+<span id="whatsapp-text">
+
+No
+
+</span>
+
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<!-- =============================
+ ACTIVIDADES
+============================== -->
+
+
+<div class="card">
+
+
+
+<div class="section-title">
+
+📚 Actividades
+
+</div>
+
+
+
+
+{{ formset.management_form }}
+
+
+
+<div id="formset-body">
+
+
+
+
+
+{% for f in formset %}
+
+
+
+<div class="actividad-card">
+
+
+
+
+
+<div class="tabs">
+
+
+<button
+type="button"
+class="tab-btn active">
+
+Institución - Cargo
+
+</button>
+
+
+<button
+type="button"
+class="tab-btn">
+
+Condición Actividad
+
+</button>
+
+
+<button
+type="button"
+class="tab-btn">
+
+Asignación
+
+</button>
+
+
+
+<button
+type="button"
+class="tab-btn">
+
+Funciones
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- TAB 1 -->
+
+<div class="tab-content active">
+
+
+<div class="field">
+
+<label>
+
+CUE
+
+</label>
+
+
+{{ f.cueanexo }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Categoría
+
+</label>
+
+
+{{ f.categoria }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Modalidad
+
+</label>
+
+
+{{ f.modalidad }}
+
+</div>
+
+
+
+<div class="field">
+
+<label>
+
+Nivel
+
+</label>
+
+
+{{ f.niveles }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+CEIC
+
+</label>
+
+
+{{ f.ceic }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Turno
+
+</label>
+
+
+{{ f.turno }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Estado
+
+</label>
+
+
+{{ f.estado }}
+
+</div>
+
+<!-- =============================
+ HORARIOS
+============================== -->
+
+
+<div class="horarios-box">
+
+
+<div style="display:flex;justify-content:space-between">
+
+
+<strong>
+
+🕒 Horarios
+
+</strong>
+
+
+
+<button
+
+type="button"
+
+class="btn add"
+
+onclick="agregarHorario({{forloop.counter0}})">
+
+
++
+
+Agregar
+
+
+</button>
+
+
+</div>
+
+
+
+
+<div id="horarios-{{forloop.counter0}}">
+
+
+
+{% with horario_formset=horarios|get_item:forloop.counter0 %}
+
+
+
+{{ horario_formset.management_form }}
+
+
+
+{% for h in horario_formset %}
+
+
+
+<div class="grid horario-row">
+
+<div class="field">
+    <label>Día</label>
+    {{ h.dia }}
+</div>
+
+<div class="field">
+    <label>Desde</label>
+    {{ h.hora_desde }}
+</div>
+
+<div class="field">
+    <label>Hasta</label>
+    {{ h.hora_hasta }}
+</div>
+
+<div class="field">
+<button type="button" class="btn delete" onclick="this.closest('.horario-row').remove()">
+
+Eliminar
+
+</button>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+{% endwith %}
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<!-- TAB 2 -->
+
+<div class="tab-content">
+
+
+
+<div class="field">
+
+<label>
+
+Situación Revista
+
+</label>
+
+
+{{ f.sit_revista }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Condición Actividad
+
+</label>
+
+
+{{ f.cond_actividad }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Designación
+
+</label>
+
+
+{{ f.designacion }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Desde
+
+</label>
+
+
+{{ f.f_desde }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Hasta
+
+</label>
+
+
+{{ f.f_hasta }}
+
+</div>
+
+
+
+
+<div class="field">
+
+<label>
+
+Horas
+
+</label>
+
+
+{{ f.carga_horaria }}
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- TAB 3 -->
+
+<div class="tab-content">
+
+
+
+<div class="field">
+
+<label>
+
+Grado / Año
+
+</label>
+
+
+{{ f.grado_anio }}
+
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+
+Sección
+
+</label>
+
+
+{{ f.secciones }}
+
+
+</div>
+
+
+
+
+
+<div class="field">
+
+<label>
+
+Espacio
+
+</label>
+
+
+{{ f.espacios }}
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- TAB 4 -->
+
+<div class="tab-content">
+
+
+
+<div class="field">
+
+<label>
+
+Funciones
+
+</label>
+
+
+{{ f.funciones }}
+
+</div>
+
+
+
+<div class="field">
+
+<label>
+
+Desde
+
+</label>
+
+
+{{ f.f_desde_funciones }}
+
+</div>
+
+
+
+<div class="field">
+
+<label>
+
+Hasta
+
+</label>
+
+
+{{ f.f_hasta_funciones }}
+
+</div>
+
+
+
+</div>
+
+
+
+
+<!-- ASISTENTE -->
+
+
+<div class="assistant-box">
+
+
+<div class="assistant-title">
+
+🤖 Asistente BNH Personas
+
+</div>
+
+
+
+<div class="assistant-content">
+
+
+Seleccione una opción para recibir orientación.
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="actions">
+
+
+{{ f.DELETE }}
+
+
+<button
+
+type="button"
+
+class="btn delete">
+
+
+❌ Eliminar
+
+
+</button>
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="actions">
+
+
+
+<button
+
+type="button"
+
+class="btn add"
+
+id="add">
+
+
+➕ Agregar actividad
+
+
+</button>
+
+
+
+
+
+<button
+
+type="submit"
+
+class="btn save">
+
+
+💾 Guardar Registro
+
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- =============================
+ FORMSET VACIO
+============================== -->
+
+<template id="empty-form-template">
+
+<div class="actividad-card">
+
+
+<div class="tabs">
+
+
+<button type="button" class="tab-btn active">
+
+Institución - Cargo
+
+</button>
+
+
+<button type="button" class="tab-btn">
+
+Condición Actividad
+
+</button>
+
+
+<button type="button" class="tab-btn">
+
+Asignación
+
+</button>
+
+
+<button type="button" class="tab-btn">
+
+Funciones
+
+</button>
+
+
+</div>
+
+
+<div class="card mt-3">
+
+<div class="card-header">
+
+Horarios
+
+</div>
+
+
+<div class="horarios-box">
+
+    <div style="display:flex;justify-content:space-between">
+        <strong>🕒 Horarios</strong>
+
+        <button type="button"
+                class="btn add"
+                onclick="agregarHorario(__prefix__)">
+            + Agregar
+        </button>
+    </div>
+
+    <div id="horarios-__prefix__">
+
+        <!-- IMPORTANTE: contador manual inicial -->
+        <input type="hidden"
+               name="horario-__prefix__-TOTAL_FORMS"
+               value="0">
+
+        <input type="hidden"
+               name="horario-__prefix__-INITIAL_FORMS"
+               value="0">
+
+        <input type="hidden"
+               name="horario-__prefix__-MIN_NUM_FORMS"
+               value="0">
+
+        <input type="hidden"
+               name="horario-__prefix__-MAX_NUM_FORMS"
+               value="1000">
+
+    </div>
+
+</div>
+
+
+</div>
+
+
+<div class="tab-content active">
+
+
+<div class="field">
+
+<label>CUE</label>
+
+{{ formset.empty_form.cueanexo }}
+
+</div>
+
+
+<div class="field">
+
+<label>Categoría</label>
+
+{{ formset.empty_form.categoria }}
+
+</div>
+
+
+<div class="field">
+
+<label>Modalidad</label>
+
+{{ formset.empty_form.modalidad }}
+
+</div>
+
+
+<div class="field">
+
+<label>Nivel</label>
+
+{{ formset.empty_form.niveles }}
+
+</div>
+
+
+<div class="field">
+
+<label>CEIC</label>
+
+{{ formset.empty_form.ceic }}
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="actividad-actions">
+
+
+{{ formset.empty_form.DELETE }}
+
+
+<button
+
+type="button"
+
+class="btn delete eliminar-actividad">
+
+
+❌ Eliminar
+
+
+</button>
+
+
+</div>
+
+
+
+</div>
+
+
+</template>
+
+
+
+
+
+</form>
+
+
+</div>
+
+
+
+</body>
+
+
+<script>
+
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+
+
+/* =====================================================
+ TABS
+===================================================== */
+
+
+document.addEventListener("click",e=>{
+
+
+if(!e.target.classList.contains("tab-btn"))
+return;
+
+
+
+const card =
+e.target.closest(".actividad-card");
+
+
+if(!card)
+return;
+
+
+
+const buttons =
+card.querySelectorAll(".tab-btn");
+
+
+const contents =
+card.querySelectorAll(".tab-content");
+
+
+
+buttons.forEach(b=>
+b.classList.remove("active")
+);
+
+
+contents.forEach(c=>
+c.classList.remove("active")
+);
+
+
+
+e.target.classList.add("active");
+
+
+
+let index =
+Array.from(buttons)
+.indexOf(e.target);
+
+
+
+contents[index]
+?.classList
+.add("active");
+
+
+
+});
+
+
+
+
+
+/* =====================================================
+ AGREGAR ACTIVIDAD FORMSET
+===================================================== */
+
+
+const add =
+document.getElementById("add");
+
+
+
+if(add){
+
+
+add.addEventListener("click",()=>{
+
+
+const total =
+document.querySelector(
+'input[name$="-TOTAL_FORMS"]'
+);
+
+
+
+let index =
+parseInt(total.value);
+
+
+
+const template =
+document.getElementById(
+"empty-form-template"
+);
+
+
+
+let html =
+template.innerHTML.replace(
+/__prefix__/g,
+index
+);
+
+
+
+document
+.getElementById("formset-body")
+.insertAdjacentHTML(
+"beforeend",
+html
+);
+
+
+
+total.value =
+index+1;
+
+
+
+});
+
+}
+
+
+
+
+/* =====================================================
+ ELIMINAR ACTIVIDAD
+===================================================== */
+
+
+document.addEventListener(
+"click",
+e=>{
+
+
+if(!e.target.classList.contains("eliminar-actividad"))
+return;
+
+
+
+const card =
+e.target.closest(".actividad-card");
+
+
+if(!card)
+return;
+
+
+
+const del =
+card.querySelector(
+'input[name$="-DELETE"]'
+);
+
+
+
+if(del)
+del.checked=true;
+
+
+
+card.style.display="none";
+
+
+
+});
+
+
+/* =====================================================
+ WHATSAPP
+===================================================== */
+
+
+const whatsapp =
+document.getElementById(
+"id_whatsapp"
+);
+
+
+
+const whatsappText =
+document.getElementById(
+"whatsapp-text"
+);
+
+
+
+function actualizarWhatsapp(){
+
+
+if(!whatsapp)
+return;
+
+
+
+whatsappText.textContent =
+whatsapp.checked
+?"Sí"
+:"No";
+
+}
+
+
+if(whatsapp){
+
+
+actualizarWhatsapp();
+
+
+whatsapp.addEventListener(
+"change",
+actualizarWhatsapp
+);
+
+
+}
+
+
+
+
+
+
+
+/* =====================================================
+ PREVIEW TELEFONO
+===================================================== */
+
+
+function previewTelefono(){
+
+
+
+const tel =
+document.getElementById(
+"id_telefono"
+);
+
+
+
+const codigo =
+document.getElementById(
+"codigo-area-autocomplete"
+);
+
+
+
+const preview =
+document.getElementById(
+"preview-telefono"
+);
+
+
+
+if(!tel || !codigo || !preview)
+return;
+
+
+
+let numero =
+tel.value.replace(/\D/g,"");
+
+
+
+let area =
+codigo.value.match(/^(\d+)/);
+
+
+
+if(numero && area){
+
+
+preview.value =
+"+54"+area[1]+numero;
+
+
+}else{
+
+
+preview.value="";
+
+
+}
+
+
+
+}
+
+
+
+document.addEventListener(
+"input",
+e=>{
+
+
+if(
+e.target.id==="id_telefono"
+||
+e.target.id==="codigo-area-autocomplete"
+)
+
+previewTelefono();
+
+
+});
+
+
+
+
+
+
+
+
+
+/* =====================================================
+ AUTOCOMPLETE CODIGO AREA
+===================================================== */
+
+
+const codigo =
+document.getElementById(
+"codigo-area-autocomplete"
+);
+
+
+const lista =
+document.getElementById(
+"codigo-area-list"
+);
+
+
+
+const hidden =
+document.getElementById(
+"id_codigo_area"
+);
+
+
+
+if(codigo){
+
+
+codigo.addEventListener(
+"input",()=>{
+
+
+let q =
+codigo.value.replace(/\D/g,"");
+
+
+
+if(q.length<2){
+
+lista.innerHTML="";
+return;
+
+}
+
+
+
+fetch(
+`/bnh/buscar-codigos-area/?q=${q}`
+)
+
+
+.then(r=>r.json())
+
+.then(data=>{
+
+
+lista.innerHTML="";
+
+
+
+data.forEach(item=>{
+
+
+let div =
+document.createElement("div");
+
+
+div.className =
+"autocomplete-item";
+
+
+div.textContent =
+item.label;
+
+
+
+div.onclick=()=>{
+
+
+codigo.value =
+item.label;
+
+
+
+hidden.value =
+item.id;
+
+
+
+lista.innerHTML="";
+
+
+
+previewTelefono();
+
+
+
+};
+
+
+
+lista.appendChild(div);
+
+
+
+});
+
+
+
+});
+
+
+});
+
+}
+
+
+
+
+
+/* =====================================================
+ PROVINCIA LOCALIDAD
+===================================================== */
+
+
+const provincia =
+document.getElementById(
+"id_provincia"
+);
+
+
+const localidad =
+document.getElementById(
+"id_localidad"
+);
+
+
+
+if(provincia){
+
+
+provincia.addEventListener(
+"change",()=>{
+
+
+fetch(
+`{% url 'bnhpersonas:filtrar_localidades' %}?provincia=${provincia.value}`
+)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+
+localidad.innerHTML =
+"<option value=''>----</option>";
+
+
+
+data.forEach(x=>{
+
+
+let o =
+document.createElement("option");
+
+
+
+o.value =
+x.c_localidad;
+
+
+o.textContent =
+x.descrip_localidad;
+
+
+
+localidad.appendChild(o);
+
+
+});
+
+
+});
+
+
+});
+
+
+}
+
+
+
+
+
+/* =====================================================
+ VALIDAR CUIL
+===================================================== */
+
+
+function validarCUIL(cuil){
+
+
+cuil =
+cuil.replace(/\D/g,"");
+
+
+if(cuil.length!==11)
+return false;
+
+
+
+let coef =
+[5,4,3,2,7,6,5,4,3,2];
+
+
+let suma=0;
+
+
+
+for(let i=0;i<10;i++){
+
+
+suma +=
+parseInt(cuil[i])
+*
+coef[i];
+
+
+}
+
+
+
+let resto =
+suma%11;
+
+
+let dv =
+11-resto;
+
+
+if(dv===11)
+dv=0;
+
+
+if(dv===10)
+dv=9;
+
+
+
+return dv ==
+parseInt(cuil[10]);
+
+
+}
+
+
+
+
+
+function dniDesdeCuil(cuil){
+
+
+cuil =
+cuil.replace(/\D/g,"");
+
+
+return cuil.substring(2,10);
+
+
+}
+
+
+
+
+
+
+/* =====================================================
+ BUSCAR PERSONA
+===================================================== */
+
+
+const cuil =
+document.getElementById(
+"id_cuil"
+);
+
+
+const estado =
+document.getElementById(
+"estado-persona"
+);
+
+
+const dni =
+document.getElementById(
+"id_dni"
+);
+
+
+
+if(cuil){
+
+
+cuil.addEventListener(
+"input",()=>{
+
+
+cuil.value =
+cuil.value.replace(/\D/g,"");
+
+
+if(cuil.value.length===11){
+
+
+if(validarCUIL(cuil.value)){
+
+
+estado.innerHTML =
+"✅ CUIL válido";
+
+
+dni.value =
+dniDesdeCuil(cuil.value);
+
+
+}else{
+
+
+estado.innerHTML =
+"❌ CUIL inválido";
+
+
+}
+
+
+
+}
+
+
+});
+
+
+
+
+
+
+cuil.addEventListener(
+"blur",()=>{
+
+
+
+if(
+!validarCUIL(cuil.value)
+)
+return;
+
+
+
+fetch(
+`{% url 'bnhpersonas:buscar_persona' %}?cuil=${cuil.value}`
+)
+
+
+
+.then(r=>r.json())
+
+.then(data=>{
+
+
+if(!data.existe){
+
+
+estado.innerHTML =
+"🟢 Persona nueva";
+
+
+return;
+
+}
+
+
+
+estado.innerHTML =
+"🔵 Persona encontrada";
+
+
+
+id_dni.value =
+data.dni||"";
+
+
+id_apellido.value =
+data.apellido||"";
+
+
+id_nombre.value =
+data.nombre||"";
+
+
+id_sexo.value =
+data.sexo||"";
+
+
+id_telefono.value =
+data.telefono||"";
+
+
+
+});
+
+
+
+});
+
+
+
+}
+
+
+
+
+
+
+
+
+/* =====================================================
+ CEIC GRADO SECCION
+===================================================== */
+
+
+document.addEventListener(
+"change",
+e=>{
+
+
+if(
+!e.target.name
+)
+return;
+
+
+
+if(
+e.target.name.includes("modalidad")
+||
+e.target.name.includes("niveles")
+){
+
+
+
+const card =
+e.target.closest(
+".actividad-card"
+);
+
+
+
+const mod =
+card.querySelector(
+'[name$="modalidad"]'
+)?.value;
+
+
+
+const niv =
+card.querySelector(
+'[name$="niveles"]'
+)?.value;
+
+
+
+
+const cargar=(url,select)=>{
+
+
+if(!select)
+return;
+
+
+
+fetch(url)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+
+select.innerHTML =
+"<option value=''>----</option>";
+
+
+
+data.forEach(x=>{
+
+
+let o =
+document.createElement("option");
+
+
+o.value =
+x.id || x.c_ceic || x.c_grado_anio || x.c_seccion;
+
+
+
+o.textContent =
+x.descripcion ||
+x.nombre_grado_anio ||
+x.nombre_seccion;
+
+
+
+select.appendChild(o);
+
+
+});
+
+
+});
+
+
+};
+
+
+
+
+cargar(
+
+`{% url 'bnhpersonas:filtrar_ceic' %}?modalidad=${mod}&nivel=${niv}`,
+
+card.querySelector('[name$="ceic"]')
+
+);
+
+
+
+cargar(
+
+`/bnh/filtrar-grado-anio/?modalidad=${mod}&nivel=${niv}`,
+
+card.querySelector('[name$="grado_anio"]')
+
+);
+
+
+
+cargar(
+
+`/bnh/filtrar-secciones/?modalidad=${mod}&nivel=${niv}`,
+
+card.querySelector('[name$="secciones"]')
+
+);
+
+
+
+}
+
+
+});
+
+
+
+
+
+
+
+
+
+/* =====================================================
+ ASISTENTE RENPE
+===================================================== */
+
+
+document.addEventListener(
+"change",
+e=>{
+
+
+const card =
+e.target.closest(
+".actividad-card"
+);
+
+
+
+if(!card)
+return;
+
+
+
+const box =
+card.querySelector(
+".assistant-content"
+);
+
+
+
+if(box){
+
+
+box.innerHTML =
+"✔ Información actualizada";
+
+}
+
+
+
+});
+
+
+
+});
+
+
+
+
+
+/* =====================================================
+ AGREGAR HORARIO
+===================================================== */
+function agregarHorario(index) {
+
+
+    const container =
+        document.getElementById(
+            `horarios-${index}`
+        );
+
+
+    if(!container)
+        return;
+    
+
+    const totalForms =
+    container.querySelector(`input[name="horario-${index}-TOTAL_FORMS"]`);
+
+
+    const currentIndex =
+        parseInt(totalForms.value);
+
+
+
+    const html = `
+
+    
+
+    <div class="grid horario-row">
+
+
+        <div class="field">
+
+            <label>Día</label>
+
+            <select name="horarios-${index}-${currentIndex}-dia">
+                <option value="lunes">Lunes</option>
+                <option value="martes">Martes</option>
+                <option value="miércoles">Miércoles</option>
+                <option value="jueves">Jueves</option>
+                <option value="viernes">Viernes</option>
+            </select>
+
+        </div>
+
+
+
+        <div class="field">
+
+            <label>Desde</label>
+
+            <input
+            type="time"
+            name="horarios-${index}-${currentIndex}-hora_desde">
+
+        </div>
+
+
+
+        <div class="field">
+
+            <label>Hasta</label>
+
+            <input
+            type="time"
+            name="horarios-${index}-${currentIndex}-hora_hasta">
+
+        </div>
+
+
+
+        <div class="field">
+
+
+            <button
+            type="button"
+            class="btn delete"
+            onclick="markDelete(this)"
+            ❌ Eliminar
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+    `;
+
+
+
+    container.insertAdjacentHTML(
+        "beforeend",
+        html
+    );
+
+    if (!totalForms) {
+        console.error("No existe management form de horarios para actividad", index);
+        return;
+    }
+
+    totalForms.value =
+        currentIndex + 1;
+
+
+}
+
+function markDelete(btn){
+    const row = btn.closest(".horario-row");
+    const del = row.querySelector('input[type="hidden"]');
+
+    if(del){
+        del.value = "on";
+    }
+
+    row.style.display = "none";
+}
+
+</script>
+
+{{ form.media }}
+
+</form>
+</div>
+
+</body>
+</html>

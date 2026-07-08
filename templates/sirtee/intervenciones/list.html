@@ -1,0 +1,263 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+
+<div class="container-fluid mt-4">
+
+
+<div class="card shadow">
+
+
+<div class="card-header d-flex justify-content-between">
+
+
+<h4>
+Intervenciones
+</h4>
+
+
+
+<a href="{% url 'sirtee:intervenciones-create' %}"
+class="btn btn-success">
+
+<i class="bi bi-plus-circle"></i>
+
+Nueva
+
+</a>
+
+
+</div>
+
+
+
+
+<div class="card-body">
+
+
+<table class="table table-hover align-middle">
+
+
+<thead>
+
+<tr>
+
+<th>
+Intervención
+</th>
+
+<th>
+Hallazgo
+</th>
+
+<th>
+Estado
+</th>
+
+<th>
+Avance
+</th>
+
+<th>
+Costo
+</th>
+
+<th>
+Acciones
+</th>
+
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for intervencion in intervenciones %}
+
+
+<tr>
+
+
+<td>
+
+<strong>
+
+{{ intervencion.titulo }}
+
+</strong>
+
+
+<br>
+
+<small>
+
+{{ intervencion.tipo.nombre }}
+
+</small>
+
+
+</td>
+
+
+
+<td>
+
+{{ intervencion.hallazgo.titulo }}
+
+<br>
+
+<small>
+
+CUE:
+{{ intervencion.hallazgo.relevamiento.cueanexo }}
+
+</small>
+
+
+</td>
+
+
+
+
+<td>
+
+
+{% if intervencion.estado.codigo == "FINALIZADA" %}
+
+<span class="badge bg-success">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+{% elif intervencion.estado.codigo == "EN_EJECUCION" %}
+
+<span class="badge bg-warning text-dark">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+{% elif intervencion.estado.codigo == "CANCELADA" %}
+
+<span class="badge bg-danger">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+{% else %}
+
+<span class="badge bg-secondary">
+
+{{ intervencion.estado.nombre }}
+
+</span>
+
+
+{% endif %}
+
+
+</td>
+
+
+
+
+
+<td width="180">
+
+
+<div class="progress">
+
+<div class="progress-bar"
+style="width:{{ intervencion.porcentaje_avance }}%">
+
+
+{{ intervencion.porcentaje_avance }}%
+
+</div>
+
+</div>
+
+
+</td>
+
+
+
+
+<td>
+
+
+{% if intervencion.costo_real %}
+
+Real:
+${{ intervencion.costo_real }}
+
+{% else %}
+
+Sin costo
+
+{% endif %}
+
+
+</td>
+
+
+
+
+<td>
+
+
+{% include "sirtee/intervenciones/_acciones_estado.html" %}
+
+
+
+</td>
+
+
+</tr>
+
+
+{% empty %}
+
+
+<tr>
+
+<td colspan="6"
+class="text-center">
+
+No existen intervenciones.
+
+</td>
+
+</tr>
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

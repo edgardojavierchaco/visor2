@@ -1,0 +1,380 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+<div class="container mt-4">
+
+<div class="card shadow">
+
+
+<div class="card-header bg-primary text-white">
+
+<h4>
+
+{% if object %}
+Editar intervención
+{% else %}
+Nueva intervención
+{% endif %}
+
+</h4>
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<form method="post">
+
+{% csrf_token %}
+
+
+{% if form.non_field_errors %}
+
+<div class="alert alert-danger">
+
+{{ form.non_field_errors }}
+
+</div>
+
+{% endif %}
+
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+<label class="form-label">
+Hallazgo
+</label>
+
+{{ form.hallazgo }}
+
+{{ form.hallazgo.errors }}
+
+</div>
+
+
+
+<div class="col-md-6 mb-3">
+
+<label class="form-label">
+Empresa ejecutora
+</label>
+
+{{ form.empresa }}
+
+{{ form.empresa.errors }}
+
+</div>
+
+
+</div>
+
+
+
+<hr>
+
+
+
+<h5>
+Clasificación
+</h5>
+
+
+<div class="row">
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Tipo
+</label>
+
+{{ form.tipo }}
+
+</div>
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Estado
+</label>
+
+{{ form.estado }}
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Prioridad
+</label>
+
+{{ form.prioridad }}
+
+</div>
+
+
+</div>
+
+
+
+<hr>
+
+
+<h5>
+Información técnica
+</h5>
+
+
+
+<div class="mb-3">
+
+<label>
+Título
+</label>
+
+{{ form.titulo }}
+
+</div>
+
+
+
+
+<div class="mb-3">
+
+<label>
+Descripción
+</label>
+
+{{ form.descripcion }}
+
+</div>
+
+
+
+<hr>
+
+
+
+<h5>
+Responsables
+</h5>
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+<label>
+Responsable
+</label>
+
+{{ form.responsable }}
+
+</div>
+
+
+
+<div class="col-md-6 mb-3">
+
+<label>
+Equipo ejecutor
+</label>
+
+{{ form.equipo_ejecutor }}
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-6 mb-3">
+
+<label>
+Organismo responsable
+</label>
+
+{{ form.organismo_responsable }}
+
+</div>
+
+
+
+<div class="col-md-6 mb-3">
+
+<label>
+Fuente financiamiento
+</label>
+
+{{ form.fuente_financiamiento }}
+
+</div>
+
+
+</div>
+
+
+
+<hr>
+
+
+<h5>
+Cronograma
+</h5>
+
+
+
+<div class="row">
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Inicio
+</label>
+
+{{ form.fecha_inicio }}
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Fin
+</label>
+
+{{ form.fecha_fin }}
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Fin estimado
+</label>
+
+{{ form.fecha_estimada_fin }}
+
+</div>
+
+
+</div>
+
+
+
+<hr>
+
+
+<h5>
+Costos y avance
+</h5>
+
+
+
+<div class="row">
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Avance %
+</label>
+
+{{ form.porcentaje_avance }}
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Costo estimado
+</label>
+
+{{ form.costo_estimado }}
+
+</div>
+
+
+
+<div class="col-md-4 mb-3">
+
+<label>
+Costo real
+</label>
+
+{{ form.costo_real }}
+
+</div>
+
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label>
+Observaciones
+</label>
+
+{{ form.observaciones }}
+
+</div>
+
+
+
+
+<button class="btn btn-success">
+
+<i class="bi bi-save"></i>
+
+Guardar
+
+</button>
+
+
+
+<a href="{% url 'sirtee:intervenciones-list' %}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+</div>
+
+
+{% endblock %}

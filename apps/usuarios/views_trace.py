@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.db.models import Count, Max
 from .models import UsuarioAccesoLog
+from django.utils.dateparse import parse_date
 
 
 # ==========================
@@ -21,27 +22,32 @@ def trazabilidad_data(request):
     print("🔍 USERNAME RAW:", request.GET.get("username"))
     print("📊 TOTAL LOGS:", UsuarioAccesoLog.objects.count())
 
-    logs = UsuarioAccesoLog.objects.all().order_by("-fecha")
+    logs = UsuarioAccesoLog.objects.all()
 
     username = request.GET.get("username")
     accion = request.GET.get("accion")
+    
     fecha_desde = request.GET.get("desde")
     fecha_hasta = request.GET.get("hasta")
 
     if username:
-        username = username.strip()
-        logs = logs.filter(username=username)
+        logs = logs.filter(username=username.strip())
 
     if accion:
         logs = logs.filter(accion=accion)
 
     if fecha_desde:
-        logs = logs.filter(fecha__date__gte=fecha_desde)
+        logs = logs.filter(
+            fecha__date__gte=parse_date(fecha_desde)
+        )
+
 
     if fecha_hasta:
-        logs = logs.filter(fecha__date__lte=fecha_hasta)
+        logs = logs.filter(
+            fecha__date__lte=parse_date(fecha_hasta)
+        )
 
-    logs = logs[:500]  # 🔥 LIMIT DESPUÉS DEL FILTRO
+    logs = logs.order_by("-fecha")
 
     data = [
         {

@@ -33,6 +33,8 @@ BASE_APPS = [
     'django_celery_beat',
     'guardian',
     'smart_selects',
+    'django_filters',
+    "django_tables2",
 ]
 
 LOCAL_APPS = [
@@ -83,10 +85,12 @@ LOCAL_APPS = [
     'apps.padroninterno',
     'apps.bnhpersonas',
     'apps.indicators',
-    "apps.cef.apps.CefConfig",
-    "apps.bnhalumnos.apps.BnhalumnosConfig",
-    "apps.supervisor_registro.apps.SupervisorRegistroConfig",
-    "apps.monitoreo_login",
+    'apps.cef.apps.CefConfig',
+    'apps.bnhalumnos.apps.BnhalumnosConfig',
+    'apps.supervisor_registro.apps.SupervisorRegistroConfig',
+    'apps.monitoreo_login',
+    'apps.sirtee',
+    'apps.sirtee.catalogos',
 ]
 
 
@@ -157,7 +161,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public,bnh,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof'
+            'options': '-c search_path=sirtee,bnh,public,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof'
         }
     },        
     'Evaluacion': {

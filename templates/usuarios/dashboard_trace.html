@@ -66,7 +66,9 @@
                     📈 Accesos por día
                 </div>
                 <div class="card-body">
-                    <canvas id="chartAccesos"></canvas>
+                    <div style="height:400px">
+                        <canvas id="chartAccesos"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -147,6 +149,18 @@ $(document).ready(function(){
                     data: resp.accesos.data,
                     tension: 0.3
                 }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 90,
+                            minRotation: 45
+                        }
+                    }
+                }
             }
         });
 

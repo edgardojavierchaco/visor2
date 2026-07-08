@@ -6,6 +6,8 @@ from apps.alumnos.models import oferta
 class CapaUnicaOfertas(models.Model):
 
     cueanexo = models.CharField(primary_key=True, max_length=9)
+    
+    cui=models.CharField(max_length=20)
 
     nom_est = models.CharField(max_length=255)
 

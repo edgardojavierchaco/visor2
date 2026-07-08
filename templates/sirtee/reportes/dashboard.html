@@ -1,0 +1,591 @@
+{% extends "sirtee/base.html" %}
+
+{% load humanize %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- ========================================== -->
+    <!-- TÍTULO -->
+    <!-- ========================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="mb-0">
+                Dashboard Ejecutivo SIRTEE
+            </h2>
+
+            <small class="text-muted">
+                Sistema Integral de Relevamiento Técnico de Establecimientos Educativos
+            </small>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- KPIs -->
+    <!-- ========================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-xl-2 col-md-4">
+
+            <div class="card border-primary shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">
+                        Relevamientos
+                    </h6>
+
+                    <h2 class="text-primary">
+                        {{ kpis.relevamientos }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-2 col-md-4">
+
+            <div class="card border-warning shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">
+                        Hallazgos
+                    </h6>
+
+                    <h2 class="text-warning">
+                        {{ kpis.hallazgos }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-2 col-md-4">
+
+            <div class="card border-success shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">
+                        Intervenciones
+                    </h6>
+
+                    <h2 class="text-success">
+                        {{ kpis.intervenciones }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-2 col-md-4">
+
+            <div class="card border-info shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">
+                        Empresas
+                    </h6>
+
+                    <h2 class="text-info">
+                        {{ kpis.empresas }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-2 col-md-4">
+
+            <div class="card border-danger shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">
+                        Obras críticas
+                    </h6>
+
+                    <h2 class="text-danger">
+                        {{ criticas|length }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-2 col-md-4">
+
+            <div class="card border-secondary shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h6 class="text-muted">
+                        Obras atrasadas
+                    </h6>
+
+                    <h2 class="text-secondary">
+                        {{ atrasadas|length }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SEMÁFOROS -->
+    <!-- ========================================== -->
+
+    <div class="row mb-4">
+
+        <div class="col-md-4">
+
+            <div class="card">
+
+                <div class="card-header">
+                    Avance promedio
+                </div>
+
+                <div class="card-body text-center">
+
+                    {% if kpis.avance_promedio >= 80 %}
+
+                        <div class="display-2 text-success">
+                            🟢
+                        </div>
+
+                    {% elif kpis.avance_promedio >= 50 %}
+
+                        <div class="display-2 text-warning">
+                            🟡
+                        </div>
+
+                    {% else %}
+
+                        <div class="display-2 text-danger">
+                            🔴
+                        </div>
+
+                    {% endif %}
+
+                    <h2>
+
+                        {{ kpis.avance_promedio }}%
+
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <div class="card">
+
+                <div class="card-header">
+                    Costo estimado
+                </div>
+
+                <div class="card-body text-center">
+
+                    <h3>
+
+                        $ {{ kpis.costo_estimado|intcomma }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <div class="card">
+
+                <div class="card-header">
+                    Costo real
+                </div>
+
+                <div class="card-body text-center">
+
+                    <h3>
+
+                        $ {{ finanzas.real|intcomma }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- GRÁFICOS -->
+    <!-- ========================================== -->
+
+    <div class="row mb-4">
+
+        <div class="col-lg-6">
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    Intervenciones por Estado
+
+                </div>
+
+                <div class="card-body">
+
+                    <canvas id="chartEstados"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-6">
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    Empresas
+
+                </div>
+
+                <div class="card-body">
+
+                    <canvas id="chartEmpresas"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- RANKINGS -->
+    <!-- ========================================== -->
+
+    <div class="row">
+
+        <div class="col-lg-4">
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    Ranking Escuelas
+
+                </div>
+
+                <table class="table table-sm mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Escuela</th>
+
+                            <th>Interv.</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for e in escuelas %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ e.cueanexo }}
+
+                            </td>
+
+                            <td>
+
+                                {{ e.intervenciones }}
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    Ranking Empresas
+
+                </div>
+
+                <table class="table table-sm mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Empresa</th>
+
+                            <th>Cant.</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for e in empresas %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ e.razon_social }}
+
+                            </td>
+
+                            <td>
+
+                                {{ e.intervenciones }}
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    Organismos
+
+                </div>
+
+                <table class="table table-sm mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Organismo</th>
+
+                            <th>Cant.</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for o in organismos %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ o.organismo_responsable__nombre }}
+
+                            </td>
+
+                            <td>
+
+                                {{ o.cantidad }}
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ALERTAS -->
+    <!-- ========================================== -->
+
+    <div class="row mt-4">
+
+        <div class="col-lg-6">
+
+            <div class="card border-danger">
+
+                <div class="card-header bg-danger text-white">
+
+                    Intervenciones críticas
+
+                </div>
+
+                <div class="list-group list-group-flush">
+
+                    {% for i in criticas %}
+
+                        <div class="list-group-item">
+
+                            <strong>
+
+                                {{ i.titulo }}
+
+                            </strong>
+
+                            <br>
+
+                            {{ i.hallazgo }}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="list-group-item">
+
+                            Sin registros.
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-6">
+
+            <div class="card border-warning">
+
+                <div class="card-header bg-warning">
+
+                    Obras atrasadas
+
+                </div>
+
+                <div class="list-group list-group-flush">
+
+                    {% for i in atrasadas %}
+
+                        <div class="list-group-item">
+
+                            <strong>
+
+                                {{ i.titulo }}
+
+                            </strong>
+
+                            <br>
+
+                            Vencimiento:
+                            {{ i.fecha_estimada_fin }}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="list-group-item">
+
+                            No existen obras atrasadas.
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ========================================== -->
+<!-- DATOS PARA CHART.JS -->
+<!-- ========================================== -->
+
+{{ estados_chart|json_script:"estadosChart" }}
+{{ empresas_chart|json_script:"empresasChart" }}
+
+<script>
+const estadosChart = JSON.parse(
+    document.getElementById("estadosChart").textContent
+);
+
+const empresasChart = JSON.parse(
+    document.getElementById("empresasChart").textContent
+);
+</script>
+
+{% load static %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{% static 'sirtee/js/reportes_dashboard.js' %}"></script>
+
+{% endblock %}

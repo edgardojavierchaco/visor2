@@ -1,0 +1,122 @@
+{% extends "sirtee/base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container mt-4">
+
+
+<div class="card border-danger">
+
+
+
+<div class="card-header bg-danger text-white">
+
+
+<h4>
+Eliminar seguimiento
+</h4>
+
+
+</div>
+
+
+
+
+
+<div class="card-body">
+
+
+
+<p>
+
+¿Está seguro que desea eliminar este seguimiento?
+
+</p>
+
+
+
+
+<div class="alert alert-warning">
+
+
+<p>
+
+<strong>
+Estado:
+</strong>
+
+{{ object.get_estado_display }}
+
+</p>
+
+
+
+<p>
+
+<strong>
+Comentario:
+</strong>
+
+<br>
+
+{{ object.comentario }}
+
+</p>
+
+
+
+</div>
+
+
+
+
+
+
+<form method="post">
+
+
+{% csrf_token %}
+
+
+
+<button
+type="submit"
+class="btn btn-danger">
+
+Sí, eliminar
+
+</button>
+
+
+
+
+<a
+href="{% url 'sirtee:seguimientos-list' %}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+
+
+</form>
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% endblock %}
