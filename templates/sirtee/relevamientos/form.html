@@ -1,240 +1,241 @@
 {% extends "sirtee/base.html" %}
-
 {% load static %}
-
 
 {% block content %}
 
 <div class="container mt-4">
 
-
-    <div class="card">
+    <div class="card shadow-sm">
 
         <div class="card-header">
 
-            <h4>
+            <h4 class="mb-0">
                 Nuevo Relevamiento
             </h4>
 
         </div>
 
-
         <div class="card-body">
 
-
-            <form method="post">
+            <form method="post" novalidate>
 
                 {% csrf_token %}
 
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
 
-                <!-- ========================= -->
-                <!-- DATOS ESCUELA -->
-                <!-- ========================= -->
+                <!-- ================================================= -->
+                <!-- ESCUELA -->
+                <!-- ================================================= -->
 
-
-                <h5 class="mb-3">
+                <h5 class="border-bottom pb-2 mb-3">
                     Escuela
                 </h5>
 
-
                 <div class="row">
-
 
                     <div class="col-md-4 mb-3">
 
+                        <label for="{{ form.cueanexo.id_for_label }}"
+                               class="form-label">
 
-                        <label class="form-label">
                             CUEANEXO
-                        </label>
 
+                        </label>
 
                         {{ form.cueanexo }}
 
+                        {% if form.cueanexo.help_text %}
+                        <div class="form-text">
+                            {{ form.cueanexo.help_text }}
+                        </div>
+                        {% endif %}
 
                         {{ form.cueanexo.errors }}
 
-
                         <div
                             id="resultadoEscuelas"
-                            class="list-group mt-1">
+                            class="list-group mt-2">
                         </div>
 
-
                     </div>
-
-
 
                     <div class="col-md-8 mb-3">
 
+                        <label
+                            for="id_nom_est"
+                            class="form-label">
 
-                        <label class="form-label">
-                            Nombre escuela
+                            Nombre de la escuela
+
                         </label>
 
-
                         <input
-                            type="text"
                             id="id_nom_est"
+                            type="text"
                             class="form-control"
-                            readonly
-                        >
-
+                            readonly>
 
                     </div>
 
-
                 </div>
-
-
 
                 <div class="row">
 
-
                     <div class="col-md-4 mb-3">
 
+                        <label
+                            for="{{ form.cui.id_for_label }}"
+                            class="form-label">
 
-                        <label class="form-label">
                             CUI
-                        </label>
 
+                        </label>
 
                         {{ form.cui }}
 
+                        {% if form.cui.help_text %}
+                        <div class="form-text">
+                            {{ form.cui.help_text }}
+                        </div>
+                        {% endif %}
 
                         {{ form.cui.errors }}
 
-
                     </div>
-
-
 
                     <div class="col-md-8 mb-3">
 
+                        <label
+                            for="{{ form.oferta.id_for_label }}"
+                            class="form-label">
 
-                        <label class="form-label">
-                            Oferta
+                            Ofertas educativas
+
                         </label>
-
 
                         {{ form.oferta }}
 
+                        {% if form.oferta.help_text %}
+                        <div class="form-text">
+                            {{ form.oferta.help_text }}
+                        </div>
+                        {% endif %}
 
                         {{ form.oferta.errors }}
 
-
                     </div>
 
-
                 </div>
-
-
 
                 <hr>
 
+                <!-- ================================================= -->
+                <!-- RELEVAMIENTO -->
+                <!-- ================================================= -->
 
-
-                <!-- ========================= -->
-                <!-- DATOS RELEVAMIENTO -->
-                <!-- ========================= -->
-
-
-                <h5 class="mb-3">
+                <h5 class="border-bottom pb-2 mb-3">
                     Datos del relevamiento
                 </h5>
 
-
-
                 <div class="row">
-
 
                     <div class="col-md-4 mb-3">
 
+                        <label
+                            for="{{ form.fecha.id_for_label }}"
+                            class="form-label">
 
-                        <label class="form-label">
                             Fecha
-                        </label>
 
+                        </label>
 
                         {{ form.fecha }}
 
-
                         {{ form.fecha.errors }}
-
 
                     </div>
 
-
-
-
                     <div class="col-md-4 mb-3">
 
+                        <label
+                            for="{{ form.estado.id_for_label }}"
+                            class="form-label">
 
-                        <label class="form-label">
                             Estado
-                        </label>
 
+                        </label>
 
                         {{ form.estado }}
 
-
                         {{ form.estado.errors }}
 
-
                     </div>
-
-
-
 
                     <div class="col-md-4 mb-3">
 
+                        <label
+                            for="{{ form.tipo_relevamiento.id_for_label }}"
+                            class="form-label">
 
-                        <label class="form-label">
-                            Tipo
+                            Tipo de relevamiento
+
                         </label>
-
 
                         {{ form.tipo_relevamiento }}
 
-
                         {{ form.tipo_relevamiento.errors }}
-
 
                     </div>
 
-
                 </div>
-
-
-
 
                 <div class="mb-3">
 
+                    <label
+                        for="{{ form.observaciones.id_for_label }}"
+                        class="form-label">
 
-                    <label class="form-label">
                         Observaciones
-                    </label>
 
+                    </label>
 
                     {{ form.observaciones }}
 
-
                     {{ form.observaciones.errors }}
-
 
                 </div>
 
+                <div class="form-check mb-4">
 
+                    {{ form.finalizado }}
 
+                    <label
+                        class="form-check-label"
+                        for="{{ form.finalizado.id_for_label }}">
+
+                        Relevamiento finalizado
+
+                    </label>
+
+                    {{ form.finalizado.errors }}
+
+                </div>
+
+                <hr>
 
                 <button
                     type="submit"
                     class="btn btn-success">
 
+                    <i class="fas fa-save"></i>
+
                     Guardar relevamiento
 
                 </button>
-
-
 
                 <a
                     href="{% url 'sirtee:relevamientos-list' %}"
@@ -244,22 +245,40 @@
 
                 </a>
 
-
-
             </form>
-
 
         </div>
 
     </div>
 
-
 </div>
 
+<script src="{% static 'sirtee/js/buscador_escuelas.js' %}"></script>
 
+<script>
 
-<script src="{% static 'sirtee/js/buscador_escuelas.js' %}">
+document.addEventListener("DOMContentLoaded", function(){
+
+    if (window.jQuery && $.fn.select2){
+
+        $(".select2").select2({
+
+            width: "100%",
+
+            placeholder: function(){
+
+                return $(this).data("placeholder");
+
+            },
+
+            allowClear: false
+
+        });
+
+    }
+
+});
+
 </script>
-
 
 {% endblock %}

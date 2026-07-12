@@ -1,5 +1,10 @@
+# apps/sirtee/views/relevamientos.py
+
+from django.contrib import messages
+
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
-from apps.usuarios.models import UsuariosVisualizador
+
 from django.views.generic import (
     ListView,
     CreateView,
@@ -8,18 +13,25 @@ from django.views.generic import (
     DeleteView,
 )
 
-
 from apps.sirtee.models.relevamientos import Relevamiento
 
-from apps.sirtee.forms.relevamientos import RelevamientoForm
-
-from apps.sirtee.security.mixins import SirteePermissionMixin
+from apps.sirtee.forms.relevamientos import (
+    RelevamientoForm
+)
 
 from apps.sirtee.forms.relevamientos_update import (
     RelevamientoUpdateForm
 )
 
-from django.core.paginator import Paginator
+from apps.sirtee.security.mixins import (
+    SirteePermissionMixin
+)
+
+from apps.sirtee.permissions import (
+    PuedeVerRelevamientos
+)
+
+from apps.usuarios.models import UsuariosVisualizador
 
 from apps.sirtee.filters.relevamientos import (
     RelevamientoFilter
@@ -29,9 +41,14 @@ from apps.sirtee.data.padron import (
     PadronEscuelas
 )
 
-# --------------------------------------
+from apps.sirtee.services.permisos import PermisosSirtee
+
+
+
+# ==================================================
 # LISTADO
-# --------------------------------------
+# ==================================================
+
 class RelevamientoListView(
     SirteePermissionMixin,
     ListView
@@ -39,16 +56,15 @@ class RelevamientoListView(
 
     model = Relevamiento
 
+    permiso_requerido = PermisosSirtee.puede_ver_relevamientos
 
     template_name = (
         "sirtee/relevamientos/list.html"
     )
 
-
     context_object_name = (
         "relevamientos"
     )
-
 
     paginate_by = 20
 
@@ -60,32 +76,41 @@ class RelevamientoListView(
         queryset = (
 
             Relevamiento.objects
+            .permitidos(
+                self.request.user
+            )
             .activos()
-            .order_by("-fecha")
+            .order_by(
+                "-fecha"
+            )
 
         )
 
 
-        self.filterset = RelevamientoFilter(
-            self.request.GET,
-            queryset=queryset
+        self.filterset = (
+            RelevamientoFilter(
+                self.request.GET,
+                queryset=queryset
+            )
         )
 
 
         return self.filterset.qs
+    
+    
 
-
+# ==================================================
+# CONTEXTO
+# ==================================================
 
     def get_context_data(
         self,
         **kwargs
     ):
 
-
         context = super().get_context_data(
             **kwargs
         )
-
 
 
         relevamientos = (
@@ -93,12 +118,10 @@ class RelevamientoListView(
         )
 
 
-
         cueanexos = [
             str(r.cueanexo)
             for r in relevamientos
         ]
-
 
 
         escuelas = (
@@ -109,39 +132,53 @@ class RelevamientoListView(
         )
 
 
-
         context["filas"] = []
 
 
-
         for r in relevamientos:
-
 
             context["filas"].append(
 
                 {
                     "relevamiento": r,
 
-                    "escuela": escuelas.get(
+                    "escuela":
+                    escuelas.get(
                         str(r.cueanexo)
                     )
                 }
 
             )
+        
+        # ==========================================
+        # Permisos para la interfaz
+        # ==========================================
 
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
+        )
 
 
         return context
 
-# --------------------------------------
+
+
+
+
+# ==================================================
 # DETALLE
-# --------------------------------------
+# ==================================================
 
 class RelevamientoDetailView(
+    SirteePermissionMixin,
     DetailView
 ):
 
     model = Relevamiento
+
+    permiso_requerido = PermisosSirtee.puede_ver_relevamientos
 
 
     template_name = (
@@ -154,16 +191,45 @@ class RelevamientoDetailView(
     )
 
 
+    def get_queryset(self):
 
-# --------------------------------------
+        return (
+            Relevamiento.objects
+            .permitidos(
+                self.request.user
+            )
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context["escuela"] = PadronEscuelas.get(
+            self.object.cueanexo
+        )
+
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
+        )
+
+        return context
+
+
+
+# ==================================================
 # CREAR
-# --------------------------------------
+# ==================================================
 
 class RelevamientoCreateView(
+    SirteePermissionMixin,
     CreateView
 ):
 
     model = Relevamiento
+
+    permiso_requerido=PermisosSirtee.puede_gestionar
+
 
     form_class = RelevamientoForm
 
@@ -178,31 +244,43 @@ class RelevamientoCreateView(
     )
 
 
-    def form_valid(self, form):
 
-        usuario = UsuariosVisualizador.objects.get(
-            username=self.request.user.username
+    def form_valid(
+        self,
+        form
+    ):
+
+
+        form.instance.usuario_creador = (
+            self.request.user
         )
 
-        form.instance.usuario_creador = usuario
-        
+
         return super().form_valid(
             form
         )
 
 
 
-# --------------------------------------
+
+
+# ==================================================
 # EDITAR
-# --------------------------------------
+# ==================================================
 
 class RelevamientoUpdateView(
+    SirteePermissionMixin,
     UpdateView
 ):
 
     model = Relevamiento
 
-    form_class = RelevamientoUpdateForm
+    permiso_requerido=PermisosSirtee.puede_gestionar
+
+
+    form_class = (
+        RelevamientoUpdateForm
+    )
 
 
     template_name = (
@@ -213,29 +291,34 @@ class RelevamientoUpdateView(
     success_url = reverse_lazy(
         "sirtee:relevamientos-list"
     )
-    
-    def form_valid(
-        self,
-        form
-    ):
 
-        response = super().form_valid(
-            form
+
+
+    def get_queryset(self):
+
+        return (
+            Relevamiento.objects
+            .permitidos(
+                self.request.user
+            )
         )
 
-        return response
 
 
 
-# --------------------------------------
+
+# ==================================================
 # ELIMINAR
-# --------------------------------------
+# ==================================================
 
 class RelevamientoDeleteView(
+    SirteePermissionMixin,
     DeleteView
 ):
 
     model = Relevamiento
+
+    permiso_requerido=PermisosSirtee.puede_gestionar
 
 
     template_name = (
@@ -248,16 +331,24 @@ class RelevamientoDeleteView(
     )
 
 
-    def delete(
-        self,
-        request,
-        *args,
-        **kwargs
-    ):
 
-        obj = self.get_object()
+    def get_queryset(self):
 
-        obj.delete()
+        return (
+            Relevamiento.objects
+            .permitidos(
+                self.request.user
+            )
+        )
+
+
+
+    def delete(self, request, *args, **kwargs):
+
+        messages.success(
+            request,
+            "Relevamiento eliminado correctamente."
+        )
 
         return super().delete(
             request,

@@ -114,6 +114,7 @@ class PadronEscuelas:
         if not cueanexos:
             return {}
 
+        cueanexos = [str(c) for c in cueanexos]
 
         sql = f"""
             SELECT
@@ -155,12 +156,14 @@ class PadronEscuelas:
 
 
     # --------------------------------------
-    # ALIAS CORTO
+    # UNA ESCUELA
     # --------------------------------------
 
     @classmethod
     def get(cls, cueanexo):
 
-        return cls.get_by_cueanexos(
-            cueanexo
+        escuelas = cls.get_by_cueanexos(
+            [str(cueanexo)]
         )
+
+        return escuelas.get(str(cueanexo))

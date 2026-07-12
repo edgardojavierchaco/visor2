@@ -21,6 +21,42 @@ class SirteeQuerySet(models.QuerySet):
 
     def actualizados_recientemente(self):
         return self.order_by("-updated_at")
+    
+    # ==================================================
+    # FILTROS SIRTEE COMUNES
+    # ==================================================
+
+    def por_cueanexo(
+        self,
+        cueanexo
+    ):
+
+        return self.filter(
+            cueanexo=cueanexo
+        )
+
+
+
+    def por_cueanexos(
+        self,
+        cueanexos
+    ):
+
+        return self.filter(
+            cueanexo__in=cueanexos
+        )
+
+
+
+    def estado(
+        self,
+        estado
+    ):
+
+        return self.filter(
+            estado=estado
+        )
+
 
     # ==================================================
     # AUDITORÍA

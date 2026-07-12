@@ -17,6 +17,7 @@
 Seguimientos
 </h4>
 
+{% if puede_gestionar %}
 
 <a
 href="{% url 'sirtee:seguimientos-create' %}"
@@ -25,7 +26,7 @@ class="btn btn-success">
 Nuevo seguimiento
 
 </a>
-
+{% endif %}
 
 </div>
 
@@ -222,7 +223,7 @@ Ver
 </a>
 
 
-
+{% if puede_gestionar %}
 <a
 href="{% url 'sirtee:seguimientos-update' seguimiento.pk %}"
 class="btn btn-sm btn-warning">
@@ -240,7 +241,7 @@ class="btn btn-sm btn-danger">
 Eliminar
 
 </a>
-
+{% endif %}
 
 </div>
 

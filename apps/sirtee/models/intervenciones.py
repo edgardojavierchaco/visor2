@@ -10,10 +10,13 @@ from django.core.exceptions import ValidationError
 
 from apps.sirtee.models.mixins import (
     AuditoriaMixin,
+    TimestampMixin,
     SoftDeleteMixin,
 )
 
-from apps.sirtee.managers.base import SirteeManager
+from apps.sirtee.managers.secure import (
+    IntervencionManager
+)
 
 
 from apps.sirtee.catalogos.models import (
@@ -28,6 +31,7 @@ from apps.sirtee.catalogos.models import (
 
 class Intervencion(
     AuditoriaMixin,
+    TimestampMixin,
     SoftDeleteMixin,
     models.Model,
 ):
@@ -280,7 +284,7 @@ class Intervencion(
 
 
 
-    objects = SirteeManager()
+    objects = IntervencionManager()
 
 
 
@@ -335,6 +339,15 @@ class Intervencion(
 
 
 
+    def save(self, *args, **kwargs):
+
+        self.full_clean()
+
+        super().save(
+            *args,
+            **kwargs
+        )
+        
     # ==================================================
     # VALIDACIÓN
     # ==================================================
@@ -486,9 +499,7 @@ class Intervencion(
             campos.extend(update_fields)
 
         self.save(
-            update_fields=[
-                "estado"
-            ]
+            update_fields=campos
         )
 
 

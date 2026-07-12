@@ -259,14 +259,14 @@ No posee evidencias.
 
 
 
-
+{% if puede_gestionar %}
 <a href="{% url 'sirtee:hallazgos-update' hallazgo.pk %}"
 class="btn btn-warning">
 
 Editar
 
 </a>
-
+{% endif %}
 
 
 <a href="{% url 'sirtee:hallazgos-list' %}"

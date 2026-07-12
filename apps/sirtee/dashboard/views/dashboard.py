@@ -8,7 +8,7 @@ from apps.sirtee.security.mixins import (
     SirteePermissionMixin
 )
 
-
+from apps.sirtee.services.permisos import PermisosSirtee
 
 class DashboardView(
     SirteePermissionMixin,
@@ -33,6 +33,16 @@ class DashboardView(
 
         context.update(
             DashboardSIRTEE.resumen()
+        )
+        
+        # ==========================================
+        # Permisos para la interfaz
+        # ==========================================
+
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
         )
 
 

@@ -1,17 +1,12 @@
 from django.db import models
-
-from apps.sirtee.models.mixins import AuditoriaMixin, SoftDeleteMixin
-from apps.sirtee.managers.base import SirteeManager
-
+from apps.sirtee.models.mixins import AuditoriaMixin, TimestampMixin, SoftDeleteMixin
+from apps.sirtee.managers.secure import (
+    RelevamientoManager
+)
 from apps.sirtee.data.padron import PadronEscuelas
-
-def get_escuela(self):
-    return PadronEscuelas.get_by_cueanexos(self.cueanexo)
-
 from apps.usuarios.models import UsuariosVisualizador
 
-
-class Relevamiento(AuditoriaMixin, SoftDeleteMixin, models.Model):
+class Relevamiento(AuditoriaMixin, TimestampMixin, SoftDeleteMixin, models.Model):
     """
     Relevamiento técnico de una escuela.
 
@@ -27,13 +22,18 @@ class Relevamiento(AuditoriaMixin, SoftDeleteMixin, models.Model):
 
     cueanexo = models.CharField(max_length=9, db_index=True)
     
-    cui = models.CharField(
-        max_length=20,
+    # Puede guardar uno o varios CUI
+    cui = models.JSONField(
+        default=list,
         blank=True,
+        verbose_name="CUI seleccionados",
     )
-    oferta = models.CharField(
-        max_length=255,
+    
+    # Puede guardar una o varias ofertas
+    oferta = models.JSONField(
+        default=list,
         blank=True,
+        verbose_name="Ofertas seleccionadas",
     )
 
     # --------------------------------------
@@ -86,7 +86,7 @@ class Relevamiento(AuditoriaMixin, SoftDeleteMixin, models.Model):
     # AUDITORÍA / QUERYSET / MANAGER
     # --------------------------------------
 
-    objects = SirteeManager()
+    objects = RelevamientoManager()
 
     # --------------------------------------
     # META
@@ -99,11 +99,27 @@ class Relevamiento(AuditoriaMixin, SoftDeleteMixin, models.Model):
         ordering = ["-fecha"]
 
     def __str__(self):
+        if self.oferta:
+            return (
+                f"{self.cueanexo} - "
+                f"{', '.join(self.oferta)} - "
+                f"{self.fecha}"
+            )
+        
         return f"{self.cueanexo} - {self.fecha}"
 
     # --------------------------------------
     # LÓGICA DE NEGOCIO
     # --------------------------------------
+    
+    def get_escuela(self):
+
+        return (
+            PadronEscuelas
+            .get_by_cueanexos(
+                self.cueanexo
+            )
+        )
 
     def finalizar(self, usuario=None):
         """
@@ -116,7 +132,7 @@ class Relevamiento(AuditoriaMixin, SoftDeleteMixin, models.Model):
         self.fecha_finalizacion = timezone.now()
 
         if usuario:
-            self.usuario_creador = str(usuario)
+            self.usuario_creador = usuario
 
         self.save()
 
@@ -143,3 +159,43 @@ class Relevamiento(AuditoriaMixin, SoftDeleteMixin, models.Model):
         return self.hallazgos.filter(
             estado="ABIERTO"
         ).count()
+    
+    # ==========================================================
+    # OFERTAS SELECCIONADAS
+    # ==========================================================
+
+    def ofertas_texto(self):
+        """
+        Devuelve las ofertas en formato legible.
+        """
+
+        if not self.oferta:
+            return ""
+
+        return ", ".join(self.oferta)
+
+
+    def cuis_texto(self):
+        """
+        Devuelve los CUI en formato legible.
+        """
+
+        if not self.cui:
+            return ""
+
+        return ", ".join(self.cui)
+
+
+    def cantidad_ofertas(self):
+
+        return len(self.oferta or [])
+
+
+    def tiene_oferta(self, oferta):
+
+        return oferta in (self.oferta or [])
+
+
+    def tiene_cui(self, cui):
+
+        return cui in (self.cui or [])

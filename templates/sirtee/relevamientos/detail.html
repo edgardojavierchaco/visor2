@@ -20,6 +20,7 @@ Detalle del relevamiento
 
 <div>
 
+{% if puede_gestionar %}    
 <a
 href="{% url 'sirtee:relevamientos-update' relevamiento.id %}"
 class="btn btn-warning">
@@ -28,7 +29,6 @@ Editar
 
 </a>
 
-
 <a
 href="{% url 'sirtee:relevamientos-delete' relevamiento.id %}"
 class="btn btn-danger">
@@ -36,7 +36,7 @@ class="btn btn-danger">
 Eliminar
 
 </a>
-
+{% endif %}
 
 </div>
 
@@ -117,7 +117,11 @@ CUI
 
 
 <p>
-{{ relevamiento.cui_loc }}
+{% for cui in relevamiento.cui %}
+    {{ cui }}{% if not forloop.last %}, {% endif %}
+{% empty %}
+    -
+{% endfor %}
 </p>
 
 
@@ -133,7 +137,11 @@ Oferta
 
 
 <p>
-{{ relevamiento.oferta }}
+{% for oferta in relevamiento.oferta %}
+    {{ oferta }}{% if not forloop.last %}<br>{% endif %}
+{% empty %}
+    -
+{% endfor %}
 </p>
 
 
@@ -504,7 +512,7 @@ Volver
 
 </a>
 
-
+{% if puede_gestionar %}
 <a
 href="{% url 'sirtee:hallazgos-create' %}?relevamiento={{ relevamiento.id }}"
 class="btn btn-danger">
@@ -512,7 +520,7 @@ class="btn btn-danger">
 Nuevo hallazgo
 
 </a>
-
+{% endif %}
 
 </div>
 

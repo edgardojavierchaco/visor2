@@ -1,12 +1,11 @@
 from django.db import models
 from django.contrib.contenttypes.fields import GenericRelation
-
 from apps.sirtee.models.auditoria import AuditoriaBase
-
 
 class AuditoriaMixin(models.Model):
     """
     Mixin base para agregar auditoría automática a cualquier modelo.
+    Agrega trazabilidad completa mediante AuditoriaBase.
     """
 
     # Relación inversa para consultar auditorías del objeto

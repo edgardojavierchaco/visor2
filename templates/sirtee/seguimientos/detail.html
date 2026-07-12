@@ -195,6 +195,7 @@ Intervención:
 
 
 
+{% if puede_gestionar %}
 
 <a
 href="{% url 'sirtee:seguimientos-update' seguimiento.pk %}"
@@ -215,7 +216,7 @@ Eliminar
 
 </a>
 
-
+{% endif %}
 
 
 <a

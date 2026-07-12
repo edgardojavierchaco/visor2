@@ -84,7 +84,7 @@ class IntervencionViewSet(viewsets.ModelViewSet):
 @require_GET
 def escuela(request, cueanexo):
 
-    escuela = PadronEscuelas.get_by_cueanexo(cueanexo)
+    escuela = PadronEscuelas.get_by_cueanexos(cueanexo)
 
     if escuela is None:
         return JsonResponse({}, status=404)

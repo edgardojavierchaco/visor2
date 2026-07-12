@@ -1,4 +1,6 @@
 from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from apps.sirtee.models.relevamientos import Relevamiento
 from apps.sirtee.forms.base import SirteeBaseForm
@@ -59,11 +61,16 @@ class RelevamientoUpdateForm(SirteeBaseForm):
 
         }
 
-
+    # =========================================
+    # VALIDACIONES
+    # =========================================
     def clean(self):
 
         cleaned = super().clean()
 
+        fecha = cleaned.get(
+            "fecha"
+        )
 
         estado = cleaned.get(
             "estado"
@@ -74,16 +81,67 @@ class RelevamientoUpdateForm(SirteeBaseForm):
             "observaciones"
         )
 
-
-        if (
-            estado == "FINALIZADO"
-            and not observaciones
-        ):
+        finalizado = cleaned.get(
+            "finalizado"
+        )
+        
+        if fecha and fecha > timezone.localdate():
 
             self.add_error(
-                "observaciones",
-                "Debe justificar el relevamiento finalizado."
+                "fecha",
+                "La fecha del relevamiento no puede ser futura."
             )
+
+        if finalizado:
+
+            if not observaciones:
+
+                self.add_error(
+                    "observaciones",
+                    "Debe justificar el relevamiento finalizado."
+                )
+
+
+            cleaned["estado"] = "FINALIZADO"
 
 
         return cleaned
+
+    # =========================================
+    # SAVE
+    # =========================================
+
+    def save(self, commit=True):
+
+        obj = super().save(commit=False)
+
+
+        if obj.finalizado:
+
+
+            obj.estado = "FINALIZADO"
+
+
+            if not obj.fecha_finalizacion:
+
+                obj.fecha_finalizacion = timezone.now()
+
+
+        else:
+
+
+            obj.fecha_finalizacion = None
+
+
+            if obj.estado == "FINALIZADO":
+
+                obj.estado = "EN_PROCESO"
+
+
+
+        if commit:
+
+            obj.save()
+
+
+        return obj
