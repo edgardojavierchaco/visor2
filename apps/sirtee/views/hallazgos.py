@@ -1,6 +1,6 @@
-from django.contrib import messages
+# apps/sirtee/views/hallazgos.py
 
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 
 from django.urls import reverse_lazy
 
@@ -13,7 +13,6 @@ from django.views.generic import (
     DeleteView,
     DetailView,
 )
-
 
 from django_tables2.views import SingleTableMixin
 
@@ -37,18 +36,31 @@ from apps.sirtee.tables.hallazgos import (
 )
 
 
+from apps.sirtee.security.mixins import (
+    SirteePermissionMixin
+)
+
+from apps.sirtee.permissions import (
+    PuedeVerHallazgos
+)
+
+from apps.sirtee.services.permisos import PermisosSirtee
+
+
 
 # ==========================================================
 # LISTADO
 # ==========================================================
 
 class HallazgoListView(
-    LoginRequiredMixin,
+    SirteePermissionMixin,
     SingleTableMixin,
     ListView
 ):
 
     model = Hallazgo
+
+    permiso_requerido = PermisosSirtee.puede_ver_hallazgos
 
     table_class = HallazgoTable
 
@@ -66,9 +78,14 @@ class HallazgoListView(
 
     def get_queryset(self):
 
+
         queryset = (
 
             Hallazgo.objects
+
+            .permitidos(
+                self.request.user
+            )
 
             .select_related(
 
@@ -127,8 +144,19 @@ class HallazgoListView(
             self.filterset
         )
 
+        # ==========================================
+        # Permisos para la interfaz
+        # ==========================================
+
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
+        )
 
         return context
+
+
 
 
 
@@ -138,11 +166,13 @@ class HallazgoListView(
 # ==========================================================
 
 class HallazgoDetailView(
-    LoginRequiredMixin,
+    SirteePermissionMixin,
     DetailView
 ):
 
     model = Hallazgo
+
+    permiso_requerido = PermisosSirtee.puede_ver_hallazgos
 
 
     template_name = (
@@ -161,6 +191,10 @@ class HallazgoDetailView(
         return (
 
             Hallazgo.objects
+
+            .permitidos(
+                self.request.user
+            )
 
             .select_related(
 
@@ -196,21 +230,23 @@ class HallazgoDetailView(
 
 
 
+
+
 # ==========================================================
 # CREAR
 # ==========================================================
 
 class HallazgoCreateView(
-    LoginRequiredMixin,
+    SirteePermissionMixin,
     CreateView
 ):
 
-
     model = Hallazgo
+
+    permiso_requerido=PermisosSirtee.puede_gestionar
 
 
     form_class = HallazgoForm
-
 
 
     template_name = (
@@ -218,11 +254,9 @@ class HallazgoCreateView(
     )
 
 
-
     success_url = reverse_lazy(
         "sirtee:hallazgos-list"
     )
-
 
 
 
@@ -234,10 +268,8 @@ class HallazgoCreateView(
         kwargs.update(
 
             {
-
                 "usuario":
                 self.request.user
-
             }
 
         )
@@ -285,7 +317,6 @@ class HallazgoCreateView(
             )
 
 
-
         return context
 
 
@@ -303,17 +334,12 @@ class HallazgoCreateView(
         context = self.get_context_data()
 
 
-
         evidencia_formset = (
-
             context["evidencias"]
-
         )
 
 
-
         if not evidencia_formset.is_valid():
-
 
             return self.form_invalid(
                 form
@@ -326,11 +352,9 @@ class HallazgoCreateView(
 
 
         evidencias = (
-
             evidencia_formset.save(
                 commit=False
             )
-
         )
 
 
@@ -353,16 +377,14 @@ class HallazgoCreateView(
 
 
         messages.success(
-
             self.request,
-
             "Hallazgo registrado correctamente."
-
         )
 
 
-
         return super().form_valid(form)
+
+
 
 
 
@@ -374,13 +396,13 @@ class HallazgoCreateView(
 # ==========================================================
 
 class HallazgoUpdateView(
-    LoginRequiredMixin,
+    SirteePermissionMixin,
     UpdateView
 ):
 
-
     model = Hallazgo
 
+    permiso_requerido = PermisosSirtee.puede_gestionar
 
     form_class = HallazgoForm
 
@@ -399,6 +421,21 @@ class HallazgoUpdateView(
 
 
 
+    def get_queryset(self):
+
+        return (
+
+            Hallazgo.objects
+
+            .permitidos(
+                self.request.user
+            )
+
+        )
+
+
+
+
     def get_form_kwargs(self):
 
         kwargs = super().get_form_kwargs()
@@ -407,17 +444,14 @@ class HallazgoUpdateView(
         kwargs.update(
 
             {
-
                 "usuario":
                 self.request.user
-
             }
 
         )
 
 
         return kwargs
-
 
 
 
@@ -486,17 +520,12 @@ class HallazgoUpdateView(
         context = self.get_context_data()
 
 
-
         evidencia_formset = (
-
             context["evidencias"]
-
         )
 
 
-
         if not evidencia_formset.is_valid():
-
 
             return self.form_invalid(
                 form
@@ -545,19 +574,15 @@ class HallazgoUpdateView(
 
 
 
-
-
         messages.success(
-
             self.request,
-
             "Hallazgo actualizado correctamente."
-
         )
 
 
-
         return super().form_valid(form)
+
+
 
 
 
@@ -569,28 +594,40 @@ class HallazgoUpdateView(
 # ==========================================================
 
 class HallazgoDeleteView(
-    LoginRequiredMixin,
+    SirteePermissionMixin,
     DeleteView
 ):
 
-
     model = Hallazgo
+
+    permiso_requerido = PermisosSirtee.puede_gestionar
 
 
 
     template_name = (
-
         "sirtee/hallazgos/confirm_delete.html"
-
     )
 
 
 
     success_url = reverse_lazy(
-
         "sirtee:hallazgos-list"
-
     )
+
+
+
+
+    def get_queryset(self):
+
+        return (
+
+            Hallazgo.objects
+
+            .permitidos(
+                self.request.user
+            )
+
+        )
 
 
 
@@ -604,20 +641,13 @@ class HallazgoDeleteView(
 
 
         messages.success(
-
             request,
-
             "Hallazgo eliminado correctamente."
-
         )
 
 
         return super().delete(
-
             request,
-
             *args,
-
             **kwargs
-
         )

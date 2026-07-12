@@ -20,14 +20,14 @@
 Hallazgos técnicos
 </h4>
 
-
+{% if puede_gestionar %}
 <a href="{% url 'sirtee:hallazgos-create' %}"
 class="btn btn-primary">
 
 Nuevo hallazgo
 
 </a>
-
+{% endif %}
 
 </div>
 

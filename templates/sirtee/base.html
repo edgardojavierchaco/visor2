@@ -16,13 +16,13 @@
         <a class="navbar-brand" href="/sirtee/dashboard/">SiRTEE (Sistema para Relevamiento Técnico Establecimientos Educativos)</a>
 
         <div class="navbar-nav">
-
+            {% if puede_gestionar %}
             <a class="nav-link" href="/sirtee/relevamientos/">Relevamientos</a>
             <a class="nav-link" href="/sirtee/hallazgos/">Hallazgos</a>
             <a class="nav-link" href="/sirtee/intervenciones/">Intervenciones</a>
             <a class="nav-link" href="/sirtee/empresas/">Empresas</a>
-            <a class="nav-link" href="/sirtee/reportes/general/">Reportes</a>
-
+            {% comment %} <a class="nav-link" href="/sirtee/reportes/general/">Reportes</a> {% endcomment %}
+            {% endif %}
         </div>
     </div>
 </nav>

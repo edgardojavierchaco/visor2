@@ -412,7 +412,7 @@
 
                 <div class="card-body">
 
-
+                    {% if puede_gestionar %}
                     <a
                     href="{% url 'sirtee:relevamientos-list' %}"
                     class="btn btn-outline-primary">
@@ -460,7 +460,7 @@
 
 
                     </a>
-
+                    {% endif %}
 
                 </div>
 

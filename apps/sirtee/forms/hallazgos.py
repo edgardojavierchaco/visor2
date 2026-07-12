@@ -1,12 +1,9 @@
 from django import forms
-
 from apps.sirtee.models.hallazgos import Hallazgo
 from apps.sirtee.models.relevamientos import Relevamiento
-
 from apps.sirtee.catalogos.models import EstadoHallazgo
-
 from apps.sirtee.forms.base import SirteeBaseForm
-
+from apps.usuarios.models import UsuariosVisualizador
 
 
 class HallazgoForm(SirteeBaseForm):
@@ -291,19 +288,21 @@ class HallazgoForm(SirteeBaseForm):
         # RESPONSABLE AUTOMÁTICO
         # ------------------------------------------------------
 
-        if usuario:
+        if usuario and "usuario_responsable" in self.fields:
 
+            usuario_bd = UsuariosVisualizador.objects.get(
+                pk=usuario.pk
+            )
 
-            if (
-                not self.instance.pk
-                and
-                "usuario_responsable"
-                in self.fields
-            ):
+            self.fields["usuario_responsable"].queryset = (
+                UsuariosVisualizador.objects.filter(
+                    pk=usuario_bd.pk
+                )
+            )
 
-                self.fields[
-                    "usuario_responsable"
-                ].initial = usuario
+            self.fields["usuario_responsable"].initial = usuario_bd
+
+            self.fields["usuario_responsable"].disabled = True
 
 
 
@@ -491,3 +490,22 @@ class HallazgoForm(SirteeBaseForm):
 
 
         return cleaned
+    
+    
+    def save(self, commit=True):
+
+        obj = super().save(commit=False)
+
+        if self.usuario:
+
+            obj.usuario_responsable = (
+                UsuariosVisualizador.objects.get(
+                    pk=self.usuario.pk
+                )
+            )
+
+        if commit:
+            obj.save()
+            self.save_m2m()
+
+        return obj

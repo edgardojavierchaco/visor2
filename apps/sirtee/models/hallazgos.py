@@ -3,11 +3,13 @@ from django.utils import timezone
 
 from apps.sirtee.models.mixins import (
     AuditoriaMixin,
+    TimestampMixin,
     SoftDeleteMixin,
 )
 
-from apps.sirtee.managers.base import SirteeManager
-
+from apps.sirtee.managers.secure import (
+    HallazgoManager
+)
 from apps.sirtee.models.relevamientos import Relevamiento
 
 from apps.usuarios.models import UsuariosVisualizador
@@ -27,6 +29,7 @@ from apps.sirtee.catalogos.models import (
 
 class Hallazgo(
     AuditoriaMixin,
+    TimestampMixin,
     SoftDeleteMixin,
     models.Model,
 ):
@@ -159,7 +162,7 @@ class Hallazgo(
     # MANAGER
     # ==========================================================
 
-    objects = SirteeManager()
+    objects = HallazgoManager()
 
     # ==========================================================
     # META

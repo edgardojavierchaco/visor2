@@ -1,6 +1,6 @@
-from django.contrib import messages
+# apps/sirtee/views/intervenciones.py
 
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 
 from django.db import transaction
 
@@ -37,28 +37,40 @@ from apps.sirtee.security.mixins import (
 )
 
 
+from apps.sirtee.permissions import (
+    PuedeVerIntervenciones
+)
+
+from apps.sirtee.services.permisos import PermisosSirtee
+
+
 
 # =====================================================
 # LISTADO
 # =====================================================
 
 class IntervencionListView(
-    LoginRequiredMixin,
     SirteePermissionMixin,
     ListView
 ):
 
     model = Intervencion
 
+    permiso_requerido=PermisosSirtee.puede_ver_intervenciones
+
+
     template_name = (
         "sirtee/intervenciones/list.html"
     )
+
 
     context_object_name = (
         "intervenciones"
     )
 
+
     paginate_by = 25
+
 
 
     def get_queryset(self):
@@ -66,6 +78,10 @@ class IntervencionListView(
         return (
 
             Intervencion.objects
+
+            .permitidos(
+                self.request.user
+            )
 
             .activos()
 
@@ -94,6 +110,22 @@ class IntervencionListView(
             )
 
         )
+    
+    def get_context_data(self, **kwargs):
+
+        context = super().get_context_data(**kwargs)
+
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
+        )
+
+        return context
+
+
+
+
 
 
 
@@ -102,12 +134,13 @@ class IntervencionListView(
 # =====================================================
 
 class IntervencionDetailView(
-    LoginRequiredMixin,
     SirteePermissionMixin,
     DetailView
 ):
 
     model = Intervencion
+
+    permiso_requerido=PermisosSirtee.puede_ver_intervenciones
 
 
     template_name = (
@@ -120,11 +153,16 @@ class IntervencionDetailView(
     )
 
 
+
     def get_queryset(self):
 
         return (
 
             Intervencion.objects
+
+            .permitidos(
+                self.request.user
+            )
 
             .activos()
 
@@ -152,17 +190,24 @@ class IntervencionDetailView(
 
 
 
+
+
+
+
+
 # =====================================================
 # CREAR
 # =====================================================
 
 class IntervencionCreateView(
-    LoginRequiredMixin,
     SirteePermissionMixin,
     CreateView
 ):
 
     model = Intervencion
+
+    permiso_requerido=PermisosSirtee.puede_gestionar
+
 
     form_class = IntervencionForm
 
@@ -172,34 +217,20 @@ class IntervencionCreateView(
     )
 
 
+
     def get_form_kwargs(self):
 
         kwargs = super().get_form_kwargs()
 
         kwargs.update(
             {
-                "usuario": self.request.user
+                "usuario":
+                self.request.user
             }
         )
 
         return kwargs
 
-
-
-    def get_initial(self):
-
-        initial = super().get_initial()
-
-        hallazgo_id = self.kwargs.get(
-            "pk"
-        )
-
-        if hallazgo_id:
-
-            initial["hallazgo"] = hallazgo_id
-
-
-        return initial
 
 
 
@@ -208,6 +239,7 @@ class IntervencionCreateView(
         self,
         form
     ):
+
 
         self.object = form.save()
 
@@ -224,6 +256,7 @@ class IntervencionCreateView(
 
 
 
+
     def get_success_url(self):
 
         return reverse_lazy(
@@ -236,17 +269,23 @@ class IntervencionCreateView(
 
 
 
+
+
+
+
+
 # =====================================================
 # EDITAR
 # =====================================================
 
 class IntervencionUpdateView(
-    LoginRequiredMixin,
     SirteePermissionMixin,
     UpdateView
 ):
 
     model = Intervencion
+
+    permiso_requerido=PermisosSirtee.puede_gestionar
 
 
     form_class = IntervencionForm
@@ -257,17 +296,38 @@ class IntervencionUpdateView(
     )
 
 
+
+    def get_queryset(self):
+
+        return (
+
+            Intervencion.objects
+
+            .permitidos(
+                self.request.user
+            )
+
+        )
+
+
+
+
     def get_form_kwargs(self):
 
         kwargs = super().get_form_kwargs()
 
+
         kwargs.update(
             {
-                "usuario": self.request.user
+                "usuario":
+                self.request.user
             }
         )
 
+
         return kwargs
+
+
 
 
 
@@ -276,6 +336,7 @@ class IntervencionUpdateView(
         self,
         form
     ):
+
 
         self.object = form.save()
 
@@ -292,6 +353,7 @@ class IntervencionUpdateView(
 
 
 
+
     def get_success_url(self):
 
         return reverse_lazy(
@@ -304,17 +366,23 @@ class IntervencionUpdateView(
 
 
 
+
+
+
+
+
 # =====================================================
 # ELIMINAR
 # =====================================================
 
 class IntervencionDeleteView(
-    LoginRequiredMixin,
     SirteePermissionMixin,
     DeleteView
 ):
 
     model = Intervencion
+
+    permiso_requerido=PermisosSirtee.puede_gestionar
 
 
     template_name = (
@@ -328,12 +396,27 @@ class IntervencionDeleteView(
 
 
 
+    def get_queryset(self):
+
+        return (
+
+            Intervencion.objects
+
+            .permitidos(
+                self.request.user
+            )
+
+        )
+
+
+
     def delete(
         self,
         request,
         *args,
         **kwargs
     ):
+
 
         messages.success(
             request,
@@ -349,16 +432,23 @@ class IntervencionDeleteView(
 
 
 
+
+
+
+
+
+
 # =====================================================
 # CAMBIO DE ESTADOS
 # =====================================================
 
-
 class IntervencionEstadoBaseView(
-    LoginRequiredMixin,
     SirteePermissionMixin,
     View
 ):
+
+
+    permission = PuedeVerIntervenciones
 
 
     estado_destino = None
@@ -371,16 +461,24 @@ class IntervencionEstadoBaseView(
 
 
 
+
     def post(
         self,
         request,
         pk
     ):
 
+
         intervencion = get_object_or_404(
-            Intervencion,
+
+            Intervencion.objects.permitidos(
+                request.user
+            ),
+
             pk=pk
+
         )
+
 
 
         if hasattr(
@@ -388,14 +486,17 @@ class IntervencionEstadoBaseView(
             "puede_cambiar_a"
         ):
 
+
             if not intervencion.puede_cambiar_a(
                 self.estado_destino
             ):
+
 
                 messages.error(
                     request,
                     "Cambio de estado no permitido."
                 )
+
 
                 return redirect(
                     "sirtee:intervenciones-detail",
@@ -403,21 +504,70 @@ class IntervencionEstadoBaseView(
                 )
 
 
+
+        acciones = {
+
+            "EN_EJECUCION": "iniciar",
+
+            "PAUSADA": "pausar",
+
+            "FINALIZADA": "finalizar",
+
+            "CANCELADA": "cancelar",
+
+        }
+
+
+        accion = acciones.get(
+            self.estado_destino
+        )
+
+
+        if not accion:
+
+            messages.error(
+                request,
+                "Acción de estado no configurada."
+            )
+
+            return redirect(
+                "sirtee:intervenciones-detail",
+                pk=pk
+            )
+
+
         metodo = getattr(
             intervencion,
-            self.estado_destino.lower()
+            accion,
+            None
         )
+
+
+        if not metodo:
+
+            messages.error(
+                request,
+                "La intervención no soporta esta transición."
+            )
+
+            return redirect(
+                "sirtee:intervenciones-detail",
+                pk=pk
+            )
 
 
         metodo()
 
 
+
         messages.add_message(
             request,
+
             getattr(
                 messages,
                 self.nivel.upper()
             ),
+
             self.mensaje
         )
 
@@ -428,36 +578,22 @@ class IntervencionEstadoBaseView(
         )
 
 
-
-# =====================================================
-# INICIAR
-# =====================================================
-
 class IntervencionIniciarView(
     IntervencionEstadoBaseView
 ):
 
-    estado_destino = (
-        "EN_EJECUCION"
-    )
+    estado_destino = "EN_EJECUCION"
 
     mensaje = (
         "La intervención fue iniciada."
     )
 
 
-
-# =====================================================
-# PAUSAR
-# =====================================================
-
 class IntervencionPausarView(
     IntervencionEstadoBaseView
 ):
 
-    estado_destino = (
-        "PAUSADA"
-    )
+    estado_destino = "PAUSADA"
 
     nivel = "warning"
 
@@ -465,37 +601,22 @@ class IntervencionPausarView(
         "La intervención fue pausada."
     )
 
-
-
-# =====================================================
-# FINALIZAR
-# =====================================================
-
 class IntervencionFinalizarView(
     IntervencionEstadoBaseView
 ):
 
-    estado_destino = (
-        "FINALIZADA"
-    )
+    estado_destino = "FINALIZADA"
 
     mensaje = (
         "La intervención fue finalizada."
     )
 
 
-
-# =====================================================
-# CANCELAR
-# =====================================================
-
 class IntervencionCancelarView(
     IntervencionEstadoBaseView
 ):
 
-    estado_destino = (
-        "CANCELADA"
-    )
+    estado_destino = "CANCELADA"
 
     nivel = "error"
 

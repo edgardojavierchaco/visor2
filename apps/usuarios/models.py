@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
         if not username:
-            raise ValueError('The Username field must be set')
+            raise ValueError('El username es obligatorio')
         user = self.model(username=username, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -90,7 +90,11 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
         db_table = 'Usuario_Visualizador'
 
     def __str__(self):
-        return self.username
+        return (
+            f"{self.username} - "
+            f"{self.apellido}, "
+            f"{self.nombres}"
+        )
 
     # Compatibilidad con Django login
     @property

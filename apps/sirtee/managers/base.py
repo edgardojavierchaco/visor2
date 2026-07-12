@@ -1,7 +1,6 @@
 from django.db import models
 from apps.sirtee.querysets.base import SirteeQuerySet
 
-
 class SirteeManager(models.Manager):
     """
     Manager base para todo SIRTEE.
@@ -29,6 +28,45 @@ class SirteeManager(models.Manager):
 
     def con_auditoria(self):
         return self.get_queryset().con_auditoria()
+    
+    
+    # ==================================================
+    # FILTROS COMUNES SIRTEE
+    # ==================================================
+
+    def por_cueanexo(
+        self,
+        cueanexo
+    ):
+
+        return (
+            self.get_queryset()
+            .por_cueanexo(cueanexo)
+        )
+
+
+
+    def por_cueanexos(
+        self,
+        cueanexos
+    ):
+
+        return (
+            self.get_queryset()
+            .por_cueanexos(cueanexos)
+        )
+
+
+
+    def por_estado(
+        self,
+        estado
+    ):
+
+        return (
+            self.get_queryset()
+            .estado(estado)
+        )
 
     # -------------------------
     # OPERACIONES MASIVAS
@@ -42,3 +80,5 @@ class SirteeManager(models.Manager):
 
     def borrar_fisico(self):
         return self.get_queryset().borrar_fisico()
+    
+    
