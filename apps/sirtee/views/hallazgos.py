@@ -86,6 +86,8 @@ class HallazgoListView(
             .permitidos(
                 self.request.user
             )
+            
+            .activos()
 
             .select_related(
 
@@ -195,6 +197,8 @@ class HallazgoDetailView(
             .permitidos(
                 self.request.user
             )
+            
+            .activos()
 
             .select_related(
 
@@ -430,6 +434,7 @@ class HallazgoUpdateView(
             .permitidos(
                 self.request.user
             )
+            .activos()
 
         )
 
@@ -632,22 +637,9 @@ class HallazgoDeleteView(
 
 
 
-    def delete(
-        self,
-        request,
-        *args,
-        **kwargs
-    ):
-
-
+    def form_valid(self, form):
         messages.success(
-            request,
+            self.request,
             "Hallazgo eliminado correctamente."
         )
-
-
-        return super().delete(
-            request,
-            *args,
-            **kwargs
-        )
+        return super().form_valid(form)
