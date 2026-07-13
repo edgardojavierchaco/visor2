@@ -1,5 +1,5 @@
 # apps/sirtee/views/relevamientos.py
-
+from django.shortcuts import get_object_or_404
 from django.contrib import messages
 
 from django.shortcuts import redirect
@@ -355,3 +355,170 @@ class RelevamientoDeleteView(
             *args,
             **kwargs
         )
+
+
+# ==================================================
+# RELEVAMIENTOS DE UNA ESCUELA
+# ==================================================
+
+class RelevamientosEscuelaView(
+    SirteePermissionMixin,
+    ListView
+):
+
+    model = Relevamiento
+
+    permiso_requerido = (
+        PermisosSirtee.puede_ver_relevamientos
+    )
+
+    template_name = (
+        "sirtee/relevamientos/list_escuela.html"
+    )
+
+    context_object_name = (
+        "relevamientos"
+    )
+
+    paginate_by = 20
+
+
+    def get_queryset(self):
+
+        self.cueanexo = self.kwargs["cueanexo"]
+
+        queryset = (
+
+            Relevamiento.objects
+
+            .permitidos(
+                self.request.user
+            )
+
+            .activos()
+
+            .filter(
+                cueanexo=self.cueanexo
+            )
+
+            .select_related(
+                "usuario_creador"
+            )
+
+            .prefetch_related(
+                "hallazgos",
+            )
+
+            .order_by(
+                "-fecha"
+            )
+
+        )
+
+        return queryset
+
+
+    def get_context_data(
+        self,
+        **kwargs
+    ):
+
+        context = super().get_context_data(
+            **kwargs
+        )
+
+        escuela = PadronEscuelas.get(
+            self.cueanexo
+        )
+
+        context["escuela"] = escuela
+
+        context["cueanexo"] = self.cueanexo
+
+        context["cantidad"] = (
+            context["relevamientos"].paginator.count
+            if hasattr(
+                context["relevamientos"],
+                "paginator"
+            )
+            else len(
+                context["relevamientos"]
+            )
+        )
+
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
+        )
+
+        return context
+
+
+# ==================================================
+# DETALLE RELEVAMIENTO MAPA
+# ==================================================
+
+class RelevamientoDetailMapaView(
+    SirteePermissionMixin,
+    DetailView
+):
+
+    model = Relevamiento
+
+    permiso_requerido = (
+        PermisosSirtee.puede_ver_relevamientos
+    )
+
+    template_name = (
+        "sirtee/relevamientos/detail_mapa.html"
+    )
+
+    context_object_name = (
+        "relevamiento"
+    )
+
+
+    def get_queryset(self):
+
+        return (
+
+            Relevamiento.objects
+
+            .permitidos(
+                self.request.user
+            )
+
+            .select_related(
+                "usuario_creador"
+            )
+
+            .prefetch_related(
+                "hallazgos"
+            )
+
+        )
+
+
+    def get_context_data(
+        self,
+        **kwargs
+    ):
+
+        context = super().get_context_data(
+            **kwargs
+        )
+
+        context["escuela"] = (
+            PadronEscuelas.get(
+                self.object.cueanexo
+            )
+        )
+
+        context["puede_gestionar"] = (
+            PermisosSirtee.puede_gestionar(
+                self.request.user
+            )
+        )
+
+        return context
