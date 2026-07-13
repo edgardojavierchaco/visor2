@@ -125,94 +125,59 @@ document.addEventListener("DOMContentLoaded", function () {
 
             </h5>
 
-            <table class="table table-sm table-bordered">
+            <table class="table table-sm table-bordered mb-3">
 
                 <tr>
 
-                    <th width="40%">CUE</th>
-
+                    <th width="40%">CUEANEXO</th>
                     <td>${e.cueanexo ?? "-"}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Localidad</th>
-
                     <td>${e.localidad ?? "-"}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Departamento</th>
-
                     <td>${e.departamento ?? "-"}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Región</th>
-
                     <td>${e.region_loc ?? "-"}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Hallazgos</th>
-
                     <td>${e.cantidad_hallazgos ?? 0}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Críticos</th>
-
                     <td>${e.hallazgos_criticos ?? 0}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Intervenciones</th>
-
                     <td>${e.intervenciones_pendientes ?? 0}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Criticidades</th>
-
                     <td>${e.criticidades ?? "-"}</td>
-
                 </tr>
-
                 <tr>
-
                     <th>Estados</th>
-
                     <td>${e.estados_intervencion ?? "-"}</td>
-
                 </tr>
 
             </table>
+            
+            <div class="d-grid">
+                <a
+                    href="${URL_RELEVAMIENTO}escuela/${e.cueanexo}/"
+                    class="btn btn-primary">
 
-            <a
+                    <i class="bi bi-building"></i>
 
-                href="/sirtee/relevamientos/${e.relevamiento_id}/"
+                    Ver relevamientos de esta escuela
 
-                class="btn btn-primary btn-sm w-100"
-
-            >
-
-                Abrir relevamientos
-
-            </a>
-
+                </a>
+            </div>
         </div>
 
         `;
