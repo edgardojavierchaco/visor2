@@ -3,33 +3,55 @@
 
 {% block sirtee_content %}
 
+
 <div class="container mt-4">
+
 
 <div class="card shadow">
 
 
 <div class="card-header bg-primary text-white">
 
-<h4>
+
+<h4 class="mb-0">
+
 
 {% if object %}
+
+<i class="bi bi-pencil-square"></i>
+
 Editar intervención
+
+
 {% else %}
+
+<i class="bi bi-plus-circle"></i>
+
 Nueva intervención
+
+
 {% endif %}
+
 
 </h4>
 
+
 </div>
+
 
 
 
 <div class="card-body">
 
 
-<form method="post">
+
+<form method="post"
+      enctype="multipart/form-data"
+      novalidate>
+
 
 {% csrf_token %}
+
 
 
 {% if form.non_field_errors %}
@@ -44,32 +66,80 @@ Nueva intervención
 
 
 
+
+
+<!-- ========================= -->
+<!-- RELACION -->
+<!-- ========================= -->
+
+
+<h5 class="border-bottom pb-2">
+
+<i class="bi bi-link"></i>
+
+Relación
+
+</h5>
+
+
+
 <div class="row">
+
 
 
 <div class="col-md-6 mb-3">
 
+
 <label class="form-label">
-Hallazgo
+
+{{ form.hallazgo.label }}
+
 </label>
+
 
 {{ form.hallazgo }}
 
-{{ form.hallazgo.errors }}
+
+{% for error in form.hallazgo.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
 
 </div>
 
 
 
+
+
 <div class="col-md-6 mb-3">
 
+
 <label class="form-label">
-Empresa ejecutora
+
+{{ form.empresa.label }}
+
 </label>
+
 
 {{ form.empresa }}
 
-{{ form.empresa.errors }}
+
+{% for error in form.empresa.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
 
 </div>
 
@@ -78,126 +148,234 @@ Empresa ejecutora
 
 
 
-<hr>
 
 
 
-<h5>
+<!-- ========================= -->
+<!-- CLASIFICACION -->
+<!-- ========================= -->
+
+
+<h5 class="border-bottom pb-2 mt-4">
+
+
+<i class="bi bi-tags"></i>
+
 Clasificación
+
+
 </h5>
+
+
 
 
 <div class="row">
 
 
+
 <div class="col-md-4 mb-3">
 
-<label>
-Tipo
+
+<label class="form-label">
+
+{{ form.tipo.label }}
+
 </label>
+
 
 {{ form.tipo }}
 
+
 </div>
+
+
 
 
 <div class="col-md-4 mb-3">
 
-<label>
-Estado
+
+<label class="form-label">
+
+{{ form.estado.label }}
+
 </label>
+
 
 {{ form.estado }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-4 mb-3">
 
-<label>
-Prioridad
+
+<label class="form-label">
+
+{{ form.prioridad.label }}
+
 </label>
+
 
 {{ form.prioridad }}
 
-</div>
-
 
 </div>
 
 
 
-<hr>
+</div>
 
 
-<h5>
+
+
+
+
+
+<!-- ========================= -->
+<!-- INFORMACION TECNICA -->
+<!-- ========================= -->
+
+
+<h5 class="border-bottom pb-2 mt-4">
+
+<i class="bi bi-tools"></i>
+
 Información técnica
+
 </h5>
+
+
 
 
 
 <div class="mb-3">
 
-<label>
-Título
+
+<label class="form-label">
+
+{{ form.titulo.label }}
+
 </label>
+
 
 {{ form.titulo }}
 
+
+{% for error in form.titulo.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
 </div>
+
+{% endfor %}
+
+
+</div>
+
+
 
 
 
 
 <div class="mb-3">
 
-<label>
-Descripción
+
+<label class="form-label">
+
+{{ form.descripcion.label }}
+
 </label>
+
 
 {{ form.descripcion }}
 
+
+
+{% for error in form.descripcion.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
 </div>
 
 
 
-<hr>
 
 
 
-<h5>
+<!-- ========================= -->
+<!-- RESPONSABLES -->
+<!-- ========================= -->
+
+
+<h5 class="border-bottom pb-2 mt-4">
+
+<i class="bi bi-people"></i>
+
 Responsables
+
 </h5>
+
+
+
 
 
 <div class="row">
 
 
+
 <div class="col-md-6 mb-3">
 
-<label>
-Responsable
+
+<label class="form-label">
+
+{{ form.responsable.label }}
+
 </label>
+
 
 {{ form.responsable }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-6 mb-3">
 
-<label>
-Equipo ejecutor
+
+<label class="form-label">
+
+{{ form.equipo_ejecutor.label }}
+
 </label>
+
 
 {{ form.equipo_ejecutor }}
 
+
 </div>
 
 
+
 </div>
+
+
+
 
 
 
@@ -205,39 +383,67 @@ Equipo ejecutor
 <div class="row">
 
 
+
 <div class="col-md-6 mb-3">
 
-<label>
-Organismo responsable
+
+<label class="form-label">
+
+{{ form.organismo_responsable.label }}
+
 </label>
+
 
 {{ form.organismo_responsable }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-6 mb-3">
 
-<label>
-Fuente financiamiento
+
+<label class="form-label">
+
+{{ form.fuente_financiamiento.label }}
+
 </label>
+
 
 {{ form.fuente_financiamiento }}
 
-</div>
-
 
 </div>
 
 
+</div>
 
-<hr>
 
 
-<h5>
+
+
+
+
+
+<!-- ========================= -->
+<!-- CRONOGRAMA -->
+<!-- ========================= -->
+
+
+<h5 class="border-bottom pb-2 mt-4">
+
+
+<i class="bi bi-calendar"></i>
+
 Cronograma
+
+
 </h5>
+
+
 
 
 
@@ -246,135 +452,219 @@ Cronograma
 
 <div class="col-md-4 mb-3">
 
-<label>
+
+<label class="form-label">
+
 Inicio
+
 </label>
+
 
 {{ form.fecha_inicio }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-4 mb-3">
 
-<label>
+
+<label class="form-label">
+
 Fin
+
 </label>
+
 
 {{ form.fecha_fin }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-4 mb-3">
 
-<label>
+
+<label class="form-label">
+
 Fin estimado
+
 </label>
+
 
 {{ form.fecha_estimada_fin }}
 
-</div>
-
 
 </div>
 
 
 
-<hr>
+</div>
 
 
-<h5>
+
+
+
+
+
+<!-- ========================= -->
+<!-- COSTOS -->
+<!-- ========================= -->
+
+
+<h5 class="border-bottom pb-2 mt-4">
+
+
+<i class="bi bi-cash"></i>
+
 Costos y avance
+
+
 </h5>
+
+
 
 
 
 <div class="row">
 
 
+
 <div class="col-md-4 mb-3">
 
-<label>
+
+<label class="form-label">
+
 Avance %
+
 </label>
+
 
 {{ form.porcentaje_avance }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-4 mb-3">
 
-<label>
+
+<label class="form-label">
+
 Costo estimado
+
 </label>
+
 
 {{ form.costo_estimado }}
 
+
 </div>
+
+
 
 
 
 <div class="col-md-4 mb-3">
 
-<label>
+
+<label class="form-label">
+
 Costo real
+
 </label>
+
 
 {{ form.costo_real }}
 
+
 </div>
 
 
+
 </div>
+
+
+
+
+
 
 
 
 <div class="mb-3">
 
-<label>
-Observaciones
+
+<label class="form-label">
+
+{{ form.observaciones.label }}
+
 </label>
 
+
 {{ form.observaciones }}
+
 
 </div>
 
 
 
 
-<button class="btn btn-success">
+
+
+
+<hr>
+
+
+
+<button type="submit"
+        class="btn btn-success">
+
 
 <i class="bi bi-save"></i>
 
-Guardar
+Guardar intervención
+
 
 </button>
 
 
 
+
 <a href="{% url 'sirtee:intervenciones-list' %}"
-class="btn btn-secondary">
+   class="btn btn-secondary">
+
+
+<i class="bi bi-arrow-left"></i>
 
 Cancelar
 
+
 </a>
+
 
 
 
 </form>
 
 
+
+</div>
+
+
 </div>
 
 
 </div>
 
-</div>
 
 
 {% endblock %}

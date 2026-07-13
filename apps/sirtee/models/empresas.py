@@ -1,4 +1,5 @@
 from django.db import models
+from apps.bnhpersonas.models import Localidades
 
 from apps.sirtee.models.mixins import (
     AuditoriaMixin,
@@ -124,10 +125,9 @@ class Empresa(
     )
 
 
-    localidad = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
+    localidad = models.ForeignKey(
+        Localidades,
+        on_delete=models.PROTECT
     )
 
 

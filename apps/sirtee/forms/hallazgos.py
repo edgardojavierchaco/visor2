@@ -1,12 +1,27 @@
 from django import forms
+
 from apps.sirtee.models.hallazgos import Hallazgo
 from apps.sirtee.models.relevamientos import Relevamiento
 from apps.sirtee.catalogos.models import EstadoHallazgo
+
 from apps.sirtee.forms.base import SirteeBaseForm
+
 from apps.usuarios.models import UsuariosVisualizador
 
 
 class HallazgoForm(SirteeBaseForm):
+    """
+    Formulario principal de Hallazgos SiRTEE.
+
+    Incluye:
+
+    - Bootstrap automático mediante SirteeBaseForm
+    - Select2 automático
+    - Validaciones técnicas
+    - Restricción por usuario
+    - Responsable automático
+    """
+
 
     class Meta:
 
@@ -44,14 +59,12 @@ class HallazgoForm(SirteeBaseForm):
         ]
 
 
+
         widgets = {
 
 
             "relevamiento": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione relevamiento"
                 }
@@ -61,9 +74,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "sistema_constructivo": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione sistema constructivo"
                 }
@@ -73,9 +83,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "area_afectada": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione área afectada"
                 }
@@ -85,9 +92,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "tipo_hallazgo": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione tipo de hallazgo"
                 }
@@ -97,9 +101,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "criticidad": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione criticidad"
                 }
@@ -109,9 +110,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "riesgo": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione riesgo"
                 }
@@ -121,9 +119,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "estado": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
-
                     "data-placeholder":
                     "Seleccione estado"
                 }
@@ -133,9 +128,6 @@ class HallazgoForm(SirteeBaseForm):
 
             "titulo": forms.TextInput(
                 attrs={
-                    "class":
-                    "form-control",
-
                     "placeholder":
                     "Título del hallazgo"
                 }
@@ -145,14 +137,12 @@ class HallazgoForm(SirteeBaseForm):
 
             "descripcion": forms.Textarea(
                 attrs={
-                    "class":
-                    "form-control",
 
-                    "rows":
-                    5,
+                    "rows": 5,
 
                     "placeholder":
                     "Describa técnicamente el problema detectado"
+
                 }
             ),
 
@@ -160,11 +150,10 @@ class HallazgoForm(SirteeBaseForm):
 
             "ubicacion": forms.TextInput(
                 attrs={
-                    "class":
-                    "form-control",
 
                     "placeholder":
                     "Ej: Aula 4, Galería Norte, Cubierta sector B"
+
                 }
             ),
 
@@ -172,14 +161,12 @@ class HallazgoForm(SirteeBaseForm):
 
             "observacion_tecnica": forms.Textarea(
                 attrs={
-                    "class":
-                    "form-control",
 
-                    "rows":
-                    4,
+                    "rows": 4,
 
                     "placeholder":
                     "Detalle técnico complementario"
+
                 }
             ),
 
@@ -187,14 +174,12 @@ class HallazgoForm(SirteeBaseForm):
 
             "recomendacion": forms.Textarea(
                 attrs={
-                    "class":
-                    "form-control",
 
-                    "rows":
-                    4,
+                    "rows": 4,
 
                     "placeholder":
                     "Indique acciones recomendadas"
+
                 }
             ),
 
@@ -202,11 +187,10 @@ class HallazgoForm(SirteeBaseForm):
 
             "usuario_responsable": forms.Select(
                 attrs={
-                    "class":
-                    "form-select select2",
 
                     "data-placeholder":
                     "Seleccione responsable"
+
                 }
             ),
 
@@ -215,7 +199,7 @@ class HallazgoForm(SirteeBaseForm):
 
 
     # ==========================================================
-    # INIT DINÁMICO
+    # INIT
     # ==========================================================
 
 
@@ -227,6 +211,7 @@ class HallazgoForm(SirteeBaseForm):
         **kwargs
     ):
 
+
         super().__init__(
             *args,
             **kwargs
@@ -237,9 +222,10 @@ class HallazgoForm(SirteeBaseForm):
 
 
 
-        # ------------------------------------------------------
+        # ======================================================
         # RELEVAMIENTOS DISPONIBLES
-        # ------------------------------------------------------
+        # ======================================================
+
 
         if usuario:
 
@@ -249,26 +235,34 @@ class HallazgoForm(SirteeBaseForm):
                 "relevamientos_disponibles"
             ):
 
+
                 self.fields[
                     "relevamiento"
                 ].queryset = (
+
                     usuario
                     .relevamientos_disponibles()
+
                 )
+
 
             else:
 
+
                 self.fields[
                     "relevamiento"
                 ].queryset = (
+
                     Relevamiento.objects.all()
+
                 )
 
 
 
-        # ------------------------------------------------------
+        # ======================================================
         # RELEVAMIENTO PRESELECCIONADO
-        # ------------------------------------------------------
+        # ======================================================
+
 
         if relevamiento:
 
@@ -284,31 +278,45 @@ class HallazgoForm(SirteeBaseForm):
 
 
 
-        # ------------------------------------------------------
-        # RESPONSABLE AUTOMÁTICO
-        # ------------------------------------------------------
+        # ======================================================
+        # RESPONSABLE
+        # ======================================================
+
 
         if usuario and "usuario_responsable" in self.fields:
+
 
             usuario_bd = UsuariosVisualizador.objects.get(
                 pk=usuario.pk
             )
 
-            self.fields["usuario_responsable"].queryset = (
+
+            self.fields[
+                "usuario_responsable"
+            ].queryset = (
+
                 UsuariosVisualizador.objects.filter(
                     pk=usuario_bd.pk
                 )
+
             )
 
-            self.fields["usuario_responsable"].initial = usuario_bd
 
-            self.fields["usuario_responsable"].disabled = True
+            self.fields[
+                "usuario_responsable"
+            ].initial = usuario_bd
+
+
+            self.fields[
+                "usuario_responsable"
+            ].disabled = True
 
 
 
-        # ------------------------------------------------------
+        # ======================================================
         # ESTADO INICIAL
-        # ------------------------------------------------------
+        # ======================================================
+
 
         if not self.instance.pk:
 
@@ -316,34 +324,25 @@ class HallazgoForm(SirteeBaseForm):
             self.fields[
                 "estado"
             ].queryset = (
+
                 EstadoHallazgo.objects.filter(
                     codigo="ABIERTO"
                 )
+
             )
 
-        # ------------------------------------------------------
-        # DEBUG TEMPORAL
-        # ------------------------------------------------------
+
+
+        # ======================================================
+        # LABELS REQUERIDOS
+        # ======================================================
+
 
         for nombre, campo in self.fields.items():
 
-            if hasattr(campo, "queryset"):
-
-                print(
-                    "CAMPO:",
-                    nombre,
-                    "QUERYSET:",
-                    campo.queryset
-                )
-
-
-        # ------------------------------------------------------
-        # CAMPOS REQUERIDOS
-        # ------------------------------------------------------
-
-        for nombre, campo in self.fields.items():
 
             if campo.required:
+
 
                 campo.label = (
                     f"{campo.label} *"
@@ -351,16 +350,27 @@ class HallazgoForm(SirteeBaseForm):
 
 
 
+        # ======================================================
+        # BOOTSTRAP + SELECT2
+        # ======================================================
+
+
+        self.configure_fields()
+
+
+
     # ==========================================================
-    # CLEAN TITULO
+    # VALIDACION TITULO
     # ==========================================================
 
 
     def clean_titulo(self):
 
+
         titulo = (
-            self.cleaned_data
-            .get("titulo")
+            self.cleaned_data.get(
+                "titulo"
+            )
         )
 
 
@@ -369,18 +379,23 @@ class HallazgoForm(SirteeBaseForm):
             titulo = titulo.strip()
 
 
+
         if not titulo:
+
 
             raise forms.ValidationError(
                 "Debe ingresar un título."
             )
 
 
+
         if len(titulo) < 10:
+
 
             raise forms.ValidationError(
                 "El título debe ser más descriptivo."
             )
+
 
 
         return titulo
@@ -388,16 +403,19 @@ class HallazgoForm(SirteeBaseForm):
 
 
     # ==========================================================
-    # CLEAN DESCRIPCION
+    # VALIDACION DESCRIPCION
     # ==========================================================
 
 
     def clean_descripcion(self):
 
+
         descripcion = (
-            self.cleaned_data
-            .get("descripcion")
+            self.cleaned_data.get(
+                "descripcion"
+            )
         )
+
 
 
         if descripcion:
@@ -405,19 +423,23 @@ class HallazgoForm(SirteeBaseForm):
             descripcion = descripcion.strip()
 
 
+
         if not descripcion:
+
 
             raise forms.ValidationError(
                 "Debe ingresar una descripción técnica."
             )
 
 
+
         if len(descripcion) < 30:
 
+
             raise forms.ValidationError(
-                "La descripción técnica debe "
-                "tener al menos 30 caracteres."
+                "La descripción técnica debe tener al menos 30 caracteres."
             )
+
 
 
         return descripcion
@@ -431,81 +453,111 @@ class HallazgoForm(SirteeBaseForm):
 
     def clean(self):
 
+
         cleaned = super().clean()
 
 
 
-        criticidad = (
-            cleaned.get("criticidad")
+        criticidad = cleaned.get(
+            "criticidad"
         )
 
 
-        recomendacion = (
-            cleaned.get("recomendacion")
+        recomendacion = cleaned.get(
+            "recomendacion"
         )
 
 
-        estado = (
-            cleaned.get("estado")
+        estado = cleaned.get(
+            "estado"
         )
 
 
-
-        # ------------------------------------------------------
-        # CRITICIDAD CRÍTICA
-        # ------------------------------------------------------
 
         if (
+
             criticidad
+
             and criticidad.codigo == "CRITICA"
+
             and not recomendacion
+
         ):
 
+
             self.add_error(
+
                 "recomendacion",
 
-                "Los hallazgos críticos "
-                "requieren recomendación técnica."
+                "Los hallazgos críticos requieren recomendación técnica."
+
             )
 
 
 
-        # ------------------------------------------------------
-        # NO PERMITIR CREAR COMO RESUELTO
-        # ------------------------------------------------------
-
         if (
+
             not self.instance.pk
+
             and estado
+
             and estado.codigo == "RESUELTO"
+
         ):
 
+
             self.add_error(
+
                 "estado",
 
-                "Un hallazgo nuevo no puede "
-                "crearse como resuelto."
+                "Un hallazgo nuevo no puede crearse como resuelto."
+
             )
 
 
 
         return cleaned
-    
-    
-    def save(self, commit=True):
 
-        obj = super().save(commit=False)
+
+
+    # ==========================================================
+    # SAVE
+    # ==========================================================
+
+
+    def save(
+        self,
+        commit=True
+    ):
+
+
+        obj = super().save(
+            commit=False
+        )
+
+
 
         if self.usuario:
 
+
             obj.usuario_responsable = (
+
                 UsuariosVisualizador.objects.get(
                     pk=self.usuario.pk
                 )
+
             )
 
+
+
         if commit:
+
+
             obj.save()
+
+
             self.save_m2m()
+
+
 
         return obj
