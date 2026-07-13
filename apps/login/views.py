@@ -47,6 +47,7 @@ class LoginFormView(LoginView):
         'Aplicador': 'directores:institucional',
         #'Director_Privada': 'directores:institucional',
         #'DirGral_Privada': 'privada:dashboard',
+        'Infraestructura': 'archivos:portada_gestor',
     }
 
     # --------------------------
