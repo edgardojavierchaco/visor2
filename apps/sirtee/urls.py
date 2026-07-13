@@ -8,7 +8,9 @@ from apps.sirtee.views.relevamientos import (
     RelevamientoCreateView,
     RelevamientoUpdateView,
     RelevamientoDetailView,
-    RelevamientoDeleteView
+    RelevamientoDeleteView,
+    RelevamientosEscuelaView,
+    RelevamientoDetailMapaView
 )
 
 from apps.sirtee.views.hallazgos import (
@@ -119,6 +121,8 @@ urlpatterns = [
     path("relevamientos/<int:pk>/", RelevamientoDetailView.as_view(), name="relevamientos-detail"),
     path("relevamientos/<int:pk>/editar/", RelevamientoUpdateView.as_view(), name="relevamientos-update"),
     path("relevamientos/<int:pk>/eliminar/",RelevamientoDeleteView.as_view(),name="relevamientos-delete"),
+    path("relevamientos/escuela/<str:cueanexo>/",RelevamientosEscuelaView.as_view(),name="relevamientos-escuela"),
+    path("relevamientos/mapa/<int:pk>/",RelevamientoDetailMapaView.as_view(),name="relevamientos-mapa"),
 
     # ---------------- HALLAZGOS ----------------
     path("hallazgos/", HallazgoListView.as_view(), name="hallazgos-list"),

@@ -5,7 +5,7 @@
 
 
 
-{% block content %}
+{% block sirtee_content %}
 
 
 
@@ -602,6 +602,31 @@ src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js">
 src="{% static 'sirtee/js/mapa_sirtee.js' %}">
 </script>
 
+<script>
+$(function () {
+
+    $("#filtroRegion").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+    $("#filtroDepartamento").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+    $("#filtroCriticidad").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+    $("#filtroEstado").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+});
+</script>
 
 <script>
     const URL_RELEVAMIENTO = "/sirtee/relevamientos/";

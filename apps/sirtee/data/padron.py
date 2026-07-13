@@ -124,6 +124,7 @@ class PadronEscuelas:
                 oferta
             FROM {cls.VIEW}
             WHERE cueanexo IN %s
+            ORDER BY nom_est, oferta
         """
 
 
@@ -148,11 +149,28 @@ class PadronEscuelas:
                 for row in cursor.fetchall()
             ]
 
+        resultado = {}
 
-        return {
-            str(row["cueanexo"]): row
-            for row in rows
-        }
+        for row in rows:
+
+            cue = str(row["cueanexo"])
+
+            if cue not in resultado:
+
+                resultado[cue] = {
+                    "cueanexo": cue,
+                    "nom_est": row["nom_est"],
+                    "ofertas": []
+                }
+
+            resultado[cue]["ofertas"].append(
+                {
+                    "cui": row["cui"],
+                    "oferta": row["oferta"],
+                }
+            )
+
+        return resultado
 
 
     # --------------------------------------

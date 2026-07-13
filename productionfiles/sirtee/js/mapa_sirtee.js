@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             >
 
-                Abrir relevamiento
+                Abrir relevamientos
 
             </a>
 
