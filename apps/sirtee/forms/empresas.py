@@ -1,5 +1,4 @@
 from django import forms
-from django.db.models import Q
 
 from apps.sirtee.models.empresas import Empresa
 from apps.sirtee.forms.base import SirteeBaseForm
@@ -7,6 +6,35 @@ from apps.sirtee.forms.base import SirteeBaseForm
 
 
 class EmpresaForm(SirteeBaseForm):
+
+
+    localidad = forms.ChoiceField(
+
+        label="Localidad",
+
+        required=False,
+
+        choices=[],
+
+        widget=forms.Select(
+
+            attrs={
+
+                "class":
+                    "form-select select2",
+
+                "id":
+                    "id_localidad",
+
+                "data-placeholder":
+                    "Seleccione localidad"
+
+            }
+
+        )
+
+    )
+
 
 
     class Meta:
@@ -52,23 +80,16 @@ class EmpresaForm(SirteeBaseForm):
 
             "razon_social": forms.TextInput(
                 attrs={
-                    "class":
-                    "form-control",
-
-                    "placeholder":
-                    "Razón social",
+                    "class": "form-control",
+                    "placeholder": "Razón social",
                 }
             ),
 
 
-
             "nombre_fantasia": forms.TextInput(
                 attrs={
-                    "class":
-                    "form-control",
-
-                    "placeholder":
-                    "Nombre comercial",
+                    "class": "form-control",
+                    "placeholder": "Nombre comercial",
                 }
             ),
 
@@ -76,11 +97,8 @@ class EmpresaForm(SirteeBaseForm):
 
             "cuit": forms.TextInput(
                 attrs={
-                    "class":
-                    "form-control",
-
-                    "placeholder":
-                    "Ej: 30-12345678-9",
+                    "class": "form-control",
+                    "placeholder": "Ej: 30-12345678-9",
                 }
             ),
 
@@ -92,7 +110,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-select select2",
 
                     "data-placeholder":
-                    "Seleccione tipo de empresa"
+                    "Seleccione tipo de empresa",
                 }
             ),
 
@@ -104,7 +122,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-control",
 
                     "placeholder":
-                    "Registro o matrícula"
+                    "Registro o matrícula",
                 }
             ),
 
@@ -116,7 +134,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-control",
 
                     "placeholder":
-                    "Condición fiscal"
+                    "Condición fiscal",
                 }
             ),
 
@@ -128,7 +146,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-control",
 
                     "placeholder":
-                    "Teléfono"
+                    "Teléfono",
                 }
             ),
 
@@ -140,7 +158,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-control",
 
                     "placeholder":
-                    "correo@empresa.com"
+                    "correo@empresa.com",
                 }
             ),
 
@@ -152,19 +170,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-control",
 
                     "placeholder":
-                    "Domicilio"
-                }
-            ),
-
-
-
-            "localidad": forms.TextInput(
-                attrs={
-                    "class":
-                    "form-control",
-
-                    "placeholder":
-                    "Localidad"
+                    "Domicilio",
                 }
             ),
 
@@ -176,7 +182,7 @@ class EmpresaForm(SirteeBaseForm):
                     "form-control",
 
                     "placeholder":
-                    "Responsable de contacto"
+                    "Responsable de contacto",
                 }
             ),
 
@@ -185,7 +191,7 @@ class EmpresaForm(SirteeBaseForm):
             "activa": forms.CheckboxInput(
                 attrs={
                     "class":
-                    "form-check-input"
+                    "form-check-input",
                 }
             ),
 
@@ -200,19 +206,18 @@ class EmpresaForm(SirteeBaseForm):
                     4,
 
                     "placeholder":
-                    "Observaciones generales"
+                    "Observaciones generales",
                 }
             ),
-
 
         }
 
 
 
-    # ==================================================
-    # INIT
-    # ==================================================
 
+    # =====================================================
+    # INIT
+    # =====================================================
 
     def __init__(
         self,
@@ -232,9 +237,34 @@ class EmpresaForm(SirteeBaseForm):
 
 
 
-        # etiquetas requeridas
+        # Valor inicial localidad
+        # para edición
 
-        for nombre, campo in self.fields.items():
+        if self.instance.pk:
+
+            if self.instance.localidad:
+
+
+                self.fields[
+                    "localidad"
+                ].choices = [
+
+                    (
+                        self.instance.localidad,
+                        self.instance.localidad
+                    )
+
+                ]
+
+
+                self.initial[
+                    "localidad"
+                ] = self.instance.localidad
+
+
+
+        for nombre,campo in self.fields.items():
+
 
             if campo.required:
 
@@ -244,22 +274,73 @@ class EmpresaForm(SirteeBaseForm):
 
 
 
-    # ==================================================
-    # CLEAN RAZON SOCIAL
-    # ==================================================
+        self.configure_fields()
 
+
+
+        self.fields["tipo"].widget.attrs.update(
+
+            {
+
+                "class":
+                    "form-select select2",
+
+                "data-placeholder":
+                    "Seleccione tipo de empresa"
+
+            }
+
+        )
+
+
+
+        self.fields["localidad"].widget.attrs.update(
+
+            {
+
+                "class":
+                    "form-select select2",
+
+                "data-placeholder":
+                    "Seleccione localidad"
+
+            }
+
+        )
+
+
+
+    # =====================================================
+    # CLEAN LOCALIDAD
+    # =====================================================
+
+    def clean_localidad(self):
+
+        localidad = (
+            self.cleaned_data
+            .get("localidad")
+        )
+
+
+        return localidad
+
+
+
+    # =====================================================
+    # CLEAN RAZON SOCIAL
+    # =====================================================
 
     def clean_razon_social(self):
 
-        valor = (
-            self.cleaned_data
-            .get("razon_social")
+        valor = self.cleaned_data.get(
+            "razon_social"
         )
 
 
         if valor:
 
             valor = valor.strip()
+
 
 
         if not valor:
@@ -269,11 +350,13 @@ class EmpresaForm(SirteeBaseForm):
             )
 
 
+
         if len(valor) < 3:
 
             raise forms.ValidationError(
                 "La razón social es demasiado corta."
             )
+
 
 
         qs = Empresa.objects.filter(
@@ -299,16 +382,14 @@ class EmpresaForm(SirteeBaseForm):
 
 
 
-    # ==================================================
+    # =====================================================
     # CLEAN CUIT
-    # ==================================================
-
+    # =====================================================
 
     def clean_cuit(self):
 
-        cuit = (
-            self.cleaned_data
-            .get("cuit")
+        cuit = self.cleaned_data.get(
+            "cuit"
         )
 
 
@@ -334,32 +415,10 @@ class EmpresaForm(SirteeBaseForm):
 
 
 
-        if len(cuit) != 11:
+        if len(cuit)!=11:
 
             raise forms.ValidationError(
                 "El CUIT debe contener 11 dígitos."
-            )
-
-
-
-        qs = Empresa.objects.filter(
-            cuit__icontains=cuit
-        )
-
-
-
-        if self.instance.pk:
-
-            qs = qs.exclude(
-                pk=self.instance.pk
-            )
-
-
-
-        if qs.exists():
-
-            raise forms.ValidationError(
-                "Ya existe una empresa con ese CUIT."
             )
 
 
@@ -372,32 +431,29 @@ class EmpresaForm(SirteeBaseForm):
 
 
 
-    # ==================================================
+    # =====================================================
     # CLEAN EMAIL
-    # ==================================================
-
+    # =====================================================
 
     def clean_email(self):
 
-        email = (
-            self.cleaned_data
-            .get("email")
+        email = self.cleaned_data.get(
+            "email"
         )
 
 
         if email:
 
-            email = email.lower().strip()
+            email=email.lower().strip()
 
 
         return email
 
 
 
-    # ==================================================
+    # =====================================================
     # VALIDACION GENERAL
-    # ==================================================
-
+    # =====================================================
 
     def clean(self):
 
@@ -415,13 +471,55 @@ class EmpresaForm(SirteeBaseForm):
         )
 
 
+
         if not telefono and not email:
 
             self.add_error(
+
                 "telefono",
+
                 "Debe ingresar al menos un medio de contacto."
+
             )
 
 
-
         return cleaned
+
+
+
+    # =====================================================
+    # SAVE
+    # =====================================================
+
+    def save(
+        self,
+        commit=True
+    ):
+
+
+        obj = super().save(
+            commit=False
+        )
+
+
+
+        if self.usuario:
+
+            if hasattr(
+                obj,
+                "usuario_creacion"
+            ):
+
+                obj.usuario_creacion = (
+                    self.usuario
+                )
+
+
+
+        if commit:
+
+            obj.save()
+
+
+
+        return obj

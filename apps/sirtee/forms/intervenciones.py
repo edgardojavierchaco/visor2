@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 
 from apps.sirtee.models.intervenciones import Intervencion
 
@@ -61,238 +60,178 @@ class IntervencionForm(SirteeBaseForm):
         widgets = {
 
 
-
             "hallazgo": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
-                    "Seleccione hallazgo"
-
+                    "Seleccione hallazgo",
                 }
-
             ),
 
 
 
             "titulo": forms.TextInput(
-
                 attrs={
-
                     "class":
                     "form-control",
 
                     "placeholder":
                     "Título de la intervención"
-
                 }
-
             ),
 
 
 
             "descripcion": forms.Textarea(
-
                 attrs={
-
                     "class":
                     "form-control",
 
-                    "rows":
-                    5,
+                    "rows":5,
 
                     "placeholder":
                     "Descripción técnica de la intervención"
-
                 }
-
             ),
 
 
 
             "tipo": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
                     "Tipo de intervención"
-
                 }
-
             ),
 
 
 
             "estado": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
                     "Estado"
-
                 }
-
             ),
 
 
 
             "prioridad": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
                     "Prioridad"
-
                 }
-
             ),
 
 
 
             "empresa": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
                     "Empresa ejecutora"
-
                 }
-
             ),
 
 
 
             "responsable": forms.TextInput(
-
                 attrs={
-
                     "class":
                     "form-control",
 
                     "placeholder":
                     "Responsable técnico"
-
                 }
-
             ),
 
 
 
             "equipo_ejecutor": forms.TextInput(
-
                 attrs={
-
                     "class":
                     "form-control",
 
                     "placeholder":
-                    "Cuadrilla o equipo ejecutor"
-
+                    "Equipo ejecutor"
                 }
-
             ),
 
 
 
             "organismo_responsable": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
                     "Organismo responsable"
-
                 }
-
             ),
 
 
 
             "fuente_financiamiento": forms.Select(
-
                 attrs={
-
                     "class":
-                    "form-select select2",
+                    "form-control select2",
 
                     "data-placeholder":
                     "Fuente de financiamiento"
-
                 }
-
             ),
 
 
 
             "fecha_inicio": forms.DateTimeInput(
-
                 attrs={
-
                     "type":
                     "datetime-local",
 
                     "class":
                     "form-control"
-
                 }
-
             ),
 
 
 
             "fecha_fin": forms.DateTimeInput(
-
                 attrs={
-
                     "type":
                     "datetime-local",
 
                     "class":
                     "form-control"
-
                 }
-
             ),
 
 
 
             "fecha_estimada_fin": forms.DateInput(
-
                 attrs={
-
                     "type":
                     "date",
 
                     "class":
                     "form-control"
-
                 }
-
             ),
 
 
 
             "costo_estimado": forms.NumberInput(
-
                 attrs={
-
                     "class":
                     "form-control",
 
@@ -301,17 +240,13 @@ class IntervencionForm(SirteeBaseForm):
 
                     "min":
                     "0"
-
                 }
-
             ),
 
 
 
             "costo_real": forms.NumberInput(
-
                 attrs={
-
                     "class":
                     "form-control",
 
@@ -320,17 +255,13 @@ class IntervencionForm(SirteeBaseForm):
 
                     "min":
                     "0"
-
                 }
-
             ),
 
 
 
             "porcentaje_avance": forms.NumberInput(
-
                 attrs={
-
                     "class":
                     "form-control",
 
@@ -339,27 +270,20 @@ class IntervencionForm(SirteeBaseForm):
 
                     "max":
                     "100"
-
                 }
-
             ),
 
 
 
             "observaciones": forms.Textarea(
-
                 attrs={
-
                     "class":
                     "form-control",
 
                     "rows":
                     4
-
                 }
-
             ),
-
 
         }
 
@@ -369,14 +293,12 @@ class IntervencionForm(SirteeBaseForm):
     # INIT
     # ==================================================
 
-
     def __init__(
         self,
         *args,
         usuario=None,
         **kwargs
     ):
-
 
         super().__init__(
             *args,
@@ -387,8 +309,7 @@ class IntervencionForm(SirteeBaseForm):
         self.usuario = usuario
 
 
-
-        # Campos obligatorios visuales
+        # Labels obligatorios
 
         for nombre, campo in self.fields.items():
 
@@ -399,17 +320,49 @@ class IntervencionForm(SirteeBaseForm):
                 )
 
 
+        # Select placeholder
+
+        selects = [
+
+            "hallazgo",
+            "tipo",
+            "estado",
+            "prioridad",
+            "empresa",
+            "organismo_responsable",
+            "fuente_financiamiento",
+
+        ]
+
+
+        for campo in selects:
+
+            if campo in self.fields:
+
+                field = self.fields[campo]
+
+
+                if hasattr(
+                    field,
+                    "empty_label"
+                ):
+
+                    field.empty_label = (
+                        "Seleccione..."
+                    )
+
+
 
     # ==================================================
-    # CLEAN TITULO
+    # TITULO
     # ==================================================
-
 
     def clean_titulo(self):
 
         titulo = (
-            self.cleaned_data
-            .get("titulo")
+            self.cleaned_data.get(
+                "titulo"
+            )
         )
 
 
@@ -437,15 +390,15 @@ class IntervencionForm(SirteeBaseForm):
 
 
     # ==================================================
-    # CLEAN DESCRIPCION
+    # DESCRIPCION
     # ==================================================
-
 
     def clean_descripcion(self):
 
         descripcion = (
-            self.cleaned_data
-            .get("descripcion")
+            self.cleaned_data.get(
+                "descripcion"
+            )
         )
 
 
@@ -474,15 +427,15 @@ class IntervencionForm(SirteeBaseForm):
 
 
     # ==================================================
-    # CLEAN PORCENTAJE
+    # AVANCE
     # ==================================================
-
 
     def clean_porcentaje_avance(self):
 
         avance = (
-            self.cleaned_data
-            .get("porcentaje_avance")
+            self.cleaned_data.get(
+                "porcentaje_avance"
+            )
         )
 
 
@@ -504,139 +457,48 @@ class IntervencionForm(SirteeBaseForm):
 
 
     # ==================================================
-    # VALIDACIONES GENERALES
+    # VALIDACION GENERAL
     # ==================================================
 
-
     def clean(self):
-
 
         cleaned = super().clean()
 
 
-
-        fecha_inicio = (
-            cleaned.get(
-                "fecha_inicio"
-            )
+        fecha_inicio = cleaned.get(
+            "fecha_inicio"
         )
 
-
-        fecha_fin = (
-            cleaned.get(
-                "fecha_fin"
-            )
+        fecha_fin = cleaned.get(
+            "fecha_fin"
         )
 
-
-        costo_estimado = (
-            cleaned.get(
-                "costo_estimado"
-            )
+        estado = cleaned.get(
+            "estado"
         )
 
-
-        costo_real = (
-            cleaned.get(
-                "costo_real"
-            )
-        )
-
-
-        estado = (
-            cleaned.get(
-                "estado"
-            )
-        )
-
-
-        avance = (
-            cleaned.get(
-                "porcentaje_avance"
-            )
+        avance = cleaned.get(
+            "porcentaje_avance"
         )
 
 
 
-        # ---------------------------------------------
-        # FECHAS
-        # ---------------------------------------------
-
+        # Fechas
 
         if (
-
             fecha_inicio
-
-            and
-
-            fecha_fin
-
-            and
-
-            fecha_fin < fecha_inicio
-
+            and fecha_fin
+            and fecha_fin < fecha_inicio
         ):
 
             self.add_error(
-
                 "fecha_fin",
-
-                "La fecha final no puede "
-                "ser anterior a la fecha inicial."
-
+                "La fecha final no puede ser anterior a la inicial."
             )
 
 
 
-        # ---------------------------------------------
-        # COSTOS
-        # ---------------------------------------------
-
-
-        if (
-
-            costo_estimado
-
-            and
-
-            costo_estimado < 0
-
-        ):
-
-            self.add_error(
-
-                "costo_estimado",
-
-                "El costo no puede ser negativo."
-
-            )
-
-
-
-        if (
-
-            costo_real
-
-            and
-
-            costo_real < 0
-
-        ):
-
-            self.add_error(
-
-                "costo_real",
-
-                "El costo no puede ser negativo."
-
-            )
-
-
-
-        # ---------------------------------------------
-        # FINALIZACIÓN
-        # ---------------------------------------------
-
+        # Estado finalizado
 
         if (
 
@@ -644,23 +506,61 @@ class IntervencionForm(SirteeBaseForm):
 
             and
 
-            estado.codigo == "FINALIZADA"
+            estado.codigo in [
 
-            and
+                "FINALIZADA",
+                "FINALIZADO"
 
-            avance != 100
+            ]
+
+            and avance != 100
 
         ):
 
             self.add_error(
-
                 "porcentaje_avance",
-
-                "Una intervención finalizada "
-                "debe tener 100% de avance."
-
+                "Una intervención finalizada debe tener 100% de avance."
             )
 
 
 
         return cleaned
+
+
+
+    # ==================================================
+    # SAVE
+    # ==================================================
+
+    def save(
+        self,
+        commit=True
+    ):
+
+        obj = super().save(
+            commit=False
+        )
+
+
+        if self.usuario:
+
+            if hasattr(
+                obj,
+                "usuario_creacion"
+            ):
+
+                obj.usuario_creacion = (
+                    self.usuario
+                )
+
+
+
+        if commit:
+
+            obj.save()
+
+
+            self.save_m2m()
+
+
+        return obj

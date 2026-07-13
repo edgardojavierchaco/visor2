@@ -4,6 +4,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from django.db import transaction
 
+from django.http import JsonResponse
+from django.db.models import Q
 from django.urls import reverse_lazy
 
 from django.views.generic import (
@@ -27,7 +29,7 @@ from apps.sirtee.security.mixins import (
     SirteePermissionMixin
 )
 
-
+from apps.bnhpersonas.models import Localidades
 
 
 
@@ -377,3 +379,53 @@ class EmpresaDeleteView(
             *args,
             **kwargs
         )
+    
+    
+def filtrar_localidades(request):
+
+    provincia_id = 22
+
+    termino = request.GET.get(
+        "q",
+        ""
+    )
+    
+    qs = (
+        Localidades.objects
+        .filter(
+            c_provincia_id=provincia_id
+        )
+    )
+    
+    if termino:
+        qs = qs.filter(
+
+            Q(descrip_localidad__icontains=termino)
+
+        )
+    
+    qs = qs.order_by(
+        "descrip_localidad"
+    )[:50]
+
+
+    data = [
+
+        {
+            "id":
+            str(x.c_localidad),
+
+            "text":
+            x.descrip_localidad
+
+        }
+
+        for x in qs
+
+    ]
+
+
+    return JsonResponse(
+        data,
+        safe=False
+    )

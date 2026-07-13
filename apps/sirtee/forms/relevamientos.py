@@ -44,7 +44,7 @@ class RelevamientoForm(SirteeBaseForm):
 
             attrs={
 
-                "class": "select2",
+                "class": "form-control select2",
 
                 "data-placeholder":
                     "Seleccione uno o más CUI",
@@ -69,7 +69,7 @@ class RelevamientoForm(SirteeBaseForm):
 
             attrs={
 
-                "class": "select2",
+                "class": "form-control select2",
 
                 "data-placeholder":
                     "Seleccione una o más ofertas",
@@ -111,7 +111,7 @@ class RelevamientoForm(SirteeBaseForm):
                 attrs={
 
                     "type": "date",
-
+                    "class": "form-control",
                 }
 
             ),
@@ -121,12 +121,14 @@ class RelevamientoForm(SirteeBaseForm):
                 attrs={
 
                     "rows": 5,
-
+                    "class": "form-control",
                 }
 
             ),
 
-            "finalizado": forms.CheckboxInput(),
+            "finalizado": forms.CheckboxInput(attrs={
+            "class": "form-check-input",
+        }),
 
         }
 

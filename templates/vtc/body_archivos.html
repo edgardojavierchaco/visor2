@@ -93,6 +93,8 @@
 
 {% block scripts %}
 
+{{ block.super }}
+
 <script>
 const estado = {{ estado|default:"null"|safe }};
 

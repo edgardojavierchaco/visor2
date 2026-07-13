@@ -39,6 +39,7 @@ from apps.sirtee.views.empresas import (
     EmpresaUpdateView,
     EmpresaDetailView,
     EmpresaDeleteView,
+    filtrar_localidades,
 )
 
 from apps.sirtee.views.reportes import (
@@ -148,6 +149,11 @@ urlpatterns = [
     path("empresas/<int:pk>/", EmpresaDetailView.as_view(), name="empresas-detail"),
     path("empresas/<int:pk>/editar/", EmpresaUpdateView.as_view(), name="empresas-update"),
     path("empresas/<int:pk>/eliminar/", EmpresaDeleteView.as_view(), name="empresas-delete"),
+    path(
+        "ajax/localidades/",
+        filtrar_localidades,
+        name="filtrar-localidades"
+    ),
     
 
     # ---------------- REPORTES ----------------
