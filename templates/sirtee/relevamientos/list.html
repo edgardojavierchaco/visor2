@@ -1,0 +1,236 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block sirtee_content %}
+
+
+<div class="container-fluid mt-4">
+
+
+<div class="card">
+
+
+<div class="card-header d-flex justify-content-between">
+
+
+<h4>
+Relevamientos técnicos
+</h4>
+
+{% if puede_gestionar %}
+<a
+href="{% url 'sirtee:relevamientos-create' %}"
+class="btn btn-success">
+
+Nuevo
+
+</a>
+{% endif %}
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<table class="table table-hover table-striped">
+
+
+<thead class="table-dark">
+
+<tr>
+
+<th>CUEANEXO</th>
+
+<th>Escuela</th>
+
+<th>CUI</th>
+
+<th>Oferta</th>
+
+<th>Fecha</th>
+
+<th>Estado</th>
+
+<th>Tipo</th>
+
+<th>Acciones</th>
+
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for fila in filas %}
+
+
+{% with r=fila.relevamiento escuela=fila.escuela %}
+
+
+<tr>
+
+
+<td>
+{{ r.cueanexo }}
+</td>
+
+
+
+<td>
+
+{{ escuela.nom_est|default:"Sin datos" }}
+
+</td>
+
+
+
+<td>
+
+{{ escuela.cui|default:"-" }}
+
+</td>
+
+
+
+<td>
+
+{{ escuela.oferta|default:"-" }}
+
+</td>
+
+
+
+<td>
+
+{{ r.fecha|date:"d/m/Y" }}
+
+</td>
+
+
+
+<td>
+
+
+{% if r.estado == "FINALIZADO" %}
+
+<span class="badge bg-success">
+Finalizado
+</span>
+
+
+{% elif r.estado == "EN_PROCESO" %}
+
+<span class="badge bg-warning">
+En proceso
+</span>
+
+
+{% elif r.estado == "OBSERVADO" %}
+
+<span class="badge bg-danger">
+Observado
+</span>
+
+
+{% else %}
+
+<span class="badge bg-secondary">
+Borrador
+</span>
+
+
+{% endif %}
+
+
+</td>
+
+
+
+<td>
+
+{{ r.get_tipo_relevamiento_display }}
+
+</td>
+
+
+
+<td>
+
+
+<a
+class="btn btn-sm btn-info"
+href="{% url 'sirtee:relevamientos-detail' r.pk %}">
+
+👁
+
+</a>
+
+
+
+<a
+class="btn btn-sm btn-primary"
+href="{% url 'sirtee:relevamientos-update' r.pk %}">
+
+✏
+
+</a>
+
+
+
+<a
+class="btn btn-sm btn-danger"
+href="{% url 'sirtee:relevamientos-delete' r.pk %}">
+
+🗑
+
+</a>
+
+
+</td>
+
+
+</tr>
+
+
+{% endwith %}
+
+
+{% empty %}
+
+
+<tr>
+
+<td colspan="8"
+class="text-center">
+
+No hay relevamientos registrados.
+
+</td>
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

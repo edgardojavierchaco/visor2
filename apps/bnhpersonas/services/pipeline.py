@@ -1,230 +1,84 @@
 # services/pipeline.py
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+import time
 import logging
 import traceback
-import time
-
 
 logger = logging.getLogger(__name__)
 
 
-# =========================================================
-# PIPELINE EXCEPTIONS
-# =========================================================
 class PipelineError(Exception):
-
-    def __init__(
-        self,
-        step,
-        original_exception,
-        context=None,
-    ):
-
-        self.step = step
-        self.original_exception = original_exception
-        self.context = context or {}
-
-        super().__init__(
-            f"[{step}] {str(original_exception)}"
-        )
+    pass
 
 
-# =========================================================
-# PIPELINE CONTEXT
-# =========================================================
 @dataclass
 class PipelineContext:
-
-    user: Optional[Any] = None
-
-    request: Optional[Any] = None
-
-    source: Optional[str] = None
-
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-    errors: List[Dict[str, Any]] = field(default_factory=list)
-
-    stats: Dict[str, Any] = field(default_factory=dict)
+    user: Any = None
+    source: str = None
+    errors: List = field(default_factory=list)
+    stats: Dict = field(default_factory=dict)
 
 
-# =========================================================
-# BASE STEP
-# =========================================================
 class BaseStep:
-
     name = "BaseStep"
 
-    stop_on_error = True
-
     @classmethod
-    def apply(cls, obj, context: PipelineContext):
+    def apply(cls, obj, context):
         return obj
 
-    @classmethod
-    def before(cls, obj, context):
-        pass
 
-    @classmethod
-    def after(cls, obj, context):
-        pass
-
-    @classmethod
-    def on_error(cls, obj, error, context):
-        pass
-
-
-# =========================================================
-# PIPELINE
-# =========================================================
 class Pipeline:
 
-    def __init__(
-        self,
-        *steps,
-        fail_fast=True,
-        log_steps=True,
-    ):
-
+    def __init__(self, *steps, fail_fast=True, log_steps=True):
         self.steps = steps
-
         self.fail_fast = fail_fast
-
         self.log_steps = log_steps
 
-    # =====================================================
-    # RUN SINGLE OBJECT
-    # =====================================================
-    def run(
-        self,
-        obj,
-        context: Optional[PipelineContext] = None,
-    ):
+    def run(self, obj, context=None):
 
         context = context or PipelineContext()
-
         current = obj
 
         for step in self.steps:
 
-            started = time.perf_counter()
+            start = time.perf_counter()
 
             try:
-
-                if self.log_steps:
-
-                    logger.info(
-                        f"[PIPELINE] START {step.__name__}"
-                    )
-
                 step.before(current, context)
-
                 current = step.apply(current, context)
-
-                if current is None:
-
-                    raise ValueError(
-                        f"{step.__name__} retornó None"
-                    )
-
                 step.after(current, context)
 
-                elapsed = round(
-                    time.perf_counter() - started,
-                    4
-                )
-
-                context.stats.setdefault(
-                    step.__name__,
-                    {
-                        "success": 0,
-                        "errors": 0,
-                        "time": 0,
-                    }
-                )
-
-                context.stats[step.__name__]["success"] += 1
-                context.stats[step.__name__]["time"] += elapsed
-
-                if self.log_steps:
-
-                    logger.info(
-                        f"[PIPELINE] OK {step.__name__} ({elapsed}s)"
-                    )
+                if current is None:
+                    raise ValueError("Step retornó None")
 
             except Exception as e:
 
                 tb = traceback.format_exc()
 
-                error_data = {
+                context.errors.append({
                     "step": step.__name__,
                     "error": str(e),
-                    "traceback": tb,
-                }
+                    "trace": tb
+                })
 
-                context.errors.append(error_data)
+                logger.exception(f"ERROR {step.__name__}")
 
-                context.stats.setdefault(
-                    step.__name__,
-                    {
-                        "success": 0,
-                        "errors": 0,
-                        "time": 0,
-                    }
-                )
+                if self.fail_fast:
+                    raise PipelineError(str(e))
 
-                context.stats[step.__name__]["errors"] += 1
-
-                logger.exception(
-                    f"[PIPELINE] ERROR {step.__name__}"
-                )
-
-                step.on_error(current, e, context)
-
-                if self.fail_fast or step.stop_on_error:
-
-                    raise PipelineError(
-                        step=step.__name__,
-                        original_exception=e,
-                        context=error_data,
-                    ) from e
+            finally:
+                elapsed = time.perf_counter() - start
+                context.stats[step.__name__] = elapsed
 
         return current
 
-    # =====================================================
-    # RUN MANY
-    # =====================================================
-    def run_many(
-        self,
-        objects,
-        context: Optional[PipelineContext] = None,
-    ):
+    def run_many(self, objects, context=None):
 
         context = context or PipelineContext()
+        results = []
 
-        processed = []
+        for obj in objects:
+            results.append(self.run(obj, context))
 
-        for index, obj in enumerate(objects):
-
-            try:
-
-                result = self.run(obj, context)
-
-                processed.append(result)
-
-            except Exception as e:
-
-                logger.exception(
-                    f"[PIPELINE] OBJECT ERROR index={index}"
-                )
-
-                context.errors.append({
-                    "index": index,
-                    "error": str(e),
-                })
-
-                if self.fail_fast:
-                    raise
-
-        return processed
+        return results

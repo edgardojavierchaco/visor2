@@ -37,7 +37,10 @@ def usuarios_list_ajax(request):
         # 🔢 total SIN filtros
         total = UsuariosVisualizador.objects.count()
 
-        qs = UsuariosVisualizador.objects.all()
+        qs = UsuariosVisualizador.objects.select_related(
+            "perfil__rol",
+            "nivelacceso"
+        ).all()
 
         # 🔍 filtro por username
         if username:
@@ -100,6 +103,8 @@ def usuarios_list_ajax(request):
                 return "📊"
             if "director" in nombre:
                 return "📁"
+            if "aplicador" in nombre:
+                return "📝"
 
             return "👤"
 
@@ -110,11 +115,13 @@ def usuarios_list_ajax(request):
             rol_nombre = ""
             nivel = ""
 
-            if getattr(u, "perfil", None):
-                rol_nombre = getattr(getattr(u.perfil, "rol", None), "nombre", "")
+            try:
+                rol_nombre = u.perfil.rol.nombre
+            except UsuariosVisualizador.perfil.RelatedObjectDoesNotExist:
+                rol_nombre = ""
 
-            if getattr(u, "nivelacceso", None):
-                nivel = getattr(u.nivelacceso, "tacceso", "")
+            if u.nivelacceso:
+                nivel = str(u.nivelacceso)
 
             icono = get_rol_icon(rol_nombre)
             rol_html = f"{icono} {rol_nombre}"

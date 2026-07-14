@@ -1,18 +1,18 @@
 from django import forms
-from django.forms import inlineformset_factory, BaseInlineFormSet
-
 from .models import (
     Personas,
     RegistroActividades,
     Localidades,
     CodAreasTelefonos,
     Grado_anio,
-    Secciones
+    Secciones,
+    HorarioActividad,
+    NomencladorCeic
 )
+from apps.bnhpersonas.domain.access import get_user_cueanexos
 
-from .models import NomencladorCeic
-
-from .utils import get_ofertas_usuario
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 
 # =====================================================
@@ -28,6 +28,7 @@ class PersonaForm(forms.ModelForm):
             "dni",
             "apellido",
             "nombre",
+            "f_nacimiento",
             "sexo",
             "provincia",
             "localidad",
@@ -35,242 +36,189 @@ class PersonaForm(forms.ModelForm):
             "telefono",
             "whatsapp",
         ]
-
         widgets = {
 
-            "cuil": forms.TextInput(attrs={
-                "class": "form-control",
-                "maxlength": 11,
-                "autocomplete": "off",
-            }),
+            "cuil": forms.TextInput(
+                attrs={
+                    "class":"form-control"
+                }
+            ),
+            
+            "dni": forms.TextInput(
+                attrs={
+                    "class":"form-control"
+                }
+            ),
 
-            "dni": forms.TextInput(attrs={
-                "class": "form-control",
-                "maxlength": 8,
-                "autocomplete": "off",
-            }),
+            "apellido": forms.TextInput(
+                attrs={
+                    "class":"form-control"
+                }
+            ),
 
-            "apellido": forms.TextInput(attrs={
-                "class": "form-control",
-                "autocomplete": "off",
-            }),
+            "nombre": forms.TextInput(
+                attrs={
+                    "class":"form-control"
+                }
+            ),
+            
+            "f_nacimiento": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "class":"form-control",
+                    "type":"date"
+                }
+            ),
 
-            "nombre": forms.TextInput(attrs={
-                "class": "form-control",
-                "autocomplete": "off",
-            }),
+            "sexo": forms.Select(
+                attrs={
+                    "class":"form-select"
+                }
+            ),
 
-            "telefono": forms.TextInput(attrs={
-                "class": "form-control",
-                "maxlength": 8,
-                "autocomplete": "off",
-            }),
+            "provincia": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "localidad": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+            
+            "codigo_area": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+            
+            "telefono": forms.TextInput(
+                attrs={
+                    "class":"form-control"
+                }
+            ),
+            
+            "whatsapp": forms.CheckboxInput(
+                attrs={
+                    "class":"form-check-input",
+                    "role":"switch"
+                }
+            ),
 
         }
 
-    # =====================================================
-    # INIT
-    # =====================================================
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
+        
+        self.fields["f_nacimiento"].input_formats = ["%Y-%m-%d"]
 
-        # ==========================================
-        # LOCALIDADES VACIAS INICIALMENTE
-        # ==========================================
         self.fields["localidad"].queryset = Localidades.objects.none()
 
-        # ==========================================
-        # CODIGOS AREA
-        # ==========================================
-        self.fields["codigo_area"].queryset = (
-            CodAreasTelefonos.objects
-            .only("id", "codigo", "localidad")
-            .order_by("codigo")
-        )
+        self.fields["codigo_area"].queryset = CodAreasTelefonos.objects.all()
 
-        # ==========================================
-        # CUANDO VIENE POST
-        # ==========================================
         if "provincia" in self.data:
-
             try:
-
                 provincia_id = self.data.get("provincia")
-
-                self.fields["localidad"].queryset = (
-                    Localidades.objects
-                    .filter(c_provincia_id=provincia_id)
-                    .order_by("descrip_localidad")
+                self.fields["localidad"].queryset = Localidades.objects.filter(
+                    c_provincia_id=provincia_id
                 )
-
-            except (ValueError, TypeError):
-
+            except:
                 pass
 
-        # =================================================
-        # EDICION
-        # =================================================
-        if self.instance and self.instance.pk:
+        if self.instance.pk and self.instance.provincia_id:
+            self.fields["localidad"].queryset = Localidades.objects.filter(
+                c_provincia_id=self.instance.provincia_id
+            )
 
-            if self.instance.provincia_id:
-
-                self.fields["localidad"].queryset = (
-                    Localidades.objects.filter(
-                        c_provincia_id=self.instance.provincia_id
-                    ).order_by("descrip_localidad")
-                )
-
-    # =====================================================
-    # VALIDACIONES
-    # =====================================================
     def clean_cuil(self):
-
         cuil = self.cleaned_data.get("cuil")
-
-        if cuil:
-            cuil = ''.join(filter(str.isdigit, cuil))
-
-        return cuil
+        return ''.join(filter(str.isdigit, cuil)) if cuil else cuil
 
     def clean_dni(self):
-
         dni = self.cleaned_data.get("dni")
-
-        if dni:
-            dni = ''.join(filter(str.isdigit, dni))
-
-        return dni
+        return ''.join(filter(str.isdigit, dni)) if dni else dni
 
     def clean_apellido(self):
-
-        apellido = self.cleaned_data.get("apellido", "")
-
-        apellido = (
-            apellido
-            .upper()
-            .strip()
-        )
-
-        return " ".join(apellido.split())
+        return " ".join(self.cleaned_data.get("apellido", "").upper().split())
 
     def clean_nombre(self):
-
-        nombre = self.cleaned_data.get("nombre", "")
-
-        nombre = (
-            nombre
-            .upper()
-            .strip()
-        )
-
-        return " ".join(nombre.split())
+        return " ".join(self.cleaned_data.get("nombre", "").upper().split())
     
+    def clean(self):
+
+        cleaned_data = super().clean()
+
+
+        cuil = cleaned_data.get("cuil")
+        dni = cleaned_data.get("dni")
+
+
+        if cuil and dni:
+
+
+            # dejar solamente números
+            cuil = ''.join(
+                filter(
+                    str.isdigit,
+                    cuil
+                )
+            )
+
+
+            dni = ''.join(
+                filter(
+                    str.isdigit,
+                    dni
+                )
+            )
+
+
+
+            # CUIL debe tener 11 dígitos
+            if len(cuil) != 11:
+
+                self.add_error(
+                    "cuil",
+                    "El CUIL debe tener 11 dígitos."
+                )
+
+                return cleaned_data
+
+
+
+            # extraer DNI del CUIL
+            dni_cuil = cuil[2:10]
+
+
+
+            if dni_cuil != dni:
+
+
+                self.add_error(
+                    "dni",
+                    "El DNI no coincide con el DNI incluido en el CUIL."
+                )
+
+
+                self.add_error(
+                    "cuil",
+                    "El CUIL no corresponde al DNI ingresado."
+                )
+
+
+
+        return cleaned_data
+
 
 # =====================================================
 # ACTIVIDAD FORM
 # =====================================================
-class ActividadForm(forms.ModelForm):
 
-    cueanexo = forms.ChoiceField(
-        choices=[],
-        required=True
-    )
-
-    class Meta:
-
-        model = RegistroActividades
-
-        exclude = (
-            "persona",
-            "usuario_creacion",
-            "usuario_modificacion",
-        )
-
-        widgets = {
-
-            "f_desde": forms.DateInput(attrs={
-                "type": "date"
-            }),
-
-            "f_hasta": forms.DateInput(attrs={
-                "type": "date"
-            }),
-            "f_desde_funciones": forms.DateInput(attrs={
-                "type": "date"
-            }),
-
-            "f_hasta_funciones": forms.DateInput(attrs={
-                "type": "date"
-            }),
-
-        }    
-    
-
-
-# =====================================================
-# BASE FORMSET
-# =====================================================
-class BaseActividadFormSet(BaseInlineFormSet):
-
-    def __init__(self, *args, **kwargs):
-
-        self.user = kwargs.pop("user", None)
-
-        super().__init__(*args, **kwargs)
-        
-        self._cue_choices = []
-        
-        if self.user:
-
-            self._cue_choices = [
-                (x.cueanexo, x.cueanexo)
-                for x in get_ofertas_usuario(self.user)
-            ]
-
-    
-    # =================================================
-    # CONSTRUCT FORM
-    # =================================================
-    def _construct_form(self, i, **kwargs):
-
-        form = super()._construct_form(i, **kwargs)
-
-        form.fields["cueanexo"].choices = self._cue_choices
-
-        return form
-
-    # =================================================
-    # EMPTY FORM
-    # =================================================
-    @property
-    def empty_form(self):
-
-        form = super().empty_form
-
-        form.fields["cueanexo"].choices = self._cue_choices
-
-        return form
-
-
-# =====================================================
-# INLINE FORMSET
-# =====================================================
-ActividadFormSet = inlineformset_factory(
-    Personas,
-    RegistroActividades,
-    form=ActividadForm,
-    formset=BaseActividadFormSet,
-    extra=1,
-    can_delete=True
-)
-
-
-# =====================================================
-# FORM DIRECTOR
-# SOLO DATOS LABORALES
-# =====================================================
 class ActividadDirectorForm(forms.ModelForm):
+
+    cueanexo = forms.ChoiceField(required=True)
 
     class Meta:
 
@@ -280,10 +228,11 @@ class ActividadDirectorForm(forms.ModelForm):
             "cueanexo",
             "categoria",
             "modalidad",
-            "niveles",            
+            "niveles",
             "sit_revista",
             "cond_actividad",
             "designacion",
+            "t_designacion",
             "ceic",
             "grado_anio",
             "turno",
@@ -298,141 +247,354 @@ class ActividadDirectorForm(forms.ModelForm):
             "f_hasta_funciones",
         ]
 
+
         widgets = {
+
+            "categoria": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "modalidad": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "niveles": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "sit_revista": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "cond_actividad": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "designacion": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+            
+            "t_designacion": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "ceic": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "grado_anio": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "turno": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "secciones": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "espacios": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "estado": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+            "funciones": forms.Select(
+                attrs={
+                    "class":"form-select select2"
+                }
+            ),
+
+
+            # ==========================
+            # FECHAS
+            # ==========================
 
             "f_desde": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={
-                    "type": "date",
-                    "class": "form-control",
+                    "class":"form-control",
+                    "type":"date"
                 }
             ),
 
             "f_hasta": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={
-                    "type": "date",
-                    "class": "form-control",
+                    "class":"form-control",
+                    "type":"date"
                 }
             ),
-            
+
+
             "f_desde_funciones": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={
-                    "type": "date",
-                    "class": "form-control",
+                    "class":"form-control",
+                    "type":"date"
                 }
             ),
 
             "f_hasta_funciones": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={
-                    "type": "date",
-                    "class": "form-control",
+                    "class":"form-control",
+                    "type":"date"
                 }
             ),
 
 
-        }
-
-        labels = {
-
-            "cueanexo": "Institución",
-            "ceic": "Cargo (CEIC)",
-            "sit_revista": "Situación de Revista",
-            "cond_actividad": "Condición de Actividad",
-            "grado_anio": "Grado / Año",
-            "turno": "Turno",
-            "secciones": "Secciones",
-            "carga_horaria": "Carga Horaria",
-            "funciones": "Funciones",
-            "f_desde_funciones": "Desde",
-            "f_hasta_funciones": "Hasta",
+            "carga_horaria": forms.TextInput(
+                attrs={
+                    "class":"form-control"
+                }
+            ),
 
         }
 
-    def __init__(self, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+
+    def __init__(self,*args,**kwargs):
+
+        self.user = kwargs.pop("user",None)
+
+        super().__init__(*args,**kwargs)
+
+
+
+        # ==========================
+        # CUEANEXO POR USUARIO
+        # ==========================
+
+        if self.user:
+
+            ofertas = get_user_cueanexos(self.user)
+
+            self.fields["cueanexo"].choices = [
+                (x,x)
+                for x in ofertas
+            ]
+
+
+        self.fields["cueanexo"].widget.attrs.update({
+
+            "class":"form-select select2"
+
+        })
+
+
+
+        # ==========================
+        # FORMATO FECHAS AL EDITAR
+        # ==========================
+
+        for campo in [
+
+            "f_desde",
+            "f_hasta",
+            "f_desde_funciones",
+            "f_hasta_funciones"
+
+        ]:
+
+            self.fields[campo].input_formats = [
+                "%Y-%m-%d"
+            ]
+
+
+        # =========================
+        # DEFAULT F_HASTA
+        # TITULAR / INTERINO
+        # =========================
         
-        if self.instance.pk:
+        if not self.instance.pk:
 
-            modalidad = self.instance.modalidad_id
-            nivel = self.instance.niveles_id
+            sit = None
 
-            ################
-            # CEIC
-            ################
-            qs = NomencladorCeic.objects.all()
 
-            if nivel:
-                qs = qs.filter(
-                    t_nivel="Nivel",
-                    c_niv=nivel
+            if self.data:
+
+                sit = self.data.get(
+                    "sit_revista"
                 )
 
-            elif modalidad:
-                qs = qs.filter(
-                    t_nivel="Modalidad",
-                    c_niv=modalidad
-                )
-
-            self.fields["ceic"].queryset = qs
-            
-            
-            ####################
-            # GRADO / AÑO
-            ####################
-            qs_grado = Grado_anio.objects.all()
-
-            if nivel:
-                qs_grado = qs_grado.filter(
-                    t_niv_grado="Nivel",
-                    c_niv_grado=nivel
-                )
-            elif modalidad:
-                qs_grado = qs_grado.filter(
-                    t_niv_grado="Modalidad",
-                    c_niv_grado=modalidad
-                )
-
-            self.fields["grado_anio"].queryset = qs_grado
-
-            ###############
-            # SECCIONES
-            ###############
-            qs_sec = Secciones.objects.all()
-
-            if nivel:
-                qs_sec = qs_sec.filter(
-                    t_niv_seccion="Nivel",
-                    c_niv_seccion=nivel
-                )
-            elif modalidad:
-                qs_sec = qs_sec.filter(
-                    t_niv_seccion="Modalidad",
-                    c_niv_seccion=modalidad
-                )
-
-            self.fields["secciones"].queryset = qs_sec
-
-        for field_name, field in self.fields.items():
-
-            widget = field.widget
-
-            current = widget.attrs.get(
-                "class",
-                ""
-            )
-
-            if "select" in widget.__class__.__name__.lower():
-
-                widget.attrs["class"] = (
-                    f"{current} form-select select2"
-                ).strip()
 
             else:
 
-                widget.attrs["class"] = (
-                    f"{current} form-control"
-                ).strip()
+                sit = (
+                    self.initial.get("sit_revista")
+                )
+
+
+            if sit in [
+                "TITULAR",
+                "INTERINO"
+            ]:
+
+
+                limite = (
+                    date(
+                        date.today().year,
+                        12,
+                        31
+                    )
+                    +
+                    relativedelta(
+                        years=28
+                    )
+                )
+
+
+                self.initial["f_hasta"] = limite
+                
+
+        # ==========================
+        # MANTENER CUEANEXO
+        # ==========================
+
+        if self.instance and self.instance.pk:
+
+            self.initial["cueanexo"] = str(
+                self.instance.cueanexo
+            )
+
+
+    
+    def clean_cueanexo(self):
+
+        cue = self.cleaned_data.get("cueanexo")
+
+
+        if self.user:
+
+            permitidos = set(
+                get_user_cueanexos(self.user)
+            )
+
+
+            if str(cue) not in permitidos:
+
+                raise forms.ValidationError(
+                    "Sin permisos para esta institución."
+                )
+
+
+        return cue
+    
+        # =====================================================
+    # VALIDACIONES DE FECHAS
+    # =====================================================
+
+    def clean(self):
+
+        cleaned_data = super().clean()
+
+
+        f_desde = cleaned_data.get(
+            "f_desde"
+        )
+
+        f_hasta = cleaned_data.get(
+            "f_hasta"
+        )
+
+
+        f_desde_funciones = cleaned_data.get(
+            "f_desde_funciones"
+        )
+
+        f_hasta_funciones = cleaned_data.get(
+            "f_hasta_funciones"
+        )
+
+
+
+        # ================================
+        # VALIDAR RANGO DEL CARGO
+        # ================================
+
+        if f_desde and f_hasta:
+
+            if f_hasta < f_desde:
+
+                self.add_error(
+                    "f_hasta",
+                    "La fecha hasta no puede ser menor que la fecha desde."
+                )
+
+
+
+        # ================================
+        # FUNCIONES DENTRO DEL PERÍODO
+        # ================================
+
+        if f_desde and f_desde_funciones:
+
+            if f_desde_funciones < f_desde:
+
+                self.add_error(
+                    "f_desde_funciones",
+                    "La fecha desde funciones debe estar dentro del período del cargo."
+                )
+
+
+
+        if f_hasta and f_hasta_funciones:
+
+            if f_hasta_funciones > f_hasta:
+
+                self.add_error(
+                    "f_hasta_funciones",
+                    "La fecha hasta funciones debe estar dentro del período del cargo."
+                )
+
+
+        return cleaned_data
+
+
+# =====================================================
+# HORARIO FORM
+# =====================================================
+class HorarioActividadForm(forms.ModelForm):
+
+    class Meta:
+        model = HorarioActividad
+        fields = ["dia", "hora_desde", "hora_hasta"]
+
+    def clean(self):
+        data = super().clean()
+
+        if data.get("hora_desde") and data.get("hora_hasta"):
+            if data["hora_desde"] >= data["hora_hasta"]:
+                raise forms.ValidationError("Horario inválido")
+
+        return data

@@ -1,5 +1,6 @@
 # models.py
 import re
+import uuid
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -8,6 +9,7 @@ from .middleware import get_current_user
 from smart_selects.db_fields import ChainedForeignKey
 from django.utils import timezone
 from datetime import date
+from dateutil.relativedelta import relativedelta
 
 
 #################
@@ -431,10 +433,11 @@ class Personas(AuditoriaModel):
 
     apellido = models.CharField(max_length=150, db_index=True)
     nombre = models.CharField(max_length=150, db_index=True)
-
+    f_nacimiento=models.DateField()
+    
     sexo = models.ForeignKey('Sexo', on_delete=models.PROTECT)
+    
     provincia = models.ForeignKey('Provincias', on_delete=models.PROTECT)
-
     localidad = models.ForeignKey('Localidades', on_delete=models.PROTECT)
     
     codigo_area = models.ForeignKey(
@@ -481,6 +484,58 @@ class Personas(AuditoriaModel):
             validar_dni(self.dni)
         if self.cuil:
             validar_cuil(self.cuil)
+        
+        # =========================
+        # VALIDAR EDAD
+        # ENTRE 16 Y 90 AÑOS
+        # =========================
+
+        if self.f_nacimiento:
+
+
+            hoy = date.today()
+
+
+
+            fecha_minima = (
+                hoy -
+                relativedelta(
+                    years=90
+                )
+            )
+
+
+
+            fecha_maxima = (
+                hoy -
+                relativedelta(
+                    years=16
+                )
+            )
+
+
+
+            if self.f_nacimiento < fecha_minima:
+
+
+                raise ValidationError({
+
+                    "f_nacimiento":
+                    "La persona no puede tener más de 90 años."
+
+                })
+
+
+
+            if self.f_nacimiento > fecha_maxima:
+
+
+                raise ValidationError({
+
+                    "f_nacimiento":
+                    "La persona debe tener al menos 16 años."
+
+                })
     
     
     # =========================
@@ -661,13 +716,53 @@ class TipoDesigFunc(models.Model):
     
     def __str__(self):
         return self.desigfunc_descripcion
+    
 
+#################################
+# MODALIDAD - NIVELES
+#################################
+class ModalidadNivel(models.Model): 
+    id = models.BigAutoField(primary_key=True)
+    modalidad = models.ForeignKey(Modalidades, on_delete=models.CASCADE)
+    nivel = models.ForeignKey(NivelServicio, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "modalidad_nivel"
+        unique_together = ("modalidad", "nivel")
+
+    def __str__(self):
+        return f"{self.modalidad} - {self.nivel}"
+
+
+
+#################################
+# MODALIDAD - NIVELES - CEIC
+#################################    
+class ModalidadNivelCeic(models.Model):
+
+    modalidad = models.ForeignKey(Modalidades, on_delete=models.CASCADE)
+    nivel = models.ForeignKey(NivelServicio, on_delete=models.CASCADE)
+
+    rango_ceic = models.CharField(
+        max_length=500,
+        help_text="Ej.: 1-21,220,221"
+    )
+    
+    class Meta:
+        db_table = "modalidad_nivel_ceic"
+        unique_together = ("modalidad", "nivel")
+
+    def __str__(self):
+        return f"{self.modalidad} - {self.nivel} - {self.rango_ceic}"
+    
+    
 
 ###############################
 # REGISTRO DE ACTIVIDADES
 ###############################
 class RegistroActividades(AuditoriaModel):
 
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     cueanexo = models.CharField(max_length=9, db_index=True)
     persona = models.ForeignKey(Personas, on_delete=models.CASCADE, related_name='actividades')
 
@@ -686,6 +781,8 @@ class RegistroActividades(AuditoriaModel):
         ('CARGO', 'CARGO'),
         ('HORAS CATEDRAS', 'HORAS CATEDRAS'),
     ], default='CARGO')
+    
+    t_designacion=models.ForeignKey('TipoDesigFunc', on_delete=models.PROTECT)
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
     
@@ -775,3 +872,56 @@ class RegistroActividades(AuditoriaModel):
         """
         if self.cueanexo:
             self.cueanexo = str(self.cueanexo).strip()
+            
+
+################################
+# ACTIVIDAD INTERMEDIA
+################################
+class ActividadSede(models.Model):
+    actividad = models.ForeignKey(RegistroActividades, on_delete=models.CASCADE)
+    cueanexo = models.CharField(max_length=9, db_index=True)
+
+    class Meta:
+        unique_together = ("actividad", "cueanexo")
+    
+    def __str__(self):
+        return f"{self.actividad_id} - {self.cueanexo}"
+        
+
+################################
+# HORARIOS ACTIVIDAD
+################################
+class HorarioActividad(models.Model):
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    
+    actividad_sede = models.ForeignKey(
+        ActividadSede,
+        on_delete=models.CASCADE,
+        related_name="horarios"
+    )
+
+    DIAS = [
+        ("LUNES", "Lunes"),
+        ("MARTES", "Martes"),
+        ("MIERCOLES", "Miércoles"),
+        ("JUEVES", "Jueves"),
+        ("VIERNES", "Viernes"),
+    ]
+
+    dia = models.CharField(
+        max_length=15,
+        choices=DIAS
+    )
+
+    hora_desde = models.TimeField()
+
+    hora_hasta = models.TimeField()
+
+    class Meta:
+        db_table="horarios_actividad"
+        unique_together = ("actividad_sede", "dia", "hora_desde", "hora_hasta")
+
+
+    def __str__(self):
+        return f"{self.dia} {self.hora_desde}-{self.hora_hasta}"

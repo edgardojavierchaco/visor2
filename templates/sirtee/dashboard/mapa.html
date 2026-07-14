@@ -1,0 +1,636 @@
+{% extends "sirtee/base.html" %}
+
+
+{% load static %}
+
+
+
+{% block sirtee_content %}
+
+
+
+<div class="container-fluid mt-4">
+
+
+
+<div class="card shadow">
+
+
+
+<div class="card-header d-flex justify-content-between align-items-center">
+
+
+<h4 class="mb-0">
+
+<i class="bi bi-map"></i>
+
+Mapa operativo SIRTEE
+
+</h4>
+
+
+
+
+<a
+href="{% url 'sirtee:dashboard' %}"
+class="btn btn-secondary btn-sm">
+
+
+Volver
+
+
+</a>
+
+
+
+</div>
+
+
+
+
+
+<div class="card-body">
+
+
+
+
+
+<!-- ================================================= -->
+<!-- FILTROS -->
+<!-- ================================================= -->
+
+
+<div class="card mb-3">
+
+
+<div class="card-body">
+
+
+<div class="row g-3">
+
+
+
+
+
+<div class="col-md-3">
+
+
+<label class="form-label">
+
+Región
+
+</label>
+
+
+<select
+id="filtroRegion"
+class="form-select">
+
+
+<option value="">
+
+Todas
+
+</option>
+
+
+{% for r in regiones %}
+
+
+<option value="{{ r }}">
+
+{{ r }}
+
+</option>
+
+
+{% endfor %}
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="col-md-3">
+
+
+<label class="form-label">
+
+Departamento
+
+</label>
+
+
+
+<select
+id="filtroDepartamento"
+class="form-select">
+
+
+<option value="">
+
+Todos
+
+</option>
+
+
+
+{% for d in departamentos %}
+
+
+<option value="{{ d }}">
+
+{{ d }}
+
+</option>
+
+
+{% endfor %}
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="col-md-2">
+
+
+<label class="form-label">
+
+Criticidad
+
+</label>
+
+
+
+<select
+id="filtroCriticidad"
+class="form-select">
+
+
+<option value="">
+
+Todas
+
+</option>
+
+
+
+<option value="CRITICA">
+
+Crítica
+
+</option>
+
+
+<option value="ALTA">
+
+Alta
+
+</option>
+
+
+<option value="MEDIA">
+
+Media
+
+</option>
+
+
+<option value="BAJA">
+
+Baja
+
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="col-md-2">
+
+
+<label class="form-label">
+
+Estado intervención
+
+</label>
+
+
+
+<select
+id="filtroEstado"
+class="form-select">
+
+
+<option value="">
+
+Todos
+
+</option>
+
+
+<option value="PENDIENTE">
+
+Pendiente
+
+</option>
+
+
+
+<option value="EN_EJECUCION">
+
+En ejecución
+
+</option>
+
+
+
+<option value="PAUSADA">
+
+Pausada
+
+</option>
+
+
+
+<option value="FINALIZADA">
+
+Finalizada
+
+</option>
+
+
+
+<option value="CANCELADA">
+
+Cancelada
+
+</option>
+
+
+
+</select>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="col-md-2 d-flex align-items-end gap-2">
+
+
+
+<button
+id="btnActualizar"
+class="btn btn-primary w-50">
+
+
+<i class="bi bi-search"></i>
+
+Buscar
+
+
+</button>
+
+
+
+
+
+<button
+id="btnLimpiar"
+class="btn btn-outline-secondary w-50">
+
+
+<i class="bi bi-x-circle"></i>
+
+Limpiar
+
+
+</button>
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- RESUMEN -->
+<!-- ================================================= -->
+
+
+
+<div class="row mb-3">
+
+
+
+<div class="col-md-4">
+
+
+<div class="alert alert-info mb-0">
+
+
+<i class="bi bi-building"></i>
+
+
+Escuelas visibles:
+
+
+<strong id="contadorEscuelas">
+
+0
+
+</strong>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="col-md-8">
+
+
+<div class="alert alert-light mb-0">
+
+
+<span class="me-3">
+
+
+<span style="
+display:inline-block;
+width:14px;
+height:14px;
+background:#dc3545;
+border-radius:50%;
+">
+</span>
+
+
+Crítica
+
+
+</span>
+
+
+
+
+
+<span class="me-3">
+
+
+<span style="
+display:inline-block;
+width:14px;
+height:14px;
+background:#fd7e14;
+border-radius:50%;
+">
+</span>
+
+
+Intervención activa
+
+
+</span>
+
+
+
+
+
+<span class="me-3">
+
+
+<span style="
+display:inline-block;
+width:14px;
+height:14px;
+background:#ffc107;
+border-radius:50%;
+">
+</span>
+
+
+Hallazgos
+
+
+</span>
+
+
+
+
+
+<span>
+
+
+<span style="
+display:inline-block;
+width:14px;
+height:14px;
+background:#198754;
+border-radius:50%;
+">
+</span>
+
+
+Sin novedades
+
+
+</span>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- MAPA -->
+<!-- ================================================= -->
+
+
+
+<div
+id="mapa"
+
+style="
+height:750px;
+width:100%;
+border-radius:10px;
+">
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- LEAFLET -->
+<!-- ================================================= -->
+
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+
+
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- MARKER CLUSTER -->
+<!-- ================================================= -->
+
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"
+/>
+
+
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"
+/>
+
+
+
+
+<script
+src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js">
+</script>
+
+
+
+
+
+
+
+
+<script
+src="{% static 'sirtee/js/mapa_sirtee.js' %}">
+</script>
+
+<script>
+$(function () {
+
+    $("#filtroRegion").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+    $("#filtroDepartamento").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+    $("#filtroCriticidad").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+    $("#filtroEstado").select2({
+        theme: "bootstrap-5",
+        width: "100%"
+    });
+
+});
+</script>
+
+<script>
+    const URL_RELEVAMIENTO = "/sirtee/relevamientos/";
+</script>
+
+
+{% endblock %}

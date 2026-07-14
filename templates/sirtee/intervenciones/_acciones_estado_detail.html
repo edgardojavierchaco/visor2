@@ -1,0 +1,95 @@
+{% comment %} <a href="{% url 'sirtee:intervenciones-detail' intervencion.pk %}"
+class="btn btn-sm btn-primary">
+
+<i class="bi bi-eye">Detalle</i>
+
+</a>
+
+
+
+<a href="{% url 'sirtee:intervenciones-update' intervencion.pk %}"
+class="btn btn-sm btn-warning">
+
+<i class="bi bi-pencil">Editar</i>
+
+</a> {% endcomment %}
+
+
+
+{% if not intervencion.esta_finalizada %}
+
+
+
+{% if intervencion.estado.codigo == "PENDIENTE" %}
+
+
+<form method="post"
+action="{% url 'sirtee:intervenciones-iniciar' intervencion.pk %}"
+class="d-inline">
+
+{% csrf_token %}
+
+<button class="btn btn-sm btn-success">
+
+<i class="bi bi-play">Iniciar</i>
+
+</button>
+
+</form>
+
+
+
+{% endif %}
+
+
+
+
+
+{% if intervencion.estado.codigo == "EN_EJECUCION" %}
+
+
+<form method="post"
+action="{% url 'sirtee:intervenciones-pausar' intervencion.pk %}"
+class="d-inline">
+
+{% csrf_token %}
+
+<button class="btn btn-sm btn-secondary">
+
+<i class="bi bi-pause">Pausar</i>
+
+</button>
+
+</form>
+
+
+
+<form method="post"
+action="{% url 'sirtee:intervenciones-finalizar' intervencion.pk %}"
+class="d-inline">
+
+{% csrf_token %}
+
+<button class="btn btn-sm btn-success">
+
+<i class="bi bi-check">Finalizar</i>
+
+</button>
+
+</form>
+
+
+{% endif %}
+
+
+
+{% endif %}
+
+
+
+<a href="{% url 'sirtee:intervenciones-delete' intervencion.pk %}"
+class="btn btn-sm btn-danger">
+
+<i class="bi bi-trash">Cancelar</i>
+
+</a>

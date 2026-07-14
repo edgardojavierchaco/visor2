@@ -1,0 +1,170 @@
+<form id="actividadForm" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="cargo">
+
+    <input 
+        type="hidden"
+        id="persona_id"
+        name="persona_id"
+        value="{{ persona.id|default:'' }}"
+    >
+
+    <div class="row g-3">
+
+        <div class="col-md-6">
+            <label class="form-label">Cueanexo</label>
+            {{ actividad_form.cueanexo }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Categoría</label>
+            {{ actividad_form.categoria }}
+        </div>
+
+        <div class="col-md-6">            
+            {{ actividad_form.modalidad.label_tag }}
+            {{ actividad_form.modalidad }}
+        </div>
+
+        <div class="col-md-6">
+            {{ actividad_form.niveles.label_tag }}
+            {{ actividad_form.niveles }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Situación de revista</label>
+            {{ actividad_form.sit_revista }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Condición actividad</label>
+            {{ actividad_form.cond_actividad }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Designación</label>
+            {{ actividad_form.designacion }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Tipo_Designación</label>
+            {{ actividad_form.t_designacion }}
+        </div>
+
+        <div class="col-md-6">
+            {{ actividad_form.ceic.label_tag }}
+            {{ actividad_form.ceic }}
+        </div>
+
+        <div class="col-md-6">
+            {{ actividad_form.grado_anio.label_tag }}
+            {{ actividad_form.grado_anio }}
+        </div>
+
+        <div class="col-md-6">
+            {{ actividad_form.secciones.label_tag }}
+            {{ actividad_form.secciones }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Turno</label>
+            {{ actividad_form.turno }}
+        </div>
+        
+
+        <div class="col-md-6">
+            <label class="form-label">Espacios</label>
+            {{ actividad_form.espacios }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Desde</label>
+            {{ actividad_form.f_desde }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Hasta</label>
+            {{ actividad_form.f_hasta }}
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Carga horaria</label>
+            {{ actividad_form.carga_horaria }}
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Estado</label>
+            {{ actividad_form.estado }}
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label">Funciones</label>
+            {{ actividad_form.funciones }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Desde funciones</label>
+            {{ actividad_form.f_desde_funciones }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Hasta funciones</label>
+            {{ actividad_form.f_hasta_funciones }}
+        </div>
+
+    </div>
+
+    <button 
+        class="btn btn-success mt-3" 
+        id="btnGuardarActividad" 
+        type="button">
+
+        Agregar Actividad
+
+    </button>
+</form>
+
+<div 
+    class="modal fade"
+    id="modalAyuda"
+    tabindex="-1">
+
+
+    <div class="modal-dialog">
+
+
+    <div class="modal-content">
+
+
+    <div class="modal-header">
+
+    <h5 
+    class="modal-title"
+    id="modalAyudaTitulo">
+    </h5>
+
+
+    <button 
+    type="button"
+    class="btn-close"
+    data-bs-dismiss="modal">
+    </button>
+
+
+    </div>
+
+
+    <div class="modal-body">
+
+    <p id="modalAyudaTexto"></p>
+
+    </div>
+
+
+    </div>
+
+
+    </div>
+
+
+</div>

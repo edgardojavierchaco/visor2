@@ -1,0 +1,247 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block sirtee_content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card shadow">
+
+
+<div class="card-header d-flex justify-content-between">
+
+
+<h4>
+
+{{ empresa.razon_social }}
+
+</h4>
+
+
+
+{% if empresa.activa %}
+
+<span class="badge bg-success">
+
+Activa
+
+</span>
+
+{% else %}
+
+<span class="badge bg-secondary">
+
+Inactiva
+
+</span>
+
+{% endif %}
+
+
+</div>
+
+
+
+<div class="card-body">
+
+
+
+<h5>
+Datos generales
+</h5>
+
+
+
+<table class="table">
+
+
+<tr>
+
+<th>
+Razón social
+</th>
+
+<td>
+{{ empresa.razon_social }}
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<th>
+Nombre fantasía
+</th>
+
+<td>
+{{ empresa.nombre_fantasia|default:"-" }}
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<th>
+CUIT
+</th>
+
+<td>
+{{ empresa.cuit|default:"-" }}
+</td>
+
+</tr>
+
+
+
+
+<tr>
+
+<th>
+Tipo
+</th>
+
+<td>
+{{ empresa.get_tipo_display }}
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<th>
+Registro
+</th>
+
+<td>
+{{ empresa.registro_empresa|default:"-" }}
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<th>
+Condición fiscal
+</th>
+
+<td>
+{{ empresa.condicion_fiscal|default:"-" }}
+</td>
+
+</tr>
+
+
+
+</table>
+
+
+
+
+<hr>
+
+
+<h5>
+Contacto
+</h5>
+
+
+
+<p>
+<strong>Responsable:</strong>
+{{ empresa.responsable|default:"-" }}
+</p>
+
+
+<p>
+<strong>Teléfono:</strong>
+{{ empresa.telefono|default:"-" }}
+</p>
+
+
+<p>
+<strong>Email:</strong>
+{{ empresa.email|default:"-" }}
+</p>
+
+
+<p>
+<strong>Domicilio:</strong>
+{{ empresa.domicilio|default:"-" }}
+</p>
+
+
+<p>
+<strong>Localidad:</strong>
+{{ empresa.localidad|default:"-" }}
+</p>
+
+
+
+
+
+<hr>
+
+
+<h5>
+Observaciones
+</h5>
+
+
+<div class="alert alert-light">
+
+{{ empresa.observaciones|default:"Sin observaciones" }}
+
+</div>
+
+
+
+
+
+<a
+href="{% url 'sirtee:empresas-update' empresa.pk %}"
+class="btn btn-warning">
+
+Editar
+
+</a>
+
+
+<a
+href="{% url 'sirtee:empresas-delete' empresa.pk %}"
+class="btn btn-danger">
+
+Eliminar
+
+</a>
+
+
+
+<a
+href="{% url 'sirtee:empresas-list' %}"
+class="btn btn-secondary">
+
+Volver
+
+</a>
+
+
+
+
+</div>
+
+</div>
+
+</div>
+
+
+{% endblock %}

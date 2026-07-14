@@ -36,6 +36,8 @@ def preparar_roles(sender, instance, created, update_fields=None, **kwargs):
         'gestor': ('Gestor', 'all'),
         'regional': ('Regional', 'regional'),
         'director/a': ('Director', 'propio'),
+        'aplicador': ('Aplicador', 'propio'),
+        'referente': ('Referente', 'propio'),
     }
 
     # -----------------------------------

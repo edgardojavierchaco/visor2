@@ -3,8 +3,6 @@ from apps.bnhpersonas.services.pipeline import BaseStep
 
 class NormalizeStep(BaseStep):
 
-    name = "NormalizeStep"
-
     @classmethod
     def apply(cls, obj, context):
 

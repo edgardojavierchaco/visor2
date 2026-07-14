@@ -1,0 +1,730 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block sirtee_content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card shadow-sm">
+
+
+<div class="card-header bg-primary text-white">
+
+
+<h4 class="mb-0">
+
+<i class="bi bi-building"></i>
+
+
+{% if object %}
+
+Editar empresa
+
+{% else %}
+
+Nueva empresa
+
+{% endif %}
+
+
+</h4>
+
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<form method="post"
+      enctype="multipart/form-data"
+      novalidate>
+
+
+{% csrf_token %}
+
+
+
+{% if form.non_field_errors %}
+
+<div class="alert alert-danger">
+
+{{ form.non_field_errors }}
+
+</div>
+
+{% endif %}
+
+
+
+
+
+<!-- ==============================
+     DATOS PRINCIPALES
+================================ -->
+
+
+<h5 class="border-bottom pb-2 mb-3">
+
+Datos principales
+
+</h5>
+
+
+
+<div class="row">
+
+
+
+<div class="col-md-8 mb-3">
+
+
+<label class="form-label">
+
+{{ form.razon_social.label }}
+
+</label>
+
+
+{{ form.razon_social }}
+
+
+
+{% for error in form.razon_social.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+<div class="col-md-4 mb-3">
+
+
+<label class="form-label">
+
+{{ form.cuit.label }}
+
+</label>
+
+
+{{ form.cuit }}
+
+
+
+{% for error in form.cuit.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<div class="mb-3">
+
+
+<label class="form-label">
+
+{{ form.nombre_fantasia.label }}
+
+</label>
+
+
+{{ form.nombre_fantasia }}
+
+
+
+{% for error in form.nombre_fantasia.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+
+
+<div class="row">
+
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+{{ form.tipo.label }}
+
+</label>
+
+
+{{ form.tipo }}
+
+
+
+{% for error in form.tipo.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+{{ form.registro_empresa.label }}
+
+</label>
+
+
+{{ form.registro_empresa }}
+
+
+
+{% for error in form.registro_empresa.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="mb-3">
+
+
+<label class="form-label">
+
+{{ form.condicion_fiscal.label }}
+
+</label>
+
+
+{{ form.condicion_fiscal }}
+
+
+{% for error in form.condicion_fiscal.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+
+<hr>
+
+
+
+
+
+<!-- ==============================
+     CONTACTO
+================================ -->
+
+
+<h5 class="border-bottom pb-2 mb-3">
+
+Contacto
+
+</h5>
+
+
+
+
+
+<div class="row">
+
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+{{ form.telefono.label }}
+
+</label>
+
+
+{{ form.telefono }}
+
+
+
+{% for error in form.telefono.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+{{ form.email.label }}
+
+</label>
+
+
+{{ form.email }}
+
+
+
+{% for error in form.email.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="row">
+
+
+
+<div class="col-md-8 mb-3">
+
+
+<label class="form-label">
+
+{{ form.domicilio.label }}
+
+</label>
+
+
+{{ form.domicilio }}
+
+
+
+{% for error in form.domicilio.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+
+<div class="col-md-4 mb-3">
+
+
+<label class="form-label">
+
+{{ form.localidad.label }}
+
+</label>
+
+
+
+{{ form.localidad }}
+
+
+
+{% for error in form.localidad.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="mb-3">
+
+
+<label class="form-label">
+
+{{ form.responsable.label }}
+
+</label>
+
+
+{{ form.responsable }}
+
+
+
+{% for error in form.responsable.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+
+<hr>
+
+
+
+
+
+<!-- ==============================
+     ESTADO
+================================ -->
+
+
+
+<div class="form-check mb-3">
+
+
+{{ form.activa }}
+
+
+
+<label class="form-check-label"
+       for="{{ form.activa.id_for_label }}">
+
+
+Empresa activa
+
+
+</label>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="mb-3">
+
+
+<label class="form-label">
+
+{{ form.observaciones.label }}
+
+</label>
+
+
+{{ form.observaciones }}
+
+
+
+{% for error in form.observaciones.errors %}
+
+<div class="invalid-feedback d-block">
+
+{{ error }}
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+
+
+<div class="mt-4">
+
+
+<button type="submit"
+        class="btn btn-success">
+
+
+<i class="bi bi-save"></i>
+
+Guardar
+
+
+</button>
+
+
+
+
+
+<a href="{% url 'sirtee:empresas-list' %}"
+   class="btn btn-secondary">
+
+
+<i class="bi bi-x-circle"></i>
+
+Cancelar
+
+
+</a>
+
+
+</div>
+
+
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}
+
+
+
+
+
+
+{% block sirtee_scripts %}
+
+
+<script>
+
+
+$(function(){
+
+
+
+/*
+=====================================
+ SELECT2 GENERAL
+=====================================
+*/
+
+
+$(".select2").select2({
+
+
+    theme:
+    "bootstrap4",
+
+
+    width:
+    "100%",
+
+
+    allowClear:
+    true
+
+
+});
+
+
+
+
+
+/*
+=====================================
+ LOCALIDADES AJAX
+=====================================
+*/
+
+
+$("#id_localidad").select2({
+
+
+    theme:
+    "bootstrap4",
+
+
+    width:
+    "100%",
+
+
+    placeholder:
+    "Seleccione localidad",
+
+
+    allowClear:
+    true,
+
+    minimumInputLength: 2,
+
+    ajax:{
+
+
+        url:
+        "{% url 'sirtee:filtrar-localidades' %}",
+
+
+        dataType:
+        "json",
+
+
+        delay:
+        300,
+
+        data: function(params){
+
+            return {
+
+                q: params.term
+
+            };
+
+        },
+
+
+
+        processResults:function(data){
+
+
+            return {
+
+
+                results:data
+
+
+            };
+
+
+        },
+
+
+
+        cache:true
+
+
+    }
+
+
+
+});
+
+
+
+});
+
+
+
+</script>
+
+
+{% endblock %}

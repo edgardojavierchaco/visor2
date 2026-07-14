@@ -1,0 +1,535 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block sirtee_content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card">
+
+
+<div class="card-header d-flex justify-content-between">
+
+
+<h4>
+Detalle del relevamiento
+</h4>
+
+
+<div>
+
+{% if puede_gestionar %}    
+<a
+href="{% url 'sirtee:relevamientos-update' relevamiento.id %}"
+class="btn btn-warning">
+
+Editar
+
+</a>
+
+<a
+href="{% url 'sirtee:relevamientos-delete' relevamiento.id %}"
+class="btn btn-danger">
+
+Eliminar
+
+</a>
+{% endif %}
+
+</div>
+
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<!-- ========================= -->
+<!-- ESCUELA -->
+<!-- ========================= -->
+
+
+<h5>
+Datos de la institución
+</h5>
+
+<hr>
+
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+<strong>
+CUEANEXO
+</strong>
+
+<p>
+{{ relevamiento.cueanexo }}
+</p>
+
+</div>
+
+
+
+<div class="col-md-8">
+
+<strong>
+Nombre escuela
+</strong>
+
+<p>
+
+{% if escuela %}
+
+{{ escuela.nom_est }}
+
+{% else %}
+
+No encontrada en padrón
+
+{% endif %}
+
+</p>
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+<strong>
+CUI
+</strong>
+
+
+<p>
+{% for cui in relevamiento.cui %}
+    {{ cui }}{% if not forloop.last %}, {% endif %}
+{% empty %}
+    -
+{% endfor %}
+</p>
+
+
+</div>
+
+
+
+<div class="col-md-8">
+
+<strong>
+Oferta
+</strong>
+
+
+<p>
+{% for oferta in relevamiento.oferta %}
+    {{ oferta }}{% if not forloop.last %}<br>{% endif %}
+{% empty %}
+    -
+{% endfor %}
+</p>
+
+
+</div>
+
+
+</div>
+
+
+
+<hr>
+
+
+
+<!-- ========================= -->
+<!-- DATOS TECNICOS -->
+<!-- ========================= -->
+
+
+<h5>
+Información del relevamiento
+</h5>
+
+
+<hr>
+
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+<strong>
+Fecha
+</strong>
+
+<p>
+{{ relevamiento.fecha|date:"d/m/Y" }}
+</p>
+
+</div>
+
+
+
+<div class="col-md-4">
+
+<strong>
+Estado
+</strong>
+
+
+<p>
+
+<span class="badge bg-primary">
+
+{{ relevamiento.get_estado_display }}
+
+</span>
+
+</p>
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Tipo
+</strong>
+
+
+<p>
+
+{{ relevamiento.get_tipo_relevamiento_display }}
+
+</p>
+
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="mb-3">
+
+
+<strong>
+Observaciones
+</strong>
+
+
+<p>
+
+{{ relevamiento.observaciones|default:"Sin observaciones" }}
+
+</p>
+
+
+</div>
+
+
+
+<hr>
+
+
+
+<!-- ========================= -->
+<!-- HALLAZGOS -->
+<!-- ========================= -->
+
+
+<h5>
+Hallazgos detectados
+</h5>
+
+
+<hr>
+
+
+{% if relevamiento.hallazgos.exists %}
+
+
+<table class="table table-striped">
+
+
+<thead>
+
+<tr>
+
+<th>
+Título
+</th>
+
+
+<th>
+Categoría
+</th>
+
+
+<th>
+Criticidad
+</th>
+
+
+<th>
+Estado
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+<tbody>
+
+
+{% for hallazgo in relevamiento.hallazgos.all %}
+
+
+<tr>
+
+
+<td>
+
+<a href="{% url 'sirtee:hallazgos-detail' hallazgo.id %}">
+
+{{ hallazgo.titulo }}
+
+</a>
+
+</td>
+
+
+
+<td>
+
+{{ hallazgo.get_categoria_display }}
+
+</td>
+
+
+<td>
+
+
+{% if hallazgo.criticidad == "CRITICA" %}
+
+<span class="badge bg-danger">
+
+{{ hallazgo.get_criticidad_display }}
+
+</span>
+
+
+{% elif hallazgo.criticidad == "ALTA" %}
+
+<span class="badge bg-warning">
+
+{{ hallazgo.get_criticidad_display }}
+
+</span>
+
+
+{% else %}
+
+<span class="badge bg-secondary">
+
+{{ hallazgo.get_criticidad_display }}
+
+</span>
+
+
+{% endif %}
+
+
+</td>
+
+
+
+<td>
+
+{{ hallazgo.get_estado_display }}
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+{% else %}
+
+
+<div class="alert alert-info">
+
+No existen hallazgos registrados.
+
+</div>
+
+
+{% endif %}
+
+
+
+<hr>
+
+
+
+<!-- ========================= -->
+<!-- CONTROL -->
+<!-- ========================= -->
+
+
+<h5>
+Control
+</h5>
+
+
+<hr>
+
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+
+<strong>
+Usuario creador
+</strong>
+
+
+<p>
+{{ relevamiento.usuario_creador }}
+</p>
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Finalizado
+</strong>
+
+
+<p>
+
+
+{% if relevamiento.finalizado %}
+
+<span class="badge bg-success">
+Sí
+</span>
+
+
+{% else %}
+
+<span class="badge bg-secondary">
+No
+</span>
+
+
+{% endif %}
+
+
+</p>
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<strong>
+Fecha finalización
+</strong>
+
+
+<p>
+
+{{ relevamiento.fecha_finalizacion|date:"d/m/Y H:i" }}
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+</div>
+
+
+<div class="card-footer">
+
+
+<a
+href="{% url 'sirtee:relevamientos-list' %}"
+class="btn btn-secondary">
+
+Volver
+
+</a>
+
+{% if puede_gestionar %}
+<a
+href="{% url 'sirtee:hallazgos-create' %}?relevamiento={{ relevamiento.id }}"
+class="btn btn-danger">
+
+Nuevo hallazgo
+
+</a>
+{% endif %}
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

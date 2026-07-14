@@ -1,0 +1,106 @@
+{% extends "sirtee/base.html" %}
+
+
+{% load render_table from django_tables2 %}
+
+
+{% block sirtee_content %}
+
+
+<div class="container-fluid mt-4">
+
+
+<div class="card">
+
+
+<div class="card-header d-flex justify-content-between">
+
+
+<h4>
+Hallazgos técnicos
+</h4>
+
+{% if puede_gestionar %}
+<a href="{% url 'sirtee:hallazgos-create' %}"
+class="btn btn-primary">
+
+Nuevo hallazgo
+
+</a>
+{% endif %}
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<form method="get"
+class="row g-3 mb-3">
+
+
+<div class="col-md-4">
+
+{{ filter.form.buscar }}
+
+</div>
+
+
+<div class="col-md-2">
+
+{{ filter.form.criticidad }}
+
+</div>
+
+
+<div class="col-md-2">
+
+{{ filter.form.estado }}
+
+</div>
+
+
+<div class="col-md-2">
+
+{{ filter.form.area }}
+
+</div>
+
+
+<div class="col-md-2">
+
+<button class="btn btn-secondary w-100">
+
+Filtrar
+
+</button>
+
+</div>
+
+
+</form>
+
+<div class="alert alert-info">
+
+Total hallazgos:
+<strong>
+{{ table.page.paginator.count }}
+</strong>
+
+</div>
+
+{% render_table table %}
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}
