@@ -15,6 +15,8 @@ from .models import (
     EspecialDocenteBanco,
     DocenteSeccion,
     SeccionEspecial,
+    EspecialDocenteBnh,
+    PADRON_DB_ALIAS,
 )
 from .permisos import especial_required
 from .views_contexto import contexto_base
@@ -33,13 +35,13 @@ def _is_ajax(request):
 
 def _buscar_docente_bnh(cuil):
     """
-    Busca en bnhpersonas o la tabla que uses para docentes.
-    NOTA: Debes conectar esto con tu modelo real de personas/docentes.
-    Por ahora retorna None si no hay integración directa.
+    Busca en bnhpersonas la tabla de personas.
     """
-    # from apps.bnhpersonas.models import Persona
-    # return Persona.objects.filter(cuil=cuil).first()
-    return None 
+    return (
+        EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+        .filter(cuil=cuil)
+        .first()
+    )
 
 def _docente_row(docente):
     if not docente:
@@ -47,8 +49,10 @@ def _docente_row(docente):
     return {
         "apellido": getattr(docente, "apellido", "") or "",
         "nombre": getattr(docente, "nombre", "") or "",
+        "nombre_completo": getattr(docente, "nombre_completo", ""),
         "cuil": getattr(docente, "cuil", "") or "",
         "dni": getattr(docente, "dni", "") or "",
+        "estado": getattr(docente, "estado", "") or "",
     }
 
 def _docentes_banco(especial_context):

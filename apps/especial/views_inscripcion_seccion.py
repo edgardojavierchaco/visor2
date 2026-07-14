@@ -62,6 +62,51 @@ def _buscar_alumno(cuil):
     return _alumno_model().objects.filter(cuil=cuil).first()
 
 
+def dar_alta_inscripcion_seccion(inscripcion, user):
+    """
+    Reactiva una inscripción de alumno que estaba en baja.
+    Lanza ValidationError si ya existe otra inscripción activa.
+    """
+    if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO:
+        raise ValidationError("La inscripción ya está activa.")
+
+    duplicado = AlumnoSeccion.objects.filter(
+        seccion=inscripcion.seccion,
+        alumno=inscripcion.alumno,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+    ).exclude(pk=inscripcion.pk).exists()
+
+    if duplicado:
+        raise ValidationError(
+            "El alumno ya tiene otra inscripción activa en esta sección. "
+            "Da de baja esa inscripción antes de reinscribir."
+        )
+
+    with transaction.atomic():
+        inscripcion.estado = AlumnoSeccion.Estado.ACTIVO
+        inscripcion.fecha_baja = None
+        inscripcion.motivo_baja = ""
+        inscripcion.actualizado_por = user
+        inscripcion.save(update_fields=["estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"])
+
+
+def dar_baja_inscripcion_seccion(inscripcion, user):
+    """
+    Marca una inscripción de alumno como baja y registra la fecha de baja.
+    Lanza ValidationError si la inscripción ya está en baja.
+    """
+    if inscripcion.estado == AlumnoSeccion.Estado.BAJA:
+        raise ValidationError("La inscripción ya está dada de baja.")
+
+    from django.utils import timezone
+    with transaction.atomic():
+        inscripcion.estado = AlumnoSeccion.Estado.BAJA
+        inscripcion.fecha_baja = timezone.localdate()
+        inscripcion.motivo_baja = "Baja desde gestión"
+        inscripcion.actualizado_por = user
+        inscripcion.save(update_fields=["estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"])
+
+
 def _texto(valor):
     if valor is None:
         return ""

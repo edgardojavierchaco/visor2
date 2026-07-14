@@ -48,14 +48,14 @@
                         </td>
                         <td class="cef-act-cell">
                             <div class="d-flex flex-wrap gap-1 align-items-center">
-                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'cef:editar_inscripcion_grupo' grupo.pk inscripcion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% if gestionar_grupo_modo %}&volver=gestionar{% endif %}{% elif gestionar_grupo_modo %}?volver=gestionar{% endif %}" title="Editar inscripción">
+                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:editar_inscripcion_seccion' seccion.pk inscripcion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% if gestionar_seccion_modo %}&volver=gestionar{% endif %}{% elif gestionar_seccion_modo %}?volver=gestionar{% endif %}" title="Editar inscripción">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </a>
                                  {% if inscripcion.estado == 'activo' %}
-                                     <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Dar de baja alumno" data-cef-confirm-message="La inscripción quedará registrada como baja, no se eliminará." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
+                                     <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Dar de baja alumno" data-cef-confirm-message="La inscripción quedará registrada como baja, no se eliminará." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
                                          {% csrf_token %}
-                                         <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                                         {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                         <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                         {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                         <input type="hidden" name="accion" value="baja_alumno">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
                                         <button class="btn btn-outline-secondary btn-sm" type="submit">
@@ -63,10 +63,10 @@
                                          </button>
                                      </form>
                                 {% elif inscripcion.estado == 'baja' %}
-                                    <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Se creará una inscripción activa nueva para este alumno si no existe otra activa." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
+                                    <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Se creará una inscripción activa nueva para este alumno si no existe otra activa." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
                                         {% csrf_token %}
-                                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                        <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                        {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                         <input type="hidden" name="accion" value="alta_alumno">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
                                         <button class="btn btn-outline-success btn-sm" type="submit">
@@ -84,7 +84,7 @@
 {% else %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-        Todavía no hay alumnos inscriptos en este grupo.
+        Todavía no hay alumnos inscriptos en este seccion.
     </div>
 {% endif %}
 
