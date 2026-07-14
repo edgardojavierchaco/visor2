@@ -1,22 +1,22 @@
-{% extends "cef/base_operativo_cef.html" %}
+{% extends "especial/base_operativo_especial.html" %}
 
-{% block cef_subtitle %}Ficha integral del curso/grupo seleccionado.{% endblock %}
+{% block especial_subtitle %}Ficha integral de la sección/grupo seleccionado.{% endblock %}
 
-{% block cef_content %}
+{% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Gestionar curso <span>» Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span></h2>
+        <h2 class="cef-panel-title">Gestionar sección <span>» Sección {{ seccion.nombre_seccion }}</span></h2>
         <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a Grupos / Cursos
             </a>
-            <a class="btn btn-outline-primary" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-pen"></i> Editar curso
+            <a class="btn btn-outline-primary" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-pen"></i> Editar sección
             </a>
-            <a class="btn btn-outline-primary" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
+            <a class="btn btn-outline-primary" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
                 <i class="fa-solid fa-user-plus"></i> Inscribir alumno
             </a>
-            <a class="btn btn-primary" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1">
+            <a class="btn btn-primary" href="{% url 'especial:docentes' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1">
                 <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
             </a>
         </div>
@@ -26,47 +26,46 @@
         <div class="mb-3">
             <span class="cef-context-pill">
                 <i class="fa-solid fa-clipboard-list"></i>
-                <span><strong>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</strong></span>
-                <span>{{ grupo.turno }}</span>
-                <span>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</span>
-                <span>{{ grupo_dias_texto|default:"Sin días cargados" }}</span>
+                <span><strong>Sección {{ seccion.nombre_seccion }}</strong></span>
+                <span>{{ seccion.turno }}</span>
+                <span>{{ seccion.lugar_dictado|default:"Sin lugar de dictado" }}</span>
             </span>
         </div>
 
         <div data-cef-fragment="gestion-resumen">
-            {% include "cef/gestionar_grupo_resumen_cef.html" %}
+            {% include "especial/gestionar_seccion_resumen_especial.html" %}
         </div>
 
         <div class="cef-edit-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <h3 class="mb-0">Alumnos del curso</h3>
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
+                <h3 class="mb-0">Alumnos de la sección</h3>
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
                     <i class="fa-solid fa-user-plus"></i> Inscribir alumno
                 </a>
             </div>
-            <div data-cef-fragment="inscripciones-grupo">
-                {% include "cef/inscripciones_grupo_lista_cef.html" %}
+            <div data-cef-fragment="inscripciones-seccion">
+                {% include "especial/inscripciones_seccion_lista_especial.html" %}
             </div>
         </div>
 
         <div class="cef-edit-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <h3 class="mb-0">Profesores del curso</h3>
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1">
+                <h3 class="mb-0">Profesores de la sección</h3>
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:docentes' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1">
                     <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
                 </a>
             </div>
-            <div data-cef-fragment="docentes-grupo">
-                {% include "cef/docentes_grupo_lista_cef.html" %}
+            <div data-cef-fragment="docentes-seccion">
+                {% include "especial/docentes_seccion_lista_especial.html" %}
             </div>
         </div>
 
         <div class="cef-edit-panel" data-cef-fragment="docente-titular-activo">
-            {% include "cef/gestionar_grupo_docente_activo_cef.html" with titulo="Profesor titular activo" docente_activo=docente_titular rol_texto="profesor titular" %}
+            {% include "especial/gestionar_seccion_docente_activo_cef.html" with titulo="Profesor titular activo" docente_activo=docente_titular rol_texto="profesor titular" %}
         </div>
 
         <div class="cef-edit-panel" data-cef-fragment="docente-suplente-activo">
-            {% include "cef/gestionar_grupo_docente_activo_cef.html" with titulo="Profesor suplente activo" docente_activo=docente_suplente rol_texto="profesor suplente" %}
+            {% include "especial/gestionar_seccion_docente_activo_cef.html" with titulo="Profesor suplente activo" docente_activo=docente_suplente rol_texto="profesor suplente" %}
         </div>
 
     </div>

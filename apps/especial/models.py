@@ -14,7 +14,7 @@ from apps.bnhalumnos.models import Alumno
 # ============================================================
 ACRONIMO_ESPECIAL = "EEE"
 LONGITUD_CUEANEXO = 9
-PADRON_DB_ALIAS = "default"
+PADRON_DB_ALIAS = "default" # TODO: Check if this should be 'padron' or 'default' (BNH uses 'padron' probably, but in `models.py` it's 'default'. I will leave it as is or check later)
 ROLES_AUTORIZADOS_ESPECIAL = {
     "Administrador",
     "Director",
@@ -24,6 +24,27 @@ ROLES_AUTORIZADOS_ESPECIAL = {
 # ============================================================
 # MODELOS EXTERNOS / INTEGRACION (Sin cambios mayores, solo limpieza)
 # ============================================================
+
+class EspecialDocenteBnh(models.Model):
+    """Modelo proxy para consultar personas en el esquema BNH."""
+    cuil = models.CharField(max_length=11, primary_key=True)
+    dni = models.CharField(max_length=20, blank=True, null=True)
+    apellido = models.CharField(max_length=150, blank=True, null=True)
+    nombre = models.CharField(max_length=150, blank=True, null=True)
+    estado = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = '"bnh"."personas"'
+        ordering = ["apellido", "nombre", "cuil"]
+
+    @property
+    def nombre_completo(self):
+        apellidos = (self.apellido or "").strip()
+        nombres = (self.nombre or "").strip()
+        if apellidos and nombres:
+            return f"{apellidos}, {nombres}"
+        return apellidos or nombres
 class EspecialPadronOferta(models.Model):
     """Modelo de integración Especial contra la vista de Padrón."""
     id = models.BigIntegerField(primary_key=True)

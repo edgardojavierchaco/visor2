@@ -1,18 +1,18 @@
 <div class="cef-context-summary mb-3">
     <div class="cef-context-summary-item">
         <span>CUE-Anexo</span>
-        <strong>{{ cef_context.cueanexo }}</strong>
+        <strong>{{ especial_context.cueanexo }}</strong>
     </div>
-    {% if cef_context.establecimiento %}
+    {% if especial_context.establecimiento %}
         <div class="cef-context-summary-item is-wide">
-            <span>CEF</span>
-            <strong>{{ cef_context.establecimiento.nom_est|default:"CEF" }}</strong>
+            <span>Escuela</span>
+            <strong>{{ especial_context.establecimiento.nom_est|default:"Escuela" }}</strong>
         </div>
     {% endif %}
-    {% if cef_context.ciclo %}
+    {% if especial_context.ciclo %}
         <div class="cef-context-summary-item">
             <span>Ciclo</span>
-            <strong>{{ cef_context.ciclo }}</strong>
+            <strong>{{ especial_context.ciclo }}</strong>
         </div>
     {% endif %}
 </div>
@@ -20,25 +20,24 @@
 <div class="cef-edit-panel">
     <h3>Datos del curso</h3>
     <div class="cef-info-grid">
-        <div class="cef-info-item"><span>Actividad</span><strong>{{ grupo.actividad|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>N°</span><strong>{{ grupo.numero|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Nombre</span><strong>{{ grupo.nombre|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Nivel</span><strong>{{ grupo.nivel|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Rango etario</span><strong>{{ grupo.rango_etario|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Turno</span><strong>{{ grupo.turno|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Horario</span><strong>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</strong></div>
-        <div class="cef-info-item"><span>Días</span><strong>{{ grupo_dias_texto|default:"Sin días cargados" }}</strong></div>
-        <div class="cef-info-item"><span>Cupo</span><strong>{{ grupo.cupo_maximo|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Tipo de sección</span><strong>{{ seccion.cd_tipo_seccion|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Estructura especial</span><strong>{{ seccion.tipo_estructura_especial|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Nombre</span><strong>{{ seccion.nombre_seccion|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Modalidad</span><strong>{{ seccion.modalidad|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Rango etario</span><strong>{{ seccion.rango_etario|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Turno</span><strong>{{ seccion.turno|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Lugar de dictado</span><strong>{{ seccion.lugar_dictado|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Cupo total</span><strong>{{ seccion.capacidad_total|default:"-" }}</strong></div>
         <div class="cef-info-item">
             <span>Estado</span>
             <strong>
-                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% elif grupo.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
-                    {{ grupo.get_estado_display }}
+                <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
+                    {{ seccion.get_estado_display }}
                 </span>
             </strong>
         </div>
         <div class="cef-info-item"><span>Profesores activos</span><strong>{{ docentes_activos|length }}</strong></div>
         <div class="cef-info-item"><span>Inscripciones registradas</span><strong>{{ inscripciones|length }}</strong></div>
-        <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ grupo.observaciones|default:"Sin observaciones" }}</strong></div>
+        <div class="cef-info-item span-all"><span>Descripción</span><strong>{{ seccion.descripcion|default:"Sin descripción" }}</strong></div>
     </div>
 </div>

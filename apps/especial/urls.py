@@ -70,6 +70,11 @@ urlpatterns = [
         views_carga_seccion.carga_seccion_form,
         name="carga_seccion_editar",
     ),
+    path(
+        "carga/secciones/<int:seccion_id>/gestionar/",
+        views_carga_seccion.gestionar_seccion,
+        name="gestionar_seccion",
+    ),
     # Inscripción de alumnos a secciones
     path(
         "carga/secciones/<int:seccion_id>/inscripciones/",
