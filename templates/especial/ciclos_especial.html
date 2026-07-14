@@ -1,8 +1,8 @@
-{% extends "especial/base_operativo_especial.html" %}
+{% extends "cef/base_operativo_cef.html" %}
 
-{% block especial_subtitle %}Alta de ciclos y selección del ciclo actual. Solo disponible para Administrador.{% endblock %}
+{% block cef_subtitle %}Alta de ciclos y selección del ciclo actual. Solo disponible para Administrador.{% endblock %}
 
-{% block especial_content %}
+{% block cef_content %}
 <div class="cef-row-grid">
     <section class="cef-card">
         <div class="cef-card-header">
@@ -51,9 +51,9 @@
                                                 {% csrf_token %}
                                                 <input type="hidden" name="accion" value="marcar_actual">
                                                 <input type="hidden" name="ciclo_id" value="{{ ciclo.pk }}">
-                                                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                {% if especial_context.ciclo %}
-                                                    <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                {% if cef_context.ciclo %}
+                                                    <input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">
                                                 {% endif %}
                                                 <button type="submit" class="btn btn-outline-primary btn-sm">
                                                     <i class="fa-solid fa-check"></i> Marcar actual
@@ -85,9 +85,9 @@
             <form method="post" novalidate>
                 {% csrf_token %}
                 <input type="hidden" name="accion" value="crear">
-                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                {% if especial_context.ciclo %}
-                    <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                {% if cef_context.ciclo %}
+                    <input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">
                 {% endif %}
 
                 {% if form.non_field_errors %}

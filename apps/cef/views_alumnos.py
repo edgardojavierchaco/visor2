@@ -102,6 +102,77 @@ def _errores_form(form):
     return " ".join(error for errors in form.errors.values() for error in errors)
 
 
+def _pk_post(request, campo):
+    try:
+        return int(request.POST.get(campo) or "")
+    except (TypeError, ValueError):
+        return None
+
+
+def _inscribir_alumno_grupo_desde_banco(request, cef_context):
+    if not cef_context["puede_operar"]:
+        messages.error(
+            request,
+            "Seleccioná un CUE-Anexo y un ciclo lectivo para inscribir alumnos.",
+        )
+        return
+
+    alumno_banco_id = _pk_post(request, "alumno_banco_id")
+    grupo_id = _pk_post(request, "grupo_id")
+
+    if not alumno_banco_id or not grupo_id:
+        messages.error(request, "No se pudo identificar el alumno o el grupo.")
+        return
+
+    alumno_banco = (
+        CefAlumnoCef.objects.filter(
+            pk=alumno_banco_id,
+            cueanexo=cef_context["cueanexo"],
+            ciclo=cef_context["ciclo"],
+            estado=CefAlumnoCef.Estado.ACTIVO,
+        )
+        .select_related("alumno")
+        .first()
+    )
+    if not alumno_banco:
+        messages.error(request, "El alumno no está activo en el banco de este CEF y ciclo.")
+        return
+
+    grupo = CefGrupo.objects.filter(
+        pk=grupo_id,
+        cueanexo=cef_context["cueanexo"],
+        ciclo=cef_context["ciclo"],
+    ).first()
+    if not grupo:
+        messages.error(request, "El grupo no corresponde al CEF y ciclo seleccionados.")
+        return
+
+    inscripcion_activa = CefInscripcion.objects.filter(
+        grupo=grupo,
+        alumno=alumno_banco.alumno,
+        estado=CefInscripcion.Estado.ACTIVO,
+    ).exists()
+    if inscripcion_activa:
+        messages.info(request, "El alumno ya se encuentra inscripto en ese grupo.")
+        return
+
+    try:
+        with transaction.atomic():
+            CefInscripcion.objects.create(
+                grupo=grupo,
+                alumno=alumno_banco.alumno,
+                estado=CefInscripcion.Estado.ACTIVO,
+                creado_por=request.user,
+                actualizado_por=request.user,
+            )
+        messages.success(request, "Alumno inscripto correctamente al grupo.")
+    except (IntegrityError, ValidationError):
+        messages.error(
+            request,
+            "No se pudo crear la inscripción. Verificá que no exista una inscripción activa.",
+        )
+
+
 def _alumnos_banco(cef_context):
     if not cef_context["puede_operar"]:
         return CefAlumnoCef.objects.none()
@@ -202,6 +273,10 @@ def alumnos(request):
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
 
     if request.method == "POST":
+        if request.POST.get("accion") == "inscribir_grupo":
+            _inscribir_alumno_grupo_desde_banco(request, cef_context)
+            return redirect(_url_alumnos(cef_context))
+
         busqueda_form = CefBusquedaAlumnoForm(request.POST)
         abrir_modal = True
 

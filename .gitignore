@@ -15,5 +15,5 @@ staticfiles/
 
 .env
 
-#BORRAR PARA SUBIR AL MAIN
+#Con esta linea se ignoran los archivos de producción que no deben subirse al repositorio
 productionfiles/*

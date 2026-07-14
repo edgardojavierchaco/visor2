@@ -1,0 +1,161 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Ficha integral del curso/sección seleccionada.{% endblock %}
+
+{% block especial_content %}
+<div class="especial-panel">
+    <div class="especial-panel-head">
+        <h2 class="especial-panel-title">Gestionar curso <span>» Sección {{ seccion.actividad }} Nro. {{ seccion.numero }}</span></h2>
+        <div class="especial-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a Secciones / Cursos
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-pen"></i> Editar curso
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-user-plus"></i> Inscribir alumno
+            </a>
+            <a class="btn btn-primary" href="{% url 'especial:docentes_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-chalkboard-user"></i> Administrar profesores
+            </a>
+        </div>
+    </div>
+
+    <div class="especial-panel-body">
+        <div class="mb-3">
+            <span class="especial-context-pill">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span><strong>Sección {{ seccion.actividad }} Nro. {{ seccion.numero }}</strong></span>
+                <span>{{ seccion.turno }}</span>
+                <span>{{ seccion.hora_inicio|time:"H:i" }} - {{ seccion.hora_fin|time:"H:i" }}</span>
+                <span>{{ seccion_dias_texto|default:"Sin días cargados" }}</span>
+            </span>
+        </div>
+
+        <div class="especial-context-summary mb-3">
+            <div class="especial-context-summary-item">
+                <span>CUE-Anexo</span>
+                <strong>{{ especial_context.cueanexo }}</strong>
+            </div>
+            {% if especial_context.establecimiento %}
+                <div class="especial-context-summary-item is-wide">
+                    <span>especial</span>
+                    <strong>{{ especial_context.establecimiento.nom_est|default:"Cueanexo" }}</strong>
+                </div>
+            {% endif %}
+            {% if especial_context.ciclo %}
+                <div class="especial-context-summary-item">
+                    <span>Ciclo</span>
+                    <strong>{{ especial_context.ciclo }}</strong>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="especial-edit-panel">
+            <h3>Datos del curso</h3>
+            <div class="especial-info-grid">
+                <div class="especial-info-item"><span>Actividad</span><strong>{{ seccion.actividad|default:"-" }}</strong></div>
+                <div class="especial-info-item"><span>N°</span><strong>{{ seccion.numero|default:"-" }}</strong></div>
+                <div class="especial-info-item"><span>Nombre</span><strong>{{ seccion.nombre|default:"-" }}</strong></div>
+                <div class="especial-info-item"><span>Nivel</span><strong>{{ seccion.nivel|default:"-" }}</strong></div>
+                <div class="especial-info-item"><span>Rango etario</span><strong>{{ seccion.rango_etario|default:"-" }}</strong></div>
+                <div class="especial-info-item"><span>Turno</span><strong>{{ seccion.turno|default:"-" }}</strong></div>
+                <div class="especial-info-item"><span>Horario</span><strong>{{ seccion.hora_inicio|time:"H:i" }} - {{ seccion.hora_fin|time:"H:i" }}</strong></div>
+                <div class="especial-info-item"><span>Días</span><strong>{{ seccion_dias_texto|default:"Sin días cargados" }}</strong></div>
+                <div class="especial-info-item"><span>Cupo</span><strong>{{ seccion.cupo_maximo|default:"-" }}</strong></div>
+                <div class="especial-info-item">
+                    <span>Estado</span>
+                    <strong>
+                        <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
+                            {{ seccion.get_estado_display }}
+                        </span>
+                    </strong>
+                </div>
+                <div class="especial-info-item"><span>Profesores activos</span><strong>{{ docentes_activos|length }}</strong></div>
+                <div class="especial-info-item"><span>Alumnos activos/en espera</span><strong>{{ inscripciones|length }}</strong></div>
+                <div class="especial-info-item span-all"><span>Observaciones</span><strong>{{ seccion.observaciones|default:"Sin observaciones" }}</strong></div>
+            </div>
+        </div>
+
+        <div class="especial-edit-panel">
+            <h3>Profesor titular activo</h3>
+            {% if docente_titular %}
+                <div class="especial-info-grid">
+                    <div class="especial-info-item span-all"><span>Profesor</span><strong>{{ docente_titular.docente_nombre_snapshot|default:docente_titular.docente_cuil }}</strong></div>
+                    <div class="especial-info-item"><span>CUIL</span><strong>{{ docente_titular.docente_cuil }}</strong></div>
+                    <div class="especial-info-item"><span>DNI</span><strong>{{ docente_titular.docente_dni_snapshot|default:"-" }}</strong></div>
+                    <div class="especial-info-item"><span>Estado BNH</span><strong>{{ docente_titular.docente_estado_bnh_snapshot|default:"-" }}</strong></div>
+                    <div class="especial-info-item"><span>Desde</span><strong>{% if docente_titular.fecha_desde %}{{ docente_titular.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="especial-info-item"><span>Hasta</span><strong>{% if docente_titular.fecha_hasta %}{{ docente_titular.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="especial-info-item span-all"><span>Observaciones</span><strong>{{ docente_titular.observaciones|default:"Sin observaciones" }}</strong></div>
+                </div>
+            {% else %}
+                <div class="especial-empty-state">
+                    <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    No hay profesor titular activo para este curso.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="especial-edit-panel">
+            <h3>Profesor suplente activo</h3>
+            {% if docente_suplente %}
+                <div class="especial-info-grid">
+                    <div class="especial-info-item span-all"><span>Profesor</span><strong>{{ docente_suplente.docente_nombre_snapshot|default:docente_suplente.docente_cuil }}</strong></div>
+                    <div class="especial-info-item"><span>CUIL</span><strong>{{ docente_suplente.docente_cuil }}</strong></div>
+                    <div class="especial-info-item"><span>DNI</span><strong>{{ docente_suplente.docente_dni_snapshot|default:"-" }}</strong></div>
+                    <div class="especial-info-item"><span>Estado BNH</span><strong>{{ docente_suplente.docente_estado_bnh_snapshot|default:"-" }}</strong></div>
+                    <div class="especial-info-item"><span>Desde</span><strong>{% if docente_suplente.fecha_desde %}{{ docente_suplente.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="especial-info-item"><span>Hasta</span><strong>{% if docente_suplente.fecha_hasta %}{{ docente_suplente.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="especial-info-item span-all"><span>Observaciones</span><strong>{{ docente_suplente.observaciones|default:"Sin observaciones" }}</strong></div>
+                </div>
+            {% else %}
+                <div class="especial-empty-state">
+                    <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    No hay profesor suplente activo para este curso.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="especial-edit-panel">
+            <h3>Alumnos inscriptos</h3>
+            {% if inscripciones %}
+                <div class="especial-table-wrap">
+                    <table class="especial-dt">
+                        <thead>
+                            <tr>
+                                <th>Apellido y Nombre</th>
+                                <th>Documento</th>
+                                <th>CUIL</th>
+                                <th>Fecha inscripción</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inscripcion in inscripciones %}
+                                <tr>
+                                    <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
+                                    <td>{{ inscripcion.alumno.nro_doc|default:"-" }}</td>
+                                    <td>{{ inscripcion.alumno.cuil|default:"-" }}</td>
+                                    <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge text-bg-{% if inscripcion.estado == 'activo' %}success{% else %}primary{% endif %}">
+                                            {{ inscripcion.get_estado_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="especial-empty-state">
+                    <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                    Todavía no hay alumnos activos o en espera en este curso.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

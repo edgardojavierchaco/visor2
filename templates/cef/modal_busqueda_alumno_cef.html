@@ -353,6 +353,12 @@
                 </form>
             </div>
 
+            {% if modal_feedback %}
+                <div class="alert alert-{% if modal_feedback_level == 'success' %}success{% else %}danger{% endif %} mb-3" data-cef-modal-feedback>
+                    {{ modal_feedback }}
+                </div>
+            {% endif %}
+
             <!-- Table -->
             <div class="cef-modal-table-wrap">
                 <table class="cef-modal-table">
@@ -529,6 +535,31 @@
         return true;
     }
 
+    function replaceFragmentContent(selector, html) {
+        var current = selector ? document.querySelector(selector) : null;
+        if (!current || typeof html !== "string") return false;
+        current.innerHTML = html;
+        if (window.initCefInscripcionTable) {
+            window.initCefInscripcionTable(current);
+        }
+        if (window.initCefAlumnosTable) {
+            window.initCefAlumnosTable(current);
+        }
+        return true;
+    }
+
+    function handleJsonPost(data) {
+        if (!data || typeof data !== "object") return false;
+        var replaced = true;
+        if (data.fragment_html) {
+            replaced = replaceFragmentContent(data.fragment_selector, data.fragment_html);
+        }
+        if (data.modal_html) {
+            replaceModalContent(data.modal_html, window.location.href);
+        }
+        return replaced;
+    }
+
     document.addEventListener("click", function(e) {
         var opener = e.target.closest("[data-open-personas-modal]");
         if (!opener) return;
@@ -594,11 +625,24 @@
         })
             .then(function (response) {
                 if (!response.ok) throw new Error("No se pudo guardar.");
+                var contentType = response.headers.get("content-type") || "";
+                if (contentType.indexOf("application/json") !== -1) {
+                    return response.json().then(function (data) {
+                        return { json: data };
+                    });
+                }
                 return response.text().then(function (html) {
                     return { html: html, url: response.url, redirected: response.redirected };
                 });
             })
             .then(function (result) {
+                if (result.json) {
+                    if (handleJsonPost(result.json)) {
+                        return;
+                    }
+                    form.submit();
+                    return;
+                }
                 if (result.redirected && replacePagePanel(result.html)) {
                     if (window.history && window.history.replaceState && result.url) {
                         window.history.replaceState({}, "", result.url);

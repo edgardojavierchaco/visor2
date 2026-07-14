@@ -1,14 +1,14 @@
-{% extends "especial/base_operativo_especial.html" %}
+{% extends "cef/base_operativo_cef.html" %}
 
-{% block especial_subtitle %}Búsqueda por CUIL e inscripción de alumnos a la sección seleccionada.{% endblock %}
+{% block cef_subtitle %}Búsqueda por CUIL e inscripción de alumnos al grupo seleccionado.{% endblock %}
 
-{% block especial_content %}
+{% block cef_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Secciones <span>» Inscripción de Alumnos</span></h2>
+        <h2 class="cef-panel-title">Grupos <span>» Inscripción de Alumnos</span></h2>
         <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a secciones
+            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
             </a>
             <button class="btn btn-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Agregar alumno
@@ -17,133 +17,20 @@
     </div>
 
     <div class="cef-panel-body">
-        {% if seccion %}
+        {% if grupo %}
             <div class="mb-3">
                 <span class="cef-context-pill">
                     <i class="fa-solid fa-users"></i>
-                    {{ seccion.nombre_seccion }} — {{ seccion.cd_tipo_seccion }} — {{ seccion.turno }}
+                    {{ grupo.actividad }} — Grupo {{ grupo.nombre|default:"" }} N° {{ grupo.numero }} — {{ grupo.turno }}
                 </span>
             </div>
         {% endif %}
 
-        <div class="cef-tools">
-            <div class="cef-tools-left">
-                <span class="cef-tools-label">Mostrar</span>
-                <select data-cef-page-size>
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-                <span class="cef-tools-label">registros</span>
-            </div>
-            <div class="cef-tools-right">
-                <div class="cef-search-wrap">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input id="searchInscripcion" type="search" placeholder="Buscar…" data-cef-table-search>
-                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        {% if inscripciones %}
-            <div class="cef-table-wrap">
-                <table class="cef-dt" data-cef-table>
-                    <thead>
-                        <tr>
-                            <th>Apellido y Nombre</th>
-                            <th>Documento</th>
-                            <th>CUIL</th>
-                            <th>Sexo</th>
-                            <th>Fecha inscripción</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inscripcion in inscripciones %}
-                            <tr>
-                                <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
-                                <td>{{ inscripcion.alumno.nro_doc }}</td>
-                                <td>{{ inscripcion.alumno.cuil|default:"—" }}</td>
-                                <td>{{ inscripcion.alumno.sexo|default:"—" }}</td>
-                                <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
-                                <td>
-                                    <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}secondary{% else %}primary{% endif %}">
-                                        {{ inscripcion.get_estado_display }}
-                                    </span>
-                                </td>
-                                <td class="cef-act-cell">
-                                    <span class="cef-dots" title="Más opciones">•••</span>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="cef-empty-state">
-                <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-                Todavía no hay alumnos inscriptos en esta sección.
-            </div>
-        {% endif %}
-
-        <div class="cef-tfoot">
-            <span class="cef-tfoot-count" data-cef-table-count>{{ inscripciones|length }} registros</span>
-            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        <div data-cef-fragment="inscripciones-grupo">
+            {% include "cef/inscripciones_grupo_lista_cef.html" %}
         </div>
     </div>
 </div>
 
-{% include "especial/modal_busqueda_alumno_especial.html" %}
-
-<script>
-(function () {
-    window.initCefInscripcionTable = function () {
-        var table = document.querySelector("[data-cef-table]");
-        if (!table || table.dataset.cefTableReady === "1") return;
-        table.dataset.cefTableReady = "1";
-        var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
-        var search = document.querySelector("[data-cef-table-search]");
-        var size   = document.querySelector("[data-cef-page-size]");
-        var count  = document.querySelector("[data-cef-table-count]");
-        var paginEl = document.querySelector("[data-cef-table-pagination]");
-        var page = 1;
-
-    function filteredRows() {
-        var term = search ? search.value.toLowerCase().trim() : "";
-        return rows.filter(function(r){ return !term || r.textContent.toLowerCase().includes(term); });
-    }
-
-    function render() {
-        var visible  = filteredRows();
-        var pageSize = parseInt(size ? size.value : "10", 10) || 10;
-        var pages    = Math.max(1, Math.ceil(visible.length / pageSize));
-        page         = Math.min(page, pages);
-        rows.forEach(function(r){ r.style.display = "none"; });
-        visible.slice((page - 1) * pageSize, page * pageSize).forEach(function(r){ r.style.display = ""; });
-        if (count) count.textContent = visible.length + " registros";
-        if (paginEl) {
-            if (pages <= 1) { paginEl.innerHTML = ""; return; }
-            var html = '<button type="button" data-page-prev>← Anterior</button>';
-            html += '<span class="page-num">' + page + ' / ' + pages + '</span>';
-            html += '<button type="button" data-page-next>Siguiente →</button>';
-            paginEl.innerHTML = html;
-        }
-    }
-
-    if (search)  search.addEventListener("input",  function(){ page = 1; render(); });
-    if (size)    size.addEventListener("change",   function(){ page = 1; render(); });
-    if (paginEl) paginEl.addEventListener("click", function(ev){
-        if (ev.target.hasAttribute("data-page-prev")) page = Math.max(1, page - 1);
-        if (ev.target.hasAttribute("data-page-next")) page = page + 1;
-        render();
-    });
-        render();
-    };
-
-    window.initCefInscripcionTable();
-})();
-</script>
+{% include "cef/modal_busqueda_alumno_cef.html" %}
 {% endblock %}

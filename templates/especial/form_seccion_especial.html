@@ -1,63 +1,62 @@
-{% extends "especial/base_operativo_especial.html" %}
+{% extends "cef/base_operativo_cef.html" %}
 
-{% block especial_subtitle %}Carga y edición de secciones de Educación Especial.{% endblock %}
+{% block cef_subtitle %}Carga y edición de cursos/grupos del CEF activo.{% endblock %}
 
-{% block especial_content %}
+{% block cef_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">{{ form_title }}</h2>
         <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a secciones
+            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
             </a>
         </div>
     </div>
 
     <div class="cef-panel-body">
-        {% if especial_context.establecimiento %}
+        {% if cef_context.establecimiento %}
             <div class="mb-3">
                 <div class="cef-context-summary">
                     <div class="cef-context-summary-item">
                         <span>CUE-Anexo</span>
-                        <strong>{{ especial_context.cueanexo }}</strong>
+                        <strong>{{ cef_context.cueanexo }}</strong>
                     </div>
                     <div class="cef-context-summary-item is-wide">
-                        <span>Establecimiento</span>
-                        <strong>{{ especial_context.establecimiento.nom_est|default:"Especial" }}</strong>
+                        <span>CEF</span>
+                        <strong>{{ cef_context.establecimiento.nom_est|default:"CEF" }}</strong>
                     </div>
-                    {% if especial_context.ciclo %}
+                    {% if cef_context.ciclo %}
                         <div class="cef-context-summary-item">
                             <span>Ciclo</span>
-                            <strong>{{ especial_context.ciclo.anio }}</strong>
+                            <strong>{{ cef_context.ciclo }}</strong>
                         </div>
                     {% endif %}
                 </div>
             </div>
         {% endif %}
 
-        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate>
+        <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
             {% csrf_token %}
-            <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-            {% if especial_context.ciclo %}
-                <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
-            {% endif %}
+            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+            <input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">
 
             {% if form.non_field_errors %}
                 <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
             {% endif %}
+            {% if dias_form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ dias_form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="alert alert-info mb-3">
+                <div>El numero y el nombre del grupo se generan automaticamente segun la actividad seleccionada.</div>
+                <div>El codigo RA se toma automaticamente de la actividad configurada.</div>
+            </div>
 
             <div class="cef-form-grid">
                 {% for field in form %}
-                    <div class="cef-field {% if field.name == 'descripcion' or field.name == 'lugar_dictado' %}span-3{% endif %} {% if field.field.widget.input_type == 'checkbox' %}is-checkbox-field{% endif %}">
-                        {% if field.field.widget.input_type == "checkbox" %}
-                            <label class="cef-switch-line" for="{{ field.id_for_label }}">
-                                {{ field }}
-                                <span>{{ field.label }}</span>
-                            </label>
-                        {% else %}
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                        {% endif %}
+                    <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
                         {% if field.errors %}
                             <div class="cef-error">{{ field.errors|join:", " }}</div>
                         {% endif %}
@@ -65,9 +64,24 @@
                 {% endfor %}
             </div>
 
+            <div class="mt-3">
+                <span class="cef-check-label">Días de funcionamiento</span>
+                {% if dias_form.dias.errors %}
+                    <div class="cef-error mb-2">{{ dias_form.dias.errors|join:", " }}</div>
+                {% endif %}
+                <div class="cef-check-grid mt-1">
+                    {% for checkbox in dias_form.dias %}
+                        <label class="cef-check-chip">
+                            {{ checkbox.tag }}
+                            <span>{{ checkbox.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="cef-form-actions mt-4">
-                <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a secciones
+                <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a grupos
                 </a>
                 <button type="submit" class="btn btn-primary">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar

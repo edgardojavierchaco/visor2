@@ -1,0 +1,93 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Carga y edición de cursos/secciones del cueanexo activo.{% endblock %}
+
+{% block especial_content %}
+<div class="especial-panel">
+    <div class="especial-panel-head">
+        <h2 class="especial-panel-title">{{ form_title }}</h2>
+        <div class="especial-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a secciones
+            </a>
+        </div>
+    </div>
+
+    <div class="especial-panel-body">
+        {% if especial_context.establecimiento %}
+            <div class="mb-3">
+                <div class="especial-context-summary">
+                    <div class="especial-context-summary-item">
+                        <span>CUE-Anexo</span>
+                        <strong>{{ especial_context.cueanexo }}</strong>
+                    </div>
+                    <div class="especial-context-summary-item is-wide">
+                        <span>especial</span>
+                        <strong>{{ especial_context.establecimiento.nom_est|default:"especial" }}</strong>
+                    </div>
+                    {% if especial_context.ciclo %}
+                        <div class="especial-context-summary-item">
+                            <span>Ciclo</span>
+                            <strong>{{ especial_context.ciclo }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+            <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% if dias_form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ dias_form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="alert alert-info mb-3">
+                <div>El numero y el nombre de la sección se generan automaticamente segun la actividad seleccionada.</div>
+                <div>El codigo RA se toma automaticamente de la actividad configurada.</div>
+            </div>
+
+            <div class="especial-form-grid">
+                {% for field in form %}
+                    <div class="especial-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="especial-error">{{ field.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-3">
+                <span class="especial-check-label">Días de funcionamiento</span>
+                {% if dias_form.dias.errors %}
+                    <div class="especial-error mb-2">{{ dias_form.dias.errors|join:", " }}</div>
+                {% endif %}
+                <div class="especial-check-grid mt-1">
+                    {% for checkbox in dias_form.dias %}
+                        <label class="especial-check-chip">
+                            {{ checkbox.tag }}
+                            <span>{{ checkbox.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="especial-form-actions mt-4">
+                <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a secciones
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

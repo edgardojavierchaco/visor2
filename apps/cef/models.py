@@ -1637,6 +1637,19 @@ class CefDocenteGrupo(CefAuditoriaMixin):
         if errors:
             raise ValidationError(errors)
 
+        if (
+            self.estado == self.Estado.ACTIVO
+            and self.grupo_id
+            and self.rol
+            and self.docente_cuil
+        ):
+            validar_docente_grupo_activo(
+                self.grupo,
+                self.docente_cuil,
+                self.rol,
+                excluir_pk=self.pk,
+            )
+
     def actualizar_snapshots_docente(self):
         """
         Copia datos basicos del docente BNH si se encuentra por CUIL.
@@ -1664,6 +1677,60 @@ class CefDocenteGrupo(CefAuditoriaMixin):
     def __str__(self):
         docente = self.docente_nombre_snapshot or self.docente_cuil
         return f"{self.grupo} - {self.get_rol_display()} - {docente}"
+
+
+def _rol_docente_grupo_texto(rol):
+    return dict(CefDocenteGrupo.Rol.choices).get(rol, rol or "rol")
+
+
+def validar_docente_grupo_activo(grupo, docente_cuil, rol, excluir_pk=None):
+    docente_cuil_normalizado = solo_digitos(docente_cuil)
+    if len(docente_cuil_normalizado) != 11:
+        raise ValidationError("El CUIL del docente debe tener 11 digitos.")
+    if not grupo:
+        raise ValidationError("El grupo seleccionado no es válido.")
+    if not rol:
+        raise ValidationError("Seleccioná un rol para el profesor.")
+
+    activos = CefDocenteGrupo.objects.filter(
+        grupo=grupo,
+        estado=CefDocenteGrupo.Estado.ACTIVO,
+    )
+    if excluir_pk:
+        activos = activos.exclude(pk=excluir_pk)
+
+    docente_activo = activos.filter(docente_cuil=docente_cuil_normalizado).first()
+    if docente_activo:
+        if docente_activo.rol != rol:
+            raise ValidationError("Este profesor ya está activo en este grupo con otro rol.")
+        raise ValidationError("Este profesor ya está activo en este grupo.")
+
+    rol_activo = activos.filter(rol=rol).first()
+    if rol_activo:
+        raise ValidationError(f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo.")
+
+
+def docentes_grupo_tiene_duplicados_activos(grupo):
+    if not grupo:
+        return False
+
+    activos = CefDocenteGrupo.objects.filter(
+        grupo=grupo,
+        estado=CefDocenteGrupo.Estado.ACTIVO,
+    )
+    docente_duplicado = (
+        activos.values("docente_cuil")
+        .annotate(total=models.Count("pk"))
+        .filter(total__gt=1)
+        .exists()
+    )
+    rol_duplicado = (
+        activos.values("rol")
+        .annotate(total=models.Count("pk"))
+        .filter(total__gt=1)
+        .exists()
+    )
+    return docente_duplicado or rol_duplicado
 
 
 # ============================================================

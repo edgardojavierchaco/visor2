@@ -70,9 +70,9 @@
                                 <td>
                                     {% if item.inscripciones_grupo %}
                                         {% for inscripcion in item.inscripciones_grupo %}
-                                            <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'cef:inscripcion_grupo' inscripcion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                                                {{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}
-                                            </a>
+                                            <span class="btn btn-outline-primary btn-sm mb-1 disabled" aria-disabled="true">
+                                                Grupo {{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}
+                                            </span>
                                         {% endfor %}
                                     {% else %}
                                         <span class="text-muted small">Sin grupo asignado</span>
@@ -83,9 +83,17 @@
                                         {% if grupos_disponibles %}
                                             {% if item.grupos_asignables|length == 1 and not item.grupos_bloqueados %}
                                                 {% for grupo in item.grupos_asignables %}
-                                                    <a class="btn btn-primary btn-sm" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1&cuil={{ item.alumno_cuil_snapshot|default:item.alumno.cuil }}">
-                                                        <i class="fa-solid fa-user-plus"></i> Inscribir a grupo
-                                                    </a>
+                                                    <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="accion" value="inscribir_grupo">
+                                                        <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
+                                                        <input type="hidden" name="grupo_id" value="{{ grupo.pk }}">
+                                                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                        <button class="btn btn-primary btn-sm" type="submit">
+                                                            <i class="fa-solid fa-user-plus"></i> Inscribir a grupo
+                                                        </button>
+                                                    </form>
                                                 {% endfor %}
                                             {% else %}
                                                 <div class="dropdown" data-cef-alumno-dropdown>
@@ -95,10 +103,18 @@
                                                     <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
                                                     {% for grupo in item.grupos_asignables %}
                                                         <li>
-                                                            <a class="dropdown-item" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1&cuil={{ item.alumno_cuil_snapshot|default:item.alumno.cuil }}">
-                                                                <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
-                                                                <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
-                                                            </a>
+                                                            <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="accion" value="inscribir_grupo">
+                                                                <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
+                                                                <input type="hidden" name="grupo_id" value="{{ grupo.pk }}">
+                                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                                <button class="dropdown-item" type="submit">
+                                                                    <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
+                                                                    <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                                </button>
+                                                            </form>
                                                         </li>
                                                     {% endfor %}
                                                     {% if item.grupos_asignables and item.grupos_bloqueados %}

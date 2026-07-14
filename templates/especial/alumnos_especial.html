@@ -1,112 +1,297 @@
-{% extends 'archivos/base/layout.html' %}
-{% load static %}
+{% extends "cef/base_operativo_cef.html" %}
 
-{% block content %}
+{% block cef_subtitle %}Gestión de Alumnos CEF.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Alumnos <span>» Gestión de Alumnos</span></h2>
+        <div class="cef-panel-actions">
+            <button class="btn btn-primary" type="button" data-open-personas-modal>
+                <i class="fa-solid fa-user-plus"></i> Agregar alumno
+            </button>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+            <div class="cef-tools-right">
+                <div class="cef-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchAlumnos" type="search" placeholder="Buscar…" data-cef-table-search>
+                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if alumnos_banco_tabla_pendiente %}
+            <div class="alert alert-warning mb-3">
+                El banco de alumnos CEF está pendiente de creación en base de datos.
+            </div>
+        {% endif %}
+
+        {% if alumnos %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt" data-cef-table>
+                    <thead>
+                        <tr>
+                            <th>Alumno</th>
+                            <th>CUIL</th>
+                            <th>Documento</th>
+                            <th>Estado en CEF</th>
+                            <th>Fecha alta</th>
+                            <th>Grupos / inscripciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in alumnos %}
+                            <tr>
+                                <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
+                                <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
+                                <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
+                                <td>
+                                    <span class="badge text-bg-{% if item.estado == 'activo' %}success{% elif item.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                        {{ item.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>{{ item.fecha_alta|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if item.inscripciones_grupo %}
+                                        {% for inscripcion in item.inscripciones_grupo %}
+                                            <span class="btn btn-outline-primary btn-sm mb-1 disabled" aria-disabled="true">
+                                                Grupo {{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}
+                                            </span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted small">Sin grupo asignado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="cef-act-cell">
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        {% if grupos_disponibles %}
+                                            {% if item.grupos_asignables|length == 1 and not item.grupos_bloqueados %}
+                                                {% for grupo in item.grupos_asignables %}
+                                                    <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="accion" value="inscribir_grupo">
+                                                        <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
+                                                        <input type="hidden" name="grupo_id" value="{{ grupo.pk }}">
+                                                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                        <button class="btn btn-primary btn-sm" type="submit">
+                                                            <i class="fa-solid fa-user-plus"></i> Inscribir a grupo
+                                                        </button>
+                                                    </form>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="dropdown" data-cef-alumno-dropdown>
+                                                    <button class="btn {% if item.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
+                                                        <i class="fa-solid fa-user-plus"></i> {% if item.grupos_asignables %}Inscribir a grupo{% elif item.grupos_bloqueados %}Ya inscripto a grupo{% else %}Sin grupos disponibles{% endif %}
+                                                    </button>
+                                                    <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
+                                                    {% for grupo in item.grupos_asignables %}
+                                                        <li>
+                                                            <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="accion" value="inscribir_grupo">
+                                                                <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
+                                                                <input type="hidden" name="grupo_id" value="{{ grupo.pk }}">
+                                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                                <button class="dropdown-item" type="submit">
+                                                                    <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
+                                                                    <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    {% endfor %}
+                                                    {% if item.grupos_asignables and item.grupos_bloqueados %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                    {% endif %}
+                                                    {% for inscripcion in item.grupos_bloqueados %}
+                                                        <li>
+                                                            <span class="dropdown-item disabled" aria-disabled="true">
+                                                                <span>Grupo {{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}</span>
+                                                                <small>Ya inscripto{% if inscripcion.fecha_inscripcion %} desde {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}{% endif %}</small>
+                                                            </span>
+                                                        </li>
+                                                    {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted small">Sin grupos cargados</span>
+                                        {% endif %}
+                                        {% if item.url_editar_alumno %}
+                                            <a class="btn btn-outline-primary btn-sm" title="Editar datos del alumno" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
+                                                <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif alumnos_banco_tabla_pendiente %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Listado pendiente hasta crear la tabla cef.alumnos_cef.
+            </div>
+        {% elif cef_context.puede_operar %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-user-magnifying-glass" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavía no hay alumnos en el banco de este CEF y ciclo.
+            </div>
+        {% else %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un CUE-Anexo y un ciclo para ver alumnos.
+            </div>
+        {% endif %}
+
+        <div class="cef-tfoot">
+            <span class="cef-tfoot-count" data-cef-table-count>{{ alumnos|length }} registros</span>
+            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
+    </div>
+</div>
+
 <style>
-    .cef-director-wrapper { max-width: 1180px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
-    .cef-director-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
-    .cef-director-title h1 { margin: 0; color: #1a4f8a; font-size: 1.45rem; font-weight: 800; }
-    .cef-director-title p { margin: .25rem 0 0; color: #60758a; font-size: .9rem; font-weight: 600; }
-    .cef-director-nav { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1rem; }
-    .cef-director-nav .btn { font-weight: 700; font-size: .84rem; }
-    .cef-card { border: 1px solid #d8e4f2; border-radius: .85rem; background: #fff; box-shadow: 0 10px 24px rgba(18, 52, 86, .07); overflow: hidden; margin-bottom: 1rem; }
-    .cef-card-header { padding: .85rem 1rem; background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%); border-bottom: 1px solid #d8e4f2; color: #20364d; font-weight: 800; }
-    .cef-card-body { padding: 1rem; }
-    .cef-muted { color: #60758a; }
-    .cef-badge-soft { display: inline-flex; align-items: center; gap: .25rem; padding: .22rem .55rem; border-radius: 999px; background: #eef5ff; color: #1a4f8a; font-size: .78rem; font-weight: 800; }
-    .cef-selector-form { display: flex; flex-wrap: wrap; align-items: end; gap: .6rem; }
-    .cef-selector-form label { color: #29435a; font-size: .8rem; font-weight: 800; margin-bottom: .25rem; }
-    .cef-selector-form select { min-width: 260px; }
-    @media (max-width: 768px) { .cef-director-wrapper { padding: .85rem .55rem 2rem; } .cef-selector-form select { min-width: 100%; } }
+    .cef-alumno-dropdown-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 260px;
+        padding: .35rem;
+    }
+
+    .cef-alumno-dropdown-menu .dropdown-item {
+        background: transparent;
+        border: 0;
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        display: block;
+        font-size: var(--fs-sm);
+        height: auto;
+        justify-content: flex-start;
+        line-height: 1.25;
+        margin: 0;
+        min-height: 0;
+        padding: .45rem .55rem;
+        text-align: left;
+        white-space: normal;
+        width: 100%;
+    }
+
+    .cef-alumno-dropdown-menu .dropdown-item:hover,
+    .cef-alumno-dropdown-menu .dropdown-item:focus {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-alumno-dropdown-menu .dropdown-item.disabled {
+        background: var(--surface-soft);
+        color: var(--slate-600);
+        cursor: default;
+        opacity: .85;
+    }
+
+    .cef-alumno-dropdown-menu .dropdown-item span,
+    .cef-alumno-dropdown-menu .dropdown-item small {
+        display: block;
+    }
+
+    .cef-alumno-dropdown-menu .dropdown-item small {
+        color: var(--text-faint);
+        font-size: var(--fs-xs);
+        margin-top: .15rem;
+    }
+
+    .cef-alumno-dropdown-menu .dropdown-item.disabled small {
+        color: var(--green-700);
+        font-weight: 700;
+    }
 </style>
 
-<main class="cef-director-wrapper">
-    <section class="cef-director-header">
-        <div class="cef-director-title">
-            <h1>{{ title|default:"Alumnos Educación Especial" }}</h1>
-            <p>
-                Búsqueda y gestión de alumnos de Educación Especial.
-                {% if especial_context.cueanexo %}
-                    <span class="cef-badge-soft">Establecimiento activo: {{ especial_context.cueanexo }}</span>
-                {% endif %}
-            </p>
-        </div>
-    </section>
-
-    <nav class="cef-director-nav" aria-label="Menu interno Especial">
-        <a href="{% url 'especial:visualizacion_localizaciones' %}" class="btn btn-outline-primary">Volver a Localizaciones</a>
-        <a href="{% url 'especial:alumnos' %}" class="btn {% if active_menu == 'alumnos' %}btn-primary{% else %}btn-outline-primary{% endif %}">Alumnos</a>
-        <a href="{% url 'especial:carga_seccion' %}" class="btn btn-outline-primary">Secciones</a>
-    </nav>
-
-    <section class="cef-card">
-        <div class="cef-card-header">Validación de CUIL de alumno</div>
-        <div class="cef-card-body">
-            {% if especial_context.cueanexo %}
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-7">
-                        <label for="cuilAlumnoInput" class="form-label fw-bold">CUIL del alumno</label>
-                        <input type="text" id="cuilAlumnoInput" class="form-control" placeholder="Ej: 20-12345678-6" autocomplete="off">
-                        <div id="cuilAlumnoResultado" class="form-text mt-2">Ingresá un CUIL para validar formato y buscar al alumno.</div>
-                    </div>
-                    <div class="col-md-5 d-flex gap-2">
-                        <button type="button" class="btn btn-outline-primary" id="btnValidarCuilAlumno">Validar CUIL</button>
-                    </div>
-                </div>
-            {% else %}
-                <div class="alert alert-warning mb-0">No hay un establecimiento activo seleccionado para validar alumnos.</div>
-            {% endif %}
-        </div>
-    </section>
-</main>
-
+{% include "cef/modal_busqueda_alumno_cef.html" %}
 <script>
 (function () {
-    const input = document.getElementById("cuilAlumnoInput");
-    const button = document.getElementById("btnValidarCuilAlumno");
-    const result = document.getElementById("cuilAlumnoResultado");
+    if (window.cefAlumnoDropdownReady) return;
+    window.cefAlumnoDropdownReady = true;
 
-    if (!input || !button || !result) {
-        return;
+    function closeDropdown(dropdown) {
+        if (!dropdown) return;
+        var toggle = dropdown.querySelector("[data-cef-alumno-dropdown-toggle]");
+        var menu = dropdown.querySelector("[data-cef-alumno-dropdown-menu]");
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+        if (menu) {
+            menu.classList.remove("show");
+            menu.removeAttribute("style");
+        }
     }
 
-    function setResult(message, ok) {
-        result.textContent = message;
-        result.classList.remove("text-success", "text-danger", "text-muted");
-        result.classList.add(ok ? "text-success" : "text-danger");
+    function closeOtherDropdowns(current) {
+        document.querySelectorAll("[data-cef-alumno-dropdown]").forEach(function(dropdown) {
+            if (dropdown !== current) closeDropdown(dropdown);
+        });
     }
 
-    button.addEventListener("click", function () {
-        const cuil = input.value || "";
+    function positionMenu(toggle, menu) {
+        var rect = toggle.getBoundingClientRect();
+        var tableWrap = toggle.closest(".cef-table-wrap");
+        var bounds = tableWrap ? tableWrap.getBoundingClientRect() : { left: 12, right: window.innerWidth - 12 };
+        var menuWidth = Math.min(320, window.innerWidth - 24);
+        var left = Math.min(rect.left, bounds.right - menuWidth - 8);
+        menu.style.position = "fixed";
+        menu.style.top = (rect.bottom + 4) + "px";
+        menu.style.left = Math.max(bounds.left + 8, left) + "px";
+        menu.style.width = menuWidth + "px";
+        menu.style.zIndex = "1090";
+    }
 
-        if (!cuil.trim()) {
-            setResult("Ingresá un CUIL para validar.", false);
+    document.addEventListener("click", function(event) {
+        var toggle = event.target.closest("[data-cef-alumno-dropdown-toggle]");
+        if (toggle) {
+            event.preventDefault();
+            var dropdown = toggle.closest("[data-cef-alumno-dropdown]");
+            var menu = dropdown ? dropdown.querySelector("[data-cef-alumno-dropdown-menu]") : null;
+            if (!dropdown || !menu) return;
+
+            var willOpen = !menu.classList.contains("show");
+            closeOtherDropdowns(dropdown);
+            toggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+            menu.classList.toggle("show", willOpen);
+            if (willOpen) {
+                positionMenu(toggle, menu);
+            } else {
+                menu.removeAttribute("style");
+            }
             return;
         }
 
-        // Se usa el endpoint común de validación de padrón/alumnos
-        const url = "/alumnos/api/validar_cuil/?cuil=" + encodeURIComponent(cuil);
+        if (!event.target.closest("[data-cef-alumno-dropdown-menu]")) {
+            closeOtherDropdowns(null);
+        }
+    });
 
-        fetch(url, {
-            method: "GET",
-            headers: {"X-Requested-With": "XMLHttpRequest"}
-        })
-        .then(function (response) { return response.json(); })
-        .then(function (data) {
-            if (data.valido) {
-                setResult(data.mensaje + " CUIL normalizado: " + data.cuil, true);
-                return;
-            }
-
-            const errores = data.errores && data.errores.length
-                ? data.errores.join(" ")
-                : data.mensaje;
-
-            setResult(errores, false);
-        })
-        .catch(function () {
-            setResult("No se pudo validar el CUIL en este momento.", false);
-        });
+    window.addEventListener("scroll", function() {
+        closeOtherDropdowns(null);
+    }, true);
+    window.addEventListener("resize", function() {
+        closeOtherDropdowns(null);
     });
 })();
 </script>

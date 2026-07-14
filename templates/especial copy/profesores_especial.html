@@ -1,0 +1,405 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Gestión de Profesores CEF.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Profesores <span>» Gestión de Profesores</span></h2>
+        <div class="cef-panel-actions">
+            <button class="btn btn-primary" type="button" data-open-docentes-modal>
+                <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+            </button>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+            <div class="cef-tools-right">
+                <div class="cef-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchProfesores" type="search" placeholder="Buscar..." data-cef-table-search>
+                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if docentes_banco_tabla_pendiente %}
+            <div class="alert alert-warning mb-3">
+                El banco de profesores CEF está pendiente de creación en base de datos.
+            </div>
+        {% endif %}
+
+        {% if docentes %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt" data-cef-table>
+                    <thead>
+                        <tr>
+                            <th>Profesor</th>
+                            <th>CUIL</th>
+                            <th>DNI</th>
+                            <th>Estado BNH</th>
+                            <th>Estado en CEF</th>
+                            <th>Fecha alta</th>
+                            <th>Grupos asignados</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for docente_banco in docentes %}
+                            <tr>
+                                <td><strong>{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}</strong></td>
+                                <td>{{ docente_banco.docente_cuil }}</td>
+                                <td>{{ docente_banco.docente_dni_snapshot|default:"-" }}</td>
+                                <td>{{ docente_banco.docente_estado_bnh_snapshot|default:"-" }}</td>
+                                <td>
+                                    <span class="badge text-bg-{% if docente_banco.estado == 'activo' %}success{% elif docente_banco.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                        {{ docente_banco.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>{{ docente_banco.fecha_alta|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if docente_banco.asignaciones_grupo %}
+                                        {% for asignacion in docente_banco.asignaciones_grupo %}
+                                            <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'cef:docentes_grupo' asignacion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }} - {{ asignacion.get_rol_display }}{% if asignacion.estado != 'activo' %} - {{ asignacion.get_estado_display }}{% endif %}
+                                            </a>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted small">Sin grupo asignado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="cef-act-cell">
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        {% if grupos_disponibles %}
+                                            {% if docente_banco.grupos_asignables|length == 1 and not docente_banco.grupos_bloqueados %}
+                                                {% for grupo in docente_banco.grupos_asignables %}
+                                                    <a class="btn btn-primary btn-sm" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                        <i class="fa-solid fa-user-plus"></i> Asignar a grupo
+                                                    </a>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="dropdown" data-cef-profesor-dropdown>
+                                                    <button class="btn {% if docente_banco.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-profesor-dropdown-toggle aria-expanded="false">
+                                                        <i class="fa-solid fa-user-plus"></i> {% if docente_banco.grupos_asignables %}Asignar a grupo{% elif docente_banco.grupos_bloqueados %}Ya asignado a grupo{% else %}Sin grupos disponibles{% endif %}
+                                                    </button>
+                                                    <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
+                                                    {% for grupo in docente_banco.grupos_asignables %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                                <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
+                                                                <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                            </a>
+                                                        </li>
+                                                    {% endfor %}
+                                                    {% if docente_banco.grupos_asignables and docente_banco.grupos_bloqueados %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                    {% endif %}
+                                                    {% for asignacion in docente_banco.grupos_bloqueados %}
+                                                        <li>
+                                                            <span class="dropdown-item disabled" aria-disabled="true">
+                                                                <span>Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }}</span>
+                                                                <small>Ya asignado como {{ asignacion.get_rol_display }}</small>
+                                                            </span>
+                                                        </li>
+                                                    {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted small">Sin grupos cargados</span>
+                                            <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                <i class="fa-solid fa-plus"></i> Crear grupo
+                                            </a>
+                                        {% endif %}
+                                        <a class="btn btn-outline-primary btn-sm" title="Editar datos del profesor" href="{{ docente_banco.url_editar_profesor }}" target="_blank" rel="noopener">
+                                            <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif docentes_banco_tabla_pendiente %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Listado pendiente hasta crear la tabla cef.docentes_cef.
+            </div>
+        {% elif cef_context.puede_operar %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-chalkboard-user" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavía no hay profesores en el banco de este CEF y ciclo.
+            </div>
+        {% else %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un CUE-Anexo y un ciclo para ver profesores.
+            </div>
+        {% endif %}
+
+        <div class="cef-tfoot">
+            <span class="cef-tfoot-count" data-cef-table-count>{{ docentes|length }} registros</span>
+            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+{% include "cef/modal_busqueda_docente_cef.html" %}
+
+<style>
+    .cef-profesor-dropdown-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 260px;
+        padding: .35rem;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item {
+        background: transparent;
+        border: 0;
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        display: block;
+        font-size: var(--fs-sm);
+        height: auto;
+        justify-content: flex-start;
+        line-height: 1.25;
+        margin: 0;
+        min-height: 0;
+        padding: .45rem .55rem;
+        text-align: left;
+        white-space: normal;
+        width: 100%;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item:hover,
+    .cef-profesor-dropdown-menu .dropdown-item:focus {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item.disabled {
+        background: var(--surface-soft);
+        color: var(--slate-600);
+        cursor: default;
+        opacity: .85;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item span,
+    .cef-profesor-dropdown-menu .dropdown-item small {
+        display: block;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item small {
+        color: var(--text-faint);
+        font-size: var(--fs-xs);
+        margin-top: .15rem;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item.disabled small {
+        color: var(--green-700);
+        font-weight: 700;
+    }
+</style>
+
+<div id="modalAsignarProfesorGrupo" class="cef-docente-overlay{% if asignacion_modal_abierto %} is-open{% endif %}" aria-hidden="{% if asignacion_modal_abierto %}false{% else %}true{% endif %}">
+    <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="asignarProfesorGrupoTitulo">
+        <div class="cef-docente-modal-head">
+            <h2 id="asignarProfesorGrupoTitulo" class="cef-docente-modal-title">
+                <i class="fa-solid fa-user-check me-2"></i>Asignar profesor <span>» Grupo</span>
+            </h2>
+            <button class="cef-docente-close" type="button" aria-label="Cerrar" data-cef-asignar-grupo-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="cef-docente-modal-body">
+            <div class="cef-context-pill mb-3">
+                <i class="fa-solid fa-chalkboard-user"></i>
+                <span data-cef-asignar-docente-label>{% if asignacion_docente_cuil %}{{ asignacion_docente_cuil }}{% else %}Profesor{% endif %}</span>
+                <span data-cef-asignar-grupo-label>{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.actividad }} N° {{ asignacion_grupo_seleccionado.numero }} - {{ asignacion_grupo_seleccionado.turno }}{% else %}Grupo{% endif %}</span>
+            </div>
+
+            <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                <input type="hidden" name="accion" value="asignar_grupo">
+                <input type="hidden" name="grupo_id" value="{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.pk }}{% endif %}" data-cef-asignar-grupo-id>
+                <input type="hidden" name="cuil" value="{{ asignacion_docente_cuil }}" data-cef-asignar-docente-cuil>
+
+                {% if asignacion_modal_error %}
+                    <div class="alert alert-danger mb-3">{{ asignacion_modal_error }}</div>
+                {% endif %}
+
+                {% if docente_grupo_form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">{{ docente_grupo_form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="cef-form-grid">
+                    {% for field in docente_grupo_form %}
+                        <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="cef-error">{{ field.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="cef-form-actions mt-3">
+                    <button class="btn btn-outline-secondary" type="button" data-cef-asignar-grupo-close>
+                        <i class="fa-solid fa-xmark"></i> Cancelar
+                    </button>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fa-solid fa-user-check"></i> Asociar profesor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    if (!window.cefProfesorDropdownReady) {
+        window.cefProfesorDropdownReady = true;
+
+        function closeDropdown(dropdown) {
+            if (!dropdown) return;
+            var toggle = dropdown.querySelector("[data-cef-profesor-dropdown-toggle]");
+            var menu = dropdown.querySelector("[data-cef-profesor-dropdown-menu]");
+            if (toggle) toggle.setAttribute("aria-expanded", "false");
+            if (menu) {
+                menu.classList.remove("show");
+                menu.removeAttribute("style");
+            }
+        }
+
+        function closeOtherDropdowns(current) {
+            document.querySelectorAll("[data-cef-profesor-dropdown]").forEach(function(dropdown) {
+                if (dropdown !== current) closeDropdown(dropdown);
+            });
+        }
+
+        function positionMenu(toggle, menu) {
+            var rect = toggle.getBoundingClientRect();
+            var menuWidth = Math.min(320, window.innerWidth - 24);
+            var left = Math.min(rect.left, window.innerWidth - menuWidth - 12);
+            menu.style.position = "fixed";
+            menu.style.top = (rect.bottom + 4) + "px";
+            menu.style.left = Math.max(12, left) + "px";
+            menu.style.width = menuWidth + "px";
+            menu.style.zIndex = "1090";
+        }
+
+        document.addEventListener("click", function(event) {
+            var toggle = event.target.closest("[data-cef-profesor-dropdown-toggle]");
+            if (toggle) {
+                event.preventDefault();
+                var dropdown = toggle.closest("[data-cef-profesor-dropdown]");
+                var menu = dropdown ? dropdown.querySelector("[data-cef-profesor-dropdown-menu]") : null;
+                if (!dropdown || !menu) return;
+
+                var willOpen = !menu.classList.contains("show");
+                closeOtherDropdowns(dropdown);
+                toggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+                menu.classList.toggle("show", willOpen);
+                if (willOpen) {
+                    positionMenu(toggle, menu);
+                } else {
+                    menu.removeAttribute("style");
+                }
+                return;
+            }
+
+            if (!event.target.closest("[data-cef-profesor-dropdown-menu]")) {
+                closeOtherDropdowns(null);
+            }
+        });
+
+        window.addEventListener("scroll", function() {
+            closeOtherDropdowns(null);
+        }, true);
+        window.addEventListener("resize", function() {
+            closeOtherDropdowns(null);
+        });
+    }
+
+    function closeProfesorDropdowns() {
+        document.querySelectorAll("[data-cef-profesor-dropdown]").forEach(function(dropdown) {
+            var toggle = dropdown.querySelector("[data-cef-profesor-dropdown-toggle]");
+            var menu = dropdown.querySelector("[data-cef-profesor-dropdown-menu]");
+            if (toggle) toggle.setAttribute("aria-expanded", "false");
+            if (menu) {
+                menu.classList.remove("show");
+                menu.removeAttribute("style");
+            }
+        });
+    }
+
+    var asignarModal = document.getElementById("modalAsignarProfesorGrupo");
+    if (!asignarModal || window.cefAsignarProfesorGrupoReady) return;
+    window.cefAsignarProfesorGrupoReady = true;
+
+    function setText(selector, value) {
+        var el = asignarModal.querySelector(selector);
+        if (el) el.textContent = value || "";
+    }
+
+    function setValue(selector, value) {
+        var el = asignarModal.querySelector(selector);
+        if (el) el.value = value || "";
+    }
+
+    function openAsignarModal(trigger) {
+        setValue("[data-cef-asignar-grupo-id]", trigger.dataset.grupoId);
+        setValue("[data-cef-asignar-docente-cuil]", trigger.dataset.docenteCuil);
+        setText("[data-cef-asignar-grupo-label]", trigger.dataset.grupoLabel);
+        setText(
+            "[data-cef-asignar-docente-label]",
+            (trigger.dataset.docenteNombre || "Profesor") + " - " + trigger.dataset.docenteCuil
+        );
+        asignarModal.classList.add("is-open");
+        asignarModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeAsignarModal() {
+        asignarModal.classList.remove("is-open");
+        asignarModal.setAttribute("aria-hidden", "true");
+    }
+
+    document.addEventListener("click", function(event) {
+        var trigger = event.target.closest("[data-cef-asignar-grupo-open]");
+        if (trigger) {
+            event.preventDefault();
+            if (trigger.classList.contains("disabled") || trigger.getAttribute("aria-disabled") === "true" || !trigger.dataset.grupoId) {
+                return;
+            }
+            closeProfesorDropdowns();
+            openAsignarModal(trigger);
+            return;
+        }
+
+        if (event.target === asignarModal || event.target.closest("[data-cef-asignar-grupo-close]")) {
+            event.preventDefault();
+            closeAsignarModal();
+        }
+    });
+})();
+</script>
+{% endblock %}

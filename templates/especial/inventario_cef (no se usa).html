@@ -1,0 +1,128 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Carga y edición de materiales por CUE-Anexo y ciclo lectivo.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Inventario <span>» Gestión de Inventario</span></h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-primary" href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}accion=agregar">
+                <i class="fa-solid fa-plus"></i> Agregar material
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+            <div class="cef-tools-right">
+                <div class="cef-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchInventario" type="search" placeholder="Buscar…" data-cef-table-search>
+                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if inventario %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt" data-cef-table>
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Cantidad</th>
+                            <th>Estado</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inventario %}
+                            <tr>
+                                <td><strong>{{ item.material|default:item.material_nombre_snapshot }}</strong></td>
+                                <td>
+                                    <span class="badge text-bg-primary">{{ item.cantidad }}</span>
+                                </td>
+                                <td>{{ item.estado_descripcion|default:"—" }}</td>
+                                <td>{{ item.observaciones|default:"—" }}</td>
+                                <td class="cef-act-cell">
+                                    <a title="Editar material" href="{% url 'cef:editar_inventario' item.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <span class="cef-dots" title="Más opciones">•••</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif cef_context.puede_operar %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-box-open" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavía no hay materiales cargados para este CEF y ciclo.
+            </div>
+        {% else %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un CUE-Anexo y un ciclo para ver inventario.
+            </div>
+        {% endif %}
+
+        <div class="cef-tfoot">
+            <span class="cef-tfoot-count" data-cef-table-count>{{ inventario|length }} registros</span>
+            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+{% if mostrar_form and form and cef_context.puede_operar %}
+    <div class="cef-edit-panel">
+        <h3>
+            <i class="fa-solid {% if item_edicion %}fa-pen-to-square{% else %}fa-plus-circle{% endif %} me-2" style="color:var(--primary)"></i>
+            {% if item_edicion %}Editar material{% else %}Agregar material{% endif %}
+        </h3>
+        <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+            <input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="cef-form-grid">
+                {% for field in form %}
+                    <div class="cef-field {% if field.name == 'estado_descripcion' or field.name == 'observaciones' %}span-3{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="cef-error">{{ field.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="cef-form-actions mt-4">
+                <a class="btn btn-outline-secondary" href="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar material
+                </button>
+            </div>
+        </form>
+    </div>
+{% endif %}
+
+{% endblock %}

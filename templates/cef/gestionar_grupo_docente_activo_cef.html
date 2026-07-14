@@ -1,0 +1,17 @@
+<h3>{{ titulo }}</h3>
+{% if docente_activo %}
+    <div class="cef-info-grid">
+        <div class="cef-info-item span-all"><span>Profesor</span><strong>{{ docente_activo.docente_nombre_snapshot|default:docente_activo.docente_cuil }}</strong></div>
+        <div class="cef-info-item"><span>CUIL</span><strong>{{ docente_activo.docente_cuil }}</strong></div>
+        <div class="cef-info-item"><span>DNI</span><strong>{{ docente_activo.docente_dni_snapshot|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Estado BNH</span><strong>{{ docente_activo.docente_estado_bnh_snapshot|default:"-" }}</strong></div>
+        <div class="cef-info-item"><span>Desde</span><strong>{% if docente_activo.fecha_desde %}{{ docente_activo.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+        <div class="cef-info-item"><span>Hasta</span><strong>{% if docente_activo.fecha_hasta %}{{ docente_activo.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+        <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ docente_activo.observaciones|default:"Sin observaciones" }}</strong></div>
+    </div>
+{% else %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        No hay {{ rol_texto }} activo para este curso.
+    </div>
+{% endif %}

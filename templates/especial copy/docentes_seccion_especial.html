@@ -1,0 +1,138 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Administración de profesores asignados a la sección seleccionada.{% endblock %}
+
+{% block especial_content %}
+<div class="especial-panel">
+    <div class="especial-panel-head">
+        <h2 class="especial-panel-title">Profesores asignados a la sección</h2>
+        <div class="especial-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a secciones
+            </a>
+            <button class="btn btn-primary" type="button" data-open-docentes-modal>
+                <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+            </button>
+        </div>
+    </div>
+
+    <div class="especial-panel-body">
+        {% if seccion %}
+            <div class="mb-3">
+                <span class="especial-context-pill">
+                    <i class="fa-solid fa-users"></i>
+                    <span><strong>{{ seccion_rotulo }}</strong></span>
+                    <span>{{ seccion.turno }}</span>
+                    <span>{{ seccion.hora_inicio|time:"H:i" }} - {{ seccion.hora_fin|time:"H:i" }}</span>
+                    <span>{{ seccion_dias_texto|default:"Sin dias cargados" }}</span>
+                </span>
+            </div>
+        {% endif %}
+
+        <p class="small text-muted mb-3">
+            Desde esta pantalla podés agregar, editar o dar de baja profesores asignados a esta seccion.
+        </p>
+
+        <div class="especial-tools">
+            <div class="especial-tools-left">
+                <span class="especial-tools-label">Mostrar</span>
+                <select data-especial-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="especial-tools-label">registros</span>
+            </div>
+            <div class="especial-tools-right">
+                <div class="especial-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchDocentesSeccion" type="search" placeholder="Buscar..." data-especial-table-search>
+                    <button type="button" class="especial-search-clear" data-especial-search-clear aria-label="Limpiar busqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if docentes %}
+            <div class="especial-table-wrap">
+                <table class="especial-dt" data-especial-table>
+                    <thead>
+                        <tr>
+                            <th>Docente</th>
+                            <th>CUIL</th>
+                            <th>DNI</th>
+                            <th>Rol</th>
+                            <th>Estado en esta sección</th>
+                            <th>Desde</th>
+                            <th>Hasta</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asignacion in docentes %}
+                            <tr>
+                                <td><strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong></td>
+                                <td>{{ asignacion.docente_cuil }}</td>
+                                <td>{{ asignacion.docente_dni_snapshot|default:"-" }}</td>
+                                <td>{{ asignacion.get_rol_display }}</td>
+                                <td>
+                                    <span class="badge text-bg-{% if asignacion.estado == 'activo' %}success{% elif asignacion.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                        {{ asignacion.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                                <td>{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                                <td>{{ asignacion.observaciones|default:"-" }}</td>
+                                <td class="especial-act-cell">
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:editar_docente_seccion' seccion.pk asignacion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                            <i class="fa-solid fa-pen-to-square"></i> Editar
+                                        </a>
+                                        {% if asignacion.estado == 'activo' %}
+                                        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0" data-confirm-baja-docente>
+                                            {% csrf_token %}
+                                            <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                            {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                            <input type="hidden" name="accion" value="baja">
+                                            <input type="hidden" name="docente_seccion_id" value="{{ asignacion.pk }}">
+                                            <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                                <i class="fa-solid fa-user-minus"></i> Dar de baja
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="especial-empty-state">
+                <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavia no hay profesores asignados a esta sección.
+            </div>
+        {% endif %}
+
+        <div class="especial-tfoot">
+            <span class="especial-tfoot-count" data-especial-table-count>{{ docentes|length }} registros</span>
+            <div class="especial-tfoot-pagination" data-especial-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+{% include "especial/modal_busqueda_docente_especial.html" %}
+<script>
+(function () {
+    document.addEventListener("submit", function(event) {
+        var form = event.target.closest("[data-confirm-baja-docente]");
+        if (!form) return;
+        if (!window.confirm("¿Dar de baja a este profesor de la sección?")) {
+            event.preventDefault();
+        }
+    });
+})();
+</script>
+{% endblock %}
