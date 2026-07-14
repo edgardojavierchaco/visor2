@@ -437,12 +437,12 @@
                         <td>
                             {% if registro.asistencia == 'AUSENTE' %}<span class="badge"
                                 style="color: #95a5a6;">Ausente</span>
-                            {% elif registro.cantidad_palabras_leidas <= 20 %}<span class="badge"
-                                style="color: #e74c3c;">Debajo del Básico</span>
-                                {% elif registro.cantidad_palabras_leidas <= 46 %}<span class="badge"
-                                    style="color: #e67e22;">Básico</span>
-                                    {% elif registro.cantidad_palabras_leidas <= 70 %}<span class="badge"
-                                        style="color: #f1c40f;">Satisfactorio</span>
+                            {% elif registro.cantidad_palabras_leidas <= 20 %}
+                            <span class="badge"style="color: #e74c3c;">Debajo del Básico</span>
+                                {% elif registro.cantidad_palabras_leidas <= 46 %}
+                                <span class="badge"style="color: #e67e22;">Básico</span>
+                                    {% elif registro.cantidad_palabras_leidas <= 70 %}
+                                    <span class="badge"style="color: #f1c40f;">Satisfactorio</span>
                                         {% else %}<span class="badge" style="color: #2ecc71;">Avanzado</span>
                                         {% endif %}
                         </td>
@@ -457,10 +457,10 @@
                                 style="color: #95a5a6;">Ausente</span>
                             {% elif registro.puntaje_comprension < 3.40 %} <span class="badge" style="color: #e74c3c;">
                                 Debajo del Básico</span>
-                                {% elif registro.puntaje_comprension >= 3.40 and registro.puntaje_comprension <=
-                                    5.20%}<span class="badge" style="color: #e67e22;">Básico</span>
-                                    {% elif registro.puntaje_comprension > 5.20 and registro.puntaje_comprension <=
-                                        6.75%}<span class="badge" style="color: #f1c40f;">Satisfactorio</span>
+                                {% elif registro.puntaje_comprension >= 3.40 and registro.puntaje_comprension <= 5.20%}
+                                <span class="badge" style="color: #e67e22;">Básico</span>
+                                    {% elif registro.puntaje_comprension > 5.20 and registro.puntaje_comprension <= 6.75%}
+                                    <span class="badge" style="color: #f1c40f;">Satisfactorio</span>
                                         {% else %}<span class="badge" style="color: #2ecc71;">Avanzado</span>
                                         {% endif %}
                         </td>
@@ -498,8 +498,8 @@
                                 Debajo del Básico</span>
                                 {% elif registro.puntaje_comprension >= 3.40 and registro.puntaje_comprension <= 5.20 %}
                                     <span class="badge" style="color: #e67e22;">Básico</span>
-                                    {% elif registro.puntaje_comprension > 5.20 and registro.puntaje_comprension <=
-                                        6.75%} <span class="badge" style="color: #f1c40f;">Satisfactorio</span>
+                                    {% elif registro.puntaje_comprension > 5.20 and registro.puntaje_comprension <= 6.75%} 
+                                    <span class="badge" style="color: #f1c40f;">Satisfactorio</span>
                                         {% else %}<span class="badge" style="color: #2ecc71;">Avanzado</span>
                                         {% endif %}
                         </td>
