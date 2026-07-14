@@ -1,13 +1,13 @@
+from django.core.exceptions import ValidationError
 from apps.bnhpersonas.services.pipeline import BaseStep
 
 
 class ValidationStep(BaseStep):
 
-    name = "ValidationStep"
-
     @classmethod
     def apply(cls, obj, context):
 
-        obj.full_clean()
+        if hasattr(obj, "full_clean"):
+            obj.full_clean()
 
         return obj

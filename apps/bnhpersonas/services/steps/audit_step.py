@@ -4,8 +4,6 @@ from apps.bnhpersonas.services.pipeline import BaseStep
 
 class AuditStep(BaseStep):
 
-    name = "AuditStep"
-
     @classmethod
     def apply(cls, obj, context):
 
@@ -13,7 +11,7 @@ class AuditStep(BaseStep):
 
         if user and user.is_authenticated:
 
-            if not getattr(obj, "pk", None):
+            if not obj.pk:
                 obj.usuario_creacion = user
 
             obj.usuario_modificacion = user

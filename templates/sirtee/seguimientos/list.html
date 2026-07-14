@@ -1,0 +1,293 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card shadow">
+
+
+<div class="card-header d-flex justify-content-between align-items-center">
+
+
+<h4>
+Seguimientos
+</h4>
+
+{% if puede_gestionar %}
+
+<a
+href="{% url 'sirtee:seguimientos-create' %}"
+class="btn btn-success">
+
+Nuevo seguimiento
+
+</a>
+{% endif %}
+
+</div>
+
+
+
+
+<div class="card-body">
+
+
+
+{% if seguimientos %}
+
+
+
+<div class="table-responsive">
+
+
+<table class="table table-striped table-hover">
+
+
+<thead>
+
+<tr>
+
+<th>
+Fecha
+</th>
+
+
+<th>
+Estado
+</th>
+
+
+<th>
+Relevamiento
+</th>
+
+
+<th>
+Hallazgo
+</th>
+
+
+<th>
+Intervención
+</th>
+
+
+<th>
+Usuario
+</th>
+
+
+<th>
+Acciones
+</th>
+
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+
+
+{% for seguimiento in seguimientos %}
+
+
+<tr>
+
+
+<td>
+
+{{ seguimiento.fecha|date:"d/m/Y H:i" }}
+
+</td>
+
+
+
+<td>
+
+
+{% if seguimiento.estado == "RESUELTO" %}
+
+<span class="badge bg-success">
+{{ seguimiento.get_estado_display }}
+</span>
+
+
+{% elif seguimiento.estado == "BLOQUEADO" %}
+
+<span class="badge bg-danger">
+{{ seguimiento.get_estado_display }}
+</span>
+
+
+{% elif seguimiento.estado == "EN_PROCESO" %}
+
+<span class="badge bg-warning text-dark">
+{{ seguimiento.get_estado_display }}
+</span>
+
+
+{% else %}
+
+<span class="badge bg-secondary">
+{{ seguimiento.get_estado_display }}
+</span>
+
+
+{% endif %}
+
+
+
+</td>
+
+
+
+
+<td>
+
+{{ seguimiento.relevamiento }}
+
+</td>
+
+
+
+
+
+<td>
+
+
+{% if seguimiento.hallazgo %}
+
+{{ seguimiento.hallazgo.titulo }}
+
+{% else %}
+
+-
+
+{% endif %}
+
+
+</td>
+
+
+
+
+
+<td>
+
+
+{% if seguimiento.intervencion %}
+
+{{ seguimiento.intervencion.titulo }}
+
+{% else %}
+
+-
+
+{% endif %}
+
+
+</td>
+
+
+
+
+<td>
+
+{{ seguimiento.usuario }}
+
+</td>
+
+
+
+
+
+<td>
+
+
+<div class="btn-group">
+
+
+<a
+href="{% url 'sirtee:seguimientos-detail' seguimiento.pk %}"
+class="btn btn-sm btn-primary">
+
+Ver
+
+</a>
+
+
+{% if puede_gestionar %}
+<a
+href="{% url 'sirtee:seguimientos-update' seguimiento.pk %}"
+class="btn btn-sm btn-warning">
+
+Editar
+
+</a>
+
+
+
+<a
+href="{% url 'sirtee:seguimientos-delete' seguimiento.pk %}"
+class="btn btn-sm btn-danger">
+
+Eliminar
+
+</a>
+{% endif %}
+
+</div>
+
+
+</td>
+
+
+</tr>
+
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+
+{% else %}
+
+
+<div class="alert alert-info">
+
+No existen seguimientos registrados.
+
+</div>
+
+
+{% endif %}
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

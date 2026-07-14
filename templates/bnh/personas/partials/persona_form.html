@@ -1,0 +1,111 @@
+<form id="personaForm">
+
+{% csrf_token %}
+
+<input type="hidden" name="persona_id" id="persona_id">
+
+
+<div class="row g-3">
+
+    <div class="col-md-4">
+        <label class="form-label">CUIL</label>
+        <input 
+            class="form-control"
+            type="text"
+            id="id_cuil"
+            name="cuil"
+            autocomplete="off">
+        <small id="cuil_status"></small>
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label">DNI</label>
+        {{ form.dni }}
+        <small id="dni_status" class="text-danger"> </small>
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label">Apellido</label>
+        {{ form.apellido }}
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label">Nombre</label>
+        {{ form.nombre }}
+    </div>
+
+    <div class="col-md-4">
+
+        <label class="form-label">Fecha nacimiento</label>
+
+        {{ form.f_nacimiento }}
+
+        <small 
+            id="edad_status"
+            class="text-danger">
+        </small>
+
+    </div>
+    
+    <div class="col-md-4">
+        <label class="form-label">Sexo</label>
+        {{ form.sexo }}
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label">Provincia</label>
+        {{ form.provincia }}
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label">Localidad</label>
+        {{ form.localidad }}
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Código Área</label>
+        {{ form.codigo_area }}
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Teléfono</label>
+        {{ form.telefono }}
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label">Whatsapp</label>
+        <div class="form-check form-switch">
+
+            {{ form.whatsapp }}
+
+            <label 
+                class="form-check-label"
+                for="{{ form.whatsapp.id_for_label }}">
+
+                Usa WhatsApp
+
+            </label>
+
+        </div>
+    </div>
+
+
+</div>
+
+
+<button 
+    class="btn btn-primary mt-3"
+    type="button"
+    onclick="guardarPersona()">
+
+    Guardar Persona
+</button>
+
+
+</form>

@@ -1,0 +1,292 @@
+{% extends "sirtee/base.html" %}
+
+
+
+{% block sirtee_content %}
+
+
+<div class="container mt-4">
+
+
+
+<div class="card shadow">
+
+
+<div class="card-header">
+
+
+<h3>
+
+{{ hallazgo.titulo }}
+
+</h3>
+
+
+</div>
+
+
+
+
+<div class="card-body">
+
+
+
+<div class="row">
+
+
+<div class="col-md-8">
+
+
+<p>
+
+<strong>Descripción:</strong>
+
+<br>
+
+{{ hallazgo.descripcion }}
+
+</p>
+
+
+
+<p>
+
+<strong>Ubicación:</strong>
+
+{{ hallazgo.ubicacion|default:"Sin especificar" }}
+
+</p>
+
+
+
+<p>
+
+<strong>Observación técnica:</strong>
+
+<br>
+
+{{ hallazgo.observacion_tecnica|default:"-" }}
+
+</p>
+
+
+
+<p>
+
+<strong>Recomendación:</strong>
+
+<br>
+
+{{ hallazgo.recomendacion|default:"-" }}
+
+</p>
+
+
+</div>
+
+
+
+
+<div class="col-md-4">
+
+
+<p>
+
+<strong>Área:</strong>
+
+<br>
+
+{{ hallazgo.area_afectada }}
+
+</p>
+
+
+
+<p>
+
+<strong>Sistema:</strong>
+
+<br>
+
+{{ hallazgo.sistema_constructivo }}
+
+</p>
+
+
+
+<p>
+
+<strong>Tipo:</strong>
+
+<br>
+
+{{ hallazgo.tipo_hallazgo }}
+
+</p>
+
+
+
+<p>
+
+<strong>Criticidad:</strong>
+
+
+<br>
+
+
+<span class="badge bg-{{ hallazgo.badge_color }}">
+
+{{ hallazgo.criticidad }}
+
+</span>
+
+
+</p>
+
+
+
+<p>
+
+<strong>Estado:</strong>
+
+<br>
+
+{{ hallazgo.estado }}
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<hr>
+
+
+
+<h5>
+
+<i class="bi bi-images"></i>
+
+Evidencias
+
+</h5>
+
+
+
+<div class="row">
+
+
+
+{% for evidencia in hallazgo.evidencias.all %}
+
+
+
+<div class="col-md-3 mb-3">
+
+
+
+<div class="card">
+
+
+
+{% if evidencia.es_imagen %}
+
+
+<img src="{{ evidencia.url }}"
+class="card-img-top">
+
+
+
+{% endif %}
+
+
+
+<div class="card-body">
+
+
+<p class="small">
+
+{{ evidencia.nombre_archivo }}
+
+</p>
+
+
+
+<a href="{{ evidencia.url }}"
+target="_blank"
+class="btn btn-sm btn-primary">
+
+Abrir
+
+</a>
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+{% empty %}
+
+
+
+<div class="alert alert-secondary">
+
+No posee evidencias.
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+
+{% if puede_gestionar %}
+<a href="{% url 'sirtee:hallazgos-update' hallazgo.pk %}"
+class="btn btn-warning">
+
+Editar
+
+</a>
+{% endif %}
+
+
+<a href="{% url 'sirtee:hallazgos-list' %}"
+class="btn btn-secondary">
+
+Volver
+
+</a>
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% endblock %}

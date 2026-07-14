@@ -1,0 +1,110 @@
+{% extends "sirtee/base.html" %}
+
+
+
+{% block sirtee_content %}
+
+
+<div class="container mt-5">
+
+
+    <div class="card border-danger">
+
+
+        <div class="card-header bg-danger text-white">
+
+
+            <h4>
+                Eliminar relevamiento
+            </h4>
+
+
+        </div>
+
+
+
+
+        <div class="card-body">
+
+
+            <p>
+                ¿Está seguro que desea eliminar este relevamiento?
+            </p>
+
+
+
+            <div class="alert alert-warning">
+
+
+                <strong>
+                    CUEANEXO:
+                </strong>
+
+                {{ relevamiento.cueanexo }}
+
+
+                <br>
+
+
+                <strong>
+                    Fecha:
+                </strong>
+
+                {{ relevamiento.fecha|date:"d/m/Y" }}
+
+
+
+            </div>
+
+
+
+
+            <form method="post">
+
+
+                {% csrf_token %}
+
+
+
+                <button
+                    type="submit"
+                    class="btn btn-danger">
+
+
+                    Confirmar eliminación
+
+
+                </button>
+
+
+
+
+                <a
+                    href="{% url 'sirtee:relevamientos-list' %}"
+                    class="btn btn-secondary">
+
+
+                    Cancelar
+
+
+                </a>
+
+
+
+            </form>
+
+
+
+        </div>
+
+
+
+    </div>
+
+
+
+</div>
+
+
+
+{% endblock %}

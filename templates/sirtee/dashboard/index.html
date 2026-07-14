@@ -1,0 +1,483 @@
+{% extends "sirtee/base.html" %}
+
+
+{% block sirtee_content %}
+
+
+<div class="container-fluid mt-4">
+
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+
+        <h3>
+            Dashboard Operativo SIRTEE
+        </h3>
+
+
+        <a
+            href="{% url 'sirtee:dashboard-mapa' %}"
+            class="btn btn-primary">
+
+            <i class="bi bi-map"></i>
+            Mapa Territorial
+
+        </a>
+
+
+    </div>
+
+
+
+    <!-- ===================== -->
+    <!-- TARJETAS INDICADORES -->
+    <!-- ===================== -->
+
+
+    <div class="row g-3">
+
+
+
+        <div class="col-xl-3 col-md-6">
+
+
+            <div class="card shadow-sm border-primary">
+
+
+                <div class="card-body">
+
+
+                    <h6 class="text-muted">
+                        Escuelas relevadas
+                    </h6>
+
+
+                    <h2 class="text-primary">
+
+                        {{ escuelas_relevadas }}
+
+                    </h2>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+        <div class="col-xl-3 col-md-6">
+
+
+            <div class="card shadow-sm border-success">
+
+
+                <div class="card-body">
+
+
+                    <h6 class="text-muted">
+                        Relevamientos
+                    </h6>
+
+
+                    <h2 class="text-success">
+
+                        {{ total_relevamientos }}
+
+                    </h2>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+
+        <div class="col-xl-3 col-md-6">
+
+
+            <div class="card shadow-sm border-danger">
+
+
+                <div class="card-body">
+
+
+                    <h6 class="text-muted">
+                        Hallazgos críticos
+                    </h6>
+
+
+                    <h2 class="text-danger">
+
+                        {{ hallazgos_criticos }}
+
+                    </h2>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+
+
+        <div class="col-xl-3 col-md-6">
+
+
+            <div class="card shadow-sm border-warning">
+
+
+                <div class="card-body">
+
+
+                    <h6 class="text-muted">
+                        Intervenciones pendientes
+                    </h6>
+
+
+                    <h2 class="text-warning">
+
+                        {{ intervenciones_pendientes }}
+
+                    </h2>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+    </div>
+
+
+
+
+
+    <hr class="my-4">
+
+
+
+
+
+    <div class="row g-4">
+
+
+
+        <!-- ========================= -->
+        <!-- ESTADO RELEVAMIENTOS -->
+        <!-- ========================= -->
+
+
+        <div class="col-lg-6">
+
+
+            <div class="card shadow-sm">
+
+
+                <div class="card-header">
+
+
+                    Estado de relevamientos
+
+
+                </div>
+
+
+
+                <div class="card-body">
+
+
+                    <table class="table table-hover">
+
+
+                        <thead>
+
+
+                            <tr>
+
+                                <th>
+                                    Estado
+                                </th>
+
+
+                                <th class="text-end">
+                                    Cantidad
+                                </th>
+
+
+                            </tr>
+
+
+                        </thead>
+
+
+
+                        <tbody>
+
+
+                        {% for item in relevamientos_estado %}
+
+
+                            <tr>
+
+
+                                <td>
+
+                                    {{ item.estado }}
+
+                                </td>
+
+
+
+                                <td class="text-end">
+
+
+                                    <span class="badge bg-primary">
+
+                                        {{ item.cantidad }}
+
+                                    </span>
+
+
+                                </td>
+
+
+                            </tr>
+
+
+                        {% empty %}
+
+
+                            <tr>
+
+
+                                <td colspan="2"
+                                    class="text-center text-muted">
+
+
+                                    Sin datos
+
+
+                                </td>
+
+
+                            </tr>
+
+
+                        {% endfor %}
+
+
+
+                        </tbody>
+
+
+                    </table>
+
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+
+
+        <!-- ========================= -->
+        <!-- AVANCE OBRAS -->
+        <!-- ========================= -->
+
+
+        <div class="col-lg-6">
+
+
+            <div class="card shadow-sm">
+
+
+                <div class="card-header">
+
+
+                    Avance promedio de obras
+
+
+                </div>
+
+
+
+                <div class="card-body text-center">
+
+
+
+                    <h1>
+
+
+                        {{ avance_obras }} %
+
+
+                    </h1>
+
+
+
+
+
+                    <div class="progress"
+                         style="height:25px;">
+
+
+
+                        <div
+                            class="progress-bar"
+                            role="progressbar"
+                            style="
+                            width:{{ avance_obras }}%;
+                            ">
+
+                        </div>
+
+
+
+                    </div>
+
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+    </div>
+
+
+
+
+
+
+    <!-- ========================= -->
+    <!-- ACCESOS RÁPIDOS -->
+    <!-- ========================= -->
+
+
+    <div class="row mt-4">
+
+
+        <div class="col-12">
+
+
+            <div class="card shadow-sm">
+
+
+                <div class="card-header">
+
+                    Accesos rápidos
+
+
+                </div>
+
+
+
+                <div class="card-body">
+
+                    {% if puede_gestionar %}
+                    <a
+                    href="{% url 'sirtee:relevamientos-list' %}"
+                    class="btn btn-outline-primary">
+
+
+                        Relevamientos
+
+
+                    </a>
+
+
+
+                    <a
+                    href="{% url 'sirtee:hallazgos-list' %}"
+                    class="btn btn-outline-danger">
+
+
+                        Hallazgos
+
+
+                    </a>
+
+
+
+
+                    <a
+                    href="{% url 'sirtee:intervenciones-list' %}"
+                    class="btn btn-outline-warning">
+
+
+                        Intervenciones
+
+
+                    </a>
+
+
+
+
+                    <a
+                    href="{% url 'sirtee:empresas-list' %}"
+                    class="btn btn-outline-success">
+
+
+                        Empresas
+
+
+                    </a>
+                    {% endif %}
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+
+
+</div>
+
+
+
+{% endblock %}

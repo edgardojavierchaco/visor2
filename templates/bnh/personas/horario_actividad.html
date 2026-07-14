@@ -1,0 +1,60 @@
+<ul class="list-group">
+
+
+{% for h in horarios %}
+
+
+<li class="list-group-item d-flex justify-content-between">
+
+
+<div>
+
+<strong>
+
+{{ h.dia }}
+
+</strong>
+
+
+{{ h.hora_desde|time:"H:i" }}
+
+-
+
+{{ h.hora_hasta|time:"H:i" }}
+
+
+</div>
+
+
+
+<button
+
+class="btn btn-sm btn-danger"
+
+onclick="eliminarHorario('{{ h.id }}')">
+
+X
+
+</button>
+
+
+
+</li>
+
+
+
+{% empty %}
+
+
+<li class="list-group-item">
+
+Sin horarios cargados
+
+</li>
+
+
+{% endfor %}
+
+
+
+</ul>

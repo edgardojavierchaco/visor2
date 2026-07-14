@@ -1,0 +1,300 @@
+<h4>Actividades registradas</h4>
+
+
+<table class="table table-bordered table-striped">
+
+<thead>
+<tr>
+
+<th>CUEANEXO</th>
+<th>Función</th>
+<th>Designación</th>
+<th>Turno</th>
+<th>Carga</th>
+<th>Acciones</th>
+
+</tr>
+</thead>
+
+
+<tbody>
+
+
+{% for actividad in actividades %}
+
+<tr>
+
+
+<td>
+{{ actividad.cueanexo }}
+</td>
+
+
+<td>
+{{ actividad.funciones }}
+</td>
+
+
+<td>
+{{ actividad.designacion }}
+</td>
+
+
+<td>
+{{ actividad.turno }}
+</td>
+
+
+<td>
+{{ actividad.carga_horaria }}
+</td>
+
+
+<td>
+
+
+<a 
+href="{% url 'bnhpersonas:editar_actividad' pk=actividad.id %}"
+class="btn btn-sm btn-primary">
+
+Editar
+
+</a>
+
+
+
+<button
+
+class="btn btn-sm btn-success"
+
+onclick="abrirHorarios('{{ actividad.id }}')">
+
+Horarios
+
+</button>
+
+
+
+</td>
+
+
+</tr>
+
+
+{% empty %}
+
+
+<tr>
+
+<td colspan="6">
+
+No hay actividades cargadas.
+
+</td>
+
+</tr>
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+</table>
+
+
+
+<!-- ============================= -->
+<!-- MODAL HORARIOS -->
+<!-- ============================= -->
+
+
+<div 
+id="horarioModal"
+class="modal fade"
+tabindex="-1">
+
+
+<div class="modal-dialog">
+
+
+<div class="modal-content">
+
+
+<div class="modal-header">
+
+<h5 class="modal-title">
+
+Asignar horarios
+
+</h5>
+
+
+<button 
+type="button"
+class="btn-close"
+onclick="cerrarHorarios()">
+
+</button>
+
+
+</div>
+
+
+
+<div class="modal-body">
+
+
+
+<form id="horarioForm">
+
+
+{% csrf_token %}
+
+
+<div class="mb-3">
+
+<label>
+Día
+</label>
+
+
+<select 
+class="form-select"
+name="dia"
+id="dia">
+
+
+<option value="LUNES">
+Lunes
+</option>
+
+
+<option value="MARTES">
+Martes
+</option>
+
+
+<option value="MIERCOLES">
+Miércoles
+</option>
+
+
+<option value="JUEVES">
+Jueves
+</option>
+
+
+<option value="VIERNES">
+Viernes
+</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+<div class="row">
+
+
+<div class="col">
+
+<label>
+Desde
+</label>
+
+
+<input
+
+type="time"
+
+name="hora_desde"
+
+class="form-control"
+
+>
+
+
+</div>
+
+
+
+<div class="col">
+
+
+<label>
+Hasta
+</label>
+
+
+<input
+
+type="time"
+
+name="hora_hasta"
+
+class="form-control"
+
+>
+
+
+</div>
+
+
+</div>
+
+
+
+<button
+
+type="button"
+
+onclick="guardarHorario()"
+
+class="btn btn-success mt-3">
+
+
+Agregar horario
+
+
+</button>
+
+
+</form>
+
+
+
+
+<hr>
+
+
+
+<h6>
+Horarios cargados
+</h6>
+
+
+
+<div id="horariosList">
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+</div>
