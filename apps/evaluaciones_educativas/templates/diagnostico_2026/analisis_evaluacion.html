@@ -379,6 +379,9 @@
             </li>
 
             <li><a href="javascript:void(0)" onclick="cambiarVista('lectura')">📖 Leer Material</a></li>
+            <li id="menu-progreso" style="display: {% if not hay_datos or not materia_sel or cueanexo == 'TODOS' %}none{% else %}block{% endif %};">
+                <a href="javascript:void(0)" onclick="activarProgreso()">📈 Ver serie Historica de Resultados</a>
+            </li>
         </ul>
     </aside>
 
@@ -673,6 +676,87 @@
             <p>No se ha cargado material para esta selección.</p>
             {% endif %}
         </div>
+
+        <!-- ── PANEL: PROGRESO 2025 → 2026 ──────────────────────────────── -->
+        <div id="vista_progreso" style="display: none;">
+            <h3 class="section-title">📈 serie Historica de Resultados de Alumnos — Diagnóstico 2025 → 2026</h3>
+
+            <div id="progreso-cargando" style="text-align:center; padding: 40px; display: none;">
+                <div style="font-size:2rem;">⏳</div>
+                <p>Cruzando datos 2025 y 2026...</p>
+            </div>
+            <div id="progreso-error" style="display:none; color:#e74c3c; padding: 20px;"></div>
+
+            <div id="progreso-contenido" style="display:none;">
+
+                <!-- Resumen numérico -->
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 25px;">
+                    <div class="info-card" style="flex:1; min-width:140px; text-align:center;">
+                        <div style="font-size:0.85rem; opacity:.8;">Total 2026</div>
+                        <div class="info-number" id="prog-total-2026">—</div>
+                    </div>
+                    <div class="info-card" style="flex:1; min-width:140px; text-align:center; background: linear-gradient(135deg,#27ae60,#2ecc71);">
+                        <div style="font-size:0.85rem; opacity:.9;">Mejoraron</div>
+                        <div class="info-number" id="prog-mejoro">—</div>
+                    </div>
+                    <div class="info-card" style="flex:1; min-width:140px; text-align:center; background: linear-gradient(135deg,#c0392b,#e74c3c);">
+                        <div style="font-size:0.85rem; opacity:.9;">Bajaron</div>
+                        <div class="info-number" id="prog-empeoro">—</div>
+                    </div>
+                    <div class="info-card" style="flex:1; min-width:140px; text-align:center; background: linear-gradient(135deg,#d35400,#e67e22);">
+                        <div style="font-size:0.85rem; opacity:.9;">Sin cambio</div>
+                        <div class="info-number" id="prog-igual">—</div>
+                    </div>
+                    <div class="info-card" style="flex:1; min-width:140px; text-align:center; background: linear-gradient(135deg,#7f8c8d,#95a5a6);">
+                        <div style="font-size:0.85rem; opacity:.9;">Sin datos 2025</div>
+                        <div class="info-number" id="prog-sin-datos">—</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="charts-grid" style="margin-bottom: 25px;">
+                    <div class="chart-card" style="max-width: 320px; min-width: 260px; flex: 0 0 auto;">
+                        <h4>Distribución de Tendencias</h4>
+                        <div style="position:relative; height:260px;">
+                            <canvas id="GraficoProgresoDonut"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card" style="flex:2; min-width:0;">
+                        <h4>Promedio General: 2025 vs 2026</h4>
+                        <div style="position:relative; height:260px;">
+                            <canvas id="GraficoProgresoGeneral"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card" style="margin-bottom: 25px;">
+                    <h4>Promedio por Capacidad: 2025 vs 2026</h4>
+                    <div style="position:relative; height:300px;">
+                        <canvas id="GraficoProgresoCapacidades"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabla individual -->
+                <div class="chart-card">
+                    <h4>Detalle por Alumno</h4>
+                    <div style="overflow-x:auto;">
+                        <table id="tabla-progreso" class="dataTable-tabla" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>DNI</th>
+                                    <th>Alumno</th>
+                                    <th>Nota 2025</th>
+                                    <th>Nota 2026</th>
+                                    <th>Δ Delta</th>
+                                    <th>Tendencia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-progreso-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -927,11 +1011,192 @@
 
     function cambiarVista(tipo) {
         document.getElementById('vista_graficos').style.display = (tipo === 'grafico') ? 'block' : 'none';
-        document.getElementById('vista_listado').style.display = (tipo === 'listado') ? 'block' : 'none';
-        document.getElementById('vista_lectura').style.display = (tipo === 'lectura') ? 'block' : 'none';
+        document.getElementById('vista_listado').style.display  = (tipo === 'listado')  ? 'block' : 'none';
+        document.getElementById('vista_lectura').style.display  = (tipo === 'lectura')  ? 'block' : 'none';
+        document.getElementById('vista_progreso').style.display = (tipo === 'progreso') ? 'block' : 'none';
 
         if (tipo === 'listado' && tabla) { setTimeout(() => { tabla.columns.adjust().draw(); }, 50); }
         if (tipo === 'grafico') { setTimeout(() => { crearGraficos(); window.dispatchEvent(new Event('resize')); }, 100); }
+    }
+
+    // ── Progreso: carga AJAX ──────────────────────────────────────────────────
+    let chartsProgreso = [];
+    let progresoYaCargado = false;
+
+    function activarProgreso() {
+        cambiarVista('progreso');
+        if (progresoYaCargado) return;
+
+        const cue    = '{{ cueanexo|default:"" }}';
+        const anio   = '{{ anio_sel|default:"" }}';
+        const seccion = '{{ seccion_sel|default:"" }}';
+        const turno  = '{{ turno_sel|default:"" }}';
+        const mat    = '{{ materia_sel|default:"" }}';
+
+        if (!cue || !anio || !mat) {
+            document.getElementById('progreso-error').style.display = 'block';
+            document.getElementById('progreso-error').textContent   = 'Aplicá primero los filtros (establecimiento, año y materia) para ver el progreso.';
+            return;
+        }
+
+        const BASE = window.location.pathname.replace('analisis_evaluacion/', '');
+        const url  = `${BASE}progreso_alumnos/?cueanexo=${cue}&anio=${anio}&seccion=${seccion}&turno=${turno}&materia=${mat}`;
+
+        document.getElementById('progreso-cargando').style.display  = 'block';
+        document.getElementById('progreso-contenido').style.display = 'none';
+        document.getElementById('progreso-error').style.display     = 'none';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('progreso-cargando').style.display = 'none';
+
+                if (data.error) {
+                    document.getElementById('progreso-error').textContent   = '❌ ' + data.error;
+                    document.getElementById('progreso-error').style.display = 'block';
+                    return;
+                }
+                if (data.sin_datos) {
+                    document.getElementById('progreso-error').textContent   = '⚠️ ' + data.mensaje;
+                    document.getElementById('progreso-error').style.display = 'block';
+                    return;
+                }
+
+                renderizarProgreso(data);
+                progresoYaCargado = true;
+            })
+            .catch(err => {
+                document.getElementById('progreso-cargando').style.display = 'none';
+                document.getElementById('progreso-error').textContent   = '❌ Error al obtener los datos de progreso: ' + err;
+                document.getElementById('progreso-error').style.display = 'block';
+            });
+    }
+
+    function renderizarProgreso(data) {
+        // Resumen
+        document.getElementById('prog-total-2026').textContent = data.total_alumnos_2026;
+        document.getElementById('prog-mejoro').textContent     = data.tendencias.mejoro;
+        document.getElementById('prog-empeoro').textContent    = data.tendencias.empeoro;
+        document.getElementById('prog-igual').textContent      = data.tendencias.igual;
+        document.getElementById('prog-sin-datos').textContent  = data.tendencias.sin_datos;
+
+        // Destruir charts anteriores si los hay
+        chartsProgreso.forEach(c => c.destroy());
+        chartsProgreso = [];
+
+        // Gráfico 1: Donut tendencias
+        chartsProgreso.push(new Chart(document.getElementById('GraficoProgresoDonut'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Mejoró', 'Bajó', 'Sin cambio', 'Sin datos 2025'],
+                datasets: [{
+                    data: [data.tendencias.mejoro, data.tendencias.empeoro,
+                           data.tendencias.igual, data.tendencias.sin_datos],
+                    backgroundColor: ['#2ecc71', '#e74c3c', '#e67e22', '#95a5a6'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    datalabels: { display: true, color: '#fff', font: { weight: 'bold' }, formatter: percentageFormatter },
+                    legend: { position: 'bottom' }
+                }
+            }
+        }));
+
+        // Gráfico 2: Promedio general barras agrupadas
+        chartsProgreso.push(new Chart(document.getElementById('GraficoProgresoGeneral'), {
+            type: 'bar',
+            data: {
+                labels: ['Prom. General'],
+                datasets: [
+                    { label: 'Diagnóstico 2025', data: [data.promedios.general_2025], backgroundColor: '#3498db', borderRadius: 6 },
+                    { label: 'Diagnóstico 2026', data: [data.promedios.general_2026], backgroundColor: '#9b59b6', borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 30 } },
+                plugins: {
+                    datalabels: {
+                        display: true, anchor: 'end', align: 'top',
+                        color: '#2c3e50', font: { weight: 'bold', size: 13 },
+                        formatter: v => v !== null ? v.toFixed(1) : '—'
+                    },
+                    legend: { position: 'bottom' }
+                },
+                scales: { y: { beginAtZero: true, grace: '20%' }, x: { grid: { display: false } } }
+            }
+        }));
+
+        // Gráfico 3: Promedio por capacidad agrupado
+        const capLabels = data.promedios.capacidades_labels;
+        chartsProgreso.push(new Chart(document.getElementById('GraficoProgresoCapacidades'), {
+            type: 'bar',
+            data: {
+                labels: capLabels,
+                datasets: [
+                    {
+                        label: 'Diagnóstico 2025',
+                        data: data.promedios.capacidades_2025,
+                        backgroundColor: 'rgba(52,152,219,0.85)', borderRadius: 6
+                    },
+                    {
+                        label: 'Diagnóstico 2026',
+                        data: data.promedios.capacidades_2026,
+                        backgroundColor: 'rgba(155,89,182,0.85)', borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 30 } },
+                plugins: {
+                    datalabels: {
+                        display: true, anchor: 'end', align: 'top',
+                        color: '#2c3e50', font: { weight: 'bold', size: 12 },
+                        formatter: v => v !== null ? v.toFixed(1) : '—'
+                    },
+                    legend: { position: 'bottom' }
+                },
+                scales: { y: { beginAtZero: true, grace: '20%' }, x: { grid: { display: false } } }
+            }
+        }));
+
+        // Tabla individual
+        const tbody = document.getElementById('tabla-progreso-body');
+        tbody.innerHTML = '';
+        data.alumnos.forEach(al => {
+            const tdColor = al.tendencia === 'mejoro'   ? '#d5f5e3' :
+                            al.tendencia === 'empeoro'  ? '#fadbd8' :
+                            al.tendencia === 'igual'    ? '#fef9e7' : '#f2f3f4';
+            const badge   = al.tendencia === 'mejoro'   ? '<span style="color:#27ae60;font-weight:bold;">▲ Mejoró</span>' :
+                            al.tendencia === 'empeoro'  ? '<span style="color:#c0392b;font-weight:bold;">▼ Bajó</span>' :
+                            al.tendencia === 'igual'    ? '<span style="color:#d35400;font-weight:bold;">➡ Sin cambio</span>' :
+                                                         '<span style="color:#7f8c8d;">— Sin datos 2025</span>';
+            const delta   = al.delta !== null ? (al.delta > 0 ? '+' + al.delta : al.delta) : '—';
+            tbody.innerHTML += `<tr style="background:${tdColor}">
+                <td>${al.dni}</td>
+                <td>${al.apellido}, ${al.nombre}</td>
+                <td>${al.nota_2025 !== null ? al.nota_2025 : '—'}</td>
+                <td>${al.nota_2026 !== null ? al.nota_2026 : '—'}</td>
+                <td style="font-weight:bold;">${delta}</td>
+                <td>${badge}</td>
+            </tr>`;
+        });
+
+        // DataTable sobre la tabla
+        if ($j.fn.DataTable.isDataTable('#tabla-progreso')) {
+            $j('#tabla-progreso').DataTable().destroy();
+        }
+        $j('#tabla-progreso').DataTable({
+            language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' },
+            order: [[4, 'desc']],
+            pageLength: 20
+        });
+
+        document.getElementById('progreso-contenido').style.display = 'block';
     }
 
     function toggleFilter(id) { document.getElementById(id).classList.toggle('active'); }
