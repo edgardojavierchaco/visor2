@@ -98,431 +98,567 @@
         border: 1px solid #e2e8f0;
         border-radius: 12px;
         display: flex;
-        gap: .5rem;
-        padding: .75rem 1rem;
-        position: relative;
-        transition: border-color .2s ease, box-shadow .2s ease;
+        flex-wrap: wrap;
+        gap: .6rem;
+        margin-bottom: 1.25rem;
+        padding: .85rem 1rem;
     }
 
-    .cef-modal-search:focus-within {
-        background: #fff;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
-    }
-
-    .cef-modal-search i.fa-search {
+    .cef-modal-search-label {
         color: #64748b;
-        font-size: 1.1rem;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .07em;
+        margin-bottom: .25rem;
+        text-transform: uppercase;
+        width: 100%;
     }
 
-    .cef-modal-search input {
+    .cef-modal-search-form {
+        align-items: center;
+        display: flex;
+        gap: .65rem;
+        width: 100%;
+    }
+
+    .cef-modal-input-wrap {
+        align-items: center;
+        background: #fff;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+        display: flex;
+        flex: 1 1 auto;
+        gap: .5rem;
+        min-width: 0;
+        min-height: 40px;
+        padding: .35rem .75rem;
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+    .cef-modal-input-wrap:focus-within {
+        border-color: #2d7dd2;
+        box-shadow: 0 0 0 3px rgba(45,125,210,.13);
+    }
+
+    .cef-modal-input-wrap i {
+        color: #94a3b8;
+        font-size: .9rem;
+    }
+
+    .cef-modal-input-wrap input {
         background: transparent;
         border: none;
         color: #0f172a;
         flex: 1;
-        font-size: 1.05rem;
-        font-weight: 600;
+        font-size: .9375rem;
         min-width: 0;
         outline: none;
+        padding: .2rem 0;
     }
 
-    .cef-modal-search input::placeholder {
-        color: #94a3b8;
-        font-weight: 500;
-    }
+    .cef-modal-input-wrap input::placeholder { color: #94a3b8; }
 
-    .cef-modal-search .btn-search {
-        background: #2563eb;
+    .cef-modal-search-btn {
+        align-items: center;
+        background: linear-gradient(155deg, #2366c4 0%, #14407a 100%);
         border: none;
         border-radius: 8px;
         color: #fff;
         cursor: pointer;
-        font-size: .85rem;
+        display: inline-flex;
+        font-size: .875rem;
         font-weight: 700;
-        padding: .4rem 1rem;
-        transition: background .15s ease;
-    }
-
-    .cef-modal-search .btn-search:hover {
-        background: #1d4ed8;
-    }
-
-    /* Result area */
-    .cef-modal-result {
-        margin-top: 1.25rem;
-    }
-
-    .cef-person-card {
-        background: #fff;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(15,23,42,.03);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .cef-person-header {
-        align-items: center;
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-        display: flex;
-        gap: 1rem;
-        padding: 1.25rem;
-    }
-
-    .cef-person-avatar {
-        align-items: center;
-        background: #e0e7ff;
-        border-radius: 50%;
-        color: #4338ca;
-        display: flex;
-        flex: 0 0 auto;
-        font-size: 1.5rem;
-        height: 54px;
+        gap: .4rem;
         justify-content: center;
-        width: 54px;
+        min-height: 40px;
+        white-space: nowrap;
+        padding: 0 1.1rem;
+        transition: all .18s ease;
     }
 
-    .cef-person-name {
-        flex: 1;
-        min-width: 0;
+    .cef-modal-search-btn:hover {
+        background: linear-gradient(155deg, #2d7dd2 0%, #1a56a4 100%);
+        box-shadow: 0 4px 12px rgba(20,64,122,.3);
+        transform: translateY(-1px);
     }
 
-    .cef-person-name h3 {
-        color: #0f172a;
-        font-size: 1.2rem;
-        font-weight: 800;
-        margin: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    /* Table */
+    .cef-modal-table-wrap {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow-x: auto;
+    }
+
+    .cef-modal-table {
+        border-collapse: collapse;
+        font-size: .875rem;
+        min-width: 600px;
+        width: 100%;
+    }
+
+    .cef-modal-table thead tr {
+        border-bottom: 2px solid #bfdbfe;
+    }
+
+    .cef-modal-table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .07em;
+        padding: .55rem .75rem;
+        text-align: left;
+        text-transform: uppercase;
         white-space: nowrap;
     }
 
-    .cef-person-name span {
-        color: #64748b;
-        display: block;
-        font-size: .85rem;
-        font-weight: 600;
-        margin-top: .15rem;
+    .cef-modal-table tbody td {
+        border-bottom: 1px solid #e2e8f0;
+        color: #334155;
+        padding: .65rem .75rem;
+        vertical-align: middle;
     }
 
-    .cef-person-details {
-        display: grid;
-        gap: 1px;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        background: #e2e8f0;
-    }
+    .cef-modal-table tbody tr:last-child td { border-bottom: none; }
+    .cef-modal-table tbody tr:hover { background: #eff6ff; }
 
-    .cef-person-detail {
-        background: #fff;
-        padding: 1rem 1.25rem;
-    }
-
-    .cef-person-detail label {
-        color: #64748b;
-        display: block;
-        font-size: .7rem;
-        font-weight: 800;
-        letter-spacing: .05em;
-        margin-bottom: .25rem;
-        text-transform: uppercase;
-    }
-
-    .cef-person-detail strong {
-        color: #1e293b;
-        display: block;
-        font-size: .95rem;
-        font-weight: 600;
-    }
-
-    /* Actions */
+    /* Action links inside table */
     .cef-modal-actions {
-        background: #f1f5f9;
-        border-top: 1px solid #e2e8f0;
+        align-items: center;
         display: flex;
-        gap: .75rem;
-        justify-content: flex-end;
-        padding: 1rem 1.5rem;
+        flex-wrap: wrap;
+        gap: .45rem;
     }
 
-    .cef-modal-actions .btn {
+    .cef-modal-link,
+    .cef-modal-inline-btn {
         align-items: center;
-        border-radius: 8px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        color: #1a56a4;
         cursor: pointer;
         display: inline-flex;
-        font-size: .9rem;
-        font-weight: 700;
-        gap: .4rem;
-        height: 38px;
-        justify-content: center;
-        padding: 0 1.25rem;
+        font-size: .8125rem;
+        font-weight: 600;
+        gap: .3rem;
+        padding: .25rem .6rem;
         text-decoration: none;
         transition: all .15s ease;
     }
 
-    .cef-modal-actions .btn-cancel {
-        background: transparent;
-        border: 1px solid #cbd5e1;
-        color: #475569;
-    }
-
-    .cef-modal-actions .btn-cancel:hover {
-        background: #e2e8f0;
-        color: #0f172a;
-    }
-
-    .cef-modal-actions .btn-action {
-        background: #10b981;
-        border: 1px solid #059669;
+    .cef-modal-link:hover,
+    .cef-modal-inline-btn:hover {
+        background: #2d7dd2;
+        border-color: #2d7dd2;
         color: #fff;
-        box-shadow: 0 1px 2px rgba(0,0,0,.05);
     }
 
-    .cef-modal-actions .btn-action:hover {
-        background: #059669;
-        transform: translateY(-1px);
-    }
+    .cef-modal-inline-btn { background: #dcfce7; border-color: #86efac; color: #15803d; }
+    .cef-modal-inline-btn:hover { background: #16a34a; border-color: #16a34a; color: #fff; }
 
-    .cef-modal-actions .btn-edit {
-        background: #fff;
-        border: 1px solid #3b82f6;
-        color: #2563eb;
-    }
-
-    .cef-modal-actions .btn-edit:hover {
-        background: #eff6ff;
-        border-color: #2563eb;
-        color: #1d4ed8;
-    }
-
-    /* Empty state */
-    .cef-modal-empty {
+    /* Messages */
+    .cef-modal-msg {
         align-items: center;
         color: #64748b;
         display: flex;
         flex-direction: column;
-        font-size: .95rem;
+        font-size: .9rem;
         font-weight: 500;
+        gap: .5rem;
         justify-content: center;
-        min-height: 200px;
-        padding: 2rem;
+        min-height: 80px;
+        padding: 1.5rem;
         text-align: center;
     }
 
-    .cef-modal-empty i {
-        color: #cbd5e1;
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
+    .cef-modal-msg i { font-size: 1.5rem; }
+    .cef-modal-msg.is-error { color: #b91c1c; }
 
-    .cef-modal-empty strong {
-        color: #334155;
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin-bottom: .25rem;
-    }
-
-    .cef-modal-error {
-        color: #ef4444;
-        font-size: .85rem;
+    .cef-modal-load-link {
+        color: #1a56a4;
+        font-size: .875rem;
         font-weight: 600;
-        margin-top: .5rem;
-        padding: 0 1rem;
+        text-decoration: none;
     }
 
-    /* Message card for already enrolled */
-    .cef-msg-card {
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 12px;
+    .cef-modal-load-link:hover { text-decoration: underline; }
+
+    /* Footer */
+    .cef-modal-footer {
+        border-top: 1px solid #e2e8f0;
         display: flex;
-        gap: 1rem;
-        margin-top: 1rem;
-        padding: 1rem 1.25rem;
+        justify-content: flex-end;
+        margin-top: 1.25rem;
+        padding-top: .9rem;
     }
 
-    .cef-msg-card i {
-        color: #3b82f6;
-        font-size: 1.5rem;
-        margin-top: .1rem;
+    .cef-modal-volver {
+        align-items: center;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+        color: #475569;
+        display: inline-flex;
+        font-size: .875rem;
+        font-weight: 600;
+        gap: .38rem;
+        padding: .4rem .9rem;
+        text-decoration: none;
+        transition: all .15s ease;
     }
 
-    .cef-msg-card div {
-        flex: 1;
+    .cef-modal-volver:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #1e293b;
     }
 
-    .cef-msg-card h4 {
-        color: #1e3a8a;
-        font-size: .95rem;
-        font-weight: 800;
-        margin: 0 0 .25rem;
+    @media (max-width: 768px) {
+        .cef-modal { width: 96vw; border-radius: 12px; }
+        .cef-modal-search-form { flex-direction: column; }
+        .cef-modal-input-wrap,
+        .cef-modal-search-btn { width: 100%; }
     }
-
-    .cef-msg-card p {
-        color: #1e40af;
-        font-size: .85rem;
-        margin: 0;
-    }
-
-    .cef-msg-card.is-warning {
-        background: #fef3c7;
-        border-color: #fde68a;
-    }
-
-    .cef-msg-card.is-warning i { color: #d97706; }
-    .cef-msg-card.is-warning h4 { color: #92400e; }
-    .cef-msg-card.is-warning p { color: #b45309; }
 </style>
 
-<div class="cef-overlay {% if modal_alumno_abierto %}is-open{% endif %}" id="cefPersonModal" role="dialog" aria-modal="true" aria-labelledby="cefModalTitle">
-    <div class="cef-modal">
+<div id="modalBusquedaAlumno" class="cef-overlay{% if modal_alumno_abierto %} is-open{% endif %}" aria-hidden="{% if modal_alumno_abierto %}false{% else %}true{% endif %}" data-volver-url="{{ modal_volver_url }}">
+    <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="personasBusquedaTitulo">
+
+        <!-- Header -->
         <div class="cef-modal-head">
-            <h2 class="cef-modal-title" id="cefModalTitle">
-                <i class="fa-solid fa-user-magnifying-glass me-2"></i>Buscar Alumno
-                {% if modal_tiene_seccion %}
-                    <span>/ Inscripción a Sección</span>
-                {% endif %}
+            <h2 id="personasBusquedaTitulo" class="cef-modal-title">
+                <i class="fa-solid fa-magnifying-glass me-2"></i>Personas <span>» Búsqueda</span>
             </h2>
-            <a href="{{ modal_volver_url }}" class="cef-modal-close" aria-label="Cerrar modal">
+            <a class="cef-modal-close" href="{{ modal_volver_url }}" aria-label="Cerrar" data-modal-close>
                 <i class="fa-solid fa-xmark"></i>
             </a>
         </div>
 
+        <!-- Body -->
         <div class="cef-modal-body">
-            <form method="post" action="{{ modal_action_url }}" id="cefPersonSearchForm">
-                {% csrf_token %}
-                <div class="cef-modal-search">
-                    <i class="fa-solid fa-search"></i>
-                    <input type="text" name="cuil" id="modalCuilInput" placeholder="Ingresá el CUIL del alumno..." value="{{ cuil_buscado|default:'' }}" autocomplete="off" autofocus>
-                    <button type="submit" class="btn-search">Buscar</button>
-                </div>
-                {% if cuil_error %}
-                    <div class="cef-modal-error"><i class="fa-solid fa-circle-exclamation me-1"></i> {{ cuil_error }}</div>
-                {% endif %}
-            </form>
-
-            <div class="cef-modal-result">
-                {% if alumno %}
-                    <div class="cef-person-card">
-                        <div class="cef-person-header">
-                            <div class="cef-person-avatar">
-                                <i class="fa-solid fa-user"></i>
-                            </div>
-                            <div class="cef-person-name">
-                                <h3>{{ alumno.apellidos }}, {{ alumno.nombres }}</h3>
-                                <span><i class="fa-regular fa-id-card me-1"></i> {{ alumno_row.tipo_doc|default:"DOC" }} {{ alumno_row.nro_doc|default:"—" }}</span>
-                            </div>
-                        </div>
-                        <div class="cef-person-details">
-                            <div class="cef-person-detail">
-                                <label>CUIL</label>
-                                <strong>{{ alumno_row.cuil|default:"—" }}</strong>
-                            </div>
-                            <div class="cef-person-detail">
-                                <label>Fecha de Nacimiento</label>
-                                <strong>{{ alumno_row.fecha_nac|date:"d/m/Y"|default:"—" }}</strong>
-                            </div>
-                            <div class="cef-person-detail">
-                                <label>Sexo</label>
-                                <strong>{{ alumno_row.sexo|default:"—" }}</strong>
-                            </div>
-                            <div class="cef-person-detail">
-                                <label>Lugar de Nacimiento</label>
-                                <strong>{{ alumno_row.lugar_nac|default:"—" }}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if modal_tiene_seccion %}
-                        {% if inscripcion_abierta %}
-                            <div class="cef-msg-card is-warning">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <div>
-                                    <h4>Alumno ya inscripto</h4>
-                                    <p>Este alumno ya se encuentra inscripto en la sección en estado <strong>{{ inscripcion_abierta.get_estado_display|upper }}</strong>. No podés volver a inscribirlo.</p>
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="cef-msg-card">
-                                <i class="fa-solid fa-circle-info"></i>
-                                <div>
-                                    <h4>Alumno listo para inscripción</h4>
-                                    <p>Verificá los datos del alumno y si son correctos hacé clic en "Inscribir a sección". Si faltan datos podés editarlos primero en el Padrón.</p>
-                                </div>
-                            </div>
-                        {% endif %}
-                    {% else %}
-                        <div class="cef-msg-card">
-                            <i class="fa-solid fa-circle-check"></i>
-                            <div>
-                                <h4>Alumno encontrado en Padrón</h4>
-                                <p>Podés editar sus datos filiatorios si es necesario usando el botón correspondiente.</p>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% elif request.method == "POST" or request.GET.cuil %}
-                    {% if not cuil_error %}
-                        <div class="cef-modal-empty">
-                            <i class="fa-regular fa-face-frown-open"></i>
-                            <strong>No encontramos a este alumno en el padrón provincial</strong>
-                            <span>Verificá que el número de CUIL ({{ cuil_buscado }}) sea correcto. Si es correcto, deberás darlo de alta.</span>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <div class="cef-modal-empty">
-                        <i class="fa-solid fa-users-viewfinder"></i>
-                        <strong>Buscar en Padrón</strong>
-                        <span>Ingresá el número de CUIL completo (sin guiones o con guiones) y presioná Buscar para continuar.</span>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="cef-modal-actions">
-            {% if alumno %}
-                <a href="{{ url_editar_alumno }}" class="btn btn-edit" target="_blank" title="Se abrirá en una nueva pestaña">
-                    <i class="fa-solid fa-pen"></i> Editar datos filiatorios
-                </a>
-            {% elif cuil_buscado and not cuil_error and request.method == "POST" %}
-                <a href="{{ url_carga_alumno }}" class="btn btn-action" target="_blank">
-                    <i class="fa-solid fa-user-plus"></i> Dar de alta nuevo alumno
-                </a>
-            {% endif %}
-
-            <div style="flex: 1;"></div>
-
-            <a href="{{ modal_volver_url }}" class="btn btn-cancel">Cancelar</a>
-
-            {% if alumno and modal_tiene_seccion and not inscripcion_abierta %}
-                <form method="post" action="{{ modal_action_url }}" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
-                    <button type="submit" class="btn btn-action">
-                        <i class="fa-solid fa-check"></i> Inscribir a sección
+            <!-- Search -->
+            <div class="cef-modal-search">
+                <span class="cef-modal-search-label">Buscar por DNI o CUIL</span>
+                <form method="get" action="{{ modal_action_url }}" class="cef-modal-search-form" novalidate data-modal-search-form>
+                    <input type="hidden" name="cueanexo" value="{{ cef_context.cueanexo }}">
+                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                    <input type="hidden" name="abrir_modal_alumno" value="1">
+                    <label class="cef-modal-input-wrap" for="cefCuilInput">
+                        <i class="fa-solid fa-id-card"></i>
+                        <input id="cefCuilInput" type="text" name="cuil" value="{{ cuil_buscado }}" placeholder="Ingresar DNI/CUIL" inputmode="numeric" autocomplete="off">
+                    </label>
+                    <button class="cef-modal-search-btn" type="submit">
+                        <i class="fa-solid fa-magnifying-glass"></i> Buscar
                     </button>
                 </form>
+            </div>
+
+            {% if modal_feedback %}
+                <div class="alert alert-{% if modal_feedback_level == 'success' %}success{% else %}danger{% endif %} mb-3" data-cef-modal-feedback>
+                    {{ modal_feedback }}
+                </div>
             {% endif %}
+
+            <!-- Table -->
+            <div class="cef-modal-table-wrap">
+                <table class="cef-modal-table">
+                    <thead>
+                        <tr>
+                            <th>Apellidos</th>
+                            <th>Nombres</th>
+                            <th>Tipo Doc.</th>
+                            <th>Nro. Doc.</th>
+                            <th>CUIL</th>
+                            <th>Fecha Nac.</th>
+                            <th>Sexo</th>
+                            <th>Lugar de Nac.</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if alumno_row %}
+                            <tr>
+                                <td><strong>{{ alumno_row.apellidos|default:"—" }}</strong></td>
+                                <td>{{ alumno_row.nombres|default:"—" }}</td>
+                                <td>{{ alumno_row.tipo_doc|default:"—" }}</td>
+                                <td>{{ alumno_row.nro_doc|default:"—" }}</td>
+                                <td>{{ alumno_row.cuil|default:"—" }}</td>
+                                <td>{% if alumno_row.fecha_nac %}{{ alumno_row.fecha_nac|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+                                <td>{{ alumno_row.sexo|default:"—" }}</td>
+                                <td>{{ alumno_row.lugar_nac|default:"—" }}</td>
+                                <td>
+                                    <div class="cef-modal-actions">
+                                        {% if modal_tiene_grupo %}
+                                            {% if inscripcion_abierta %}
+                                                <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya inscripto</span>
+                                            {% else %}
+                                                <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                    <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
+                                                    <button class="cef-modal-inline-btn" type="submit">
+                                                        <i class="fa-solid fa-user-check"></i> Inscribir
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        {% elif alumno_en_banco %}
+                                            <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya está en el banco del CEF.</span>
+                                        {% elif modal_puede_agregar_banco %}
+                                            <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
+                                                {% csrf_token %}
+                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
+                                                <button class="cef-modal-inline-btn" type="submit">
+                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco del CEF
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span style="font-size:.8rem;color:#64748b;font-style:italic">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
+                                        {% endif %}
+                                        {% if url_editar_alumno %}
+                                            <a class="cef-modal-link" href="{{ url_editar_alumno }}">
+                                                <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="9">
+                                    {% if cuil_error %}
+                                        <div class="cef-modal-msg is-error">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                            {{ cuil_error }}
+                                        </div>
+                                    {% elif not cuil_buscado %}
+                                        <div class="cef-modal-msg">
+                                            <i class="fa-solid fa-id-card" style="color:#bfdbfe"></i>
+                                            Ingrese DNI/CUIL para buscar una persona.
+                                        </div>
+                                    {% else %}
+                                        <div class="cef-modal-msg">
+                                            <i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i>
+                                            No se encontró ninguna persona con ese documento.
+                                            {% if url_carga_alumno %}
+                                                <a class="cef-modal-load-link" href="{{ url_carga_alumno }}">
+                                                    <i class="fa-solid fa-plus-circle"></i> Cargar datos del alumno
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if alumno_row and not cuil_error %}
+                <p style="font-size:.8125rem;color:#64748b;margin-top:.75rem;font-style:italic">
+                    Si ninguna de las personas encontradas es la solicitada, puede realizar la carga completa de datos.
+                    {% if url_carga_alumno %}
+                        <a class="cef-modal-load-link ms-1" href="{{ url_carga_alumno }}">Cargar datos del alumno</a>
+                    {% endif %}
+                </p>
+            {% endif %}
+
+            <!-- Footer -->
+            <div class="cef-modal-footer">
+                <a class="cef-modal-volver" href="{{ modal_volver_url }}" data-modal-close>
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    var overlay = document.getElementById("cefPersonModal");
-    if (!overlay) return;
+(function () {
+    var modal   = document.getElementById("modalBusquedaAlumno");
+    if (!modal) return;
 
-    var triggers = document.querySelectorAll("[data-open-personas-modal]");
-    var inputCuil = document.getElementById("modalCuilInput");
+    function closeModal() {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        if (modal.dataset.volverUrl && window.history && window.history.replaceState) {
+            window.history.replaceState({}, "", modal.dataset.volverUrl);
+        }
+    }
 
-    triggers.forEach(function (btn) {
-        btn.addEventListener("click", function (e) {
-            e.preventDefault();
-            overlay.classList.add("is-open");
-            if (inputCuil) {
-                setTimeout(function () { inputCuil.focus(); }, 100);
-            }
+    function focusInput() {
+        var input = modal.querySelector("input[name='cuil']");
+        if (input) input.focus();
+    }
+
+    function buildSearchUrl(form) {
+        var url = new URL(form.getAttribute("action"), window.location.href);
+        var data = new FormData(form);
+        data.forEach(function (value, key) {
+            url.searchParams.set(key, value);
         });
+        return url.toString();
+    }
+
+    function replaceModalContent(html, url) {
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var incomingModal = doc.getElementById("modalBusquedaAlumno");
+        var currentDialog = modal.querySelector(".cef-modal");
+        var incomingDialog = incomingModal ? incomingModal.querySelector(".cef-modal") : null;
+        if (!currentDialog || !incomingDialog) {
+            window.location.href = url;
+            return;
+        }
+        currentDialog.innerHTML = incomingDialog.innerHTML;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, "", url);
+        }
+        focusInput();
+    }
+
+    function replacePagePanel(html) {
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var currentPanel = document.querySelector(".cef-panel");
+        var incomingPanel = doc.querySelector(".cef-panel");
+        if (!currentPanel || !incomingPanel) return false;
+        currentPanel.replaceWith(incomingPanel);
+        if (window.initCefInscripcionTable) {
+            window.initCefInscripcionTable();
+        }
+        if (window.initCefAlumnosTable) {
+            window.initCefAlumnosTable();
+        }
+        return true;
+    }
+
+    function replaceFragmentContent(selector, html) {
+        var current = selector ? document.querySelector(selector) : null;
+        if (!current || typeof html !== "string") return false;
+        current.innerHTML = html;
+        if (window.initCefInscripcionTable) {
+            window.initCefInscripcionTable(current);
+        }
+        if (window.initCefAlumnosTable) {
+            window.initCefAlumnosTable(current);
+        }
+        return true;
+    }
+
+    function handleJsonPost(data) {
+        if (!data || typeof data !== "object") return false;
+        var replaced = true;
+        if (data.fragment_html) {
+            replaced = replaceFragmentContent(data.fragment_selector, data.fragment_html);
+        }
+        if (data.modal_html) {
+            replaceModalContent(data.modal_html, window.location.href);
+        }
+        return replaced;
+    }
+
+    document.addEventListener("click", function(e) {
+        var opener = e.target.closest("[data-open-personas-modal]");
+        if (!opener) return;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        focusInput();
     });
-});
+
+    modal.addEventListener("click", function(e) {
+        var closeBtn = e.target.closest("[data-modal-close]");
+        if (!closeBtn) return;
+        e.preventDefault();
+        closeModal();
+    });
+
+    modal.addEventListener("click", function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    modal.addEventListener("submit", function(e) {
+        var form = e.target.closest("[data-modal-search-form]");
+        if (!form || form.method.toLowerCase() !== "get") return;
+
+        e.preventDefault();
+        var url = buildSearchUrl(form);
+        var submitBtn = form.querySelector("button[type='submit']");
+        if (submitBtn) submitBtn.disabled = true;
+
+        fetch(url, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            credentials: "same-origin"
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("No se pudo buscar.");
+                return response.text();
+            })
+            .then(function (html) {
+                replaceModalContent(html, url);
+            })
+            .catch(function () {
+                window.location.href = url;
+            })
+            .finally(function () {
+                if (submitBtn) submitBtn.disabled = false;
+            });
+    });
+
+    modal.addEventListener("submit", function(e) {
+        var form = e.target.closest("[data-modal-post-form]");
+        if (!form || form.method.toLowerCase() !== "post") return;
+
+        e.preventDefault();
+        var submitBtn = form.querySelector("button[type='submit']");
+        if (submitBtn) submitBtn.disabled = true;
+
+        fetch(form.getAttribute("action"), {
+            method: "POST",
+            body: new FormData(form),
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            credentials: "same-origin"
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("No se pudo guardar.");
+                var contentType = response.headers.get("content-type") || "";
+                if (contentType.indexOf("application/json") !== -1) {
+                    return response.json().then(function (data) {
+                        return { json: data };
+                    });
+                }
+                return response.text().then(function (html) {
+                    return { html: html, url: response.url, redirected: response.redirected };
+                });
+            })
+            .then(function (result) {
+                if (result.json) {
+                    if (handleJsonPost(result.json)) {
+                        return;
+                    }
+                    form.submit();
+                    return;
+                }
+                if (result.redirected && replacePagePanel(result.html)) {
+                    if (window.history && window.history.replaceState && result.url) {
+                        window.history.replaceState({}, "", result.url);
+                    }
+                    closeModal();
+                    return;
+                }
+                replaceModalContent(result.html, window.location.href);
+            })
+            .catch(function () {
+                if (submitBtn) submitBtn.disabled = false;
+                form.submit();
+            })
+            .finally(function () {
+                if (submitBtn) submitBtn.disabled = false;
+            });
+    });
+})();
 </script>

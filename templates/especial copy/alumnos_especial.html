@@ -1,0 +1,282 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Gestión de Alumnos especial.{% endblock %}
+
+{% block especial_content %}
+<div class="especial-panel">
+    <div class="especial-panel-head">
+        <h2 class="especial-panel-title">Alumnos <span>» Gestión de Alumnos</span></h2>
+        <div class="especial-panel-actions">
+            <button class="btn btn-primary" type="button" data-open-personas-modal>
+                <i class="fa-solid fa-user-plus"></i> Agregar alumno
+            </button>
+        </div>
+    </div>
+
+    <div class="especial-panel-body">
+        <div class="especial-tools">
+            <div class="especial-tools-left">
+                <span class="especial-tools-label">Mostrar</span>
+                <select data-especial-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="especial-tools-label">registros</span>
+            </div>
+            <div class="especial-tools-right">
+                <div class="especial-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="searchAlumnos" type="search" placeholder="Buscar…" data-especial-table-search>
+                    <button type="button" class="especial-search-clear" data-especial-search-clear aria-label="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if alumnos_banco_tabla_pendiente %}
+            <div class="alert alert-warning mb-3">
+                El banco de alumnos especial está pendiente de creación en base de datos.
+            </div>
+        {% endif %}
+
+        {% if alumnos %}
+            <div class="especial-table-wrap">
+                <table class="especial-dt" data-especial-table>
+                    <thead>
+                        <tr>
+                            <th>Alumno</th>
+                            <th>CUIL</th>
+                            <th>Documento</th>
+                            <th>Estado en especial</th>
+                            <th>Fecha alta</th>
+                            <th>Secciones / inscripciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in alumnos %}
+                            <tr>
+                                <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
+                                <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
+                                <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
+                                <td>
+                                    <span class="badge text-bg-{% if item.estado == 'activo' %}success{% elif item.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                        {{ item.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>{{ item.fecha_alta|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if item.inscripciones_seccion %}
+                                        {% for inscripcion in item.inscripciones_seccion %}
+                                            <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'especial:inscripcion_seccion' inscripcion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                                {{ inscripcion.seccion.actividad }} Nro. {{ inscripcion.seccion.numero }}
+                                            </a>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted small">Sin sección asignada</span>
+                                    {% endif %}
+                                </td>
+                                <td class="especial-act-cell">
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        {% if secciones_disponibles %}
+                                            {% if item.secciones_asignables|length == 1 and not item.secciones_bloqueados %}
+                                                {% for seccion in item.secciones_asignables %}
+                                                    <a class="btn btn-primary btn-sm" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1&cuil={{ item.alumno_cuil_snapshot|default:item.alumno.cuil }}">
+                                                        <i class="fa-solid fa-user-plus"></i> Inscribir a seccion
+                                                    </a>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="dropdown" data-especial-alumno-dropdown>
+                                                    <button class="btn {% if item.secciones_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-especial-alumno-dropdown-toggle aria-expanded="false">
+                                                        <i class="fa-solid fa-user-plus"></i> {% if item.secciones_asignables %}Inscribir a seccion{% elif item.secciones_bloqueados %}Ya inscripto a seccion{% else %}Sin secciones disponibles{% endif %}
+                                                    </button>
+                                                    <ul class="dropdown-menu especial-alumno-dropdown-menu" data-especial-alumno-dropdown-menu>
+                                                    {% for seccion in item.secciones_asignables %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1&cuil={{ item.alumno_cuil_snapshot|default:item.alumno.cuil }}">
+                                                                <span>seccion {{ seccion.actividad }} Nro. {{ seccion.numero }}</span>
+                                                                <small>{{ seccion.turno }} - {{ seccion.get_estado_display }}</small>
+                                                            </a>
+                                                        </li>
+                                                    {% endfor %}
+                                                    {% if item.secciones_asignables and item.secciones_bloqueados %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                    {% endif %}
+                                                    {% for inscripcion in item.secciones_bloqueados %}
+                                                        <li>
+                                                            <span class="dropdown-item disabled" aria-disabled="true">
+                                                                <span>seccion {{ inscripcion.seccion.actividad }} Nro. {{ inscripcion.seccion.numero }}</span>
+                                                                <small>Ya inscripto{% if inscripcion.fecha_inscripcion %} desde {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}{% endif %}</small>
+                                                            </span>
+                                                        </li>
+                                                    {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted small">Sin secciones cargadas</span>
+                                        {% endif %}
+                                        {% if item.url_editar_alumno %}
+                                            <a class="btn btn-outline-primary btn-sm" title="Editar datos del alumno" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
+                                                <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif alumnos_banco_tabla_pendiente %}
+            <div class="especial-empty-state">
+                <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Listado pendiente hasta crear la tabla especial.alumnos_especial.
+            </div>
+        {% elif especial_context.puede_operar %}
+            <div class="especial-empty-state">
+                <i class="fa-solid fa-user-magnifying-glass" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Todavía no hay alumnos en el banco de este cueanexo y ciclo.
+            </div>
+        {% else %}
+            <div class="especial-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un CUE-Anexo y un ciclo para ver alumnos.
+            </div>
+        {% endif %}
+
+        <div class="especial-tfoot">
+            <span class="especial-tfoot-count" data-especial-table-count>{{ alumnos|length }} registros</span>
+            <div class="especial-tfoot-pagination" data-especial-table-pagination></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .especial-alumno-dropdown-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 260px;
+        padding: .35rem;
+    }
+
+    .especial-alumno-dropdown-menu .dropdown-item {
+        background: transparent;
+        border: 0;
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        display: block;
+        font-size: var(--fs-sm);
+        height: auto;
+        justify-content: flex-start;
+        line-height: 1.25;
+        margin: 0;
+        min-height: 0;
+        padding: .45rem .55rem;
+        text-align: left;
+        white-space: normal;
+        width: 100%;
+    }
+
+    .especial-alumno-dropdown-menu .dropdown-item:hover,
+    .especial-alumno-dropdown-menu .dropdown-item:focus {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .especial-alumno-dropdown-menu .dropdown-item.disabled {
+        background: var(--surface-soft);
+        color: var(--slate-600);
+        cursor: default;
+        opacity: .85;
+    }
+
+    .especial-alumno-dropdown-menu .dropdown-item span,
+    .especial-alumno-dropdown-menu .dropdown-item small {
+        display: block;
+    }
+
+    .especial-alumno-dropdown-menu .dropdown-item small {
+        color: var(--text-faint);
+        font-size: var(--fs-xs);
+        margin-top: .15rem;
+    }
+
+    .especial-alumno-dropdown-menu .dropdown-item.disabled small {
+        color: var(--green-700);
+        font-weight: 700;
+    }
+</style>
+
+{% include "especial/modal_busqueda_alumno_especial.html" %}
+<script>
+(function () {
+    if (window.especialAlumnoDropdownReady) return;
+    window.especialAlumnoDropdownReady = true;
+
+    function closeDropdown(dropdown) {
+        if (!dropdown) return;
+        var toggle = dropdown.querySelector("[data-especial-alumno-dropdown-toggle]");
+        var menu = dropdown.querySelector("[data-especial-alumno-dropdown-menu]");
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+        if (menu) {
+            menu.classList.remove("show");
+            menu.removeAttribute("style");
+        }
+    }
+
+    function closeOtherDropdowns(current) {
+        document.querySelectorAll("[data-especial-alumno-dropdown]").forEach(function(dropdown) {
+            if (dropdown !== current) closeDropdown(dropdown);
+        });
+    }
+
+    function positionMenu(toggle, menu) {
+        var rect = toggle.getBoundingClientRect();
+        var tableWrap = toggle.closest(".especial-table-wrap");
+        var bounds = tableWrap ? tableWrap.getBoundingClientRect() : { left: 12, right: window.innerWidth - 12 };
+        var menuWidth = Math.min(320, window.innerWidth - 24);
+        var left = Math.min(rect.left, bounds.right - menuWidth - 8);
+        menu.style.position = "fixed";
+        menu.style.top = (rect.bottom + 4) + "px";
+        menu.style.left = Math.max(bounds.left + 8, left) + "px";
+        menu.style.width = menuWidth + "px";
+        menu.style.zIndex = "1090";
+    }
+
+    document.addEventListener("click", function(event) {
+        var toggle = event.target.closest("[data-especial-alumno-dropdown-toggle]");
+        if (toggle) {
+            event.preventDefault();
+            var dropdown = toggle.closest("[data-especial-alumno-dropdown]");
+            var menu = dropdown ? dropdown.querySelector("[data-especial-alumno-dropdown-menu]") : null;
+            if (!dropdown || !menu) return;
+
+            var willOpen = !menu.classList.contains("show");
+            closeOtherDropdowns(dropdown);
+            toggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+            menu.classList.toggle("show", willOpen);
+            if (willOpen) {
+                positionMenu(toggle, menu);
+            } else {
+                menu.removeAttribute("style");
+            }
+            return;
+        }
+
+        if (!event.target.closest("[data-especial-alumno-dropdown-menu]")) {
+            closeOtherDropdowns(null);
+        }
+    });
+
+    window.addEventListener("scroll", function() {
+        closeOtherDropdowns(null);
+    }, true);
+    window.addEventListener("resize", function() {
+        closeOtherDropdowns(null);
+    });
+})();
+</script>
+{% endblock %}

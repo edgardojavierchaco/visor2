@@ -1,0 +1,76 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Edición de rol, estado, fechas y observaciones del profesor en la sección.{% endblock %}
+
+{% block especial_content %}
+<div class="especial-panel">
+    <div class="especial-panel-head">
+        <h2 class="especial-panel-title">Editar profesor de la sección</h2>
+        <div class="especial-panel-actions">
+            <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a profesores
+            </a>
+        </div>
+    </div>
+
+    <div class="especial-panel-body">
+        {% if seccion %}
+            <div class="mb-3">
+                <span class="especial-context-pill">
+                    <i class="fa-solid fa-users"></i>
+                    <span><strong>{{ seccion_rotulo }}</strong></span>
+                    <span>{{ seccion.turno }}</span>
+                    <span>{{ seccion.hora_inicio|time:"H:i" }} - {{ seccion.hora_fin|time:"H:i" }}</span>
+                    <span>{{ seccion_dias_texto|default:"Sin dias cargados" }}</span>
+                </span>
+            </div>
+        {% endif %}
+
+        <div class="especial-context-summary mb-3">
+            <div class="especial-context-summary-item is-wide">
+                <span>Profesor</span>
+                <strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong>
+            </div>
+            <div class="especial-context-summary-item">
+                <span>CUIL</span>
+                <strong>{{ asignacion.docente_cuil }}</strong>
+            </div>
+            <div class="especial-context-summary-item">
+                <span>DNI</span>
+                <strong>{{ asignacion.docente_dni_snapshot|default:"-" }}</strong>
+            </div>
+        </div>
+
+        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+            {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="especial-form-grid">
+                {% for field in form %}
+                    <div class="especial-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="especial-error">{{ field.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="especial-form-actions mt-4">
+                <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a profesores
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

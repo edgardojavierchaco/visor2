@@ -1,0 +1,104 @@
+<div class="cef-tools">
+    <div class="cef-tools-left">
+        <span class="cef-tools-label">Mostrar</span>
+        <select data-cef-page-size>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+        </select>
+        <span class="cef-tools-label">registros</span>
+    </div>
+    <div class="cef-tools-right">
+        <div class="cef-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="searchDocentesGrupo" type="search" placeholder="Buscar..." data-cef-table-search>
+            <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar busqueda">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if docentes_activos_duplicados %}
+    <div class="alert alert-warning mb-3">
+        Se detectaron asignaciones activas duplicadas en este grupo. Revisá las filas y dejá activa solo una asignación por profesor y rol.
+    </div>
+{% endif %}
+
+{% if docentes %}
+    <div class="cef-table-wrap">
+        <table class="cef-dt" data-cef-table>
+            <thead>
+                <tr>
+                    <th>Docente</th>
+                    <th>CUIL</th>
+                    <th>DNI</th>
+                    <th>Rol</th>
+                    <th>Estado en este grupo</th>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                    <th>Observaciones</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asignacion in docentes %}
+                    <tr class="{% if asignacion.estado != 'activo' %}table-light text-muted{% endif %}">
+                        <td><strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong></td>
+                        <td>{{ asignacion.docente_cuil }}</td>
+                        <td>{{ asignacion.docente_dni_snapshot|default:"-" }}</td>
+                        <td>{{ asignacion.get_rol_display }}</td>
+                        <td>
+                            <span class="badge text-bg-{% if asignacion.estado == 'activo' %}success{% elif asignacion.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                {{ asignacion.get_estado_display }}
+                            </span>
+                        </td>
+                        <td>{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                        <td>{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                        <td>{{ asignacion.observaciones|default:"-" }}</td>
+                        <td class="cef-act-cell">
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_docente_grupo' grupo.pk asignacion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% if gestionar_grupo_modo %}&volver=gestionar{% endif %}{% elif gestionar_grupo_modo %}?volver=gestionar{% endif %}">
+                                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                                </a>
+                                 {% if asignacion.estado == 'activo' %}
+                                 <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Dar de baja profesor" data-cef-confirm-message="La asignación quedará registrada como baja, no se eliminará." data-cef-confirm-entity="{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}">
+                                     {% csrf_token %}
+                                     <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                    <input type="hidden" name="accion" value="{% if gestionar_grupo_modo %}baja_docente{% else %}baja{% endif %}">
+                                    <input type="hidden" name="docente_grupo_id" value="{{ asignacion.pk }}">
+                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                         <i class="fa-solid fa-user-minus"></i> Dar de baja
+                                     </button>
+                                 </form>
+                                {% elif asignacion.estado == 'baja' or asignacion.estado == 'inactivo' %}
+                                <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reasignar profesor" data-cef-confirm-message="Se creará una asignación activa nueva con el mismo rol si no existe conflicto activo." data-cef-confirm-entity="{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                    <input type="hidden" name="accion" value="{% if gestionar_grupo_modo %}alta_docente{% else %}alta{% endif %}">
+                                    <input type="hidden" name="docente_grupo_id" value="{{ asignacion.pk }}">
+                                    <button class="btn btn-outline-success btn-sm" type="submit">
+                                        <i class="fa-solid fa-user-check"></i> Reasignar
+                                    </button>
+                                </form>
+                                 {% endif %}
+                             </div>
+                         </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        Todavia no hay profesores asignados a este grupo.
+    </div>
+{% endif %}
+
+<div class="cef-tfoot">
+    <span class="cef-tfoot-count">{{ docentes_activos_count|default:0 }} activos / {{ docentes|length }} total</span>
+    <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+</div>

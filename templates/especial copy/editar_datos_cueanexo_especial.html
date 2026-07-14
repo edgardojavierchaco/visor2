@@ -1,0 +1,123 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_subtitle %}Edición de comedor, beneficio alimentario, orientación y sección por CUE-Anexo/ciclo.{% endblock %}
+
+{% block especial_content %}
+<div class="especial-row-grid">
+    <section class="especial-card">
+        <div class="especial-card-header">
+            <h3><i class="fa-solid fa-school me-2"></i>Datos de referencia</h3>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:carga_cueanexo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+        <div class="especial-card-body">
+            {% if establecimiento_items %}
+                <div class="especial-info-grid">
+                    {% for label, value in establecimiento_items %}
+                        <div class="especial-info-item">
+                            <span>{{ label }}</span>
+                            <strong>{{ value|default:"-" }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="especial-empty-state">No se encontraron datos de Padrón para el CUE-Anexo seleccionado.</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="especial-card">
+        <div class="especial-card-header">
+            <h3><i class="fa-solid fa-pen-to-square me-2"></i>Datos adicionales</h3>
+            <span class="badge text-bg-primary">Ciclo {{ especial_context.ciclo|default:"-" }}</span>
+        </div>
+        <div class="especial-card-body">
+            {% if catalogos_faltantes %}
+                <div class="alert alert-warning">
+                    <strong>Faltan catálogos para completar esta carga.</strong>
+                    <div class="small mt-1">{{ catalogos_faltantes|join:", " }}</div>
+                </div>
+            {% endif %}
+
+            {% if form and especial_context.puede_operar %}
+                <form method="post" id="formDatosCueanexo" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                    <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="especial-form-grid">
+                        {% for field in form %}
+                            <div class="especial-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="especial-error">{{ field.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="especial-form-actions mt-3">
+                        <a class="btn btn-outline-secondary" href="{% url 'especial:carga_cueanexo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Cancelar</a>
+                        <button type="submit" class="btn btn-primary" {% if catalogos_faltantes %}disabled{% endif %}>
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="especial-empty-state">Seleccioná un CUE-Anexo y un ciclo para editar los datos.</div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script>
+(function() {
+    var form = document.getElementById("formDatosCueanexo");
+    if (!form) return;
+
+    var beneficio = document.getElementById("id_beneficio_alimentario_gratuito");
+    var fuente = document.getElementById("id_fuente_financiamiento");
+    var prestacion = document.getElementById("id_prestacion_tipo");
+    var fuenteNoCorresponde = "{{ form.no_corresponde_fuente_id|default:'' }}";
+    var prestacionNoCorresponde = "{{ form.no_corresponde_prestacion_id|default:'' }}";
+
+    function normalizar(texto) {
+        return String(texto || "").toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function requiereNoCorresponde() {
+        if (!beneficio || beneficio.selectedIndex < 0) return false;
+        var texto = normalizar(beneficio.options[beneficio.selectedIndex].textContent);
+        return texto.indexOf("-1") >= 0 || texto === "no" || texto.indexOf(" sin informacion") >= 0 || texto.indexOf("sin informacion") >= 0;
+    }
+
+    function setVisualDisabled(select, disabled) {
+        if (!select) return;
+        select.disabled = disabled;
+        select.classList.toggle("bg-light", disabled);
+    }
+
+    function sync() {
+        var debe = requiereNoCorresponde();
+        if (debe && fuenteNoCorresponde) fuente.value = fuenteNoCorresponde;
+        if (debe && prestacionNoCorresponde) prestacion.value = prestacionNoCorresponde;
+        setVisualDisabled(fuente, debe);
+        setVisualDisabled(prestacion, debe);
+    }
+
+    if (beneficio) beneficio.addEventListener("change", sync);
+    form.addEventListener("submit", function() {
+        setVisualDisabled(fuente, false);
+        setVisualDisabled(prestacion, false);
+    });
+    sync();
+})();
+</script>
+{% endblock %}

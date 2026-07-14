@@ -26,74 +26,8 @@
             </div>
         {% endif %}
 
-        <div class="cef-tools">
-            <div class="cef-tools-left">
-                <span class="cef-tools-label">Mostrar</span>
-                <select data-cef-page-size>
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-                <span class="cef-tools-label">registros</span>
-            </div>
-            <div class="cef-tools-right">
-                <div class="cef-search-wrap">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input id="searchInscripcion" type="search" placeholder="Buscar…" data-cef-table-search>
-                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        {% if inscripciones %}
-            <div class="cef-table-wrap">
-                <table class="cef-dt" data-cef-table>
-                    <thead>
-                        <tr>
-                            <th>Apellido y Nombre</th>
-                            <th>Documento</th>
-                            <th>CUIL</th>
-                            <th>Sexo</th>
-                            <th>Fecha inscripción</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inscripcion in inscripciones %}
-                            <tr>
-                                <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
-                                <td>{{ inscripcion.alumno.nro_doc }}</td>
-                                <td>{{ inscripcion.alumno.cuil|default:"—" }}</td>
-                                <td>{{ inscripcion.alumno.sexo|default:"—" }}</td>
-                                <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
-                                <td>
-                                    <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}secondary{% else %}primary{% endif %}">
-                                        {{ inscripcion.get_estado_display }}
-                                    </span>
-                                </td>
-                                <td class="cef-act-cell">
-                                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'cef:editar_inscripcion_grupo' grupo.pk inscripcion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" title="Editar inscripción">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="cef-empty-state">
-                <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-                Todavía no hay alumnos inscriptos en este grupo.
-            </div>
-        {% endif %}
-
-        <div class="cef-tfoot">
-            <span class="cef-tfoot-count" data-cef-table-count>{{ inscripciones|length }} registros</span>
-            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        <div data-cef-fragment="inscripciones-grupo">
+            {% include "cef/inscripciones_grupo_lista_cef.html" %}
         </div>
     </div>
 </div>

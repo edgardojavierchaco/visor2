@@ -7,7 +7,9 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 
 from .forms import CefBusquedaDocenteForm, CefDocenteGrupoForm
@@ -17,6 +19,7 @@ from .models import (
     CefDocenteGrupo,
     CefGrupo,
     PADRON_DB_ALIAS,
+    validar_docente_grupo_activo,
 )
 from .permisos import cef_required
 from .views_contexto import contexto_base
@@ -30,6 +33,10 @@ MSG_BANCO_DOCENTES_PENDIENTE = (
 
 def _solo_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
+
+
+def _is_ajax(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
 
 
 def _buscar_docente(cuil):
@@ -185,6 +192,10 @@ def _errores_form(form):
 
 
 def _mensaje_error_asignacion_form(form):
+    errores = _errores_form(form)
+    if errores:
+        return errores
+
     campos = [
         form.fields[field].label or field
         for field in form.errors
@@ -199,33 +210,6 @@ def _mensaje_error_asignacion_form(form):
 
 def _grupo_rotulo(grupo):
     return f"Grupo {grupo.actividad} Nro. {grupo.numero}"
-
-
-def _asignacion_docente_activa(grupo, cuil):
-    return (
-        CefDocenteGrupo.objects.filter(
-            grupo=grupo,
-            docente_cuil=cuil,
-            estado=CefDocenteGrupo.Estado.ACTIVO,
-        )
-        .select_related("grupo", "grupo__actividad")
-        .first()
-    )
-
-
-def _asignacion_rol_activa(grupo, rol, cuil):
-    if not rol:
-        return None
-
-    return (
-        CefDocenteGrupo.objects.filter(
-            grupo=grupo,
-            rol=rol,
-            estado=CefDocenteGrupo.Estado.ACTIVO,
-        )
-        .exclude(docente_cuil=cuil)
-        .first()
-    )
 
 
 def _grupo_profesores_seguro(grupo_id, cef_context):
@@ -264,19 +248,17 @@ def _asignar_docente_grupo(request, cef_context):
         form.instance.grupo = grupo
         form.instance.docente_cuil = cuil
 
-    asignacion_activa = _asignacion_docente_activa(grupo, cuil) if grupo and len(cuil) == 11 else None
-    if not modal_error and asignacion_activa:
-        modal_error = f"Este profesor ya está asignado a {_grupo_rotulo(grupo)} como {asignacion_activa.get_rol_display()}."
-    elif not modal_error and grupo and len(cuil) == 11 and docente and form.is_valid():
-        rol_ocupado = _asignacion_rol_activa(
-            grupo,
-            form.cleaned_data.get("rol"),
-            cuil,
-        )
-        if rol_ocupado:
-            modal_error = f"El grupo ya tiene un {rol_ocupado.get_rol_display()} activo."
-            return None, form, grupo, cuil, modal_error
-
+    if not modal_error and grupo and len(cuil) == 11 and docente and form.is_valid():
+        if form.cleaned_data.get("estado") == CefDocenteGrupo.Estado.ACTIVO:
+            try:
+                validar_docente_grupo_activo(
+                    grupo,
+                    cuil,
+                    form.cleaned_data.get("rol"),
+                )
+            except ValidationError as exc:
+                modal_error = "; ".join(exc.messages)
+                return None, form, grupo, cuil, modal_error, ""
         try:
             _, _, banco_pendiente = _asegurar_docente_banco(
                 docente,
@@ -284,12 +266,14 @@ def _asignar_docente_grupo(request, cef_context):
                 request.user,
             )
             if banco_pendiente:
-                messages.warning(request, MSG_BANCO_DOCENTES_PENDIENTE)
+                if not _is_ajax(request):
+                    messages.warning(request, MSG_BANCO_DOCENTES_PENDIENTE)
         except (IntegrityError, ValidationError):
-            messages.warning(
-                request,
-                "No se pudo actualizar el banco de profesores CEF, pero se continuará con la asignación al grupo.",
-            )
+            if not _is_ajax(request):
+                messages.warning(
+                    request,
+                    "No se pudo actualizar el banco de profesores CEF, pero se continuará con la asignación al grupo.",
+                )
 
         try:
             with transaction.atomic():
@@ -299,14 +283,19 @@ def _asignar_docente_grupo(request, cef_context):
                 asignacion.creado_por = request.user
                 asignacion.actualizado_por = request.user
                 asignacion.save()
+            ajax_message = f"Profesor asignado como {asignacion.get_rol_display().lower()}."
+            if _is_ajax(request):
+                return None, form, grupo, cuil, modal_error, ajax_message
             messages.success(request, "Profesor asociado correctamente al grupo.")
-            return redirect(_url_profesores(cef_context)), form, grupo, cuil, modal_error
-        except (IntegrityError, ValidationError):
+            return redirect(_url_profesores(cef_context)), form, grupo, cuil, modal_error, ""
+        except ValidationError as exc:
+            modal_error = "; ".join(exc.messages)
+        except IntegrityError:
             modal_error = "No se pudo asociar el profesor. Verificá que no exista ya activo en ese grupo o rol."
     elif not modal_error and grupo and len(cuil) == 11 and docente:
         modal_error = _mensaje_error_asignacion_form(form)
 
-    return None, form, grupo, cuil, modal_error
+    return None, form, grupo, cuil, modal_error, ""
 
 
 @cef_required
@@ -323,6 +312,8 @@ def profesores(request):
     asignacion_grupo_seleccionado = None
     asignacion_docente_cuil = ""
     asignacion_modal_error = ""
+    asignacion_ajax_ok = False
+    asignacion_ajax_message = ""
 
     if request.method == "POST" and request.POST.get("accion") == "asignar_grupo":
         (
@@ -331,10 +322,12 @@ def profesores(request):
             asignacion_grupo_seleccionado,
             asignacion_docente_cuil,
             asignacion_modal_error,
+            asignacion_ajax_message,
         ) = _asignar_docente_grupo(request, cef_context)
         if asignacion_response:
             return asignacion_response
-        asignacion_modal_abierto = True
+        asignacion_ajax_ok = bool(asignacion_ajax_message)
+        asignacion_modal_abierto = not asignacion_ajax_ok
         busqueda_form = CefBusquedaDocenteForm()
     elif request.method == "POST":
         busqueda_form = CefBusquedaDocenteForm(request.POST)
@@ -442,6 +435,7 @@ def profesores(request):
             "asignacion_grupo_seleccionado": asignacion_grupo_seleccionado,
             "asignacion_docente_cuil": asignacion_docente_cuil,
             "asignacion_modal_error": asignacion_modal_error,
+            "asignacion_modal_feedback": asignacion_ajax_message,
             "cuil_buscado": cuil_buscado,
             "cuil_error": cuil_error,
             "url_carga_profesor": url_carga_profesor,
@@ -453,4 +447,23 @@ def profesores(request):
             "modal_volver_url": url_profesores,
         }
     )
+    if request.method == "POST" and request.POST.get("accion") == "asignar_grupo" and _is_ajax(request):
+        return JsonResponse(
+            {
+                "ok": asignacion_ajax_ok,
+                "message": asignacion_ajax_message or asignacion_modal_error,
+                "fragment_selector": "[data-cef-fragment='profesores-banco']",
+                "fragment_html": render_to_string(
+                    "cef/profesores_lista_cef.html",
+                    context,
+                    request=request,
+                ),
+                "modal_html": render_to_string(
+                    "cef/asignar_profesor_grupo_modal_cef.html",
+                    context,
+                    request=request,
+                ),
+                "close_modal": asignacion_ajax_ok,
+            }
+        )
     return render(request, "cef/profesores_cef.html", context)

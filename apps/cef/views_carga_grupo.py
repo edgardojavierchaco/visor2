@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Max, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 
 from .forms import CefGrupoDiasForm, CefGrupoForm
 from .models import (
@@ -11,9 +14,12 @@ from .models import (
     CefGrupo,
     CefGrupoDiaFuncionamiento,
     CefInscripcion,
+    docentes_grupo_tiene_duplicados_activos,
 )
 from .permisos import cef_required
 from .views_contexto import contexto_base, redirect_con_contexto
+from .views_docentes_grupo import dar_alta_docente_grupo, dar_baja_docente_grupo
+from .views_inscripcion_grupo import dar_alta_inscripcion_grupo, dar_baja_inscripcion_grupo
 
 
 def _grupos_queryset(cef_context):
@@ -64,29 +70,205 @@ def _dias_texto(grupo):
     )
 
 
-def _inscripciones_abiertas_grupo(grupo):
+def _inscripciones_grupo(grupo):
     return (
-        CefInscripcion.objects.filter(
-            grupo=grupo,
-            estado=CefInscripcion.Estado.ACTIVO,
-        )
+        CefInscripcion.objects.filter(grupo=grupo)
         .select_related("alumno", "alumno__sexo")
         .order_by("estado", "alumno__apellidos", "alumno__nombres")
     )
 
 
-def _docentes_activos_grupo(grupo):
+def _docentes_grupo(grupo):
     return (
-        CefDocenteGrupo.objects.filter(
-            grupo=grupo,
-            estado=CefDocenteGrupo.Estado.ACTIVO,
-        )
-        .order_by("rol", "docente_nombre_snapshot", "docente_cuil")
+        CefDocenteGrupo.objects.filter(grupo=grupo)
+        .order_by("estado", "rol", "docente_nombre_snapshot", "docente_cuil")
     )
 
 
 def _docente_activo_por_rol(docentes, rol):
-    return next((docente for docente in docentes if docente.rol == rol), None)
+    return next(
+        (
+            docente
+            for docente in docentes
+            if docente.rol == rol and docente.estado == CefDocenteGrupo.Estado.ACTIVO
+        ),
+        None,
+    )
+
+
+def _url_gestionar_grupo(grupo, cef_context):
+    return redirect_con_contexto("cef:gestionar_grupo", cef_context, grupo_id=grupo.pk)
+
+
+def _is_ajax(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def _gestionar_fragment_context(grupo, cef_context):
+    inscripciones = list(_inscripciones_grupo(grupo))
+    docentes = list(_docentes_grupo(grupo))
+    docentes_activos = [
+        docente for docente in docentes if docente.estado == CefDocenteGrupo.Estado.ACTIVO
+    ]
+    return {
+        "cef_context": cef_context,
+        "grupo": grupo,
+        "inscripciones": inscripciones,
+        "docentes": docentes,
+        "docentes_activos": docentes_activos,
+        "gestionar_grupo_modo": True,
+        "gestionar_grupo_url": _url_gestionar_grupo(grupo, cef_context),
+        "docente_titular": _docente_activo_por_rol(
+            docentes,
+            CefDocenteGrupo.Rol.TITULAR,
+        ),
+        "docente_suplente": _docente_activo_por_rol(
+            docentes,
+            CefDocenteGrupo.Rol.SUPLENTE,
+        ),
+        "grupo_dias_texto": _dias_texto(grupo),
+        "docentes_activos_count": len(docentes_activos),
+        "docentes_activos_duplicados": docentes_grupo_tiene_duplicados_activos(grupo),
+    }
+
+
+def _render_docente_activo_fragment(request, context, titulo, docente_activo, rol_texto):
+    fragment_context = {
+        **context,
+        "titulo": titulo,
+        "docente_activo": docente_activo,
+        "rol_texto": rol_texto,
+    }
+    return render_to_string(
+        "cef/gestionar_grupo_docente_activo_cef.html",
+        fragment_context,
+        request=request,
+    )
+
+
+def _ajax_gestionar_fragment_response(request, grupo, cef_context, ok, message):
+    context = _gestionar_fragment_context(grupo, cef_context)
+    return JsonResponse(
+        {
+            "ok": ok,
+            "message": message,
+            "fragments": [
+                {
+                    "selector": "[data-cef-fragment='gestion-resumen']",
+                    "html": render_to_string(
+                        "cef/gestionar_grupo_resumen_cef.html",
+                        context,
+                        request=request,
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='inscripciones-grupo']",
+                    "html": render_to_string(
+                        "cef/inscripciones_grupo_lista_cef.html",
+                        context,
+                        request=request,
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='docentes-grupo']",
+                    "html": render_to_string(
+                        "cef/docentes_grupo_lista_cef.html",
+                        context,
+                        request=request,
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='docente-titular-activo']",
+                    "html": _render_docente_activo_fragment(
+                        request,
+                        context,
+                        "Profesor titular activo",
+                        context["docente_titular"],
+                        "profesor titular",
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='docente-suplente-activo']",
+                    "html": _render_docente_activo_fragment(
+                        request,
+                        context,
+                        "Profesor suplente activo",
+                        context["docente_suplente"],
+                        "profesor suplente",
+                    ),
+                },
+            ],
+            "close_modal": ok,
+        }
+    )
+
+
+def _baja_alumno_gestionar(request, grupo):
+    try:
+        inscripcion_id = int(request.POST.get("inscripcion_id"))
+    except (TypeError, ValueError):
+        return False, "La inscripción seleccionada no es válida."
+
+    inscripcion = get_object_or_404(
+        CefInscripcion.objects.filter(grupo=grupo),
+        pk=inscripcion_id,
+    )
+    try:
+        dar_baja_inscripcion_grupo(inscripcion, request.user)
+        return True, "Alumno dado de baja del curso correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+def _alta_alumno_gestionar(request, grupo):
+    try:
+        inscripcion_id = int(request.POST.get("inscripcion_id"))
+    except (TypeError, ValueError):
+        return False, "La inscripción seleccionada no es válida."
+
+    inscripcion = get_object_or_404(
+        CefInscripcion.objects.filter(grupo=grupo),
+        pk=inscripcion_id,
+    )
+    try:
+        dar_alta_inscripcion_grupo(inscripcion, request.user)
+        return True, "Alumno reinscripto correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+def _baja_docente_gestionar(request, grupo):
+    try:
+        docente_grupo_id = int(request.POST.get("docente_grupo_id"))
+    except (TypeError, ValueError):
+        return False, "La asignación seleccionada no es válida."
+
+    asignacion = get_object_or_404(
+        CefDocenteGrupo.objects.filter(grupo=grupo),
+        pk=docente_grupo_id,
+    )
+    try:
+        dar_baja_docente_grupo(asignacion, request.user)
+        return True, "Profesor dado de baja del curso correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+def _alta_docente_gestionar(request, grupo):
+    try:
+        docente_grupo_id = int(request.POST.get("docente_grupo_id"))
+    except (TypeError, ValueError):
+        return False, "La asignación seleccionada no es válida."
+
+    asignacion = get_object_or_404(
+        CefDocenteGrupo.objects.filter(grupo=grupo),
+        pk=docente_grupo_id,
+    )
+    try:
+        dar_alta_docente_grupo(asignacion, request.user)
+        return True, "Profesor reasignado al curso correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
 
 
 def _dias_iniciales(grupo):
@@ -198,25 +380,61 @@ def gestionar_grupo(request, grupo_id):
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
     grupo = _grupo_seguro(grupo_id, cef_context)
-    inscripciones = list(_inscripciones_abiertas_grupo(grupo))
-    docentes_activos = list(_docentes_activos_grupo(grupo))
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        if accion == "baja_alumno":
+            ok, message = _baja_alumno_gestionar(request, grupo)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    grupo,
+                    cef_context,
+                    ok,
+                    message,
+                )
+        elif accion == "alta_alumno":
+            ok, message = _alta_alumno_gestionar(request, grupo)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    grupo,
+                    cef_context,
+                    ok,
+                    message,
+                )
+        elif accion == "baja_docente":
+            ok, message = _baja_docente_gestionar(request, grupo)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    grupo,
+                    cef_context,
+                    ok,
+                    message,
+                )
+        elif accion == "alta_docente":
+            ok, message = _alta_docente_gestionar(request, grupo)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    grupo,
+                    cef_context,
+                    ok,
+                    message,
+                )
+        else:
+            ok = False
+            message = "La acción solicitada no es válida."
+            if _is_ajax(request):
+                return JsonResponse({"ok": False, "message": message}, status=400)
+        if ok:
+            messages.success(request, message)
+        else:
+            messages.error(request, message)
+        return redirect(_url_gestionar_grupo(grupo, cef_context))
 
-    context.update(
-        {
-            "grupo": grupo,
-            "grupo_dias_texto": _dias_texto(grupo),
-            "inscripciones": inscripciones,
-            "docentes_activos": docentes_activos,
-            "docente_titular": _docente_activo_por_rol(
-                docentes_activos,
-                CefDocenteGrupo.Rol.TITULAR,
-            ),
-            "docente_suplente": _docente_activo_por_rol(
-                docentes_activos,
-                CefDocenteGrupo.Rol.SUPLENTE,
-            ),
-        }
-    )
+    context.update(_gestionar_fragment_context(grupo, cef_context))
+    context["grupo_dias_texto"] = _dias_texto(grupo)
     return render(request, "cef/gestionar_grupo_cef.html", context)
 
 

@@ -1,25 +1,41 @@
 # apps/especial/forms.py
 # -*- coding: utf-8 -*-
-
 import re
-
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField
-
+from django.utils import timezone
 from .models import (
     AlumnoSeccion,
     CatalogoTipoEstructuraEspecial,
     CatalogoTipoRangoEtario,
     EspecialCiclo,
+    EspecialAlumnoBanco,
+    EspecialDocenteBanco,
+    DocenteSeccion,
     ModalidadDictadoTipo,
     SeccionEspecial,
     seccion_tipo,
     TurnoTipo,
     normalizar_cueanexo,
-    seccion_tipo,
+    solo_digitos,
 )
 
+def _aplicar_clases_bootstrap(field):
+    widget = field.widget
+    clases = widget.attrs.get("class", "")
+    if isinstance(widget, forms.CheckboxSelectMultiple):
+        return
+    if isinstance(widget, forms.CheckboxInput):
+        widget.attrs["class"] = f"{clases} form-check-input".strip()
+        return
+    if isinstance(widget, forms.Textarea):
+        nueva = "form-control"
+    elif isinstance(widget, forms.Select):
+        nueva = "form-select"
+    else:
+        nueva = "form-control"
+    widget.attrs["class"] = f"{clases} {nueva}".strip()
 
 class EspecialBusquedaAlumnoForm(forms.Form):
     """Formulario de búsqueda de alumno por CUIL."""
@@ -33,13 +49,29 @@ class EspecialBusquedaAlumnoForm(forms.Form):
             "pattern": r"\d{11}|[\d-]{13}",
         }),
     )
-
     def clean_cuil(self):
         cuil = re.sub(r"\D", "", self.cleaned_data.get("cuil", ""))
         if len(cuil) != 11:
             raise ValidationError("El CUIL debe tener 11 dígitos.")
         return cuil
 
+class EspecialBusquedaDocenteForm(forms.Form):
+    """Formulario de búsqueda de docente por CUIL."""
+    cuil = forms.CharField(
+        max_length=13,
+        required=True,
+        label="CUIL del Docente",
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Ej: 20-12345678-9",
+            "pattern": r"\d{11}|[\d-]{13}",
+        }),
+    )
+    def clean_cuil(self):
+        cuil = re.sub(r"\D", "", self.cleaned_data.get("cuil", ""))
+        if len(cuil) != 11:
+            raise ValidationError("El CUIL debe tener 11 dígitos.")
+        return cuil
 
 class EspecialSeccionForm(forms.ModelForm):
     """Formulario de creación/edición de sección de Educación Especial."""
@@ -84,7 +116,6 @@ class EspecialSeccionForm(forms.ModelForm):
     def __init__(self, *args, ciclo=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.ciclo = ciclo
-
         # Mapeo de campos y sus querysets
         campos_catalogo = {
             "cd_tipo_seccion": seccion_tipo.objects.all(),
@@ -93,12 +124,14 @@ class EspecialSeccionForm(forms.ModelForm):
             "rango_etario": CatalogoTipoRangoEtario.objects.all(),
             "modalidad": ModalidadDictadoTipo.objects.all(),
         }
-
         for nombre_campo, queryset in campos_catalogo.items():
             field = self.fields.get(nombre_campo)
             if isinstance(field, ModelChoiceField):
                 field.queryset = queryset
                 field.label_from_instance = lambda obj: getattr(obj, "descripcion", str(obj))
+        
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
 
     def clean_capacidad_total(self):
         capacidad = self.cleaned_data.get("capacidad_total")
@@ -119,7 +152,6 @@ class EspecialSeccionForm(forms.ModelForm):
         if commit:
             seccion.save()
         return seccion
-
 
 class EspecialCicloForm(forms.ModelForm):
     """Formulario de creación de ciclo lectivo."""
@@ -142,6 +174,11 @@ class EspecialCicloForm(forms.ModelForm):
             "activo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "actual": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
 
     def save(self, user=None, commit=True):
         ciclo = super().save(commit=False)
@@ -151,3 +188,65 @@ class EspecialCicloForm(forms.ModelForm):
         if commit:
             ciclo.save()
         return ciclo
+
+class EspecialInscripcionForm(forms.ModelForm):
+    """Formulario para inscribir/alumno a sección (AlumnoSeccion)."""
+    class Meta:
+        model = AlumnoSeccion
+        fields = [
+            "estado",
+            "fecha_inscripcion",
+            "fecha_baja",
+            "motivo_baja",
+            "observaciones",
+        ]
+        widgets = {
+            "fecha_inscripcion": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "fecha_baja": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+        labels = {
+            "estado": "Estado",
+            "fecha_inscripcion": "Fecha de inscripción",
+            "fecha_baja": "Fecha de baja",
+            "motivo_baja": "Motivo de baja",
+            "observaciones": "Observaciones",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and not getattr(self.instance, "pk", None):
+            self.fields["fecha_inscripcion"].initial = timezone.localdate
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+class EspecialDocenteSeccionForm(forms.ModelForm):
+    """Formulario para asignar docente a sección."""
+    class Meta:
+        model = DocenteSeccion
+        fields = [
+            "rol",
+            "estado",
+            "fecha_desde",
+            "fecha_hasta",
+            "observaciones",
+        ]
+        widgets = {
+            "fecha_desde": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "fecha_hasta": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+        labels = {
+            "rol": "Rol en la sección",
+            "estado": "Estado en esta sección",
+            "fecha_desde": "Fecha de asignación",
+            "fecha_hasta": "Fecha de finalización",
+            "observaciones": "Observaciones",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and not getattr(self.instance, "pk", None):
+            self.fields["fecha_desde"].initial = timezone.localdate
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
