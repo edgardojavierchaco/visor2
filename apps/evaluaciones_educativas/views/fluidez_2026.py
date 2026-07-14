@@ -1069,7 +1069,6 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 	nivel_acceso = request.user.nivelacceso_id
 	# print(f'REGIONALLLLL{nivel_acceso}')
 	contexto["rol"] = nivel_acceso
-	print(nivel_acceso)
 	# Inicializamos el primer formulario siempre
 	# print(nivel_acceso)
 	form_director_nivel = DirectorNivelForm(request.POST or None)
@@ -1539,12 +1538,12 @@ def comprension_lectora(alumnos, grado_seleccionado):
 			# Reiniciamos los puntos para CADA alumno dentro del bucle
 			p1 = 1 if i.pregunta_1 == "B" else 0
 			p2 = 1 if i.pregunta_2 == "C" else 0
-			p3 = 1 if i.pregunta_3 == "B" else 0
+			p3 = 1 if i.pregunta_3 == "A" else 0
 
 			# IMPORTANTE: Usamos punto para el decimal (1.5)
-			p4 = 1.50 if i.pregunta_4 == "A" else 0
-			p5 = 1.50 if i.pregunta_5 == "B" else 0
-			p6 = 1.50 if i.pregunta_6 == "C" else 0
+			p4 = 1.50 if i.pregunta_4 == "D" else 0
+			p5 = 1.50 if i.pregunta_5 == "A" else 0
+			p6 = 1.50 if i.pregunta_6 == "A" else 0
 			# print(f'{i.pregunta_1}{i.pregunta_2}{i.pregunta_3}{i.pregunta_4}{i.pregunta_5}{i.pregunta_6}')
 			puntaje_total = p1 + p2 + p3 + p4 + p5 + p6
 			i.puntaje_comprension = puntaje_total
@@ -1561,14 +1560,14 @@ def comprension_lectora(alumnos, grado_seleccionado):
 	else:
 		for i in evaluaciones:
 			# Reiniciamos los puntos para CADA alumno dentro del bucle
-			p1 = 1 if i.pregunta_1 == "B" else 0
+			p1 = 1 if i.pregunta_1 == "D" else 0
 			p2 = 1 if i.pregunta_2 == "C" else 0
-			p3 = 1 if i.pregunta_3 == "C" else 0
+			p3 = 1.50 if i.pregunta_3 == "B" else 0
 
 			# IMPORTANTE: Usamos punto para el decimal (1.5)
-			p4 = 1.50 if i.pregunta_4 == "A" else 0
-			p5 = 1.50 if i.pregunta_5 == "C" else 0
-			p6 = 1.50 if i.pregunta_6 == "C" else 0
+			p4 = 1 if i.pregunta_4 == "B" else 0
+			p5 = 1.50 if i.pregunta_5 == "D" else 0
+			p6 = 1.50 if i.pregunta_6 == "A" else 0
 			# print(f'{i.pregunta_1}{i.pregunta_2}{i.pregunta_3}{i.pregunta_4}{i.pregunta_5}{i.pregunta_6}')
 			puntaje_total = p1 + p2 + p3 + p4 + p5 + p6
 			if puntaje_total < 3.40:
