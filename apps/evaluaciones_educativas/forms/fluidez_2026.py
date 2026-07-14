@@ -281,9 +281,7 @@ class DirectorNivelForm(DirectorForm):
 		('R.E. 8-A', 'R.E. 8-A'),
 		('R.E. 8-B', 'R.E. 8-B'),
 		('R.E. 9', 'R.E. 9'),
-		('R.E. 10-A', 'R.E. 10-A'),
-		('R.E. 10-B', 'R.E. 10-B'),
-		('R.E. 10-C', 'R.E. 10-C'),	
+		('R.E. 10-AB', 'R.E. 10-AB'),
 		]
 		
 		region = forms.ChoiceField(
@@ -379,7 +377,8 @@ class CueanexoForm(forms.Form):
 				#print(f'ministro lista{qs}')
 				choices = [
 					('', '--------'),
-					('TODOS', '----TODOS LOS CUEANEXOS----'),
+					('TODOS', '----TO'
+					'DOS LOS CUEANEXOS----'),
 					]
 				
 			lista_cueanexos_validos=[]
@@ -405,9 +404,9 @@ class CueanexoForm(forms.Form):
 					label = f"Cueanexo: {obj.cueanexo}- Est:{obj.escuela}"
 					choices.append((obj.cueanexo, label))
 					var=obj.cueanexo
-			label = f"Cueanexo: {obj.cueanexo}"
-			choices.append((obj.cueanexo, label))
-			var=obj.cueanexo
+			#label = f"Cueanexo: {obj.cueanexo}"
+			#choices.append((obj.cueanexo, label))
+			#var=obj.cueanexo
 
 			# 4. Asignamos la lista final al campo
 			self.fields['cueanexo_seleccionado'].choices = choices
