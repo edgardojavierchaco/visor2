@@ -282,6 +282,7 @@ class DirectorNivelForm(DirectorForm):
 		('R.E. 8-B', 'R.E. 8-B'),
 		('R.E. 9', 'R.E. 9'),
 		('R.E. 10-AB', 'R.E. 10-AB'),
+		('R.E. 10-C', 'R.E. 10-C'),
 		]
 		
 		region = forms.ChoiceField(
@@ -329,9 +330,11 @@ class CueanexoForm(forms.Form):
 			#print(f'consulta a grado{cueanexo_grado}')
 			if nivel_acceso == 'Director/a':
 				cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
+				#print(cuil_con_caracter)
 				qs = CapaUnicaOfertas.objects.filter(
 					resploc_cuitcuil=cuil_con_caracter, oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
 				).only('cueanexo','nom_est')
+				#print(qs)
 				choices = [('', '--------')]
 			elif nivel_acceso =='Regional':
 				region_regional = obtener_regional(cuil)
@@ -354,8 +357,10 @@ class CueanexoForm(forms.Form):
 					]
 			else:
 				#region = obtener_regional(cuil)
+				if region== 'R.E. 10-AB':
+						region= ['R.E. 10-A','R.E. 10-B']
 				cueanexos=obtener_sector_ambito_region(sector,ambito,region)
-				#print(region)
+				#print(f"desde aca{cueanexos}")
 				cueanexo_grado= GradoFluidez2026.objects.filter(cueanexo__in=cueanexos).values_list('cueanexo',flat=True).order_by('cueanexo')
 				lista_enteros = [int(i) for i in cueanexo_grado]
 				#print(lista_enteros)
@@ -366,30 +371,31 @@ class CueanexoForm(forms.Form):
 				#print(f'region que llega{region}')
 				#print(f'ambito que llega{ambito}')
 				#print(f'sector que llega{sector}')
-				if region=='TODOS':
+				if region=='TODOS' or isinstance(region, list):
 					qs = CapaUnicaOfertas.objects.filter(
 					 oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
 				).only('cueanexo','nom_est')
 				else:
+					#print(f"x{region}")
 					qs = CapaUnicaOfertas.objects.filter(
 						region_loc = region, oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
 					).only('cueanexo','nom_est')
+					#print(f"x{qs}")
 				#print(f'ministro lista{qs}')
-				choices = [
-					('', '--------'),
-					('TODOS', '----TO'
-					'DOS LOS CUEANEXOS----'),
-					]
+				# choices = [
+				# 	('', '--------'),
+				# 	('TODOS', '----TODOS LOS CUEANEXOS----'),
+				# 	]
 				
 			lista_cueanexos_validos=[]
 			#print(f'QS{qs}')
 			for i in qs:
 				lista_cueanexos_validos.append(i.cueanexo)
-				label = f'{i.nom_est}-({i.cueanexo})'
-				choices.append((i.cueanexo, label))
+				# label = f'{i.nom_est}-({i.cueanexo})'
+				# choices.append((i.cueanexo, label))
 
 			escuela= EstablecimientosFluidez2026.objects.filter(cueanexo__in=lista_cueanexos_validos).order_by('cueanexo')
-			print('aca')
+			#print('aca')
 			#2. Armamos la lista de opciones manualmente
 			choices = [
 			('', '--- Seleccionar ---'),
@@ -401,7 +407,9 @@ class CueanexoForm(forms.Form):
 			for obj in escuela:
 				# Aquí puedes aplicar tu lógica de etiquetas
 				if var==False or var!=obj.cueanexo:
-					label = f"Cueanexo: {obj.cueanexo}- Est:{obj.escuela}"
+					# label = f"Cueanexo: {obj.cueanexo}- Est:{obj.escuela}"
+					# choices.append((obj.cueanexo, label))
+					label = f'{obj.escuela}-({obj.cueanexo})'
 					choices.append((obj.cueanexo, label))
 					var=obj.cueanexo
 			#label = f"Cueanexo: {obj.cueanexo}"
@@ -585,10 +593,15 @@ def obtener_sector_ambito_region(sector, ambito, region):
 	conn = None
 	cueanexos = []
 	#print(f'{sector},{ambito},{region}')
+	#print(f"desde funcion{region}")
 	# 1. Limpieza total de los parámetros que llegan del form
 	s = sector.strip() if (sector and str(sector).strip()) else None
 	a = ambito.strip() if (ambito and str(ambito).strip()) else None
-	r = region.strip() if (region and str(region).strip()) else None
+	# region puede llegar como string o como lista de strings
+	if isinstance(region, list):
+		r = [v.strip() for v in region if v and str(v).strip()] or None
+	else:
+		r = region.strip() if (region and str(region).strip()) else None
 	
 	# Filtro base obligatorio para tu reporte
 	oferta_val = '%Común - Primaria de 7 años%'
@@ -614,9 +627,15 @@ def obtener_sector_ambito_region(sector, ambito, region):
 				parametros.append(f"{a}%")
 				
 			# Si el usuario eligió REGIÓN, la sumamos
-			if r and r!='TODOS':
-				condiciones.append("TRIM(region_loc) ILIKE %s")
-				parametros.append(r)
+			if r and r != 'TODOS':
+				if isinstance(r, list):
+					# Lista: genera IN (%s, %s, ...) con un %s por cada elemento
+					placeholders = ', '.join(['%s'] * len(r))
+					condiciones.append(f"TRIM(region_loc) IN ({placeholders})")
+					parametros.extend(r)  # extend agrega cada valor por separado
+				else:
+					condiciones.append("TRIM(region_loc) ILIKE %s")
+					parametros.append(r)
 
 			# 3. ARMADO FINAL DE LA QUERY
 			# Join une la lista con " AND ". Si hay 1 filtro, no pone AND. 
