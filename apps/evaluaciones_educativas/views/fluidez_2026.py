@@ -839,7 +839,7 @@ def completar_carga(request,grado_public_id):
 	})
 #---------------------------------------------------------------------------------
 
-# @login_required
+@login_required
 def analisis_evaluaciones_junio_2026(request):
 	contexto = {
 		"alumnos_evaluados_segundo": [],
@@ -933,7 +933,7 @@ def analisis_evaluaciones_junio_2026(request):
 
 
 # #------------------logica para regional---------------------------
-# @login_required
+@login_required
 def analisis_evaluaciones_regional_junio_2026(request):
 	contexto = {
 		"alumnos_evaluados_segundo": [],
@@ -1049,7 +1049,7 @@ def analisis_evaluaciones_regional_junio_2026(request):
 
 # #--------------------fin de logica para regional----------------
 # #---------------------logica para SUBSE Y MINISTRO---------------------------
-# @login_required
+@login_required
 def analisis_evaluaciones_ministros_junio_2026(request):
 	contexto = {
 		"alumnos_evaluados_segundo": [],
