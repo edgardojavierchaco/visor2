@@ -84,20 +84,13 @@ LOCAL_APPS = [
     'apps.padroninterno',
     'apps.bnhpersonas',
     'apps.indicators',
-<<<<<<< HEAD
-    "apps.cef.apps.CefConfig",
-    "apps.bnhalumnos.apps.BnhalumnosConfig",
-    "apps.supervisor_registro.apps.SupervisorRegistroConfig",
-    "apps.monitoreo_login",
-    "apps.especial",
-=======
     'apps.cef.apps.CefConfig',
     'apps.bnhalumnos.apps.BnhalumnosConfig',
     'apps.supervisor_registro.apps.SupervisorRegistroConfig',
     'apps.monitoreo_login',
     'apps.sirtee',
     'apps.sirtee.catalogos',
->>>>>>> main
+    "apps.especial",
 ]
 
 
