@@ -1776,6 +1776,7 @@ def analisis_evaluacion(request):
     lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
     rol_dennied = 'Director/a'
     rol_usuario = usuario.nivelacceso_id
+    print(rol_usuario)
     
     # ── PROTECCIÓN DE ACCESO ─────────────────────────────────────
     if rol_usuario == rol_dennied:
@@ -2103,13 +2104,256 @@ def analisis_evaluacion(request):
     }
     return render(request, 'diagnostico_2026/analisis_evaluacion.html', context)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Vista: Progreso Alumnos (2025 → 2026)
+# Endpoint AJAX que cruza datos de diagnostico_2025 con diagnostico_2026 por DNI
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+def progreso_alumnos(request):
+    """
+    Compara el desempeño de cada alumno entre el diagnóstico 2025 y 2026.
+    Recibe los mismos filtros que analisis_evaluacion (cueanexo, anio, seccion, turno, materia).
+    Retorna JSON con:
+      - lista de alumnos con delta
+      - promedios generales y por capacidad de ambos años
+      - distribución de tendencias (mejoró / empeoró / igual / sin datos)
+    """
+    from apps.evaluaciones_educativas.models.analisis_evaluacion import (
+        ExamenLenguaAlumno,
+        ExamenMatematicaAlumno,
+    )
+
+    usuario = request.user
+    name = usuario.username
+    cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
+
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro']
+    rol_usuario = usuario.nivelacceso_id
+
+    # ── Protección de acceso ──────────────────────────────────────────────────
+    if rol_usuario == 'Director/a':
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+    if rol_usuario not in lista_usuarios_jerarquicos:
+        has_oferta = CapaUnicaOfertas.objects.filter(
+            resploc_cuitcuil=cuil_con_caracter,
+            offer__icontains='Secundaria Completa req. 7 años'
+        ).exists()
+        if not has_oferta:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("No tienes permiso para acceder a esta sección.")
+
+    # ── Parámetros de filtro ──────────────────────────────────────────────────
+    cueanexo   = request.GET.get('cueanexo', '').strip()
+    anio_id    = request.GET.get('anio', '').strip()
+    seccion    = request.GET.get('seccion', '').strip()
+    turno      = request.GET.get('turno', '').strip()
+    materia    = request.GET.get('materia', '').strip()
+
+    UMBRAL_IGUAL = 1.0  # diferencia máxima para considerar "sin cambio"
+
+    if not materia or not cueanexo or not anio_id:
+        return JsonResponse({'error': 'Faltan parámetros: cueanexo, anio, materia'}, status=400)
+
+    cueanexo_int = int(cueanexo) if cueanexo.isdigit() else None
+    anio_int     = int(anio_id)  if anio_id.isdigit()  else None
+
+    if cueanexo_int is None or anio_int is None:
+        return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
+
+    # ── 1. Obtener alumnos + puntajes 2026 ───────────────────────────────────
+    if materia == 'matematica':
+        Modelo2026 = Matematica2026
+    elif materia == 'lengua':
+        Modelo2026 = Lengua2026
+    else:
+        return JsonResponse({'error': 'Materia no válida'}, status=400)
+
+    q_2026 = Q(alumno__seccion__año__cueanexo=cueanexo_int, alumno__seccion__año_id=anio_int)
+    if seccion and turno and seccion != 'TODOS':
+        q_2026 &= Q(alumno__seccion__seccion=seccion, alumno__seccion__turno=turno)
+
+    examenes_2026 = (
+        Modelo2026.objects.filter(q_2026, asistencia='PRESENTE')
+        .select_related('alumno')
+        .values('alumno__dni', 'alumno__apellido', 'alumno__nombre', 'total_puntaje',
+                *(['correcion_reconocimiento', 'correcion_comunicacion', 'correcion_resolucion']
+                  if materia == 'matematica'
+                  else ['correcion_extraccion', 'correcion_interpretacion',
+                        'correcion_reflexion', 'correcion_escritura']))
+    )
+
+    # Mapa: dni → datos 2026
+    mapa_2026 = {}
+    for ex in examenes_2026:
+        dni = str(ex['alumno__dni']).strip()
+        mapa_2026[dni] = ex
+
+    if not mapa_2026:
+        return JsonResponse({'sin_datos': True, 'mensaje': 'No hay alumnos presentes en 2026 con estos filtros.'})
+
+    # ── 2. Obtener puntajes 2025 para esos mismos DNIs ────────────────────────
+    dnis_2026 = list(mapa_2026.keys())
+    Modelo2025 = ExamenMatematicaAlumno if materia == 'matematica' else ExamenLenguaAlumno
+
+    if materia == 'matematica':
+        campos_2025 = ['dni', 'total', 'reconocimiento_conceptos', 'comunicacion', 'resolucion_situaciones']
+    else:
+        campos_2025 = ['dni', 'total', 'extraer', 'interpretar', 'reflexionar_evaluar', 'escribir']
+
+    examenes_2025 = Modelo2025.objects.filter(
+        dni__in=dnis_2026,
+        cueanexo=cueanexo
+    ).values(*campos_2025)
+
+    # Mapa: dni → datos 2025
+    def _sf(v):
+        try:
+            return round(float(str(v or '').replace(',', '.')), 2)
+        except (ValueError, TypeError):
+            return None
+
+    mapa_2025 = {}
+    for ex in examenes_2025:
+        dni = str(ex['dni']).strip()
+        mapa_2025[dni] = ex
+
+    # ── 3. Cruce y cálculo de deltas ─────────────────────────────────────────
+    alumnos_resultado = []
+    mejoro = empeoro = igual = sin_datos = 0
+    suma_2026 = suma_2025 = n_cruce = 0
+
+    # Promedios por capacidad
+    CAP_KEYS_2026 = (
+        ['correcion_reconocimiento', 'correcion_comunicacion', 'correcion_resolucion']
+        if materia == 'matematica'
+        else ['correcion_extraccion', 'correcion_interpretacion', 'correcion_reflexion', 'correcion_escritura']
+    )
+    CAP_KEYS_2025 = (
+        ['reconocimiento_conceptos', 'comunicacion', 'resolucion_situaciones']
+        if materia == 'matematica'
+        else ['extraer', 'interpretar', 'reflexionar_evaluar', 'escribir']
+    )
+    CAP_LABELS = (
+        ['Reconocimiento', 'Comunicación', 'Resolución']
+        if materia == 'matematica'
+        else ['Extraer', 'Interpretar', 'Reflexionar/Eval.', 'Escritura']
+    )
+
+    sumas_cap_2026 = [0.0] * len(CAP_KEYS_2026)
+    sumas_cap_2025 = [0.0] * len(CAP_KEYS_2025)
+    ns_cap         = [0]   * len(CAP_KEYS_2026)
+
+    for dni, d26 in mapa_2026.items():
+        apellido = d26['alumno__apellido'] or ''
+        nombre   = d26['alumno__nombre']   or ''
+        tp_2026  = d26.get('total_puntaje')
+        tp_2026f = round(float(tp_2026), 2) if tp_2026 is not None else None
+
+        d25 = mapa_2025.get(dni)
+        tp_2025f = _sf(d25.get('total')) if d25 else None
+
+        # Tendencia
+        if tp_2025f is None or d25 is None:
+            tendencia = 'sin_datos'
+            delta     = None
+            sin_datos += 1
+        else:
+            delta = round(tp_2026f - tp_2025f, 2) if tp_2026f is not None else None
+            if delta is None:
+                tendencia = 'sin_datos'; sin_datos += 1
+            elif delta > UMBRAL_IGUAL:
+                tendencia = 'mejoro';  mejoro    += 1
+            elif delta < -UMBRAL_IGUAL:
+                tendencia = 'empeoro'; empeoro   += 1
+            else:
+                tendencia = 'igual';   igual     += 1
+
+            if tp_2026f is not None:
+                suma_2026 += tp_2026f
+                suma_2025 += tp_2025f
+                n_cruce   += 1
+
+        # Capacidades
+        caps_2026_vals = {}
+        caps_2025_vals = {}
+        for i, (k26, k25) in enumerate(zip(CAP_KEYS_2026, CAP_KEYS_2025)):
+            v26 = d26.get(k26)
+            v26f = round(float(v26), 2) if v26 is not None else None
+            caps_2026_vals[CAP_LABELS[i]] = v26f
+
+            v25f = _sf(d25.get(k25)) if d25 else None
+            caps_2025_vals[CAP_LABELS[i]] = v25f
+
+            if v26f is not None:
+                sumas_cap_2026[i] += v26f
+                ns_cap[i]         += 1
+            if v25f is not None:
+                sumas_cap_2025[i] += v25f
+
+        alumnos_resultado.append({
+            'dni':         dni,
+            'apellido':    apellido,
+            'nombre':      nombre,
+            'nota_2025':   tp_2025f,
+            'nota_2026':   tp_2026f,
+            'delta':       delta,
+            'tendencia':   tendencia,
+            'caps_2026':   caps_2026_vals,
+            'caps_2025':   caps_2025_vals,
+        })
+
+    # Ordenar: primero los con datos 2025, luego sin datos; dentro, mayor delta desc
+    alumnos_resultado.sort(
+        key=lambda x: (x['tendencia'] == 'sin_datos', -(x['delta'] or 0))
+    )
+
+    # Promedios globales
+    prom_2026 = round(suma_2026 / n_cruce, 2) if n_cruce else None
+    prom_2025 = round(suma_2025 / n_cruce, 2) if n_cruce else None
+
+    prom_cap_2026 = [
+        round(sumas_cap_2026[i] / ns_cap[i], 2) if ns_cap[i] else None
+        for i in range(len(CAP_LABELS))
+    ]
+    prom_cap_2025 = [
+        round(sumas_cap_2025[i] / ns_cap[i], 2) if ns_cap[i] else None
+        for i in range(len(CAP_LABELS))
+    ]
+
+    return JsonResponse({
+        'sin_datos':    False,
+        'materia':      materia,
+        'total_alumnos_2026': len(mapa_2026),
+        'total_cruce':  n_cruce,
+        'tendencias': {
+            'mejoro':    mejoro,
+            'empeoro':   empeoro,
+            'igual':     igual,
+            'sin_datos': sin_datos,
+        },
+        'promedios': {
+            'general_2026': prom_2026,
+            'general_2025': prom_2025,
+            'capacidades_labels': CAP_LABELS,
+            'capacidades_2026':   prom_cap_2026,
+            'capacidades_2025':   prom_cap_2025,
+        },
+        'alumnos': alumnos_resultado,
+    })
+
+
 @login_required
 def descargar_examen_individual(request, materia):
     usuario = request.user
     name = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
     lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
-    rol_usuario = usuario.nivelacceso_id  
+    rol_usuario = usuario.nivelacceso_id
+
     
     # ── 1. SEGURIDAD Y PERMISOS ───────────────────────────────────────────────
     if rol_usuario not in lista_usuarios_jerarquicos:
