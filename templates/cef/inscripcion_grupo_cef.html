@@ -1,0 +1,36 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Búsqueda por CUIL e inscripción de alumnos al grupo seleccionado.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Grupos <span>» Inscripción de Alumnos</span></h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+            </a>
+            <button class="btn btn-primary" type="button" data-open-personas-modal>
+                <i class="fa-solid fa-user-plus"></i> Agregar alumno
+            </button>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if grupo %}
+            <div class="mb-3">
+                <span class="cef-context-pill">
+                    <i class="fa-solid fa-users"></i>
+                    {{ grupo.actividad }} — Grupo {{ grupo.nombre|default:"" }} N° {{ grupo.numero }} — {{ grupo.turno }}
+                </span>
+            </div>
+        {% endif %}
+
+        <div data-cef-fragment="inscripciones-grupo">
+            {% include "cef/inscripciones_grupo_lista_cef.html" %}
+        </div>
+    </div>
+</div>
+
+{% include "cef/modal_busqueda_alumno_cef.html" %}
+{% endblock %}

@@ -3,19 +3,14 @@ import os
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .db_helpers import conectar_ra, obtener_dblink_visualizador
 
 def conectar_bd(request):
     try:
-        connection = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD'),
-            database=os.getenv('DB_NAME2') 
-        )
-        return connection
+        return conectar_ra()
     except psycopg2.Error:
         return None
-
+    
 def dashboard_matric_discapacidad_secundaria(request):
     regiones = [
         "R.E. 1", "R.E. 2", "R.E. 3", "R.E. 4-A", "R.E. 4-B", 
@@ -46,6 +41,13 @@ def matric_disc_sec_ajax(request):
 
         cursor = connection.cursor()
 
+        dblink_conn = obtener_dblink_visualizador()
+
+        dblink_sql = """
+            SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc
+            FROM public.v_capa_unica_ofertas_ant
+        """
+
         # =================================================================================================
         # BLINDAJE DE DATOS: EXPRESIONES REGULARES (REGEX) PARA COLUMNAS NUMÉRICAS
         # =================================================================================================
@@ -73,14 +75,22 @@ def matric_disc_sec_ajax(request):
             FROM public.{tvista} AS mc
             LEFT JOIN (
                 SELECT cueanexo, nom_est, sector, ambito, region_loc, departamento, localidad
-                FROM dblink('dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant')
-                AS padron(cueanexo character varying, nom_est character varying, ambito character varying, sector character varying, departamento character varying, localidad character varying, region_loc character varying)
-            ) AS p ON mc.cueanexo = p.cueanexo
+                FROM dblink(
+                    %s,
+                    %s
+                ) AS padron(
+                    cueanexo character varying,
+                    nom_est character varying,
+                    ambito character varying,
+                    sector character varying,
+                    departamento character varying,
+                    localidad character varying,
+                    region_loc character varying
+                )
             WHERE 1=1
         """
 
-        parameters = []       
+        parameters = [dblink_conn, dblink_sql]     
         if cueanexo:
             query += " AND mc.cueanexo = %s"
             parameters.append(cueanexo) 

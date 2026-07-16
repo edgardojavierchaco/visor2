@@ -1269,7 +1269,7 @@ function renderTabla(data) {
         const mot    = parseInt(item.motora_pura) || 0;
         const neu    = parseInt(item.neuromotora) || 0;
         const tea    = parseInt(item.tea)        || 0;
-        const totRow = parseInt(item.total)      || 0;
+        const totRow = ceg + dism + sord + hipo + int_ + mot + neu + tea;
 
         tCeg += ceg; tDism += dism; tSord += sord; tHipo += hipo;
         tInt += int_; tMot += mot; tNeu += neu; tTea += tea; tTotal += totRow;

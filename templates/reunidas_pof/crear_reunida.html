@@ -1,0 +1,386 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="reunidas" %}
+    <div class="pof-view-header">
+        <h1>&#128218; CREAR POF</h1>
+        <p>Seleccion&aacute; a&ntilde;o y nivel para crear una nueva Planta Org&aacute;nica Funcional.</p>
+    </div>
+
+    <form method="post" class="pof-card pof-card-accent" id="crearReunidaForm" novalidate>
+        {% csrf_token %}
+        <h2>Detalles de la POF</h2>
+        <div class="pof-help">
+            El sistema evita duplicar una Reunida con el mismo a&ntilde;o y nivel.
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="pof-status error">
+                {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="pof-grid">
+            <div
+                id="crearReunidaCampoAnio"
+                class="pof-field pof-col-6{% if form.anio.errors %} pof-field-error{% endif %}"
+            >
+                <label for="{{ form.anio.id_for_label }}">A&ntilde;o</label>
+                {{ form.anio }}
+
+                <div
+                    id="crearReunidaErrorAnio"
+                    class="pof-form-error{% if not form.anio.errors %} pof-hidden{% endif %}"
+                    role="alert"
+                    aria-live="polite"
+                >
+                    {% for error in form.anio.errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div
+                id="crearReunidaCampoNivel"
+                class="pof-field pof-col-6{% if form.nivel.errors %} pof-field-error{% endif %}"
+            >
+                <label for="{{ form.nivel.id_for_label }}">Nivel</label>
+                {{ form.nivel }}
+
+                <div
+                    id="crearReunidaErrorNivel"
+                    class="pof-form-error{% if not form.nivel.errors %} pof-hidden{% endif %}"
+                    role="alert"
+                    aria-live="polite"
+                >
+                    {% for error in form.nivel.errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="crearReunidaError"
+            class="pof-status error{% if not form.errors %} pof-hidden{% endif %}"
+            role="alert"
+            aria-live="polite"
+        >
+            {% if form.non_field_errors %}
+                {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            {% elif form.errors %}
+                Revis&aacute; los campos marcados antes de continuar.
+            {% endif %}
+        </div>
+
+        <div class="pof-actions">
+            <button type="submit" class="pof-btn pof-btn-primary" id="crearReunidaSubmit">
+                Crear Reunida
+            </button>
+
+            <a class="pof-btn pof-btn-light" href="{% url 'reunidas_pof:reunidas_pof' %}">
+                Cancelar
+            </a>
+        </div>
+        <div id="crearReunidaError" class="pof-status error pof-hidden" role="alert"></div>
+    </form>
+</div>
+
+<div id="confirmarCrearReunidaModal" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
+    <div class="pof-modal pof-reunida-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmarCrearReunidaTitulo">
+        <div class="pof-modal-header">
+            <h2 id="confirmarCrearReunidaTitulo"><span class="pof-reunida-confirm-icon" aria-hidden="true">📝</span> Confirmar creación de Reunida</h2>
+            <button type="button" class="pof-modal-close" id="cerrarConfirmarCrearReunida" aria-label="Cerrar">&times;</button>
+        </div>
+
+        <div class="pof-reunida-confirm-section">
+            <p>Vas a crear la Reunida:</p>
+            <div class="pof-reunida-confirm-block pof-reunida-confirm-block-destino" id="confirmarReunidaDestino">📤 —</div>
+        </div>
+
+        <div class="pof-reunida-confirm-section" id="confirmarReunidaConBase">
+            <p>Se tomará como base la Reunida:</p>
+            <div class="pof-reunida-confirm-block" id="confirmarReunidaBase">📆 —</div>
+            <div class="pof-reunida-confirm-inheritance">
+                <p>Se heredarán automáticamente:</p>
+                <ul>
+                    <li>Todas las localizaciones</li>
+                    <li>Todos los cargos</li>
+                    <li>Estados AFECTADO y DESAFECTADO</li>
+                </ul>
+            </div>
+            <p class="pof-reunida-confirm-protection" id="confirmarReunidaProteccion"></p>
+        </div>
+
+        <div class="pof-reunida-confirm-section pof-reunida-confirm-empty pof-hidden" id="confirmarReunidaSinBase">
+            <p>No se encontró una Reunida base para:</p>
+            <div class="pof-reunida-confirm-block">📆 —</div>
+            <p>La nueva Reunida comenzará vacía.</p>
+        </div>
+
+        <div class="pof-modal-actions">
+            <button type="button" class="pof-btn pof-btn-light" id="cancelarConfirmarCrearReunida">Cancelar</button>
+            <button type="button" class="pof-btn pof-btn-primary" id="confirmarCrearReunida">Confirmar creación</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var form = document.getElementById("crearReunidaForm");
+    var submitButton = document.getElementById("crearReunidaSubmit");
+    var modal = document.getElementById("confirmarCrearReunidaModal");
+    var modalDestino = document.getElementById("confirmarReunidaDestino");
+    var modalBase = document.getElementById("confirmarReunidaBase");
+    var modalConBase = document.getElementById("confirmarReunidaConBase");
+    var modalSinBase = document.getElementById("confirmarReunidaSinBase");
+    var modalProteccion = document.getElementById("confirmarReunidaProteccion");
+
+    var errorGeneral = document.getElementById("crearReunidaError");
+
+    var campoAnio = document.getElementById("crearReunidaCampoAnio");
+    var errorAnio = document.getElementById("crearReunidaErrorAnio");
+
+    var campoNivel = document.getElementById("crearReunidaCampoNivel");
+    var errorNivel = document.getElementById("crearReunidaErrorNivel");
+
+    var confirmado = false;
+    var input = document.querySelector("[data-pof-anio-input]");
+    if (!form || !submitButton || !modal || !input) {
+        return;
+    }
+
+    var nivel = document.getElementById("id_nivel");
+
+    /**
+     * Cierra la confirmación sin enviar el formulario.
+     *
+     * - Oculta el overlay y restablece su estado accesible.
+     * - No modifica los campos ni crea la Reunida.
+     */
+    function cerrarModal() {
+        modal.classList.add("pof-hidden");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+       /**
+     * Obtiene un único mensaje legible desde un error recibido.
+     *
+     * - Admite texto simple o lista de mensajes.
+     * - Evita duplicar lógica al mostrar errores de distintos campos.
+     */
+    function primerError(valor) {
+        if (Array.isArray(valor)) {
+            return valor.length ? valor[0] : "";
+        }
+
+        return valor || "";
+    }
+
+    /**
+     * Muestra el error general del formulario.
+     *
+     * - Se usa para errores de combinación, duplicados o problemas de consulta.
+     * - No reemplaza los errores específicos de Año o Nivel.
+     */
+    function mostrarErrorGeneral(mensaje) {
+        errorGeneral.textContent = mensaje || "";
+        errorGeneral.classList.remove("pof-hidden");
+    }
+
+    /**
+     * Limpia únicamente el error general.
+     */
+    function limpiarErrorGeneral() {
+        errorGeneral.textContent = "";
+        errorGeneral.classList.add("pof-hidden");
+    }
+
+    /**
+     * Muestra un error específico debajo de Año o Nivel.
+     *
+     * - Marca visualmente el campo.
+     * - Muestra el mensaje debajo del casillero.
+     * - Añade aria-invalid para accesibilidad.
+     */
+    function mostrarErrorCampo(campo, mensaje) {
+        var contenedorCampo = campo === "anio" ? campoAnio : campoNivel;
+        var contenedorError = campo === "anio" ? errorAnio : errorNivel;
+        var control = campo === "anio" ? input : nivel;
+
+        if (!contenedorCampo || !contenedorError || !control) {
+            return;
+        }
+
+        contenedorCampo.classList.add("pof-field-error");
+        contenedorError.textContent = mensaje || "";
+        contenedorError.classList.remove("pof-hidden");
+        control.setAttribute("aria-invalid", "true");
+    }
+
+    /**
+     * Limpia el error específico de Año o Nivel.
+     */
+    function limpiarErrorCampo(campo) {
+        var contenedorCampo = campo === "anio" ? campoAnio : campoNivel;
+        var contenedorError = campo === "anio" ? errorAnio : errorNivel;
+        var control = campo === "anio" ? input : nivel;
+
+        if (!contenedorCampo || !contenedorError || !control) {
+            return;
+        }
+
+        contenedorCampo.classList.remove("pof-field-error");
+        contenedorError.textContent = "";
+        contenedorError.classList.add("pof-hidden");
+        control.removeAttribute("aria-invalid");
+    }
+
+    /**
+     * Limpia todos los errores de la pantalla antes de una nueva validación.
+     */
+    function limpiarErroresFormulario() {
+        limpiarErrorCampo("anio");
+        limpiarErrorCampo("nivel");
+        limpiarErrorGeneral();
+    }
+
+    /**
+     * Distribuye los errores backend en su lugar correspondiente.
+     *
+     * - Año se muestra debajo de Año.
+     * - Nivel se muestra debajo de Nivel.
+     * - El mensaje general permanece debajo del conjunto de campos.
+     */
+    function mostrarErroresFormulario(datos) {
+        var errores = datos && datos.errores ? datos.errores : {};
+
+        if (errores.anio) {
+            mostrarErrorCampo("anio", primerError(errores.anio));
+        }
+
+        if (errores.nivel) {
+            mostrarErrorCampo("nivel", primerError(errores.nivel));
+        }
+
+        mostrarErrorGeneral(
+            datos && datos.mensaje
+                ? datos.mensaje
+                : "No se pudo verificar la información ingresada."
+        );
+    }
+
+    /**
+     * Renderiza el resultado de la consulta exacta de base en la modal.
+     *
+     * - Usa nivel y año devueltos por backend para evitar una base ficticia.
+     * - Diferencia visualmente herencia disponible y creación desde cero.
+     * - No modifica campos ni datos de la solicitud real.
+     */
+    function abrirModal(datos) {
+        var destino = datos.destino;
+        var base = datos.base;
+        var destinoTexto = "📤 " + destino.nivel_nombre + " " + destino.anio;
+        var baseTexto = "📆 " + base.nivel_nombre + " " + base.anio;
+
+        modalDestino.textContent = destinoTexto;
+        modalBase.textContent = baseTexto;
+        modalConBase.classList.toggle("pof-hidden", !base.existe);
+        modalSinBase.classList.toggle("pof-hidden", base.existe);
+        modalSinBase.querySelector(".pof-reunida-confirm-block").textContent = baseTexto;
+        modalProteccion.textContent = "La Reunida " + base.anio + " no será modificada.";
+        modal.classList.remove("pof-hidden");
+        modal.setAttribute("aria-hidden", "false");
+        document.getElementById("confirmarCrearReunida").focus();
+    }
+
+    /**
+     * Valida los mínimos del formulario y solicita la previsualización de base.
+     *
+     * - Ejecuta una única consulta al presionar Crear Reunida.
+     * - Abre la modal solo con una respuesta backend válida.
+     * - Mantiene cerrada la modal ante datos incompletos o errores de consulta.
+     */
+    async function prepararConfirmacion() {
+        limpiarErroresFormulario();
+
+        var params = new URLSearchParams({
+            anio: input.value,
+            nivel: nivel ? nivel.value : "",
+        });
+        submitButton.disabled = true;
+        try {
+            var response = await fetch("{% url 'reunidas_pof:previsualizar_reunida_base' %}?" + params.toString(), {
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+            });
+            var datos = await response.json();
+            if (!response.ok || !datos.ok) {
+                mostrarErroresFormulario(datos);
+                return;
+            }
+            abrirModal(datos);
+        } catch (error) {
+            mostrarErrorGeneral(
+                "No se pudo verificar la base de la Reunida. Intentá nuevamente."
+            );
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
+
+    form.addEventListener("submit", function (event) {
+        if (confirmado) {
+            return;
+        }
+        event.preventDefault();
+        prepararConfirmacion();
+    });
+
+    document.getElementById("confirmarCrearReunida").addEventListener("click", function () {
+        confirmado = true;
+        HTMLFormElement.prototype.submit.call(form);
+    });
+    document.getElementById("cancelarConfirmarCrearReunida").addEventListener("click", cerrarModal);
+    document.getElementById("cerrarConfirmarCrearReunida").addEventListener("click", cerrarModal);
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) {
+            cerrarModal();
+        }
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !modal.classList.contains("pof-hidden")) {
+            cerrarModal();
+        }
+    });
+
+    function limpiarAnio(valor) {
+        return String(valor || "").replace(/\D/g, "").slice(0, 4);
+    }
+
+    input.addEventListener("input", function () {
+        this.value = limpiarAnio(this.value);
+        limpiarErrorCampo("anio");
+        limpiarErrorGeneral();
+    });
+
+    if (nivel) {
+        nivel.addEventListener("change", function () {
+            limpiarErrorCampo("nivel");
+            limpiarErrorGeneral();
+        });
+    }
+
+    input.addEventListener("paste", function (event) {
+        event.preventDefault();
+        var texto = event.clipboardData ? event.clipboardData.getData("text") : "";
+        this.value = limpiarAnio(this.value + texto);
+    });
+});
+</script>
+
+{% endblock %}

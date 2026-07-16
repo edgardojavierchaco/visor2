@@ -1,0 +1,23 @@
+/* Mantiene la pagina anterior visible hasta que el siguiente documento esta listo. */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root) {
+    animation: none;
+}
+
+::view-transition-new(root) {
+    animation: padron-navigation-reveal 120ms ease-out both;
+}
+
+@keyframes padron-navigation-reveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-new(root) {
+        animation: none;
+    }
+}

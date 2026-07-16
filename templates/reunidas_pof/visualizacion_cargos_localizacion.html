@@ -1,0 +1,1256 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="visualizacion_cargos" %}
+    <link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260716-2">
+
+    <div class="pof-view-header">
+        {% if es_proyecto_especial and proyecto_especial %}
+            <h1>PROYECTO ESPECIAL {{ proyecto_especial.anio }} &middot; {{ proyecto_especial.nombre }}</h1>
+            <p>Visualizaci&oacute;n de cargos del Proyecto Especial POF{% if proyecto_especial.resolucion %}. Resoluci&oacute;n {{ proyecto_especial.resolucion }}{% endif %}.</p>
+        {% else %}
+        <h1>💻 Visualizaci&oacute;n de Cargos por Localizaci&oacute;n</h1>
+        <p>Consulta global de cargos cargados en POF por CUEANEXO/localizaci&oacute;n, con datos de padr&oacute;n, CUOF, CUI y CEIC.</p>
+        {% endif %}
+    </div>
+
+    {% if mensaje_contexto_visualizacion %}
+        <div class="pof-note">{{ mensaje_contexto_visualizacion }}</div>
+    {% endif %}
+
+    <form method="get"
+          id="visualizacionCargosForm"
+          class="pof-visual-filter-card"
+          data-datos-url="{% url 'reunidas_pof:visualizacion_cargos_localizacion_datos' %}"
+          data-filtros-url="{% url 'reunidas_pof:visualizacion_cargos_localizacion_filtros' %}">
+        {% if es_proyecto_especial and proyecto_especial %}
+            <input type="hidden" name="cabecera_tipo" value="PROYECTO_ESPECIAL">
+            <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial.id }}">
+        {% endif %}
+        <input type="hidden" name="columnas_estado" id="columnasEstado" value="{{ columnas_estado }}">
+        <input type="hidden" name="campo_filtro" id="visualizacionCampoFiltroActivo" value="">
+
+        <div class="pof-visual-toolbar">
+            <div class="pof-visual-live-search" id="visualizacionLiveSearch">
+                <label class="pof-visually-hidden" for="visualizacionColumnaSelect">Columna</label>
+                <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                <select id="visualizacionColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                    {% for columna in columnas %}
+                        {% if columna.buscable %}
+                            <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <label class="pof-visually-hidden" for="visualizacionColumnaInput">Buscar en columna</label>
+                <input type="text"
+                       id="visualizacionColumnaInput"
+                       class="pof-visual-search-input"
+                       value="{{ busqueda_columna_valor }}"
+                       placeholder="Buscar en esta columna"
+                       autocomplete="off">
+                <span id="visualizacionBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                    <span class="pof-visually-hidden">Buscando</span>
+                </span>
+                <button type="button" class="pof-visual-search-clear" id="visualizacionLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+            </div>
+
+            {% if not es_proyecto_especial %}
+                <div class="pof-visual-year-filter">
+                    <label for="visualizacionAnioSelect">A&ntilde;o</label>
+                    <select id="visualizacionAnioSelect"
+                            name="anio"
+                            class="pof-visual-year-select"
+                            {% if not anios_visualizacion %}disabled{% endif %}>
+                        {% for anio in anios_visualizacion %}
+                            <option value="{{ anio }}" {% if anio == anio_visualizacion %}selected{% endif %}>{{ anio }}</option>
+                        {% empty %}
+                            <option value="">Sin a&ntilde;os</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            <div class="pof-visual-toolbar-actions">
+                <button type="button"
+                        class="pof-btn pof-btn-outline-primary pof-visual-toolbar-btn pof-visual-toggle-btn"
+                        data-panel-toggle="filtros"
+                        aria-controls="visualizacionPanelFiltros"
+                        aria-expanded="false">
+                    🔧 Filtros
+                </button>
+
+                <button type="button"
+                        class="pof-btn pof-btn-light pof-visual-toolbar-btn pof-visual-toggle-btn"
+                        data-panel-toggle="columnas"
+                        aria-controls="visualizacionPanelColumnas"
+                        aria-expanded="false">
+                    Columnas
+                </button>
+
+                <div class="dropdown pof-grid-dropdown">
+                    <button type="button"
+                            class="pof-btn pof-btn-excel pof-visual-toolbar-btn dropdown-toggle"
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false">
+                        Exportar
+                    </button>
+
+                    <div class="dropdown-menu dropdown-menu-right pof-grid-dropdown-menu">
+                        <a id="visualizacionExcelFiltros"
+                        class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
+                        href="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}{% if querystring_exportar_filtros %}?{{ querystring_exportar_filtros }}{% endif %}"
+                        data-export-base="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}">
+                            📊 Exportar vista actual
+                        </a>
+
+                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
+                        href="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_todo' %}{% if querystring_exportar_todo %}?{{ querystring_exportar_todo }}{% endif %}">
+                            📁 Exportar todos los datos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="visualizacionPanelFiltros" class="pof-visual-panel" hidden>
+            <div class="pof-visual-panel-head">
+                <strong>Filtros</strong>
+            </div>
+            <div class="pof-visual-filter-grid">
+                {% for filtro in filtros_campos %}
+                    <div>
+                        <button type="button"
+                                class="pof-visual-filter-btn"
+                                data-filter-field="{{ filtro.id }}"
+                                data-filter-label="{{ filtro.label }}"
+                                data-filter-mode="{{ filtro.tipo }}"
+                                data-filter-operators="{{ filtro.operadores }}">
+                            {{ filtro.label }}
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="visualizacionPanelColumnas" class="pof-visual-panel" hidden>
+            <div class="pof-visual-panel-head">
+                <strong>Columnas</strong>
+                <span id="visualizacionColumnasContador">Mostrando {{ columnas_visibles_count }} de {{ columnas_total_count }} columnas</span>
+            </div>
+            <div class="pof-visual-columns-grid">
+                {% for columna in columnas %}
+                    <label class="pof-visual-column-option" for="visible_{{ columna.id }}">
+                        <input class="pof-export-column-check pof-visual-column-check"
+                               type="checkbox"
+                               id="visible_{{ columna.id }}"
+                               name="visible_col"
+                               value="{{ columna.id }}"
+                               data-default="{% if columna.visible_default %}1{% else %}0{% endif %}"
+                               {% if columna.visible %}checked{% endif %}>
+                        <span>{{ columna.label }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+
+            <div class="pof-visual-panel-actions pof-visual-columns-actions">
+                <button type="button"
+                        class="pof-filter-clear-btn"
+                        data-column-action="all">
+                    Todas
+                </button>
+
+                <button type="button"
+                        class="pof-filter-clear-btn"
+                        data-column-action="none">
+                    Ocultar Todas
+                </button>
+
+                <button type="button"
+                        class="pof-filter-clear-btn"
+                        data-column-action="default">
+                    Por Defecto
+                </button>
+
+                <button type="button"
+                        class="pof-filter-clear-btn"
+                        id="visualizacionContraerColumnas"
+                        aria-pressed="false">
+                    Modo compacto
+                </button>
+            </div>
+        </div>
+
+        <div id="visualizacionFiltroBackdrop" class="pof-visual-dialog-backdrop" hidden></div>
+        <div id="visualizacionDialogFiltro" class="pof-visual-dialog" hidden>
+            <h6 id="visualizacionDialogTitulo" class="pof-visual-dialog-title">Agregar Filtro</h6>
+            <div class="pof-visual-dialog-body">
+                <div class="pof-visual-dialog-field">
+                    <label for="visualizacionOperadorFiltro">Operador</label>
+                    <select name="operador_filtro" id="visualizacionOperadorFiltro"></select>
+                </div>
+                <div class="pof-visual-dialog-field">
+                    <label id="visualizacionValorFiltroLabel" for="visualizacionValorFiltro">Valor</label>
+                    <div id="visualizacionValorFiltroMount"></div>
+                </div>
+                <div class="pof-visual-dialog-actions">
+                    <button type="submit" class="pof-filter-apply-btn">Agregar filtro</button>
+                    <button type="button" class="pof-filter-clear-btn" id="visualizacionCerrarDialogoFiltro">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if tabla_visualizacion_no_migrada %}
+        <div class="pof-note">La tabla de cargos todav&iacute;a no est&aacute; disponible. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
+    {% endif %}
+
+        <div class="pof-filter-active-list"
+            id="visualizacionFiltrosActivos"
+            aria-label="Filtros activos"
+            {% if not filtros_activos %}hidden{% endif %}>
+
+            {% for chip in filtros_activos %}
+                <button type="button"
+                        class="pof-filter-chip"
+                        data-filter-chip
+                        data-filter-type="{{ chip.tipo }}"
+                        data-filter-index="{{ chip.indice|default:'' }}"
+                        data-filter-field="{{ chip.campo|default:'' }}">
+                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                    <span class="pof-filter-chip-text">{{ chip.texto }}</span>
+                    <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
+                </button>
+            {% endfor %}
+
+            {% if filtros_activos %}
+                <a class="pof-filter-clear-all pof-visual-clear-filters-link"
+                href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">
+                    Limpiar todos
+                </a>
+            {% endif %}
+        </div>
+
+    <div class="pof-visual-preview">
+        <div class="pof-visual-preview-toolbar">
+            <span class="pof-export-count"
+                id="visualizacionColumnasContadorTop"
+                data-visual-row-count="{{ total_registros }}">
+                {{ columnas_visibles_count }} columnas visibles &middot; {{ total_registros }} cargos
+            </span>
+        </div>
+
+        <div class="pof-export-wrap pof-visual-table-wrap" id="visualizacionTablaWrap">
+            <table class="pof-export-table pof-visual-table" id="visualizacionCargosTabla">
+                <thead>
+                    <tr>
+                        {% for columna in columnas %}
+                            <th data-column-id="{{ columna.id }}" {% if not columna.visible %}hidden{% endif %}>
+                                {% if columna.ordenable %}
+                                    <a href="?{{ columna.order_querystring }}" class="pof-visual-sort-link">
+                                        {{ columna.label }}
+                                        {% if columna.order_active %}
+                                            {% if columna.order_dir == "desc" %}&darr;{% else %}&uarr;{% endif %}
+                                        {% endif %}
+                                    </a>
+                                {% else %}
+                                    <span class="pof-visual-column-label">{{ columna.label }}</span>
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="visualizacionNoColumnasRow" {% if columnas_visibles %}hidden{% endif %}>
+                        <td colspan="{{ columnas_colspan }}" class="pof-grid-empty">No hay columnas visibles. Use el panel de columnas para mostrar al menos una.</td>
+                    </tr>
+                    {% for fila in filas %}
+                        <tr class="pof-visual-data-row{% if fila.es_inicio_cue or fila.es_inicio_localizacion %} pof-visualizacion-grupo-cue{% elif fila.es_inicio_anexo %} pof-visualizacion-grupo-anexo{% endif %}" {% if not columnas_visibles %}hidden{% endif %}>
+                            {% for celda in fila.celdas %}
+                                <td data-column-id="{{ celda.id }}"{% if celda.centrada %} class="pof-grid-cell-center"{% endif %}{% if not celda.visible %} hidden{% endif %}>
+                                    {% if celda.badge %}
+                                        <span class="pof-grid-badge pof-grid-badge-{{ fila.estado_pof_codigo }}">{{ celda.valor }}</span>
+                                    {% else %}
+                                        {{ celda.valor }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% empty %}
+                        <tr id="visualizacionSinRegistrosRow" {% if not columnas_visibles %}hidden{% endif %}>
+                            <td colspan="{{ columnas_colspan }}" class="pof-grid-empty">No se encontraron cargos.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{ filtros_opciones|json_script:"visualizacionFiltrosOpcionesData" }}
+
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260716-2"></script>
+<script>
+(function () {
+    const form = document.getElementById("visualizacionCargosForm");
+    if (!form) {
+        return;
+    }
+
+    const columnasEstado = document.getElementById("columnasEstado");
+    const checkboxes = Array.from(document.querySelectorAll(".pof-visual-column-check"));
+    const contador = document.getElementById("visualizacionColumnasContador");
+    const contadorTop = document.getElementById("visualizacionColumnasContadorTop");
+    const tbody = document.querySelector("#visualizacionCargosTabla tbody");
+    const excelFiltros = document.getElementById("visualizacionExcelFiltros");
+    const liveSearch = document.getElementById("visualizacionLiveSearch");
+    const anioSelect = document.getElementById("visualizacionAnioSelect");
+    const columnaSelect = document.getElementById("visualizacionColumnaSelect");
+    const columnaInput = document.getElementById("visualizacionColumnaInput");
+    const limpiarBusquedaColumnaBtn = document.getElementById("visualizacionLimpiarBusquedaColumna");
+    const busquedaColumnaLoading = document.getElementById("visualizacionBusquedaColumnaLoading");
+    const tablaWrap = document.getElementById("visualizacionTablaWrap");
+    const contraerBtn = document.getElementById("visualizacionContraerColumnas");
+    const filtrosActivos = document.getElementById("visualizacionFiltrosActivos");
+    const dialog = document.getElementById("visualizacionDialogFiltro");
+    const dialogBackdrop = document.getElementById("visualizacionFiltroBackdrop");
+    const dialogTitulo = document.getElementById("visualizacionDialogTitulo");
+    const campoFiltroActivo = document.getElementById("visualizacionCampoFiltroActivo");
+    const operadorFiltro = document.getElementById("visualizacionOperadorFiltro");
+    const valorFiltroLabel = document.getElementById("visualizacionValorFiltroLabel");
+    const valorFiltroMount = document.getElementById("visualizacionValorFiltroMount");
+    const cerrarDialogoFiltro = document.getElementById("visualizacionCerrarDialogoFiltro");
+    const filterButtons = Array.from(document.querySelectorAll(".pof-visual-filter-btn"));
+    const compactStorageKey = "pof_visualizacion_cargos_columnas_compactas";
+    const datosUrl = form.dataset.datosUrl;
+    const filtrosUrl = form.dataset.filtrosUrl;
+    const SEARCH_DEBOUNCE_MS = 500;
+    const SIMPLE_FILTER_PARAMS = [
+        "cueanexo", "cue", "anexo", "cuof", "cui", "ceic", "cargo",
+        "nombre_establecimiento", "numero_establecimiento", "estado_pof",
+        "region", "localidad", "departamento", "ambito", "categoria",
+        "jornada", "oferta", "acronimo", "estado_localizacion_padron",
+        "estado_oferta_padron", "estado_establecimiento_padron"
+    ];
+    const FILTER_OPERATOR_PRESETS = {
+        text: [
+            { value: "0", label: "parecido a" },
+            { value: "1", label: "no parecido a" },
+            { value: "2", label: "igual a" },
+            { value: "7", label: "distinto de" }
+        ],
+        exact: [
+            { value: "2", label: "igual a" },
+            { value: "7", label: "distinto de" }
+        ],
+        numeric: [
+            { value: "2", label: "igual a" },
+            { value: "7", label: "distinto de" },
+            { value: "3", label: "mayor a" },
+            { value: "4", label: "mayor o igual a" },
+            { value: "5", label: "menor a" },
+            { value: "6", label: "menor o igual a" }
+        ]
+    };
+    const fieldConfig = {};
+    let filterOptions = null;
+    let filterOptionsRequest = null;
+    let activeController = null;
+    let requestToken = 0;
+    let searchTimer = null;
+    let columnSearchLoadingToken = 0;
+
+    const opcionesIniciales = document.getElementById("visualizacionFiltrosOpcionesData");
+    if (opcionesIniciales) {
+        try {
+            const parsedOptions = JSON.parse(opcionesIniciales.textContent || "{}");
+            filterOptions = Object.keys(parsedOptions).length ? parsedOptions : null;
+        } catch (error) {
+            window.console.error("No se pudieron leer las opciones iniciales de filtros.", error);
+        }
+    }
+
+    filterButtons.forEach(function (button) {
+        fieldConfig[button.dataset.filterField] = {
+            field: button.dataset.filterField,
+            label: button.dataset.filterLabel,
+            mode: button.dataset.filterMode || "text",
+            operators: button.dataset.filterOperators || "text"
+        };
+    });
+
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function selectedColumnIds() {
+        return checkboxes
+            .filter(function (checkbox) { return checkbox.checked; })
+            .map(function (checkbox) { return checkbox.value; });
+    }
+
+    function setVisibleParams(url, includeEmptyState) {
+        const selectedIds = selectedColumnIds();
+        url.searchParams.delete("visible_col");
+        url.searchParams.delete("columnas_estado");
+        selectedIds.forEach(function (columnId) {
+            url.searchParams.append("visible_col", columnId);
+        });
+        url.searchParams.delete("page");
+        url.searchParams.delete("page_size");
+        if (includeEmptyState && selectedIds.length === 0) {
+            url.searchParams.set("columnas_estado", "none");
+        }
+        return url;
+    }
+
+    function clearColumnSearchParams(url) {
+        checkboxes.forEach(function (checkbox) {
+            url.searchParams.delete("col_" + checkbox.value);
+        });
+        return url;
+    }
+
+    function setColumnSearchLoading(active) {
+        if (busquedaColumnaLoading) {
+            busquedaColumnaLoading.classList.toggle("pof-hidden", !active);
+            busquedaColumnaLoading.setAttribute("aria-hidden", active ? "false" : "true");
+        }
+        if (liveSearch) {
+            liveSearch.classList.toggle("pof-visual-search-busy", active);
+            liveSearch.setAttribute("aria-busy", active ? "true" : "false");
+        }
+    }
+
+    function finishColumnSearchLoading(token) {
+        if (token === columnSearchLoadingToken) {
+            setColumnSearchLoading(false);
+        }
+    }
+
+    function updateColumnCounters() {
+        const seleccionadas = selectedColumnIds().length;
+        const text = "Mostrando " + seleccionadas + " de " + checkboxes.length + " columnas";
+        if (contador) {
+            contador.textContent = text;
+        }
+        if (contadorTop) {
+            contadorTop.textContent = seleccionadas + " columnas visibles \u00b7 " + contadorTop.dataset.visualRowCount + " cargos";
+        }
+        if (columnasEstado) {
+            columnasEstado.value = seleccionadas === 0 ? "none" : "custom";
+        }
+        return seleccionadas;
+    }
+
+    function buildUrlWithCurrentColumns(rawUrl, options) {
+        const opts = options || {};
+        const url = new URL(rawUrl, window.location.origin);
+        setVisibleParams(url, opts.includeEmptyState !== false);
+        return url;
+    }
+
+    function buildDataUrl(pageUrl) {
+        const source = new URL(pageUrl, window.location.origin);
+        const target = new URL(datosUrl, window.location.href);
+        source.searchParams.forEach(function (value, key) {
+            target.searchParams.append(key, value);
+        });
+        return target;
+    }
+
+    function buildFiltersExcelUrl() {
+        const visibleIds = selectedColumnIds();
+        if (!excelFiltros || visibleIds.length === 0) {
+            return "";
+        }
+
+        const target = new URL(excelFiltros.dataset.exportBase, window.location.origin);
+        const source = new URL(window.location.href);
+        source.searchParams.forEach(function (value, key) {
+            if (key === "page" || key === "page_size" || key === "visible_col" || key === "columnas_estado") {
+                return;
+            }
+            target.searchParams.append(key, value);
+        });
+        if (anioSelect && anioSelect.value) {
+            target.searchParams.set("anio", anioSelect.value);
+        }
+        visibleIds.forEach(function (columnId) {
+            target.searchParams.append("visible_col", columnId);
+        });
+        return target.toString();
+    }
+
+    function updateDynamicLinks() {
+        document.querySelectorAll(".pof-visual-sort-link, .pof-visual-query-link").forEach(function (link) {
+            link.href = buildUrlWithCurrentColumns(link.href, { includeEmptyState: true }).toString();
+        });
+
+        document.querySelectorAll(".pof-visual-clear-filters-link").forEach(function (link) {
+            link.href = buildUrlWithCurrentColumns(link.href, { includeEmptyState: true }).toString();
+        });
+
+        if (excelFiltros) {
+            const href = buildFiltersExcelUrl();
+            if (href) {
+                excelFiltros.href = href;
+                excelFiltros.classList.remove("pof-btn-disabled");
+                excelFiltros.removeAttribute("aria-disabled");
+            } else {
+                excelFiltros.removeAttribute("href");
+                excelFiltros.classList.add("pof-btn-disabled");
+                excelFiltros.setAttribute("aria-disabled", "true");
+            }
+        }
+    }
+
+    function applyPayloadColumns(columnas) {
+        if (!Array.isArray(columnas)) {
+            return;
+        }
+        columnas.forEach(function (columna) {
+            const header = document.querySelector('th[data-column-id="' + columna.id + '"]');
+            if (!header) {
+                return;
+            }
+            header.hidden = !columna.visible;
+            const link = header.querySelector(".pof-visual-sort-link");
+            if (link) {
+                let label = escapeHtml(columna.label);
+                if (columna.order_active) {
+                    label += columna.order_dir === "desc" ? " &darr;" : " &uarr;";
+                }
+                link.innerHTML = label;
+                link.href = "?" + columna.order_querystring;
+            }
+        });
+    }
+
+    function syncColumnVisibility() {
+        const visibleSet = new Set(selectedColumnIds());
+        const visibles = updateColumnCounters();
+
+        document.querySelectorAll("[data-column-id]").forEach(function (cell) {
+            cell.hidden = !visibleSet.has(cell.dataset.columnId);
+        });
+
+        document.querySelectorAll("#visualizacionNoColumnasRow").forEach(function (row) {
+            row.hidden = visibles > 0;
+        });
+        document.querySelectorAll(".pof-visual-data-row").forEach(function (row) {
+            row.hidden = visibles === 0;
+        });
+        document.querySelectorAll("#visualizacionSinRegistrosRow").forEach(function (row) {
+            row.hidden = visibles === 0;
+        });
+        updateDynamicLinks();
+    }
+
+    function updateSearchControlFromUrl(url) {
+        if (!columnaSelect || !columnaInput) {
+            return;
+        }
+        let activeColumn = columnaSelect.value || "cueanexo";
+        let activeValue = "";
+        const searchableIds = new Set(Array.from(columnaSelect.options).map(function (option) {
+            return option.value;
+        }));
+        checkboxes.forEach(function (checkbox) {
+            if (!searchableIds.has(checkbox.value)) {
+                return;
+            }
+            const value = url.searchParams.get("col_" + checkbox.value);
+            if (value && !activeValue) {
+                activeColumn = checkbox.value;
+                activeValue = value;
+            }
+        });
+        columnaSelect.value = activeColumn;
+        columnaInput.value = activeValue;
+    }
+
+    function renderRows(filas, colspan) {
+        if (!tbody) {
+            return;
+        }
+        const visibles = selectedColumnIds().length;
+        let html = '<tr id="visualizacionNoColumnasRow"' + (visibles > 0 ? ' hidden' : '') + '>';
+        html += '<td colspan="' + escapeHtml(colspan || checkboxes.length || 1) + '" class="pof-grid-empty">';
+        html += 'No hay columnas visibles. Use el panel de columnas para mostrar al menos una.</td></tr>';
+
+        if (Array.isArray(filas) && filas.length) {
+            filas.forEach(function (fila) {
+                let rowClass = "pof-visual-data-row";
+                if (fila.es_inicio_cue || fila.es_inicio_localizacion) {
+                    rowClass += " pof-visualizacion-grupo-cue";
+                } else if (fila.es_inicio_anexo) {
+                    rowClass += " pof-visualizacion-grupo-anexo";
+                }
+                html += '<tr class="' + rowClass + '"' + (visibles === 0 ? ' hidden' : '') + '>';
+                (fila.celdas || []).forEach(function (celda) {
+                    const cellClass = celda.centrada ? ' class="pof-grid-cell-center"' : "";
+                    html += '<td data-column-id="' + escapeHtml(celda.id) + '"' + cellClass + (celda.visible ? "" : " hidden") + ">";
+                    if (celda.badge) {
+                        html += '<span class="pof-grid-badge pof-grid-badge-' + escapeHtml(fila.estado_pof_codigo) + '">';
+                        html += escapeHtml(celda.valor);
+                        html += "</span>";
+                    } else {
+                        html += escapeHtml(celda.valor);
+                    }
+                    html += "</td>";
+                });
+                html += "</tr>";
+            });
+        } else {
+            html += '<tr id="visualizacionSinRegistrosRow"' + (visibles === 0 ? ' hidden' : '') + '>';
+            html += '<td colspan="' + escapeHtml(colspan || checkboxes.length || 1) + '" class="pof-grid-empty">No se encontraron cargos.</td></tr>';
+        }
+        tbody.innerHTML = html;
+    }
+
+    function renderBadges(chips) {
+        if (!filtrosActivos) {
+            return;
+        }
+
+        const activos = Array.isArray(chips) ? chips : [];
+        filtrosActivos.hidden = activos.length === 0;
+
+        const chipsHtml = activos.map(function (chip) {
+            return '<button type="button" class="pof-filter-chip" data-filter-chip'
+                + ' data-filter-type="' + escapeHtml(chip.tipo || "") + '"'
+                + ' data-filter-index="' + escapeHtml(chip.indice == null ? "" : chip.indice) + '"'
+                + ' data-filter-field="' + escapeHtml(chip.campo || "") + '">'
+                + '<span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>'
+                + '<span class="pof-filter-chip-text">' + escapeHtml(chip.texto || "") + '</span>'
+                + '<span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>'
+                + '</button>';
+        }).join("");
+
+        const limpiarHtml = activos.length
+            ? '<a href="#" class="pof-filter-clear-all pof-visual-clear-filters-link">Limpiar todos</a>'
+            : "";
+
+        filtrosActivos.innerHTML = chipsHtml + limpiarHtml;
+    }
+
+    function renderPayload(payload) {
+        if (!payload || !payload.ok) {
+            return;
+        }
+        if (contadorTop) {
+            contadorTop.dataset.visualRowCount = payload.total_registros || 0;
+        }
+        applyPayloadColumns(payload.columnas);
+        renderRows(payload.filas, payload.columnas_colspan);
+        renderBadges(payload.filtros_activos);
+        updateColumnCounters();
+        updateSearchControlFromUrl(new URL(window.location.href));
+        updateDynamicLinks();
+        syncColumnVisibility();
+    }
+
+    function refreshTableFromUrl(rawUrl, options) {
+        const opts = options || {};
+        const targetUrl = buildUrlWithCurrentColumns(rawUrl, { includeEmptyState: true });
+        const token = ++requestToken;
+        if (activeController) {
+            activeController.abort();
+        }
+        activeController = new AbortController();
+
+        return fetch(buildDataUrl(targetUrl).toString(), {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            signal: activeController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Error al actualizar la visualizacion.");
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                if (token !== requestToken) {
+                    return;
+                }
+                if (opts.replace) {
+                    window.history.replaceState({}, "", targetUrl.toString());
+                } else {
+                    window.history.pushState({}, "", targetUrl.toString());
+                }
+                renderPayload(payload);
+            })
+            .catch(function (error) {
+                if (error.name !== "AbortError") {
+                    window.console.error(error);
+                }
+            });
+    }
+
+    function submitColumnSearch(options) {
+        window.clearTimeout(searchTimer);
+        const loadingToken = ++columnSearchLoadingToken;
+        setColumnSearchLoading(true);
+        const value = (columnaInput.value || "").trim();
+        const columnId = columnaSelect.value;
+        const url = new URL(window.location.href);
+        clearColumnSearchParams(url);
+        if (value && columnId) {
+            url.searchParams.set("col_" + columnId, value);
+        }
+        setVisibleParams(url, true);
+        return refreshTableFromUrl(url.toString(), options)
+            .finally(function () {
+                finishColumnSearchLoading(loadingToken);
+            });
+    }
+
+    function clearColumnSearch() {
+        window.clearTimeout(searchTimer);
+        const loadingToken = ++columnSearchLoadingToken;
+        setColumnSearchLoading(true);
+        const url = new URL(window.location.href);
+        clearColumnSearchParams(url);
+        setVisibleParams(url, true);
+        if (columnaInput) {
+            columnaInput.value = "";
+        }
+        return refreshTableFromUrl(url.toString())
+            .finally(function () {
+                finishColumnSearchLoading(loadingToken);
+            });
+    }
+
+    function scheduleColumnSearch() {
+        window.clearTimeout(searchTimer);
+        setColumnSearchLoading(true);
+        searchTimer = window.setTimeout(function () {
+            submitColumnSearch({ replace: true });
+        }, SEARCH_DEBOUNCE_MS);
+    }
+
+    function fetchFilterOptions() {
+        if (filterOptions) {
+            return Promise.resolve(filterOptions);
+        }
+        if (!filterOptionsRequest) {
+            const filtrosEndpointUrl = new URL(filtrosUrl, window.location.origin);
+            const sourceUrl = new URL(window.location.href);
+            ["cabecera_tipo", "proyecto_especial_id"].forEach(function (param) {
+                const value = sourceUrl.searchParams.get(param);
+                if (value) {
+                    filtrosEndpointUrl.searchParams.set(param, value);
+                }
+            });
+            const filtrosEndpoint = filtrosEndpointUrl.toString();
+            filterOptionsRequest = fetch(filtrosEndpoint, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+                .then(function (response) {
+                    return response.text().then(function (body) {
+                        let payload = null;
+                        try {
+                            payload = body ? JSON.parse(body) : {};
+                        } catch (error) {
+                            const jsonError = new Error("La respuesta de filtros no es JSON valido.");
+                            jsonError.url = filtrosEndpoint;
+                            jsonError.status = response.status;
+                            jsonError.body = body;
+                            throw jsonError;
+                        }
+                        if (!response.ok) {
+                            const httpError = new Error("Error al cargar opciones de filtros.");
+                            httpError.url = filtrosEndpoint;
+                            httpError.status = response.status;
+                            httpError.body = body;
+                            throw httpError;
+                        }
+                        return payload;
+                    });
+                })
+                .then(function (payload) {
+                    filterOptions = payload.opciones || payload || {};
+                    return filterOptions;
+                })
+                .catch(function (error) {
+                    filterOptionsRequest = null;
+                    throw error;
+                });
+        }
+        return filterOptionsRequest;
+    }
+
+    function activeValuesForField(field) {
+        const url = new URL(window.location.href);
+        const campos = url.searchParams.getAll("campo_filtro");
+        const valores = url.searchParams.getAll("valor_filtro");
+        const seleccionados = [];
+        campos.forEach(function (campo, index) {
+            if (campo === field && valores[index]) {
+                seleccionados.push(valores[index]);
+            }
+        });
+        return new Set(seleccionados);
+    }
+
+    function renderTextValueControl(mode) {
+        const type = mode === "number" ? "number" : "text";
+        valorFiltroLabel.textContent = "Valor";
+        valorFiltroMount.innerHTML = '<input type="' + type + '" id="visualizacionValorFiltro" class="pof-visual-dialog-input" autocomplete="off">';
+        const input = document.getElementById("visualizacionValorFiltro");
+        if (input) {
+            input.focus();
+        }
+    }
+
+    function obtenerOpcionValorEtiqueta(opcion) {
+        return {
+            value: typeof opcion === "object" ? opcion.value : opcion,
+            label: typeof opcion === "object" ? opcion.label : opcion
+        };
+    }
+
+    function obtenerGrupoOferta(label) {
+        const texto = String(label || "").trim();
+        const partes = texto.split(" - ");
+        if (partes.length > 1 && partes[0].trim()) {
+            return partes[0].trim();
+        }
+        if (["Común", "Especial", "Adultos"].indexOf(texto) !== -1) {
+            return texto;
+        }
+        return texto.toLowerCase() === "sin información" ? "Sin Información" : "Otros";
+    }
+
+    function renderOpcionChecklist(value, label, selectedValues) {
+        return '<label class="pof-visual-dialog-option" data-option-text="' + escapeHtml(String(label).toLowerCase()) + '">'
+            + '<input type="checkbox" value="' + escapeHtml(value) + '"' + (selectedValues.has(String(value)) ? " checked" : "") + '>'
+            + '<span>' + escapeHtml(label) + '</span></label>';
+    }
+
+    function renderOpcionesOferta(opciones, selectedValues) {
+        const grupos = {};
+        const orden = [];
+        opciones.forEach(function (opcion) {
+            const item = obtenerOpcionValorEtiqueta(opcion);
+            const grupo = obtenerGrupoOferta(item.label);
+            if (!grupos[grupo]) {
+                grupos[grupo] = [];
+                orden.push(grupo);
+            }
+            if (String(item.label).trim() !== grupo || grupo === "Sin Información" || grupo === "Otros") {
+                grupos[grupo].push(item);
+            }
+        });
+
+        const ordenPreferido = ["Común", "Especial", "Adultos", "Sin Información", "Otros"];
+        orden.sort(function (a, b) {
+            const ia = ordenPreferido.indexOf(a);
+            const ib = ordenPreferido.indexOf(b);
+            if (ia !== -1 || ib !== -1) {
+                return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+            }
+            return a.localeCompare(b);
+        });
+
+        return orden.map(function (grupo) {
+            const opcionesGrupo = grupos[grupo];
+            if (!opcionesGrupo.length && grupo === "Otros") {
+                return "";
+            }
+            let htmlGrupo = '<div class="pof-visual-dialog-section" data-option-section>';
+            htmlGrupo += '<div class="pof-visual-dialog-section-title">' + escapeHtml(grupo) + '</div>';
+            htmlGrupo += '<div class="pof-visual-dialog-section-grid">';
+            opcionesGrupo.forEach(function (item) {
+                htmlGrupo += renderOpcionChecklist(item.value, item.label, selectedValues);
+            });
+            htmlGrupo += '</div></div>';
+            return htmlGrupo;
+        }).join("");
+    }
+
+    function renderChecklistValueControl(field, options) {
+        const selectedValues = activeValuesForField(field);
+        const opciones = Array.isArray(options) ? options : [];
+        valorFiltroLabel.textContent = "Opciones";
+        if (!opciones.length) {
+            valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">Sin opciones disponibles.</div>';
+            return;
+        }
+        let html = '<input type="text" id="visualizacionBuscarOpcionFiltro" class="pof-visual-dialog-input" autocomplete="off" placeholder="Buscar opcion">';
+        html += '<div class="pof-visual-dialog-options' + (field === "oferta" ? ' pof-visual-dialog-options-grouped' : '') + '" id="visualizacionOpcionesFiltro">';
+        if (field === "oferta") {
+            html += renderOpcionesOferta(opciones, selectedValues);
+        } else {
+            opciones.forEach(function (opcion) {
+                const item = obtenerOpcionValorEtiqueta(opcion);
+                html += renderOpcionChecklist(item.value, item.label, selectedValues);
+            });
+        }
+        html += "</div>";
+        valorFiltroMount.innerHTML = html;
+
+        const search = document.getElementById("visualizacionBuscarOpcionFiltro");
+        if (search) {
+            search.addEventListener("input", function () {
+                const text = search.value.trim().toLowerCase();
+                document.querySelectorAll("#visualizacionOpcionesFiltro .pof-visual-dialog-option").forEach(function (option) {
+                    option.hidden = text && option.dataset.optionText.indexOf(text) === -1;
+                });
+                document.querySelectorAll("#visualizacionOpcionesFiltro [data-option-section]").forEach(function (section) {
+                    section.hidden = text && !section.querySelector(".pof-visual-dialog-option:not([hidden])");
+                });
+            });
+            search.focus();
+        }
+    }
+
+    function renderLoadingValueControl() {
+        valorFiltroLabel.textContent = "Opciones";
+        valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">Cargando opciones...</div>';
+    }
+
+    function renderOptionsErrorControl() {
+        valorFiltroLabel.textContent = "Valor";
+        valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">No se pudieron cargar las opciones. Puede ingresar un valor manualmente.</div>'
+            + '<input type="text" id="visualizacionValorFiltro" class="pof-visual-dialog-input" autocomplete="off">';
+        const input = document.getElementById("visualizacionValorFiltro");
+        if (input) {
+            input.focus();
+        }
+    }
+
+    function prepararDialogoFiltro(config) {
+        campoFiltroActivo.value = config.field;
+        dialogTitulo.textContent = config.label;
+        operadorFiltro.innerHTML = (FILTER_OPERATOR_PRESETS[config.operators] || FILTER_OPERATOR_PRESETS.text).map(function (operator) {
+            return '<option value="' + escapeHtml(operator.value) + '">' + escapeHtml(operator.label) + '</option>';
+        }).join("");
+        dialog.hidden = false;
+        dialogBackdrop.hidden = false;
+    }
+
+    function openFilterDialog(config) {
+        prepararDialogoFiltro(config);
+
+        if (config.mode !== "checklist") {
+            renderTextValueControl(config.mode);
+            return;
+        }
+
+        renderLoadingValueControl();
+        fetchFilterOptions().then(function (options) {
+            if (campoFiltroActivo.value === config.field) {
+                renderChecklistValueControl(config.field, options[config.field]);
+            }
+        }).catch(function (error) {
+            window.console.error("Error al cargar opciones de filtros.", {
+                url: error.url || new URL(filtrosUrl, window.location.origin).toString(),
+                status: error.status || "",
+                body: error.body || "",
+                message: error.message || error,
+            });
+            if (campoFiltroActivo.value === config.field) {
+                renderOptionsErrorControl();
+            }
+        });
+    }
+
+    function closeFilterDialog() {
+        if (dialog) {
+            dialog.hidden = true;
+        }
+        if (dialogBackdrop) {
+            dialogBackdrop.hidden = true;
+        }
+        if (campoFiltroActivo) {
+            campoFiltroActivo.value = "";
+        }
+        if (valorFiltroMount) {
+            valorFiltroMount.innerHTML = "";
+        }
+    }
+
+    function collectFilterValues() {
+        const config = fieldConfig[campoFiltroActivo.value];
+        if (!config) {
+            return [];
+        }
+        if (config.mode === "checklist") {
+            const checkedValues = Array.from(valorFiltroMount.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(function (checkbox) { return checkbox.value; })
+                .filter(Boolean);
+            if (checkedValues.length) {
+                return checkedValues;
+            }
+        }
+        const input = document.getElementById("visualizacionValorFiltro");
+        const value = input ? input.value.trim() : "";
+        return value ? [value] : [];
+    }
+
+    function replaceFilterValuesForField(url, field, operator, values) {
+        const params = url.searchParams;
+        const campos = params.getAll("campo_filtro");
+        const operadores = params.getAll("operador_filtro");
+        const valores = params.getAll("valor_filtro");
+        params.delete("campo_filtro");
+        params.delete("operador_filtro");
+        params.delete("valor_filtro");
+
+        campos.forEach(function (campo, index) {
+            if (campo === field) {
+                return;
+            }
+            params.append("campo_filtro", campo);
+            params.append("operador_filtro", operadores[index] || "0");
+            params.append("valor_filtro", valores[index] || "");
+        });
+
+        values.forEach(function (value) {
+            params.append("campo_filtro", field);
+            params.append("operador_filtro", operator);
+            params.append("valor_filtro", value);
+        });
+        params.delete("page");
+        params.delete("page_size");
+    }
+
+    function removeAdvancedFilterByIndex(url, indexToRemove) {
+        const params = url.searchParams;
+        const campos = params.getAll("campo_filtro");
+        const operadores = params.getAll("operador_filtro");
+        const valores = params.getAll("valor_filtro");
+        params.delete("campo_filtro");
+        params.delete("operador_filtro");
+        params.delete("valor_filtro");
+
+        campos.forEach(function (campo, index) {
+            if (String(index) === String(indexToRemove)) {
+                return;
+            }
+            params.append("campo_filtro", campo);
+            params.append("operador_filtro", operadores[index] || "0");
+            params.append("valor_filtro", valores[index] || "");
+        });
+    }
+
+    function clearFilterFromChip(chip) {
+        const url = new URL(window.location.href);
+        const type = chip.dataset.filterType;
+        const field = chip.dataset.filterField;
+        if (type === "avanzado") {
+            removeAdvancedFilterByIndex(url, chip.dataset.filterIndex);
+        } else if (type === "simple" && field) {
+            url.searchParams.delete(field);
+        } else if (type === "busqueda") {
+            url.searchParams.delete("q");
+        } else if (type === "columna" && field) {
+            url.searchParams.delete("col_" + field);
+        }
+        setVisibleParams(url, true);
+        refreshTableFromUrl(url.toString());
+    }
+
+    function clearAllFilters() {
+        window.clearTimeout(searchTimer);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("q");
+        url.searchParams.delete("smart_ui_col");
+        url.searchParams.delete("smart_ui_val");
+        url.searchParams.delete("campo_filtro");
+        url.searchParams.delete("operador_filtro");
+        url.searchParams.delete("valor_filtro");
+        SIMPLE_FILTER_PARAMS.forEach(function (param) {
+            url.searchParams.delete(param);
+        });
+        clearColumnSearchParams(url);
+        setVisibleParams(url, true);
+        if (columnaInput) {
+            columnaInput.value = "";
+        }
+        refreshTableFromUrl(url.toString());
+    }
+
+    function togglePanel(panelName) {
+        const panel = document.getElementById(panelName === "filtros" ? "visualizacionPanelFiltros" : "visualizacionPanelColumnas");
+        const other = document.getElementById(panelName === "filtros" ? "visualizacionPanelColumnas" : "visualizacionPanelFiltros");
+        const willOpen = panel.hidden;
+
+        if (other) {
+            other.hidden = true;
+        }
+        panel.hidden = !willOpen;
+
+        document.querySelectorAll("[data-panel-toggle]").forEach(function (button) {
+            const active = button.dataset.panelToggle === panelName && willOpen;
+            button.classList.toggle("pof-visual-toggle-active", active);
+            button.setAttribute("aria-expanded", active ? "true" : "false");
+        });
+    }
+
+    function setCompactTable(active) {
+        if (!tablaWrap || !contraerBtn) {
+            return;
+        }
+
+        tablaWrap.classList.toggle("pof-visual-table-compact", active);
+        contraerBtn.setAttribute("aria-pressed", active ? "true" : "false");
+        contraerBtn.textContent = active ? "Vista normal" : "Modo compacto";
+        localStorage.setItem(compactStorageKey, active ? "1" : "0");
+    }
+
+    document.querySelectorAll("[data-panel-toggle]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            togglePanel(button.dataset.panelToggle);
+        });
+    });
+
+    checkboxes.forEach(function (checkbox) {
+        checkbox.addEventListener("change", function () {
+            const url = buildUrlWithCurrentColumns(window.location.href, { includeEmptyState: true });
+            window.history.replaceState({}, "", url.toString());
+            syncColumnVisibility();
+        });
+    });
+
+    document.querySelectorAll("[data-column-action]").forEach(function (boton) {
+        boton.addEventListener("click", function () {
+            const accion = boton.dataset.columnAction;
+            checkboxes.forEach(function (checkbox) {
+                if (accion === "all") {
+                    checkbox.checked = true;
+                } else if (accion === "none") {
+                    checkbox.checked = false;
+                } else if (accion === "default") {
+                    checkbox.checked = checkbox.dataset.default === "1";
+                }
+            });
+            const url = buildUrlWithCurrentColumns(window.location.href, { includeEmptyState: true });
+            window.history.replaceState({}, "", url.toString());
+            syncColumnVisibility();
+        });
+    });
+
+    if (limpiarBusquedaColumnaBtn) {
+        limpiarBusquedaColumnaBtn.addEventListener("click", clearColumnSearch);
+    }
+    if (columnaInput) {
+        columnaInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                submitColumnSearch();
+            }
+        });
+        columnaInput.addEventListener("input", scheduleColumnSearch);
+    }
+    if (columnaSelect) {
+        columnaSelect.addEventListener("change", scheduleColumnSearch);
+    }
+    if (anioSelect) {
+        anioSelect.addEventListener("change", function () {
+            const url = new URL(window.location.href);
+            if (anioSelect.value) {
+                url.searchParams.set("anio", anioSelect.value);
+            } else {
+                url.searchParams.delete("anio");
+            }
+            url.searchParams.delete("page");
+            url.searchParams.delete("page_size");
+            window.location.href = url.toString();
+        });
+    }
+
+    filterButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            const config = fieldConfig[button.dataset.filterField];
+            if (config) {
+                openFilterDialog(config);
+            }
+        });
+    });
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const field = campoFiltroActivo.value;
+        if (!field) {
+            return;
+        }
+        const values = collectFilterValues();
+        const url = new URL(window.location.href);
+        replaceFilterValuesForField(url, field, operadorFiltro.value || "0", values);
+        setVisibleParams(url, true);
+        closeFilterDialog();
+        refreshTableFromUrl(url.toString());
+    });
+
+    if (cerrarDialogoFiltro) {
+        cerrarDialogoFiltro.addEventListener("click", closeFilterDialog);
+    }
+    if (dialogBackdrop) {
+        dialogBackdrop.addEventListener("click", closeFilterDialog);
+    }
+    if (filtrosActivos) {
+        filtrosActivos.addEventListener("click", function (event) {
+            const limpiarTodos = event.target.closest(".pof-visual-clear-filters-link");
+
+            if (limpiarTodos) {
+                event.preventDefault();
+                clearAllFilters();
+                return;
+            }
+
+            const chip = event.target.closest("[data-filter-chip]");
+
+            if (chip) {
+                clearFilterFromChip(chip);
+            }
+        });
+    }
+
+
+    document.querySelectorAll(".pof-visual-sort-link").forEach(function (link) {
+        link.addEventListener("click", function (event) {
+            event.preventDefault();
+            refreshTableFromUrl(link.href);
+        });
+    });
+
+    if (excelFiltros) {
+        excelFiltros.addEventListener("click", function (event) {
+            const href = buildFiltersExcelUrl();
+            if (!href) {
+                event.preventDefault();
+            } else {
+                excelFiltros.href = href;
+            }
+        });
+    }
+
+    if (contraerBtn) {
+        contraerBtn.addEventListener("click", function () {
+            setCompactTable(!tablaWrap.classList.contains("pof-visual-table-compact"));
+        });
+        setCompactTable(localStorage.getItem(compactStorageKey) === "1");
+    }
+
+    window.addEventListener("popstate", function () {
+        refreshTableFromUrl(window.location.href, { replace: true });
+    });
+
+    syncColumnVisibility();
+})();
+</script>
+{% endblock %}

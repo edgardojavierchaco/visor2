@@ -1,0 +1,366 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="cargar" %}
+    <div class="pof-view-header">
+        <h1>ALTA DE CARGOS - PROYECTO ESPECIAL</h1>
+        <p>Registrar cargos y horas c&aacute;tedra asociados a un Proyecto Especial POF.</p>
+    </div>
+
+    {% if mensaje_error %}
+        <div class="pof-card pof-card-accent pof-cabecera-load-card">
+            <div class="pof-status error">{{ mensaje_error }}</div>
+            <div class="pof-actions pof-mt-2">
+                <a class="pof-btn pof-btn-light" href="{% url 'reunidas_pof:proyectos_especiales_pof' %}">
+                    Volver a Proyectos Especiales
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="pof-card pof-card-accent pof-cabecera-load-card">
+            <h2>1. Cabecera de carga</h2>
+            <div class="pof-help">
+                Eleg&iacute; el Proyecto Especial POF sobre el que vas a cargar cargos.
+            </div>
+
+            <div class="pof-grid" id="cabeceraProyectoCampos">
+                <div class="pof-field pof-col-9 pof-project-filter-search">
+                    <label for="proyectoEspecialSelect">Proyecto Especial POF</label>
+                    <select id="proyectoEspecialSelect"
+                            class="pof-form-select"
+                            data-placeholder="Seleccion&aacute; un Proyecto Especial POF..."
+                            {% if proyecto_especial %}disabled{% endif %}>
+                        <option value=""></option>
+                        {% for proyecto in proyectos_especiales %}
+                            <option value="{{ proyecto.id }}"
+                                    data-anio="{{ proyecto.anio }}"
+                                    data-nombre="{{ proyecto.nombre }}"
+                                    data-resolucion="{{ proyecto.resolucion|default_if_none:'' }}"
+                                    {% if proyecto_especial and proyecto_especial.id == proyecto.id %}selected{% endif %}>
+                                {{ proyecto.anio }} &mdash; {{ proyecto.nombre }} &mdash; {% if proyecto.resolucion %}Res. {{ proyecto.resolucion }}{% else %}Sin resoluci&oacute;n{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" id="proyectoEspecialId" name="proyecto_especial_id" value="{{ proyecto_especial.id }}">
+                    <div id="proyectoHint" class="pof-field-hint"></div>
+                </div>
+            </div>
+
+            <div class="pof-cabecera-actions">
+                <div class="pof-actions">
+                    <button type="button" class="pof-btn pof-btn-primary{% if proyecto_especial %} pof-hidden{% endif %}" id="btnValidarCabeceraProyecto">
+                        Validar cabecera
+                    </button>
+                    <button type="button" class="pof-btn pof-btn-light{% if not proyecto_especial %} pof-hidden{% endif %}" id="btnCambiarCabecera">
+                        Cambiar cabecera
+                    </button>
+                </div>
+            </div>
+
+            <div id="estadoCabecera" class="pof-status{% if proyecto_especial %} ok{% endif %}">{% if proyecto_especial %}Cabecera de Proyecto Especial validada.{% endif %}</div>
+        </div>
+
+        <div id="bloqueOrigenProyecto" class="pof-card pof-card-accent pof-cabecera-load-card{% if not proyecto_especial %} pof-hidden{% endif %}">
+            <h2>2. Origen de la localizaci&oacute;n / referencia del Proyecto Especial</h2>
+            <div class="pof-actions">
+                <button type="button" class="pof-btn pof-btn-primary" id="btnModoPadron">
+                    Buscar en padr&oacute;n
+                </button>
+                <button type="button" class="pof-btn pof-btn-light" id="btnModoManual">
+                    Ingreso manual controlado
+                </button>
+            </div>
+            <div id="estadoOrigen" class="pof-status"></div>
+        </div>
+
+        <div id="bloquePadron" class="pof-card pof-card-accent pof-hidden">
+            <h2>Buscar en padr&oacute;n</h2>
+            <div class="pof-grid">
+                <div class="pof-field pof-col-4">
+                    <label for="cueBase">CUE</label>
+                    <input type="text" id="cueBase" class="pof-form-control" maxlength="7" inputmode="numeric" placeholder="Ej: 2200001" autocomplete="off">
+                </div>
+                <div class="pof-field pof-col-4">
+                    <label for="anexo">Anexo</label>
+                    <input type="text" id="anexo" class="pof-form-control" maxlength="2" inputmode="numeric" placeholder="Ej: 00" autocomplete="off">
+                </div>
+                <div class="pof-field pof-col-4">
+                    <label for="cueanexo">CUEANEXO</label>
+                    <input type="text" id="cueanexo" class="pof-form-control" maxlength="9" inputmode="numeric" placeholder="Ej: 220000100" autocomplete="off" readonly>
+                </div>
+                <div class="pof-col-12">
+                    <button type="button" class="pof-btn pof-btn-primary" id="btnBuscarPadron">
+                        Buscar en padr&oacute;n
+                    </button>
+                </div>
+            </div>
+            <div id="estadoPadron" class="pof-status"></div>
+        </div>
+
+        <div id="resultadosPadron" class="pof-hidden"></div>
+
+        <div id="bloqueManual" class="pof-card pof-card-accent pof-hidden">
+            <h2>Ingreso manual controlado</h2>
+            <div class="pof-grid">
+                <div class="pof-field pof-col-4">
+                    <label for="manualCuof">CUOF</label>
+                    <div class="pof-autocomplete">
+                        <input type="text" id="manualCuof" class="pof-form-control" maxlength="100" placeholder="Ej: 2091/RES.10295/12" autocomplete="off">
+                        <span id="manualCuofLoading" class="pof-ceic-loading pof-hidden" role="status" aria-hidden="true">
+                            <span class="pof-visually-hidden">Buscando CUOF</span>
+                        </span>
+                        <div id="sugerenciasCuofManual" class="pof-suggestions pof-hidden"></div>
+                    </div>
+                    <div id="mensajeCuofManual" class="pof-field-hint pof-ceic-help pof-hidden"></div>
+                    <div id="accionCuofPadronManual" class="pof-status warn pof-hidden"></div>
+                </div>
+            </div>
+            <div id="bloqueCamposManual" class="pof-grid pof-hidden">
+                <div class="pof-field pof-col-4">
+                    <label for="manualCui">CUI</label>
+                    <input type="text" id="manualCui" class="pof-form-control" maxlength="100" autocomplete="off">
+                </div>
+                <div class="pof-field pof-col-4">
+                    <label for="manualNumero">N&uacute;mero</label>
+                    <input type="text" id="manualNumero" class="pof-form-control" maxlength="100" autocomplete="off">
+                </div>
+                <div class="pof-field pof-col-12">
+                    <label for="manualNombre">Nombre</label>
+                    <input type="text" id="manualNombre" class="pof-form-control" maxlength="255" autocomplete="off">
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualRegion">Regi&oacute;n</label>
+                    <select id="manualRegion" class="pof-form-select" data-catalogo="region"></select>
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualLocalidad">Localidad</label>
+                    <select id="manualLocalidad" class="pof-form-select" data-catalogo="localidad"></select>
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualDepartamento">Departamento</label>
+                    <select id="manualDepartamento" class="pof-form-select" data-catalogo="departamento"></select>
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualAcronimo">Acr&oacute;nimo</label>
+                    <select id="manualAcronimo" class="pof-form-select" data-catalogo="acronimo"></select>
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualAmbito">&Aacute;mbito</label>
+                    <select id="manualAmbito" class="pof-form-select" data-catalogo="ambito"></select>
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualCategoria">Categor&iacute;a</label>
+                    <select id="manualCategoria" class="pof-form-select" data-catalogo="categoria"></select>
+                </div>
+                <div class="pof-field pof-col-4 pof-manual-select2-field">
+                    <label for="manualJornada">Jornada</label>
+                    <select id="manualJornada" class="pof-form-select" data-catalogo="jornada"></select>
+                </div>
+                <div class="pof-field pof-col-4">
+                    <label for="manualEstadoLocalizacion">Estado localizaci&oacute;n</label>
+                    <select id="manualEstadoLocalizacion" class="pof-form-select" data-catalogo="estado_localizacion_padron"></select>
+                </div>
+                <div class="pof-col-12">
+                    <button type="button" class="pof-btn pof-btn-primary" id="btnConfirmarManual">
+                        Confirmar ingreso manual
+                    </button>
+                </div>
+            </div>
+            <div id="estadoManual" class="pof-status"></div>
+        </div>
+
+        <div id="bloqueSeleccion" class="pof-hidden">
+            <div id="detalleSeleccion"></div>
+        </div>
+
+        <div id="bloqueCargos" class="pof-cargo-entry pof-hidden">
+            <div class="pof-cargo-entry-panel">
+                <h2>Cargos a cargar</h2>
+                <div class="pof-cargo-entry-grid pof-cargo-entry-grid-compact">
+                    <div class="pof-field pof-cargo-entry-search">
+                        <label for="ceicBusqueda">CEIC</label>
+                        <div class="pof-autocomplete">
+                            <input type="text" id="ceicBusqueda" placeholder="Ej: 1 o 223" inputmode="numeric" maxlength="3" pattern="[0-9]{1,3}" autocomplete="off">
+                            <span id="ceicLoading" class="pof-ceic-loading pof-hidden" role="status" aria-hidden="true">
+                                <span class="pof-visually-hidden">Buscando CEIC</span>
+                            </span>
+                            <input type="hidden" id="ceicSeleccionado">
+                            <div id="sugerenciasCeic" class="pof-suggestions pof-hidden"></div>
+                        </div>
+                        <div id="mensajeCeic" class="pof-field-hint pof-ceic-help pof-hidden"></div>
+                    </div>
+                    <div class="pof-field pof-cargo-entry-selected">
+                        <label for="cargoSeleccionado">Cargo seleccionado</label>
+                        <input type="text" id="cargoSeleccionado" placeholder="Se completa al seleccionar CEIC" readonly>
+                    </div>
+                    <div class="pof-field pof-cargo-entry-small">
+                        <label for="cantidadCargo">Cantidad</label>
+                        <input type="number" id="cantidadCargo" min="1" step="1" value="1">
+                    </div>
+                    <div class="pof-field pof-cargo-entry-unit">
+                        <label for="unidadCargo">Unidad</label>
+                        <select id="unidadCargo">
+                            <option value="CARGO">Cargo</option>
+                            <option value="HORA_CATEDRA">Horas C&aacute;tedra</option>
+                        </select>
+                    </div>
+                    <div class="pof-field pof-cargo-entry-small">
+                        <label for="puntosCargo">Puntos</label>
+                        <input type="number" id="puntosCargo" min="0" step="0.01" placeholder="Puntos" readonly>
+                    </div>
+                    <div class="pof-field pof-cargo-entry-small pof-cargo-entry-total">
+                        <label for="totalCargo">Total</label>
+                        <input type="number" id="totalCargo" readonly value="0">
+                    </div>
+                    <div class="pof-cargo-entry-actions" id="cargoEntryActions">
+                        <button type="button" class="pof-btn pof-observation-toggle" id="btnMostrarObservacion">
+                            💬 Agregar observación
+                        </button>
+                        <button type="button" class="pof-btn pof-cargo-primary-action" id="btnAgregarCargoLista">
+                            👤 Agregar cargo a la lista
+                        </button>
+                    </div>
+                    <div class="pof-field pof-observation-panel pof-hidden" id="panelObservacionCargo">
+                        <label for="observacionCargo">Observaci&oacute;n</label>
+                        <textarea id="observacionCargo" rows="2" placeholder="Opcional — escribí una aclaración para este cargo..."></textarea>
+                        <div class="pof-observation-actions" id="observationCargoActions">
+                            <button type="button" class="pof-btn pof-observation-remove" id="btnQuitarObservacion">
+                                ❌ Quitar observación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cargoListaWrapper" class="pof-cargos-list-wrapper pof-hidden">
+                <h2>Listado de Cargos</h2>
+                <div id="cargoInfoGeneral" class="pof-cargos-info"></div>
+                <div class="pof-table-wrap pof-cargos-table-wrap">
+                    <table class="pof-table pof-cargos-table">
+                        <thead>
+                            <tr>
+                                <th>CEIC</th>
+                                <th>Cargo</th>
+                                <th>Cantidad</th>
+                                <th>Unidad</th>
+                                <th>Puntos</th>
+                                <th>Total</th>
+                                <th>Observaci&oacute;n</th>
+                                <th>Acci&oacute;n</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCargos">
+                            <tr>
+                                <td colspan="8" class="pof-empty-row">Todav&iacute;a no agregaste cargos.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="cargoTotalPuntos" class="pof-cargos-total-puntos"></div>
+            </div>
+        </div>
+
+        <div id="bloqueGuardarCarga" class="pof-hidden pof-mt-2">
+            <button type="button" class="pof-btn pof-btn-primary" id="btnGuardarCarga">
+                Guardar carga
+            </button>
+        </div>
+
+        <div id="estadoGuardado" class="pof-status"></div>
+
+        <div id="modalConfirmarCarga" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
+            <div class="pof-modal" role="dialog" aria-modal="true" aria-labelledby="modalConfirmarCargaTitulo">
+                <div class="pof-modal-header">
+                    <div>
+                        <h2 id="modalConfirmarCargaTitulo">Confirmar carga de cargos</h2>
+                        <p class="pof-help">Revis&aacute; los cargos antes de guardar definitivamente.</p>
+                    </div>
+                    <button type="button"
+                            class="pof-modal-close"
+                            aria-label="Cerrar"
+                            data-cancelar-confirmacion-carga>&times;</button>
+                </div>
+
+                <div class="pof-table-wrap pof-cargos-table-wrap">
+                    <table class="pof-table pof-cargos-table">
+                        <thead>
+                            <tr>
+                                <th>CEIC</th>
+                                <th>Cargo</th>
+                                <th>Cantidad</th>
+                                <th>Unidad</th>
+                                <th>Puntos</th>
+                                <th>Total</th>
+                                <th>Observaci&oacute;n</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaConfirmarCarga"></tbody>
+                    </table>
+                </div>
+
+                <div id="modalCargoTotalPuntos" class="pof-cargos-total-puntos"></div>
+
+                <div class="pof-modal-actions">
+                    <button type="button"
+                            class="pof-btn pof-btn-light"
+                            data-cancelar-confirmacion-carga>
+                        Cancelar
+                    </button>
+
+                    <button type="button"
+                            class="pof-btn pof-btn-primary"
+                            id="btnConfirmarGuardarCarga">
+                        Confirmar guardado
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+{% if not mensaje_error %}
+{% url 'reunidas_pof:buscar_padron_proyecto_especial' as url_buscar_padron_pe %}
+{% url 'reunidas_pof:catalogos_ingreso_manual_proyecto_especial' as url_catalogos_manual_pe %}
+{% url 'reunidas_pof:buscar_cuof_manual_proyecto_especial' as url_buscar_cuof_manual_pe %}
+{% url 'reunidas_pof:catalogo_ceic_proyecto_especial' as url_catalogo_ceic_pe %}
+{% url 'reunidas_pof:guardar_carga_proyecto_especial' as url_guardar_carga_pe %}
+{% url 'reunidas_pof:detalle_reunida' as url_detalle_reunida %}
+<script id="cargarCargosProyectoEspecialConfig" type="application/json">
+{
+    "proyectoEspecial": {
+        "id": "{{ proyecto_especial.id|default_if_none:''|escapejs }}",
+        "anio": "{{ proyecto_especial.anio|default_if_none:''|escapejs }}",
+        "nombre": "{{ proyecto_especial.nombre|default_if_none:''|escapejs }}",
+        "resolucion": "{{ proyecto_especial_resolucion|default_if_none:''|escapejs }}"
+    },
+    "proyectosEspeciales": [
+        {% for p in proyectos_especiales %}
+        {
+            "id": "{{ p.id|default_if_none:''|escapejs }}",
+            "anio": "{{ p.anio|default_if_none:''|escapejs }}",
+            "nombre": "{{ p.nombre|default_if_none:''|escapejs }}",
+            "resolucion": "{{ p.resolucion|default_if_none:''|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "urls": {
+        "buscarPadron": "{{ url_buscar_padron_pe|escapejs }}",
+        "catalogosManual": "{{ url_catalogos_manual_pe|escapejs }}",
+        "buscarCuofManual": "{{ url_buscar_cuof_manual_pe|escapejs }}",
+        "catalogoCeic": "{{ url_catalogo_ceic_pe|escapejs }}",
+        "guardarCarga": "{{ url_guardar_carga_pe|escapejs }}",
+        "detalleReunida": "{{ url_detalle_reunida|escapejs }}"
+    }
+}
+</script>
+<script>
+    {% include "reunidas_pof/_helpers_carga_cargos_comunes.html" %}
+</script>
+<script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/cargar_cargos_proyecto_especial.js' %}"></script>
+{% endif %}
+{% endblock %}

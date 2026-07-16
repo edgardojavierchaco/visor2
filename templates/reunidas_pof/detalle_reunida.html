@@ -1,0 +1,816 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+{% block content %}
+
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa=seccion_activa %}
+    <div class="pof-view-header">
+        <h1>{{ cabecera_detalle_nombre|upper }} {{ reunida.anio }}{% if reunida.nivel %} &middot; {{ reunida.nivel }}{% endif %}</h1>
+        <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUE, anexos y CUOF de la POF.{% endif %}</p>
+    </div>
+
+    <div class="pof-detalle-toolbar{% if not es_proyecto_especial %} pof-detalle-toolbar-comun{% endif %}" aria-label="Acciones de la POF">
+        {% if reunida.existe %}
+            <a href="{% if es_proyecto_especial %}{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto_especial.id }}{% else %}{% url 'reunidas_pof:cargar_cargos' %}?{{ cabecera_querystring }}{% endif %}" class="pof-btn pof-btn-primary">
+                &#128101; Afectar Cargos
+            </a>
+
+            <a href="{% url 'reunidas_pof:exportar_reunida' %}?{% if es_proyecto_especial and detalle_exportar_querystring %}{{ detalle_exportar_querystring }}{% else %}{{ cabecera_querystring }}{% endif %}" class="pof-btn pof-btn-excel">
+                &#128215; {% if es_proyecto_especial %}Exportar Proyecto Especial{% else %}Exportar POF{% endif %}
+            </a>
+
+            {% if not es_proyecto_especial %}
+                <a href="{% url 'reunidas_pof:historial_movimientos' %}?{{ cabecera_querystring }}" class="pof-btn pof-btn-light">
+                    &#128344; Historial
+                </a>
+            {% endif %}
+        {% endif %}
+
+        {% if es_proyecto_especial %}
+            <a href="{% url 'reunidas_pof:proyectos_especiales_pof' %}" class="pof-btn pof-btn-light">
+                &#8617; Volver
+            </a>
+        {% endif %}
+    </div>
+
+    {% if es_proyecto_especial %}
+        {% if reunida.existe %}
+            <form method="get"
+                  id="detalleReunidaFiltrosForm"
+                  class="pof-visual-filter-card pof-detalle-filter-card"
+                  data-detalle-filtros-dinamicos="1"
+                  aria-label="Filtros del detalle de Proyecto Especial">
+                <input type="hidden" name="cabecera_tipo" value="PROYECTO_ESPECIAL">
+                <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial.id }}">
+                <input type="hidden" name="campo_filtro" id="detalleCampoFiltroActivo" value="">
+
+                <div class="pof-visual-toolbar">
+                    <div class="pof-visual-live-search" id="detalleLiveSearch">
+                        <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
+                        <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                        <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                            {% for columna in detalle_busqueda_columnas %}
+                                <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
+                        <input type="text"
+                               id="detalleColumnaInput"
+                               class="pof-visual-search-input"
+                               value="{{ detalle_busqueda_columna_valor }}"
+                               placeholder="Buscar en esta columna"
+                               autocomplete="off">
+                        <span id="detalleBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                            <span class="pof-visually-hidden">Buscando</span>
+                        </span>
+                        <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                    </div>
+
+                    <div class="pof-visual-toolbar-actions">
+                        <button type="button"
+                            class="pof-btn pof-btn-outline-primary pof-visual-toolbar-btn pof-visual-toggle-btn{% if filtros_detalle_activos %} pof-visual-toggle-active{% endif %}"
+                            data-detalle-panel-toggle="filtros"
+                            aria-controls="detallePanelFiltros"
+                            aria-expanded="false">
+                            🔧 Filtros
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pof-filter-active-list" id="detalleFiltrosActivos" aria-label="Filtros activos" {% if not filtros_detalle_activos %}hidden{% endif %}>
+                    {% for chip in filtros_detalle_chips %}
+                        <button type="button"
+                                class="pof-filter-chip"
+                                data-filter-chip
+                                data-filter-type="{{ chip.tipo }}"
+                                data-filter-index="{{ chip.indice|default:'' }}"
+                                data-filter-field="{{ chip.campo|default:'' }}">
+                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                            <span class="pof-filter-chip-text">{{ chip.texto }}</span>
+                            <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
+                        </button>
+                    {% endfor %}
+                    {% if filtros_detalle_activos %}
+                        <a class="pof-filter-clear-all"
+                            href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
+                            Limpiar todos
+                        </a>
+                    {% endif %}
+                </div>
+
+                {% if filtros_detalle_invalidos %}
+                    <div class="pof-filter-warning">
+                        <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+                        <span>{{ mensaje_filtros_detalle_general }}</span>
+                    </div>
+                {% endif %}
+
+                <div id="detallePanelFiltros" class="pof-visual-panel" hidden>
+                    <div class="pof-visual-panel-head">
+                        <strong>Filtros</strong>
+                    </div>
+                    <div class="pof-visual-filter-grid">
+                        {% for filtro in filtros_detalle_campos %}
+                            <div>
+                                <button type="button"
+                                        class="pof-visual-filter-btn"
+                                        data-filter-field="{{ filtro.id }}"
+                                        data-filter-label="{{ filtro.label }}"
+                                        data-filter-mode="{{ filtro.tipo }}"
+                                        data-filter-operators="{{ filtro.operadores }}">
+                                    {{ filtro.label }}
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div id="detalleFiltroBackdrop" class="pof-visual-dialog-backdrop" hidden></div>
+                <div id="detalleDialogFiltro" class="pof-visual-dialog" hidden>
+                    <h6 id="detalleDialogTitulo" class="pof-visual-dialog-title">Agregar Filtro</h6>
+                    <div class="pof-visual-dialog-body">
+                        <div class="pof-visual-dialog-field">
+                            <label for="detalleOperadorFiltro">Operador</label>
+                            <select name="operador_filtro" id="detalleOperadorFiltro"></select>
+                        </div>
+                        <div class="pof-visual-dialog-field">
+                            <label id="detalleValorFiltroLabel" for="detalleValorFiltro">Valor</label>
+                            <div id="detalleValorFiltroMount"></div>
+                        </div>
+                        <div class="pof-visual-dialog-actions">
+                            <button type="submit" class="pof-filter-apply-btn">Agregar filtro</button>
+                            <button type="button" class="pof-filter-clear-btn" id="detalleCerrarDialogoFiltro">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            {{ filtros_detalle_opciones|json_script:"detalleFiltrosOpcionesData" }}
+        {% endif %}
+
+        {% if grupos_detalle_proyecto %}
+            {% for grupo_proyecto in grupos_detalle_proyecto %}
+                <div class="pof-cue-block pof-cue-block-normal">
+                    <div class="pof-cue-header pof-cue-header-normal">
+                        <div class="pof-cue-title pof-cue-title-normal">
+                            <strong>
+                                {% if grupo_proyecto.tipo_identidad == "CUE" %}
+                                    <span class="pof-cue-code">&#127979; CUE {{ grupo_proyecto.cue }}</span>
+                                {% else %}
+                                    <span class="pof-cue-code">&#128193; CUOF {{ grupo_proyecto.cuof|default:"—" }}</span>
+                                {% endif %}
+                                <span class="pof-cue-separator">&middot;</span>
+                                <span class="pof-cue-name">{{ grupo_proyecto.establecimiento|default:"Proyecto Especial" }}</span>
+                                {% if grupo_proyecto.tipo_identidad == "CUE" and grupo_proyecto.info_cue %}
+                                    <button type="button"
+                                            class="pof-cue-info-placeholder pof-cue-info-button"
+                                            data-pof-cue-modal-open="modal-info-proyecto-cue-{{ forloop.counter }}"
+                                            aria-controls="modal-info-proyecto-cue-{{ forloop.counter }}"
+                                            aria-expanded="false"
+                                            aria-label="Ver informacion del CUE {{ grupo_proyecto.cue }}"
+                                            title="Ver informacion del CUE">
+                                        &#128161; INFO CUE
+                                    </button>
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="pof-cue-totals-row" aria-label="Totales del grupo">
+                        <div class="pof-cue-total">
+                            {% if grupo_proyecto.tipo_identidad == "CUE" %}
+                                <span><span class="pof-cue-total-icon" aria-hidden="true">&#128193;</span> Total anexos</span>
+                                <strong>{{ grupo_proyecto.total_anexos|default:0 }}</strong>
+                            {% else %}
+                                <span><span class="pof-cue-total-icon" aria-hidden="true">&#128205;</span> Total localizaciones</span>
+                                <strong>{{ grupo_proyecto.total_localizaciones|default:0 }}</strong>
+                            {% endif %}
+                        </div>
+
+                        <div class="pof-cue-total">
+                            <span><span class="pof-cue-total-icon" aria-hidden="true">&#128188;</span> Total cargos</span>
+                            <strong>{{ grupo_proyecto.total_cargos|default:0 }}</strong>
+                        </div>
+
+                        <div class="pof-cue-total">
+                            <span><span class="pof-cue-total-icon" aria-hidden="true">&#11088;</span> Total puntos</span>
+                            <strong>{{ grupo_proyecto.total_puntos|default_if_none:"0" }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="pof-table-wrap pof-cue-table-wrap">
+                        <table class="pof-table">
+                            <thead>
+                                <tr>
+                                    {% if grupo_proyecto.tipo_identidad == "CUE" %}
+                                        <th>Anexo</th>
+                                    {% else %}
+                                        <th>CUOF</th>
+                                    {% endif %}
+                                    <th>CUI</th>
+                                    {% if grupo_proyecto.tipo_identidad == "CUE" %}
+                                        <th>CUOF</th>
+                                    {% else %}
+                                        <th>Establecimiento / Referencia</th>
+                                    {% endif %}
+                                    <th>Cargos</th>
+                                    <th>Acci&oacute;n</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for localizacion in grupo_proyecto.localizaciones %}
+                                    <tr>
+                                        {% if grupo_proyecto.tipo_identidad == "CUE" %}
+                                            <td>{{ localizacion.anexo|default:"—" }}</td>
+                                        {% else %}
+                                            <td>{{ localizacion.cuof|default:"—" }}</td>
+                                        {% endif %}
+                                        <td>{{ localizacion.cui|default_if_none:"" }}</td>
+                                        {% if grupo_proyecto.tipo_identidad == "CUE" %}
+                                            <td>{{ localizacion.cuof|default:"—" }}</td>
+                                        {% else %}
+                                            <td>{{ localizacion.establecimiento|default:"—" }}</td>
+                                        {% endif %}
+                                        <td>{{ localizacion.cantidad_cargos|default:0 }}</td>
+                                        <td>
+                                            <div class="pof-actions">
+                                                <button type="button"
+                                                        class="pof-btn pof-btn-light js-detalle-grupo-toggle"
+                                                        aria-expanded="false"
+                                                        data-url="{% url 'reunidas_pof:detalle_proyecto_especial_localizacion_cargos' proyecto_especial.id localizacion.localizacion_id %}"
+                                                        data-localizacion-id="{{ localizacion.localizacion_id }}"
+                                                        data-cueanexo="{{ localizacion.cueanexo }}"
+                                                        data-cuof="{{ localizacion.cuof }}"
+                                                        data-target="detalle-proyecto-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                                        title="Ver cargos de esta localizaci&oacute;n">
+                                                    &#128065;&#65039; Mostrar cargos
+                                                </button>
+                                                {% if localizacion.admin_querystring %}
+                                                    <a href="{% url 'reunidas_pof:consultar_cargos' %}?{{ localizacion.admin_querystring }}"
+                                                       class="pof-btn pof-btn-light"
+                                                       aria-label="Administrar cargos de esta localizaci&oacute;n"
+                                                       title="Administrar cargos de esta localizaci&oacute;n">
+                                                        &#9881;&#65039; Administrar
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="pof-hidden pof-detalle-grupo-row"
+                                        data-detalle-grupo-row="true"
+                                        hidden>
+                                        <td colspan="5">
+                                            <div id="detalle-proyecto-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                                 data-detalle-grupo-contenido="true"></div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if grupo_proyecto.tipo_identidad == "CUE" and grupo_proyecto.info_cue %}
+                        <div id="modal-info-proyecto-cue-{{ forloop.counter }}"
+                             class="pof-modal-backdrop pof-hidden pof-cue-info-modal-backdrop"
+                             aria-hidden="true"
+                             data-pof-cue-modal>
+                            <div class="pof-modal pof-cue-info-modal"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-labelledby="modalInfoProyectoCueTitulo{{ forloop.counter }}">
+                                <div class="pof-modal-header">
+                                    <div>
+                                        <h2 id="modalInfoProyectoCueTitulo{{ forloop.counter }}">Informaci&oacute;n del CUE</h2>
+                                        <p class="pof-help">CUE {{ grupo_proyecto.cue }}</p>
+                                    </div>
+                                    <button type="button"
+                                            class="pof-modal-close"
+                                            aria-label="Cerrar"
+                                            data-pof-cue-modal-close>&times;</button>
+                                </div>
+                                <div class="pof-cue-info-grid">
+                                    {% for item_info in grupo_proyecto.info_cue %}
+                                        <div class="pof-cue-info-item">
+                                            <span>{{ item_info.label }}</span>
+                                            <strong>{{ item_info.valor }}</strong>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="pof-modal-actions">
+                                    <button type="button"
+                                            class="pof-btn pof-btn-light"
+                                            data-pof-cue-modal-close>Cerrar</button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            {% if paginacion_grupos_detalle.total %}
+                <div class="pof-table-footer" aria-label="Paginaci&oacute;n de grupos del Proyecto Especial">
+                    <div class="pof-page-size">
+                        Mostrando grupos {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}
+                    </div>
+                    {% if paginacion_grupos_detalle.paginator.num_pages > 1 %}
+                        <nav class="pof-pagination" aria-label="Paginaci&oacute;n de grupos del Proyecto Especial">
+                            {% if paginacion_grupos_detalle.page_obj.has_previous %}
+                                <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ paginacion_grupos_detalle.page_obj.previous_page_number }}">Anterior</a>
+                            {% else %}
+                                <span class="pof-page-btn pof-page-btn-disabled">Anterior</span>
+                            {% endif %}
+                            {% for page_number in paginacion_grupos_detalle.page_range %}
+                                {% if page_number == paginacion_grupos_detalle.page_obj.number %}
+                                    <span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>
+                                {% elif page_number == '…' %}
+                                    <span class="pof-page-ellipsis">…</span>
+                                {% else %}
+                                    <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                                {% endif %}
+                            {% endfor %}
+                            {% if paginacion_grupos_detalle.page_obj.has_next %}
+                                <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ paginacion_grupos_detalle.page_obj.next_page_number }}">Siguiente</a>
+                            {% else %}
+                                <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
+                            {% endif %}
+                        </nav>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            {% if mensaje_detalle %}
+                <div class="pof-note">{{ mensaje_detalle }}</div>
+            {% elif filtros_detalle_invalidos %}
+                <div class="pof-detalle-empty">
+                    Correg&iacute; los filtros marcados para ver resultados.
+                </div>
+            {% elif filtros_detalle_activos %}
+                <div class="pof-detalle-empty">
+                    No se encontraron cargos para los filtros aplicados.
+                </div>
+            {% else %}
+                <div class="pof-detalle-empty">
+                    No hay cargos cargados para este Proyecto Especial.
+                </div>
+            {% endif %}
+        {% endif %}
+    {% else %}
+        {% if reunida.existe %}
+            <form method="get"
+                  id="detalleReunidaFiltrosForm"
+                  class="pof-visual-filter-card pof-detalle-filter-card"
+                  data-detalle-filtros-dinamicos="1"
+                  aria-label="Filtros del detalle de reunida">
+                <input type="hidden" name="cabecera_tipo" value="REUNIDA">
+                <input type="hidden" name="anio" value="{{ reunida.anio }}">
+                <input type="hidden" name="nivel" value="{{ reunida.nivel_codigo }}">
+                <input type="hidden" name="campo_filtro" id="detalleCampoFiltroActivo" value="">
+
+                <div class="pof-visual-toolbar">
+                    <div class="pof-visual-live-search" id="detalleLiveSearch">
+                        <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
+                        <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                        <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                            {% for columna in detalle_busqueda_columnas %}
+                                <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
+                        <input type="text"
+                               id="detalleColumnaInput"
+                               class="pof-visual-search-input"
+                               value="{{ detalle_busqueda_columna_valor }}"
+                               placeholder="Buscar en esta columna"
+                               autocomplete="off">
+                        <span id="detalleBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                            <span class="pof-visually-hidden">Buscando</span>
+                        </span>
+                        <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                    </div>
+
+                    <div class="pof-visual-toolbar-actions">
+                        <button type="button"
+                                class="pof-btn pof-btn-outline-primary pof-visual-toolbar-btn pof-visual-toggle-btn{% if filtros_detalle_activos %} pof-visual-toggle-active{% endif %}"
+                                data-detalle-panel-toggle="filtros"
+                                aria-controls="detallePanelFiltros"
+                                aria-expanded="false">
+                            🔧 Filtros
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pof-filter-active-list" id="detalleFiltrosActivos" aria-label="Filtros activos" {% if not filtros_detalle_activos %}hidden{% endif %}>
+                    {% for chip in filtros_detalle_chips %}
+                        <button type="button"
+                                class="pof-filter-chip"
+                                data-filter-chip
+                                data-filter-type="{{ chip.tipo }}"
+                                data-filter-index="{{ chip.indice|default:'' }}"
+                                data-filter-field="{{ chip.campo|default:'' }}">
+                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                            <span class="pof-filter-chip-text">{{ chip.texto }}</span>
+                            <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
+                        </button>
+                    {% endfor %}
+                    {% if filtros_cargo_detalle_activos and not filtros_detalle_invalidos %}
+                        <span class="pof-filter-chip">Modo coincidencias</span>
+                    {% endif %}
+                    {% if filtros_detalle_activos %}
+                        <a class="pof-filter-clear-all"
+                            href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
+                            Limpiar todos
+                        </a>
+                    {% endif %}
+                </div>
+
+                {% if filtros_detalle_invalidos %}
+                    <div class="pof-filter-warning">
+                        <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+                        <span>{{ mensaje_filtros_detalle_general }}</span>
+                    </div>
+                {% endif %}
+
+                <div id="detallePanelFiltros" class="pof-visual-panel" hidden>
+                    <div class="pof-visual-panel-head">
+                        <strong>Filtros</strong>
+                    </div>
+                    <div class="pof-visual-filter-grid">
+                        {% for filtro in filtros_detalle_campos %}
+                            <div>
+                                <button type="button"
+                                        class="pof-visual-filter-btn"
+                                        data-filter-field="{{ filtro.id }}"
+                                        data-filter-label="{{ filtro.label }}"
+                                        data-filter-mode="{{ filtro.tipo }}"
+                                        data-filter-operators="{{ filtro.operadores }}">
+                                    {{ filtro.label }}
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div id="detalleFiltroBackdrop" class="pof-visual-dialog-backdrop" hidden></div>
+                <div id="detalleDialogFiltro" class="pof-visual-dialog" hidden>
+                    <h6 id="detalleDialogTitulo" class="pof-visual-dialog-title">Agregar Filtro</h6>
+                    <div class="pof-visual-dialog-body">
+                        <div class="pof-visual-dialog-field">
+                            <label for="detalleOperadorFiltro">Operador</label>
+                            <select name="operador_filtro" id="detalleOperadorFiltro"></select>
+                        </div>
+                        <div class="pof-visual-dialog-field">
+                            <label id="detalleValorFiltroLabel" for="detalleValorFiltro">Valor</label>
+                            <div id="detalleValorFiltroMount"></div>
+                        </div>
+                        <div class="pof-visual-dialog-actions">
+                            <button type="submit" class="pof-filter-apply-btn">Agregar filtro</button>
+                            <button type="button" class="pof-filter-clear-btn" id="detalleCerrarDialogoFiltro">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            {{ filtros_detalle_opciones|json_script:"detalleFiltrosOpcionesData" }}
+
+            {% if mostrar_resumen_detalle %}
+                <div class="pof-detalle-search-summary">
+                    <strong>⭐ Resultado de búsqueda: {{ resumen_coincidencias_detalle.cargos|default:0 }} cargos · {{ resumen_coincidencias_detalle.cues|default:0 }} CUE · {{ resumen_coincidencias_detalle.anexos|default:0 }} Anexos</strong>
+                    <span>Los totales de cada CUE corresponden al CUE completo dentro del alcance mostrado.</span>
+                </div>
+            {% elif not filtros_detalle_activos %}
+                <div class="pof-list-status">
+                    <span>&#9638; Resultados: Mostrando CUE {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}.</span>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if filtros_cargo_detalle_activos %}
+            {% if filtros_detalle_invalidos %}
+                <div class="pof-detalle-empty">
+                    Correg&iacute; los filtros marcados para ver resultados.
+                </div>
+            {% elif grupos_coincidentes_detalle %}
+                {% for grupo_cue in grupos_coincidentes_detalle %}
+                    <div class="pof-cue-block">
+                        <div class="pof-cue-header">
+                            <div class="pof-cue-title">
+                                <strong>CUE {{ grupo_cue.cue|default:"—" }}</strong>
+                                <span>{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
+                            </div>
+
+                            <span class="pof-cue-info-placeholder" title="Acción prevista para una próxima etapa">
+                                Info CUE
+                            </span>
+
+                            <div class="pof-cue-total">
+                                <span>Total anexos</span>
+                                <strong>{{ grupo_cue.total_anexos|default:0 }}</strong>
+                            </div>
+
+                            <div class="pof-cue-total">
+                                <span>Total cargos</span>
+                                <strong>{{ grupo_cue.total_cargos|default:0 }}</strong>
+                            </div>
+
+                            <div class="pof-cue-total">
+                                <span>Total puntos</span>
+                                <strong>{{ grupo_cue.total_puntos|default_if_none:"0" }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="pof-table-wrap">
+                            <table class="pof-table">
+                                <thead>
+                                    <tr>
+                                        <th>Anexo</th>
+                                        <th>CUEANEXO</th>
+                                        <th>CUOF</th>
+                                        <th>Oferta / Tipo</th>
+                                        <th>CEIC</th>
+                                        <th>Cantidad</th>
+                                        <th>Modificaci&oacute;n de cantidad</th>
+                                        <th>Cargo</th>
+                                        <th>Unidad</th>
+                                        <th>Puntos</th>
+                                        <th>Total</th>
+                                        <th>Observaci&oacute;n</th>
+                                        <th>Estado</th>
+                                        <th>Acci&oacute;n</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for grupo_anexo in grupo_cue.anexos %}
+                                        {% for cargo in grupo_anexo.cargos %}
+                                            <tr>
+                                                <td>{{ grupo_anexo.anexo|default:"—" }}</td>
+                                                <td>{{ grupo_anexo.cueanexo|default_if_none:""|default:"—" }}</td>
+                                                <td>{{ grupo_anexo.cuof|default_if_none:""|default:"—" }}</td>
+                                                <td>{{ grupo_anexo.oferta_tipo|default_if_none:""|default:"—" }}</td>
+                                                <td>{{ cargo.ceic|default:"—" }}</td>
+                                                <td>
+                                                    <span class="pof-quantity-cell">
+                                                        {{ cargo.cantidad|default:"—" }}
+                                                        {% if cargo.tiene_modificacion_cantidad %}
+                                                            <button type="button"
+                                                                    class="pof-history-detail-btn pof-quantity-history-btn"
+                                                                    data-pof-quantity-history
+                                                                    data-cargo-ids="{{ cargo.cargo_ids|join:',' }}"
+                                                                    aria-label="Ver historial de cantidad"
+                                                                    title="Ver historial de cantidad">&#128337;</button>
+                                                        {% endif %}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if cargo.tiene_modificacion_cantidad %}
+                                                        <span class="pof-grid-badge pof-grid-badge-modificacion">Modificado</span>
+                                                    {% else %}
+                                                        <span class="pof-grid-badge pof-grid-badge-desafectado">Sin modificaci&oacute;n</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ cargo.cargo|default:"—" }}</td>
+                                                <td>{{ cargo.unidad_cantidad|default:"—" }}</td>
+                                                <td>{{ cargo.puntos_asignados|default:"—" }}</td>
+                                                <td>{{ cargo.total|default:"—" }}</td>
+                                                <td>
+                                                    <span class="pof-quantity-cell">
+                                                        {{ cargo.observacion|default:"—" }}
+                                                        {% if cargo.tiene_modificacion_observacion %}
+                                                            <button type="button"
+                                                                    class="pof-history-detail-btn pof-quantity-history-btn"
+                                                                    data-pof-observation-history
+                                                                    data-cargo-ids="{{ cargo.cargo_ids|join:',' }}"
+                                                                    aria-label="Ver historial de observaci&oacute;n"
+                                                                    title="Ver historial de observaci&oacute;n">&#128337;</button>
+                                                        {% endif %}
+                                                    </span>
+                                                </td>
+                                                <td>{{ cargo.estado|default:"—" }}</td>
+                                                <td>—</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                {% if mensaje_detalle %}
+                    <div class="pof-note">{{ mensaje_detalle }}</div>
+                {% else %}
+                    <div class="pof-detalle-empty">
+                        No hay cargos coincidentes con los filtros aplicados.
+                    </div>
+                {% endif %}
+            {% endif %}
+        {% elif grupos_operativos_detalle %}
+        {% for grupo_cue in grupos_operativos_detalle %}
+            <div class="pof-cue-block pof-cue-block-normal">
+                <div class="pof-cue-header pof-cue-header-normal">
+                    <div class="pof-cue-title pof-cue-title-normal">
+                        <strong>
+                            <span class="pof-cue-code">🏫 CUE {{ grupo_cue.cue|default:"—" }}</span>
+                            <span class="pof-cue-separator">&middot;</span>
+                            <span class="pof-cue-name">{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
+                            {% if grupo_cue.info_cue %}
+                                <button type="button"
+                                        class="pof-cue-info-placeholder pof-cue-info-button"
+                                        data-pof-cue-modal-open="modal-info-cue-{{ forloop.counter }}"
+                                        aria-controls="modal-info-cue-{{ forloop.counter }}"
+                                        aria-expanded="false"
+                                        aria-label="Ver informacion del CUE {{ grupo_cue.cue|default_if_none:'' }}"
+                                        title="Ver informacion del CUE">
+                                    💡 INFO CUE
+                                </button>
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="pof-cue-totals-row" aria-label="Totales del CUE">
+                    <div class="pof-cue-total">
+                        <span><span class="pof-cue-total-icon" aria-hidden="true">&#128193;</span> Total anexos</span>
+                        <strong>{{ grupo_cue.total_anexos|default:0 }}</strong>
+                    </div>
+
+                    <div class="pof-cue-total">
+                        <span><span class="pof-cue-total-icon" aria-hidden="true">&#128188;</span> Total cargos</span>
+                        <strong>{{ grupo_cue.total_cargos|default:0 }}</strong>
+                    </div>
+
+                    <div class="pof-cue-total">
+                        <span><span class="pof-cue-total-icon" aria-hidden="true">&#11088;</span> Total puntos</span>
+                        <strong>{{ grupo_cue.total_puntos|default_if_none:"0" }}</strong>
+                    </div>
+                </div>
+
+                <div class="pof-table-wrap pof-cue-table-wrap">
+                    <table class="pof-table">
+                        <thead>
+                            <tr>
+                                <th>Anexo</th>
+                                <th>CUI</th>
+                                <th>CUOF</th>
+                                <th>Cargos</th>
+                                <th>Acci&oacute;n</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for grupo_anexo in grupo_cue.anexos %}
+                                <tr>
+                                    <td>{{ grupo_anexo.anexo|default:"—" }}</td>
+                                    <td>{{ grupo_anexo.cui|default_if_none:""|default:"" }}</td>
+                                    <td>{{ grupo_anexo.cuof|default_if_none:""|default:"—" }}</td>
+                                    <td>{{ grupo_anexo.cantidad_cargos|default:0 }}</td>
+                                    <td>
+                                        <div class="pof-actions">
+                                            <button type="button"
+                                                    class="pof-btn pof-btn-light js-detalle-grupo-toggle"
+                                                    aria-expanded="false"
+                                                    data-url="{% url 'reunidas_pof:detalle_reunida_grupo_cargos' reunida.id %}"
+                                                    data-cueanexo="{{ grupo_anexo.cueanexo|default_if_none:'' }}"
+                                                    data-cuof="{{ grupo_anexo.cuof|default_if_none:'' }}"
+                                                    data-target="detalle-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                                    title="Ver cargos del grupo {{ grupo_anexo.cueanexo|default_if_none:'' }} / {{ grupo_anexo.cuof|default_if_none:'' }}">
+                                                👁️ Mostrar cargos
+                                            </button>
+                                            <a href="{% url 'reunidas_pof:consultar_cargos' %}?cabecera_tipo=REUNIDA&amp;anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}&amp;cueanexo={{ grupo_anexo.cueanexo|default_if_none:'' }}&amp;cuof={{ grupo_anexo.cuof|default_if_none:'' }}"
+                                               class="pof-btn pof-btn-light"
+                                               aria-label="Administrar cargos de este Anexo/CUOF"
+                                               title="Administrar cargos de este Anexo/CUOF">
+                                                ⚙️ Administrar
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="pof-hidden pof-detalle-grupo-row"
+                                    data-detalle-grupo-row="true"
+                                    hidden>
+                                    <td colspan="5">
+                                        <div id="detalle-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                             data-detalle-grupo-contenido="true"></div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="pof-grid-empty">No hay anexos cargados para este CUE.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if grupo_cue.info_cue %}
+                    <div id="modal-info-cue-{{ forloop.counter }}"
+                         class="pof-modal-backdrop pof-hidden pof-cue-info-modal-backdrop"
+                         aria-hidden="true"
+                         data-pof-cue-modal>
+                        <div class="pof-modal pof-cue-info-modal"
+                             role="dialog"
+                             aria-modal="true"
+                             aria-labelledby="modalInfoCueTitulo{{ forloop.counter }}">
+                            <div class="pof-modal-header">
+                                <div>
+                                    <h2 id="modalInfoCueTitulo{{ forloop.counter }}">Informaci&oacute;n del CUE</h2>
+                                    <p class="pof-help">CUE {{ grupo_cue.cue|default:"—" }}</p>
+                                </div>
+                                <button type="button"
+                                        class="pof-modal-close"
+                                        aria-label="Cerrar"
+                                        data-pof-cue-modal-close>
+                                    &times;
+                                </button>
+                            </div>
+
+                            <div class="pof-cue-info-grid">
+                                {% for item_info in grupo_cue.info_cue %}
+                                    <div class="pof-cue-info-item">
+                                        <span>{{ item_info.label }}</span>
+                                        <strong>{{ item_info.valor }}</strong>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="pof-modal-actions">
+                                <button type="button"
+                                        class="pof-btn pof-btn-light"
+                                        data-pof-cue-modal-close>
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+        {% else %}
+            {% if filtros_detalle_invalidos %}
+                <div class="pof-detalle-empty">
+                    Correg&iacute; los filtros marcados para ver resultados.
+                </div>
+            {% elif mensaje_detalle %}
+                <div class="pof-note">{{ mensaje_detalle }}</div>
+            {% elif filtros_detalle_activos %}
+                <div class="pof-detalle-empty">
+                    No hay grupos CUE que coincidan con los filtros aplicados.
+                </div>
+            {% else %}
+                <div class="pof-detalle-empty">
+                    No hay cargos cargados para esta reunida.
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if paginacion_grupos_detalle.total %}
+            <div class="pof-table-footer" aria-label="Paginaci&oacute;n de grupos CUE">
+                <div class="pof-page-size">
+                    Mostrando CUE {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}
+                </div>
+
+                {% if paginacion_grupos_detalle.paginator.num_pages > 1 %}
+                    <nav class="pof-pagination" aria-label="Paginaci&oacute;n de grupos CUE">
+                        {% if paginacion_grupos_detalle.page_obj.has_previous %}
+                            <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ paginacion_grupos_detalle.page_obj.previous_page_number }}">Anterior</a>
+                        {% else %}
+                            <span class="pof-page-btn pof-page-btn-disabled">Anterior</span>
+                        {% endif %}
+
+                        {% for page_number in paginacion_grupos_detalle.page_range %}
+                            {% if page_number == paginacion_grupos_detalle.page_obj.number %}
+                                <span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>
+                            {% elif page_number == '…' %}
+                                <span class="pof-page-ellipsis">…</span>
+                            {% else %}
+                                <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if paginacion_grupos_detalle.page_obj.has_next %}
+                            <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ paginacion_grupos_detalle.page_obj.next_page_number }}">Siguiente</a>
+                        {% else %}
+                            <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
+                        {% endif %}
+                    </nav>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% include "reunidas_pof/historial_cantidad_modal.html" %}
+    {% include "reunidas_pof/historial_observacion_modal.html" %}
+    {% include "reunidas_pof/historial_estado_modal.html" %}
+    {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="event" %}
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260716-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260716-1"></script>
+{% endblock %}

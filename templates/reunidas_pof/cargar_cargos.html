@@ -1,0 +1,289 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="cargar" %}
+    <div class="pof-view-header">
+        <h1>&#128221; AFECTAR CARGOS</h1>
+        <p>Registr&aacute; cargos y horas c&aacute;tedra asociados a una oferta educativa.</p>
+    </div>
+
+    <div class="pof-card pof-card-accent pof-cabecera-load-card">
+        <h2>1. Cabecera de carga</h2>
+        <div class="pof-help">
+            Seleccioná la Reunida POF sobre la que vas a cargar cargos.
+        </div>
+
+        <input type="hidden" id="cabecera_reunida_id">
+        <input type="hidden" id="anio_validado">
+        <input type="hidden" id="nivel_validado">
+
+        <!-- Campos de Reunida -->
+        <div class="pof-grid" id="cabeceraReunidaCampos">
+            <div class="pof-field pof-col-6">
+                <label for="anio">A&ntilde;o</label>
+                <select id="anio" class="pof-form-select" {% if not anios_reunida %}disabled{% endif %}>
+                    {% if anios_reunida %}
+                        {% for anio in anios_reunida %}
+                            <option value="{{ anio }}" {% if anio_activo == anio %}selected{% endif %}>{{ anio }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="">No hay reunidas cargadas</option>
+                    {% endif %}
+                </select>
+            </div>
+
+            <div class="pof-field pof-col-6">
+                <label for="nivel">Nivel</label>
+                <select id="nivel" class="pof-form-select" required>
+                    <option value="">Seleccioná un nivel</option>
+                    {% for value, label in niveles %}
+                        <option value="{{ value }}" {% if nivel_activo == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="pof-cabecera-actions">
+            <div class="pof-actions">
+                <button type="button" class="pof-btn pof-btn-primary" id="btnValidarReunida">
+                    Validar Reunida
+                </button>
+                <button type="button" class="pof-btn pof-btn-light pof-hidden" id="btnCambiarReunida">
+                    Cambiar cabecera
+                </button>
+            </div>
+        </div>
+
+        <div id="estadoCabecera" class="pof-status"></div>
+    </div>
+
+    <div id="bloqueBusquedaPadron" class="pof-card pof-card-accent pof-cabecera-load-card pof-hidden">
+        <h2>2. Buscar localización en padrón</h2>
+        <div class="pof-help">
+            Ingresá el CUE y anexo, al completar se buscará un CUEANEXO específico.
+        </div>
+
+        <div class="pof-grid">
+            <div class="pof-field pof-col-4">
+                <label>CUE</label>
+                <input type="text" id="cueBase" maxlength="7" placeholder="Ej: 2200001" disabled>
+            </div>
+
+            <div class="pof-field pof-col-4">
+                <label>Anexo</label>
+                <input type="text" id="anexo" maxlength="2" placeholder="Ej: 00" disabled>
+            </div>
+
+            <div class="pof-field pof-col-4">
+                <label>CUEANEXO</label>
+                <input type="text" id="cueanexo" readonly disabled>
+            </div>
+
+            <div class="pof-col-12">
+                <button type="button" class="pof-btn pof-btn-primary" id="btnBuscarPadron" disabled>
+                    Buscar en padrón
+                </button>
+            </div>
+        </div>
+
+        <div id="estadoBusqueda" class="pof-status"></div>
+    </div>
+
+    <div id="bloquePadron" class="pof-hidden">
+        <div id="resultadosPadron"></div>
+    </div>
+    <div id="bloqueSeleccion" class="pof-hidden">
+        <div id="detalleSeleccion"></div>
+    </div>
+
+    <div id="bloqueCargos" class="pof-cargo-entry pof-hidden">
+        <div class="pof-cargo-entry-panel">
+            <h2>Cargos a cargar</h2>
+            <div class="pof-cargo-entry-grid">
+                <div class="pof-field pof-cargo-entry-search">
+                    <label>CEIC</label>
+                    <div class="pof-ceic-mode" role="radiogroup" aria-label="Modo de búsqueda CEIC">
+                        <span>Buscar:</span>
+                        <label>
+                            <input type="radio" name="modoCeic" value="sugeridos" checked>
+                            Sugeridos
+                        </label>
+                        <label>
+                            <input type="radio" name="modoCeic" value="otros">
+                            Otros
+                        </label>
+                    </div>
+                    <div class="pof-autocomplete">
+                        <input type="text"
+                            id="ceicBusqueda"
+                            placeholder="Ej: 1 o 223"
+                            inputmode="numeric"
+                            maxlength="3"
+                            pattern="[0-9]{1,3}"
+                            autocomplete="off">
+
+                        <span id="ceicLoading"
+                            class="pof-ceic-loading pof-hidden"
+                            role="status"
+                            aria-hidden="true">
+                            <span class="pof-visually-hidden">Buscando CEIC</span>
+                        </span>
+
+                        <input type="hidden" id="ceicSeleccionado">
+                        <div id="sugerenciasCeic" class="pof-suggestions pof-hidden"></div>
+                    </div>
+                    <div id="mensajeCeic" class="pof-field-hint pof-ceic-help pof-hidden"></div>
+                </div>
+
+                <div class="pof-field pof-cargo-entry-selected">
+                    <label>Cargo seleccionado</label>
+                    <input type="text" id="cargoSeleccionado" placeholder="Se completa al seleccionar CEIC" readonly>
+                </div>
+
+                <div class="pof-field pof-cargo-entry-small">
+                    <label>Cantidad</label>
+                    <input type="number" id="cantidadCargo" min="1" step="1" value="1">
+                </div>
+
+                <div class="pof-field pof-cargo-entry-unit">
+                    <label>Unidad</label>
+                    <select id="unidadCargo">
+                        <option value="CARGO">Cargo</option>
+                        <option value="HORA_CATEDRA">Horas Cátedra</option>
+                    </select>
+                </div>
+
+                <div class="pof-field pof-cargo-entry-small">
+                    <label>Puntos</label>
+                    <input type="number" id="puntosCargo" min="0" step="0.01" placeholder="Puntos" readonly>
+                </div>
+
+                <div class="pof-field pof-cargo-entry-small pof-cargo-entry-total">
+                    <label>Total</label>
+                    <input type="number" id="totalCargo" readonly value="0">
+                </div>
+
+                <div class="pof-cargo-entry-actions" id="cargoEntryActions">
+                    <button type="button" class="pof-btn pof-observation-toggle" id="btnMostrarObservacion">
+                        💬 Agregar observación
+                    </button>
+                    <button type="button" class="pof-btn pof-cargo-primary-action" id="btnAgregarCargoLista">
+                        👤 Agregar cargo a la lista
+                    </button>
+                </div>
+
+                <div class="pof-field pof-observation-panel pof-hidden" id="panelObservacionCargo">
+                    <label>Observación</label>
+                    <textarea id="observacionCargo" rows="2" placeholder="Opcional — escribí una aclaración para este cargo..."></textarea>
+                    <div class="pof-observation-actions" id="observationCargoActions">
+                        <button type="button" class="pof-btn pof-observation-remove" id="btnQuitarObservacion">
+                            ❌ Quitar observación
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="cargoListaWrapper" class="pof-cargos-list-wrapper pof-hidden">
+            <h2>Listado de Cargos</h2>
+            <div id="cargoInfoGeneral" class="pof-cargos-info"></div>
+
+            <div class="pof-table-wrap pof-cargos-table-wrap">
+                <table class="pof-table pof-cargos-table">
+                    <thead>
+                        <tr>
+                            <th>CEIC</th>
+                            <th>Cargo</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Puntos</th>
+                            <th>Total</th>
+                            <th>Observación</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCargos">
+                        <tr>
+                            <td colspan="8" class="pof-empty-row">
+                                Todavía no agregaste cargos.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="cargoTotalPuntos" class="pof-cargos-total-puntos"></div>
+        </div>
+
+        <div id="bloqueGuardarCarga" class="pof-hidden pof-mt-2">
+            <button type="button" class="pof-btn pof-btn-primary" id="btnGuardarCarga">
+                Guardar carga
+            </button>
+        </div>
+
+        <div id="estadoGuardado" class="pof-status"></div>
+    </div>
+</div>
+
+<div id="modalConfirmarCarga" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
+    <div class="pof-modal" role="dialog" aria-modal="true" aria-labelledby="modalConfirmarCargaTitulo">
+        <div class="pof-modal-header">
+            <div>
+                <h2 id="modalConfirmarCargaTitulo">Confirmar carga de cargos</h2>
+                <p class="pof-help">Revis&aacute; los cargos antes de guardar definitivamente.</p>
+            </div>
+            <button type="button" class="pof-modal-close" aria-label="Cerrar" data-cancelar-confirmacion-carga>&times;</button>
+        </div>
+        <div class="pof-table-wrap pof-cargos-table-wrap">
+            <table class="pof-table pof-cargos-table">
+                <thead>
+                    <tr>
+                        <th>CEIC</th>
+                        <th>Cargo</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Puntos</th>
+                        <th>Total</th>
+                        <th>Observaci&oacute;n</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaConfirmarCarga"></tbody>
+            </table>
+        </div>
+        <div id="modalCargoTotalPuntos" class="pof-cargos-total-puntos"></div>
+        <div class="pof-modal-actions">
+            <button type="button" class="pof-btn pof-btn-light" data-cancelar-confirmacion-carga>Cancelar</button>
+            <button type="button" class="pof-btn pof-btn-primary" id="btnConfirmarGuardarCarga">Confirmar guardado</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+{% url 'reunidas_pof:validar_reunida' as url_validar_reunida %}
+{% url 'reunidas_pof:buscar_padron' as url_buscar_padron %}
+{% url 'reunidas_pof:buscar_ceic' as url_buscar_ceic %}
+{% url 'reunidas_pof:catalogo_ceic' as url_catalogo_ceic %}
+{% url 'reunidas_pof:guardar_carga_pof' as url_guardar_carga_pof %}
+{% url 'reunidas_pof:detalle_reunida' as url_detalle_reunida %}
+<script id="cargarCargosReunidaConfig" type="application/json">
+{
+    "urls": {
+        "validarReunida": "{{ url_validar_reunida|escapejs }}",
+        "buscarPadron": "{{ url_buscar_padron|escapejs }}",
+        "buscarCeic": "{{ url_buscar_ceic|escapejs }}",
+        "catalogoCeic": "{{ url_catalogo_ceic|escapejs }}",
+        "guardarCargaPof": "{{ url_guardar_carga_pof|escapejs }}",
+        "detalleReunida": "{{ url_detalle_reunida|escapejs }}"
+    }
+}
+</script>
+<script>
+    {% include "reunidas_pof/_helpers_carga_cargos_comunes.html" %}
+</script>
+<script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}"></script>
+{% endblock %}

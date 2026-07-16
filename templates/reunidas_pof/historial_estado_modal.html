@@ -1,0 +1,50 @@
+<div class="pof-modal-backdrop pof-hidden"
+     aria-hidden="true"
+     data-pof-state-history-modal
+     data-url="{% url 'reunidas_pof:historial_estado_cargos_pof' %}">
+
+    <div class="pof-modal pof-history-modal pof-quantity-history-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="pofStateHistoryTitle">
+
+        <div class="pof-modal-header">
+            <div>
+                <h2 id="pofStateHistoryTitle">
+                    Historial de Estado POF
+                </h2>
+
+                <p class="pof-help">
+                    Cambios reales registrados de afectación y desafectación del cargo.
+                </p>
+            </div>
+
+            <button type="button"
+                    class="pof-modal-close"
+                    aria-label="Cerrar"
+                    data-pof-state-history-close>
+                &times;
+            </button>
+        </div>
+
+        <div class="pof-detail-grid pof-quantity-history-summary pof-hidden"
+             data-pof-state-history-summary>
+        </div>
+
+        <div class="pof-status pof-api-status"
+             role="status"
+             aria-live="polite"
+             data-pof-state-history-status>
+        </div>
+
+        <div data-pof-state-history-content></div>
+
+        <div class="pof-modal-actions">
+            <button type="button"
+                    class="pof-btn pof-btn-light"
+                    data-pof-state-history-close>
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>

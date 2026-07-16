@@ -1,0 +1,118 @@
+    <div id="modalGestionCargo"
+        class="pof-modal-backdrop pof-hidden"
+        aria-hidden="true"
+        data-cargo-gestion-modal
+        data-detalle-url-base="{% url 'reunidas_pof:detalle_cargo_pof' 0 %}"
+        data-modificar-url-base="{% url 'reunidas_pof:modificar_cargo_pof' 0 %}"
+        data-eliminar-url-base="{% url 'reunidas_pof:eliminar_cargo_pof' 0 %}"
+        data-success-mode="{{ gestion_cargo_success_mode|default:'reload' }}">
+        <div class="pof-modal" role="dialog" aria-modal="true" aria-labelledby="modalGestionCargoTitulo">
+            <div class="pof-modal-header">
+                <div>
+                    <h2 id="modalGestionCargoTitulo" class="pof-admin-modal-title">GESTI&Oacute;N CARGO</h2>
+                    <div class="pof-admin-modal-subtitle">
+                        <span id="cargoGestionSubtituloCabecera">-</span>
+                        <span id="cargoGestionSubtituloActualizado">&Uacute;ltima modificaci&oacute;n: -</span>
+                    </div>
+                </div>
+                <button type="button" class="pof-modal-close" aria-label="Cerrar" data-cargo-cerrar>&times;</button>
+            </div>
+
+            <div id="estadoGestionCargo" class="pof-status"></div>
+
+            <form id="formGestionCargo">
+                <input type="hidden" id="cargoGestionId">
+
+                <div class="pof-admin-cargo-summary">
+                    <div class="pof-cargos-info-item">
+                        <span>Cabecera</span>
+                        <strong id="cargoGestionResumenCabecera">-</strong>
+                    </div>
+                    <div class="pof-cargos-info-item">
+                        <span>CUEANEXO</span>
+                        <strong id="cargoGestionResumenCueanexo">-</strong>
+                    </div>
+                    <div class="pof-cargos-info-item">
+                        <span>CUOF</span>
+                        <strong id="cargoGestionResumenCuof">-</strong>
+                    </div>
+                    <div class="pof-cargos-info-item pof-admin-summary-wide">
+                        <span>Establecimiento</span>
+                        <strong id="cargoGestionResumenEstablecimiento">-</strong>
+                    </div>
+                </div>
+
+                <div class="pof-grid">
+                    <div class="pof-field pof-col-3">
+                        <label for="cargoGestionCeicBusqueda">CEIC</label>
+                        <input type="text" id="cargoGestionCeicBusqueda" class="pof-locked-control" readonly autocomplete="off" placeholder="CEIC">
+                        <input type="hidden" id="cargoGestionCeic">
+                    </div>
+
+                    <div class="pof-field pof-col-9">
+                        <label for="cargoGestionCargo">Cargo</label>
+                        <input type="text" id="cargoGestionCargo" class="pof-locked-control" readonly autocomplete="off" tabindex="-1">
+                    </div>
+
+                    <div class="pof-field pof-col-4">
+                        <label for="cargoGestionCantidad">Cantidad</label>
+                        <input type="number" id="cargoGestionCantidad" min="1" step="1" required>
+                    </div>
+                    <div class="pof-field pof-col-4">
+                        <label for="cargoGestionUnidad">Unidad</label>
+                        <select id="cargoGestionUnidad" required>
+                            <option value="CARGO">Cargo</option>
+                            <option value="HORA_CATEDRA">Hora c&aacute;tedra</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="cargoGestionEstado">
+
+                    <div class="pof-field pof-col-4">
+                        <label for="cargoGestionPuntos">Puntos</label>
+                        <input type="number" id="cargoGestionPuntos" class="pof-locked-control" readonly tabindex="-1">
+                    </div>
+                    <div class="pof-field pof-col-4">
+                        <label for="cargoGestionTotal">Total</label>
+                        <input type="text" id="cargoGestionTotal" class="pof-locked-control" readonly>
+                    </div>
+                    <div class="pof-field pof-col-4 pof-admin-state-field">
+                        <label>Estado</label>
+                        <div id="cargoGestionEstadoPanel" class="pof-admin-state-panel">
+                            <strong id="cargoGestionResumenEstado" class="pof-admin-state-text">-</strong>
+                            <button type="button" id="cargoGestionEstadoToggle" class="pof-btn pof-admin-state-toggle">-</button>
+                        </div>
+                    </div>
+
+                    <div class="pof-field pof-col-12 pof-observation-panel pof-admin-observation-panel">
+                        <label for="cargoGestionObservacion">Observaci&oacute;n</label>
+                        <textarea id="cargoGestionObservacion" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="pof-modal-actions">
+                    <span id="cargoGestionCambiosPendientes" class="pof-admin-pending-message pof-hidden">Guardar los cambios para aplicar</span>
+                    <button type="submit" class="pof-btn pof-btn-primary" id="btnGuardarCargo">Guardar cambios</button>
+                    <button type="button" class="pof-btn pof-btn-danger" id="btnEliminarCargo">Eliminar cargo</button>
+                    <button type="button" class="pof-btn pof-btn-light" data-cargo-cerrar>Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="modalConfirmarEliminacionCargo" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
+        <div class="pof-modal pof-delete-warning-modal" role="dialog" aria-modal="true" aria-labelledby="modalConfirmarEliminacionTitulo">
+            <div class="pof-modal-header">
+                <div>
+                    <h2 id="modalConfirmarEliminacionTitulo">Eliminar cargo permanentemente</h2>
+                    <p class="pof-help">Esta acci&oacute;n borrar&aacute; el cargo permanentemente y no podr&aacute; recuperarse.</p>
+                </div>
+                <button type="button" class="pof-modal-close pof-delete-close" aria-label="Cerrar" data-eliminar-cancelar>&times;</button>
+            </div>
+            <div class="pof-delete-warning-box">
+                El cargo seleccionado se eliminar&aacute; de forma definitiva. Confirm&aacute; solo si est&aacute;s seguro.
+            </div>
+            <div class="pof-modal-actions">
+                <button type="button" class="pof-btn pof-btn-danger pof-delete-confirm-btn" id="btnConfirmarEliminarCargo">Eliminar permanentemente</button>
+                <button type="button" class="pof-btn pof-btn-light" data-eliminar-cancelar>Cancelar</button>
+            </div>
+        </div>
+    </div>

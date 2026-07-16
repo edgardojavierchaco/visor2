@@ -78,6 +78,8 @@ urlpatterns = [
     path('supreg/', include('apps.supervisor_registro.urls', namespace='supervisor_registro')),
     path('monitoreo/',include('apps.monitoreo_login.urls')),
     path('sirtee/', include('apps.sirtee.urls', namespace='sirtee')),
+    path('bnhalumnos/', include('apps.bnhalumnos.urls', namespace='bnhalumnos')),
+    path("pof/", include("apps.reunidas_pof.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

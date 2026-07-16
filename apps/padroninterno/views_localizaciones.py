@@ -14,9 +14,11 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
-PADRON_DB = 'Padron'
+MATERIALIZADAS_DB = 'default'
 PAGE_SIZE = 10
 OFERTA_ESTADO_FILTER_OPTIONS = ('Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes')
+
+# Opciones fijas usadas por filtros que no dependen de una consulta dinamica.
 
 PERIODO_FUNCIONAMIENTO_OPTIONS = [
     'Común',
@@ -94,6 +96,7 @@ REGIONAL_HASTA_2020_OPTIONS = [
 _REPEATED_PAIR_RE = re.compile(r'^(.+)-\1$')
 
 
+# Normaliza textos provenientes de la base antes de enviarlos al template o JSON.
 def _normalize_text(value, keep_linebreaks=False):
     if value is None:
         return ''
@@ -251,17 +254,7 @@ def _build_cue_anexo(cue, anexo):
 
 @lru_cache(maxsize=None)
 def _get_campo_codigo_pairs(id_campo_prov):
-    with connections[PADRON_DB].cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT codigo::text, COALESCE(descripcion, '')
-            FROM campo_prov_codigo
-            WHERE id_campo_prov = %s
-            ORDER BY LENGTH(codigo::text) DESC, codigo::text
-            """,
-            [id_campo_prov],
-        )
-        return tuple((_normalize_text(code), _normalize_text(desc)) for code, desc in cursor.fetchall())
+    return tuple()
 
 
 def _split_campo_codigo(value, id_campo_prov=None):
@@ -308,6 +301,8 @@ def _format_desc_with_code(value, id_campo_prov=None):
 
 def _format_code_then_desc(value, id_campo_prov=None):
     code, description = _split_campo_codigo(value, id_campo_prov)
+    if code and description and code.casefold() == description.casefold():
+        return code
     if code and description:
         return f'{code}, {description}'
     return code or description
@@ -320,6 +315,7 @@ def _format_desc_then_code(value, id_campo_prov=None):
     return description or code
 
 
+# Fragmentos SQL reutilizados por listado, busqueda y exportacion.
 RESPONSABLE_SQL = """
     BTRIM(
         CONCAT(
@@ -374,6 +370,7 @@ DOMICILIO_SEARCH_SQL = """
     )
 """
 
+# Mapa cerrado de campos permitidos para filtros y ordenamiento.
 CAMPO_SQL = {
     'cue': 'vl.cue::text',
     'anexo': "COALESCE(BTRIM(vl.anexo), '')",
@@ -395,7 +392,7 @@ CAMPO_SQL = {
     'cod_area_tel': "COALESCE(BTRIM(vl.telefono_cod_area), '')",
     'telefono': "COALESCE(BTRIM(vl.telefono), '')",
     'email': "COALESCE(BTRIM(vl.email), '')",
-    'modalidades_complementarias': "COALESCE(BTRIM(mods.modalidades), '')",
+    'modalidades_complementarias': "COALESCE(BTRIM(vl.modalidades_complementarias), '')",
     'tel_director_regional': "COALESCE(BTRIM(vl.cp_tedirregional), '')",
     'email_dir_regional': "COALESCE(BTRIM(vl.cp_emaildirregional), '')",
     'supervisor_tecnico': "COALESCE(BTRIM(vl.cp_supervisortecnico), '')",
@@ -404,7 +401,7 @@ CAMPO_SQL = {
     'regional_actual': "COALESCE(BTRIM(vl.cp_esvat5), '')",
     'zona_provincial': "COALESCE(BTRIM(vl.cp_zonaprovincial), '')",
     'anterior_regional': "COALESCE(BTRIM(vl.cp_esvat3), '')",
-    'director_regional': "COALESCE(BTRIM(vl.cp_directorregional), '')",
+    'director_regional': "COALESCE(BTRIM(vl.director_regional), '')",
     'plan_de_obra': "COALESCE(BTRIM(vl.cp_plandeobra), '')",
     'patrimonio_edilicio': "COALESCE(BTRIM(vl.cp_patrimonioedilicio), '')",
     'fecha_creacion_edificio': "COALESCE(BTRIM(vl.cp_estfechacreacionedificio), '')",
@@ -415,11 +412,12 @@ CAMPO_SQL = {
     'tipo_albergue': "COALESCE(BTRIM(vl.cp_esvat1), '')",
     'regional_hasta_2015': "COALESCE(BTRIM(vl.cp_p8104_localizacion_1019638033), '')",
     'inst_legal_edificio': "COALESCE(BTRIM(vl.cp_edif_instlegal_creaciondeestablecimiento), '')",
-    'tel_supervisor': "COALESCE(BTRIM(loc_tel_sup.valor), '')",
-    'email_supervisor': "COALESCE(BTRIM(loc_email_sup.valor), '')",
+    'tel_supervisor': "COALESCE(BTRIM(vl.tel_supervisor), '')",
+    'email_supervisor': "COALESCE(BTRIM(vl.email_supervisor), '')",
     'regional_hasta_2020': "COALESCE(BTRIM(vl.cp_reg_hasta_2020), '')",
 }
 
+# Nombres legibles para reportes y resumen de filtros.
 VISIBLE_NAME_MAP = {
     'cue': 'Cue',
     'anexo': 'Anexo',
@@ -466,6 +464,7 @@ VISIBLE_NAME_MAP = {
     'regional_hasta_2020': 'Regional Ed. HASTA 2020',
 }
 
+# Columnas que puede incluir la exportacion Excel.
 COLUMNAS_EXPORTACION = [
     ('Cue', 'cue'),
     ('Anexo', 'anexo'),
@@ -512,6 +511,7 @@ COLUMNAS_EXPORTACION = [
     ('Regional Ed. HASTA 2020', 'regional_hasta_2020'),
 ]
 
+# SELECT principal del listado de localizaciones.
 _SELECT_FIELDS = f"""
     SELECT
         vl.id_localizacion AS id,
@@ -535,7 +535,7 @@ _SELECT_FIELDS = f"""
         COALESCE(BTRIM(vl.telefono_cod_area), '') AS cod_area_tel,
         COALESCE(BTRIM(vl.telefono), '') AS telefono,
         COALESCE(BTRIM(vl.email), '') AS email,
-        COALESCE(BTRIM(mods.modalidades), '') AS modalidades_complementarias,
+        COALESCE(BTRIM(vl.modalidades_complementarias), '') AS modalidades_complementarias,
         COALESCE(BTRIM(vl.cp_tedirregional), '') AS tel_director_regional,
         COALESCE(BTRIM(vl.cp_emaildirregional), '') AS email_dir_regional,
         COALESCE(BTRIM(vl.cp_supervisortecnico), '') AS supervisor_tecnico,
@@ -544,7 +544,7 @@ _SELECT_FIELDS = f"""
         COALESCE(BTRIM(vl.cp_esvat5), '') AS regional_actual,
         COALESCE(BTRIM(vl.cp_zonaprovincial), '') AS zona_provincial,
         COALESCE(BTRIM(vl.cp_esvat3), '') AS anterior_regional,
-        COALESCE(BTRIM(vl.cp_directorregional), '') AS director_regional,
+        COALESCE(BTRIM(vl.director_regional), '') AS director_regional,
         COALESCE(BTRIM(vl.cp_plandeobra), '') AS plan_de_obra,
         COALESCE(BTRIM(vl.cp_patrimonioedilicio), '') AS patrimonio_edilicio,
         COALESCE(BTRIM(vl.cp_estfechacreacionedificio), '') AS fecha_creacion_edificio,
@@ -555,48 +555,46 @@ _SELECT_FIELDS = f"""
         COALESCE(BTRIM(vl.cp_esvat1), '') AS tipo_albergue,
         COALESCE(BTRIM(vl.cp_p8104_localizacion_1019638033), '') AS regional_hasta_2015,
         COALESCE(BTRIM(vl.cp_edif_instlegal_creaciondeestablecimiento), '') AS inst_legal_edificio,
-        COALESCE(BTRIM(loc_tel_sup.valor), '') AS tel_supervisor,
-        COALESCE(BTRIM(loc_email_sup.valor), '') AS email_supervisor,
+        COALESCE(BTRIM(vl.tel_supervisor), '') AS tel_supervisor,
+        COALESCE(BTRIM(vl.email_supervisor), '') AS email_supervisor,
         COALESCE(BTRIM(vl.cp_reg_hasta_2020), '') AS regional_hasta_2020
 """
 
+# FROM y joins completos usados por datos, filtros pesados y exportacion.
 _BASE_SQL = """
-    FROM vp_localizaciones vl
-    LEFT JOIN vp_establecimientos ve
+    FROM padroninterno.mv_localizaciones vl
+    LEFT JOIN padroninterno.mv_establecimientos ve
       ON ve.id_establecimiento = vl.id_establecimiento
-    LEFT JOIN loc_campo_prov_valor loc_tel_sup
-      ON loc_tel_sup.id_localizacion = vl.id_localizacion
-     AND loc_tel_sup.id_campo_prov = 1019638042
-    LEFT JOIN loc_campo_prov_valor loc_email_sup
-      ON loc_email_sup.id_localizacion = vl.id_localizacion
-     AND loc_email_sup.id_campo_prov = 1019638043
     LEFT JOIN LATERAL (
-        SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, ol.id_oferta_local) AS tipo_ofertas
-        FROM oferta_local ol
-        JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+        SELECT STRING_AGG(BTRIM(ol.oferta), ', ' ORDER BY ol.c_oferta, ol.id_oferta_local) AS tipo_ofertas
+        FROM padroninterno.mv_ofertaslocales ol
         WHERE ol.id_localizacion = vl.id_localizacion
     ) otipos ON TRUE
-    LEFT JOIN LATERAL (
-        SELECT STRING_AGG(BTRIM(m2.descripcion), ', ' ORDER BY m2.orden, m2.descripcion) AS modalidades
-        FROM localizacion_modalidad2_assn lm2
-        JOIN modalidad2_tipo m2 ON m2.c_modalidad2 = lm2.c_modalidad2
-        WHERE lm2.id_localizacion = vl.id_localizacion
-    ) mods ON TRUE
     LEFT JOIN LATERAL (
         SELECT
             d.calle,
             d.nro,
             d.barrio,
             d.cod_postal
-        FROM localizacion_domicilio ld
-        JOIN domicilio d ON d.id_domicilio = ld.id_domicilio
-        WHERE ld.id_localizacion = vl.id_localizacion
-        ORDER BY CASE WHEN ld.c_tipo_dom = 1 THEN 0 ELSE 1 END, ld.c_tipo_dom, ld.id_domicilio
+        FROM padroninterno.mv_localizacion_domicilios d
+        WHERE d.id_localizacion = vl.id_localizacion
+        ORDER BY CASE WHEN d.c_tipo_dom = 1 THEN 0 ELSE 1 END, d.c_tipo_dom, d.id_domicilio
         LIMIT 1
     ) dom ON TRUE
 """
 
+_COUNT_LIGHT_SQL = """
+    FROM padroninterno.mv_localizaciones vl
+"""
 
+_COUNT_HEAVY_ALIASES = (
+    've.',
+    'dom.',
+    'otipos.',
+)
+
+
+# Paginador liviano para SQL crudo.
 class _RawPage:
     def __init__(self, data_sql, count_sql, params, db_alias):
         self._data_sql = data_sql
@@ -627,6 +625,7 @@ class _RawPage:
             return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
+# Operadores permitidos en filtros avanzados.
 OPERADOR_SQL = {
     '0': ('ILIKE', lambda v: f'%{v}%'),
     '1': ('NOT ILIKE', lambda v: f'%{v}%'),
@@ -719,8 +718,8 @@ def _tipo_oferta_clause_operator(oper):
 
 def _build_tipo_oferta_clause(oper, tipo_value_counts=None, estado_count=0):
     tipo_value_counts = tipo_value_counts or []
-    descripcion = _folded_sql('otf.descripcion')
-    estado = _folded_sql('etf.descripcion')
+    descripcion = _folded_sql('olf.oferta')
+    estado = _folded_sql('olf.estado_ofertalocal')
     op_str = _tipo_oferta_clause_operator(oper)
     conditions = []
 
@@ -739,9 +738,7 @@ def _build_tipo_oferta_clause(oper, tipo_value_counts=None, estado_count=0):
     return (
         f"{exists_operator} ("
         "SELECT 1 "
-        "FROM oferta_local olf "
-        "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
-        "LEFT JOIN estado_tipo etf ON etf.c_estado = olf.c_estado "
+        "FROM padroninterno.mv_ofertaslocales olf "
         "WHERE olf.id_localizacion = vl.id_localizacion "
         f"AND {' AND '.join(conditions)}"
         ")"
@@ -749,46 +746,23 @@ def _build_tipo_oferta_clause(oper, tipo_value_counts=None, estado_count=0):
 
 
 def _build_modalidades_clause(oper, token_count=1):
-    descripcion = _folded_sql('m2f.descripcion')
+    descripcion = _folded_sql(CAMPO_SQL['modalidades_complementarias'])
 
     if oper == '1':
         token_checks = ' AND '.join([f"{descripcion} LIKE %s" for _ in range(max(token_count, 1))])
-        return (
-            "NOT EXISTS ("
-            "SELECT 1 "
-            "FROM localizacion_modalidad2_assn lm2f "
-            "JOIN modalidad2_tipo m2f ON m2f.c_modalidad2 = lm2f.c_modalidad2 "
-            "WHERE lm2f.id_localizacion = vl.id_localizacion "
-            f"AND {token_checks}"
-            ")"
-        )
+        return f"NOT ({token_checks})"
 
     if oper == '7':
-        return (
-            "NOT EXISTS ("
-            "SELECT 1 "
-            "FROM localizacion_modalidad2_assn lm2f "
-            "JOIN modalidad2_tipo m2f ON m2f.c_modalidad2 = lm2f.c_modalidad2 "
-            "WHERE lm2f.id_localizacion = vl.id_localizacion "
-            f"AND {descripcion} = %s"
-            ")"
-        )
+        return f"NOT ({descripcion} = %s)"
 
     op_str, _ = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
     if oper in {'0', '2'}:
         op_str = 'LIKE' if oper == '0' else '='
     token_checks = ' AND '.join([f"{descripcion} {op_str} %s" for _ in range(max(token_count, 1))])
-    return (
-        "EXISTS ("
-        "SELECT 1 "
-        "FROM localizacion_modalidad2_assn lm2f "
-        "JOIN modalidad2_tipo m2f ON m2f.c_modalidad2 = lm2f.c_modalidad2 "
-        "WHERE lm2f.id_localizacion = vl.id_localizacion "
-        f"AND {token_checks}"
-        ")"
-    )
+    return token_checks
 
 
+# Construye el WHERE con filtros por campo, busqueda global y casos especiales.
 def _build_where(request):
     clauses = []
     params = []
@@ -922,6 +896,68 @@ def _build_where(request):
     return where, params
 
 
+def _field_requires_heavy_count(campo):
+    sql = CAMPO_SQL.get(campo, '')
+    return any(alias in sql for alias in _COUNT_HEAVY_ALIASES)
+
+
+def _request_requires_heavy_count(request):
+    if request.GET.get('q', '').strip():
+        return True
+
+    campos = request.GET.getlist('campo_filtro')
+    valores = request.GET.getlist('valor_filtro')
+
+    for index, campo in enumerate(campos):
+        campo = campo.strip()
+        valor = valores[index].strip() if index < len(valores) else ''
+
+        if not campo or not valor or campo not in CAMPO_SQL:
+            continue
+
+        if _field_requires_heavy_count(campo):
+            return True
+
+    return False
+
+
+def _build_count_sql(request, where):
+    base_sql = _BASE_SQL if _request_requires_heavy_count(request) else _COUNT_LIGHT_SQL
+    return f"SELECT COUNT(*) {base_sql} {where}"
+
+
+def _build_order_clause(request):
+    orden_key = request.GET.get('orden', 'cue')
+    col_orden = CAMPO_SQL.get(orden_key, 'vl.cue::text')
+
+    if orden_key == 'cue':
+        return "vl.cue::text, COALESCE(vl.anexo, '') DESC, vl.id_localizacion"
+    if orden_key == 'anexo':
+        return "COALESCE(vl.anexo, '') DESC, vl.cue::text, vl.id_localizacion"
+    return f"{col_orden}, vl.cue::text, COALESCE(vl.anexo, '') DESC, vl.id_localizacion"
+
+
+def _build_data_sql(request, where):
+    return f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {_build_order_clause(request)}"
+
+
+def _parse_positive_int(value, default):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _get_page_size(request):
+    return min(_parse_positive_int(request.GET.get('page_size'), PAGE_SIZE), 100)
+
+
+def _get_page_number(request):
+    return _parse_positive_int(request.GET.get('page'), 1)
+
+
+# Arma el resumen de filtros para el encabezado del Excel.
 def _armar_texto_filtros(request):
     partes = []
     operadores_txt = {
@@ -984,6 +1020,7 @@ def _resolver_columnas_exportar(request, formato):
     return columnas or COLUMNAS_EXPORTACION
 
 
+# Genera el archivo Excel de localizaciones.
 def _exportar_excel(datos_exportar, formato, request):
     columnas_mapeo = _resolver_columnas_exportar(request, formato)
 
@@ -1062,24 +1099,26 @@ def _exportar_excel(datos_exportar, formato, request):
     response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
     return response
 
+# Convierte cursores SQL en diccionarios.
 def _dictfetchall(cursor):
     columns = [column[0] for column in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
 def _fetch_one(sql, params):
-    with connections[PADRON_DB].cursor() as cursor:
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
         cursor.execute(sql, params)
         rows = _dictfetchall(cursor)
     return rows[0] if rows else None
 
 
 def _fetch_all(sql, params):
-    with connections[PADRON_DB].cursor() as cursor:
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
         cursor.execute(sql, params)
         return _dictfetchall(cursor)
 
 
+# Reemplaza None por cadena vacia de forma recursiva para respuestas JSON.
 def _sanitize_json_payload(value):
     if isinstance(value, dict):
         return {key: _sanitize_json_payload(inner_value) for key, inner_value in value.items()}
@@ -1122,7 +1161,7 @@ def _fetch_distinct_formatted_options(cursor, column_name, formatter):
     cursor.execute(
         f"""
         SELECT DISTINCT {column_name}
-        FROM vp_localizaciones
+        FROM padroninterno.mv_localizaciones
         WHERE COALESCE(BTRIM({column_name}), '') <> ''
         """
     )
@@ -1150,7 +1189,7 @@ def _fetch_distinct_label_options(cursor, column_name, label_builder):
     cursor.execute(
         f"""
         SELECT DISTINCT {column_name}
-        FROM vp_localizaciones
+        FROM padroninterno.mv_localizaciones
         WHERE COALESCE(BTRIM({column_name}), '') <> ''
         """
     )
@@ -1181,7 +1220,7 @@ def _fetch_column_value_by_label(cursor, column_name, label_builder):
     cursor.execute(
         f"""
         SELECT DISTINCT {column_name}
-        FROM vp_localizaciones
+        FROM padroninterno.mv_localizaciones
         WHERE COALESCE(BTRIM({column_name}), '') <> ''
         """
     )
@@ -1237,27 +1276,29 @@ def _code_dash_label_fallback(code, label):
 
 
 @lru_cache(maxsize=1)
+# Opciones cacheadas para los selectores de filtros.
 def _get_filter_options():
-    with connections[PADRON_DB].cursor() as cursor:
-        cursor.execute("SELECT descripcion FROM ambito_tipo ORDER BY c_ambito")
-        ambitos = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        def fetch_distinct(column_name):
+            cursor.execute(
+                f"""
+                SELECT DISTINCT BTRIM({column_name}) AS valor
+                FROM padroninterno.mv_localizaciones
+                WHERE COALESCE(BTRIM({column_name}), '') <> ''
+                ORDER BY valor
+                """
+            )
+            return [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
 
-        cursor.execute("SELECT descripcion FROM sector_tipo ORDER BY c_sector")
-        sectores = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
-
-        cursor.execute("SELECT descripcion FROM dependencia_tipo ORDER BY c_dependencia")
-        dependencias = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
-
-        cursor.execute("SELECT descripcion FROM estado_tipo ORDER BY c_estado")
-        estados = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
-
-        cursor.execute("SELECT BTRIM(descripcion) FROM oferta_tipo ORDER BY c_oferta")
-        tipo_ofertas = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
+        ambitos = fetch_distinct('ambito')
+        sectores = fetch_distinct('sector')
+        dependencias = fetch_distinct('dependencia')
+        estados = fetch_distinct('estado_localizacion')
 
         cursor.execute(
             """
             SELECT DISTINCT BTRIM(localidad_nombre) AS valor
-            FROM vp_localizaciones
+            FROM padroninterno.mv_localizaciones
             WHERE COALESCE(BTRIM(localidad_nombre), '') <> ''
             ORDER BY valor
             """
@@ -1267,7 +1308,7 @@ def _get_filter_options():
         cursor.execute(
             """
             SELECT DISTINCT BTRIM(departamento_nombre) AS valor
-            FROM vp_localizaciones
+            FROM padroninterno.mv_localizaciones
             WHERE COALESCE(BTRIM(departamento_nombre), '') <> ''
             ORDER BY valor
             """
@@ -1278,7 +1319,7 @@ def _get_filter_options():
             cursor,
             """
             SELECT DISTINCT BTRIM(periodo_funcionamiento) AS valor
-            FROM vp_localizaciones
+            FROM padroninterno.mv_localizaciones
             WHERE COALESCE(BTRIM(periodo_funcionamiento), '') <> ''
             ORDER BY valor
             """,
@@ -1287,7 +1328,12 @@ def _get_filter_options():
 
         modalidades = _build_preferred_value_options(
             cursor,
-            "SELECT descripcion FROM modalidad2_tipo ORDER BY c_modalidad2",
+            """
+            SELECT DISTINCT BTRIM(modalidades_complementarias) AS valor
+            FROM padroninterno.mv_localizaciones
+            WHERE COALESCE(BTRIM(modalidades_complementarias), '') <> ''
+            ORDER BY valor
+            """,
             MODALIDADES_COMPLEMENTARIAS_OPTIONS,
         )
 
@@ -1299,7 +1345,6 @@ def _get_filter_options():
             'sector': sectores,
             'dependencia': dependencias,
             'estado': estados,
-            'tipo_oferta': tipo_ofertas,
             'localidad': localidades,
             'departamento': departamentos,
             'modalidades_complementarias': modalidades,
@@ -1315,6 +1360,7 @@ def _get_filter_options():
         }
 
 
+# Serializador compacto de filas del listado.
 def _serialize_list_item(row):
     return {
         'id': row.get('id'),
@@ -1347,7 +1393,7 @@ def _serialize_list_item(row):
         'regional_actual': _format_desc_only(row.get('regional_actual'), 1019638011),
         'zona_provincial': _format_desc_only(_normalize_optional_text(row.get('zona_provincial'))),
         'anterior_regional': _format_desc_only(row.get('anterior_regional')),
-        'director_regional': _format_desc_only(row.get('director_regional'), 1019638045),
+        'director_regional': _normalize_text(row.get('director_regional')),
         'plan_de_obra': _normalize_optional_text(row.get('plan_de_obra')),
         'patrimonio_edilicio': _format_desc_only(_normalize_optional_text(row.get('patrimonio_edilicio'))),
         'fecha_creacion_edificio': _normalize_optional_text(row.get('fecha_creacion_edificio')),
@@ -1364,6 +1410,7 @@ def _serialize_list_item(row):
     }
 
 
+# Serializadores de detalle para modal de localizacion.
 def _serialize_localizacion(row):
     responsable_fallback = (
         str(row.get('id_responsable')).strip() == '-2'
@@ -1425,7 +1472,9 @@ def _serialize_localizacion(row):
         'regional_actual': _format_code_then_desc(row.get('cp_esvat5'), 1019638011),
         'zona_provincial': _format_desc_then_code(_normalize_optional_text(row.get('cp_zonaprovincial'))),
         'anterior_regional': _format_desc_then_code(row.get('cp_esvat3')),
-        'director_regional': _format_desc_then_code(row.get('cp_directorregional'), 1019638045),
+        'director_regional': _normalize_text(
+            row.get('director_regional_detalle') or row.get('director_regional')
+        ),
         'plan_de_obra': _normalize_optional_text(row.get('cp_plandeobra')),
         'patrimonio_edilicio': _format_desc_then_code(_normalize_optional_text(row.get('cp_patrimonioedilicio'))),
         'fecha_creacion_edificio': _normalize_optional_text(row.get('cp_estfechacreacionedificio')),
@@ -1556,106 +1605,56 @@ def _serialize_historial(row):
 
 @padron_interno_admin_o_gestor_required
 def detalle_localizacion_json(request, id_localizacion):
+    # Endpoint de detalle: localizacion, domicilios vinculados, responsable, ofertas e historial.
     localizacion_sql = """
         SELECT
             vl.*,
-            l.fecha_creacion,
-            l.fecha_alta,
-            l.fecha_baja,
-            l.fecha_actualizacion,
             COALESCE(BTRIM(ve.nombre), '') AS establecimiento_nombre,
             COALESCE(BTRIM(otipos.tipo_ofertas), '') AS tipo_oferta,
-            COALESCE(BTRIM(mods.modalidades), '') AS modalidades_complementarias,
-            COALESCE(BTRIM(loc_tel_sup.valor), '') AS tel_supervisor,
-            COALESCE(BTRIM(loc_email_sup.valor), '') AS email_supervisor
-        FROM vp_localizaciones vl
-        JOIN localizacion l
-          ON l.id_localizacion = vl.id_localizacion
-        LEFT JOIN vp_establecimientos ve
+            COALESCE(BTRIM(vl.modalidades_complementarias), '') AS modalidades_complementarias,
+            COALESCE(BTRIM(vl.tel_supervisor), '') AS tel_supervisor,
+            COALESCE(BTRIM(vl.email_supervisor), '') AS email_supervisor
+        FROM padroninterno.mv_localizaciones vl
+        LEFT JOIN padroninterno.mv_establecimientos ve
           ON ve.id_establecimiento = vl.id_establecimiento
-        LEFT JOIN loc_campo_prov_valor loc_tel_sup
-          ON loc_tel_sup.id_localizacion = vl.id_localizacion
-         AND loc_tel_sup.id_campo_prov = 1019638042
-        LEFT JOIN loc_campo_prov_valor loc_email_sup
-          ON loc_email_sup.id_localizacion = vl.id_localizacion
-         AND loc_email_sup.id_campo_prov = 1019638043
         LEFT JOIN LATERAL (
-            SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, ol.id_oferta_local) AS tipo_ofertas
-            FROM oferta_local ol
-            JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+            SELECT STRING_AGG(BTRIM(ol.oferta), ', ' ORDER BY ol.c_oferta, ol.id_oferta_local) AS tipo_ofertas
+            FROM padroninterno.mv_ofertaslocales ol
             WHERE ol.id_localizacion = vl.id_localizacion
         ) otipos ON TRUE
-        LEFT JOIN LATERAL (
-            SELECT STRING_AGG(BTRIM(m2.descripcion), ', ' ORDER BY m2.orden, m2.descripcion) AS modalidades
-            FROM localizacion_modalidad2_assn lm2
-            JOIN modalidad2_tipo m2 ON m2.c_modalidad2 = lm2.c_modalidad2
-            WHERE lm2.id_localizacion = vl.id_localizacion
-        ) mods ON TRUE
         WHERE vl.id_localizacion = %s
     """
 
     domicilios_sql = """
-        SELECT
-            ld.id_domicilio,
-            ld.c_tipo_dom,
-            dt.descripcion AS tipo_domicilio,
-            d.calle,
-            d.nro,
-            d.barrio,
-            d.referencia,
-            d.cod_postal,
-            d.cui,
-            d.calle_fondo,
-            d.calle_derecha,
-            d.calle_izquierda,
-            d.fecha_actualizacion,
-            lt.nombre AS localidad_nombre,
-            dept.nombre AS departamento_nombre
-        FROM localizacion_domicilio ld
-        JOIN domicilio d ON d.id_domicilio = ld.id_domicilio
-        LEFT JOIN domicilio_tipo dt ON dt.c_tipo_dom = ld.c_tipo_dom
-        LEFT JOIN localidad_tipo lt ON lt.c_localidad = d.c_localidad
-        LEFT JOIN departamento_tipo dept ON dept.c_departamento = lt.c_departamento
-        WHERE ld.id_localizacion = %s
-        ORDER BY CASE WHEN ld.c_tipo_dom = 1 THEN 0 ELSE 1 END, ld.c_tipo_dom, ld.id_domicilio
+        SELECT *
+        FROM padroninterno.mv_localizacion_domicilios
+        WHERE id_localizacion = %s
+        ORDER BY CASE WHEN c_tipo_dom = 1 THEN 0 ELSE 1 END, c_tipo_dom, id_domicilio
     """
 
     domicilio_localizaciones_sql = """
         SELECT
             vl.*,
             COALESCE(BTRIM(otipos.tipo_ofertas), '') AS tipo_oferta,
-            COALESCE(BTRIM(mods.modalidades), '') AS modalidades_complementarias,
-            COALESCE(BTRIM(loc_tel_sup.valor), '') AS tel_supervisor,
-            COALESCE(BTRIM(loc_email_sup.valor), '') AS email_supervisor
-        FROM localizacion_domicilio ld
-        JOIN vp_localizaciones vl
+            COALESCE(BTRIM(vl.modalidades_complementarias), '') AS modalidades_complementarias,
+            COALESCE(BTRIM(vl.tel_supervisor), '') AS tel_supervisor,
+            COALESCE(BTRIM(vl.email_supervisor), '') AS email_supervisor
+        FROM padroninterno.mv_localizacion_domicilios ld
+        JOIN padroninterno.mv_localizaciones vl
           ON vl.id_localizacion = ld.id_localizacion
-        LEFT JOIN loc_campo_prov_valor loc_tel_sup
-          ON loc_tel_sup.id_localizacion = vl.id_localizacion
-         AND loc_tel_sup.id_campo_prov = 1019638042
-        LEFT JOIN loc_campo_prov_valor loc_email_sup
-          ON loc_email_sup.id_localizacion = vl.id_localizacion
-         AND loc_email_sup.id_campo_prov = 1019638043
         LEFT JOIN LATERAL (
-            SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, ol.id_oferta_local) AS tipo_ofertas
-            FROM oferta_local ol
-            JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+            SELECT STRING_AGG(BTRIM(ol.oferta), ', ' ORDER BY ol.c_oferta, ol.id_oferta_local) AS tipo_ofertas
+            FROM padroninterno.mv_ofertaslocales ol
             WHERE ol.id_localizacion = vl.id_localizacion
         ) otipos ON TRUE
-        LEFT JOIN LATERAL (
-            SELECT STRING_AGG(BTRIM(m2.descripcion), ', ' ORDER BY m2.orden, m2.descripcion) AS modalidades
-            FROM localizacion_modalidad2_assn lm2
-            JOIN modalidad2_tipo m2 ON m2.c_modalidad2 = lm2.c_modalidad2
-            WHERE lm2.id_localizacion = vl.id_localizacion
-        ) mods ON TRUE
         WHERE ld.id_domicilio = %s
         ORDER BY vl.cue::text, COALESCE(vl.anexo::text, '') DESC, vl.id_localizacion
     """
 
     domicilio_ofertas_sql = """
         SELECT vol.*
-        FROM localizacion_domicilio ld
-        JOIN vp_oferta_local vol
+        FROM padroninterno.mv_localizacion_domicilios ld
+        JOIN padroninterno.mv_ofertaslocales vol
           ON vol.id_localizacion = ld.id_localizacion
         WHERE ld.id_domicilio = %s
         ORDER BY vol.c_oferta, vol.id_oferta_local
@@ -1675,51 +1674,26 @@ def detalle_localizacion_json(request, id_localizacion):
             r.email,
             r.fecha_nacimiento,
             r.cuil_cuit,
-            tdt.descripcion AS tipo_documento_desc,
-            st.descripcion AS sexo_desc,
-            ot.descripcion AS nacionalidad
-        FROM vp_localizaciones vl
-        LEFT JOIN responsable r ON r.id_responsable = vl.id_responsable
-        LEFT JOIN tipo_documento_tipo tdt ON tdt.c_tipo_documento = r.c_tipo_documento
-        LEFT JOIN sexo_tipo st ON st.c_sexo = r.c_sexo
-        LEFT JOIN origen_tipo ot ON ot.c_origen = r.c_nacionalidad
+            r.tipo_documento AS tipo_documento_desc,
+            r.sexo AS sexo_desc,
+            r.nacionalidad
+        FROM padroninterno.mv_localizaciones vl
+        LEFT JOIN padroninterno.mv_responsables r ON r.id_responsable = vl.id_responsable
         WHERE vl.id_localizacion = %s
     """
 
     ofertas_sql = """
         SELECT *
-        FROM vp_oferta_local
+        FROM padroninterno.mv_ofertaslocales
         WHERE id_localizacion = %s
         ORDER BY c_oferta, id_oferta_local
     """
 
     historial_sql = """
-        SELECT
-            cl.id_localizacion,
-            l.anexo,
-            e.cue,
-            m.id_movimiento,
-            tm.cod_tipo_mov,
-            tm.descripcion AS tipo_movimiento,
-            est.descripcion AS estado,
-            m.nro_instr_legal,
-            il.descripcion AS instr_legal,
-            mot.descripcion AS motivo,
-            m.fecha_inst_legal,
-            m.fecha_vigencia,
-            m.observacion,
-            u.nombre AS usuario
-        FROM cambio_estado_localizacion cl
-        JOIN localizacion l ON l.id_localizacion = cl.id_localizacion
-        JOIN establecimiento e ON e.id_establecimiento = l.id_establecimiento
-        JOIN movimiento m ON m.id_movimiento = cl.id_movimiento
-        LEFT JOIN tipo_mov_tipo tm ON tm.c_tipo_mov = m.c_tipo_mov
-        LEFT JOIN estado_tipo est ON est.c_estado = cl.c_estado
-        LEFT JOIN instr_legal_tipo il ON il.c_instr_legal = m.c_instr_legal
-        LEFT JOIN motivo_tipo mot ON mot.c_motivo = m.c_motivo
-        LEFT JOIN usuario u ON u.id_usuario = m.id_usuario
-        WHERE cl.id_localizacion = %s
-        ORDER BY m.fecha_vigencia DESC, m.id_movimiento DESC
+        SELECT *
+        FROM padroninterno.mv_localizacion_historial
+        WHERE id_localizacion = %s
+        ORDER BY fecha_vigencia DESC, id_movimiento DESC
     """
 
     try:
@@ -1757,61 +1731,75 @@ def detalle_localizacion_json(request, id_localizacion):
 @padron_interno_admin_o_gestor_required
 @ensure_csrf_cookie
 def listar_localizaciones(request):
+    # Renderiza la pantalla; el listado real se carga luego por endpoints JSON.
     formato = request.GET.get('formato')
 
     if formato == 'excel_todo':
         where, params = '', []
-    else:
+    elif formato == 'excel_pagina':
         where, params = _build_where(request)
-
-    orden_key = request.GET.get('orden', 'cue')
-    col_orden = CAMPO_SQL.get(orden_key, 'vl.cue::text')
-
-    if orden_key == 'cue':
-        order_clause = "vl.cue::text, COALESCE(vl.anexo, '') DESC, vl.id_localizacion"
-    elif orden_key == 'anexo':
-        order_clause = "COALESCE(vl.anexo, '') DESC, vl.cue::text, vl.id_localizacion"
     else:
-        order_clause = f"{col_orden}, vl.cue::text, COALESCE(vl.anexo, '') DESC, vl.id_localizacion"
+        context = {
+            'lista_items': [],
+            'page_obj': None,
+            'resultado_total': None,
+            'resultado_desde': 0,
+            'resultado_hasta': 0,
+            'username': getattr(request.user, 'username', ''),
+            'request': request,
+            'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
+            'localizaciones_async_loading': True,
+        }
+        context.update(get_contexto_fecha_padron(request))
+        return render(request, 'padroninterno/localizaciones.html', context)
 
-    data_sql = f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {order_clause}"
+    data_sql = _build_data_sql(request, where)
 
     if formato in {'excel_pagina', 'excel_todo'}:
         datos_base = _fetch_all(data_sql, params)
         datos_exportar = [_serialize_list_item(row) for row in datos_base]
         return _exportar_excel(datos_exportar, formato, request)
 
-    count_sql = f"SELECT COUNT(*) {_BASE_SQL} {where}"
 
-    try:
-        current_page_size = int(request.GET.get('page_size', PAGE_SIZE))
-    except (TypeError, ValueError):
-        current_page_size = PAGE_SIZE
+@padron_interno_admin_o_gestor_required
+def localizaciones_datos_json(request):
+    # Endpoint paginado: trae una fila extra para calcular has_next.
+    where, params = _build_where(request)
+    page_size = _get_page_size(request)
+    page = _get_page_number(request)
+    offset = (page - 1) * page_size
+    data_sql = _build_data_sql(request, where)
+    rows = _fetch_all(f"{data_sql} LIMIT %s OFFSET %s", params + [page_size + 1, offset])
+    page_rows = rows[:page_size]
+    items = [_serialize_list_item(row) for row in page_rows]
 
-    raw = _RawPage(data_sql, count_sql, params, PADRON_DB)
-    paginator = Paginator(raw, current_page_size)
+    return JsonResponse({
+        'items': items,
+        'has_next': len(rows) > page_size,
+        'has_previous': page > 1,
+        'desde': offset + 1 if items else 0,
+        'hasta': offset + len(items) if items else 0,
+        'page': page,
+        'page_size': page_size,
+        'total': None,
+        'total_pending': True,
+    })
 
-    try:
-        page_number = request.GET.get('page', 1)
-        page_obj = paginator.page(page_number)
-    except (EmptyPage, PageNotAnInteger):
-        page_obj = paginator.page(1)
 
-    total = len(raw)
-    desde = (page_obj.number - 1) * current_page_size + 1 if total else 0
-    hasta = min(page_obj.number * current_page_size, total)
+@padron_interno_admin_o_gestor_required
+def localizaciones_total_json(request):
+    # Conteo separado para no demorar la respuesta principal del listado.
+    where, params = _build_where(request)
+    count_sql = _build_count_sql(request, where)
 
-    lista_items = [_serialize_list_item(row) for row in page_obj.object_list]
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        cursor.execute(count_sql, params)
+        total = cursor.fetchone()[0]
 
-    context = {
-        'lista_items': lista_items,
-        'page_obj': page_obj,
-        'resultado_total': total,
-        'resultado_desde': desde,
-        'resultado_hasta': hasta,
-        'username': getattr(request.user, 'username', ''),
-        'request': request,
-        'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
-    }
-    context.update(get_contexto_fecha_padron(request))
-    return render(request, 'padroninterno/localizaciones.html', context)
+    return JsonResponse({'total': total})
+
+
+@padron_interno_admin_o_gestor_required
+def localizaciones_filtros_json(request):
+    # Catalogos y opciones para filtros avanzados.
+    return JsonResponse(_get_filter_options())

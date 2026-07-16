@@ -1,0 +1,140 @@
+<div class="cef-tools">
+    <div class="cef-tools-left">
+        <span class="cef-tools-label">Mostrar</span>
+        <select data-cef-page-size>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+        </select>
+        <span class="cef-tools-label">registros</span>
+    </div>
+    <div class="cef-tools-right">
+        <div class="cef-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="searchProfesores" type="search" placeholder="Buscar..." data-cef-table-search>
+            <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if docentes_banco_tabla_pendiente %}
+    <div class="alert alert-warning mb-3">
+        El banco de profesores CEF está pendiente de creación en base de datos.
+    </div>
+{% endif %}
+
+{% if docentes %}
+    <div class="cef-table-wrap">
+        <table class="cef-dt" data-cef-table>
+            <thead>
+                <tr>
+                    <th>Profesor</th>
+                    <th>CUIL</th>
+                    <th>DNI</th>
+                    <th>Estado BNH</th>
+                    <th>Estado en CEF</th>
+                    <th>Fecha alta</th>
+                    <th>Grupos asignados</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for docente_banco in docentes %}
+                    <tr>
+                        <td><strong>{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}</strong></td>
+                        <td>{{ docente_banco.docente_cuil }}</td>
+                        <td>{{ docente_banco.docente_dni_snapshot|default:"-" }}</td>
+                        <td>{{ docente_banco.docente_estado_bnh_snapshot|default:"-" }}</td>
+                        <td>
+                            <span class="badge text-bg-{% if docente_banco.estado == 'activo' %}success{% elif docente_banco.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                                {{ docente_banco.get_estado_display }}
+                            </span>
+                        </td>
+                        <td>{{ docente_banco.fecha_alta|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if docente_banco.asignaciones_grupo %}
+                                {% for asignacion in docente_banco.asignaciones_grupo %}
+                                    <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'cef:docentes_grupo' asignacion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                        Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }} - {{ asignacion.get_rol_display }}{% if asignacion.estado != 'activo' %} - {{ asignacion.get_estado_display }}{% endif %}
+                                    </a>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted small">Sin grupo asignado</span>
+                            {% endif %}
+                        </td>
+                        <td class="cef-act-cell">
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                {% if grupos_disponibles %}
+                                    {% if docente_banco.grupos_asignables|length == 1 and not docente_banco.grupos_bloqueados %}
+                                        {% for grupo in docente_banco.grupos_asignables %}
+                                            <a class="btn btn-primary btn-sm" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                <i class="fa-solid fa-user-plus"></i> Asignar a grupo
+                                            </a>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="dropdown" data-cef-profesor-dropdown>
+                                            <button class="btn {% if docente_banco.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-profesor-dropdown-toggle aria-expanded="false">
+                                                <i class="fa-solid fa-user-plus"></i> {% if docente_banco.grupos_asignables %}Asignar a grupo{% elif docente_banco.grupos_bloqueados %}Ya asignado a grupo{% else %}Sin grupos disponibles{% endif %}
+                                            </button>
+                                            <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
+                                            {% for grupo in docente_banco.grupos_asignables %}
+                                                <li>
+                                                    <a class="dropdown-item" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                        <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
+                                                        <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+                                            {% if docente_banco.grupos_asignables and docente_banco.grupos_bloqueados %}
+                                                <li><hr class="dropdown-divider"></li>
+                                            {% endif %}
+                                            {% for asignacion in docente_banco.grupos_bloqueados %}
+                                                <li>
+                                                    <span class="dropdown-item disabled" aria-disabled="true">
+                                                        <span>Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }}</span>
+                                                        <small>Ya asignado como {{ asignacion.get_rol_display }}</small>
+                                                    </span>
+                                                </li>
+                                            {% endfor %}
+                                            </ul>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">Sin grupos cargados</span>
+                                    <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                        <i class="fa-solid fa-plus"></i> Crear grupo
+                                    </a>
+                                {% endif %}
+                                <a class="btn btn-outline-primary btn-sm" title="Editar datos del profesor" href="{{ docente_banco.url_editar_profesor }}" target="_blank" rel="noopener">
+                                    <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% elif docentes_banco_tabla_pendiente %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        Listado pendiente hasta crear la tabla cef.docentes_cef.
+    </div>
+{% elif cef_context.puede_operar %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-chalkboard-user" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        Todavía no hay profesores en el banco de este CEF y ciclo.
+    </div>
+{% else %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        Seleccioná un CUE-Anexo y un ciclo para ver profesores.
+    </div>
+{% endif %}
+
+<div class="cef-tfoot">
+    <span class="cef-tfoot-count" data-cef-table-count>{{ docentes|length }} registros</span>
+    <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+</div>

@@ -1,0 +1,407 @@
+{% extends 'archivos/base/layout.html' %}
+
+{% block content %}
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="historial" %}
+    <div class="pof-view-header"><h1>&#128220; HISTORIAL DE MOVIMIENTOS</h1><p>Consult&aacute; movimientos, cambios y acciones registradas en el m&oacute;dulo POF.</p></div>
+    <form method="get" class="pof-filter-panel" id="historialFiltrosForm" data-pof-filter-form>
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+        <select id="filtroVistaRapidaHistorial" name="vista_rapida" class="pof-visually-hidden" data-pof-filter-select aria-hidden="true" tabindex="-1">
+            {% for codigo, nombre in vistas_rapidas.items %}<option value="{{ codigo }}" {% if filtros.vista_rapida == codigo %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+        </select>
+        <div class="pof-filter-grid">
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.anio %} pof-filter-field-error{% endif %}"><label for="filtroAnioHistorial">A&ntilde;o</label><input type="text" id="filtroAnioHistorial" name="anio" value="{{ filtros.anio }}" maxlength="4" inputmode="numeric" placeholder="Todos" data-pof-filter-input data-pof-digits-only >{% if errores_filtros.anio %}<span class="pof-filter-field-help">{{ errores_filtros.anio }}</span>{% endif %}</div>
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.nivel %} pof-filter-field-error{% endif %}"><label for="filtroNivelHistorial">Nivel</label><select id="filtroNivelHistorial" name="nivel" data-pof-filter-select><option value="">Seleccionar nivel</option><option value="__todos__" {% if filtros.nivel == "__todos__" %}selected{% endif %}>Todos los niveles</option>{% for codigo, nombre in niveles.items %}<option value="{{ codigo }}" {% if filtros.nivel == codigo %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>{% if errores_filtros.nivel %}<span class="pof-filter-field-help">{{ errores_filtros.nivel }}</span>{% endif %}</div>
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.cueanexo %} pof-filter-field-error{% endif %}"><label for="filtroCueanexoHistorial">CUEANEXO</label><input type="text" id="filtroCueanexoHistorial" name="cueanexo" value="{{ filtros.cueanexo }}" maxlength="9" inputmode="numeric" placeholder="9 d&iacute;gitos" data-pof-filter-input data-pof-digits-only>{% if errores_filtros.cueanexo %}<span class="pof-filter-field-help">{{ errores_filtros.cueanexo }}</span>{% endif %}</div>
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.cuof %} pof-filter-field-error{% endif %}"><label for="filtroCuofHistorial">CUOF</label><input type="text" id="filtroCuofHistorial" name="cuof" value="{{ filtros.cuof }}" maxlength="50" inputmode="numeric" pattern="[0-9]*" placeholder="CUOF" data-pof-filter-input data-pof-digits-only>{% if errores_filtros.cuof %}<span class="pof-filter-field-help">{{ errores_filtros.cuof }}</span>{% endif %}</div>
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.ceic %} pof-filter-field-error{% endif %}"><label for="filtroCeicHistorial">CEIC</label><input type="text" id="filtroCeicHistorial" name="ceic" value="{{ filtros.ceic }}" maxlength="3" inputmode="numeric" placeholder="CEIC" data-pof-filter-input data-pof-digits-only>{% if errores_filtros.ceic %}<span class="pof-filter-field-help">{{ errores_filtros.ceic }}</span>{% endif %}</div>
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.cuil %} pof-filter-field-error{% endif %}"><label for="filtroCuilHistorial">CUIL</label><input type="text" id="filtroCuilHistorial" name="cuil" value="{{ filtros.cuil }}" maxlength="11" inputmode="numeric" placeholder="8 a 11 d&iacute;gitos" data-pof-filter-input data-pof-digits-only>{% if errores_filtros.cuil %}<span class="pof-filter-field-help">{{ errores_filtros.cuil }}</span>{% endif %}</div>
+            <div class="pof-filter-field pof-col-2"><label for="filtroTipoHistorial">Movimiento</label><select id="filtroTipoHistorial" name="tipo" data-pof-filter-select><option value="">Seleccionar movimiento</option><option value="__todos__" {% if filtros.tipo == "__todos__" %}selected{% endif %}>Todos los movimientos</option>{% for codigo, nombre in tipos_movimiento.items %}<option value="{{ codigo }}" {% if filtros.tipo == codigo %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="pof-filter-actions">
+            <button type="submit" class="pof-filter-apply-btn">Aplicar filtros</button>
+            <a href="{% url 'reunidas_pof:historial_movimientos' %}?{{ limpiar_filtros_querystring }}" class="pof-filter-clear-btn">Limpiar filtros</a>
+        </div>
+    </form>
+    <div class="pof-filter-summary">
+        <div class="pof-filter-summary-left">
+            <span class="pof-filter-summary-main">Resultados: Mostrando movimientos {{ showing_start }}-{{ showing_end }} de {{ total_registros }}</span>
+            <div class="pof-filter-quick-bar">
+                <div class="pof-filter-quick-dropdown" data-pof-quick-dropdown>
+                    <button type="button" class="pof-filter-quick-btn" aria-haspopup="true" aria-expanded="false" data-pof-quick-toggle>
+                        <span>{% for codigo, nombre in vistas_rapidas.items %}{% if filtros.vista_rapida == codigo %}{{ nombre }}{% endif %}{% endfor %}</span>
+                        <span aria-hidden="true">&#9662;</span>
+                    </button>
+                    <div class="pof-filter-quick-menu pof-hidden" role="menu" data-pof-quick-menu>
+                        {% for codigo, nombre in vistas_rapidas.items %}
+                            <button type="button" class="pof-filter-quick-option{% if filtros.vista_rapida == codigo %} pof-filter-quick-option-active{% endif %}" role="menuitem" data-pof-quick-option="{{ codigo }}">{{ nombre }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <span class="pof-filter-total">Total de movimientos: {{ total_registros }}</span>
+    </div>
+    {% if filtros_activos %}
+        <div class="pof-filter-active-list" aria-label="Filtros activos">
+            {% for chip in filtros_activos %}
+                <a class="pof-filter-chip" href="{% url 'reunidas_pof:historial_movimientos' %}{% if chip.querystring %}?{{ chip.querystring }}{% endif %}">
+                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;&#65039;</span><span class="pof-filter-chip-text">{{ chip.etiqueta }}: {{ chip.valor }}</span><span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if mensaje_filtros %}
+        <div class="pof-filter-warning">
+            <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+            <span>{{ mensaje_filtros }}</span>
+        </div>
+    {% endif %}
+    <div class="pof-grid-table-wrap pof-history-table-wrap"><table class="pof-grid-table"><thead><tr><th class="pof-grid-icon-cell">Acci&oacute;n</th><th>Fecha/Hora</th><th>Usuario</th><th>Cabecera</th><th>Localizaci&oacute;n</th><th>Movimiento</th><th>Detalle</th></tr></thead><tbody>
+        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell"><button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}">&#128269;</button></td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary">{{ movimiento.detalle_resumen }}{% if movimiento.tiene_observacion_real %} <span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</td></tr>{% empty %}
+        <tr><td colspan="7" class="pof-grid-empty">No hay movimientos registrados todavía.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="pof-table-footer">
+            <form method="get" class="pof-page-size" data-pof-page-size-form>
+                <input type="hidden" name="anio" value="{{ filtros.anio }}">
+                <input type="hidden" name="nivel" value="{{ filtros.nivel }}">
+                <input type="hidden" name="cueanexo" value="{{ filtros.cueanexo }}">
+                <input type="hidden" name="cuof" value="{{ filtros.cuof }}">
+                <input type="hidden" name="ceic" value="{{ filtros.ceic }}">
+                <input type="hidden" name="cuil" value="{{ filtros.cuil }}">
+                <input type="hidden" name="tipo" value="{{ filtros.tipo }}">
+                <input type="hidden" name="vista_rapida" value="{{ filtros.vista_rapida }}">
+                <label for="pageSizeHistorial">Registros por p&aacute;gina</label>
+                <select id="pageSizeHistorial" name="page_size" data-pof-page-size-select>
+                    {% for opcion in page_size_options %}
+                        <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% if paginator.num_pages > 1 %}<nav class="pof-pagination" aria-label="Paginación de historial">{% if page_obj.has_previous %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Anterior</span>{% endif %}{% for page_number in page_range %}{% if page_number == page_obj.number %}<span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>{% elif page_number == '…' %}<span class="pof-page-ellipsis">…</span>{% else %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}{% endfor %}{% if page_obj.has_next %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>{% endif %}</nav>{% endif %}
+    </div>
+    <div class="pof-actions"><button type="button" class="pof-btn pof-btn-light" onclick="window.history.back()">Volver atrás</button></div>
+
+    <div id="modalDetalleMovimiento" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
+        <div class="pof-modal pof-history-modal" role="dialog" aria-modal="true" aria-labelledby="modalDetalleMovimientoTitulo">
+            <div class="pof-modal-header">
+                <div>
+                    <h2 id="modalDetalleMovimientoTitulo">DETALLE DEL MOVIMIENTO</h2>
+                    <p id="detalleMovimientoMeta" class="pof-help"></p>
+                </div>
+                <button type="button" class="pof-modal-close" aria-label="Cerrar" data-cerrar-detalle-movimiento>&times;</button>
+            </div>
+
+            <div id="estadoDetalleMovimiento" class="pof-status"></div>
+            <div id="contenidoDetalleMovimiento"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+
+<script>
+    const modalDetalleMovimiento = document.getElementById("modalDetalleMovimiento");
+    const contenidoDetalleMovimiento = document.getElementById("contenidoDetalleMovimiento");
+    const estadoDetalleMovimiento = document.getElementById("estadoDetalleMovimiento");
+    const detalleMovimientoMeta = document.getElementById("detalleMovimientoMeta");
+    const cerrarDetalleMovimiento = document.querySelector("[data-cerrar-detalle-movimiento]");
+    const detalleMovimientoUrlBase = "{% url 'reunidas_pof:detalle_movimiento_pof' 0 %}";
+    const historialFiltrosForm = document.querySelector("[data-pof-filter-form]");
+    const pageSizeForm = document.querySelector("[data-pof-page-size-form]");
+    const vistaRapidaSelect = document.getElementById("filtroVistaRapidaHistorial");
+    const vistaRapidaDropdown = document.querySelector("[data-pof-quick-dropdown]");
+    const vistaRapidaToggle = document.querySelector("[data-pof-quick-toggle]");
+    const vistaRapidaMenu = document.querySelector("[data-pof-quick-menu]");
+    let filtroHistorialTimer = null;
+
+    function enviarFormularioFiltros(delay) {
+        if (!historialFiltrosForm) {
+            return;
+        }
+        window.clearTimeout(filtroHistorialTimer);
+        filtroHistorialTimer = window.setTimeout(() => {
+            historialFiltrosForm.submit();
+        }, delay);
+    }
+
+    document.querySelectorAll("[data-pof-page-size-select]").forEach(select => {
+        select.addEventListener("change", () => {
+            if (pageSizeForm) {
+                pageSizeForm.submit();
+            }
+        });
+    });
+
+    function cerrarMenuVistaRapida() {
+        if (!vistaRapidaMenu || !vistaRapidaToggle) {
+            return;
+        }
+        vistaRapidaMenu.classList.add("pof-hidden");
+        vistaRapidaToggle.setAttribute("aria-expanded", "false");
+    }
+
+    if (vistaRapidaToggle && vistaRapidaMenu) {
+        vistaRapidaToggle.addEventListener("click", event => {
+            event.stopPropagation();
+            const abierto = !vistaRapidaMenu.classList.contains("pof-hidden");
+            vistaRapidaMenu.classList.toggle("pof-hidden", abierto);
+            vistaRapidaToggle.setAttribute("aria-expanded", abierto ? "false" : "true");
+        });
+    }
+
+    document.querySelectorAll("[data-pof-quick-option]").forEach(opcion => {
+        opcion.addEventListener("click", event => {
+            event.stopPropagation();
+            if (vistaRapidaSelect) {
+                vistaRapidaSelect.value = opcion.dataset.pofQuickOption;
+            }
+            cerrarMenuVistaRapida();
+            enviarFormularioFiltros(150);
+        });
+    });
+
+    function crearNodo(tag, clase, texto) {
+        const nodo = document.createElement(tag);
+        if (clase) {
+            nodo.className = clase;
+        }
+        if (texto !== undefined && texto !== null) {
+            nodo.textContent = texto;
+        }
+        return nodo;
+    }
+
+    function valorDetalle(valor) {
+        if (valor === null || valor === undefined || valor === "") {
+            return "—";
+        }
+        return String(valor);
+    }
+
+    function limpiarNodo(nodo) {
+        while (nodo.firstChild) {
+            nodo.removeChild(nodo.firstChild);
+        }
+    }
+
+    function mostrarEstadoDetalle(mensaje, tipo) {
+        estadoDetalleMovimiento.className = `pof-status ${tipo || "warn"}`;
+        estadoDetalleMovimiento.textContent = mensaje;
+    }
+
+    function ocultarEstadoDetalle() {
+        estadoDetalleMovimiento.className = "pof-status";
+        estadoDetalleMovimiento.textContent = "";
+    }
+
+    function abrirModalDetalle() {
+        modalDetalleMovimiento.classList.remove("pof-hidden");
+        modalDetalleMovimiento.setAttribute("aria-hidden", "false");
+        cerrarDetalleMovimiento.focus();
+    }
+
+    function cerrarModalDetalle() {
+        modalDetalleMovimiento.classList.add("pof-hidden");
+        modalDetalleMovimiento.setAttribute("aria-hidden", "true");
+        limpiarNodo(contenidoDetalleMovimiento);
+        ocultarEstadoDetalle();
+        detalleMovimientoMeta.textContent = "";
+    }
+
+    function crearItemDetalle(etiqueta, valor) {
+        const item = crearNodo("div", "pof-detail-item");
+        item.appendChild(crearNodo("span", "", etiqueta));
+        item.appendChild(crearNodo("strong", "", valorDetalle(valor)));
+        return item;
+    }
+
+    function agregarSeccion(titulo, elementos) {
+        const seccion = crearNodo("section", "pof-detail-section");
+        seccion.appendChild(crearNodo("h3", "", titulo.toUpperCase()));
+        const grid = crearNodo("div", "pof-detail-grid");
+        elementos.forEach(item => grid.appendChild(crearItemDetalle(item[0], item[1])));
+        seccion.appendChild(grid);
+        contenidoDetalleMovimiento.appendChild(seccion);
+    }
+
+    function renderizarDiff(diff) {
+        const seccion = crearNodo("section", "pof-detail-section");
+        seccion.appendChild(crearNodo("h3", "", "CAMBIOS DETECTADOS"));
+
+        if (!diff || !diff.length) {
+            seccion.appendChild(crearNodo("div", "pof-diff-empty", "No se detectaron cambios de valores para este movimiento."));
+            contenidoDetalleMovimiento.appendChild(seccion);
+            return;
+        }
+
+        const tabla = crearNodo("table", "pof-diff-table");
+        const thead = crearNodo("thead");
+        const encabezado = crearNodo("tr");
+        ["CAMPO", "ANTES", "DESPUÉS"].forEach(texto => encabezado.appendChild(crearNodo("th", "", texto)));
+        thead.appendChild(encabezado);
+        tabla.appendChild(thead);
+
+        const tbody = crearNodo("tbody");
+        diff.forEach(cambio => {
+            const fila = crearNodo("tr");
+            fila.appendChild(crearNodo("td", "", cambio.campo));
+            fila.appendChild(crearNodo("td", "pof-diff-old", `− ${valorDetalle(cambio.anterior)}`));
+            fila.appendChild(crearNodo("td", "pof-diff-new", `+ ${valorDetalle(cambio.nuevo)}`));
+            tbody.appendChild(fila);
+        });
+        tabla.appendChild(tbody);
+        seccion.appendChild(tabla);
+        contenidoDetalleMovimiento.appendChild(seccion);
+    }
+
+    /**
+     * Muestra la observación propia del movimiento sin duplicar la del diff.
+     *
+     * - Conserva la observación administrativa o contextual cuando aporta información extra.
+     * - Oculta la observación aparte si coincide con la observación nueva ya mostrada en el diff.
+     * - Evita repetir el mismo texto dos veces dentro del modal.
+     */
+    function renderizarObservaciones(movimiento) {
+        const observaciones = [];
+        const diffObservacion = (movimiento.diff || []).find(cambio => cambio.clave === "observacion");
+        const observacionDuplicada = diffObservacion && diffObservacion.nuevo === movimiento.observacion;
+        if (movimiento.observacion && movimiento.observacion !== "—" && !observacionDuplicada) {
+            observaciones.push(["Movimiento", movimiento.observacion]);
+        }
+        if (observaciones.length) {
+            agregarSeccion("Observación", observaciones);
+        }
+    }
+
+    function estadoResumen(movimiento, cargo) {
+        const anterior = valorDetalle(movimiento.estado_anterior);
+        const nuevo = valorDetalle(movimiento.estado_nuevo);
+        if (anterior !== "—" && nuevo !== "—") {
+            return `${anterior} → ${nuevo}`;
+        }
+        if (nuevo !== "—") {
+            return nuevo;
+        }
+        if (anterior !== "—") {
+            return anterior;
+        }
+        return valorDetalle(cargo.estado_pof);
+    }
+
+    function renderizarDetalleMovimiento(movimiento) {
+        limpiarNodo(contenidoDetalleMovimiento);
+        ocultarEstadoDetalle();
+        const usuarioMovimiento = movimiento.usuario_movimiento || {nombre: movimiento.usuario, cuil: "—"};
+        detalleMovimientoMeta.textContent = `${valorDetalle(movimiento.tipo_movimiento_display)} · ${valorDetalle(movimiento.fecha)} · CUIL ${valorDetalle(usuarioMovimiento.cuil)} · ${valorDetalle(movimiento.cabecera_resumen)}`;
+
+        const cargo = movimiento.cargo_actual || {};
+        const localizacion = movimiento.localizacion || {};
+        const cabecera = movimiento.cabecera || {};
+
+        agregarSeccion("Resumen rápido", [
+            ["CUEANEXO", localizacion.cueanexo],
+            ["CEIC", cargo.ceic],
+            ["Cargo", cargo.cargo],
+            ["Estado", estadoResumen(movimiento, cargo)],
+            ["CUIL", usuarioMovimiento.cuil],
+            ["Localidad / Departamento", `${valorDetalle(localizacion.localidad)} / ${valorDetalle(localizacion.departamento)}`],
+            ["CUOF / CUI", `${valorDetalle(localizacion.cuof)} / ${valorDetalle(localizacion.cui)}`],
+            ["Cabecera", cabecera.descripcion],
+        ]);
+
+        renderizarDiff(movimiento.diff || []);
+
+        const datosCargoActual = [
+            ["CEIC", cargo.ceic],
+            ["Cargo", cargo.cargo],
+            ["Cantidad", cargo.cantidad],
+            ["Unidad", cargo.unidad_cantidad],
+            ["Puntos", cargo.puntos_asignados],
+            ["Total", cargo.total],
+            ["Estado actual", cargo.estado_pof],
+        ];
+
+        if (cargo.observacion_actual) {
+            datosCargoActual.push(["Observación actual", cargo.observacion_actual]);
+        }
+
+        agregarSeccion("Datos completos actuales del cargo", datosCargoActual);
+
+        agregarSeccion("Información de localización", [
+            ["CUEANEXO", localizacion.cueanexo],
+            ["CUE base", localizacion.cue_base],
+            ["Anexo", localizacion.anexo_localizacion],
+            ["CUOF", localizacion.cuof],
+            ["CUI", localizacion.cui],
+            ["Establecimiento", localizacion.establecimiento],
+            ["Localidad", localizacion.localidad],
+            ["Departamento", localizacion.departamento],
+        ]);
+
+        renderizarObservaciones(movimiento);
+    }
+
+    async function cargarDetalleMovimiento(movimientoId) {
+        abrirModalDetalle();
+        limpiarNodo(contenidoDetalleMovimiento);
+        detalleMovimientoMeta.textContent = "";
+        mostrarEstadoDetalle("Cargando detalle...", "warn");
+
+        const url = detalleMovimientoUrlBase.replace("/0/", `/${encodeURIComponent(movimientoId)}/`);
+        try {
+            const respuesta = await fetch(url, {
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+                credentials: "same-origin",
+            });
+            let data = {};
+            try {
+                data = await respuesta.json();
+            } catch (error) {
+                data = {mensaje: "No se pudo cargar el detalle del movimiento."};
+            }
+
+            if (!respuesta.ok || !data.ok) {
+                throw new Error(data.mensaje || "No se pudo cargar el detalle del movimiento.");
+            }
+
+            renderizarDetalleMovimiento(data.movimiento);
+        } catch (error) {
+            limpiarNodo(contenidoDetalleMovimiento);
+            detalleMovimientoMeta.textContent = "";
+            mostrarEstadoDetalle(error.message || "No se pudo cargar el detalle del movimiento.", "error");
+        }
+    }
+
+    document.addEventListener("click", event => {
+        if (vistaRapidaDropdown && !vistaRapidaDropdown.contains(event.target)) {
+            cerrarMenuVistaRapida();
+        }
+
+        const botonDetalle = event.target.closest("[data-movimiento-id]");
+        if (botonDetalle) {
+            cargarDetalleMovimiento(botonDetalle.dataset.movimientoId);
+            return;
+        }
+
+        if (event.target === modalDetalleMovimiento) {
+            cerrarModalDetalle();
+        }
+    });
+
+    cerrarDetalleMovimiento.addEventListener("click", cerrarModalDetalle);
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            cerrarMenuVistaRapida();
+        }
+        if (event.key === "Escape" && !modalDetalleMovimiento.classList.contains("pof-hidden")) {
+            cerrarModalDetalle();
+        }
+    });
+</script>
+{% endblock %}

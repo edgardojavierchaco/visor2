@@ -1,0 +1,78 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Edición del estado de la inscripción del alumno en el grupo seleccionado.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Grupos <span>&raquo; Editar inscripción</span></h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a inscripción
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if grupo %}
+            <div class="mb-3">
+                <span class="cef-context-pill">
+                    <i class="fa-solid fa-users"></i>
+                    <span><strong>{{ grupo.actividad }}</strong></span>
+                    <span>{{ grupo.nombre|default:"Grupo" }} Nro. {{ grupo.numero }}</span>
+                    <span>{{ grupo.turno }}</span>
+                    <span>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</span>
+                    <span>{{ grupo_dias_texto|default:"Sin dias cargados" }}</span>
+                </span>
+            </div>
+        {% endif %}
+
+        <div class="cef-context-summary mb-3">
+            <div class="cef-context-summary-item is-wide">
+                <span>Alumno</span>
+                <strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Documento</span>
+                <strong>{{ inscripcion.alumno.nro_doc|default:"-" }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>CUIL</span>
+                <strong>{{ inscripcion.alumno.cuil|default:"-" }}</strong>
+            </div>
+        </div>
+
+        <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+            {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+            {% if volver_gestionar %}<input type="hidden" name="volver" value="gestionar">{% endif %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="cef-form-grid">
+                {% for field in form %}
+                    <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="cef-error">{{ field.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="cef-form-actions mt-4">
+                <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a inscripción
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
