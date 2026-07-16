@@ -1,0 +1,35 @@
+/**
+ * Helpers comunes usados por los dos flujos de Alta de Cargos.
+ *
+ * - Conservan el mismo contrato en Reunida y Proyecto Especial.
+ * - No dependen del estado visual ni del tipo de pantalla.
+ */
+function escaparHtml(texto) {
+    return String(texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function obtenerCsrfToken() {
+    const nombre = "csrftoken=";
+    const cookies = document.cookie ? document.cookie.split(";") : [];
+
+    for (const cookie of cookies) {
+        const texto = cookie.trim();
+        if (texto.startsWith(nombre)) {
+            return decodeURIComponent(texto.substring(nombre.length));
+        }
+    }
+
+    return "{{ csrf_token }}";
+}
+
+function normalizarTextoOferta(texto) {
+    return String(texto || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}

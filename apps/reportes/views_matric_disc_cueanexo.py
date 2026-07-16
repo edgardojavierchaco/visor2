@@ -3,16 +3,11 @@ import os
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .db_helpers import conectar_ra, obtener_dblink_visualizador
 
 def conectar_bd(request):
     try:
-        connection = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD'),
-            database=os.getenv('DB_NAME2') 
-        )
-        return connection
+        return conectar_ra()
     except psycopg2.Error:
         return None
 
@@ -29,6 +24,13 @@ def matric_disc_ajax(request):
         connection = conectar_bd(request)
         if not connection: return JsonResponse({'error': 'Error de conexión'}, status=500)
         cursor = connection.cursor()
+
+        dblink_conn = obtener_dblink_visualizador()
+
+        dblink_sql = """
+            SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc
+            FROM public.v_capa_unica_ofertas_ant
+        """
 
         # BLINDAJE REGEX (Idéntico a Primaria): Limpia caracteres raros antes de sumar
         query = f"""
@@ -50,13 +52,20 @@ def matric_disc_ajax(request):
             FROM public.{tvista} AS mc
             LEFT JOIN (
                 SELECT cueanexo, nom_est, sector, ambito, region_loc, departamento, localidad
-                FROM dblink('dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant')
-                AS padron(cueanexo varchar, nom_est varchar, ambito varchar, sector varchar, departamento varchar, localidad varchar, region_loc varchar)
+                FROM dblink(%s, %s)
+                AS padron(
+                    cueanexo varchar,
+                    nom_est varchar,
+                    ambito varchar,
+                    sector varchar,
+                    departamento varchar,
+                    localidad varchar,
+                    region_loc varchar
+                )
             ) AS p ON mc.cueanexo = p.cueanexo
             WHERE 1=1
         """
-        params = []
+        params = [dblink_conn, dblink_sql]
         for key, col in [('Cueanexo','mc.cueanexo'), ('Ambito','p.ambito'), ('Sector','p.sector'), ('Region','p.region_loc'), ('Departamento','p.departamento'), ('Localidad','p.localidad')]:
             val = request.POST.get(key)
             if val:
@@ -127,6 +136,13 @@ def filter_data_matric_disc_ini_cueanexo(request):
 
         cursor = connection.cursor()
 
+        dblink_conn = obtener_dblink_visualizador()
+
+        dblink_sql = """
+            SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc
+            FROM public.v_capa_unica_ofertas_ant
+        """
+
         # BLINDAJE REGEX (Idéntico a Primaria)
         query = f"""
             SELECT 
@@ -148,14 +164,13 @@ def filter_data_matric_disc_ini_cueanexo(request):
                 public.{tvistamatricula} AS mc
             LEFT JOIN (
                 SELECT cueanexo, nom_est, sector, ambito, region_loc, departamento, localidad
-                FROM dblink('dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant')
+                FROM dblink(%s, %s)
                 AS padron(cueanexo varchar, nom_est varchar, ambito varchar, sector varchar, departamento varchar, localidad varchar, region_loc varchar)
             ) AS p ON mc.cueanexo = p.cueanexo
             WHERE 1=1
         """
 
-        parameters = []       
+        parameters = [dblink_conn, dblink_sql]   
         if cueanexo: query += " AND mc.cueanexo = %s"; parameters.append(cueanexo) 
         if ambito: query += " AND p.ambito = %s"; parameters.append(ambito)
         if sector: query += " AND p.sector = %s"; parameters.append(sector)

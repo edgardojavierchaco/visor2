@@ -1,0 +1,189 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof_view_transitions.css' %}">
+{% comment %}
+    .pof-tabs-navbar {
+        --pof-primary: #3B5CFF;
+        --pof-primary-dark: #2444D8;
+        --pof-primary-darker: #1E2FA8;
+        --pof-primary-soft: #EEF2FF;
+        --pof-border: #DDE5FF;
+        --pof-text: #1F2A44;
+        align-items: center;
+        display: flex;
+        margin: -5px 0 16px;
+        overflow-x: auto;
+    }
+
+    .pof-tabs-list {
+        align-items: center;
+        background: linear-gradient(135deg, var(--pof-primary), var(--pof-primary-dark));
+        border: 1px solid rgba(36, 68, 216, .55);
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(36, 68, 216, .16);
+        display: flex;
+        flex: 1 0 auto;
+        flex-wrap: nowrap;
+        gap: 2px;
+        max-width: 100%;
+        min-width: max-content;
+        padding: 4px;
+        width: 100%;
+    }
+
+    .pof-tabs-link:first-of-type {
+        margin-left: auto;
+    }
+
+    .pof-tabs-brand {
+        color: white;
+        flex: 0 0 auto;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: .01em;
+        padding: 10px 16px 10px 12px;
+        white-space: nowrap;
+    }
+
+    .pof-tabs-link {
+        border-radius: 5px;
+        color: rgba(255, 255, 255, .92);
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 12px 18px;
+        text-decoration: none;
+        transition: background .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
+        white-space: nowrap;
+    }
+
+    .pof-tabs-link:hover {
+        background: rgba(255, 255, 255, .15);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .pof-tabs-link:active {
+        transform: translateY(1px) scale(.98);
+    }
+
+    .pof-tabs-link-active {
+        background: white;
+        box-shadow: 0 2px 8px rgba(30, 47, 168, .18);
+        color: var(--pof-primary-dark);
+    }
+
+    .pof-view-header {
+        background: linear-gradient(135deg, var(--pof-primary), var(--pof-primary-dark));
+        border-radius: 0;
+        box-shadow: 0 8px 20px rgba(36, 68, 216, .16);
+        color: white;
+        margin-bottom: 24px;
+        padding: 34px 32px;
+    }
+
+    .pof-view-header h1 {
+        font-size: 36px;
+        font-weight: 900;
+        letter-spacing: .01em;
+        margin: 0;
+    }
+
+    .pof-view-header p {
+        font-size: 16px;
+        margin: 9px 0 0;
+        opacity: .92;
+    }
+
+    @media (max-width: 576px) {
+        .pof-view-header {
+            padding: 26px 20px;
+        }
+
+        .pof-view-header h1 {
+            font-size: 27px;
+        }
+
+        .pof-tabs-brand {
+            font-size: 16px;
+            padding-right: 12px;
+        }
+
+        .pof-tabs-link {
+            font-size: 14px;
+            padding: 11px 15px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pof-tabs-link,
+        .pof-tabs-link:hover,
+        .pof-tabs-link:active {
+            transition: none;
+            transform: none;
+        }
+
+    .content-wrapper > .content-header {
+        display: none !important;
+    }
+    
+    }
+{% endcomment %}
+
+<nav class="pof-tabs-navbar" aria-label="Navegaci&oacute;n POF">
+    <div class="pof-tabs-list">
+        <span class="pof-tabs-brand">&#127979; Gesti&oacute;n POF</span>
+        <a href="{% url 'reunidas_pof:inicio' %}" class="pof-tabs-link{% if seccion_activa == 'inicio' %} pof-tabs-link-active{% endif %}">INICIO</a>
+        {% if not pof_solo_visualizacion %}
+        <a href="{% url 'reunidas_pof:reunidas_pof' %}" class="pof-tabs-link{% if seccion_activa == 'reunidas' %} pof-tabs-link-active{% endif %}">POF</a>
+        <a href="{% url 'reunidas_pof:proyectos_especiales_pof' %}" class="pof-tabs-link{% if seccion_activa == 'proyectos_especiales' %} pof-tabs-link-active{% endif %}">PROY. ESPECIALES</a>
+        <a href="{% url 'reunidas_pof:cargos_pof' %}" class="pof-tabs-link{% if seccion_activa == 'cargar' %} pof-tabs-link-active{% endif %}">AFECTAR CARGOS</a>
+        <a href="{% url 'reunidas_pof:consultar_cargos' %}{% if anio_activo and nivel_codigo %}?anio={{ anio_activo }}&amp;nivel={{ nivel_codigo }}{% endif %}" class="pof-tabs-link{% if seccion_activa == 'consultar' %} pof-tabs-link-active{% endif %}">ADMIN. CARGOS</a>
+        {% endif %}
+        <a href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}" class="pof-tabs-link{% if seccion_activa == 'visualizacion_cargos' %} pof-tabs-link-active{% endif %}">VISUALIZACI&Oacute;N</a>
+        {% if not pof_solo_visualizacion %}
+        <a href="{% url 'reunidas_pof:historial_movimientos' %}{% if anio_activo and nivel_codigo %}?anio={{ anio_activo }}&amp;nivel={{ nivel_codigo }}{% endif %}" class="pof-tabs-link{% if seccion_activa == 'historial' %} pof-tabs-link-active{% endif %}">HISTORIAL</a>
+        {% endif %}
+    </div>
+</nav>
+
+<script>
+(function() {
+    const STORAGE_KEY = "pof_sidebar_state";
+
+    function applySidebarState() {
+        const state = sessionStorage.getItem(STORAGE_KEY);
+
+        if (state === "closed") {
+            document.body.classList.add("sidebar-collapse");
+            document.body.classList.remove("sidebar-open");
+        }
+
+        if (state === "open") {
+            document.body.classList.remove("sidebar-collapse");
+        }
+    }
+
+    function saveSidebarState() {
+        const isClosed = document.body.classList.contains("sidebar-collapse");
+        sessionStorage.setItem(STORAGE_KEY, isClosed ? "closed" : "open");
+    }
+
+    applySidebarState();
+
+    document.addEventListener("DOMContentLoaded", applySidebarState);
+
+    document.addEventListener("click", function(event) {
+        const toggle = event.target.closest('[data-widget="pushmenu"]');
+
+        if (!toggle) {
+            return;
+        }
+
+        window.setTimeout(saveSidebarState, 180);
+    });
+
+    window.addEventListener("beforeunload", saveSidebarState);
+})();
+</script>

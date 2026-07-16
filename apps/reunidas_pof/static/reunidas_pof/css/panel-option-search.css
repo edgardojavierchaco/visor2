@@ -1,0 +1,93 @@
+.padron-panel-option-search {
+    width: min(100%, 390px);
+}
+
+.padron-panel-option-search .input-group {
+    overflow: hidden;
+    min-height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: .55rem;
+    background: #fff;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, .06);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.padron-panel-option-search .input-group:focus-within {
+    border-color: #3b82f6;
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, .13),
+        0 3px 9px rgba(15, 23, 42, .07);
+}
+
+.padron-panel-option-search .input-group-text {
+    min-width: 38px;
+    justify-content: center;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #f8fafc;
+    color: #3b82f6;
+    font-size: .82rem;
+}
+
+.padron-panel-option-search .input-group-text svg,
+.padron-panel-option-search-clear svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.2;
+}
+
+.padron-panel-option-search .form-control {
+    min-height: 36px;
+    margin-left: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff;
+    color: #334155;
+    font-size: .8rem;
+    font-weight: 500;
+    box-shadow: none !important;
+}
+
+.padron-panel-option-search .form-control::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+.padron-panel-option-search input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.padron-panel-option-search-clear {
+    min-width: 36px;
+    margin-left: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+}
+
+.padron-panel-option-search-clear:not(:disabled):hover {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+}
+
+.padron-panel-option-search-clear:disabled {
+    opacity: .3;
+}
+
+.padron-panel-option-hidden {
+    display: none !important;
+}
+
+.padron-panel-option-search-empty {
+    margin-top: .4rem;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 600;
+}

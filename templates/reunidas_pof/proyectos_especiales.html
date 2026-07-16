@@ -1,0 +1,392 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}">
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="proyectos_especiales" %}
+    <div class="pof-view-header">
+        <h1>📔PROYECTOS ESPECIALES</h1>
+        <p>Administr&aacute; cabeceras flexibles para cargas por proyecto, programa o dispositivo.</p>
+    </div>
+
+    <div class="pof-reunidas-top-actions">
+        <a class="pof-btn pof-reunida-create-btn" href="{% url 'reunidas_pof:crear_proyecto_especial' %}">
+            <span aria-hidden="true">🗃️</span>
+            <span>Crear Proyecto Especial</span>
+        </a>
+    </div>  
+
+    <form method="get" class="pof-filter-panel" id="filtrosProyectosForm">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+
+        <div class="pof-filter-grid">
+            <div class="pof-filter-field pof-col-2{% if filtro_anio %} pof-filter-field-active{% endif %}{% if errores_filtros.anio %} pof-filter-field-error{% endif %}">
+                <label for="filtroAnio">A&ntilde;o</label>
+                <input type="text"
+                    id="filtroAnio"
+                    name="anio"
+                    value="{{ filtro_anio }}"
+                    maxlength="4"
+                    inputmode="numeric"
+                    pattern="[0-9]{4}"
+                    data-pof-digits-only
+                    placeholder="Ej: 2026"
+                    {% if errores_filtros.anio %}aria-invalid="true" aria-describedby="errorFiltroAnioProyecto"{% endif %}>
+                {% if errores_filtros.anio %}
+                    <span id="errorFiltroAnioProyecto" class="pof-filter-field-help">{{ errores_filtros.anio }}</span>
+                {% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-4 pof-project-filter-search{% if filtro_proyecto_especial_id %} pof-filter-field-active{% endif %}{% if errores_filtros.proyecto_especial_id %} pof-filter-field-error{% endif %}">
+                <label for="filtroProyectoEspecialSelect">Proyecto Especial</label>
+                <select id="filtroProyectoEspecialSelect"
+                        name="proyecto_especial_id"
+                        {% if errores_filtros.proyecto_especial_id %}aria-invalid="true" aria-describedby="errorFiltroProyectoEspecial"{% endif %}>
+                    <option value="">Todos</option>
+                    {% for proyecto in proyectos_select %}
+                        <option value="{{ proyecto.id }}"
+                                data-nombre="{{ proyecto.nombre }}"
+                                data-resolucion="{{ proyecto.resolucion|default_if_none:'' }}"
+                                data-anio="{{ proyecto.anio }}"
+                                {% if filtro_proyecto_especial_id|stringformat:"s" == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                            {{ proyecto.nombre }}{% if proyecto.resolucion %} — Res. {{ proyecto.resolucion }}{% else %} — Sin resolución{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if errores_filtros.proyecto_especial_id %}
+                    <span id="errorFiltroProyectoEspecial" class="pof-filter-field-help">{{ errores_filtros.proyecto_especial_id }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="pof-filter-actions">
+            <button type="submit" class="pof-filter-apply-btn">Aplicar filtros</button>
+            <a class="pof-filter-clear-btn" href="{% url 'reunidas_pof:proyectos_especiales_pof' %}">
+                Limpiar filtros
+            </a>
+        </div>
+
+        {% if mensaje_filtros %}
+            <div class="pof-filter-warning">
+                <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+                <span>{{ mensaje_filtros }}</span>
+            </div>
+        {% endif %}
+    </form>
+
+    <div>
+        {% if tabla_proyectos_no_migrada %}
+            <div class="pof-note">La tabla de Proyectos Especiales todav&iacute;a no est&aacute; migrada. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
+        {% endif %}
+
+    <div class="pof-filter-summary">
+        <div class="pof-filter-summary-left">
+            <span class="pof-filter-summary-main">Resultados: Mostrando Proyectos Especiales {{ showing_start }}-{{ showing_end }} de {{ total_registros }}</span>
+        </div>
+        <span class="pof-filter-total">Total de Proyectos Especiales: {{ total_registros }}</span>
+    </div>
+
+        <div class="pof-grid-table-wrap pof-proyectos-table-wrap">
+            <table class="pof-grid-table">
+                <thead>
+                    <tr>
+                        <th class="pof-grid-icon-cell pof-grid-gear-column">Acci&oacute;n</th>
+                        <th>A&ntilde;o</th>
+                        <th>Nombre</th>
+                        <th>Resoluci&oacute;n</th>
+                        <th>Proyecto base anterior</th>
+                        <th>&Uacute;ltima modificaci&oacute;n</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proyecto in proyectos %}
+                        <tr>
+                            <td class="pof-grid-icon-cell pof-grid-gear-column">
+                                <div class="dropdown pof-grid-dropdown">
+                                    <button type="button"
+                                            class="pof-grid-icon-btn pof-grid-gear-btn"
+                                            title="Acciones del Proyecto Especial"
+                                            aria-label="Acciones del Proyecto Especial"
+                                            data-toggle="dropdown"
+                                            aria-haspopup="true"
+                                            aria-expanded="false">
+                                        &#9881;&#65039;
+                                    </button>
+                                    <div class="dropdown-menu pof-grid-dropdown-menu pof-grid-actions-menu">
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-detail" href="{% url 'reunidas_pof:detalle_reunida' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
+                                            &#128065;&#65039; VER DETALLE
+                                        </a>
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-primary" href="{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto.id }}">
+                                            &#10133; AFECTAR CARGOS
+                                        </a>
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-warning" href="{% url 'reunidas_pof:consultar_cargos' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
+                                            &#128736;&#65039; ADMIN. CARGOS
+                                        </a>
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-success" href="{% url 'reunidas_pof:exportar_reunida' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
+                                            &#128215; EXPORTAR PROYECTO ESPECIAL
+                                        </a>
+                                        <div class="pof-grid-dropdown-form pof-grid-dropdown-form-danger">
+                                            <button type="button"
+                                                    class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-danger"
+                                                    data-pof-delete-open
+                                                    data-pof-delete-tipo="PROYECTO_ESPECIAL"
+                                                    data-pof-delete-title="Eliminar Proyecto Especial"
+                                                    data-pof-delete-label="{{ proyecto.nombre }} · {{ proyecto.anio }}"
+                                                    data-pof-delete-warning="Esta operación solo se realizará si el proyecto no registra actividad administrativa y no es utilizado como base por otro Proyecto Especial."
+                                                    data-pof-delete-url="{% url 'reunidas_pof:eliminar_proyecto_especial' proyecto.id %}">
+                                                &#128465;&#65039; ELIMINAR PROYECTO
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="pof-grid-cell-center">{{ proyecto.anio }}</td>
+                            <td>{{ proyecto.nombre }}</td>
+                            <td>{{ proyecto.resolucion|default:"-" }}</td>
+                            <td>
+                                {% if proyecto.proyecto_base_anterior %}
+                                    {{ proyecto.proyecto_base_anterior.anio }} - {{ proyecto.proyecto_base_anterior.nombre }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="pof-grid-cell-center">
+                                {% if proyecto.actualizado_en %}
+                                    {{ proyecto.actualizado_en|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="pof-grid-empty">No hay Proyectos Especiales POF cargados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pof-table-footer">
+            <form method="get" class="pof-page-size">
+                <input type="hidden" name="anio" value="{{ filtro_anio }}">
+                <input type="hidden" name="proyecto_especial_id" value="{{ filtro_proyecto_especial_id }}">
+                <label for="pageSizeProyectos">Registros por p&aacute;gina</label>
+                <select id="pageSizeProyectos" name="page_size">
+                    {% for opcion in page_size_options %}
+                        <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
+            </form>
+
+            {% if paginator.num_pages > 1 %}
+                <nav class="pof-pagination" aria-label="Paginaci&oacute;n de Proyectos Especiales">
+                    {% if page_obj.has_previous %}
+                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                    {% else %}
+                        <span class="pof-page-btn pof-page-btn-disabled">Anterior</span>
+                    {% endif %}
+
+                    {% for page_number in page_range %}
+                        {% if page_number == page_obj.number %}
+                            <span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>
+                        {% elif page_number == paginator.ELLIPSIS %}
+                            <span class="pof-page-ellipsis">&hellip;</span>
+                        {% else %}
+                            <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+                    {% else %}
+                        <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% include "reunidas_pof/modal_eliminar_cabecera.html" %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script>
+(function() {
+    const filtroAnio = document.getElementById("filtroAnio");
+    const select = document.getElementById("filtroProyectoEspecialSelect");
+
+    if (!filtroAnio || !select) {
+        return;
+    }
+
+    function cargarScript(url, callback) {
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = url;
+        script.onload = callback;
+        document.head.appendChild(script);
+    }
+
+    function inicializar() {
+        if (!document.getElementById("select2-cdn-css")) {
+            const link = document.createElement("link");
+            link.id = "select2-cdn-css";
+            link.rel = "stylesheet";
+            link.href = "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css";
+            document.head.appendChild(link);
+        }
+
+        if (!window.jQuery) {
+            cargarScript("https://code.jquery.com/jquery-3.6.0.min.js", function() {
+                verificarYInicializarSelect2();
+            });
+        } else {
+            verificarYInicializarSelect2();
+        }
+    }
+
+    function verificarYInicializarSelect2() {
+        if (!window.jQuery.fn.select2) {
+            cargarScript("https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js", function() {
+                ejecutarSelect2();
+            });
+        } else {
+            ejecutarSelect2();
+        }
+    }
+
+    function normalizarTexto(valor) {
+        return String(valor || "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function matcherProyectoEspecial(params, data) {
+        const term = normalizarTexto(params.term);
+
+        if (!term) {
+            return data;
+        }
+
+        if (!data.id || !data.element) {
+            return null;
+        }
+
+        const option = data.element;
+        const textoBusqueda = normalizarTexto([
+            option.dataset.nombre,
+            option.dataset.resolucion,
+            option.dataset.anio,
+            data.text
+        ].join(" "));
+
+        return textoBusqueda.includes(term) ? data : null;
+    }
+
+    function formatProyectoResult(data) {
+        if (!data.id || !data.element) {
+            return window.jQuery("<span class='pof-project-select2-all'>Todos</span>");
+        }
+
+        const option = data.element;
+        const nombre = option.dataset.nombre || data.text || "";
+        const resolucion = option.dataset.resolucion || "";
+        const anio = option.dataset.anio || "";
+        const detalle = resolucion ? `${anio} · Res. ${resolucion}` : `${anio} · Sin resolución`;
+
+        const $item = window.jQuery("<span class='pof-project-select2-option'></span>");
+        window.jQuery("<span class='pof-project-select2-name'></span>").text(nombre).appendTo($item);
+        window.jQuery("<span class='pof-project-select2-meta'></span>").text(detalle).appendTo($item);
+
+        return $item;
+    }
+
+    function formatProyectoSelection(data) {
+        if (!data.id || !data.element) {
+            return "Todos";
+        }
+
+        const option = data.element;
+        const nombre = option.dataset.nombre || data.text || "";
+        const resolucion = option.dataset.resolucion || "";
+
+        return resolucion
+            ? `${nombre} — Res. ${resolucion}`
+            : `${nombre} — Sin resolución`;
+    }
+
+    function obtenerTextoProyectoSeleccionado() {
+        const option = select.selectedOptions[0];
+
+        if (!option || !option.value) {
+            return "Todos";
+        }
+
+        const nombre = option.dataset.nombre || option.textContent || "";
+        const resolucion = option.dataset.resolucion || "";
+
+        return resolucion
+            ? `${nombre} — Res. ${resolucion}`
+            : `${nombre} — Sin resolución`;
+    }
+
+    function actualizarDisplayProyecto() {
+        const display = document.getElementById("pofProyectoSelectorDisplay");
+
+        if (!display) {
+            return;
+        }
+
+        const estaVacio = !select.value;
+
+        display.textContent = obtenerTextoProyectoSeleccionado();
+        display.classList.toggle("is-empty", estaVacio);
+    }
+
+    function ejecutarSelect2() {
+        const $select = window.jQuery(select);
+
+        if ($select.data("select2")) {
+            return;
+        }
+
+        $select.select2({
+            width: "100%",
+            placeholder: "Todos",
+            allowClear: true,
+            closeOnSelect: true,
+            dropdownParent: window.jQuery(document.body),
+            dropdownCssClass: "pof-project-select2-dropdown",
+            selectionCssClass: "pof-project-select2-selection",
+            minimumResultsForSearch: 0,
+            templateResult: formatProyectoResult,
+            templateSelection: formatProyectoSelection,
+            matcher: matcherProyectoEspecial,
+            language: {
+                noResults: function () {
+                    return "No se encontraron proyectos.";
+                },
+                searching: function () {
+                    return "Buscando...";
+                }
+            }
+        });
+
+        actualizarDisplayProyecto();
+
+        $select.on("change", function () {
+            actualizarDisplayProyecto();
+        });
+    }
+
+    inicializar();
+})();
+</script>
+{% endblock %}

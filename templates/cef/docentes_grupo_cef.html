@@ -1,0 +1,43 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Administración de profesores asignados al grupo seleccionado.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Profesores asignados al grupo</h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+            </a>
+            <button class="btn btn-primary" type="button" data-open-docentes-modal>
+                <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+            </button>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if grupo %}
+            <div class="mb-3">
+                <span class="cef-context-pill">
+                    <i class="fa-solid fa-users"></i>
+                    <span><strong>{{ grupo_rotulo }}</strong></span>
+                    <span>{{ grupo.turno }}</span>
+                    <span>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</span>
+                    <span>{{ grupo_dias_texto|default:"Sin dias cargados" }}</span>
+                </span>
+            </div>
+        {% endif %}
+
+        <p class="small text-muted mb-3">
+            Desde esta pantalla podés agregar, editar o dar de baja profesores asignados a este grupo.
+        </p>
+
+        <div data-cef-fragment="docentes-grupo">
+            {% include "cef/docentes_grupo_lista_cef.html" %}
+        </div>
+    </div>
+</div>
+
+{% include "cef/modal_busqueda_docente_cef.html" %}
+{% endblock %}

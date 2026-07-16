@@ -1,0 +1,210 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Gestión institucional del módulo CEF.{% endblock %}
+
+{% block cef_context_selector %}{% endblock %}
+
+{% block cef_content %}
+<style>
+    .cef-home-hero {
+        background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-800) 54%, var(--blue-700) 100%);
+        border: 1px solid rgba(255,255,255,.16);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-lg);
+        color: #fff;
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+        padding: 1.7rem 1.8rem;
+        position: relative;
+    }
+
+    .cef-home-hero::after {
+        background: rgba(255,255,255,.08);
+        border-radius: 999px;
+        content: "";
+        height: 170px;
+        position: absolute;
+        right: -44px;
+        top: -64px;
+        width: 170px;
+    }
+
+    .cef-home-hero h1 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        line-height: 1.12;
+        margin: 0 0 .55rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .cef-home-hero p {
+        color: rgba(255,255,255,.86);
+        font-size: var(--fs-md);
+        font-weight: 500;
+        margin: 0;
+        max-width: 760px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .cef-home-section-title {
+        align-items: center;
+        color: var(--primary-dark);
+        display: flex;
+        font-size: var(--fs-md);
+        font-weight: 800;
+        gap: .65rem;
+        letter-spacing: 0;
+        margin: 0 0 .9rem;
+        text-transform: uppercase;
+    }
+
+    .cef-home-section-title::after {
+        background: var(--border);
+        content: "";
+        flex: 1;
+        height: 1px;
+    }
+
+    .cef-home-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cef-home-card {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-top: 3px solid var(--primary);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-sm);
+        color: var(--text-base);
+        display: flex;
+        flex-direction: column;
+        min-height: 168px;
+        padding: 1.25rem;
+        text-decoration: none;
+        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .cef-home-card:hover,
+    .cef-home-card:focus {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-md);
+        color: var(--text-base);
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+
+    .cef-home-card:focus-visible {
+        box-shadow: 0 0 0 3px rgba(45,125,210,.22), var(--shadow-md);
+        outline: none;
+    }
+
+    .cef-home-icon {
+        align-items: center;
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-md);
+        color: var(--primary-dark);
+        display: inline-flex;
+        font-size: 1.25rem;
+        height: 46px;
+        justify-content: center;
+        margin-bottom: 1rem;
+        width: 46px;
+    }
+
+    .cef-home-card h2 {
+        color: var(--primary-dark);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0 0 .45rem;
+    }
+
+    .cef-home-card p {
+        color: var(--text-faint);
+        font-size: var(--fs-base);
+        font-weight: 500;
+        line-height: 1.45;
+        margin: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        .cef-home-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .cef-home-hero {
+            padding: 1.35rem;
+        }
+
+        .cef-home-hero h1 {
+            font-size: 1.85rem;
+        }
+
+        .cef-home-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<section class="cef-home-hero">
+    <h1>Centros de Educación Física</h1>
+    <p>Gestión institucional, alumnos, datos CUE-Anexo, grupos e inventario.</p>
+</section>
+
+<section aria-labelledby="cef-home-acceso-rapido">
+    <h2 id="cef-home-acceso-rapido" class="cef-home-section-title">Acceso rápido</h2>
+
+    <div class="cef-home-grid">
+        <a class="cef-home-card" href="{% url 'cef:visualizacion_localizaciones' %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-location-dot"></i></span>
+            <h2>Localizaciones</h2>
+            <p>Consulta institucional desde Padrón, con filtros, columnas y exportación Excel.</p>
+        </a>
+
+        <a class="cef-home-card" href="{% if cef_context.alumnos_url %}{{ cef_context.alumnos_url }}{% else %}{% url 'cef:alumnos' %}{% endif %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-user-graduate"></i></span>
+            <h2>Alumnos</h2>
+            <p>Buscar, consultar y vincular alumnos al módulo CEF.</p>
+        </a>
+
+        <a class="cef-home-card" href="{% if cef_context.profesores_url %}{{ cef_context.profesores_url }}{% else %}{% url 'cef:profesores' %}{% endif %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-chalkboard-user"></i></span>
+            <h2>Profesores</h2>
+            <p>Buscar, consultar y vincular profesores/docentes al módulo CEF.</p>
+        </a>
+
+        <a class="cef-home-card" href="{% url 'cef:carga_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-school"></i></span>
+            <h2>Datos CUE-Anexo</h2>
+            <p>Registrar datos complementarios del CEF por ciclo.</p>
+        </a>
+
+        <a class="cef-home-card" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-people-group"></i></span>
+            <h2>Grupos / Cursos</h2>
+            <p>Administrar cursos, actividades, turnos, cupos e inscripciones.</p>
+        </a>
+
+        <a class="cef-home-card" href="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+            <h2>Inventario</h2>
+            <p>Gestionar materiales disponibles por CEF y ciclo.</p>
+        </a>
+
+        {% if cef_context.es_admin_cef %}
+            <a class="cef-home-card" href="{% url 'cef:administrar_ciclos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <span class="cef-home-icon"><i class="fa-solid fa-calendar-days"></i></span>
+                <h2>Ciclos</h2>
+                <p>Administrar ciclos lectivos del módulo CEF.</p>
+            </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

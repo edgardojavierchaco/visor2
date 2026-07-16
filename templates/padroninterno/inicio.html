@@ -1,5 +1,81 @@
 {% extends 'archivos/base/layout.html' %}
+{% load static %}
+{% block head %}
+{{ block.super }}
+<script>
+(function () {
+    var key = 'padron_flicker_diag_enabled';
+    var value = new URLSearchParams(window.location.search).get('padron_diag');
+    if (value === '1') sessionStorage.setItem(key, '1');
+    if (value === '0') sessionStorage.removeItem(key);
+    if (sessionStorage.getItem(key) === '1') {
+        document.write('<script src="{% static 'padroninterno/flicker-forensic-v3.js' %}?v=6"><\/script>');
+    }
+})();
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'padroninterno/css/padroninterno.css' %}">
+<link rel="stylesheet" href="{% static 'padroninterno/css/navigation-view-transition.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'padroninterno/css/establecimientos-navigation-skeleton-v2.css' %}?v=4">
+<script defer src="{% static 'padroninterno/establecimientos-navigation-skeleton.js' %}?v=3"></script>
+<script>
+(function() {
+    if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
+        document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+    } else {
+        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+    }
+})();
+</script>
+<style id="padron-prepaint-stability">
+    .content-wrapper > .content-header { display: none !important; }
+    .content-wrapper, .main-header, .main-sidebar, .main-footer { transition: none !important; animation: none !important; }
+    html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar, html.padron-sidebar-initial-collapsed .main-sidebar::before { width: 4.6rem !important; overflow-x: hidden !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover, html.padron-sidebar-initial-collapsed .main-sidebar:hover::before, html.padron-sidebar-initial-collapsed .main-sidebar:focus-within, html.padron-sidebar-initial-collapsed .main-sidebar:focus-within::before { width: 250px !important; overflow-x: visible !important; }
+    .content-wrapper > .content > .container-fluid { max-width: 100% !important; min-width: 0 !important; padding-top: 0 !important; }
+    .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands { display: inline-block; width: 1.25em; min-width: 1.25em; text-align: center; line-height: 1; }
+    .fw-700{font-weight:700!important}.fw-800{font-weight:800!important}
+    @media (max-width: 991.98px) { html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; } html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; } }
+</style>
+{% endblock %}
 {% block content %}
+<div class="padron-est-nav-curtain" data-padron-est-nav-curtain aria-hidden="true">
+    <div class="padron-est-nav-curtain__modulebar">
+        <div class="padron-est-nav-curtain__brand"><i class="fa-solid fa-school" aria-hidden="true"></i><span>Padr&oacute;n Educativo &middot; Chaco</span></div>
+        <div class="padron-est-nav-curtain__guide"><i class="fa-solid fa-circle-question" aria-hidden="true"></i><span>Gu&iacute;a de Uso</span></div>
+        <div class="padron-est-nav-curtain__links">
+            <span><i class="fa-solid fa-house" aria-hidden="true"></i> Inicio</span>
+            <span class="is-active"><i class="fa-solid fa-building-columns" aria-hidden="true"></i> Establecimientos</span>
+            <span><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Localizaciones</span>
+            <span><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> Ofertas Locales</span>
+            <span><i class="fa-solid fa-users" aria-hidden="true"></i> Responsables</span>
+        </div>
+        <div class="padron-est-nav-curtain__date"><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}</div>
+    </div>
+    <div class="padron-est-nav-curtain__content">
+        <div class="padron-est-nav-curtain__heading-row">
+            <h2><i class="fa-solid fa-building-columns" aria-hidden="true"></i> Listado de Establecimientos</h2>
+            <div class="padron-est-nav-curtain__actions">
+                <span class="padron-est-nav-curtain__search"><span class="padron-est-nav-curtain__search-icon"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__search-select">Cue <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__search-input">Buscar en esta columna...</span></span>
+                <span class="padron-est-nav-curtain__button is-outline"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Filtros Excel</span>
+                <span class="padron-est-nav-curtain__button is-solid"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Todo Excel</span>
+            </div>
+        </div>
+        <div class="padron-est-nav-curtain__filter-card"><span class="padron-est-nav-curtain__button is-blue"><i class="fa-solid fa-filter" aria-hidden="true"></i> Filtros <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__button is-gray"><i class="fa-solid fa-table-columns" aria-hidden="true"></i> Columnas <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__button is-red"><i class="fa-solid fa-broom" aria-hidden="true"></i> Limpiar Filtros</span><span class="padron-est-nav-curtain__button is-dark"><i class="fa-solid fa-compress" aria-hidden="true"></i> Contraer Columnas</span></div>
+        <div class="padron-est-nav-curtain__results"><span><i class="fa-solid fa-table" aria-hidden="true"></i> <strong>Resultados:</strong> Mostrando Establecimientos <span class="padron-est-nav-curtain__mini-total">Total de Directores</span></span><span class="padron-est-nav-curtain__counter">Mostrando 24 de 24 columnas</span></div>
+        <div class="padron-est-nav-curtain__table" aria-hidden="true">
+            <div class="padron-est-nav-curtain__table-head"><span>Acci&oacute;n</span><span>Cue</span><span>Cantidad de Localizaciones</span><span>C&oacute;digo Jurisdiccional</span><span>Nombre</span><span>Sector</span><span>Dependencia</span><span>Confesional</span><span>Arancelado</span><span>Categor&iacute;a</span><span>Director</span><span>Estado</span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+        </div>
+    </div>
+</div>
 <script>
 (function() {
     if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
@@ -10,7 +86,6 @@
 })();
 </script>
 <style id="padron-layout-stability">
-    @import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css");
     .content-wrapper > .content-header { display: none !important; }
     .content-wrapper, .main-header, .main-sidebar, .main-footer { transition: none !important; animation: none !important; }
     html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
@@ -20,6 +95,128 @@
     .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands { display: inline-block; width: 1.25em; min-width: 1.25em; text-align: center; line-height: 1; }
     .fw-700{font-weight:700!important}.fw-800{font-weight:800!important}
     @media (max-width: 991.98px) { html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; } html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; } }
+    .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top {
+        align-items: center;
+        color: rgba(255,255,255,.9);
+        font-weight: 700;
+        font-size: .875rem;
+        line-height: 1.2;
+        white-space: nowrap;
+        border-radius: .5rem;
+        padding: .5rem .55rem;
+        text-decoration: none;
+    }
+
+    .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top:hover,
+    .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top:focus {
+        color: #fff;
+        background: rgba(255,255,255,.12);
+    }
+
+    @media (min-width: 992px) {
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-menu {
+            display: none !important;
+        }
+    }
+
+    @media (min-width: 1400px) {
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] > .container-fluid {
+            flex-wrap: nowrap;
+            align-items: center;
+            column-gap: .35rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-brand {
+            order: 1;
+            flex: 0 0 auto;
+            min-width: 0;
+            max-width: 265px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-collapse {
+            order: 2;
+            flex: 1 1 auto;
+            flex-basis: auto;
+            min-width: 0;
+            align-items: center;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-nav.me-auto {
+            flex: 1 1 auto;
+            min-width: 0;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top {
+            order: 3;
+            flex: 0 0 auto;
+            margin-left: .5rem;
+        }
+    }
+
+    @media (min-width: 992px) and (max-width: 1399.98px) {
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] > .container-fluid {
+            flex-wrap: wrap;
+            align-items: flex-start;
+            row-gap: .1rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-brand {
+            order: 1;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: calc(100% - 150px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top {
+            order: 2;
+            flex: 0 0 auto;
+            margin-left: auto;
+            margin-top: .05rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-toggler {
+            order: 3;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-collapse {
+            order: 4;
+            flex: 0 0 100%;
+            width: 100%;
+            min-width: 0;
+            align-items: flex-start;
+            margin-top: .05rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-nav.me-auto {
+            flex: 1 1 auto;
+            min-width: 0;
+            flex-wrap: wrap;
+            align-items: center;
+            row-gap: .15rem;
+            margin-right: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .nav-link {
+            white-space: nowrap;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .fecha-badge-nav {
+            margin-top: .25rem;
+            margin-bottom: .25rem;
+        }
+    }
+
 </style>
 <script>
 (function() {
@@ -41,11 +238,6 @@
     }
 
     syncPadronSidebar();
-    window.setTimeout(syncPadronSidebar, 120);
-    window.setTimeout(syncPadronSidebar, 420);
-    document.addEventListener('DOMContentLoaded', syncPadronSidebar);
-    window.addEventListener('pageshow', syncPadronSidebar);
-    window.addEventListener('load', syncPadronSidebar);
     document.addEventListener('click', function(event) {
         if (event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
             window.setTimeout(function() {
@@ -58,6 +250,49 @@
 })();
 </script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+
+            @media (max-width: 991.98px) {
+        .padron-module-nav > .container-fluid {
+            flex-wrap: wrap;
+            gap: .35rem .5rem;
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+
+        .padron-module-nav .navbar-brand {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: calc(100% - 54px);
+            margin-right: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: .92rem;
+        }
+
+        .padron-module-nav .navbar-toggler {
+            flex: 0 0 auto;
+            width: 44px;
+            min-width: 44px;
+            height: 38px;
+            margin-left: auto;
+            padding: .25rem .45rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .padron-module-nav .navbar-collapse {
+            flex-basis: 100%;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .padron-module-nav .navbar-brand {
+            font-size: .84rem;
+        }
+    }
 
         /* =========================================================
    ANTI-JANK Padrón
@@ -81,6 +316,107 @@ html {
             --padron-bg:        #eef2f7;
             --padron-card-bg:   #ffffff;
         }
+
+    .padron-modal .modal-content {
+        border: 1px solid rgba(26, 79, 138, 0.16);
+        border-radius: 1.05rem;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+    }
+
+    .padron-modal .modal-header {
+        align-items: flex-start;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+        border-bottom: 1px solid rgba(26, 79, 138, 0.12);
+    }
+
+    .padron-modal .modal-title {
+        color: #20364d;
+        font-weight: 800;
+    }
+
+    .padron-modal .modal-footer {
+        border-top: 0;
+        background: #f8fbff;
+    }
+
+    .padron-modal-breadcrumbs {
+        font-size: 0.76rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    .padron-modal-breadcrumbs .crumb-link {
+        color: #0d6efd;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .padron-modal-breadcrumbs .crumb-link:hover {
+        color: #0a58ca;
+        text-decoration: underline;
+    }
+
+    .padron-modal-breadcrumbs .crumb-sep {
+        color: #7a8b9d;
+    }
+
+    .padron-guide-hero {
+        background: linear-gradient(180deg, #f9fcff 0%, #edf4fb 100%);
+        border: 1px solid rgba(26, 79, 138, 0.12);
+        border-radius: 0.95rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .padron-guide-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
+    .padron-guide-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+        border: 1px solid rgba(26, 79, 138, 0.12);
+        border-radius: 0.9rem;
+        padding: 1rem;
+    }
+
+    .padron-guide-card h6 {
+        color: #20364d;
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+    }
+
+    .padron-guide-card ul,
+    .padron-guide-card ol {
+        padding-left: 1.1rem;
+        margin-bottom: 0;
+    }
+
+    .padron-guide-card li + li {
+        margin-top: 0.35rem;
+    }
+
+    .padron-guide-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .padron-guide-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border: 1px solid rgba(26, 79, 138, 0.14);
+        border-radius: 999px;
+        background: #fff;
+        color: #334155;
+        font-size: 0.78rem;
+        font-weight: 800;
+        padding: 0.35rem 0.6rem;
+    }
         
     .padron-page-wrapper {
         max-width: 100%;
@@ -104,21 +440,35 @@ html {
         /* ── Navbar ── */
         .padron-module-nav { background-color: var(--padron-primary) !important; border-radius: .55rem; margin-bottom: .85rem; box-shadow: 0 .35rem 1rem rgba(10, 38, 70, .12); }
         .padron-module-nav .navbar-brand { font-weight: 800; letter-spacing: .5px; font-size: 1.1rem; }
-        .padron-module-nav .nav-link { font-weight: 600; font-size: .9rem; }
+        .padron-module-nav .nav-link { font-weight: 600; font-size: .9rem; white-space: nowrap; }
         .padron-module-nav .dropdown-item { font-size: .875rem; }
         .padron-module-nav .dropdown-item:hover { background-color: #e8f0fe; color: var(--padron-primary); }
+        .padron-module-nav .dropdown { position: relative; }
+        @media (min-width: 992px) {
+            .padron-module-nav .container-fluid { flex-wrap: nowrap; align-items: center; gap: .55rem; padding-left: .85rem !important; padding-right: .85rem !important; }
+            .padron-module-nav .navbar-brand { flex: 0 0 auto; margin-right: .25rem; white-space: nowrap; font-size: 1rem; letter-spacing: .1px; }
+            .padron-module-nav .navbar-brand .me-2 { margin-right: .4rem !important; }
+            .padron-module-nav .navbar-collapse { flex: 1 1 auto; flex-basis: auto; min-width: 0; flex-wrap: nowrap; align-items: center; gap: .35rem; }
+            .padron-module-nav .navbar-nav.me-auto { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; row-gap: .15rem; margin-right: .25rem !important; }
+            .padron-module-nav .navbar-nav.ms-auto { flex: 0 0 auto; align-items: center; margin-left: .25rem !important; }
+            .padron-module-nav .nav-link { font-size: .82rem; padding-left: .3rem; padding-right: .3rem; }
+            .padron-module-nav .nav-link .me-1 { margin-right: .25rem !important; }
+            .padron-module-nav .fecha-badge { font-size: .78rem; padding: .18rem .65rem; gap: .35rem; }
+            .padron-module-nav .fecha-badge .edit-icon { margin-left: 0; }
+        }
 
-        .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; }
-        .fecha-badge i { font-size: 0.85rem; color: #3b82f6; }
+        .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; line-height: 1.2; white-space: nowrap; flex: 0 0 auto; transition: all 0.2s ease; }
+        .fecha-badge i { font-size: 0.85rem; color: #3b82f6; flex: 0 0 auto; }
         .fecha-badge .edit-icon { cursor: pointer; transition: transform 0.2s, color 0.2s; margin-left: 4px; font-size: 0.8rem; color: #64748b; }
         .fecha-badge .edit-icon:hover { color: #2563eb; transform: scale(1.1); }
-        .fecha-badge-nav { margin: .25rem 0; }
+        .fecha-badge-nav { margin: .25rem 0; white-space: nowrap; }
+        .padron-fecha-nav-item { flex: 0 0 auto; display: flex !important; align-items: center; }
 
         /* ── Page header ── */
         .page-banner {
             background: linear-gradient(135deg, var(--padron-primary) 0%, var(--padron-secondary) 100%);
             color: #fff;
-            padding: 2.5rem 2rem;
+            padding: 3rem 3.9rem;
             margin-bottom: 1.35rem;
         }
 
@@ -128,6 +478,10 @@ html {
             gap: .35rem;
             margin-top: .25rem;
             margin-bottom: 1rem !important;
+            color: #495057;
+            font-size: .9rem;
+            font-weight: 800;
+            letter-spacing: .04em;
         }
 
         /* ── Quick-access cards ── */
@@ -146,14 +500,19 @@ html {
             color: var(--padron-primary);
         }
         .quick-card .icon-wrap {
-            width: 56px; height: 56px;
+            width: 64px; height: 64px;
             border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1.4rem;
-            margin-bottom: .75rem;
+            margin-bottom: 1rem;
         }
         .quick-card .card-title { font-weight: 700; font-size: 1rem; margin-bottom: .25rem; }
         .quick-card .card-text  { font-size: .82rem; color: #6c757d; }
+        .quick-card .card-body { padding: 1.7rem; }
+        .quick-icon-blue { background: #e8f1ff; color: #0d6efd; }
+        .quick-icon-green { background: #e9f6f0; color: #078a5b; }
+        .quick-icon-yellow { background: #fff7df; color: #f4b000; }
+        .quick-icon-cyan { background: #e8fbff; color: #08bedf; }
 
         /* ── Alert ── */
         .alert-legal { background: #fff8e1; border-left: 4px solid #ffc107; border-radius: .5rem; }
@@ -168,10 +527,13 @@ html {
 
 <!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
 <div class="padron-page-wrapper">
-<nav class="navbar navbar-expand-lg navbar-dark padron-module-nav">
-    <div class="container-fluid px-4">
+<nav class="navbar navbar-expand-lg navbar-dark padron-module-nav" data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02">
+    <div class="container-fluid px-3">
         <a class="navbar-brand" href="/padron/">
             <i class="fa-solid fa-school me-2"></i>Padrón Educativo · Chaco
+        </a>
+        <a class="nav-link padron-nav-guide-top d-none d-lg-inline-flex" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#guiaUsoModal">
+            <i class="fa-solid fa-circle-question me-1"></i>Gu&iacute;a de Uso
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#inicioModuleNav" aria-controls="inicioModuleNav" aria-expanded="false" aria-label="Alternar navegacion del modulo">
             <span class="navbar-toggler-icon"></span>
@@ -224,16 +586,18 @@ html {
                         <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
                     </ul>
                 </li>
-                <li class="nav-item d-flex align-items-center">
+                <li class="nav-item d-flex align-items-center padron-fecha-nav-item">
                     <span class="fecha-badge fecha-badge-nav">
                         <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}
                         {% if padron_is_admin %}<i class="fa-solid fa-edit edit-icon" id="padronEditFechaBtn" title="Editar fecha"></i>{% endif %}
                     </span>
                 </li>
             </ul>
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item d-flex gap-2">
-
+            <ul class="navbar-nav ms-auto padron-nav-guide-menu">
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#guiaUsoModal">
+                        <i class="fa-solid fa-circle-question me-1"></i>Gu&iacute;a de Uso
+                    </a>
                 </li>
             </ul>
         </div>
@@ -268,6 +632,7 @@ html {
                 <div id="padronFechaModalError" style="display: none; align-items: center; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.85rem; font-weight: 600;">
                     <i class="fa-solid fa-exclamation-circle me-2"></i><span id="padronFechaModalErrorText"></span>
                 </div>
+
             </div>
             <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; background: #f8fafc;">
                 <button type="button" id="padronFechaModalCancelBtn" class="btn btn-light" style="border: 1.5px solid #cbd5e1; font-weight: 600;">Cancelar</button>
@@ -277,68 +642,94 @@ html {
     </div>
 </div>
 {% endif %}
-
-<!-- Page Banner -->
-<div class="page-banner">
-    <div class="container-fluid px-4">
-        <h1 class="fw-800 mb-1" style="font-size:1.8rem;">
-            <i class="fa-solid fa-school me-2 opacity-75"></i>Padrón de Establecimientos Educativos
-        </h1>
-        <p class="mb-0 opacity-75" style="font-size:.95rem;">Provincia del Chaco · Sistema de Gestión y Consulta</p>
+<div id="padronRefreshFloatingStatus" class="d-none" data-refresh-active="0" style="width: 100%; margin: 0.9rem 0 1.05rem 0; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #ecfdf5 100%); border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; border-radius: 0.85rem; padding: 0.95rem 1.1rem; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);">
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-2" style="gap: 0.85rem;">
+        <div class="d-flex align-items-start" style="gap: 0.75rem; min-width: 240px;">
+            <div style="width: 2.35rem; height: 2.35rem; border-radius: 999px; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.18);">
+                <i id="padronRefreshFloatingIcon" class="fa-solid fa-rotate fa-spin" style="font-size: 0.95rem;"></i>
+            </div>
+            <div>
+                <div class="fw-bold" id="padronRefreshFloatingTitle" style="color: #0f172a; font-size: 0.95rem; line-height: 1.25;">Actualizando datos de Padr&oacute;n...</div>
+                <div class="small text-muted" style="margin-top: 0.2rem;">Pod&eacute;s seguir usando el sistema mientras finaliza el refresh.</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill" id="padronRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 9</span>
+            <button id="padronRefreshReloadBtn" type="button" class="btn btn-sm btn-primary d-none" style="font-weight: 800; box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);">Recargar ahora</button>
+            <button id="padronRefreshClearBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" style="font-weight: 700;">Cerrar</button>
+        </div>
+    </div>
+    <div class="progress" style="height: 1rem; border-radius: 999px; background: #dbeafe; overflow: hidden; box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);">
+        <div id="padronRefreshFloatingBar" class="progress-bar" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #2563eb 0%, #06b6d4 55%, #22c55e 100%); font-size: 0.72rem; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35); transition: width 0.45s ease; display: flex; align-items: center; justify-content: center; min-width: 2.3rem;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
+    <div class="small mt-2" style="display: flex; gap: 0.8rem; flex-wrap: wrap; color: #475569; font-weight: 600;">
+        <span id="padronRefreshFloatingCurrent"></span>
+        <span id="padronRefreshFloatingElapsed"></span>
     </div>
 </div>
 
-
-        <!-- Welcome text -->
-
-        <!-- Quick Access Cards -->
-        <h6 class="quick-access-heading text-uppercase text-muted fw-700" style="letter-spacing:.08em; font-size:.78rem;">
-            <i class="fa-solid fa-bolt me-1"></i>Acceso rápido
-        </h6>
-        <div class="row g-3">
-
-            <div class="col-sm-6 col-xl-4">
-                <a href="/padron/establecimiento" class="quick-card card p-4">
-                    <div class="icon-wrap bg-primary bg-opacity-10 text-primary">
-                        <i class="fa-solid fa-building-columns"></i>
-                    </div>
-                    <div class="card-title">Establecimientos</div>
-                    <div class="card-text">Listado completo de establecimientos educativos registrados.</div>
-                </a>
-            </div>
-
-            <div class="col-sm-6 col-xl-4">
-                <a href="/padron/localizacion" class="quick-card card p-4">
-                    <div class="icon-wrap bg-success bg-opacity-10 text-success">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                    </div>
-                    <div class="card-title">Localizaciones</div>
-                    <div class="card-text">Localizaciones físicas asociadas a establecimientos.</div>
-                </a>
-            </div>
-
-            <div class="col-sm-6 col-xl-4">
-                <a href="/padron/ofertalocal" class="quick-card card p-4">
-                    <div class="icon-wrap bg-warning bg-opacity-10 text-warning">
-                        <i class="fa-solid fa-graduation-cap"></i>
-                    </div>
-                    <div class="card-title">Ofertas Locales</div>
-                    <div class="card-text">Oferta educativa disponible por localización.</div>
-                </a>
-            </div>
-
-            <div class="col-sm-6 col-xl-4">
-                <a href="/padron/responsable" class="quick-card card p-4">
-                    <div class="icon-wrap bg-info bg-opacity-10 text-info">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div class="card-title">Responsables</div>
-                    <div class="card-text">Directivos y responsables registrados en el sistema.</div>
-                </a>
-            </div>
-
-        </div>
+<section class="page-banner">
+    <div>
+        <h1 class="h2 fw-800 mb-2">
+            <i class="fa-solid fa-school me-2"></i>Padr&oacute;n de Establecimientos Educativos
+        </h1>
+        <p class="mb-0">
+            Provincia del Chaco &middot; Sistema de Gesti&oacute;n y Consulta
+        </p>
     </div>
+</section>
+
+<div class="d-flex align-items-center quick-access-heading">
+    <i class="fa-solid fa-bolt"></i>
+    <span>ACCESO R&Aacute;PIDO</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-4">
+        <a class="quick-card card h-100" href="/padron/establecimiento/">
+            <div class="card-body">
+                <div class="icon-wrap quick-icon-blue">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <h3 class="card-title">Establecimientos</h3>
+                <p class="card-text mb-0">Listado completo de establecimientos educativos registrados.</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <a class="quick-card card h-100" href="/padron/localizacion/">
+            <div class="card-body">
+                <div class="icon-wrap quick-icon-green">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <h3 class="card-title">Localizaciones</h3>
+                <p class="card-text mb-0">Localizaciones f&iacute;sicas asociadas a establecimientos.</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <a class="quick-card card h-100" href="/padron/ofertalocal/">
+            <div class="card-body">
+                <div class="icon-wrap quick-icon-yellow">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <h3 class="card-title">Ofertas Locales</h3>
+                <p class="card-text mb-0">Oferta educativa disponible por localizaci&oacute;n.</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <a class="quick-card card h-100" href="/padron/responsable/">
+            <div class="card-body">
+                <div class="icon-wrap quick-icon-cyan">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h3 class="card-title">Responsables</h3>
+                <p class="card-text mb-0">Directivos y responsables registrados en el sistema.</p>
+            </div>
+        </a>
+    </div>
+</div>
 
 <!-- Footer -->
 
@@ -348,6 +739,8 @@ html {
 {% if padron_is_admin %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var STORAGE_KEY = 'padronRefreshJobId';
+
     function getCsrfToken() {
         var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
         if (tokenInput) {
@@ -367,14 +760,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var modalElement = document.getElementById('padronFechaModal');
-    if (!modalElement || typeof bootstrap === 'undefined') {
-        return;
-    }
-
-    var fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+    var fechaModalBS = modalElement && typeof bootstrap !== 'undefined'
+        ? new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false })
+        : null;
     var editBtn = document.getElementById('padronEditFechaBtn');
     var guardarBtn = document.getElementById('padronGuardarFechaBtn');
     var nuevaFechaInput = document.getElementById('padronNuevaFecha');
+    var closeBtn = document.getElementById('padronFechaModalCloseBtn');
+    var cancelBtn = document.getElementById('padronFechaModalCancelBtn');
+    var floatingBox = document.getElementById('padronRefreshFloatingStatus');
+    var floatingTitle = document.getElementById('padronRefreshFloatingTitle');
+    var floatingBar = document.getElementById('padronRefreshFloatingBar');
+    var floatingStep = document.getElementById('padronRefreshFloatingStep');
+    var floatingCurrent = document.getElementById('padronRefreshFloatingCurrent');
+    var floatingElapsed = document.getElementById('padronRefreshFloatingElapsed');
+    var floatingIcon = document.getElementById('padronRefreshFloatingIcon');
+    var reloadBtn = document.getElementById('padronRefreshReloadBtn');
+    var clearBtn = document.getElementById('padronRefreshClearBtn');
+    var progresoUrlTemplate = '{% url "padroninterno:progreso_actualizar_fecha_padron" "00000000-0000-0000-0000-000000000000" %}';
+    var pollingTimer = null;
 
     function mostrarErrorModal(msg) {
         var errDiv = document.getElementById('padronFechaModalError');
@@ -391,14 +795,148 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function progresoUrl(jobId) {
+        return progresoUrlTemplate.replace('00000000-0000-0000-0000-000000000000', jobId);
+    }
+
+    function bloquearModal(bloquear) {
+        if (nuevaFechaInput) nuevaFechaInput.disabled = bloquear;
+        if (guardarBtn) guardarBtn.disabled = bloquear;
+        if (cancelBtn) cancelBtn.disabled = bloquear;
+        if (closeBtn) closeBtn.disabled = bloquear;
+    }
+
+    function resetBotonGuardar() {
+        bloquearModal(false);
+        if (guardarBtn) guardarBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Guardar cambios';
+    }
+
+    function mostrarFloating() {
+        if (!floatingBox) return;
+        floatingBox.classList.remove('d-none');
+        floatingBox.setAttribute('data-refresh-active', '1');
+    }
+
+    function ocultarFloating() {
+        if (!floatingBox) return;
+        floatingBox.classList.add('d-none');
+        floatingBox.setAttribute('data-refresh-active', '0');
+    }
+
+    function actualizarFloating(data) {
+        var total = data.total || 9;
+        var step = data.step || 0;
+        var percent = Math.max(0, Math.min(100, parseInt(data.percent || 0, 10)));
+        mostrarFloating();
+        if (floatingTitle) floatingTitle.textContent = data.message || 'Actualizando datos de Padr\u00f3n...';
+        if (floatingIcon) floatingIcon.className = 'fa-solid fa-rotate fa-spin';
+        if (floatingBar) {
+            floatingBar.style.width = percent + '%';
+            floatingBar.setAttribute('aria-valuenow', String(percent));
+            floatingBar.textContent = percent + '%';
+            floatingBar.classList.remove('bg-danger');
+        }
+        if (floatingStep) floatingStep.textContent = step + ' / ' + total;
+        if (floatingCurrent) floatingCurrent.textContent = data.current_view || '';
+        if (floatingElapsed) floatingElapsed.textContent = data.elapsed_seconds ? data.elapsed_seconds + ' s' : '';
+        if (reloadBtn) reloadBtn.classList.toggle('d-none', data.status !== 'success');
+        if (clearBtn) clearBtn.classList.toggle('d-none', !(data.status === 'error' || data.status === 'locked'));
+    }
+
+    function detenerPolling() {
+        if (pollingTimer) {
+            clearTimeout(pollingTimer);
+            pollingTimer = null;
+        }
+    }
+
+    function limpiarEstadoRefresh() {
+        detenerPolling();
+        sessionStorage.removeItem(STORAGE_KEY);
+        ocultarFloating();
+    }
+
+    function mostrarFinalizado(data) {
+        detenerPolling();
+        mostrarFloating();
+        if (floatingTitle) floatingTitle.textContent = 'Refresh completado. Recarg\u00e1 la p\u00e1gina para ver los datos actualizados.';
+        if (floatingIcon) floatingIcon.className = 'fa-solid fa-check';
+        if (floatingBar) {
+            floatingBar.style.width = '100%';
+            floatingBar.setAttribute('aria-valuenow', '100');
+            floatingBar.textContent = '100%';
+            floatingBar.classList.remove('bg-danger');
+        }
+        if (floatingStep) floatingStep.textContent = (data.step || 9) + ' / ' + (data.total || 9);
+        if (floatingCurrent) floatingCurrent.textContent = '';
+        if (floatingElapsed) floatingElapsed.textContent = data.elapsed_seconds ? data.elapsed_seconds + ' s' : '';
+        if (reloadBtn) reloadBtn.classList.remove('d-none');
+        if (clearBtn) clearBtn.classList.add('d-none');
+        if (floatingBox) floatingBox.setAttribute('data-refresh-active', '0');
+    }
+
+    function mostrarFalla(data) {
+        detenerPolling();
+        mostrarFloating();
+        if (floatingTitle) floatingTitle.textContent = data.message || 'No se pudo completar el refresh.';
+        if (floatingIcon) floatingIcon.className = 'fa-solid fa-triangle-exclamation';
+        if (floatingBar) {
+            floatingBar.style.width = '100%';
+            floatingBar.setAttribute('aria-valuenow', '100');
+            floatingBar.textContent = 'Error';
+            floatingBar.classList.add('bg-danger');
+        }
+        if (reloadBtn) reloadBtn.classList.add('d-none');
+        if (clearBtn) clearBtn.classList.remove('d-none');
+        if (floatingBox) floatingBox.setAttribute('data-refresh-active', '0');
+    }
+
+    function consultarProgreso(jobId) {
+        if (!jobId) return;
+        fetch(progresoUrl(jobId), {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function (response) {
+                return response.json().catch(function () {
+                    return {};
+                }).then(function (data) {
+                    if (!response.ok) {
+                        throw new Error(data.message || 'HTTP ' + response.status);
+                    }
+                    return data;
+                });
+            })
+            .then(function (data) {
+                if (data.status === 'success' || (((data.percent || 0) >= 100) && ((data.step || 0) >= (data.total || 9)) && !data.current_view)) {
+                    mostrarFinalizado(data);
+                    return;
+                }
+                if (data.status === 'error' || data.status === 'locked') {
+                    mostrarFalla(data);
+                    return;
+                }
+                actualizarFloating(data);
+                pollingTimer = setTimeout(function () {
+                    consultarProgreso(jobId);
+                }, 1000);
+            })
+            .catch(function (error) {
+                mostrarFalla({ message: error.message || 'No se pudo consultar el progreso.' });
+            });
+    }
+
     function cerrarModal() {
         mostrarErrorModal('');
-        fechaModalBS.hide();
+        resetBotonGuardar();
+        if (fechaModalBS) fechaModalBS.hide();
     }
 
     if (editBtn) {
         editBtn.addEventListener('click', function () {
             mostrarErrorModal('');
+            resetBotonGuardar();
             if (nuevaFechaInput) {
                 {% if padron_ultima_fecha %}
                 nuevaFechaInput.value = '{{ padron_ultima_fecha|date:"Y-m-d H:i:s" }}'.replace(' ', 'T').slice(0, 16);
@@ -406,15 +944,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 nuevaFechaInput.value = '';
                 {% endif %}
             }
-            fechaModalBS.show();
+            if (fechaModalBS) fechaModalBS.show();
         });
     }
 
-    var closeBtn = document.getElementById('padronFechaModalCloseBtn');
     if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
-
-    var cancelBtn = document.getElementById('padronFechaModalCancelBtn');
     if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
+    if (reloadBtn) reloadBtn.addEventListener('click', function () {
+        sessionStorage.removeItem(STORAGE_KEY);
+        location.reload();
+    });
+    if (clearBtn) clearBtn.addEventListener('click', limpiarEstadoRefresh);
 
     if (guardarBtn) {
         guardarBtn.addEventListener('click', function () {
@@ -424,8 +964,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            guardarBtn.disabled = true;
-            guardarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            mostrarErrorModal('');
+            bloquearModal(true);
+            guardarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Iniciando...';
 
             fetch('{% url "padroninterno:actualizar_fecha_padron" %}', {
                 method: 'POST',
@@ -446,25 +987,189 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                 })
                 .then(function (data) {
-                    if (data.status === 'success') {
-                        fechaModalBS.hide();
-                        location.reload();
-                    } else {
-                        mostrarErrorModal(data.message || 'No se pudo actualizar la fecha.');
+                    if (data.status === 'accepted' && data.job_id) {
+                        sessionStorage.setItem(STORAGE_KEY, data.job_id);
+                        if (fechaModalBS) fechaModalBS.hide();
+                        resetBotonGuardar();
+                        actualizarFloating({ status: 'running', step: 0, total: 9, percent: 0, message: 'Actualizando datos de Padr\u00f3n...' });
+                        consultarProgreso(data.job_id);
+                        return;
                     }
+                    mostrarErrorModal(data.message || 'No se pudo iniciar el refresh.');
+                    resetBotonGuardar();
                 })
                 .catch(function (error) {
-                    mostrarErrorModal(error.message || 'No se pudo actualizar la fecha.');
-                })
-                .finally(function () {
-                    guardarBtn.disabled = false;
-                    guardarBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Guardar cambios';
+                    mostrarErrorModal(error.message || 'No se pudo iniciar el refresh.');
+                    resetBotonGuardar();
                 });
         });
+    }
+
+    var jobIdActivo = sessionStorage.getItem(STORAGE_KEY);
+    if (jobIdActivo) {
+        actualizarFloating({ status: 'running', step: 0, total: 9, percent: 0, message: 'Recuperando progreso del refresh...' });
+        consultarProgreso(jobIdActivo);
     }
 });
 </script>
 {% endif %}
+<!-- Modal Guia de Uso -->
+<div class="modal fade padron-modal" id="guiaUsoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="w-100">
+          <h5 class="modal-title mb-2"><i class="fa-solid fa-circle-question me-2 text-primary"></i>Gu&iacute;a de Uso</h5>
+          <div class="padron-modal-breadcrumbs">
+            <span class="fw-semibold text-muted">&Uacute;ltimas acciones:</span>
+            <span class="crumb-sep">&raquo;</span>
+            <a href="javascript:void(0)" class="crumb-link">Inicio</a>
+            <span class="crumb-sep">&raquo;</span>
+            <span class="text-muted">Gu&iacute;a de Uso</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="padron-guide-hero">
+          <h6 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-compass me-2"></i>Como aprovechar la pantalla</h6>
+          <p class="mb-2 text-secondary">Desde Inicio pod&eacute;s entrar a los m&oacute;dulos principales del Padr&oacute;n, revisar el estado de actualizaci&oacute;n de los datos y acceder r&aacute;pido a los listados m&aacute;s usados.</p>
+          <div class="padron-guide-chip-row">
+            <span class="padron-guide-chip"><i class="fa-solid fa-building-columns text-primary"></i>Establecimientos</span>
+            <span class="padron-guide-chip"><i class="fa-solid fa-map-location-dot text-success"></i>Localizaciones</span>
+            <span class="padron-guide-chip"><i class="fa-solid fa-graduation-cap text-info"></i>Ofertas</span>
+            <span class="padron-guide-chip"><i class="fa-solid fa-users text-primary"></i>Responsables</span>
+          </div>
+        </div>
+
+        <div class="padron-guide-grid">
+          <div class="padron-guide-card">
+            <h6><i class="fa-solid fa-house text-primary me-2"></i>1. Inicio</h6>
+            <ul>
+              <li>Us&aacute; la barra superior para volver a esta pantalla desde cualquier m&oacute;dulo.</li>
+              <li>Desde los accesos principales pod&eacute;s entrar al listado que necesit&aacute;s sin pasar por pantallas intermedias.</li>
+            </ul>
+          </div>
+
+          <div class="padron-guide-card">
+            <h6><i class="fa-solid fa-building-columns text-primary me-2"></i>2. Establecimientos</h6>
+            <ul>
+              <li>Entr&aacute; al listado completo de establecimientos.</li>
+              <li>Pod&eacute;s acceder tambi&eacute;n a vistas filtradas por estado desde el men&uacute;.</li>
+            </ul>
+          </div>
+
+          <div class="padron-guide-card">
+            <h6><i class="fa-solid fa-map-location-dot text-success me-2"></i>3. Localizaciones</h6>
+            <ul>
+              <li>Consult&aacute; domicilios, anexos y datos de ubicaci&oacute;n vinculados al Padr&oacute;n.</li>
+              <li>El men&uacute; permite abrir r&aacute;pido listados activos, inactivos o de baja.</li>
+            </ul>
+          </div>
+
+          <div class="padron-guide-card">
+            <h6><i class="fa-solid fa-graduation-cap text-info me-2"></i>4. Ofertas locales</h6>
+            <ul>
+              <li>Acced&eacute; a las ofertas educativas disponibles en cada localizaci&oacute;n.</li>
+              <li>Desde el listado pod&eacute;s filtrar, revisar detalles y exportar informaci&oacute;n.</li>
+            </ul>
+          </div>
+
+          <div class="padron-guide-card">
+            <h6><i class="fa-solid fa-users text-primary me-2"></i>5. Responsables</h6>
+            <ul>
+              <li>Ingres&aacute; al listado de responsables registrados.</li>
+              <li>Este acceso centraliza la consulta cuando necesit&aacute;s ubicar una persona responsable.</li>
+            </ul>
+          </div>
+
+          <div class="padron-guide-card">
+            <h6><i class="fa-solid fa-calendar-alt text-success me-2"></i>6. Datos al</h6>
+            <ul>
+              <li>La insignia de fecha indica la &uacute;ltima actualizaci&oacute;n disponible del Padr&oacute;n.</li>
+              <li>Si sos administrador, desde el icono de edici&oacute;n pod&eacute;s actualizar esa referencia.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light border btn-sm" data-bs-dismiss="modal">
+          <i class="fa-solid fa-arrow-left-long me-2 text-primary"></i>Volver
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="padronDatosActualizadosModal" tabindex="-1" aria-labelledby="padronDatosActualizadosModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
+            <div class="modal-header" style="background: #1e3a5f; border: none; padding: 1.2rem 1.4rem;">
+                <h5 class="modal-title mb-0" id="padronDatosActualizadosModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem;">Datos actualizados</h5>
+            </div>
+            <div class="modal-body" style="padding: 1.4rem; color: #334155; font-weight: 600;">
+                <p class="mb-2">Se han actualizado los datos de Padr&oacute;n.</p>
+                <p class="mb-0">Por favor recargue la p&aacute;gina para ver la informaci&oacute;n actualizada.</p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.4rem; background: #f8fafc;">
+                <button type="button" class="btn btn-primary" style="font-weight: 700;" onclick="location.reload();">Recargar ahora</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var versionInicial = '{{ padron_fecha_version|default_if_none:""|escapejs }}';
+    var avisoMostrado = false;
+    var estadoUrl = '{% url "padroninterno:estado_fecha_padron" %}';
+    var modalElement = document.getElementById('padronDatosActualizadosModal');
+
+    function hayRefreshAdminVisible() {
+        var progressBox = document.getElementById('padronRefreshFloatingStatus');
+        return progressBox && !progressBox.classList.contains('d-none');
+    }
+
+    function mostrarAvisoActualizacion() {
+        if (avisoMostrado || hayRefreshAdminVisible() || !modalElement || typeof bootstrap === 'undefined') {
+            return;
+        }
+        avisoMostrado = true;
+        new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false }).show();
+    }
+
+    function consultarVersionPadron() {
+        if (avisoMostrado || hayRefreshAdminVisible()) {
+            return;
+        }
+        fetch(estadoUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return null;
+                }
+                return response.json().catch(function () { return null; });
+            })
+            .then(function (data) {
+                if (!data || data.status !== 'success') {
+                    return;
+                }
+                var versionActual = data.version || '';
+                if (versionActual !== versionInicial) {
+                    mostrarAvisoActualizacion();
+                }
+            })
+            .catch(function () {});
+    }
+
+    if (versionInicial !== null) {
+        setInterval(consultarVersionPadron, 60000);
+    }
+});
+</script>
 
 
 
@@ -1074,14 +1779,6 @@ $(document).ready(function() {
                     else $(this).hide();
                 }
             });
-            
-            $('nav[aria-label^="Paginación"] ul.pagination li.edge-first').remove();
-            $('nav[aria-label^="Paginación"] ul.pagination li.edge-last').remove();
-            
-            var urlFirst = new URL(window.location.href); urlFirst.searchParams.set('page', 1);
-            var urlLast = new URL(window.location.href); urlLast.searchParams.set('page', totalPages);
-            $('<li class="page-item edge-first"><a class="page-link" href="'+urlFirst.toString()+'" title="Primero"><i class="fa-solid fa-angles-left"></i></a></li>').insertAfter(items.first());
-            $('<li class="page-item edge-last"><a class="page-link" href="'+urlLast.toString()+'" title="Último"><i class="fa-solid fa-angles-right"></i></a></li>').insertBefore(items.last());
         }
     }
     

@@ -91,6 +91,8 @@ LOCAL_APPS = [
     'apps.monitoreo_login',
     'apps.sirtee',
     'apps.sirtee.catalogos',
+    'apps.reunidas_pof.apps.ReunidasPofConfig',
+
 ]
 
 

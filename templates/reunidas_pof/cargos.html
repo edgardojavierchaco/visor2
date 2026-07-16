@@ -1,0 +1,97 @@
+﻿{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="cargar" %}
+    <div class="pof-view-header">
+        <h1>👥 AFECTAR CARGOS</h1>
+        <p>Eleg&iacute; d&oacute;nde iniciar el alta de cargos.</p>
+    </div>
+
+    <section class="pof-cargos-selector" aria-labelledby="pofCargosSelectorTitle">
+
+        <div class="pof-cargos-selector-intro">
+            <div class="pof-cargos-selector-pin" aria-hidden="true">
+                📍
+            </div>
+
+            <h2 id="pofCargosSelectorTitle">
+                ¿Dónde querés cargar?
+            </h2>
+
+            <p>
+                Elegí una opción para iniciar la afectación de cargos.
+            </p>
+        </div>
+
+        <div class="pof-cargos-selector-grid">
+
+            <article class="pof-cargos-selector-card">
+                <div class="pof-cargos-selector-card-main">
+
+                    <div class="pof-cargos-selector-icon" aria-hidden="true">
+                        📚
+                    </div>
+
+                    <div class="pof-cargos-selector-content">
+                        <span class="pof-cargos-selector-badge">
+                            REUNIDAS
+                        </span>
+
+                        <h3>Reunidas</h3>
+
+                        <p>
+                            Afectar cargos dentro de una Reunida POF.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pof-cargos-selector-divider"></div>
+
+                <a
+                    href="{% url 'reunidas_pof:cargar_cargos' %}"
+                    class="pof-btn pof-btn-primary pof-cargos-selector-action"
+                >
+                    Ir a Reunidas
+                    <span aria-hidden="true">→</span>
+                </a>
+            </article>
+
+            <article class="pof-cargos-selector-card">
+                <div class="pof-cargos-selector-card-main">
+
+                    <div class="pof-cargos-selector-icon" aria-hidden="true">
+                        📔
+                    </div>
+
+                    <div class="pof-cargos-selector-content">
+                        <span class="pof-cargos-selector-badge">
+                            PROYECTOS ESPECIALES
+                        </span>
+
+                        <h3>Proyectos Especiales</h3>
+
+                        <p>
+                            Afectar cargos en el flujo de Proyecto Especial.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pof-cargos-selector-divider"></div>
+
+                <a
+                    href="{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}"
+                    class="pof-btn pof-btn-primary pof-cargos-selector-action"
+                >
+                    Ir a Proyectos Especiales
+                    <span aria-hidden="true">→</span>
+                </a>
+            </article>
+
+        </div>
+
+    </section>
+</div>
+
+{% endblock %}

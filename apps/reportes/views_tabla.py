@@ -1,15 +1,7 @@
 import psycopg2
-import os
 from django.shortcuts import render
 from django.http import JsonResponse
-
-DB_CONFIG = {
-    "dbname": "visualizador",
-    "user": "visualizador",
-    "password": "Estadisticas24",
-    "host": "relevamientoanual.com.ar",
-    "port": "5432",  # Puerto por defecto de PostgreSQL
-}
+from .db_helpers import conectar_visualizador
 
 def tabla_view(request):
     return render(request, 'reportes/tabla.html')
@@ -18,16 +10,8 @@ def get_table_data(request):
     # Obtener las columnas seleccionadas desde la petición GET
     selected_columns = request.GET.getlist('columns[]')  # ["cueanexo", "cargos", "total"]
 
-    # Conectar a la base de datos PostgreSQL
-    connection = psycopg2.connect(
-        dbname=DB_CONFIG["dbname"],
-        user=DB_CONFIG["user"],
-        password=DB_CONFIG["password"],
-        host=DB_CONFIG["host"],
-        port=DB_CONFIG["port"]
-    )
+    connection = conectar_visualizador()
     cursor = connection.cursor()
-
     
     # Verificar qué columnas están seleccionadas para el agrupamiento
     grouping_columns = []

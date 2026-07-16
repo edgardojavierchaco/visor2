@@ -5,6 +5,7 @@ import json
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from .db_helpers import conectar_visualizador, obtener_dblink_padron
 
 # Vista para obtener la jerarquía geográfica (región -> departamento -> localidad)
 def get_jerarquia_geografica(request):
@@ -72,15 +73,8 @@ def get_jerarquia_geografica(request):
 # Función para conectar a la base de datos
 def conectar_bd(request):
     try:
-        connection = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD'),
-            database=os.getenv('POSTGRES_DB')
-        )
-        return connection
-    except psycopg2.Error as e:
-        # Manejar el error de conexión
+        return conectar_visualizador()
+    except psycopg2.Error:
         return None
 
 # Vista para mostrar el formulario de filtrado de cargos
@@ -186,6 +180,24 @@ def filter_data_cargos(request):
 
         cursor = connection.cursor()
 
+        dblink_conn = obtener_dblink_padron()
+
+        dblink_sql = """
+            SELECT distinct cueanexo, region, sector, ambito, localidad, departamento
+            FROM padron
+        """
+
+        dblink_conn = obtener_dblink_padron()
+
+        dblink_sql = """
+            SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec,
+                fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito,
+                ref_loc, calle, numero, localidad, departamento, cod_postal,
+                categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro,
+                per_funcionamiento, email_loc
+            FROM padron
+        """
+        
         query = f"""
             SELECT
                 cargos,
@@ -195,9 +207,10 @@ def filter_data_cargos(request):
                 SUM(CAST(sin_cubrir AS INT)) AS sin_cubrir                
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
-                    SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT distinct cueanexo, nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
+                   SELECT * FROM dblink (
+                    %s,
+                    %s
+                     ) 
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
                         fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,
@@ -208,7 +221,7 @@ def filter_data_cargos(request):
             WHERE 1=1           
         """
 
-        parameters = []
+        parameters = [dblink_conn, dblink_sql]
         if cueanexo:
             query += "AND p.cueanexo = %s"
             parameters.append(cueanexo)
@@ -338,6 +351,17 @@ def filter_data_docentes(request):
 
             resultados = connection.cursor()
 
+            dblink_conn = obtener_dblink_padron()
+
+            dblink_sql = """
+            SELECT distinct (cueanexo), nom_est, nro_est, anio_creac_establec,
+                fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito,
+                ref_loc, calle, numero, localidad, departamento, cod_postal,
+                categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro,
+                per_funcionamiento, email_loc
+            FROM padron
+        """
+
             query = f"""
                 SELECT
                     docentes,
@@ -346,8 +370,9 @@ def filter_data_docentes(request):
                 FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT distinct (cueanexo), nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
+                        %s,
+                        %s
+                    )
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
                         fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,
@@ -358,7 +383,7 @@ def filter_data_docentes(request):
                 WHERE 1=1 AND docentes !='Total docentes en actividad' AND docentes!='Docentes en tareas pasivas'        
             """
 
-            parameters = []
+            parameters = [dblink_conn, dblink_sql]
             if cueanexo:
                 query += "AND p.cueanexo = %s"
                 parameters.append(cueanexo)
@@ -492,6 +517,13 @@ def filter_data_horas(request):
 
             resultados1 = connection.cursor()
 
+            dblink_conn = obtener_dblink_padron()
+
+            dblink_sql = """
+                SELECT distinct cueanexo, nom_est, nro_est, region, sector, ambito, localidad, departamento
+                FROM padron
+            """
+
             query = f"""
                 SELECT
                     cargos,
@@ -501,9 +533,11 @@ def filter_data_horas(request):
                     SUM(CAST(sin_cubrir AS INT)) AS sin_cubrir                        
                 FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
+                   SELECT * FROM dblink (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT distinct cueanexo, nom_est, nro_est,  region, sector, ambito, localidad, departamento FROM padron'
+                        %s,
+                        %s
+                    )
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, 
                          region varchar, sector varchar, ambito varchar, 
@@ -513,7 +547,7 @@ def filter_data_horas(request):
                 WHERE 1=1      
             """
 
-            parameters = []
+            parameters = [dblink_conn, dblink_sql]
             if cueanexo:
                 query += "AND p.cueanexo = %s"
                 parameters.append(cueanexo)
@@ -647,6 +681,17 @@ def filter_data_docentes_pasiva(request):
 
             resultados = connection.cursor()
 
+            dblink_conn = obtener_dblink_padron()
+
+            dblink_sql = """
+                SELECT distinct (cueanexo), nom_est, nro_est, anio_creac_establec,
+                    fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito,
+                    ref_loc, calle, numero, localidad, departamento, cod_postal,
+                    categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro,
+                    per_funcionamiento, email_loc
+                FROM padron
+            """
+
             query = f"""
                 SELECT
                     docentes,
@@ -655,8 +700,9 @@ def filter_data_docentes_pasiva(request):
                 FROM funcion.{tvista}('{relevamiento}')   
                 LEFT JOIN (
                     SELECT * FROM dblink (
-                        'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT distinct (cueanexo), nom_est, nro_est, anio_creac_establec, fecha_creac_establec, region, udt, cui, cua, cuof, sector, ambito, ref_loc, calle, numero, localidad, departamento, cod_postal, categoria, estado_est, estado_loc, telefono_cod_area, telefono_nro, per_funcionamiento, email_loc FROM padron'
+                        %s,
+                        %s
+                    )
                     ) AS padron (
                         cueanexo varchar, nom_est varchar, nro_est varchar, anio_creac_establec varchar,
                         fecha_creac_establec varchar, region varchar, udt varchar, cui varchar, cua varchar, cuof varchar, sector varchar, ambito varchar, ref_loc varchar,
@@ -667,7 +713,7 @@ def filter_data_docentes_pasiva(request):
                 WHERE 1=1 AND docentes ='Docentes en tareas pasivas'        
             """
 
-            parameters = []
+            parameters = [dblink_conn, dblink_sql]
             if cueanexo:
                 query += "AND p.cueanexo = %s"
                 parameters.append(cueanexo)
@@ -762,23 +808,30 @@ def cargos_ajax(request):
             return JsonResponse({'data': [], 'error': 'Error de conexión'}, status=500)
         cursor = connection.cursor()
 
+        dblink_conn = obtener_dblink_padron()
+
+        dblink_sql = """
+            SELECT distinct cueanexo, region, sector, ambito, localidad, departamento
+            FROM padron
+        """
+
         # ── Query base: misma fuente para cargos y cabeceras ──────────────────
         # El JOIN con el Padrón trae región, sector, etc. para poder filtrar.
         # Armamos el WHERE una sola vez y lo reutilizamos en ambas consultas.
         base_from = f"""
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
-                SELECT * FROM dblink (
-                    'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                    'SELECT distinct cueanexo, region, sector, ambito, localidad, departamento FROM padron'
-                ) AS padron (
-                    cueanexo varchar, region varchar, sector varchar,
-                    ambito varchar, localidad varchar, departamento varchar
-                )
+            SELECT * FROM dblink (
+                %s,
+                %s
+            ) AS padron (
+                cueanexo varchar, region varchar, sector varchar,
+                ambito varchar, localidad varchar, departamento varchar
+            )
             ) AS p using (cueanexo)
             WHERE 1=1
         """
-        parameters = []
+        parameters = [dblink_conn, dblink_sql]
         if cueanexo:
             base_from += " AND p.cueanexo = %s"
             parameters.append(cueanexo)
@@ -867,6 +920,8 @@ def docentes_ajax(request):
             "FROM padron GROUP BY cueanexo"
         )
 
+        dblink_conn = obtener_dblink_padron()
+
         query = f"""
             SELECT docentes,
                 SUM(CAST(total AS INT)) AS total,
@@ -874,8 +929,8 @@ def docentes_ajax(request):
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
                 SELECT * FROM dblink (
-                    'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                    '{dblink_inner_sql}'
+                    %s,
+                    %s
                 ) AS padron (
                     cueanexo varchar, region varchar, sector varchar,
                     ambito varchar, localidad varchar, departamento varchar
@@ -885,7 +940,7 @@ def docentes_ajax(request):
             AND docentes != 'Total docentes en actividad'
             AND docentes != 'Docentes en tareas pasivas'
         """
-        parameters = []
+        parameters = [dblink_conn, dblink_inner_sql]
         if cueanexo:
             query += " AND p.cueanexo = %s"
             parameters.append(cueanexo)
@@ -949,6 +1004,8 @@ def docentes_pasiva_ajax(request):
             "FROM padron GROUP BY cueanexo"
         )
 
+        dblink_conn = obtener_dblink_padron()
+
         query = f"""
             SELECT docentes,
                 SUM(CAST(total AS INT)) AS total,
@@ -956,8 +1013,8 @@ def docentes_pasiva_ajax(request):
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
                 SELECT * FROM dblink (
-                    'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                    '{dblink_inner_sql}'
+                    %s,
+                    %s
                 ) AS padron (
                     cueanexo varchar, region varchar, sector varchar,
                     ambito varchar, localidad varchar, departamento varchar
@@ -965,7 +1022,7 @@ def docentes_pasiva_ajax(request):
             ) AS p using (cueanexo)
             WHERE 1=1 AND docentes = 'Docentes en tareas pasivas'
         """
-        parameters = []
+        parameters = [dblink_conn, dblink_inner_sql]
         if cueanexo:
             query += " AND p.cueanexo = %s"
             parameters.append(cueanexo)
@@ -1031,6 +1088,8 @@ def horas_ajax(request):
             "FROM padron GROUP BY cueanexo"
         )
 
+        dblink_conn = obtener_dblink_padron()
+
         # 1. CONSULTA BLINDADA CON REGEX
         query = f"""
             SELECT cargos,
@@ -1041,8 +1100,8 @@ def horas_ajax(request):
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
                 SELECT * FROM dblink (
-                    'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                    '{dblink_inner_sql}'
+                    %s,
+                    %s
                 ) AS padron (
                     cueanexo varchar, region varchar, sector varchar,
                     ambito varchar, localidad varchar, departamento varchar
@@ -1050,7 +1109,7 @@ def horas_ajax(request):
             ) AS p using (cueanexo)
             WHERE 1=1
         """
-        parameters = []
+        parameters = [dblink_conn, dblink_inner_sql]
         if cueanexo:
             query += " AND p.cueanexo = %s"
             parameters.append(cueanexo)
@@ -1145,14 +1204,16 @@ def cueanexos_cabecera_ajax(request):
             "FROM padron GROUP BY cueanexo"
         )
 
+        dblink_conn = obtener_dblink_padron()
+
         # Usamos CAST(cueanexo AS TEXT) para evitar que Postgres lance error si es un BIGINT
         query = f"""
             SELECT COUNT(DISTINCT cueanexo)
             FROM funcion.{tvista}('{relevamiento}')
             LEFT JOIN (
                 SELECT * FROM dblink (
-                    'dbname=Padron user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                    '{dblink_inner_sql}'
+                    %s,
+                    %s
                 ) AS padron (
                     cueanexo varchar, region varchar, sector varchar,
                     ambito varchar, localidad varchar, departamento varchar
@@ -1161,7 +1222,7 @@ def cueanexos_cabecera_ajax(request):
             WHERE RIGHT(CAST(cueanexo AS TEXT), 2) = '00'
         """
 
-        parameters = []
+        parameters = [dblink_conn, dblink_inner_sql]
         
         if cueanexo:
             query += " AND p.cueanexo = %s"

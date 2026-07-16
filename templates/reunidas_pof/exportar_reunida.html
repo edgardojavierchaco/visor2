@@ -1,0 +1,523 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+{% block content %}
+
+<style>
+    .pof-export-table tr.pof-export-grupo-cue > td {
+        border-top: 3px solid #2444D8;
+    }
+
+    .pof-export-table tr.pof-export-grupo-anexo > td {
+        border-top: 3px solid var(--pof-border);
+    }
+</style>
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="exportar" %}
+    <div class="pof-view-header">
+        <h1>&#128228; {{ titulo_exportacion }}</h1>
+        <p>{{ descripcion_exportacion }}</p>
+    </div>
+
+    <div class="pof-export-summary-bar">
+        <div class="pof-export-summary-card">
+            <span>A&ntilde;o</span>
+            <strong>{{ reunida.anio }}</strong>
+        </div>
+
+        <div class="pof-export-summary-card">
+            <span>{% if es_proyecto_especial %}Proyecto Especial{% else %}Nivel{% endif %}</span>
+            <strong>{{ reunida.nivel }}</strong>
+        </div>
+
+        {% if es_proyecto_especial %}
+            <div class="pof-export-summary-card">
+                <span>Resoluci&oacute;n</span>
+                <strong>{{ proyecto_especial.resolucion }}</strong>
+            </div>
+        {% endif %}
+    </div>
+
+
+    <div class="pof-export-preview">
+        <div class="pof-export-title">
+
+            {% if cabecera_querystring %}
+                <a href="{% url 'reunidas_pof:detalle_reunida' %}?{{ cabecera_querystring }}"
+                class="pof-export-btn-mini pof-export-btn-light">
+                    ↩️ Ir a Detalles
+                </a>
+            {% endif %}
+
+            <div class="pof-export-actions-mini">
+                <span class="pof-export-count" data-pof-export-count>
+                    {{ columnas|length }} columnas visibles &middot; {{ filas_exportacion|length }} filas
+                </span>
+
+                {% if columnas_disponibles %}
+                    <button type="button"
+                            class="pof-export-btn-mini pof-export-btn-light"
+                            data-pof-columns-toggle
+                            aria-expanded="false"
+                            aria-controls="pofExportColumnsPanel">
+                        🗄️ Columnas
+                    </button>
+                {% endif %}
+
+                {% if cabecera_querystring %}
+                    {% if es_proyecto_especial %}
+                        <a href="{% if excel_querystring %}?{{ excel_querystring }}{% else %}#{% endif %}"
+                        class="pof-export-btn-mini pof-export-btn-excel{% if not excel_querystring %} pof-export-btn-disabled{% endif %}"
+                        {% if not excel_querystring %}aria-disabled="true"{% endif %}>
+                            Exportar Excel
+                        </a>
+                    {% else %}
+                        <div class="dropdown pof-grid-dropdown">
+                            <button type="button"
+                                    class="pof-btn pof-btn-excel pof-visual-toolbar-btn dropdown-toggle"
+                                    data-toggle="dropdown"
+                                    aria-haspopup="true"
+                                    aria-expanded="false">
+                                📗 Exportar
+                            </button>
+
+                            <div class="dropdown-menu dropdown-menu-right pof-grid-dropdown-menu">
+                                <a href="{% if excel_querystring %}?{{ excel_querystring }}{% else %}#{% endif %}"
+                                class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success{% if not excel_querystring %} pof-export-btn-disabled{% endif %}"
+                                data-pof-excel-link
+                                {% if not excel_querystring %}aria-disabled="true"{% endif %}>
+                                    📊 Exportar vista actual
+                                </a>
+
+                                <a href="#"
+                                class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
+                                data-pof-excel-all-link>
+                                    📁 Exportar todos los datos
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        {% if columnas_disponibles %}
+            <div id="pofExportColumnsPanel"
+                 class="pof-export-columns-panel"
+                 data-pof-export-columns-panel
+                 data-row-count="{{ filas_exportacion|length }}"
+                 hidden>
+                <div class="pof-export-columns-head">
+                    <strong>Columnas</strong>
+                    <span data-pof-columns-counter>
+                        {{ columnas|length }} de {{ columnas_disponibles|length }} columnas visibles
+                    </span>
+                </div>
+
+                <div class="pof-export-columns-grid">
+                    {% for columna in columnas_disponibles %}
+                        <label class="pof-export-column-option pof-visual-column-option" for="pofExportColumn{{ forloop.counter }}">
+                            <input type="checkbox"
+                                   id="pofExportColumn{{ forloop.counter }}"
+                                   class="pof-export-column-check pof-visual-column-check"
+                                   data-column-checkbox
+                                   data-column-key="{{ columna.key }}"
+                                   data-column-source="{{ columna.source }}"
+                                   data-column-quantity="{% if columna.es_columna_cantidad %}true{% else %}false{% endif %}"
+                                   data-column-observation="{% if columna.es_columna_observacion %}true{% else %}false{% endif %}"
+                                   data-column-required="{% if columna.required %}true{% else %}false{% endif %}"
+                                   data-default-visible="{% if columna.visible_default %}true{% else %}false{% endif %}"
+                                   {% if columna.visible %}checked{% endif %}
+                                   {% if columna.required %}disabled{% endif %}>
+                            <span>{{ columna.titulo }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <div class="pof-export-columns-footer">
+                    <div class="pof-export-columns-actions">
+                        <button type="button"
+                                class="pof-filter-clear-btn"
+                                data-pof-columns-all>
+                            Todas
+                        </button>
+
+                        <button type="button"
+                                class="pof-filter-clear-btn"
+                                data-pof-columns-none>
+                            Ocultar Todas
+                        </button>
+
+                        <button type="button"
+                                class="pof-filter-clear-btn"
+                                data-pof-columns-default>
+                            Por Defecto
+                        </button>
+
+                        <button type="button"
+                                class="pof-filter-clear-btn"
+                                data-pof-export-compact
+                                aria-pressed="false">
+                            Modo compacto
+                        </button>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="pof-export-wrap" data-pof-export-table-wrap>
+            <table class="pof-export-table{% if columnas_disponibles and not columnas_visibles_keys %} pof-export-no-visible-columns{% endif %}"
+                   data-pof-export-table>
+                <thead>
+                    <tr>
+                        {% if columnas_disponibles %}
+                            {% for columna in columnas_disponibles %}
+                                <th data-column-key="{{ columna.key }}" {% if not columna.visible %}hidden{% endif %}>
+                                    {{ columna.titulo }}
+                                </th>
+                                {% if columna.es_ancla_modificacion_cantidad %}
+                                    <th data-pof-quantity-visual-column {% if not mostrar_columna_modificacion_cantidad %}hidden{% endif %}>Modificaci&oacute;n de cantidad</th>
+                                {% endif %}
+                                {% if columna.es_columna_observacion %}
+                                    <th data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>Modificaci&oacute;n de observaci&oacute;n</th>
+                                {% endif %}
+                            {% endfor %}
+                        {% elif columnas_preview_config %}
+                            {% for columna in columnas_preview_config %}
+                                <th>{{ columna.titulo }}</th>
+                                {% if columna.es_ancla_modificacion_cantidad %}
+                                    <th data-pof-quantity-visual-column {% if not mostrar_columna_modificacion_cantidad %}hidden{% endif %}>Modificaci&oacute;n de cantidad</th>
+                                {% endif %}
+                                {% if columna.es_columna_observacion %}
+                                    <th data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>Modificaci&oacute;n de observaci&oacute;n</th>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {% for columna in columnas %}
+                                <th>{{ columna }}</th>
+                            {% endfor %}
+                        {% endif %}
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% if columnas_disponibles %}
+                        <tr class="pof-export-no-columns-row" {% if columnas_visibles_keys %}hidden{% endif %}>
+                            <td colspan="{{ columnas_preview_colspan }}" data-pof-preview-colspan>
+                                No hay columnas visibles. Marc&aacute; al menos una columna para ver la tabla o exportar Excel.
+                            </td>
+                        </tr>
+                    {% endif %}
+
+                    {% for seccion in secciones_preview %}
+
+                        {% for fila in seccion.filas %}
+                            <tr class="{% if es_proyecto_especial %}{% if forloop.first %}pof-section-start{% endif %} {% if forloop.last %}pof-section-end{% endif %}{% else %}{% if fila.es_inicio_cue %}pof-export-grupo-cue{% elif fila.es_inicio_anexo %}pof-export-grupo-anexo{% endif %}{% endif %}">
+                                {% if fila.celdas %}
+                                    {% for celda in fila.celdas %}
+                                        <td data-column-key="{{ celda.key }}" {% if not celda.visible %}hidden{% endif %}>
+                                            {% if celda.es_columna_cantidad %}
+                                                <span class="pof-quantity-cell">
+                                                    {{ celda.valor }}
+                                                    {% if celda.tiene_valor_cantidad and fila.tiene_modificacion_cantidad %}
+                                                        <button type="button"
+                                                                class="pof-history-detail-btn pof-quantity-history-btn"
+                                                                data-pof-quantity-history
+                                                                data-cargo-ids="{{ fila.cargo_ids|join:',' }}"
+                                                                aria-label="Ver historial de cantidad"
+                                                                title="Ver historial de cantidad">&#128337;</button>
+                                                    {% endif %}
+                                                </span>
+                                            {% elif celda.es_columna_estado_pof %}
+                                                <span class="pof-quantity-cell">
+
+                                                    <span class="pof-grid-badge{% if celda.estado_pof_clase %} pof-grid-badge-{{ celda.estado_pof_clase }}{% endif %}">
+                                                        {{ celda.valor|default:"—" }}
+                                                    </span>
+
+                                                    {% if fila.tiene_modificacion_estado %}
+                                                        <button type="button"
+                                                                class="pof-history-detail-btn pof-quantity-history-btn"
+                                                                data-pof-state-history
+                                                                data-cargo-ids="{{ fila.cargo_ids|join:',' }}"
+                                                                aria-label="Ver historial de Estado POF"
+                                                                title="Ver historial de Estado POF">&#128337;</button>
+                                                    {% endif %}
+
+                                                </span>
+                                            {% elif celda.es_columna_observacion %}
+                                                <span>{{ celda.valor|default:"—" }}</span>
+                                                {% if fila.tiene_modificacion_observacion %}
+                                                    <button type="button"
+                                                            class="pof-history-detail-btn pof-quantity-history-btn"
+                                                            data-pof-observation-history
+                                                            data-cargo-ids="{{ fila.cargo_ids|join:',' }}"
+                                                            aria-label="Ver historial de observación"
+                                                            title="Ver historial de observación">&#128337;</button>
+                                                {% endif %}
+                                            {% else %}
+                                                {{ celda.valor }}
+                                            {% endif %}
+                                        </td>
+                                        {% if celda.es_ancla_modificacion_cantidad %}
+                                            <td data-pof-quantity-visual-column {% if not mostrar_columna_modificacion_cantidad %}hidden{% endif %}>
+                                                {% if fila.tiene_modificacion_cantidad %}
+                                                    <span class="pof-grid-badge pof-grid-badge-modificacion">Modificado</span>
+                                                {% else %}
+                                                    <span class="pof-grid-badge pof-grid-badge-desafectado">Sin modificaci&oacute;n</span>
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+                                        {% if celda.es_columna_observacion %}
+                                            <td data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>
+                                                {% if fila.tiene_modificacion_observacion %}
+                                                    <span class="pof-grid-badge pof-grid-badge-modificacion">Modificado</span>
+                                                {% else %}
+                                                    <span class="pof-grid-badge pof-grid-badge-desafectado">Sin modificaci&oacute;n</span>
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    {% for celda in fila %}
+                                        <td>{{ celda }}</td>
+                                    {% endfor %}
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+
+                    {% empty %}
+                        <tr>
+                            <td colspan="{{ columnas_preview_colspan }}" data-pof-preview-colspan>
+                                {% if mensaje_exportacion %}
+                                    {{ mensaje_exportacion }}
+                                {% else %}
+                                    No hay datos para exportar.
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+
+    {% include "reunidas_pof/historial_cantidad_modal.html" %}
+    {% include "reunidas_pof/historial_observacion_modal.html" %}
+    {% include "reunidas_pof/historial_estado_modal.html" %}
+
+    
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
+<script>
+    (function () {
+        const panel = document.querySelector("[data-pof-export-columns-panel]");
+        const table = document.querySelector("[data-pof-export-table]");
+        const tableWrap = document.querySelector("[data-pof-export-table-wrap]");
+
+        if (!panel || !table) {
+            return;
+        }
+
+        const toggle = document.querySelector("[data-pof-columns-toggle]");
+        const checks = Array.from(panel.querySelectorAll("[data-column-checkbox]"));
+        const count = document.querySelector("[data-pof-export-count]");
+        const counter = panel.querySelector("[data-pof-columns-counter]");
+        const excelLink = document.querySelector("[data-pof-excel-link]");
+        const excelAllLink = document.querySelector("[data-pof-excel-all-link]");
+        const compactButton = panel.querySelector("[data-pof-export-compact]");
+        const rowCount = panel.dataset.rowCount || "0";
+        const compactStorageKey = "pof_exportacion_tabla_columnas_compactas";
+
+        /**
+         * Mantiene seleccionadas las columnas operativas obligatorias del exportable.
+         *
+         * - Evita que `CUE-Anexo` desaparezca del preview o del Excel.
+         * - Reaplica el estado requerido despues de acciones masivas.
+         * - Conserva el resto de la interaccion actual sin cambios.
+         */
+        function syncRequiredChecks() {
+            checks.forEach(function (check) {
+                if (check.dataset.columnRequired === "true") {
+                    check.checked = true;
+                }
+            });
+        }
+
+        function getVisibleKeys() {
+            syncRequiredChecks();
+            return checks
+                .filter(function (check) { return check.checked; })
+                .map(function (check) { return check.dataset.columnKey; })
+                .filter(Boolean);
+        }
+
+        function getAllKeys() {
+            return checks
+                .map(function (check) { return check.dataset.columnKey; })
+                .filter(Boolean);
+        }
+
+        function setChecks(callback) {
+            checks.forEach(function (check) {
+                check.checked = check.dataset.columnRequired === "true"
+                    ? true
+                    : callback(check);
+            });
+            updateColumns();
+        }
+
+        /**
+        * Cambia únicamente la presentación visual de la tabla de exportación.
+        *
+        * - No modifica las columnas seleccionadas.
+        * - No modifica los datos exportados al Excel.
+        * - Conserva la preferencia visual entre recargas mediante localStorage.
+        */
+        function setCompactTable(active) {
+            if (!tableWrap || !compactButton) {
+                return;
+            }
+
+            tableWrap.classList.toggle("pof-visual-table-compact", active);
+            compactButton.setAttribute("aria-pressed", active ? "true" : "false");
+            compactButton.textContent = active ? "Vista normal" : "Modo compacto";
+            localStorage.setItem(compactStorageKey, active ? "1" : "0");
+        }
+
+        function buildExcelHref(keys) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("accion");
+            url.searchParams.delete("visible_col");
+            url.searchParams.set("accion", "excel");
+            keys.forEach(function (key) {
+                url.searchParams.append("visible_col", key);
+            });
+            return url.pathname + "?" + url.searchParams.toString();
+        }
+
+        function setExcelLinkState(link, keys) {
+            if (!link) {
+                return;
+            }
+
+            if (!keys.length) {
+                link.classList.add("pof-export-btn-disabled");
+                link.setAttribute("aria-disabled", "true");
+                link.removeAttribute("href");
+                return;
+            }
+
+            link.classList.remove("pof-export-btn-disabled");
+            link.removeAttribute("aria-disabled");
+            link.setAttribute("href", buildExcelHref(keys));
+        }
+
+
+        function setExcelState(keys) {
+            setExcelLinkState(excelLink, keys);
+            setExcelLinkState(excelAllLink, getAllKeys());
+        }
+
+        function updateColumns() {
+            const keys = getVisibleKeys();
+            const visibleSet = new Set(keys);
+
+            table.querySelectorAll("[data-column-key]").forEach(function (cell) {
+                cell.hidden = !visibleSet.has(cell.dataset.columnKey);
+            });
+            const hasVisibleQuantity = checks.some(function (check) {
+                return check.checked && check.dataset.columnQuantity === "true";
+            });
+            table.querySelectorAll("[data-pof-quantity-visual-column]").forEach(function (cell) {
+                cell.hidden = !hasVisibleQuantity;
+            });
+            const hasVisibleObservation = checks.some(function (check) {
+                return check.checked && check.dataset.columnObservation === "true";
+            });
+            table.querySelectorAll("[data-pof-observation-visual-column]").forEach(function (cell) {
+                cell.hidden = !hasVisibleObservation;
+            });
+            table.querySelectorAll("[data-pof-preview-colspan]").forEach(function (cell) {
+                cell.colSpan = checks.length
+                    + (hasVisibleQuantity ? 1 : 0)
+                    + (hasVisibleObservation ? 1 : 0);
+            });
+
+            table.classList.toggle("pof-export-no-visible-columns", keys.length === 0);
+            table.querySelectorAll(".pof-export-no-columns-row").forEach(function (row) {
+                row.hidden = keys.length > 0;
+            });
+
+            if (count) {
+                count.textContent = keys.length + " columnas visibles \u00b7 " + rowCount + " filas";
+            }
+
+            if (counter) {
+                counter.textContent = keys.length + " de " + checks.length + " columnas visibles";
+            }
+
+            setExcelState(keys);
+        }
+
+        if (toggle) {
+            toggle.addEventListener("click", function () {
+                const open = panel.hidden;
+                panel.hidden = !open;
+                toggle.setAttribute("aria-expanded", open ? "true" : "false");
+            });
+        }
+
+        panel.querySelector("[data-pof-columns-all]").addEventListener("click", function () {
+            setChecks(function () { return true; });
+        });
+
+        panel.querySelector("[data-pof-columns-none]").addEventListener("click", function () {
+            setChecks(function () { return false; });
+        });
+
+        panel.querySelector("[data-pof-columns-default]").addEventListener("click", function () {
+            setChecks(function (check) {
+                return check.dataset.defaultVisible === "true";
+            });
+        });
+
+        if (compactButton && tableWrap) {
+            compactButton.addEventListener("click", function () {
+                const active = !tableWrap.classList.contains("pof-visual-table-compact");
+                setCompactTable(active);
+            });
+
+            setCompactTable(
+                localStorage.getItem(compactStorageKey) === "1"
+            );
+        }
+
+        checks.forEach(function (check) {
+            check.addEventListener("change", updateColumns);
+        });
+
+        document.addEventListener("click", function (event) {
+            const disabledExcel = event.target.closest(
+                "[data-pof-excel-link][aria-disabled='true'], " +
+                "[data-pof-excel-all-link][aria-disabled='true']"
+            );
+
+            if (disabledExcel) {
+                event.preventDefault();
+            }
+        });
+
+        updateColumns();
+    }());
+</script>
+{% endblock %}

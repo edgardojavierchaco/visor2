@@ -1,6 +1,100 @@
 {% extends 'archivos/base/layout.html' %}
-{% load mis_filtros %}
+{% load mis_filtros static %}
+{% block head %}
+{{ block.super }}
+<script>
+(function () {
+    var key = 'padron_flicker_diag_enabled';
+    var value = new URLSearchParams(window.location.search).get('padron_diag');
+    if (value === '1') sessionStorage.setItem(key, '1');
+    if (value === '0') sessionStorage.removeItem(key);
+    if (sessionStorage.getItem(key) === '1') {
+        document.write('<script src="{% static 'padroninterno/flicker-forensic-v3.js' %}?v=6"><\/script>');
+    }
+})();
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'padroninterno/css/padroninterno.css' %}">
+<link rel="stylesheet" href="{% static 'padroninterno/css/navigation-view-transition.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'padroninterno/css/panel-option-search.css' %}?v=2">
+<script defer src="{% static 'padroninterno/panel-option-search.js' %}?v=1"></script>
+<link rel="stylesheet" href="{% static 'padroninterno/css/establecimientos-navigation-skeleton-v2.css' %}?v=4">
+<script>
+(function () {
+    var key = 'padron_est_nav_skeleton_v1';
+    var targetPath = '/padron/establecimiento/';
+    var state = null;
+
+    try {
+        state = JSON.parse(sessionStorage.getItem(key) || 'null');
+    } catch (error) {
+        state = null;
+    }
+
+    if (!('onpageswap' in window) && state && state.targetPath === targetPath && state.startedAt && Date.now() - state.startedAt <= 30000) {
+        document.documentElement.classList.add('padron-est-nav-pending');
+    }
+})();
+</script>
+<script defer src="{% static 'padroninterno/establecimientos-navigation-skeleton.js' %}?v=3"></script>
+<script>
+(function() {
+    if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
+        document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+    } else {
+        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+    }
+})();
+</script>
+<style id="padron-prepaint-stability">
+    .content-wrapper > .content-header { display: none !important; }
+    .content-wrapper, .main-header, .main-sidebar, .main-footer { transition: none !important; animation: none !important; }
+    html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar, html.padron-sidebar-initial-collapsed .main-sidebar::before { width: 4.6rem !important; overflow-x: hidden !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover, html.padron-sidebar-initial-collapsed .main-sidebar:hover::before, html.padron-sidebar-initial-collapsed .main-sidebar:focus-within, html.padron-sidebar-initial-collapsed .main-sidebar:focus-within::before { width: 250px !important; overflow-x: visible !important; }
+    .content-wrapper > .content > .container-fluid { max-width: 100% !important; min-width: 0 !important; padding-top: 0 !important; }
+    .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands { display: inline-block; width: 1.25em; min-width: 1.25em; text-align: center; line-height: 1; }
+    .fw-700{font-weight:700!important}.fw-800{font-weight:800!important}
+    @media (max-width: 991.98px) { html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; } html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; } }
+</style>
+{% endblock %}
 {% block content %}
+<div class="padron-est-nav-curtain" data-padron-est-nav-curtain aria-hidden="true">
+    <div class="padron-est-nav-curtain__modulebar">
+        <div class="padron-est-nav-curtain__brand"><i class="fa-solid fa-school" aria-hidden="true"></i><span>Padr&oacute;n Educativo &middot; Chaco</span></div>
+        <div class="padron-est-nav-curtain__guide"><i class="fa-solid fa-circle-question" aria-hidden="true"></i><span>Gu&iacute;a de Uso</span></div>
+        <div class="padron-est-nav-curtain__links">
+            <span><i class="fa-solid fa-house" aria-hidden="true"></i> Inicio</span>
+            <span class="is-active"><i class="fa-solid fa-building-columns" aria-hidden="true"></i> Establecimientos</span>
+            <span><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Localizaciones</span>
+            <span><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> Ofertas Locales</span>
+            <span><i class="fa-solid fa-users" aria-hidden="true"></i> Responsables</span>
+        </div>
+        <div class="padron-est-nav-curtain__date"><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}</div>
+    </div>
+    <div class="padron-est-nav-curtain__content">
+        <div class="padron-est-nav-curtain__heading-row">
+            <h2><i class="fa-solid fa-building-columns" aria-hidden="true"></i> Listado de Establecimientos</h2>
+            <div class="padron-est-nav-curtain__actions">
+                <span class="padron-est-nav-curtain__search"><span class="padron-est-nav-curtain__search-icon"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__search-select">Cue <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__search-input">Buscar en esta columna...</span></span>
+                <span class="padron-est-nav-curtain__button is-outline"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Filtros Excel</span>
+                <span class="padron-est-nav-curtain__button is-solid"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Todo Excel</span>
+            </div>
+        </div>
+        <div class="padron-est-nav-curtain__filter-card"><span class="padron-est-nav-curtain__button is-blue"><i class="fa-solid fa-filter" aria-hidden="true"></i> Filtros <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__button is-gray"><i class="fa-solid fa-table-columns" aria-hidden="true"></i> Columnas <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span><span class="padron-est-nav-curtain__button is-red"><i class="fa-solid fa-broom" aria-hidden="true"></i> Limpiar Filtros</span><span class="padron-est-nav-curtain__button is-dark"><i class="fa-solid fa-compress" aria-hidden="true"></i> Contraer Columnas</span></div>
+        <div class="padron-est-nav-curtain__results"><span><i class="fa-solid fa-table" aria-hidden="true"></i> <strong>Resultados:</strong> Mostrando Establecimientos {% if resultado_desde and resultado_hasta and resultado_total %}{{ resultado_desde }}-{{ resultado_hasta }} de {{ resultado_total }}.{% endif %} <span class="padron-est-nav-curtain__mini-total">Total de Directores{% if resultado_total %}: {{ resultado_total }}{% endif %}</span></span><span class="padron-est-nav-curtain__counter">Mostrando 24 de 24 columnas</span></div>
+        <div class="padron-est-nav-curtain__table" aria-hidden="true">
+            <div class="padron-est-nav-curtain__table-head"><span>Acci&oacute;n</span><span>Cue</span><span>Cantidad de Localizaciones</span><span>C&oacute;digo Jurisdiccional</span><span>Nombre</span><span>Sector</span><span>Dependencia</span><span>Confesional</span><span>Arancelado</span><span>Categor&iacute;a</span><span>Director</span><span>Estado</span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+            <div class="padron-est-nav-curtain__table-row"><span></span><span></span><span></span><span></span><span class="is-wide"></span><span></span><span></span><span class="is-wide"></span><span></span></div>
+        </div>
+    </div>
+</div>
 <script>
 (function() {
     if (sessionStorage.getItem('padron_sidebar_state') === 'closed') {
@@ -11,8 +105,7 @@
 })();
 </script>
 <style id="establecimientos-layout-stability">
-    @import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css");
-    .content-wrapper > .content-header { display: none !important; }
+.content-wrapper > .content-header { display: none !important; }
     .content-wrapper, .main-header, .main-sidebar, .main-footer { transition: none !important; animation: none !important; }
     html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
     html.padron-sidebar-initial-collapsed .main-sidebar, html.padron-sidebar-initial-collapsed .main-sidebar::before { width: 4.6rem !important; overflow-x: hidden !important; }
@@ -21,6 +114,128 @@
     .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands { display: inline-block; width: 1.25em; min-width: 1.25em; text-align: center; line-height: 1; }
     .fw-700{font-weight:700!important}.fw-800{font-weight:800!important}
     @media (max-width: 991.98px) { html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; } html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; } }
+    .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top {
+        align-items: center;
+        color: rgba(255,255,255,.9);
+        font-weight: 700;
+        font-size: .875rem;
+        line-height: 1.2;
+        white-space: nowrap;
+        border-radius: .5rem;
+        padding: .5rem .55rem;
+        text-decoration: none;
+    }
+
+    .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top:hover,
+    .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top:focus {
+        color: #fff;
+        background: rgba(255,255,255,.12);
+    }
+
+    @media (min-width: 992px) {
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-menu {
+            display: none !important;
+        }
+    }
+
+    @media (min-width: 1400px) {
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] > .container-fluid {
+            flex-wrap: nowrap;
+            align-items: center;
+            column-gap: .35rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-brand {
+            order: 1;
+            flex: 0 0 auto;
+            min-width: 0;
+            max-width: 265px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-collapse {
+            order: 2;
+            flex: 1 1 auto;
+            flex-basis: auto;
+            min-width: 0;
+            align-items: center;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-nav.me-auto {
+            flex: 1 1 auto;
+            min-width: 0;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top {
+            order: 3;
+            flex: 0 0 auto;
+            margin-left: .5rem;
+        }
+    }
+
+    @media (min-width: 992px) and (max-width: 1399.98px) {
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] > .container-fluid {
+            flex-wrap: wrap;
+            align-items: flex-start;
+            row-gap: .1rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-brand {
+            order: 1;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: calc(100% - 150px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .padron-nav-guide-top {
+            order: 2;
+            flex: 0 0 auto;
+            margin-left: auto;
+            margin-top: .05rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-toggler {
+            order: 3;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-collapse {
+            order: 4;
+            flex: 0 0 100%;
+            width: 100%;
+            min-width: 0;
+            align-items: flex-start;
+            margin-top: .05rem;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .navbar-nav.me-auto {
+            flex: 1 1 auto;
+            min-width: 0;
+            flex-wrap: wrap;
+            align-items: center;
+            row-gap: .15rem;
+            margin-right: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .nav-link {
+            white-space: nowrap;
+        }
+
+        .padron-module-nav[data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02"] .fecha-badge-nav {
+            margin-top: .25rem;
+            margin-bottom: .25rem;
+        }
+    }
+
 </style>
 <script>
     (function() {
@@ -83,7 +298,51 @@
     })();
 </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'padroninterno/css/padroninterno.css' %}">
 <style>
+
+        @media (max-width: 991.98px) {
+        .padron-module-nav > .container-fluid {
+            flex-wrap: wrap;
+            gap: .35rem .5rem;
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+
+        .padron-module-nav .navbar-brand {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: calc(100% - 54px);
+            margin-right: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: .92rem;
+        }
+
+        .padron-module-nav .navbar-toggler {
+            flex: 0 0 auto;
+            width: 44px;
+            min-width: 44px;
+            height: 38px;
+            margin-left: auto;
+            padding: .25rem .45rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .padron-module-nav .navbar-collapse {
+            flex-basis: 100%;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .padron-module-nav .navbar-brand {
+            font-size: .84rem;
+        }
+    }
 
     /* =========================================================
    ANTI-JANK Padrón
@@ -357,19 +616,20 @@ html {
     }
 
     #liveSearchContainer {
-        max-width: 320px !important;
+        width: 100%;
+        max-width: 660px !important;
         height: 31px !important;
         display: flex;
         align-items: center;
     }
 
     .search-slot {
-        width: min(100%, 320px);
+        width: min(100%, 660px);
         min-height: 31px;
         display: flex;
         align-items: center;
-        flex: 1 1 320px;
-        min-width: 220px;
+        flex: 1 1 520px;
+        min-width: 320px;
     }
 
     #headerActions,
@@ -459,6 +719,30 @@ html {
         border-bottom-left-radius: 0 !important;
         padding: 0 10px !important;
         line-height: 1 !important;
+        cursor: pointer;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    #liveSearchClear i {
+        transition: transform 0.16s ease;
+    }
+
+    #liveSearchClear:hover,
+    #liveSearchClear:focus-visible {
+        background-color: #fff1f2 !important;
+        border-color: #f1aeb5 !important;
+        color: #b02a37 !important;
+        box-shadow: inset 0 0 0 1px rgba(220, 53, 69, 0.16) !important;
+    }
+
+    #liveSearchClear:hover i,
+    #liveSearchClear:focus-visible i {
+        transform: scale(1.12);
+    }
+
+    #liveSearchClear:active {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
     }
 
     .btn-excel {
@@ -1115,6 +1399,7 @@ html {
     .padron-module-nav .nav-link {
         font-weight: 600;
         font-size: .875rem;
+        white-space: nowrap;
     }
 
     .padron-module-nav .dropdown-menu {
@@ -1122,20 +1407,92 @@ html {
         box-shadow: 0 0.5rem 1.3rem rgba(15, 44, 77, 0.12);
     }
 
-    .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; }
-    .fecha-badge i { font-size: 0.85rem; color: #3b82f6; }
+    .padron-module-nav .dropdown { position: relative; }
+
+    @media (min-width: 992px) {
+        .padron-module-nav .container-fluid {
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: .55rem;
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+
+        .padron-module-nav .navbar-brand {
+            flex: 0 0 auto;
+            margin-right: .25rem;
+            white-space: nowrap;
+            font-size: 1rem;
+            letter-spacing: .1px;
+        }
+
+        .padron-module-nav .navbar-brand .me-2 {
+            margin-right: .4rem !important;
+        }
+
+        .padron-module-nav .navbar-collapse {
+            flex: 1 1 auto;
+            flex-basis: auto;
+            min-width: 0;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: .35rem;
+        }
+
+        .padron-module-nav .navbar-nav.me-auto {
+            flex: 1 1 auto;
+            min-width: 0;
+            flex-wrap: wrap;
+            align-items: center;
+            row-gap: .15rem;
+        }
+
+        .padron-module-nav .navbar-nav.ms-auto {
+            flex: 0 0 auto;
+            align-items: center;
+            margin-left: .25rem !important;
+        }
+
+        .padron-module-nav .nav-link {
+            font-size: .82rem;
+            padding-left: .3rem;
+            padding-right: .3rem;
+        }
+
+        .padron-module-nav .nav-link .me-1 {
+            margin-right: .25rem !important;
+        }
+
+        .padron-module-nav .fecha-badge {
+            font-size: .78rem;
+            padding: .18rem .65rem;
+            gap: .35rem;
+        }
+
+        .padron-module-nav .fecha-badge .edit-icon {
+            margin-left: 0;
+        }
+    }
+
+    .fecha-badge { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 40px; padding: 0.2rem 0.9rem; font-size: 0.8rem; font-weight: 600; color: #1e293b; display: inline-flex; align-items: center; gap: 0.5rem; line-height: 1.2; white-space: nowrap; flex: 0 0 auto; transition: all 0.2s ease; }
+    .fecha-badge i { font-size: 0.85rem; color: #3b82f6; flex: 0 0 auto; }
     .fecha-badge .edit-icon { cursor: pointer; transition: transform 0.2s, color 0.2s; margin-left: 4px; font-size: 0.8rem; color: #64748b; }
     .fecha-badge .edit-icon:hover { color: #2563eb; transform: scale(1.1); }
-    .fecha-badge-nav { margin: .25rem 0; }
+    .fecha-badge-nav { margin: .25rem 0; white-space: nowrap; }
+    .padron-fecha-nav-item { flex: 0 0 auto; display: flex !important; align-items: center; }
 
     /* CorrecciÃ³n para que el "100" sea siempre visible */
     .pageSizeSelector { width: 82px !important; }
 
-    .pagination .page-link { font-size: .82rem; color: var(--padron-primary); }
+    .pagination .page-link { font-size: .82rem; color: var(--padron-primary); min-width: 2.25rem; min-height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; }
     .pagination .page-item.active .page-link { background-color: var(--padron-primary); border-color: var(--padron-primary); color: #fff; }
     #pagination-nav { opacity: 0; min-height: 38px; transition: opacity .15s ease-in-out; }
     #pagination-container { min-height: 76px; }
-    #paginador-lista { max-height: 40px; overflow: hidden; }
+    #paginador-lista {
+    max-height: none;
+    overflow: visible;
+    row-gap: .35rem;
+}
     
     #headerActions {
         flex: 1 1 560px;
@@ -1149,6 +1506,12 @@ html {
     #excelButtons {
         flex-wrap: wrap;
         justify-content: flex-end;
+    }
+
+    .padron-list-header {
+        padding-top: .25rem;
+        margin-bottom: 1.5rem !important;
+        row-gap: .85rem;
     }
 
     .page-heading {
@@ -1227,6 +1590,13 @@ html {
 
         .filter-card {
             padding: .9rem !important;
+        }
+
+        .search-slot,
+        #liveSearchContainer {
+            width: 100%;
+            max-width: none !important;
+            min-width: 0;
         }
 
         .filter-toolbar > * {
@@ -1800,11 +2170,14 @@ html {
 </style>
 
 
-<div class="establecimientos-wrapper">
-<nav class="navbar navbar-expand-lg navbar-dark padron-module-nav">
-    <div class="container-fluid px-3 px-lg-4">
+<div class="establecimientos-wrapper padron-page-wrapper{% if establecimientos_async_loading %} padron-is-initial-loading{% endif %}" data-padron-initial-loading="{% if establecimientos_async_loading %}true{% else %}false{% endif %}">
+<nav class="navbar navbar-expand-lg navbar-dark padron-module-nav" data-nav-layout="PATCH_NAVBAR_GUIDE_HEADER_20260603_02">
+    <div class="container-fluid px-3">
         <a class="navbar-brand" href="/padron/">
             <i class="fa-solid fa-school me-2"></i>Padr&oacute;n Educativo &middot; Chaco
+        </a>
+        <a class="nav-link padron-nav-guide-top d-none d-lg-inline-flex" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#guiaUsoModal">
+            <i class="fa-solid fa-circle-question me-1"></i>Gu&iacute;a de Uso
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#establecimientosModuleNav" aria-controls="establecimientosModuleNav" aria-expanded="false" aria-label="Alternar navegacion del modulo">
             <span class="navbar-toggler-icon"></span>
@@ -1861,14 +2234,14 @@ html {
                         <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
                     </ul>
                 </li>
-                <li class="nav-item d-flex align-items-center">
+                <li class="nav-item d-flex align-items-center padron-fecha-nav-item">
                     <span class="fecha-badge fecha-badge-nav">
                         <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}
                         {% if padron_is_admin %}<i class="fa-solid fa-edit edit-icon" id="padronEditFechaBtn" title="Editar fecha"></i>{% endif %}
                     </span>
                 </li>
             </ul>
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto padron-nav-guide-menu">
                 <li class="nav-item">
                     <a class="nav-link" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#guiaUsoModal">
                         <i class="fa-solid fa-circle-question me-1"></i>Gu&iacute;a de Uso
@@ -1906,6 +2279,7 @@ html {
                 <div id="padronFechaModalError" style="display: none; align-items: center; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.85rem; font-weight: 600;">
                     <i class="fa-solid fa-exclamation-circle me-2"></i><span id="padronFechaModalErrorText"></span>
                 </div>
+
             </div>
             <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; background: #f8fafc;">
                 <button type="button" id="padronFechaModalCancelBtn" class="btn btn-light" style="border: 1.5px solid #cbd5e1; font-weight: 600;">Cancelar</button>
@@ -1915,24 +2289,45 @@ html {
     </div>
 </div>
 {% endif %}
-
-<div class="card border-0 shadow-sm rounded-3">
-    <div class="card-body p-4">
-
-        <!-- Page heading + Excel buttons -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-            <div class="page-heading">
-                <h2><i class="fa-solid fa-school me-2 opacity-75"></i>Listado de Establecimientos</h2>
+<div id="padronRefreshFloatingStatus" class="d-none" data-refresh-active="0" style="width: 100%; margin: 0.9rem 0 1.05rem 0; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #ecfdf5 100%); border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; border-radius: 0.85rem; padding: 0.95rem 1.1rem; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);">
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-2" style="gap: 0.85rem;">
+        <div class="d-flex align-items-start" style="gap: 0.75rem; min-width: 240px;">
+            <div style="width: 2.35rem; height: 2.35rem; border-radius: 999px; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.18);">
+                <i id="padronRefreshFloatingIcon" class="fa-solid fa-rotate fa-spin" style="font-size: 0.95rem;"></i>
             </div>
-            <div class="d-flex flex-wrap justify-content-end align-items-center gap-2 ms-auto py-1" id="headerActions">
+            <div>
+                <div class="fw-bold" id="padronRefreshFloatingTitle" style="color: #0f172a; font-size: 0.95rem; line-height: 1.25;">Actualizando datos de Padr&oacute;n...</div>
+                <div class="small text-muted" style="margin-top: 0.2rem;">Pod&eacute;s seguir usando el sistema mientras finaliza el refresh.</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill" id="padronRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 9</span>
+            <button id="padronRefreshReloadBtn" type="button" class="btn btn-sm btn-primary d-none" style="font-weight: 800; box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);">Recargar ahora</button>
+            <button id="padronRefreshClearBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" style="font-weight: 700;">Cerrar</button>
+        </div>
+    </div>
+    <div class="progress" style="height: 1rem; border-radius: 999px; background: #dbeafe; overflow: hidden; box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);">
+        <div id="padronRefreshFloatingBar" class="progress-bar" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #2563eb 0%, #06b6d4 55%, #22c55e 100%); font-size: 0.72rem; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35); transition: width 0.45s ease; display: flex; align-items: center; justify-content: center; min-width: 2.3rem;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
+    <div class="small mt-2" style="display: flex; gap: 0.8rem; flex-wrap: wrap; color: #475569; font-weight: 600;">
+        <span id="padronRefreshFloatingCurrent"></span>
+        <span id="padronRefreshFloatingElapsed"></span>
+    </div>
+</div>
+
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-4 padron-list-header">
+            <div class="page-heading">
+                <h2><i class="fa-solid fa-building-columns me-2"></i>Listado de Establecimientos</h2>
+            </div>
+            <div id="headerActions" class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
                 <div id="liveSearchMount" class="search-slot"></div>
-                <div class="d-flex gap-2" id="excelButtons">
-                    <a href="?{% query_transform request formato='excel_pagina' %}" class="btn btn-outline-success btn-excel" title="Descargar resultados filtrados y columnas visibles a Excel">
+                <div id="excelButtons" class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                    <button type="button" id="btnExcelPagina" class="btn btn-outline-success btn-sm shadow-sm btn-excel">
                         <i class="fa-solid fa-file-excel me-1"></i>Filtros Excel
-                    </a>
-                    <a href="?{% query_transform request formato='excel_todo' %}" class="btn btn-success btn-excel" title="Descargar todo a Excel">
+                    </button>
+                    <button type="button" id="btnExcelTodo" class="btn btn-success btn-sm shadow-sm btn-excel">
                         <i class="fa-solid fa-file-excel me-1"></i>Todo Excel
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1941,7 +2336,7 @@ html {
         <form method="get" action="/padron/establecimiento/" id="filtros_form">
             <input type="hidden" name="campo_filtro" id="campo_filtro_activo" value="">
 
-            <div class="filter-card p-3 mb-3">
+            <div class="filter-card p-3 mb-4">
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2 filter-toolbar">
                     <button type="button" class="btn btn-outline-primary filter-toggle-btn d-flex justify-content-between align-items-center gap-2"
                             onclick="$('#pnlColumnas').hide();$('#pnlFiltros').toggle();">
@@ -2063,16 +2458,22 @@ html {
 
         <!-- Results bar -->
        <div class="d-flex align-items-center justify-content-between results-bar" style="margin-bottom: 0 !important;">
-            <span>
+            <span id="resultsSummary">
                 <i class="fa-solid fa-table me-1 text-muted"></i>
-                <strong>Resultados:</strong> Mostrando Establecimientos {{ resultado_desde }}-{{ resultado_hasta }} de {{ resultado_total }}.
-                <span class="results-mini-total ms-2">Total de Directores: {{ resultado_total }}</span>
+                <strong>Resultados:</strong>
+                {% if establecimientos_async_loading %}
+                    Cargando...
+                    <span class="results-mini-total ms-2">Total de Directores: calcul&aacute;ndose...</span>
+                {% else %}
+                    Mostrando Establecimientos {{ resultado_desde }}-{{ resultado_hasta }} de {{ resultado_total }}.
+                    <span class="results-mini-total ms-2">Total de Directores: {{ resultado_total }}</span>
+                {% endif %}
             </span>
             <span id="colCounterTopLabel" class="badge bg-secondary text-white shadow-sm" style="font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.6rem;"></span>
         </div>
 
         {# ===== TABLA DE DATOS ===== #}
-            <div class="table-shell">
+            <div class="table-shell{% if establecimientos_async_loading %} padron-initial-table-shell{% endif %}">
             <div class="table-responsive">
                 <table class="table table-bordered table-striped table-hover table-sm table-padron align-middle">
 <thead class="sticky-top">
@@ -2103,7 +2504,14 @@ html {
             <th class="col-descrip-inst-legal"><a href="?{% query_transform request orden='descrip_inst_legal' %}">DESCRIP. Inst. Legal Creacion del Establecimiento</a></th>
         </tr>
     </thead>
-        <tbody>
+        <tbody id="establecimientosTableBody">
+            {% if establecimientos_async_loading %}
+            <tr class="padron-table-loading-row">
+                <td colspan="24" class="padron-table-loading-cell text-start py-3 text-muted">
+                    <span class="padron-empty-inline padron-table-loading-inline"><i class="fa-solid fa-spinner fa-spin"></i>Cargando...</span>
+                </td>
+            </tr>
+            {% endif %}
             {% for item in lista_items %}
             <tr class="align-middle text-center small">
                 <td class="col-accion">
@@ -2146,8 +2554,8 @@ html {
                     <i class="table-loading-icon fa-solid fa-magnifying-glass"></i>
                 </div>
                 <div class="table-loading-copy">
-                    <div class="table-loading-title"></div>
-                    <div class="table-loading-text"></div>
+                    <div class="table-loading-title">{% if establecimientos_async_loading %}Cargando...{% endif %}</div>
+                    <div class="table-loading-text">{% if establecimientos_async_loading %}Preparando el listado inicial.{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -2155,7 +2563,7 @@ html {
         {# ===== FIN TABLA ===== #}
 
         <!-- Paginador Bootstrap -->
-<div id="pagination-container" class="mt-3">
+<div id="pagination-container" class="mt-3{% if establecimientos_async_loading %} padron-initial-pagination-pending{% endif %}">
     <div class="d-flex align-items-center mb-2 mx-auto justify-content-center psize-container">
         <span class="text-muted small fw-bold me-2">Registros por página:</span>
     <select class="form-select form-select-sm pageSizeSelector" id="pageSizeSelectorMain" style="width: 82px;">
@@ -2167,29 +2575,33 @@ html {
     </div>
 
     <nav id="pagination-nav" aria-label="Paginaci&oacute;n de establecimientos">
-       <ul class="pagination justify-content-center flex-wrap" id="paginador-lista">
+       <ul class="pagination justify-content-center flex-wrap" id="paginador-lista" data-pagination-layout="PATCH_PAGINATION_VISIBLE_WRAP_20260603_01">
             {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% query_transform request page=page_obj.previous_page_number %}"><i class="fa-solid fa-chevron-left me-1"></i>Anterior</a>
-                </li>
+                <li class="page-item"><a class="page-link" href="?{% query_transform request page=1 %}">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?{% query_transform request page=page_obj.previous_page_number %}">Anterior</a></li>
             {% else %}
-                <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-chevron-left me-1"></i>Anterior</span></li>
+                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
             {% endif %}
 
             {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                {% else %}
-                    <li class="page-item"><a class="page-link" href="?{% query_transform request page=num %}">{{ num }}</a></li>
+                {% if num == 1 or num == page_obj.paginator.num_pages or num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="?{% query_transform request page=num %}">{{ num }}</a></li>
+                    {% endif %}
+                {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                    <li class="page-item disabled"><span class="page-link border-0 text-muted bg-transparent">...</span></li>
                 {% endif %}
             {% endfor %}
 
             {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% query_transform request page=page_obj.next_page_number %}">Siguiente<i class="fa-solid fa-chevron-right ms-1"></i></a>
-                </li>
+                <li class="page-item"><a class="page-link" href="?{% query_transform request page=page_obj.next_page_number %}">Siguiente</a></li>
+                <li class="page-item"><a class="page-link" href="?{% query_transform request page=page_obj.paginator.num_pages %}">&raquo;</a></li>
             {% else %}
-                <li class="page-item disabled"><span class="page-link">Siguiente<i class="fa-solid fa-chevron-right ms-1"></i></span></li>
+                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
             {% endif %}
         </ul>
     </nav>
@@ -2203,6 +2615,8 @@ html {
 {% if padron_is_admin %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var STORAGE_KEY = 'padronRefreshJobId';
+
     function getCsrfToken() {
         var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
         if (tokenInput) {
@@ -2222,14 +2636,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var modalElement = document.getElementById('padronFechaModal');
-    if (!modalElement || typeof bootstrap === 'undefined') {
-        return;
-    }
-
-    var fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+    var fechaModalBS = modalElement && typeof bootstrap !== 'undefined'
+        ? new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false })
+        : null;
     var editBtn = document.getElementById('padronEditFechaBtn');
     var guardarBtn = document.getElementById('padronGuardarFechaBtn');
     var nuevaFechaInput = document.getElementById('padronNuevaFecha');
+    var closeBtn = document.getElementById('padronFechaModalCloseBtn');
+    var cancelBtn = document.getElementById('padronFechaModalCancelBtn');
+    var floatingBox = document.getElementById('padronRefreshFloatingStatus');
+    var floatingTitle = document.getElementById('padronRefreshFloatingTitle');
+    var floatingBar = document.getElementById('padronRefreshFloatingBar');
+    var floatingStep = document.getElementById('padronRefreshFloatingStep');
+    var floatingCurrent = document.getElementById('padronRefreshFloatingCurrent');
+    var floatingElapsed = document.getElementById('padronRefreshFloatingElapsed');
+    var floatingIcon = document.getElementById('padronRefreshFloatingIcon');
+    var reloadBtn = document.getElementById('padronRefreshReloadBtn');
+    var clearBtn = document.getElementById('padronRefreshClearBtn');
+    var progresoUrlTemplate = '{% url "padroninterno:progreso_actualizar_fecha_padron" "00000000-0000-0000-0000-000000000000" %}';
+    var pollingTimer = null;
 
     function mostrarErrorModal(msg) {
         var errDiv = document.getElementById('padronFechaModalError');
@@ -2246,14 +2671,148 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function progresoUrl(jobId) {
+        return progresoUrlTemplate.replace('00000000-0000-0000-0000-000000000000', jobId);
+    }
+
+    function bloquearModal(bloquear) {
+        if (nuevaFechaInput) nuevaFechaInput.disabled = bloquear;
+        if (guardarBtn) guardarBtn.disabled = bloquear;
+        if (cancelBtn) cancelBtn.disabled = bloquear;
+        if (closeBtn) closeBtn.disabled = bloquear;
+    }
+
+    function resetBotonGuardar() {
+        bloquearModal(false);
+        if (guardarBtn) guardarBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Guardar cambios';
+    }
+
+    function mostrarFloating() {
+        if (!floatingBox) return;
+        floatingBox.classList.remove('d-none');
+        floatingBox.setAttribute('data-refresh-active', '1');
+    }
+
+    function ocultarFloating() {
+        if (!floatingBox) return;
+        floatingBox.classList.add('d-none');
+        floatingBox.setAttribute('data-refresh-active', '0');
+    }
+
+    function actualizarFloating(data) {
+        var total = data.total || 9;
+        var step = data.step || 0;
+        var percent = Math.max(0, Math.min(100, parseInt(data.percent || 0, 10)));
+        mostrarFloating();
+        if (floatingTitle) floatingTitle.textContent = data.message || 'Actualizando datos de Padr\u00f3n...';
+        if (floatingIcon) floatingIcon.className = 'fa-solid fa-rotate fa-spin';
+        if (floatingBar) {
+            floatingBar.style.width = percent + '%';
+            floatingBar.setAttribute('aria-valuenow', String(percent));
+            floatingBar.textContent = percent + '%';
+            floatingBar.classList.remove('bg-danger');
+        }
+        if (floatingStep) floatingStep.textContent = step + ' / ' + total;
+        if (floatingCurrent) floatingCurrent.textContent = data.current_view || '';
+        if (floatingElapsed) floatingElapsed.textContent = data.elapsed_seconds ? data.elapsed_seconds + ' s' : '';
+        if (reloadBtn) reloadBtn.classList.toggle('d-none', data.status !== 'success');
+        if (clearBtn) clearBtn.classList.toggle('d-none', !(data.status === 'error' || data.status === 'locked'));
+    }
+
+    function detenerPolling() {
+        if (pollingTimer) {
+            clearTimeout(pollingTimer);
+            pollingTimer = null;
+        }
+    }
+
+    function limpiarEstadoRefresh() {
+        detenerPolling();
+        sessionStorage.removeItem(STORAGE_KEY);
+        ocultarFloating();
+    }
+
+    function mostrarFinalizado(data) {
+        detenerPolling();
+        mostrarFloating();
+        if (floatingTitle) floatingTitle.textContent = 'Refresh completado. Recarg\u00e1 la p\u00e1gina para ver los datos actualizados.';
+        if (floatingIcon) floatingIcon.className = 'fa-solid fa-check';
+        if (floatingBar) {
+            floatingBar.style.width = '100%';
+            floatingBar.setAttribute('aria-valuenow', '100');
+            floatingBar.textContent = '100%';
+            floatingBar.classList.remove('bg-danger');
+        }
+        if (floatingStep) floatingStep.textContent = (data.step || 9) + ' / ' + (data.total || 9);
+        if (floatingCurrent) floatingCurrent.textContent = '';
+        if (floatingElapsed) floatingElapsed.textContent = data.elapsed_seconds ? data.elapsed_seconds + ' s' : '';
+        if (reloadBtn) reloadBtn.classList.remove('d-none');
+        if (clearBtn) clearBtn.classList.add('d-none');
+        if (floatingBox) floatingBox.setAttribute('data-refresh-active', '0');
+    }
+
+    function mostrarFalla(data) {
+        detenerPolling();
+        mostrarFloating();
+        if (floatingTitle) floatingTitle.textContent = data.message || 'No se pudo completar el refresh.';
+        if (floatingIcon) floatingIcon.className = 'fa-solid fa-triangle-exclamation';
+        if (floatingBar) {
+            floatingBar.style.width = '100%';
+            floatingBar.setAttribute('aria-valuenow', '100');
+            floatingBar.textContent = 'Error';
+            floatingBar.classList.add('bg-danger');
+        }
+        if (reloadBtn) reloadBtn.classList.add('d-none');
+        if (clearBtn) clearBtn.classList.remove('d-none');
+        if (floatingBox) floatingBox.setAttribute('data-refresh-active', '0');
+    }
+
+    function consultarProgreso(jobId) {
+        if (!jobId) return;
+        fetch(progresoUrl(jobId), {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function (response) {
+                return response.json().catch(function () {
+                    return {};
+                }).then(function (data) {
+                    if (!response.ok) {
+                        throw new Error(data.message || 'HTTP ' + response.status);
+                    }
+                    return data;
+                });
+            })
+            .then(function (data) {
+                if (data.status === 'success' || (((data.percent || 0) >= 100) && ((data.step || 0) >= (data.total || 9)) && !data.current_view)) {
+                    mostrarFinalizado(data);
+                    return;
+                }
+                if (data.status === 'error' || data.status === 'locked') {
+                    mostrarFalla(data);
+                    return;
+                }
+                actualizarFloating(data);
+                pollingTimer = setTimeout(function () {
+                    consultarProgreso(jobId);
+                }, 1000);
+            })
+            .catch(function (error) {
+                mostrarFalla({ message: error.message || 'No se pudo consultar el progreso.' });
+            });
+    }
+
     function cerrarModal() {
         mostrarErrorModal('');
-        fechaModalBS.hide();
+        resetBotonGuardar();
+        if (fechaModalBS) fechaModalBS.hide();
     }
 
     if (editBtn) {
         editBtn.addEventListener('click', function () {
             mostrarErrorModal('');
+            resetBotonGuardar();
             if (nuevaFechaInput) {
                 {% if padron_ultima_fecha %}
                 nuevaFechaInput.value = '{{ padron_ultima_fecha|date:"Y-m-d H:i:s" }}'.replace(' ', 'T').slice(0, 16);
@@ -2261,15 +2820,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 nuevaFechaInput.value = '';
                 {% endif %}
             }
-            fechaModalBS.show();
+            if (fechaModalBS) fechaModalBS.show();
         });
     }
 
-    var closeBtn = document.getElementById('padronFechaModalCloseBtn');
     if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
-
-    var cancelBtn = document.getElementById('padronFechaModalCancelBtn');
     if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
+    if (reloadBtn) reloadBtn.addEventListener('click', function () {
+        sessionStorage.removeItem(STORAGE_KEY);
+        location.reload();
+    });
+    if (clearBtn) clearBtn.addEventListener('click', limpiarEstadoRefresh);
 
     if (guardarBtn) {
         guardarBtn.addEventListener('click', function () {
@@ -2279,8 +2840,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            guardarBtn.disabled = true;
-            guardarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            mostrarErrorModal('');
+            bloquearModal(true);
+            guardarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Iniciando...';
 
             fetch('{% url "padroninterno:actualizar_fecha_padron" %}', {
                 method: 'POST',
@@ -2301,25 +2863,101 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                 })
                 .then(function (data) {
-                    if (data.status === 'success') {
-                        fechaModalBS.hide();
-                        location.reload();
-                    } else {
-                        mostrarErrorModal(data.message || 'No se pudo actualizar la fecha.');
+                    if (data.status === 'accepted' && data.job_id) {
+                        sessionStorage.setItem(STORAGE_KEY, data.job_id);
+                        if (fechaModalBS) fechaModalBS.hide();
+                        resetBotonGuardar();
+                        actualizarFloating({ status: 'running', step: 0, total: 9, percent: 0, message: 'Actualizando datos de Padr\u00f3n...' });
+                        consultarProgreso(data.job_id);
+                        return;
                     }
+                    mostrarErrorModal(data.message || 'No se pudo iniciar el refresh.');
+                    resetBotonGuardar();
                 })
                 .catch(function (error) {
-                    mostrarErrorModal(error.message || 'No se pudo actualizar la fecha.');
-                })
-                .finally(function () {
-                    guardarBtn.disabled = false;
-                    guardarBtn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Guardar cambios';
+                    mostrarErrorModal(error.message || 'No se pudo iniciar el refresh.');
+                    resetBotonGuardar();
                 });
         });
+    }
+
+    var jobIdActivo = sessionStorage.getItem(STORAGE_KEY);
+    if (jobIdActivo) {
+        actualizarFloating({ status: 'running', step: 0, total: 9, percent: 0, message: 'Recuperando progreso del refresh...' });
+        consultarProgreso(jobIdActivo);
     }
 });
 </script>
 {% endif %}
+<div class="modal fade" id="padronDatosActualizadosModal" tabindex="-1" aria-labelledby="padronDatosActualizadosModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
+            <div class="modal-header" style="background: #1e3a5f; border: none; padding: 1.2rem 1.4rem;">
+                <h5 class="modal-title mb-0" id="padronDatosActualizadosModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem;">Datos actualizados</h5>
+            </div>
+            <div class="modal-body" style="padding: 1.4rem; color: #334155; font-weight: 600;">
+                <p class="mb-2">Se han actualizado los datos de Padr&oacute;n.</p>
+                <p class="mb-0">Por favor recargue la p&aacute;gina para ver la informaci&oacute;n actualizada.</p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.4rem; background: #f8fafc;">
+                <button type="button" class="btn btn-primary" style="font-weight: 700;" onclick="location.reload();">Recargar ahora</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var versionInicial = '{{ padron_fecha_version|default_if_none:""|escapejs }}';
+    var avisoMostrado = false;
+    var estadoUrl = '{% url "padroninterno:estado_fecha_padron" %}';
+    var modalElement = document.getElementById('padronDatosActualizadosModal');
+
+    function hayRefreshAdminVisible() {
+        var progressBox = document.getElementById('padronRefreshFloatingStatus');
+        return progressBox && !progressBox.classList.contains('d-none');
+    }
+
+    function mostrarAvisoActualizacion() {
+        if (avisoMostrado || hayRefreshAdminVisible() || !modalElement || typeof bootstrap === 'undefined') {
+            return;
+        }
+        avisoMostrado = true;
+        new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false }).show();
+    }
+
+    function consultarVersionPadron() {
+        if (avisoMostrado || hayRefreshAdminVisible()) {
+            return;
+        }
+        fetch(estadoUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return null;
+                }
+                return response.json().catch(function () { return null; });
+            })
+            .then(function (data) {
+                if (!data || data.status !== 'success') {
+                    return;
+                }
+                var versionActual = data.version || '';
+                if (versionActual !== versionInicial) {
+                    mostrarAvisoActualizacion();
+                }
+            })
+            .catch(function () {});
+    }
+
+    if (versionInicial !== null) {
+        setInterval(consultarVersionPadron, 60000);
+    }
+});
+</script>
 
 <!-- Modal Guia de Uso -->
 <div class="modal fade padron-modal" id="guiaUsoModal" tabindex="-1" aria-hidden="true">
@@ -2853,7 +3491,18 @@ $(document).ready(function() {
     var domiciliosCache = {};
     var responsableActualData = null;
     var ofertaBreadcrumbTrail = ['Listado de Establecimientos', 'Vista de Establecimiento'];
+    var ESTABLECIMIENTOS_DATOS_URL = '{% url "padroninterno:establecimientos_datos" %}';
+    var ESTABLECIMIENTOS_TOTAL_URL = '{% url "padroninterno:establecimientos_total" %}';
+    var ESTABLECIMIENTOS_FILTROS_URL = '{% url "padroninterno:establecimientos_filtros" %}';
+    var ESTABLECIMIENTOS_ASYNC_LOADING = {% if establecimientos_async_loading %}true{% else %}false{% endif %};
     var SERVER_FILTER_OPTIONS = {{ filter_options_json|safe }};
+    var filterOptionsLoaded = Object.keys(SERVER_FILTER_OPTIONS || {}).length > 0;
+    var filterOptionsRequest = null;
+    var filterOptionsPreloadAttempted = false;
+    var totalRequest = null;
+    var totalRequestToken = 0;
+    var lastTotalCacheKey = null;
+    var lastTotalValue = null;
     var FILTER_OPERATOR_PRESETS = {
         default: [
             { value: '0', label: 'parecido a' },
@@ -3079,6 +3728,71 @@ $(document).ready(function() {
         }
     };
 
+    function hydrateFilterDialogOptions() {
+        Object.keys(FILTER_DIALOG_CONFIG).forEach(function(key) {
+            if (key === 'tipo_ofertas' || key === 'nivel' || key === 'descrip_inst_legal') {
+                return;
+            }
+
+            if (FILTER_DIALOG_CONFIG[key] && FILTER_DIALOG_CONFIG[key].mode === 'checklist') {
+                FILTER_DIALOG_CONFIG[key].options = buildServerDialogOptions(key);
+            }
+        });
+    }
+
+    function filterFieldNeedsAsyncOptions(field) {
+        var config = FILTER_DIALOG_CONFIG[field];
+        return !!config && config.mode === 'checklist' && !filterOptionsLoaded &&
+            field !== 'tipo_ofertas' && field !== 'nivel' && field !== 'descrip_inst_legal';
+    }
+
+    function ensureFilterOptionsLoaded(callback) {
+        if (filterOptionsLoaded) {
+            if (callback) {
+                callback();
+            }
+            return;
+        }
+
+        if (filterOptionsRequest) {
+            filterOptionsRequest.done(function() {
+                if (callback) {
+                    callback();
+                }
+            }).fail(function() {
+                if (callback) {
+                    callback('No se pudieron cargar las opciones de filtros.');
+                }
+            });
+            return;
+        }
+
+        filterOptionsRequest = $.ajax({
+            url: ESTABLECIMIENTOS_FILTROS_URL,
+            method: 'GET',
+            dataType: 'json'
+        }).done(function(data) {
+            SERVER_FILTER_OPTIONS = data || {};
+            filterOptionsLoaded = true;
+            hydrateFilterDialogOptions();
+        }).always(function() {
+            filterOptionsRequest = null;
+        });
+
+        ensureFilterOptionsLoaded(callback);
+    }
+
+    function preloadFilterOptions() {
+        if (filterOptionsLoaded || filterOptionsRequest || filterOptionsPreloadAttempted) {
+            return;
+        }
+
+        filterOptionsPreloadAttempted = true;
+        ensureFilterOptionsLoaded();
+    }
+
+    hydrateFilterDialogOptions();
+
     var FILTER_DIALOG_SYNC_FIELDS = {
         cantidad_localizaciones: true,
         sector: true,
@@ -3299,6 +4013,7 @@ $(document).ready(function() {
         $('#filterValueMount').html('<input type="text" name="valor_filtro" id="valor_filtro" value="" class="form-control form-control-sm filter-dialog-text" placeholder="Ingrese valor..." />');
         $('#valor_filtro_label').text('Valor');
         $('#dialog_filtro').css('width', '360px');
+        $('#dialog_filtro button[type="submit"]').prop('disabled', false);
     }
 
     function closeFilterDialog() {
@@ -3306,11 +4021,59 @@ $(document).ready(function() {
         resetFilterDialog();
     }
 
+    function showFilterOptionsLoadError(field, label, message) {
+        var config = getFilterDialogConfig(field);
+        var operators = FILTER_OPERATOR_PRESETS[config.operators] || FILTER_OPERATOR_PRESETS.default;
+        var retryButtonId = 'retry_filter_options_load';
+
+        $('#campo_filtro_activo').val(field);
+        $('#dialog_filtro_title').html('<i class="fa-solid fa-filter me-2"></i>Agregar Filtro: ' + escapeHtml(label || config.label));
+        $('#operador_filtro').html(buildFilterOperatorOptionsHtml(operators));
+        $('#dialog_filtro').css('width', config.dialogWidth || '360px');
+        $('#valor_filtro_label').text('Opciones');
+        $('#filterValueMount').html(
+            '<div class="alert alert-warning py-2 px-3 mb-2 small" role="alert">' +
+                escapeHtml(message || 'No se pudieron cargar las opciones de filtros.') +
+            '</div>' +
+            '<button type="button" class="btn btn-outline-primary btn-sm" id="' + retryButtonId + '">' +
+                '<i class="fa-solid fa-rotate-right me-1"></i>Reintentar' +
+            '</button>'
+        );
+        $('#dialog_filtro button[type="submit"]').prop('disabled', true);
+        $('#dialog_filtro').show();
+
+        $('#' + retryButtonId).off('click.filterOptionsRetry').on('click.filterOptionsRetry', function() {
+            var $button = $(this);
+            $button.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Reintentando...');
+
+            ensureFilterOptionsLoaded(function(error) {
+                if (!error) {
+                    openFilterDialog(field, label);
+                    return;
+                }
+
+                showFilterOptionsLoadError(field, label, error);
+            });
+        });
+    }
+
     function openFilterDialog(field, label) {
         var config;
         var operators;
 
         if (!field) {
+            return;
+        }
+
+        if (filterFieldNeedsAsyncOptions(field)) {
+            ensureFilterOptionsLoaded(function(error) {
+                if (!error) {
+                    openFilterDialog(field, label);
+                    return;
+                }
+
+                showFilterOptionsLoadError(field, label, error);
+            });
             return;
         }
 
@@ -3322,6 +4085,7 @@ $(document).ready(function() {
         $('#operador_filtro').html(buildFilterOperatorOptionsHtml(operators));
         $('#dialog_filtro').css('width', config.dialogWidth || '360px');
         renderFilterValueControl(field);
+        $('#dialog_filtro button[type="submit"]').prop('disabled', false);
         $('#dialog_filtro').show();
 
         setTimeout(function() {
@@ -5479,7 +6243,7 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
     }
 
     function getTableDataRows() {
-        return $('.table-padron tbody tr').not('.warning-cols, .padron-table-empty-row');
+        return $('.table-padron tbody tr').not('.warning-cols, .padron-table-empty-row, .padron-table-loading-row, .padron-table-error-row');
     }
 
     function getTableShell() {
@@ -5880,6 +6644,11 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
     }
 
     function syncTableEmptyOverlay() {
+        if ($('.table-padron tbody tr.padron-table-loading-row, .table-padron tbody tr.padron-table-error-row').length) {
+            hideTableOverlay();
+            return;
+        }
+
         if ($('.table-padron tbody tr.warning-cols').length) {
             removeTableEmptyRow();
             hideTableOverlay();
@@ -5913,6 +6682,310 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
         if (!opts.instant) {
             queueCompactTableLayout(opts);
         }
+    }
+
+    function buildEstablecimientosEndpointUrl(endpointUrl, pageUrl) {
+        var sourceUrl = new URL(pageUrl || window.location.href, window.location.origin);
+        var targetUrl = new URL(endpointUrl, window.location.origin);
+
+        sourceUrl.searchParams.forEach(function(value, key) {
+            if (key === 'formato' || key === 'visible_col') {
+                return;
+            }
+            targetUrl.searchParams.append(key, value);
+        });
+
+        return targetUrl.toString();
+    }
+
+    function buildTotalCacheKey(pageUrl) {
+        var sourceUrl = new URL(pageUrl || window.location.href, window.location.origin);
+        var keyParams = new URLSearchParams();
+        var totalKeys = ['q', 'campo_filtro', 'operador_filtro', 'valor_filtro', 'f', 'o', 'v', 'smart_ui_col', 'smart_ui_val'];
+
+        totalKeys.forEach(function(key) {
+            sourceUrl.searchParams.getAll(key).forEach(function(value) {
+                keyParams.append(key, value);
+            });
+        });
+
+        return keyParams.toString();
+    }
+
+    function readRenderedTotalValue() {
+        var text = $('#resultsSummary').text() || '';
+        var match = text.match(/\bde\s+(\d+)/);
+
+        return match ? parseInt(match[1], 10) : null;
+    }
+
+    function getCachedTotalForUrl(pageUrl) {
+        var cacheKey = buildTotalCacheKey(pageUrl);
+        var renderedTotal;
+
+        if (lastTotalCacheKey === null && lastTotalValue === null) {
+            renderedTotal = readRenderedTotalValue();
+            if (renderedTotal !== null) {
+                lastTotalCacheKey = buildTotalCacheKey(window.location.href);
+                lastTotalValue = renderedTotal;
+            }
+        }
+
+        return lastTotalCacheKey === cacheKey && lastTotalValue !== null ? lastTotalValue : null;
+    }
+
+    function getTableColumnCount() {
+        return $('.table-padron thead th').length || 24;
+    }
+
+    function updateResultsSummary(desde, hasta, total, totalPending) {
+        var totalText = totalPending ? 'total calcul\u00e1ndose...' : String(total == null ? 0 : total);
+        var miniTotal = totalPending ? 'calcul\u00e1ndose...' : String(total == null ? 0 : total);
+
+        $('#resultsSummary').html(
+            '<i class="fa-solid fa-table me-1 text-muted"></i>' +
+            '<strong>Resultados:</strong> Mostrando Establecimientos ' +
+            escapeHtml(desde || 0) + '-' + escapeHtml(hasta || 0) + ' de ' + escapeHtml(totalText) + '.' +
+            '<span class="results-mini-total ms-2">Total de Directores: ' + escapeHtml(miniTotal) + '</span>'
+        );
+    }
+
+    function renderTableStatusRow(cssClass, iconHtml, text, textClass) {
+        $('#establecimientosTableBody').html(
+            '<tr class="' + cssClass + '">' +
+                '<td colspan="' + getTableColumnCount() + '" class="padron-table-loading-cell text-start py-3 ' + (textClass || 'text-muted') + '">' +
+                    '<span class="padron-empty-inline padron-table-loading-inline">' + iconHtml + escapeHtml(text) + '</span>' +
+                '</td>' +
+            '</tr>'
+        );
+    }
+
+    function renderEstablecimientoRow(item) {
+        var estado = item.estado || '';
+        var badgeClass = estado === 'Activo' ? 'bg-success' : 'bg-secondary';
+        var itemId = String(item.id || '').replace(/\D/g, '') || '0';
+        var cellValue = function(value) {
+            return value === undefined || value === null ? '' : value;
+        };
+        var cells = [
+            ['col-cue fw-bold', item.cue],
+            ['col-cantidad-localizaciones', item.cantidad_localizaciones],
+            ['col-codigo-jurisdiccional', item.codigo_jurisdiccional],
+            ['col-nombre text-start', item.nombre],
+            ['col-sector', item.sector],
+            ['col-dependencia', item.dependencia],
+            ['col-confesional', item.confesional],
+            ['col-arancelado', item.arancelado],
+            ['col-categoria', item.categoria],
+            ['col-director text-start', item.director],
+            ['col-estado', '<span class="badge ' + badgeClass + '">' + escapeHtml(estado) + '</span>', true],
+            ['col-tipo-ofertas text-start', item.tipo_ofertas],
+            ['col-localidad', item.localidad],
+            ['col-departamento', item.departamento],
+            ['col-nro-establecimiento', item.nro_establecimiento],
+            ['col-tipo-educacion', item.tipo_educacion],
+            ['col-nivel', item.nivel],
+            ['col-cargo-director', item.cargo_director],
+            ['col-observaciones text-start', item.observaciones],
+            ['col-fecha-inst-legal', item.fecha_inst_legal],
+            ['col-nro-inst-legal', item.nro_inst_legal],
+            ['col-anio-creacion', item.anio_creacion],
+            ['col-descrip-inst-legal', item.descrip_inst_legal]
+        ];
+
+        return '<tr class="align-middle text-center small">' +
+            '<td class="col-accion">' +
+                '<button type="button" class="btn btn-outline-primary btn-sm" title="Ver" onclick="abrirModalEstablecimiento(' + itemId + ')">' +
+                    '<i class="fa-solid fa-eye"></i>' +
+                '</button>' +
+            '</td>' +
+            cells.map(function(cell) {
+                return '<td class="' + cell[0] + '">' + (cell[2] ? cell[1] : escapeHtml(cellValue(cell[1]))) + '</td>';
+            }).join('') +
+        '</tr>';
+    }
+
+    function renderEstablecimientosRows(items) {
+        if (!items || !items.length) {
+            renderTableStatusRow('padron-table-empty-row', '<i class="fa-solid fa-inbox"></i>', 'No se han encontrado resultados para los filtros seleccionados.');
+            return;
+        }
+
+        $('#establecimientosTableBody').html(items.map(renderEstablecimientoRow).join(''));
+    }
+
+    function buildPageUrl(page) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('page', page);
+        return url.toString();
+    }
+
+    function getCurrentPaginationTotalPages() {
+        var totalPages = 0;
+
+        $('#paginador-lista .page-link').each(function() {
+            var text = $.trim($(this).text());
+            var href = $(this).attr('href');
+            var pageFromHref;
+
+            if (/^\d+$/.test(text)) {
+                totalPages = Math.max(totalPages, parseInt(text, 10) || 0);
+            }
+
+            if (href) {
+                try {
+                    pageFromHref = parseInt(new URL(href, window.location.href).searchParams.get('page'), 10) || 0;
+                    totalPages = Math.max(totalPages, pageFromHref);
+                } catch (e) {}
+            }
+        });
+
+        return totalPages;
+    }
+
+    function renderAjaxPagination(payload) {
+        var page = parseInt(payload.page || 1, 10) || 1;
+        var pageSize = parseInt(payload.page_size || $('.pageSizeSelector').val() || 10, 10) || 10;
+        var total = payload.total;
+        var totalPages = parseInt(payload.total_pages || 0, 10) || 0;
+        var hasPrevious;
+        var hasNext;
+        var pages = [];
+        var lastAdded = 0;
+        var html = '';
+        var i;
+
+        if (!totalPages && total !== null && total !== undefined && total !== '') {
+            totalPages = Math.max(1, Math.ceil((parseInt(total, 10) || 0) / pageSize));
+        }
+
+        if (!totalPages) {
+            totalPages = getCurrentPaginationTotalPages();
+        }
+
+        if (totalPages && page > totalPages) {
+            page = totalPages;
+        }
+
+        hasPrevious = page > 1;
+        hasNext = totalPages ? page < totalPages : !!payload.has_next;
+
+        function renderPageItem(label, targetPage, disabled, active, extraClass) {
+            var className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '') + (extraClass ? ' ' + extraClass : '');
+
+            if (disabled || active) {
+                return '<li class="' + className + '"><span class="page-link">' + label + '</span></li>';
+            }
+
+            return '<li class="' + className + '"><a class="page-link" href="' + escapeHtml(buildPageUrl(targetPage)) + '">' + label + '</a></li>';
+        }
+
+        html += renderPageItem('&laquo;', 1, !hasPrevious, false);
+        html += renderPageItem('Anterior', page - 1, !hasPrevious, false);
+
+        if (totalPages) {
+            if (totalPages <= 7) {
+                for (i = 1; i <= totalPages; i += 1) {
+                    pages.push(i);
+                }
+            } else {
+                for (i = 1; i <= totalPages; i += 1) {
+                    if (i === 1 || i === totalPages || Math.abs(i - page) <= 2) {
+                        if (lastAdded && i - lastAdded === 2) {
+                            pages.push(lastAdded + 1);
+                        } else if (lastAdded && i - lastAdded > 2) {
+                            pages.push('...');
+                        }
+
+                        pages.push(i);
+                        lastAdded = i;
+                    }
+                }
+            }
+
+            pages.forEach(function(num) {
+                if (num === '...') {
+                    html += '<li class="page-item disabled"><span class="page-link border-0 text-muted bg-transparent">...</span></li>';
+                    return;
+                }
+
+                html += renderPageItem(String(num), num, false, num === page);
+            });
+        } else {
+            html += renderPageItem(String(page), page, false, true);
+        }
+
+        html += renderPageItem('Siguiente', page + 1, !hasNext, false);
+        html += renderPageItem('&raquo;', totalPages, !totalPages || !hasNext, false);
+
+        $('#paginador-lista').html(html);
+        $('.pageSizeSelector').val(String(pageSize));
+    }
+
+    function renderAjaxTablePayload(payload) {
+        var cachedTotal = getCachedTotalForUrl(window.location.href);
+        var paginationPayload = cachedTotal !== null ? $.extend({}, payload || {}, { total: cachedTotal }) : (payload || {});
+
+        renderEstablecimientosRows(payload.items || []);
+        updateResultsSummary(payload.desde, payload.hasta, cachedTotal, cachedTotal === null);
+        renderAjaxPagination(paginationPayload);
+        updateTableOverlayOffset();
+        refreshDynamicUI({ instant: true });
+        restoreTableViewportOpacity();
+    }
+
+    function renderAjaxTableError(message) {
+        renderTableStatusRow('padron-table-error-row', '<i class="fa-solid fa-triangle-exclamation"></i>', message || 'No se pudieron cargar las primeras filas.', 'text-danger');
+        updateResultsSummary(0, 0, null, true);
+        $('#paginador-lista').html(
+            '<li class="page-item disabled"><span class="page-link">&laquo;</span></li>' +
+            '<li class="page-item disabled"><span class="page-link">Anterior</span></li>' +
+            '<li class="page-item disabled"><span class="page-link">Siguiente</span></li>' +
+            '<li class="page-item disabled"><span class="page-link">&raquo;</span></li>'
+        );
+        refreshDynamicUI({ instant: true });
+    }
+
+    function loadEstablecimientosTotal(pageUrl, rangeData) {
+        var cacheKey = buildTotalCacheKey(pageUrl);
+        var cachedTotal = getCachedTotalForUrl(pageUrl);
+        var token = totalRequestToken + 1;
+        totalRequestToken = token;
+
+        if (totalRequest && totalRequest.readyState !== 4) {
+            totalRequest.abort();
+        }
+
+        if (cachedTotal !== null) {
+            updateResultsSummary(rangeData.desde, rangeData.hasta, cachedTotal, false);
+            renderAjaxPagination($.extend({}, rangeData || {}, {
+                total: cachedTotal
+            }));
+            initPagination();
+            return;
+        }
+
+        lastTotalCacheKey = cacheKey;
+        lastTotalValue = null;
+        updateResultsSummary(rangeData.desde, rangeData.hasta, null, true);
+
+        totalRequest = $.ajax({
+            url: buildEstablecimientosEndpointUrl(ESTABLECIMIENTOS_TOTAL_URL, pageUrl),
+            method: 'GET',
+            dataType: 'json'
+        }).done(function(data) {
+            var totalValue = data && data.total != null ? data.total : 0;
+
+            if (token !== totalRequestToken) {
+                return;
+            }
+            lastTotalValue = totalValue;
+            updateResultsSummary(rangeData.desde, rangeData.hasta, totalValue, false);
+            renderAjaxPagination($.extend({}, rangeData || {}, {
+                total: totalValue
+            }));
+            initPagination();
+        });
     }
 
     function replaceTableFragments($parsed, useFade) {
@@ -6016,9 +7089,36 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
         loader.setAttribute('aria-hidden', 'true');
     }   
 
+    function clearInitialLoadingState() {
+        var root = document.querySelector('[data-padron-initial-loading="true"]');
+        var shell = document.querySelector('.table-shell');
+        var overlay = shell ? shell.querySelector('.table-loading-overlay') : null;
+        var pagination = document.getElementById('pagination-container');
+
+        if (root) {
+            root.classList.remove('padron-is-initial-loading');
+            root.setAttribute('data-padron-initial-loading', 'false');
+        }
+
+        if (shell) {
+            shell.classList.remove('padron-initial-table-shell');
+            shell.classList.remove('has-table-overlay');
+        }
+
+        if (overlay) {
+            overlay.classList.remove('is-visible', 'is-loading');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        if (pagination) {
+            pagination.classList.remove('padron-initial-pagination-pending');
+        }
+    }
+
     function refreshTableFromUrl(url, options) {
         var opts = options || {};
         var targetUrl = typeof url === 'string' ? url : url.toString();
+        var dataUrl = buildEstablecimientosEndpointUrl(ESTABLECIMIENTOS_DATOS_URL, targetUrl);
         var allowHardReload = opts.allowHardReload === true;
 
         /*
@@ -6030,23 +7130,34 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
 
         var visualToken = null;
         var request;
+        var initialLoadingRoot = document.querySelector('[data-padron-initial-loading]');
+        var isInitialLoading = opts.initialLoad === true || (
+            initialLoadingRoot &&
+            initialLoadingRoot.getAttribute('data-padron-initial-loading') === 'true'
+        );
 
         abortActiveTableRequest();
-        hideTableOverlay();
-        cancelDeferredTableLoadingOverlay(false);
+        if (!isInitialLoading) {
+            hideTableOverlay();
+            cancelDeferredTableLoadingOverlay(false);
+        } else {
+            updateTableOverlayOffset();
+        }
 
         /*
         * Loader liviano, no bloqueante.
         * Tiene delay para no parpadear en consultas rápidas.
         */
-        if (opts.showMiniLoader !== false) {
+        if (!isInitialLoading && opts.showMiniLoader !== false) {
             scheduleMiniTableLoader(
                 opts.miniLoaderText || 'Cargando...',
                 opts.miniLoaderDelayMs == null ? 120 : opts.miniLoaderDelayMs
             );
         }
 
-        if (enableSoftDim) {
+        if (isInitialLoading) {
+            cancelTableSoftDim(true);
+        } else if (enableSoftDim) {
             visualToken = scheduleTableSoftDim(
                 opts.softDimDelayMs != null ? opts.softDimDelayMs : 90,
                 opts.softDimOpacity != null ? opts.softDimOpacity : 0.8
@@ -6056,8 +7167,9 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
         }
 
         request = $.ajax({
-            url: targetUrl,
+            url: dataUrl,
             method: 'GET',
+            dataType: 'json',
 
             success: function(data) {
                 if (activeTableRequest !== request) {
@@ -6068,7 +7180,9 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
                 cancelTableSoftDim(true, visualToken);
                 hideMiniTableLoader();
                 window.history.pushState({}, '', targetUrl);
-                replaceTableFragments($(data), !!opts.useFade);
+                renderAjaxTablePayload(data || {});
+                clearInitialLoadingState();
+                loadEstablecimientosTotal(targetUrl, data || {});
                 cancelTableSoftDim(true, visualToken);
                 hideMiniTableLoader();
             },
@@ -6093,7 +7207,8 @@ function ensureColumnsVisibleForActiveServerFilters(filters) {
 
                 hideMiniTableLoader();
                 getTableViewport().css('opacity', '1');
-                syncTableEmptyOverlay();
+                renderAjaxTableError('No se pudieron cargar las primeras filas. Intent\u00e1 nuevamente.');
+                clearInitialLoadingState();
             },
 
             complete: function(xhr, textStatus) {
@@ -6692,33 +7807,15 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
                         cancelTableSoftDim(true);
                     }
 
-                    var currentRequest = $.ajax({
-                        url: url.toString(),
-                        method: 'GET',
-                        success: function(data) {
-                            cancelDeferredTableLoadingOverlay(false);
-                            cancelTableSoftDim(true);
-                            hideMiniTableLoader();
-                            replaceTableFragments($(data), false);
-                            cancelTableSoftDim(true);
-                            hideTableOverlay();
-                        },
-                        error: function(xhr, textStatus) {
-                            if (textStatus !== 'abort') {
-                                syncTableEmptyOverlay();
-                            }
-                        },
-                        complete: function(xhr, textStatus) {
-                            if (fetchXhr === currentRequest) {
-                                fetchXhr = null;
-                            }
-
-                            if (textStatus !== 'abort' && $('#liveSearchInput').val().trim().length === 0) {
-                                hideTableOverlay();
-                            }
-                        }
+                    fetchXhr = refreshTableFromUrl(url.toString(), {
+                        useFade: false,
+                        allowHardReload: false,
+                        enableSoftDim: true,
+                        softDimDelayMs: 0,
+                        softDimOpacity: 0.38,
+                        showMiniLoader: false,
+                        showOverlay: false
                     });
-                    fetchXhr = currentRequest;
                 }, 600);
             } else {
                 var url = new URL(window.location.href);
@@ -6752,29 +7849,15 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
                     cancelTableSoftDim(true);
                 }
 
-                var resetRequest = $.ajax({
-                    url: url.toString(),
-                    method: 'GET',
-                    success: function(data) {
-                        cancelDeferredTableLoadingOverlay(false);
-                        cancelTableSoftDim(true);
-                        hideMiniTableLoader();
-                        replaceTableFragments($(data), false);
-                        cancelTableSoftDim(true);
-                        hideTableOverlay();
-                    },
-                    error: function(xhr, textStatus) {
-                        if (textStatus !== 'abort') {
-                            syncTableEmptyOverlay();
-                        }
-                    },
-                    complete: function() {
-                        if (fetchXhr === resetRequest) {
-                            fetchXhr = null;
-                        }
-                    }
+                fetchXhr = refreshTableFromUrl(url.toString(), {
+                    useFade: false,
+                    allowHardReload: false,
+                    enableSoftDim: true,
+                    softDimDelayMs: 0,
+                    softDimOpacity: 0.38,
+                    showMiniLoader: false,
+                    showOverlay: false
                 });
-                fetchXhr = resetRequest;
             }
         });
 
@@ -6970,9 +8053,8 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
     function initPagination() {
         var pParams = new URLSearchParams(window.location.search);
         var $nav = $('#pagination-nav');
-        var $pagination = $('#paginador-lista');
 
-        if (!$nav.length || !$pagination.length) {
+        if (!$nav.length || !$('#paginador-lista').length) {
             return;
         }
 
@@ -6999,8 +8081,6 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
             });
         }
 
-        $nav.find('.edge-first, .edge-last').remove();
-
         $nav.find('a.page-link').each(function() {
             var href = $(this).attr('href');
 
@@ -7011,36 +8091,6 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
                 $(this).attr('href', targetURL.toString());
             }
         });
-
-        var items = $pagination.children('li');
-
-        if (items.length > 9) {
-            var totalPages = items.length - 2;
-            var activeIdx = $pagination.children('li.active').index();
-
-            items.each(function(i) {
-                if (i === 0 || i === items.length - 1 || i === 1 || i === totalPages) {
-                    return;
-                }
-
-                if (Math.abs(i - activeIdx) > 2) {
-                    if (Math.abs(i - activeIdx) === 3) {
-                        $(this).html('<span class="page-link border-0 text-muted bg-transparent">...</span>');
-                    } else {
-                        $(this).hide();
-                    }
-                }
-            });
-
-            var urlFirst = new URL(window.location.href);
-            var urlLast = new URL(window.location.href);
-
-            urlFirst.searchParams.set('page', 1);
-            urlLast.searchParams.set('page', totalPages);
-
-            $('<li class="page-item edge-first"><a class="page-link" href="' + urlFirst.toString() + '"><i class="fa-solid fa-angles-left"></i></a></li>').insertAfter(items.first());
-            $('<li class="page-item edge-last"><a class="page-link" href="' + urlLast.toString() + '"><i class="fa-solid fa-angles-right"></i></a></li>').insertBefore(items.last());
-        }
 
         $nav.find('a.page-link').off('click.paginationAjax').on('click.paginationAjax', function(e) {
             var url = $(this).attr('href');
@@ -7067,6 +8117,23 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
     bindModalBreadcrumbs();
     initPagination();
     syncTableEmptyOverlay();
+
+    if (ESTABLECIMIENTOS_ASYNC_LOADING) {
+        window.setTimeout(function() {
+            refreshTableFromUrl(window.location.href, {
+                initialLoad: true,
+                useFade: false,
+                allowHardReload: false,
+                enableSoftDim: true,
+                softDimDelayMs: 0,
+                softDimOpacity: 0.38,
+                showMiniLoader: false,
+                showOverlay: false
+            });
+        }, 0);
+    }
+
+    window.setTimeout(preloadFilterOptions, 0);
 });
 </script>
 <script>
@@ -7792,9 +8859,7 @@ $(document).on('change', '#dialog_filtro .filter-dialog-option', function() {
 (function() {
     "use strict";
 
-    var STORAGE_KEY = "
-contraer_establecimientos
-";
+    var STORAGE_KEY = "contraer_establecimientos";
 
     function syncCompactButton(animate) {
         var button = document.getElementById("btnContraerTabla");

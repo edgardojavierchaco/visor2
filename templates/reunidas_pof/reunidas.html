@@ -1,0 +1,420 @@
+{% extends 'archivos/base/layout.html' %}
+{% block content %}
+
+{% comment %}
+    :root {
+        --pof-primary: #3B5CFF;
+        --pof-primary-dark: #2444D8;
+        --pof-primary-soft: #EEF2FF;
+        --pof-border: #DDE5FF;
+        --pof-text: #1F2A44;
+        --pof-muted: #6B7280;
+        --pof-bg: #F8FAFF;
+        --pof-success: #198754;
+        --pof-warning: #B7791F;
+        --pof-danger: #DC3545;
+    }
+
+    .pof-page {
+        background: var(--pof-bg);
+        padding: 18px;
+        border-radius: 16px;
+    }
+
+    .pof-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 16px;
+    }
+
+    .pof-card {
+        background: white;
+        border: 1px solid var(--pof-border);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 6px 18px rgba(31, 42, 68, 0.06);
+        margin-bottom: 16px;
+    }
+
+    .pof-card-accent {
+        border-top: 5px solid var(--pof-primary);
+    }
+
+    .pof-card h2 {
+        font-size: 18px;
+        margin: 0 0 6px;
+        color: var(--pof-text);
+        font-weight: 700;
+    }
+
+    .pof-help {
+        color: var(--pof-muted);
+        margin-bottom: 16px;
+        font-size: 14px;
+    }
+
+    .pof-col-3 {
+        grid-column: span 3;
+    }
+
+    .pof-col-4 {
+        grid-column: span 4;
+    }
+
+    .pof-col-6 {
+        grid-column: span 6;
+    }
+
+    .pof-col-12 {
+        grid-column: span 12;
+    }
+
+    .pof-field label {
+        display: block;
+        font-weight: 600;
+        color: var(--pof-text);
+        margin-bottom: 6px;
+        font-size: 14px;
+    }
+
+    .pof-field input,
+    .pof-field select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #D1D5DB;
+        border-radius: 10px;
+        padding: 8px 10px;
+        color: var(--pof-text);
+        background: white;
+    }
+
+    .pof-field input:focus,
+    .pof-field select:focus {
+        outline: none;
+        border-color: var(--pof-primary);
+        box-shadow: 0 0 0 3px rgba(59, 92, 255, 0.14);
+    }
+
+    .pof-btn {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        min-height: 40px;
+    }
+
+    .pof-btn-primary {
+        background: var(--pof-primary);
+        color: white;
+    }
+
+    .pof-btn-primary:hover {
+        background: var(--pof-primary-dark);
+        color: white;
+        text-decoration: none;
+    }
+
+    .pof-btn-light {
+        background: var(--pof-primary-soft);
+        color: var(--pof-primary);
+        border: 1px solid var(--pof-border);
+    }
+
+    .pof-btn-light:hover {
+        color: var(--pof-primary-dark);
+        text-decoration: none;
+    }
+
+    .pof-btn-excel {
+        background: #217346;
+        color: white;
+    }
+
+    .pof-btn-excel:hover {
+        background: #185C37;
+        color: white;
+        text-decoration: none;
+    }
+
+    .pof-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+
+
+    .pof-table-wrap {
+        overflow-x: auto;
+    }
+
+    .pof-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+
+    .pof-table th {
+        background: var(--pof-primary-soft);
+        color: var(--pof-text);
+        border-bottom: 2px solid var(--pof-border);
+        padding: 10px;
+        font-size: 13px;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .pof-table td {
+        border-bottom: 1px solid #EEF2F7;
+        padding: 10px;
+        vertical-align: middle;
+        color: var(--pof-text);
+        font-size: 14px;
+    }
+
+    .pof-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .pof-badge-open {
+        background: #EAF7EF;
+        color: var(--pof-success);
+    }
+
+    .pof-badge-closed {
+        background: #F3F4F6;
+        color: #4B5563;
+    }
+
+    .pof-note {
+        background: var(--pof-primary-soft);
+        border: 1px solid var(--pof-border);
+        border-radius: 14px;
+        padding: 14px;
+        color: var(--pof-text);
+        font-size: 14px;
+    }
+
+    .pof-empty {
+        text-align: center;
+        color: var(--pof-muted);
+        padding: 18px !important;
+    }
+
+    @media (max-width: 992px) {
+        .pof-col-3,
+        .pof-col-4,
+        .pof-col-6,
+        .pof-col-12
+    }
+{% endcomment %}
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="reunidas" %}
+    <div class="pof-view-header">
+        <h1>&#128218; POF</h1>
+        <p>Consult&aacute;, filtr&aacute; y administr&aacute; Reunidas por a&ntilde;o y nivel.</p>
+    </div>
+
+    <div class="pof-reunidas-top-actions">
+    <a class="pof-btn pof-reunida-create-btn" href="{% url 'reunidas_pof:crear_reunida' %}">
+        <span aria-hidden="true">🗃️</span>
+        <span>Crear Planta Orgánica Funcional</span>
+    </a>
+</div>
+
+    <form method="get" class="pof-filter-panel" id="filtrosReunidasForm">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+
+        <div class="pof-filter-grid">
+            <div class="pof-filter-field pof-col-2{% if filtro_anio %} pof-filter-field-active{% endif %}{% if errores_filtros.anio %} pof-filter-field-error{% endif %}">
+                <label for="filtroAnio">A&ntilde;o</label>
+                <input type="text"
+                        id="filtroAnio"
+                        name="anio"
+                        value="{{ filtro_anio }}"
+                        maxlength="4"
+                        inputmode="numeric"
+                        pattern="[0-9]{4}"
+                        data-pof-digits-only
+                        placeholder="Ej: {{ anio_actual }}"
+                        {% if errores_filtros.anio %}aria-invalid="true" aria-describedby="errorFiltroAnioReunidas"{% endif %}>
+                {% if errores_filtros.anio %}
+                    <span id="errorFiltroAnioReunidas" class="pof-filter-field-help">{{ errores_filtros.anio }}</span>
+                {% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if filtro_nivel %} pof-filter-field-active{% endif %}{% if errores_filtros.nivel %} pof-filter-field-error{% endif %}">
+                <label for="filtroNivel">Nivel</label>
+                <select id="filtroNivel" name="nivel" {% if errores_filtros.nivel %}aria-invalid="true" aria-describedby="errorFiltroNivelReunidas"{% endif %}>
+                    <option value="">Todos</option>
+                    {% for codigo, nombre in niveles %}
+                        <option value="{{ codigo }}" {% if filtro_nivel == codigo %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+                {% if errores_filtros.nivel %}
+                    <span id="errorFiltroNivelReunidas" class="pof-filter-field-help">{{ errores_filtros.nivel }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="pof-filter-actions">
+            <button type="submit" class="pof-filter-apply-btn">Aplicar filtros</button>
+            <a class="pof-filter-clear-btn" href="{% url 'reunidas_pof:reunidas_pof' %}">
+                Limpiar filtros
+            </a>
+        </div>
+        {% if mensaje_filtros %}
+        <div class="pof-filter-warning">
+            <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+            <span>{{ mensaje_filtros }}</span>
+        </div>
+{% endif %}
+    </form>
+
+    <div>
+        {% if tabla_reunidas_no_migrada %}
+            <div class="pof-note">La tabla de Reunidas todav&iacute;a no est&aacute; migrada. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
+        {% endif %}
+
+        <div class="pof-filter-summary">
+            <div class="pof-filter-summary-left">
+                <span class="pof-filter-summary-main">Resultados: Mostrando Reunidas {{ showing_start }}-{{ showing_end }} de {{ total_registros }}</span>
+            </div>
+            <span class="pof-filter-total">Total de Reunidas: {{ total_registros }}</span>
+        </div>
+
+        <div class="pof-grid-table-wrap pof-reunidas-table-wrap">
+            <table class="pof-grid-table">
+                <thead>
+                    <tr>
+                        <th class="pof-grid-icon-cell pof-grid-gear-column">Acci&oacute;n</th>
+                        <th>A&ntilde;o</th>
+                        <th>Nivel</th>
+                        <th>&Uacute;ltima modificaci&oacute;n</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for reunida in reunidas %}
+                        <tr>
+                            <td class="pof-grid-icon-cell pof-grid-gear-column">
+                                <div class="dropdown pof-grid-dropdown">
+                                    <button type="button"
+                                            class="pof-grid-icon-btn pof-grid-gear-btn"
+                                            title="Acciones de la Reunida"
+                                            aria-label="Acciones de la Reunida"
+                                            data-toggle="dropdown"
+                                            aria-haspopup="true"
+                                            aria-expanded="false">
+                                        ⚙️
+                                    </button>
+                                    <div class="dropdown-menu pof-grid-dropdown-menu pof-grid-actions-menu">
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-detail" href="{% url 'reunidas_pof:detalle_reunida' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
+                                            👁️ VER DETALLE
+                                        </a>
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-primary" href="{% url 'reunidas_pof:cargar_cargos' %}?cabecera_tipo=REUNIDA&amp;anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo|urlencode }}">
+                                            👥 AFECTAR CARGOS
+                                        </a>
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-warning" href="{% url 'reunidas_pof:consultar_cargos' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
+                                            🛠️ ADMIN. CARGOS
+                                        </a>
+                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-success" href="{% url 'reunidas_pof:exportar_reunida' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
+                                            📗 EXPORTAR POF
+                                        </a>
+                                        <div class="pof-grid-dropdown-form pof-grid-dropdown-form-danger">
+                                            <button type="button"
+                                                    class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-danger"
+                                                    data-pof-delete-open
+                                                    data-pof-delete-tipo="REUNIDA"
+                                                    data-pof-delete-title="Eliminar Reunida"
+                                                    data-pof-delete-label="{{ reunida.nivel_nombre }} {{ reunida.anio }}"
+                                                    data-pof-delete-warning="Esta operación solo se realizará si la Reunida no registra actividad administrativa posterior y no es utilizada como base por otra Reunida. La Reunida base anterior no será modificada."
+                                                    data-pof-delete-url="{% url 'reunidas_pof:eliminar_reunida' reunida.id %}">
+                                                &#128465;&#65039; ELIMINAR REUNIDA
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="pof-grid-cell-center">{{ reunida.anio }}</td>
+                            <td class="pof-grid-cell-center">{{ reunida.nivel_nombre }}</td>
+                            <td class="pof-grid-cell-center">
+                                {% if reunida.actualizado_en %}
+                                    {{ reunida.actualizado_en|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="pof-grid-empty">No hay Reunidas cargadas.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pof-table-footer">
+            <form method="get" class="pof-page-size">
+                <input type="hidden" name="anio" value="{{ filtro_anio }}">
+                <input type="hidden" name="nivel" value="{{ filtro_nivel }}">
+                <label for="pageSizeReunidas">Registros por p&aacute;gina</label>
+                <select id="pageSizeReunidas" name="page_size">
+                    {% for opcion in page_size_options %}
+                        <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
+            </form>
+
+            {% if paginator.num_pages > 1 %}
+                <nav class="pof-pagination" aria-label="Paginaci&oacute;n de Reunidas">
+                    {% if page_obj.has_previous %}
+                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                    {% else %}
+                        <span class="pof-page-btn pof-page-btn-disabled">Anterior</span>
+                    {% endif %}
+
+                    {% for page_number in page_range %}
+                        {% if page_number == page_obj.number %}
+                            <span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>
+                        {% elif page_number == '…' %}
+                            <span class="pof-page-ellipsis">…</span>
+                        {% else %}
+                            <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+                    {% else %}
+                        <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    {% include "reunidas_pof/modal_eliminar_cabecera.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+
+{% endblock %}

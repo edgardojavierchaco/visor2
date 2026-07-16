@@ -1,0 +1,98 @@
+<div
+    id="modalEliminarCabecera"
+    class="pof-modal-backdrop pof-hidden"
+    aria-hidden="true"
+>
+    <div class="pof-modal pof-delete-modal" role="dialog" aria-modal="true" aria-labelledby="pofDeleteModalTitle">
+
+        <div class="pof-delete-modal-header">
+            <div class="pof-delete-modal-heading">
+                <span class="pof-delete-modal-warning-icon" aria-hidden="true">
+                    ⚠️
+                </span>
+
+                <h2
+                    id="pofDeleteModalTitle"
+                    class="pof-delete-modal-title"
+                    data-pof-delete-title
+                ></h2>
+            </div>
+
+            <button
+                type="button"
+                class="pof-modal-close pof-delete-modal-close"
+                data-pof-delete-close
+                aria-label="Cerrar"
+            >
+                ×
+            </button>
+        </div>
+
+        <div class="pof-delete-modal-divider"></div>
+
+        <form method="post" id="pofDeleteModalForm" data-pof-delete-form>
+            {% csrf_token %}
+
+            <div class="pof-delete-modal-warning-panel">
+                <div
+                    class="pof-delete-modal-trash-icon"
+                    aria-hidden="true"
+                >
+                    🗑️
+                </div>
+
+                <div class="pof-delete-modal-warning-content">
+                    <p class="pof-delete-modal-intro">
+                        Vas a solicitar la eliminación permanente de:
+                    </p>
+
+                    <p
+                        id="pofDeleteModalLabel"
+                        class="pof-delete-modal-target"
+                        data-pof-delete-label
+                    ></p>
+
+                    <p
+                        id="pofDeleteModalWarning"
+                        class="pof-delete-modal-warning-text"
+                        data-pof-delete-warning
+                    ></p>
+
+                    <div class="pof-delete-modal-inner-divider"></div>
+
+                    <p class="pof-delete-modal-question">
+                        <span aria-hidden="true">?</span>
+                        ¿Deseás continuar?
+                    </p>
+                </div>
+            </div>
+
+            <div
+                id="pofDeleteModalStatus"
+                class="pof-status pof-hidden"
+                data-pof-delete-status
+                aria-live="polite"
+            ></div>
+
+            <div class="pof-modal-actions pof-delete-modal-actions">
+                <button
+                    type="button"
+                    class="pof-btn pof-btn-light pof-delete-modal-cancel"
+                    data-pof-delete-close
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="pof-btn pof-btn-danger pof-delete-modal-confirm"
+                    id="pofDeleteModalConfirm"
+                    data-pof-delete-confirm
+                >
+                    <span aria-hidden="true">🗑️</span>
+                    Eliminar permanentemente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

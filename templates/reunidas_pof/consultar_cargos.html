@@ -1,0 +1,226 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+{% block content %}
+
+<div class="pof-page">
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="consultar" %}
+    <div class="pof-view-header">
+        <h1>&#9881;&#65039; ADMINISTRACI&Oacute;N DE CARGOS</h1>
+        <p>Busc&aacute;, revis&aacute; y modific&aacute; cargos cargados en POF.</p>
+    </div>
+
+    <form method="get" class="pof-filter-panel">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+        <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
+        <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
+
+        <div class="pof-filter-grid">
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.anio %} pof-filter-field-error{% endif %}">
+                <label for="filtroAnio">A&ntilde;o</label>
+                <input type="text" id="filtroAnio" name="anio" value="{{ filtros.anio }}" maxlength="4" inputmode="numeric" placeholder="4 dígitos" data-pof-digits-only>
+                {% if errores_filtros.anio %}<span id="errorFiltroAnio" class="pof-filter-field-help">{{ errores_filtros.anio }}</span>{% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.nivel %} pof-filter-field-error{% endif %}">
+                <label for="filtroNivel">Nivel</label>
+                <select id="filtroNivel" name="nivel">
+                    <option value="">Seleccionar nivel</option>
+                    <option value="__todos__" {% if filtros.nivel == "__todos__" %}selected{% endif %}>Todos los niveles</option>
+                    {% for codigo, nombre in niveles.items %}
+                        <option value="{{ codigo }}" {% if filtros.nivel == codigo %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+                {% if errores_filtros.nivel %}<span id="errorFiltroNivel" class="pof-filter-field-help">{{ errores_filtros.nivel }}</span>{% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.cueanexo %} pof-filter-field-error{% endif %}">
+                <label for="filtroCueanexo">CUEANEXO</label>
+                <input type="text" id="filtroCueanexo" name="cueanexo" value="{{ filtros.cueanexo }}" maxlength="9" inputmode="numeric" placeholder="9 d&iacute;gitos" data-pof-digits-only>
+                {% if errores_filtros.cueanexo %}<span id="errorFiltroCueanexo" class="pof-filter-field-help">{{ errores_filtros.cueanexo }}</span>{% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.cuof %} pof-filter-field-error{% endif %}">
+                <label for="filtroCuof">CUOF</label>
+                <input type="text" id="filtroCuof" name="cuof" value="{{ filtros.cuof }}" maxlength="50" inputmode="numeric" pattern="[0-9]*" placeholder="CUOF" data-pof-digits-only>
+                {% if errores_filtros.cuof %}<span id="errorFiltroCuof" class="pof-filter-field-help">{{ errores_filtros.cuof }}</span>{% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.ceic %} pof-filter-field-error{% endif %}">
+                <label for="filtroCeic">CEIC</label>
+                <input type="text" id="filtroCeic" name="ceic" value="{{ filtros.ceic }}" maxlength="3" inputmode="numeric" placeholder="CEIC" data-pof-digits-only {% if errores_filtros.ceic %}aria-invalid="true" aria-describedby="errorFiltroCeic"{% endif %}>
+                {% if errores_filtros.ceic %}<span id="errorFiltroCeic" class="pof-filter-field-help">{{ errores_filtros.ceic }}</span>{% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.estado_pof %} pof-filter-field-error{% endif %}">
+                <label for="filtroEstadoPof">Estado</label>
+                <select id="filtroEstadoPof" name="estado_pof" {% if errores_filtros.estado_pof %}aria-invalid="true" aria-describedby="errorFiltroEstadoPof"{% endif %}>
+                    <option value="">Seleccionar estado</option>
+                    {% for codigo_estado, etiqueta_estado in opciones_estado_pof %}
+                        <option value="{{ codigo_estado }}" {% if filtros.estado_pof == codigo_estado %}selected{% endif %}>{{ etiqueta_estado }}</option>
+                    {% endfor %}
+                </select>
+                {% if errores_filtros.estado_pof %}<span id="errorFiltroEstadoPof" class="pof-filter-field-help">{{ errores_filtros.estado_pof }}</span>{% endif %}
+            </div>
+
+            <div class="pof-filter-field pof-col-2{% if errores_filtros.unidad_cantidad %} pof-filter-field-error{% endif %}">
+                <label for="filtroUnidadCantidad">Unidad</label>
+                <select id="filtroUnidadCantidad" name="unidad_cantidad" {% if errores_filtros.unidad_cantidad %}aria-invalid="true" aria-describedby="errorFiltroUnidadCantidad"{% endif %}>
+                    <option value="">Seleccionar unidad</option>
+                    {% for codigo_unidad, etiqueta_unidad in opciones_unidad_cantidad %}
+                        <option value="{{ codigo_unidad }}" {% if filtros.unidad_cantidad == codigo_unidad %}selected{% endif %}>{{ etiqueta_unidad }}</option>
+                    {% endfor %}
+                </select>
+                {% if errores_filtros.unidad_cantidad %}<span id="errorFiltroUnidadCantidad" class="pof-filter-field-help">{{ errores_filtros.unidad_cantidad }}</span>{% endif %}
+            </div>
+
+        </div>
+
+        <div class="pof-filter-actions">
+            <button type="submit" class="pof-filter-apply-btn">Aplicar filtros</button>
+            <a class="pof-filter-clear-btn" href="{% url 'reunidas_pof:consultar_cargos' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">Limpiar filtros</a>
+        </div>
+    </form>
+
+    {% if tabla_cargos_no_migrada %}
+        <div class="pof-note">La tabla de cargos todav&iacute;a no est&aacute; migrada. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
+    {% endif %}
+
+    <div class="pof-filter-summary">
+        <div class="pof-filter-summary-left">
+            <span class="pof-filter-summary-main">Resultados: Mostrando cargos {{ showing_start }}-{{ showing_end }} de {{ total_registros }}</span>
+        </div>
+        <span class="pof-filter-total">Total de cargos: {{ total_registros }}</span>
+    </div>
+
+    {% if filtros_activos %}
+        <div class="pof-filter-active-list" aria-label="Filtros activos">
+            {% for chip in filtros_activos %}
+                <a class="pof-filter-chip" href="{% url 'reunidas_pof:consultar_cargos' %}{% if chip.querystring %}?{{ chip.querystring }}{% endif %}">
+                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;&#65039;</span><span class="pof-filter-chip-text">{{ chip.etiqueta }}: {{ chip.valor }}</span><span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if mensaje_filtros %}
+        <div class="pof-filter-warning">
+            <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+            <span>{{ mensaje_filtros }}</span>
+        </div>
+    {% endif %}
+
+    <div class="pof-grid-table-wrap">
+        <table class="pof-grid-table">
+            <thead>
+                <tr>
+                    <th class="pof-grid-icon-cell">Acci&oacute;n</th>
+                    <th>Cabecera</th>
+                    <th>CUE</th>
+                    <th>Anexo</th>
+                    <th>Establecimiento</th>
+                    <th>Unidad</th>
+                    <th>Cargo</th>
+                    <th>Cantidad</th>
+                    <th>Puntos</th>
+                    <th>Estado Actual</th>
+                    <th>&Uacute;ltima Modificaci&oacute;n</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for cargo in cargos %}
+                    <tr>
+                        <td class="pof-grid-icon-cell">
+                            <button type="button"
+                                    class="pof-grid-icon-btn pof-admin-gear-btn"
+                                    title="Gesti&oacute;n de cargo"
+                                    aria-label="Gesti&oacute;n de cargo"
+                                    data-cargo-id="{{ cargo.id }}"
+                                    data-cargo-gestion>
+                                🛠️
+                            </button>
+                        </td>
+                        <td>{{ cargo.cabecera }}</td>
+                        <td class="pof-grid-cell-center">{{ cargo.cue }}</td>
+                        <td class="pof-grid-cell-center">{{ cargo.anexo }}</td>
+                        <td>{{ cargo.establecimiento }}</td>
+                        <td class="pof-grid-cell-center">{{ cargo.unidad }}</td>
+                        <td>{{ cargo.cargo }}</td>
+                        <td class="pof-grid-cell-center">{{ cargo.cantidad }}</td>
+                        <td class="pof-grid-cell-center">{{ cargo.puntos }}</td>
+                        <td class="pof-grid-cell-center">
+                            <span class="pof-grid-badge pof-grid-badge-{{ cargo.estado_clase }}">{{ cargo.estado }}</span>
+                        </td>
+                        <td class="pof-grid-cell-center">
+                            {% if cargo.actualizado_en %}
+                                {{ cargo.actualizado_en|date:"d/m/Y H:i" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="11" class="pof-grid-empty">No se encontraron cargos asociados.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pof-table-footer">
+        <form method="get" class="pof-page-size">
+            <input type="hidden" name="anio" value="{{ filtros.anio }}">
+            <input type="hidden" name="nivel" value="{{ filtros.nivel }}">
+            <input type="hidden" name="cueanexo" value="{{ filtros.cueanexo }}">
+            <input type="hidden" name="cuof" value="{{ filtros.cuof }}">
+            <input type="hidden" name="ceic" value="{{ filtros.ceic }}">
+            <input type="hidden" name="estado_pof" value="{{ filtros.estado_pof }}">
+            <input type="hidden" name="unidad_cantidad" value="{{ filtros.unidad_cantidad }}">
+            <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
+            <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
+            <label for="pageSizeCargos">Registros por p&aacute;gina</label>
+            <select id="pageSizeCargos" name="page_size">
+                {% for opcion in page_size_options %}
+                    <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
+        </form>
+
+        {% if paginator.num_pages > 1 %}
+            <nav class="pof-pagination" aria-label="Paginaci&oacute;n de cargos">
+                {% if page_obj.has_previous %}
+                    <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                {% else %}
+                    <span class="pof-page-btn pof-page-btn-disabled">Anterior</span>
+                {% endif %}
+
+                {% for page_number in page_range %}
+                    {% if page_number == page_obj.number %}
+                        <span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>
+                    {% elif page_number == '…' %}
+                        <span class="pof-page-ellipsis">…</span>
+                    {% else %}
+                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+                {% else %}
+                    <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </div>
+
+    {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="reload" %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}"></script>
+{% endblock %}

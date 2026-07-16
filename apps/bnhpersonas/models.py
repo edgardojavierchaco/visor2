@@ -377,7 +377,7 @@ class NivelFormacion(models.Model):
 
 
 class TipoOS(models.Model):
-    c_tipo_os=models.IntegerField(primary_key=True)
+    c_tipo_os=models.IntegerField(primary_key=True, db_column='c_os')
     descrip_os=models.CharField(max_length=50)
     
     class Meta:

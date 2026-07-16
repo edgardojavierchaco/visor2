@@ -21,10 +21,11 @@ from .views_establecimientos import (
     _serialize_localizacion as _serialize_localizacion_detalle,
 )
 
-PADRON_DB = 'Padron'
+MATERIALIZADAS_DB = 'default'
 PAGE_SIZE = 10
 
 
+# Normaliza textos provenientes de la base antes de mostrarlos.
 def _normalize_text(value, keep_linebreaks=False):
     if value is None:
         return ''
@@ -99,24 +100,26 @@ def _format_date(value):
     return f"{meses[dt_value.month - 1]} {dt_value.day:02d} {dt_value.year}"
 
 
+# Convierte resultados SQL en diccionarios.
 def _dictfetchall(cursor):
     columns = [column[0] for column in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
 def _fetch_one(sql, params):
-    with connections[PADRON_DB].cursor() as cursor:
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
         cursor.execute(sql, params)
         rows = _dictfetchall(cursor)
     return rows[0] if rows else None
 
 
 def _fetch_all(sql, params):
-    with connections[PADRON_DB].cursor() as cursor:
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
         cursor.execute(sql, params)
         return _dictfetchall(cursor)
 
 
+# Limpia None antes de responder JSON.
 def _sanitize_json_payload(value):
     if isinstance(value, dict):
         return {key: _sanitize_json_payload(inner_value) for key, inner_value in value.items()}
@@ -127,26 +130,29 @@ def _sanitize_json_payload(value):
     return value
 
 
+# Fragmentos SQL reutilizados por listado, filtros y exportacion.
 LIST_CUEANEXO_SQL = (
-    "COALESCE(BTRIM(locs.cueanexo), '')"
+    "COALESCE(BTRIM(r.cueanexo), '')"
 )
 LIST_CODIGO_JURISDICCIONAL_SQL = (
-    "COALESCE(BTRIM(locs.codigo_jurisdiccional), '')"
+    "COALESCE(BTRIM(r.codigo_jurisdiccional), '')"
 )
 
+# Mapa cerrado de campos permitidos para filtros y ordenamiento.
 CAMPO_SQL = {
     'apellido': "COALESCE(BTRIM(r.apellido), '')",
     'nombre': "COALESCE(BTRIM(r.nombre), '')",
-    'tipo_documento': "COALESCE(BTRIM(tdt.descripcion), '')",
+    'tipo_documento': "COALESCE(BTRIM(r.tipo_documento), '')",
     'nro_documento': "COALESCE(r.nro_documento::text, '')",
     'telefono': "COALESCE(BTRIM(r.telefono), '')",
-    'sexo': "COALESCE(BTRIM(st.descripcion), '')",
+    'sexo': "COALESCE(BTRIM(r.sexo), '')",
     'email': "COALESCE(BTRIM(r.email), '')",
     'cueanexo': LIST_CUEANEXO_SQL,
     'codigo_jurisdiccional': LIST_CODIGO_JURISDICCIONAL_SQL,
     'cuil_cuit': "COALESCE(BTRIM(r.cuil_cuit), '')",
 }
 
+# Nombres legibles para el resumen de filtros.
 VISIBLE_NAME_MAP = {
     'apellido': 'Apellido',
     'nombre': 'Nombre',
@@ -160,6 +166,7 @@ VISIBLE_NAME_MAP = {
     'cuil_cuit': 'Cuil/Cuit',
 }
 
+# Columnas disponibles para exportar a Excel.
 COLUMNAS_EXPORTACION = [
     ('Apellido', 'apellido'),
     ('Nombre', 'nombre'),
@@ -173,47 +180,40 @@ COLUMNAS_EXPORTACION = [
     ('Cuil/Cuit', 'cuil_cuit'),
 ]
 
+# SELECT principal del listado de responsables.
 _SELECT_FIELDS = f"""
     SELECT
         r.id_responsable AS id,
         COALESCE(BTRIM(r.apellido), '') AS apellido,
         COALESCE(BTRIM(r.nombre), '') AS nombre,
-        COALESCE(BTRIM(tdt.descripcion), '') AS tipo_documento,
+        COALESCE(BTRIM(r.tipo_documento), '') AS tipo_documento,
         COALESCE(r.nro_documento::text, '') AS nro_documento,
         COALESCE(BTRIM(r.telefono), '') AS telefono,
-        COALESCE(BTRIM(st.descripcion), '') AS sexo,
+        COALESCE(BTRIM(r.sexo), '') AS sexo,
         COALESCE(BTRIM(r.email), '') AS email,
         {LIST_CUEANEXO_SQL} AS cueanexo,
         {LIST_CODIGO_JURISDICCIONAL_SQL} AS codigo_jurisdiccional,
         COALESCE(BTRIM(r.cuil_cuit), '') AS cuil_cuit
 """
 
+# FROM y joins completos del listado.
 _BASE_SQL = """
-    FROM responsable r
-    LEFT JOIN tipo_documento_tipo tdt
-      ON tdt.c_tipo_documento = r.c_tipo_documento
-    LEFT JOIN sexo_tipo st
-      ON st.c_sexo = r.c_sexo
-    LEFT JOIN LATERAL (
-        SELECT
-            STRING_AGG(
-                e.cue::text || LPAD(COALESCE(l.anexo::text, ''), 2, '0'),
-                ', '
-                ORDER BY e.cue::text ASC, COALESCE(l.anexo::text, '') DESC
-            ) AS cueanexo,
-            STRING_AGG(
-                NULLIF(BTRIM(l.codigo_jurisdiccional), ''),
-                ', '
-                ORDER BY e.cue::text ASC, COALESCE(l.anexo::text, '') DESC
-            ) AS codigo_jurisdiccional
-        FROM localizacion l
-        JOIN establecimiento e
-          ON e.id_establecimiento = l.id_establecimiento
-        WHERE l.id_responsable = r.id_responsable
-    ) locs ON TRUE
+    FROM padroninterno.mv_responsables r
 """
 
 
+_COUNT_LIGHT_SQL = """
+    FROM padroninterno.mv_responsables r
+"""
+
+_COUNT_LIGHT_JOINS = {}
+_COUNT_JOIN_ORDER = ()
+_COUNT_FIELD_JOIN_KEYS = {}
+_COUNT_HEAVY_FILTER_FIELDS = set()
+_COUNT_HEAVY_ALIASES = ()
+
+
+# Paginador liviano para SQL crudo.
 class _RawPage:
     def __init__(self, data_sql, count_sql, params, db_alias):
         self._data_sql = data_sql
@@ -244,6 +244,7 @@ class _RawPage:
             return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
+# Operadores permitidos por filtros avanzados.
 OPERADOR_SQL = {
     '0': ('ILIKE', lambda value: f'%{value}%'),
     '1': ('NOT ILIKE', lambda value: f'%{value}%'),
@@ -283,6 +284,7 @@ def _build_text_search_clause(expr, value):
     return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
 
 
+# Construye WHERE desde filtros individuales y busqueda global.
 def _build_where(request):
     clauses = []
     params = []
@@ -361,6 +363,89 @@ def _build_where(request):
     return where, params
 
 
+def _active_count_filter_fields(request):
+    campos = request.GET.getlist('campo_filtro')
+    valores = request.GET.getlist('valor_filtro')
+    active_fields = []
+
+    for index, campo_raw in enumerate(campos):
+        campo = campo_raw.strip()
+        valor = valores[index].strip() if index < len(valores) else ''
+
+        if campo and valor and campo in CAMPO_SQL:
+            active_fields.append(campo)
+
+    return active_fields
+
+
+def _field_requires_heavy_count(campo):
+    sql = CAMPO_SQL.get(campo, '')
+    return campo in _COUNT_HEAVY_FILTER_FIELDS or any(alias in sql for alias in _COUNT_HEAVY_ALIASES)
+
+
+def _request_requires_heavy_count(request, where):
+    if request.GET.get('q', '').strip():
+        return True
+
+    if any(_field_requires_heavy_count(campo) for campo in _active_count_filter_fields(request)):
+        return True
+
+    orden_key = request.GET.get('orden', '').strip()
+    if orden_key and _field_requires_heavy_count(orden_key):
+        return True
+
+    return any(alias in where for alias in _COUNT_HEAVY_ALIASES)
+
+
+def _build_count_light_sql(request, where):
+    join_keys = set()
+    for campo in _active_count_filter_fields(request):
+        join_keys.update(_COUNT_FIELD_JOIN_KEYS.get(campo, set()))
+
+    joins = [
+        _COUNT_LIGHT_JOINS[join_key].rstrip()
+        for join_key in _COUNT_JOIN_ORDER
+        if join_key in join_keys
+    ]
+    base_sql = _COUNT_LIGHT_SQL.rstrip()
+    if joins:
+        base_sql = f"{base_sql}\n" + "\n".join(joins)
+
+    return f"SELECT COUNT(*) {base_sql} {where}"
+
+
+# Elige conteo liviano o completo segun filtros activos.
+def _build_count_sql(request, where):
+    if _request_requires_heavy_count(request, where):
+        return f"SELECT COUNT(*) {_BASE_SQL} {where}"
+
+    return _build_count_light_sql(request, where)
+
+
+def _build_data_sql(request, where):
+    orden_key = request.GET.get('orden', 'apellido')
+    col_orden = CAMPO_SQL.get(orden_key, "COALESCE(BTRIM(r.apellido), '')")
+    return f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {col_orden}, r.id_responsable"
+
+
+def _parse_positive_int(value, default):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+
+    return parsed if parsed > 0 else default
+
+
+def _get_page_size(request):
+    return min(_parse_positive_int(request.GET.get('page_size'), PAGE_SIZE), 100)
+
+
+def _get_page_number(request):
+    return _parse_positive_int(request.GET.get('page'), 1)
+
+
+# Arma el resumen de filtros para el encabezado del Excel.
 def _armar_texto_filtros(request):
     partes = []
     operadores_txt = {
@@ -422,6 +507,7 @@ def _resolver_columnas_exportar(request, formato):
     return columnas_filtradas or COLUMNAS_EXPORTACION
 
 
+# Genera el Excel de responsables.
 def _exportar_excel(datos_exportar, formato, request):
     columnas_mapeo = _resolver_columnas_exportar(request, formato)
 
@@ -508,12 +594,27 @@ def _make_option(value, label=None):
 
 
 @lru_cache(maxsize=1)
+# Opciones cacheadas para filtros del frontend.
 def _get_filter_options():
-    with connections[PADRON_DB].cursor() as cursor:
-        cursor.execute("SELECT descripcion FROM tipo_documento_tipo ORDER BY c_tipo_documento")
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT BTRIM(tipo_documento) AS valor
+            FROM padroninterno.mv_responsables
+            WHERE COALESCE(BTRIM(tipo_documento), '') <> ''
+            ORDER BY valor
+            """
+        )
         tipo_documento = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
 
-        cursor.execute("SELECT descripcion FROM sexo_tipo ORDER BY c_sexo")
+        cursor.execute(
+            """
+            SELECT DISTINCT BTRIM(sexo) AS valor
+            FROM padroninterno.mv_responsables
+            WHERE COALESCE(BTRIM(sexo), '') <> ''
+            ORDER BY valor
+            """
+        )
         sexo = [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
 
     return {
@@ -522,6 +623,7 @@ def _get_filter_options():
     }
 
 
+# Serializador compacto de filas del listado.
 def _serialize_list_item(row):
     return {
         'id': row.get('id'),
@@ -538,6 +640,7 @@ def _serialize_list_item(row):
     }
 
 
+# Serializador del detalle de responsable.
 def _serialize_responsable(row):
     return {
         'id_responsable': row.get('id_responsable'),
@@ -556,24 +659,22 @@ def _serialize_responsable(row):
 
 @padron_interno_admin_o_gestor_required
 def detalle_responsable_json(request, id_responsable):
+    # Endpoint de detalle: responsable y sus establecimientos/localizaciones vinculados.
     responsable_sql = """
         SELECT
             r.id_responsable,
             r.apellido,
             r.nombre,
-            tdt.descripcion AS tipo_documento,
+            r.tipo_documento,
             r.nro_documento,
-            ot.descripcion AS nacionalidad,
+            r.nacionalidad,
             r.fecha_nacimiento,
-            st.descripcion AS sexo,
+            r.sexo,
             r.telefono,
             r.email,
             r.cuil_cuit,
             r.fecha_actualizacion
-        FROM responsable r
-        LEFT JOIN tipo_documento_tipo tdt ON tdt.c_tipo_documento = r.c_tipo_documento
-        LEFT JOIN sexo_tipo st ON st.c_sexo = r.c_sexo
-        LEFT JOIN origen_tipo ot ON ot.c_origen = r.c_nacionalidad
+        FROM padroninterno.mv_responsables r
         WHERE r.id_responsable = %s
     """
 
@@ -583,31 +684,20 @@ def detalle_responsable_json(request, id_responsable):
             {EST_OBSERVACIONES_SQL} AS observaciones,
             {EST_TIPO_OFERTAS_SQL} AS tipo_ofertas
         {EST_BASE_SQL}
-        WHERE ve.id_establecimiento IN (
-            SELECT e.id_establecimiento
-            FROM establecimiento e
-            WHERE e.id_responsable = %s
-        )
+        WHERE ve.id_responsable = %s
         ORDER BY ve.cue::text, ve.id_establecimiento
     """
 
     localizaciones_sql = """
         SELECT
             vl.*,
-            tel_sup.valor AS tel_supervisor,
-            email_sup.valor AS email_supervisor,
+            vl.tel_supervisor,
+            vl.email_supervisor,
             ofres.ofertas_resumen
-        FROM vp_localizaciones vl
-        LEFT JOIN loc_campo_prov_valor tel_sup
-            ON tel_sup.id_localizacion = vl.id_localizacion
-           AND tel_sup.id_campo_prov = 1019638042
-        LEFT JOIN loc_campo_prov_valor email_sup
-            ON email_sup.id_localizacion = vl.id_localizacion
-           AND email_sup.id_campo_prov = 1019638043
+        FROM padroninterno.mv_localizaciones vl
         LEFT JOIN LATERAL (
-            SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, ol.id_oferta_local) AS ofertas_resumen
-            FROM oferta_local ol
-            JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+            SELECT STRING_AGG(BTRIM(ol.oferta), ', ' ORDER BY ol.c_oferta, ol.id_oferta_local) AS ofertas_resumen
+            FROM padroninterno.mv_ofertaslocales ol
             WHERE ol.id_localizacion = vl.id_localizacion
         ) ofres ON TRUE
         WHERE vl.id_responsable = %s
@@ -633,54 +723,75 @@ def detalle_responsable_json(request, id_responsable):
 
 @padron_interno_admin_o_gestor_required
 def listar_responsables(request):
+    # Renderiza la pantalla; los datos se cargan por AJAX salvo exportacion Excel.
     formato = request.GET.get('formato')
 
     if formato == 'excel_todo':
         where, params = '', []
-    else:
+    elif formato == 'excel_pagina':
         where, params = _build_where(request)
+    else:
+        context = {
+            'lista_items': [],
+            'page_obj': None,
+            'resultado_total': None,
+            'resultado_desde': 0,
+            'resultado_hasta': 0,
+            'username': getattr(request.user, 'username', ''),
+            'request': request,
+            'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
+            'responsables_async_loading': True,
+        }
+        context.update(get_contexto_fecha_padron(request))
+        return render(request, 'padroninterno/listadoresponsables.html', context)
 
-    orden_key = request.GET.get('orden', 'apellido')
-    col_orden = CAMPO_SQL.get(orden_key, "COALESCE(BTRIM(r.apellido), '')")
-
-    data_sql = f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {col_orden}, r.id_responsable"
+    data_sql = _build_data_sql(request, where)
 
     if formato in {'excel_pagina', 'excel_todo'}:
         datos_base = _fetch_all(data_sql, params)
         datos_exportar = [_serialize_list_item(row) for row in datos_base]
         return _exportar_excel(datos_exportar, formato, request)
 
-    count_sql = f"SELECT COUNT(*) {_BASE_SQL} {where}"
 
-    try:
-        current_page_size = int(request.GET.get('page_size', PAGE_SIZE))
-    except (TypeError, ValueError):
-        current_page_size = PAGE_SIZE
+@padron_interno_admin_o_gestor_required
+def responsables_datos_json(request):
+    # Endpoint paginado: trae una fila extra para calcular has_next.
+    where, params = _build_where(request)
+    page_size = _get_page_size(request)
+    page = _get_page_number(request)
+    offset = (page - 1) * page_size
+    data_sql = _build_data_sql(request, where)
+    rows = _fetch_all(f"{data_sql} LIMIT %s OFFSET %s", params + [page_size + 1, offset])
+    page_rows = rows[:page_size]
+    items = [_serialize_list_item(row) for row in page_rows]
 
-    raw = _RawPage(data_sql, count_sql, params, PADRON_DB)
-    paginator = Paginator(raw, current_page_size)
+    return JsonResponse(_sanitize_json_payload({
+        'items': items,
+        'has_next': len(rows) > page_size,
+        'has_previous': page > 1,
+        'desde': offset + 1 if items else 0,
+        'hasta': offset + len(items) if items else 0,
+        'page': page,
+        'page_size': page_size,
+        'total': None,
+        'total_pending': True,
+    }))
 
-    try:
-        page_number = request.GET.get('page', 1)
-        page_obj = paginator.page(page_number)
-    except (EmptyPage, PageNotAnInteger):
-        page_obj = paginator.page(1)
 
-    total = len(raw)
-    desde = (page_obj.number - 1) * current_page_size + 1 if total else 0
-    hasta = min(page_obj.number * current_page_size, total)
+@padron_interno_admin_o_gestor_required
+def responsables_total_json(request):
+    # Conteo separado para no demorar el listado principal.
+    where, params = _build_where(request)
+    count_sql = _build_count_sql(request, where)
 
-    lista_items = [_serialize_list_item(row) for row in page_obj.object_list]
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        cursor.execute(count_sql, params)
+        total = cursor.fetchone()[0]
 
-    context = {
-        'lista_items': lista_items,
-        'page_obj': page_obj,
-        'resultado_total': total,
-        'resultado_desde': desde,
-        'resultado_hasta': hasta,
-        'username': getattr(request.user, 'username', ''),
-        'request': request,
-        'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
-    }
-    context.update(get_contexto_fecha_padron(request))
-    return render(request, 'padroninterno/listadoresponsables.html', context)
+    return JsonResponse({'total': total})
+
+
+@padron_interno_admin_o_gestor_required
+def responsables_filtros_json(request):
+    # Devuelve opciones de filtros avanzados.
+    return JsonResponse(_get_filter_options())

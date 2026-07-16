@@ -1,4 +1,3 @@
-import json
 import re
 from datetime import date, datetime
 from functools import lru_cache
@@ -6,16 +5,18 @@ from io import BytesIO
 from .permisos import padron_interno_admin_o_gestor_required
 from .views_fecha import get_contexto_fecha_padron
 import openpyxl
-from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
-PADRON_DB = 'Padron'
+MATERIALIZADAS_DB = 'default'
 PAGE_SIZE = 10
 OFERTA_ESTADO_FILTER_OPTIONS = ('Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes')
+
+# Helpers SQL para separar campos guardados como "codigo-descripcion".
+# Se reutilizan en columnas visibles, filtros y exportacion.
 
 def _cp_desc_expr(column_name):
     return (
@@ -54,9 +55,11 @@ DIRECTOR_SQL = """
 """
 
 
-OBSERVACIONES_SQL = "COALESCE(BTRIM(est_obs.valor), '')"
-TIPO_OFERTAS_SQL = "COALESCE(BTRIM(otipos.tipo_ofertas), '')"
+# Fragmentos SQL compartidos por listado, detalle y exportacion.
+OBSERVACIONES_SQL = "COALESCE(BTRIM(ve.observaciones), '')"
+TIPO_OFERTAS_SQL = "COALESCE(BTRIM(ve.tipo_ofertas), '')"
 
+# Mapa de campos permitidos para ordenar y filtrar desde parametros GET.
 CAMPO_SQL = {
     'cue': 've.cue::text',
     'cantidad_localizaciones': 'COALESCE(ve.cantidad_localizaciones, 0)',
@@ -83,6 +86,7 @@ CAMPO_SQL = {
     'descrip_inst_legal': _cp_code_expr('ve.cp_est_descrip_inst_legal'),
 }
 
+# Nombres legibles para mostrar filtros aplicados en reportes.
 VISIBLE_NAME_MAP = {
     'cue': 'Cue',
     'cantidad_localizaciones': 'Cantidad de Localizaciones',
@@ -109,6 +113,7 @@ VISIBLE_NAME_MAP = {
     'descrip_inst_legal': 'DESCRIP. Inst. Legal Creacion del Establecimiento',
 }
 
+# Columnas disponibles al generar el Excel.
 COLUMNAS_EXPORTACION = [
     ('Cue', 'cue'),
     ('Cantidad de Localizaciones', 'cantidad_localizaciones'),
@@ -135,6 +140,7 @@ COLUMNAS_EXPORTACION = [
     ('DESCRIP. Inst. Legal Creacion del Establecimiento', 'descrip_inst_legal'),
 ]
 
+# SELECT principal del listado de establecimientos.
 _SELECT_FIELDS = f"""
     SELECT
         ve.id_establecimiento AS id,
@@ -163,31 +169,66 @@ _SELECT_FIELDS = f"""
         {_cp_code_expr('ve.cp_est_descrip_inst_legal')} AS descrip_inst_legal
 """
 
+# FROM principal sobre la materializada validada.
 _BASE_SQL = """
-    FROM vp_establecimientos ve
-    LEFT JOIN LATERAL (
-        SELECT STRING_AGG(valor_limpio, ', ' ORDER BY orden_obs) AS valor
-        FROM (
-            SELECT
-                BTRIM(valor) AS valor_limpio,
-                MIN(id_est_campo_prov_valor) AS orden_obs
-            FROM est_campo_prov_valor
-            WHERE id_establecimiento = ve.id_establecimiento
-              AND id_campo_prov = 1019638050
-              AND COALESCE(BTRIM(valor), '') <> ''
-            GROUP BY BTRIM(valor)
-        ) obs
-    ) est_obs ON TRUE
-    LEFT JOIN LATERAL (
-        SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, l.anexo, ol.id_oferta_local) AS tipo_ofertas
-        FROM localizacion l
-        JOIN oferta_local ol ON ol.id_localizacion = l.id_localizacion
-        JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
-        WHERE l.id_establecimiento = ve.id_establecimiento
-    ) otipos ON TRUE
+    FROM padroninterno.mv_establecimientos ve
 """
 
 
+_COUNT_LIGHT_SQL = """
+    FROM padroninterno.mv_establecimientos ve
+"""
+
+_COUNT_HEAVY_FILTER_FIELDS = {'tipo_ofertas', 'observaciones'}
+_COUNT_HEAVY_ALIASES = ('est_obs.', 'otipos.')
+
+
+# Decide si el conteo necesita joins pesados segun filtros o busqueda.
+def _request_requires_heavy_count(request, where):
+    if request.GET.get('q', '').strip():
+        return True
+
+    if any(
+        campo.strip() in _COUNT_HEAVY_FILTER_FIELDS
+        for campo in request.GET.getlist('campo_filtro')
+    ):
+        return True
+
+    return any(alias in where for alias in _COUNT_HEAVY_ALIASES)
+
+
+def _build_count_sql_establecimientos(request, where, params):
+    base_sql = _BASE_SQL if _request_requires_heavy_count(request, where) else _COUNT_LIGHT_SQL
+    return f"SELECT COUNT(*) {base_sql} {where}"
+
+
+def _build_order_clause(request):
+    orden_key = request.GET.get('orden', 'cue')
+    col_orden = CAMPO_SQL.get(orden_key, 've.cue::text')
+    return f"{col_orden}, ve.id_establecimiento"
+
+
+def _build_data_sql(request, where):
+    return f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {_build_order_clause(request)}"
+
+
+def _parse_positive_int(value, default):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _get_page_size(request):
+    return min(_parse_positive_int(request.GET.get('page_size'), PAGE_SIZE), 100)
+
+
+def _get_page_number(request):
+    return _parse_positive_int(request.GET.get('page'), 1)
+
+
+# Paginador liviano para SQL crudo: calcula total solo cuando Django lo pide.
 class _RawPage:
     def __init__(self, data_sql, count_sql, params, db_alias):
         self._data_sql = data_sql
@@ -218,6 +259,7 @@ class _RawPage:
             return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
+# Operadores permitidos en filtros avanzados.
 OPERADOR_SQL = {
     '0': ('ILIKE', lambda v: f'%{v}%'),
     '1': ('NOT ILIKE', lambda v: f'%{v}%'),
@@ -229,6 +271,7 @@ OPERADOR_SQL = {
     '7': ('!=', lambda v: v),
 }
 
+# Normalizacion para busquedas tolerantes a acentos.
 _REPEATED_PAIR_RE = re.compile(r'^(.+)-\1$')
 _ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
 _UNACCENTED_CHARS = 'AEIOUUNaeiouun'
@@ -311,8 +354,8 @@ def _tipo_ofertas_clause_operator(oper):
 
 def _build_tipo_ofertas_clause(oper, tipo_value_counts=None, estado_count=0):
     tipo_value_counts = tipo_value_counts or []
-    descripcion = _folded_sql('otf.descripcion')
-    estado = _folded_sql('etf.descripcion')
+    descripcion = _folded_sql('olf.oferta')
+    estado = _folded_sql('olf.estado_ofertalocal')
     op_str = _tipo_ofertas_clause_operator(oper)
     conditions = []
 
@@ -331,16 +374,14 @@ def _build_tipo_ofertas_clause(oper, tipo_value_counts=None, estado_count=0):
     return (
         f"{exists_operator} ("
         "SELECT 1 "
-        "FROM localizacion ltf "
-        "JOIN oferta_local olf ON olf.id_localizacion = ltf.id_localizacion "
-        "JOIN oferta_tipo otf ON otf.c_oferta = olf.c_oferta "
-        "LEFT JOIN estado_tipo etf ON etf.c_estado = olf.c_estado "
-        "WHERE ltf.id_establecimiento = ve.id_establecimiento "
+        "FROM padroninterno.mv_ofertaslocales olf "
+        "WHERE olf.id_establecimiento = ve.id_establecimiento "
         f"AND {' AND '.join(conditions)}"
         ")"
     )
 
 
+# Normaliza valores provenientes de la base antes de mostrarlos.
 def _normalize_text(value, keep_linebreaks=False):
     if value is None:
         return ''
@@ -496,17 +537,7 @@ def _build_cue_anexo(cue, anexo):
 
 @lru_cache(maxsize=None)
 def _get_campo_codigo_pairs(id_campo_prov):
-    with connections[PADRON_DB].cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT codigo::text, COALESCE(descripcion, '')
-            FROM campo_prov_codigo
-            WHERE id_campo_prov = %s
-            ORDER BY LENGTH(codigo::text) DESC, codigo::text
-            """,
-            [id_campo_prov],
-        )
-        return tuple((_normalize_text(code), _normalize_text(desc)) for code, desc in cursor.fetchall())
+    return tuple()
 
 
 def _split_campo_codigo(value, id_campo_prov=None):
@@ -553,6 +584,8 @@ def _format_desc_with_code(value, id_campo_prov=None):
 
 def _format_code_then_desc(value, id_campo_prov=None):
     code, description = _split_campo_codigo(value, id_campo_prov)
+    if code and description and code.casefold() == description.casefold():
+        return code
     if code and description:
         return f'{code}, {description}'
     return code or description
@@ -565,6 +598,7 @@ def _format_desc_then_code(value, id_campo_prov=None):
     return description or code
 
 
+# Construye el WHERE a partir de filtros individuales y busqueda global.
 def _build_where(request):
     clauses = []
     params = []
@@ -705,6 +739,7 @@ def _build_where(request):
     return where, params
 
 
+# Arma el resumen de filtros que aparece en el encabezado del Excel.
 def _armar_texto_filtros(request):
     partes = []
     operadores_txt = {
@@ -767,6 +802,7 @@ def _resolver_columnas_exportar(request, formato):
     return columnas or COLUMNAS_EXPORTACION
 
 
+# Genera el archivo Excel del listado.
 def _exportar_excel(datos_exportar, formato, request):
     columnas_mapeo = _resolver_columnas_exportar(request, formato)
 
@@ -846,24 +882,26 @@ def _exportar_excel(datos_exportar, formato, request):
     response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
     return response
 
+# Convierte el resultado de un cursor SQL en diccionarios.
 def _dictfetchall(cursor):
     columns = [column[0] for column in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
 def _fetch_one(sql, params):
-    with connections[PADRON_DB].cursor() as cursor:
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
         cursor.execute(sql, params)
         rows = _dictfetchall(cursor)
     return rows[0] if rows else None
 
 
 def _fetch_all(sql, params):
-    with connections[PADRON_DB].cursor() as cursor:
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
         cursor.execute(sql, params)
         return _dictfetchall(cursor)
 
 
+# Limpia None recursivamente para que el frontend reciba cadenas vacias.
 def _sanitize_json_payload(value):
     if isinstance(value, dict):
         return {key: _sanitize_json_payload(inner_value) for key, inner_value in value.items()}
@@ -875,30 +913,31 @@ def _sanitize_json_payload(value):
 
 
 @lru_cache(maxsize=1)
+# Opciones cacheadas para combos de filtros.
 def _get_filter_options():
-    with connections[PADRON_DB].cursor() as cursor:
-        cursor.execute("SELECT descripcion FROM sector_tipo ORDER BY c_sector")
-        sectores = [_normalize_text(row[0]) for row in cursor.fetchall()]
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        def fetch_distinct(column_name):
+            cursor.execute(
+                f"""
+                SELECT DISTINCT BTRIM({column_name}) AS valor
+                FROM padroninterno.mv_establecimientos
+                WHERE COALESCE(BTRIM({column_name}), '') <> ''
+                ORDER BY valor
+                """
+            )
+            return [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
 
-        cursor.execute("SELECT descripcion FROM dependencia_tipo ORDER BY c_dependencia")
-        dependencias = [_normalize_text(row[0]) for row in cursor.fetchall()]
-
-        cursor.execute("SELECT descripcion FROM sino_tipo ORDER BY c_sino")
-        sino = [_normalize_text(row[0]) for row in cursor.fetchall()]
-
-        cursor.execute("SELECT descripcion FROM categoria_tipo ORDER BY c_categoria")
-        categorias = [_normalize_text(row[0]) for row in cursor.fetchall()]
-
-        cursor.execute("SELECT descripcion FROM estado_tipo ORDER BY c_estado")
-        estados = [_normalize_text(row[0]) for row in cursor.fetchall()]
-
-        cursor.execute("SELECT BTRIM(descripcion) FROM oferta_tipo ORDER BY c_oferta")
-        tipo_ofertas = [_normalize_text(row[0]) for row in cursor.fetchall()]
+        sectores = fetch_distinct('sector')
+        dependencias = fetch_distinct('dependencia')
+        confesionales = fetch_distinct('confesional')
+        arancelados = fetch_distinct('arancelado')
+        categorias = fetch_distinct('categoria')
+        estados = fetch_distinct('estado')
 
         cursor.execute(
             """
             SELECT DISTINCT BTRIM(localidad_sede) AS valor
-            FROM vp_establecimientos
+            FROM padroninterno.mv_establecimientos
             WHERE COALESCE(BTRIM(localidad_sede), '') <> ''
             ORDER BY valor
             """
@@ -908,42 +947,58 @@ def _get_filter_options():
         cursor.execute(
             """
             SELECT DISTINCT BTRIM(departamento_sede) AS valor
-            FROM vp_establecimientos
+            FROM padroninterno.mv_establecimientos
             WHERE COALESCE(BTRIM(departamento_sede), '') <> ''
             ORDER BY valor
             """
         )
         departamentos = [_normalize_text(row[0]) for row in cursor.fetchall()]
 
-        def fetch_campo_options(field_id):
-            cursor.execute(
-                """
-                SELECT COALESCE(descripcion, '')
-                FROM campo_prov_codigo
-                WHERE id_campo_prov = %s
-                ORDER BY codigo::text
-                """,
-                [field_id],
-            )
-            return [_normalize_text(row[0]) for row in cursor.fetchall() if _normalize_text(row[0])]
-
         return {
             'sector': sectores,
             'dependencia': dependencias,
-            'confesional': sino,
-            'arancelado': sino,
+            'confesional': confesionales,
+            'arancelado': arancelados,
             'categoria': categorias,
             'estado': [value for value in estados if value],
-            'tipo_ofertas': tipo_ofertas,
             'localidad': localidades,
             'departamento': departamentos,
-            'tipo_educacion': fetch_campo_options(1019638074),
-            'nivel': fetch_campo_options(1019638075),
-            'cargo_director': fetch_campo_options(1019638076),
-            'descrip_inst_legal': fetch_campo_options(1019638057),
+            'tipo_educacion': fetch_distinct('cp_est_tipo_ed'),
+            'cargo_director': fetch_distinct('cp_est_cargo_director'),
         }
 
 
+# Serializador compacto para filas del listado.
+def _serialize_list_item(row):
+    return {
+        'id': row.get('id'),
+        'cue': _normalize_text(row.get('cue')),
+        'cantidad_localizaciones': _normalize_text(row.get('cantidad_localizaciones')),
+        'codigo_jurisdiccional': _normalize_text(row.get('codigo_jurisdiccional')),
+        'nombre': _normalize_text(row.get('nombre')),
+        'sector': _normalize_text(row.get('sector')),
+        'dependencia': _normalize_text(row.get('dependencia')),
+        'confesional': _normalize_text(row.get('confesional')),
+        'arancelado': _normalize_text(row.get('arancelado')),
+        'categoria': _normalize_text(row.get('categoria')),
+        'director': _normalize_text(row.get('director')),
+        'estado': _normalize_text(row.get('estado')),
+        'tipo_ofertas': _normalize_text(row.get('tipo_ofertas')),
+        'localidad': _normalize_text(row.get('localidad')),
+        'departamento': _normalize_text(row.get('departamento')),
+        'nro_establecimiento': _normalize_text(row.get('nro_establecimiento')),
+        'tipo_educacion': _normalize_text(row.get('tipo_educacion')),
+        'nivel': _normalize_text(row.get('nivel')),
+        'cargo_director': _normalize_text(row.get('cargo_director')),
+        'observaciones': _normalize_text(row.get('observaciones'), keep_linebreaks=True),
+        'fecha_inst_legal': _normalize_text(row.get('fecha_inst_legal')),
+        'nro_inst_legal': _normalize_text(row.get('nro_inst_legal')),
+        'anio_creacion': _normalize_text(row.get('anio_creacion')),
+        'descrip_inst_legal': _normalize_text(row.get('descrip_inst_legal')),
+    }
+
+
+# Serializadores de detalle: formatean datos para los modales.
 def _serialize_establecimiento(row):
     return {
         'cue': _normalize_text(row.get('cue')),
@@ -1027,7 +1082,9 @@ def _serialize_localizacion(row):
         'microregion': _format_desc_then_code(row.get('cp_esvat4'), 1019638010),
         'udt': _format_desc_then_code(row.get('cp_esvat6'), 1019638012),
         'cuof_localizacion': _normalize_text(row.get('cp_esvar4')),
-        'director_regional': _format_desc_then_code(row.get('cp_directorregional'), 1019638045),
+        'director_regional': _normalize_text(
+            row.get('director_regional_detalle') or row.get('director_regional')
+        ),
         'telefono_director_regional': _normalize_text(row.get('cp_tedirregional')),
         'email_director_regional': _normalize_text(row.get('cp_emaildirregional')),
         'telefono_supervisor': _normalize_text(row.get('tel_supervisor')),
@@ -1111,6 +1168,7 @@ def _serialize_historial(row):
 
 @padron_interno_admin_o_gestor_required
 def detalle_establecimiento_json(request, id_establecimiento):
+    # Endpoint de detalle: reune establecimiento, localizaciones, ofertas e historial.
     establecimiento_sql = f"""
         SELECT
             ve.*,
@@ -1123,20 +1181,13 @@ def detalle_establecimiento_json(request, id_establecimiento):
     localizaciones_sql = """
         SELECT
             vl.*,
-            tel_sup.valor AS tel_supervisor,
-            email_sup.valor AS email_supervisor,
+            vl.tel_supervisor,
+            vl.email_supervisor,
             ofres.ofertas_resumen
-        FROM vp_localizaciones vl
-        LEFT JOIN loc_campo_prov_valor tel_sup
-            ON tel_sup.id_localizacion = vl.id_localizacion
-           AND tel_sup.id_campo_prov = 1019638042
-        LEFT JOIN loc_campo_prov_valor email_sup
-            ON email_sup.id_localizacion = vl.id_localizacion
-           AND email_sup.id_campo_prov = 1019638043
+        FROM padroninterno.mv_localizaciones vl
         LEFT JOIN LATERAL (
-            SELECT STRING_AGG(BTRIM(ot.descripcion), ', ' ORDER BY ot.c_oferta, ol.id_oferta_local) AS ofertas_resumen
-            FROM oferta_local ol
-            JOIN oferta_tipo ot ON ot.c_oferta = ol.c_oferta
+            SELECT STRING_AGG(BTRIM(ol.oferta), ', ' ORDER BY ol.c_oferta, ol.id_oferta_local) AS ofertas_resumen
+            FROM padroninterno.mv_ofertaslocales ol
             WHERE ol.id_localizacion = vl.id_localizacion
         ) ofres ON TRUE
         WHERE vl.id_establecimiento = %s
@@ -1145,37 +1196,16 @@ def detalle_establecimiento_json(request, id_establecimiento):
 
     ofertas_sql = """
         SELECT *
-        FROM vp_oferta_local
+        FROM padroninterno.mv_ofertaslocales
         WHERE id_establecimiento = %s
         ORDER BY c_oferta, anexo, id_oferta_local
     """
 
     historial_sql = """
-        SELECT
-            ce.id_establecimiento,
-            e.cue,
-            e.nombre,
-            m.id_movimiento,
-            tm.cod_tipo_mov,
-            tm.descripcion AS tipo_movimiento,
-            est.descripcion AS estado,
-            m.nro_instr_legal,
-            il.descripcion AS instr_legal,
-            mot.descripcion AS motivo,
-            m.fecha_inst_legal,
-            m.fecha_vigencia,
-            m.observacion,
-            u.nombre AS usuario
-        FROM cambio_estado_establecimiento ce
-        JOIN establecimiento e ON e.id_establecimiento = ce.id_establecimiento
-        JOIN movimiento m ON m.id_movimiento = ce.id_movimiento
-        LEFT JOIN tipo_mov_tipo tm ON tm.c_tipo_mov = m.c_tipo_mov
-        LEFT JOIN estado_tipo est ON est.c_estado = ce.c_estado
-        LEFT JOIN instr_legal_tipo il ON il.c_instr_legal = m.c_instr_legal
-        LEFT JOIN motivo_tipo mot ON mot.c_motivo = m.c_motivo
-        LEFT JOIN usuario u ON u.id_usuario = m.id_usuario
-        WHERE ce.id_establecimiento = %s
-        ORDER BY m.fecha_vigencia DESC, m.id_movimiento DESC
+        SELECT *
+        FROM padroninterno.mv_establecimiento_historial
+        WHERE id_establecimiento = %s
+        ORDER BY fecha_vigencia DESC, id_movimiento DESC
     """
 
     try:
@@ -1199,51 +1229,74 @@ def detalle_establecimiento_json(request, id_establecimiento):
 
 @padron_interno_admin_o_gestor_required
 def listar_establecimientos(request):
+    # Sin formato Excel, solo renderiza la pantalla; los datos llegan por AJAX.
     formato = request.GET.get('formato')
 
     if formato == 'excel_todo':
         where, params = '', []
-    else:
+    elif formato == 'excel_pagina':
         where, params = _build_where(request)
+    else:
+        context = {
+            'lista_items': [],
+            'page_obj': None,
+            'resultado_total': None,
+            'resultado_desde': 0,
+            'resultado_hasta': 0,
+            'username': getattr(request.user, 'username', ''),
+            'request': request,
+            'filter_options_json': '{}',
+            'establecimientos_async_loading': True,
+        }
+        context.update(get_contexto_fecha_padron(request))
+        return render(request, 'padroninterno/establecimientos.html', context)
 
-    orden_key = request.GET.get('orden', 'cue')
-    col_orden = CAMPO_SQL.get(orden_key, 've.cue::text')
-
-    data_sql = f"{_SELECT_FIELDS} {_BASE_SQL} {where} ORDER BY {col_orden}, ve.id_establecimiento"
+    data_sql = _build_data_sql(request, where)
 
     if formato in {'excel_pagina', 'excel_todo'}:
         datos_exportar = _fetch_all(data_sql, params)
         return _exportar_excel(datos_exportar, formato, request)
 
-    count_sql = f"SELECT COUNT(*) {_BASE_SQL} {where}"
 
-    try:
-        current_page_size = int(request.GET.get('page_size', PAGE_SIZE))
-    except (TypeError, ValueError):
-        current_page_size = PAGE_SIZE
+@padron_interno_admin_o_gestor_required
+def establecimientos_datos_json(request):
+    # Endpoint paginado: trae una fila extra para saber si existe pagina siguiente.
+    where, params = _build_where(request)
+    page_size = _get_page_size(request)
+    page = _get_page_number(request)
+    offset = (page - 1) * page_size
+    data_sql = _build_data_sql(request, where)
+    rows = _fetch_all(f"{data_sql} LIMIT %s OFFSET %s", params + [page_size + 1, offset])
+    page_rows = rows[:page_size]
+    items = [_serialize_list_item(row) for row in page_rows]
 
-    raw = _RawPage(data_sql, count_sql, params, PADRON_DB)
-    paginator = Paginator(raw, current_page_size)
+    return JsonResponse(_sanitize_json_payload({
+        'items': items,
+        'has_next': len(rows) > page_size,
+        'has_previous': page > 1,
+        'desde': offset + 1 if items else 0,
+        'hasta': offset + len(items) if items else 0,
+        'page': page,
+        'page_size': page_size,
+        'total': None,
+        'total_pending': True,
+    }))
 
-    try:
-        page_number = request.GET.get('page', 1)
-        page_obj = paginator.page(page_number)
-    except (EmptyPage, PageNotAnInteger):
-        page_obj = paginator.page(1)
 
-    total = len(raw)
-    desde = (page_obj.number - 1) * current_page_size + 1 if total else 0
-    hasta = min(page_obj.number * current_page_size, total)
+@padron_interno_admin_o_gestor_required
+def establecimientos_total_json(request):
+    # Conteo separado para no bloquear la carga inicial del listado.
+    where, params = _build_where(request)
+    count_sql = _build_count_sql_establecimientos(request, where, params)
 
-    context = {
-        'lista_items': page_obj.object_list,
-        'page_obj': page_obj,
-        'resultado_total': total,
-        'resultado_desde': desde,
-        'resultado_hasta': hasta,
-        'username': getattr(request.user, 'username', ''),
-        'request': request,
-        'filter_options_json': json.dumps(_get_filter_options(), ensure_ascii=False),
-    }
-    context.update(get_contexto_fecha_padron(request))
-    return render(request, 'padroninterno/establecimientos.html', context)
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        cursor.execute(count_sql, params)
+        total = cursor.fetchone()[0]
+
+    return JsonResponse({'total': total})
+
+
+@padron_interno_admin_o_gestor_required
+def establecimientos_filtros_json(request):
+    # Catalogos usados por los filtros avanzados del listado.
+    return JsonResponse(_get_filter_options())

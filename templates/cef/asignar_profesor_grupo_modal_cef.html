@@ -1,0 +1,62 @@
+<div id="modalAsignarProfesorGrupo" class="cef-docente-overlay{% if asignacion_modal_abierto %} is-open{% endif %}" aria-hidden="{% if asignacion_modal_abierto %}false{% else %}true{% endif %}">
+    <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="asignarProfesorGrupoTitulo">
+        <div class="cef-docente-modal-head">
+            <h2 id="asignarProfesorGrupoTitulo" class="cef-docente-modal-title">
+                <i class="fa-solid fa-user-check me-2"></i>Asignar profesor <span>» Grupo</span>
+            </h2>
+            <button class="cef-docente-close" type="button" aria-label="Cerrar" data-cef-asignar-grupo-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="cef-docente-modal-body">
+            <div class="cef-context-pill mb-3">
+                <i class="fa-solid fa-chalkboard-user"></i>
+                <span data-cef-asignar-docente-label>{% if asignacion_docente_cuil %}{{ asignacion_docente_cuil }}{% else %}Profesor{% endif %}</span>
+                <span data-cef-asignar-grupo-label>{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.actividad }} N° {{ asignacion_grupo_seleccionado.numero }} - {{ asignacion_grupo_seleccionado.turno }}{% else %}Grupo{% endif %}</span>
+            </div>
+
+            {% if asignacion_modal_feedback %}
+                <div class="alert alert-success mb-3">{{ asignacion_modal_feedback }}</div>
+            {% endif %}
+
+            <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
+                {% csrf_token %}
+                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                <input type="hidden" name="accion" value="asignar_grupo">
+                <input type="hidden" name="grupo_id" value="{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.pk }}{% endif %}" data-cef-asignar-grupo-id>
+                <input type="hidden" name="cuil" value="{{ asignacion_docente_cuil }}" data-cef-asignar-docente-cuil>
+
+                {% if asignacion_modal_error %}
+                    <div class="alert alert-danger mb-3">{{ asignacion_modal_error }}</div>
+                {% endif %}
+
+                {% if docente_grupo_form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">{{ docente_grupo_form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="cef-form-grid">
+                    {% for field in docente_grupo_form %}
+                        <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="cef-error">{{ field.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="cef-form-actions mt-3">
+                    <button class="btn btn-outline-secondary" type="button" data-cef-asignar-grupo-close>
+                        <i class="fa-solid fa-xmark"></i> Cancelar
+                    </button>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fa-solid fa-user-check"></i> Asociar profesor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
