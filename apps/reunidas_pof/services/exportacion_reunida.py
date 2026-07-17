@@ -27,7 +27,6 @@ from .exportacion_columnas_config import (
 )
 from .exportacion_schemas import obtener_labels_columnas, obtener_schema_exportacion
 from .grilla_pof import construir_grilla_pof_desde_cargos, obtener_cargos_grilla_reunida
-from .grilla_pof.columnas import obtener_clave_columna
 from .grilla_pof.proyecto_especial import (
     COLUMNAS_PROYECTO_ESPECIAL,
     armar_fila_proyecto_especial,
@@ -62,6 +61,40 @@ FUENTES_CANTIDAD_PREVIEW = {
     "cantidad",
     "cantidad_cargos",
     "cantidad_horas",
+}
+
+COLUMNAS_EXPORTACION_PROYECTO_ESPECIAL = (
+    {
+        "key": "proyecto_especial_cueanexo",
+        "titulo": "CUEANEXO",
+        "source": "cueanexo",
+        "required": True,
+        "visible_default": True,
+    },
+    {"key": "proyecto_especial_cue", "titulo": "CUE", "source": "cue", "visible_default": True},
+    {"key": "proyecto_especial_anexo", "titulo": "Anexo", "source": "anexo", "visible_default": True},
+    {"key": "proyecto_especial_cuof", "titulo": "CUOF", "source": "cuof", "visible_default": True},
+    {"key": "proyecto_especial_cui", "titulo": "CUI", "source": "cui", "visible_default": True},
+    {"key": "proyecto_especial_establecimiento", "titulo": "Establecimiento", "source": "establecimiento", "visible_default": True},
+    {"key": "proyecto_especial_oferta", "titulo": "Oferta", "source": "oferta", "visible_default": True},
+    {"key": "proyecto_especial_ceic", "titulo": "CEIC", "source": "ceic", "visible_default": True},
+    {"key": "proyecto_especial_cargo", "titulo": "Cargo", "source": "cargo", "visible_default": True},
+    {"key": "proyecto_especial_cantidad", "titulo": "Cantidad", "source": "cantidad", "visible_default": True},
+    {"key": "proyecto_especial_unidad", "titulo": "Unidad", "source": "unidad", "visible_default": True},
+    {"key": "proyecto_especial_puntos", "titulo": "Puntos", "source": "puntos", "visible_default": True},
+    {"key": "proyecto_especial_total", "titulo": "Total", "source": "total", "visible_default": True},
+    {"key": "proyecto_especial_total_general", "titulo": "Total General", "source": "total_general", "visible_default": True},
+    {"key": "proyecto_especial_estado_pof", "titulo": "Estado POF", "source": "estado_pof", "visible_default": True},
+)
+
+FUENTES_NO_REPETIR_PROYECTO_ESPECIAL = {
+    "cueanexo",
+    "cue",
+    "anexo",
+    "cuof",
+    "cui",
+    "establecimiento",
+    "total_general",
 }
 
 
@@ -742,6 +775,181 @@ def _obtener_cargos_exportacion_proyecto(proyecto_especial_id):
     )
 
 
+def _clave_orden_cargo_proyecto_especial(cargo):
+    localizacion = cargo.localizacion
+    cueanexo = normalizar_cueanexo_exportacion(localizacion.cueanexo)
+    cuof = str(localizacion.cuof or "").strip()
+    ceic = str(cargo.ceic or "").strip()
+    orden_ceic = (0, int(ceic)) if ceic.isdigit() else (1, ceic)
+
+    return (
+        0 if cueanexo else 1,
+        cueanexo[:7] if cueanexo else "",
+        cueanexo[7:] if cueanexo else "",
+        cuof,
+        orden_ceic,
+        cargo.id or 0,
+    )
+
+
+def _obtener_filas_normalizadas_exportacion_proyecto(
+    cargos_queryset,
+    incluir_historial_cantidad=False,
+    incluir_historial_observacion=False,
+):
+    cargos_ordenados = sorted(
+        list(cargos_queryset),
+        key=_clave_orden_cargo_proyecto_especial,
+    )
+    filas_normalizadas = construir_filas_normalizadas(cargos_ordenados)
+    if incluir_historial_cantidad:
+        enriquecer_filas_con_historial_cantidad(filas_normalizadas)
+    if incluir_historial_observacion:
+        enriquecer_filas_con_historial_observacion(filas_normalizadas)
+    return filas_normalizadas
+
+
+def _obtener_clave_grupo_proyecto_especial(fila, indice=None):
+    cueanexo = normalizar_cueanexo_exportacion(fila.get("cueanexo", ""))
+    if cueanexo:
+        return f"CUEANEXO:{cueanexo}"
+
+    cuof = str(fila.get("cuof", "") or "").strip()
+    if cuof:
+        return f"CUOF:{cuof}"
+
+    identificador = fila.get("localizacion_id") or fila.get("cargo_id") or indice
+    return f"LOCALIZACION:{identificador}"
+
+
+def _proyectar_filas_exportacion_proyecto(filas_normalizadas, columnas):
+    filas = []
+    clave_anterior = None
+
+    for indice, fila in enumerate(filas_normalizadas):
+        clave_actual = _obtener_clave_grupo_proyecto_especial(fila, indice)
+        misma_localizacion = clave_actual == clave_anterior
+        fila_render = []
+
+        for columna in columnas:
+            valor = fila.get(columna["source"], "")
+            if (
+                misma_localizacion
+                and columna["source"] in FUENTES_NO_REPETIR_PROYECTO_ESPECIAL
+            ):
+                valor = ""
+            fila_render.append(valor)
+
+        filas.append(fila_render)
+        clave_anterior = clave_actual
+
+    return filas
+
+
+def _obtener_separadores_grupo_visual_proyecto(filas_normalizadas):
+    separadores = []
+    clave_anterior = None
+    cue_anterior = None
+    cueanexo_anterior = None
+
+    for indice, fila in enumerate(filas_normalizadas):
+        clave_actual = _obtener_clave_grupo_proyecto_especial(fila, indice)
+        cueanexo_actual = normalizar_cueanexo_exportacion(
+            fila.get("cueanexo", "")
+        )
+        cue_actual = cueanexo_actual[:7] if cueanexo_actual else ""
+        cambio_grupo = bool(separadores and clave_actual != clave_anterior)
+        es_inicio_cue = bool(
+            cambio_grupo
+            and (
+                not cueanexo_actual
+                or not cue_anterior
+                or cue_actual != cue_anterior
+            )
+        )
+        es_inicio_anexo = bool(
+            cambio_grupo
+            and cueanexo_actual
+            and cue_actual == cue_anterior
+            and cueanexo_actual != cueanexo_anterior
+        )
+
+        separadores.append({
+            "es_inicio_cue": es_inicio_cue,
+            "es_inicio_anexo": es_inicio_anexo,
+        })
+        clave_anterior = clave_actual
+        cue_anterior = cue_actual or None
+        cueanexo_anterior = cueanexo_actual or None
+
+    return separadores
+
+
+def _construir_seccion_unica_exportacion(filas):
+    if not filas:
+        return []
+    return [{
+        "clave": "PROYECTO_ESPECIAL",
+        "titulo": "",
+        "filas": filas,
+        "indices_filas": list(range(len(filas))),
+        "cantidad_filas": len(filas),
+    }]
+
+
+def _resolver_columnas_exportacion_proyecto(request, columna_observacion):
+    columnas_base = [
+        {**columna, "required": columna.get("required", False)}
+        for columna in COLUMNAS_EXPORTACION_PROYECTO_ESPECIAL
+    ]
+    columnas_base.append({
+        **columna_observacion,
+        "required": False,
+    })
+    columnas_base = _agregar_metadata_cantidad_preview(columnas_base)
+    columnas_default_keys = [
+        columna["key"]
+        for columna in columnas_base
+        if columna.get("visible_default", False)
+    ]
+    visibles_solicitadas = [
+        limpiar_texto(valor, 120)
+        for valor in request.GET.getlist("visible_col")
+        if limpiar_texto(valor, 120)
+    ] if request else []
+
+    if visibles_solicitadas:
+        visibles_set = set(visibles_solicitadas)
+        columnas_visibles_keys = [
+            columna["key"]
+            for columna in columnas_base
+            if (
+                columna["key"] in visibles_set
+                or columna.get("source") in visibles_set
+            )
+        ]
+    else:
+        columnas_visibles_keys = list(columnas_default_keys)
+
+    for columna in columnas_base:
+        if (
+            columna.get("required")
+            and columna["key"] not in columnas_visibles_keys
+        ):
+            columnas_visibles_keys.insert(0, columna["key"])
+
+    columnas_disponibles = _marcar_columnas_disponibles(
+        columnas_base,
+        columnas_default_keys,
+        columnas_visibles_keys,
+    )
+    return (
+        columnas_disponibles,
+        columnas_default_keys,
+        columnas_visibles_keys,
+    )
+
+
 def _obtener_filas_reales_exportacion(
     columnas,
     cargos_queryset,
@@ -775,40 +983,40 @@ def _obtener_filas_reales_exportacion(
 
 
 def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None):
-    columnas_base = list(COLUMNAS_PROYECTO_ESPECIAL)
     columna_observacion = _obtener_columna_observacion_exportacion()
-    columnas = [*columnas_base, columna_observacion["titulo"]]
-    columnas_preview_config_base = [
-        {
-            "key": f"proyecto_especial_{indice}",
-            "source": obtener_clave_columna(titulo),
-            "titulo": titulo,
-            "visible": True,
-        }
-        for indice, titulo in enumerate(columnas_base)
-    ]
-    columnas_preview_config_base.append({
-        **columna_observacion,
-        "key": "proyecto_especial_observacion",
-        "visible": True,
-    })
-    columnas_preview_config = _agregar_metadata_cantidad_preview(
-        columnas_preview_config_base
+    (
+        columnas_disponibles,
+        columnas_default_keys,
+        columnas_visibles_keys,
+    ) = _resolver_columnas_exportacion_proyecto(
+        request,
+        columna_observacion,
     )
-    columnas_preview_keys = [
-        columna["key"] for columna in columnas_preview_config
+    columnas_exportacion_config = [
+        columna
+        for columna in columnas_disponibles
+        if columna["key"] in columnas_visibles_keys
+    ]
+    columnas = [
+        columna["titulo"]
+        for columna in columnas_exportacion_config
     ]
     mostrar_columna_modificacion_cantidad = any(
         columna.get("es_columna_cantidad")
-        for columna in columnas_preview_config
+        and columna["key"] in columnas_visibles_keys
+        for columna in columnas_disponibles
     )
-    mostrar_columna_modificacion_observacion = True
+    mostrar_columna_modificacion_observacion = (
+        columna_observacion["key"] in columnas_visibles_keys
+    )
     columnas_visuales_extra = (
         (1 if mostrar_columna_modificacion_cantidad else 0)
-        + 1
+        + (1 if mostrar_columna_modificacion_observacion else 0)
     )
     filas_exportacion = []
+    filas_exportacion_globales = []
     filas_normalizadas_exportacion = []
+    separadores_filas_exportacion = []
     mensaje_exportacion = ""
     proyecto_obj = None
     filtros_detalle = _obtener_filtros_detalle_reunida(request) if request else {}
@@ -834,10 +1042,8 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
                     cargos_exportacion,
                     filtros_detalle,
                 )
-            filas_base, filas_normalizadas_exportacion = _obtener_filas_reales_exportacion(
-                columnas_base,
+            filas_normalizadas_exportacion = _obtener_filas_normalizadas_exportacion_proyecto(
                 cargos_exportacion,
-                nivel_codigo=None,
                 incluir_historial_cantidad=(
                     request is not None
                     and request.GET.get("accion") != "excel"
@@ -847,13 +1053,19 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
                     and request.GET.get("accion") != "excel"
                 ),
             )
-            filas_exportacion = [
-                [*fila, datos.get("observacion_cargo", "")]
-                for fila, datos in zip(
-                    filas_base,
-                    filas_normalizadas_exportacion,
+            filas_exportacion = _proyectar_filas_exportacion_proyecto(
+                filas_normalizadas_exportacion,
+                columnas_exportacion_config,
+            )
+            filas_exportacion_globales = _proyectar_filas_exportacion_proyecto(
+                filas_normalizadas_exportacion,
+                columnas_disponibles,
+            )
+            separadores_filas_exportacion = (
+                _obtener_separadores_grupo_visual_proyecto(
+                    filas_normalizadas_exportacion
                 )
-            ]
+            )
             if not filas_exportacion:
                 mensaje_exportacion = (
                     "No hay datos para exportar con los filtros aplicados."
@@ -865,16 +1077,17 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
         except (ProgrammingError, OperationalError):
             mensaje_exportacion = "No se pudieron consultar los datos reales del Proyecto Especial POF."
 
-    secciones_exportacion = agrupar_filas_por_seccion(
-        nivel_codigo="PROYECTO_ESPECIAL",
-        columnas=columnas,
-        filas=filas_exportacion,
-        filas_normalizadas=filas_normalizadas_exportacion,
+    secciones_exportacion = _construir_seccion_unica_exportacion(
+        filas_exportacion
+    )
+    secciones_exportacion_globales = _construir_seccion_unica_exportacion(
+        filas_exportacion_globales
     )
     secciones_preview = _construir_secciones_preview(
-        secciones_exportacion,
-        columnas_preview_config,
-        columnas_preview_keys,
+        secciones_exportacion_globales,
+        columnas_disponibles,
+        columnas_visibles_keys,
+        separadores_filas_exportacion,
         filas_normalizadas=filas_normalizadas_exportacion,
     )
     anio = str(proyecto_obj.anio) if proyecto_obj else ""
@@ -898,8 +1111,21 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
         if base_params
         else ""
     )
-    excel_querystring = f"{detalle_querystring}&accion=excel" if detalle_querystring else ""
-    titulo_excel = f"Proyecto Especial POF - {nombre} {anio}".strip()
+    parametros_excel = urlencode([
+        ("accion", "excel"),
+        *(
+            ("visible_col", key)
+            for key in columnas_visibles_keys
+        ),
+    ])
+    excel_querystring = (
+        f"{detalle_querystring}&{parametros_excel}"
+        if detalle_querystring
+        else ""
+    )
+    titulo_excel = (
+        f"Proyecto Especial POF - {nombre} {anio} - Resolución: {resolucion}"
+    ).strip()
 
     return {
         "anio_activo": anio,
@@ -925,17 +1151,18 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
             "resolucion": resolucion,
         },
         "columnas": columnas,
-        "columnas_preview_config": columnas_preview_config,
-        "columnas_disponibles": [],
-        "columnas_visibles_keys": [],
-        "columnas_default_keys": [],
+        "columnas_preview_config": columnas_disponibles,
+        "columnas_disponibles": columnas_disponibles,
+        "columnas_visibles_keys": columnas_visibles_keys,
+        "columnas_default_keys": columnas_default_keys,
         "filas_exportacion": filas_exportacion,
         "filas_normalizadas_exportacion": filas_normalizadas_exportacion,
+        "separadores_filas_exportacion": separadores_filas_exportacion,
         "secciones_exportacion": secciones_exportacion,
         "secciones_preview": secciones_preview,
-        "columnas_preview_cantidad": len(columnas),
+        "columnas_preview_cantidad": len(columnas_disponibles),
         "columnas_visuales_extra": columnas_visuales_extra,
-        "columnas_preview_colspan": len(columnas) + columnas_visuales_extra,
+        "columnas_preview_colspan": len(columnas_disponibles) + columnas_visuales_extra,
         "mostrar_columna_modificacion_cantidad": mostrar_columna_modificacion_cantidad,
         "mostrar_columna_modificacion_observacion": mostrar_columna_modificacion_observacion,
         "cantidad_secciones": len(secciones_exportacion),

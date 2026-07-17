@@ -245,8 +245,6 @@ class ProyectoEspecialPofForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        anio_actual = timezone.localdate().year
-        self.fields["anio"].widget.attrs.update({"max": str(anio_actual)})
         self.fields["nombre"].required = True
         self.fields["resolucion"].required = False
         self.fields["observacion"].required = False
@@ -263,9 +261,6 @@ class ProyectoEspecialPofForm(forms.ModelForm):
         anio_texto = str(anio)
         if not anio_texto.isdigit() or len(anio_texto) != 4:
             raise forms.ValidationError("El año debe tener 4 dígitos numéricos.")
-
-        if anio > timezone.localdate().year:
-            raise forms.ValidationError("El año no puede ser posterior al año actual.")
 
         return anio
 
@@ -307,7 +302,7 @@ class CargoPofInputForm(forms.Form):
     ceic = forms.IntegerField(min_value=1)
     ceic_fuera_sugerencia = forms.BooleanField(required=False)
     observacion = forms.CharField(required=False)
-    cantidad = forms.IntegerField(min_value=1)
+    cantidad = forms.IntegerField(min_value=0)
     unidad_cantidad = forms.ChoiceField(
         choices=CargoPof.UnidadCantidad.choices
     )
@@ -337,8 +332,6 @@ class GuardarCargaPofForm(forms.Form):
                 anio_texto = str(anio)
                 if not anio_texto.isdigit() or len(anio_texto) != 4:
                     self.add_error("anio", "El año debe tener 4 dígitos numéricos.")
-                elif anio > timezone.localdate().year:
-                    self.add_error("anio", "El año no puede ser posterior al año actual.")
 
             nivel = _texto(cleaned_data.get("nivel"))
             nivel_normalizado = ""

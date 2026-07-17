@@ -59,7 +59,7 @@
         </div>
     {% endif %}
     <div class="pof-grid-table-wrap pof-history-table-wrap"><table class="pof-grid-table"><thead><tr><th class="pof-grid-icon-cell">Acci&oacute;n</th><th>Fecha/Hora</th><th>Usuario</th><th>Cabecera</th><th>Localizaci&oacute;n</th><th>Movimiento</th><th>Detalle</th></tr></thead><tbody>
-        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell"><button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}">&#128269;</button></td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary">{{ movimiento.detalle_resumen }}{% if movimiento.tiene_observacion_real %} <span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</td></tr>{% empty %}
+        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell"><button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}">&#128269;</button></td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">Nombre:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.nombre }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary">{{ movimiento.detalle_resumen }}{% if movimiento.tiene_observacion_real %} <span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</td></tr>{% empty %}
         <tr><td colspan="7" class="pof-grid-empty">No hay movimientos registrados todavía.</td></tr>{% endfor %}
     </tbody></table></div>
     <div class="pof-table-footer">
@@ -297,7 +297,7 @@
         limpiarNodo(contenidoDetalleMovimiento);
         ocultarEstadoDetalle();
         const usuarioMovimiento = movimiento.usuario_movimiento || {nombre: movimiento.usuario, cuil: "—"};
-        detalleMovimientoMeta.textContent = `${valorDetalle(movimiento.tipo_movimiento_display)} · ${valorDetalle(movimiento.fecha)} · CUIL ${valorDetalle(usuarioMovimiento.cuil)} · ${valorDetalle(movimiento.cabecera_resumen)}`;
+        detalleMovimientoMeta.textContent = `${valorDetalle(movimiento.tipo_movimiento_display)} · ${valorDetalle(movimiento.fecha)} · ${valorDetalle(usuarioMovimiento.nombre)} · CUIL ${valorDetalle(usuarioMovimiento.cuil)} · ${valorDetalle(movimiento.cabecera_resumen)}`;
 
         const cargo = movimiento.cargo_actual || {};
         const localizacion = movimiento.localizacion || {};
@@ -308,6 +308,7 @@
             ["CEIC", cargo.ceic],
             ["Cargo", cargo.cargo],
             ["Estado", estadoResumen(movimiento, cargo)],
+            ["Usuario", usuarioMovimiento.nombre],
             ["CUIL", usuarioMovimiento.cuil],
             ["Localidad / Departamento", `${valorDetalle(localizacion.localidad)} / ${valorDetalle(localizacion.departamento)}`],
             ["CUOF / CUI", `${valorDetalle(localizacion.cuof)} / ${valorDetalle(localizacion.cui)}`],

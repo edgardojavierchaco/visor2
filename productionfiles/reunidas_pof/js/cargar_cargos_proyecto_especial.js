@@ -17,6 +17,7 @@
     }
     const MENSAJE_ERROR_GENERAL_CABECERA = "No se pudo validar la cabecera. Revisá los campos marcados.";
     const MENSAJE_ERROR_PROYECTO = "Seleccioná un Proyecto Especial POF.";
+    const SIN_INFORMACION = "Sin información";
 
     const MODO_PADRON = "PADRON";
     const MODO_MANUAL = "MANUAL_CONTROLADO";
@@ -32,6 +33,7 @@
 
     let modoPadronActual = "";
     let padronSeleccionado = null;
+    let ofertasPadronSeleccionadas = [];
     let resultadosPadronActuales = [];
     let catalogosManual = null;
     let cargandoCatalogos = false;
@@ -104,6 +106,7 @@
     const btnGuardarCarga = document.getElementById("btnGuardarCarga");
     const modalConfirmarCarga = document.getElementById("modalConfirmarCarga");
     const tablaConfirmarCarga = document.getElementById("tablaConfirmarCarga");
+    const modalConfirmarOfertasHeader = document.getElementById("modalConfirmarOfertasHeader");
     const modalCargoTotalPuntos = document.getElementById("modalCargoTotalPuntos");
     const btnConfirmarGuardarCarga = document.getElementById("btnConfirmarGuardarCarga");
     const btnBuscarPadron = document.getElementById("btnBuscarPadron");
@@ -147,19 +150,20 @@
     const CAMPOS_TEXTO_MANUAL = {
         cuof: {
             maxLength: 100,
+            obligatorio: true,
             mensajeObligatorio: "El CUOF es obligatorio."
         },
         cui: {
             maxLength: 100,
-            mensajeObligatorio: "El CUI es obligatorio."
+            obligatorio: false
         },
         numero: {
             maxLength: 100,
-            mensajeObligatorio: "El número es obligatorio."
+            obligatorio: false
         },
         nombre: {
             maxLength: 255,
-            mensajeObligatorio: "El nombre o referencia es obligatorio."
+            obligatorio: false
         }
     };
     const MENSAJES_CAMPOS_CATALOGO_MANUAL = {
@@ -172,7 +176,7 @@
         jornada: "Debe seleccionar una jornada válida.",
         estado_localizacion_padron: "Debe seleccionar un estado de localización válido."
     };
-    const CAMPOS_CATALOGO_MANUAL_OBLIGATORIOS = [
+    const CAMPOS_CATALOGO_MANUAL_VALIDABLES = [
         "region",
         "localidad",
         "departamento",
@@ -208,7 +212,7 @@
     }
 
     function esErrorGeneralCamposManualActivo() {
-        return estadoManual.textContent.trim() === "Complete todos los campos obligatorios de la referencia manual antes de continuar.";
+        return estadoManual.textContent.trim() === "Revisá los campos informados antes de continuar.";
     }
 
     function obtenerContenedorCampoManual(campo) {
@@ -451,6 +455,7 @@
 
     function limpiarDatosCarga() {
         padronSeleccionado = null;
+        ofertasPadronSeleccionadas = [];
         resultadosPadronActuales = [];
         ofertaAbiertaIndex = null;
         filtroOfertaTexto = "";
@@ -532,6 +537,48 @@
             origen_datos: "PADRON",
             estado_padron: "VIGENTE"
         };
+    }
+
+    function claveOfertaPadron(item) {
+        return [
+            obtenerCampo(item, ["id_oferta_local", "id"]),
+            obtenerCampo(item, ["id_localizacion"]),
+            obtenerCampo(item, ["cuof_loc", "cuof"]),
+        ].map(valorClave => String(valorClave || "").trim()).join("|");
+    }
+
+    function ofertaPadronEstaSeleccionada(item) {
+        const clave = claveOfertaPadron(item);
+        return ofertasPadronSeleccionadas.some(oferta => claveOfertaPadron(oferta) === clave);
+    }
+
+    function construirPadronSeleccionadoMultiple() {
+        if (!ofertasPadronSeleccionadas.length) {
+            return null;
+        }
+
+        const ofertasNormalizadas = ofertasPadronSeleccionadas.map(normalizarPadronOficial);
+        const nombresOfertas = [];
+        ofertasNormalizadas.forEach(oferta => {
+            const nombre = obtenerOfertaReal(oferta);
+            if (nombre && !nombresOfertas.includes(nombre)) {
+                nombresOfertas.push(nombre);
+            }
+        });
+
+        return normalizarPadronOficial({
+            ...ofertasNormalizadas[0],
+            oferta_real: nombresOfertas.join(", "),
+            oferta: nombresOfertas.join(", "),
+            ofertas_seleccionadas: ofertasNormalizadas.map(oferta => ({
+                id_localizacion: oferta.id_localizacion,
+                id_oferta_local: oferta.id_oferta_local,
+                padron_cueanexo: oferta.padron_cueanexo,
+                cueanexo: oferta.cueanexo,
+                cuof_loc: oferta.cuof_loc,
+                cuof: oferta.cuof,
+            })),
+        });
     }
 
     function obtenerOfertaReal(item) {
@@ -795,9 +842,10 @@
             <div class="pof-offer-list">
                 ${ofertasVisibles.map(({ item, index }) => {
                     const abierta = ofertaAbiertaIndex === index;
+                    const seleccionada = ofertaPadronEstaSeleccionada(item);
 
                     return `
-                        <div class="pof-offer-card${abierta ? " pof-offer-card-open" : ""}" data-oferta-index="${index}">
+                        <div class="pof-offer-card${abierta ? " pof-offer-card-open" : ""}${seleccionada ? " pof-offer-selected" : ""}" data-oferta-index="${index}">
                             <button type="button"
                                     class="pof-offer-card-header"
                                     aria-expanded="${abierta ? "true" : "false"}"
@@ -818,8 +866,8 @@
                                 </div>
 
                                 <div class="pof-mt-2">
-                                    <button type="button" class="pof-btn pof-btn-primary" data-seleccionar-oferta-index="${index}">
-                                        Seleccionar oferta
+                                    <button type="button" class="pof-btn ${seleccionada ? "pof-btn-light" : "pof-btn-primary"}" data-seleccionar-oferta-index="${index}">
+                                        ${seleccionada ? "Quitar selección" : "Seleccionar oferta"}
                                     </button>
                                 </div>
                             </div>
@@ -863,6 +911,11 @@
                         <strong>Se encontraron ${resultadosPadronActuales.length} ofertas para esta búsqueda.</strong>
                         <span class="pof-offer-results-count">Mostrando ${ofertasVisibles.length} de ${resultadosPadronActuales.length} ofertas.</span>
                     </div>
+                </div>
+                <div class="pof-actions pof-mt-2">
+                    <button type="button" class="pof-btn pof-btn-primary" data-confirmar-ofertas-padron${ofertasPadronSeleccionadas.length ? "" : " disabled"}>
+                        Continuar con ${ofertasPadronSeleccionadas.length} oferta(s)
+                    </button>
                 </div>
                 <div class="pof-offer-filter-bar">
                     <input type="search"
@@ -932,8 +985,40 @@
             mostrarEstado(estadoPadron, "error", "La oferta seleccionada no está disponible.");
             return;
         }
+
+        const clave = claveOfertaPadron(oferta);
+        const indiceSeleccionado = ofertasPadronSeleccionadas.findIndex(item => claveOfertaPadron(item) === clave);
+        if (indiceSeleccionado >= 0) {
+            ofertasPadronSeleccionadas.splice(indiceSeleccionado, 1);
+        } else {
+            const cueanexoOferta = obtenerCampo(oferta, ["padron_cueanexo", "cueanexo"]);
+            const cueanexoInicial = obtenerCampo(ofertasPadronSeleccionadas[0], ["padron_cueanexo", "cueanexo"]);
+            if (cueanexoInicial && cueanexoOferta !== cueanexoInicial) {
+                mostrarEstado(estadoPadron, "error", "Las ofertas seleccionadas deben pertenecer al mismo CUEANEXO.");
+                return;
+            }
+            ofertasPadronSeleccionadas.push(oferta);
+        }
+
+        ofertaAbiertaIndex = null;
+        renderizarResultadosPadron(resultadosPadronActuales, true);
+        mostrarEstado(
+            estadoPadron,
+            ofertasPadronSeleccionadas.length ? "ok" : "warn",
+            ofertasPadronSeleccionadas.length
+                ? `${ofertasPadronSeleccionadas.length} oferta(s) seleccionada(s). Confirmá para continuar.`
+                : "Seleccioná al menos una oferta.",
+        );
+    }
+
+    function confirmarOfertasPadron() {
+        padronSeleccionado = construirPadronSeleccionadoMultiple();
+        if (!padronSeleccionado) {
+            mostrarEstado(estadoPadron, "error", "Seleccioná al menos una oferta del padrón.");
+            return;
+        }
+
         modoPadronActual = MODO_PADRON;
-        padronSeleccionado = normalizarPadronOficial(oferta);
         cargosTemporales = [];
         limpiarCargoActual();
         resultadosPadron.classList.add("pof-hidden");
@@ -942,7 +1027,7 @@
         bloqueCargos.classList.remove("pof-hidden");
         renderizarSeleccion();
         renderizarTablaCargos();
-        mostrarEstado(estadoPadron, "ok", "Oferta oficial seleccionada. Podés continuar con la carga de cargos.");
+        mostrarEstado(estadoPadron, "ok", `${ofertasPadronSeleccionadas.length} oferta(s) oficial(es) confirmada(s). Podés continuar con la carga de cargos.`);
     }
 
     function llenarSelect(select, opciones, etiqueta) {
@@ -1121,7 +1206,6 @@
             });
             CAMPOS_ESTADOS_MANUAL.forEach(campo => {
                 llenarSelect(manualInputs[campo], catalogosManual[campo], "estado");
-                manualInputs[campo].value = "Activo";
             });
             mostrarEstado(estadoManual, "", "");
             return true;
@@ -1293,10 +1377,12 @@
         const config = CAMPOS_TEXTO_MANUAL[campo];
         const valorTexto = String(manualInputs[campo].value || "").trim();
         if (esPlaceholderManual(valorTexto)) {
-            return { ok: false, mensaje: config.mensajeObligatorio };
+            return config.obligatorio
+                ? { ok: false, mensaje: config.mensajeObligatorio }
+                : { ok: true, valor: "" };
         }
         if (!textoSeguro(valorTexto, config.maxLength)) {
-            return { ok: false, mensaje: `${config.mensajeObligatorio} Revise longitud y caracteres permitidos.` };
+            return { ok: false, mensaje: "Revise la longitud y los caracteres permitidos." };
         }
         return { ok: true, valor: valorTexto };
     }
@@ -1304,7 +1390,7 @@
     function validarCampoCatalogoManual(campo) {
         const valorTexto = String(manualInputs[campo].value || "").trim();
         if (esPlaceholderManual(valorTexto)) {
-            return { ok: false, mensaje: MENSAJES_CAMPOS_CATALOGO_MANUAL[campo] };
+            return { ok: true, valor: "" };
         }
         if (campo === "estado_localizacion_padron") {
             const estadoValido = ["Activo", "Baja"].some(
@@ -1327,7 +1413,7 @@
                 invalidos.push(campo);
             }
         });
-        CAMPOS_CATALOGO_MANUAL_OBLIGATORIOS.forEach(campo => {
+        CAMPOS_CATALOGO_MANUAL_VALIDABLES.forEach(campo => {
             if (!validarCampoCatalogoManual(campo).ok) {
                 invalidos.push(campo);
             }
@@ -1618,7 +1704,7 @@
         }
         const validacionManual = validarCamposManualObligatorios();
         if (!validacionManual.ok) {
-            mostrarEstado(estadoManual, "error", "Complete todos los campos obligatorios de la referencia manual antes de continuar.");
+            mostrarEstado(estadoManual, "error", "Revisá los campos informados antes de continuar.");
             Object.keys(manualInputs).forEach(campo => {
                 limpiarErrorCampoManual(campo);
             });
@@ -1632,6 +1718,18 @@
             return;
         }
         limpiarErroresCamposManual();
+
+        const cui = manualInputs.cui.value.trim() || SIN_INFORMACION;
+        const nombre = manualInputs.nombre.value.trim() || SIN_INFORMACION;
+        const numero = manualInputs.numero.value.trim() || SIN_INFORMACION;
+        const region = manualInputs.region.value.trim() || SIN_INFORMACION;
+        const localidad = manualInputs.localidad.value.trim() || SIN_INFORMACION;
+        const departamento = manualInputs.departamento.value.trim() || SIN_INFORMACION;
+        const acronimo = manualInputs.acronimo.value.trim() || SIN_INFORMACION;
+        const ambito = manualInputs.ambito.value.trim() || SIN_INFORMACION;
+        const categoria = manualInputs.categoria.value.trim() || SIN_INFORMACION;
+        const jornada = manualInputs.jornada.value.trim() || SIN_INFORMACION;
+        const estadoLocalizacion = manualInputs.estado_localizacion_padron.value.trim() || SIN_INFORMACION;
 
         modoPadronActual = MODO_MANUAL;
         padronSeleccionado = {
@@ -1648,22 +1746,22 @@
             estado_est: "",
             cuof: cuof,
             cuof_loc: cuof,
-            cui: manualInputs.cui.value.trim(),
-            cui_loc: manualInputs.cui.value.trim(),
-            nombre_establecimiento: manualInputs.nombre.value.trim(),
-            nom_est: manualInputs.nombre.value.trim(),
-            numero_establecimiento: manualInputs.numero.value.trim(),
-            nro_est: manualInputs.numero.value.trim(),
-            region: manualInputs.region.value.trim(),
-            region_loc: manualInputs.region.value.trim(),
-            localidad: manualInputs.localidad.value.trim(),
-            departamento: manualInputs.departamento.value.trim(),
-            acronimo: manualInputs.acronimo.value.trim(),
-            ambito: manualInputs.ambito.value.trim(),
-            categoria: manualInputs.categoria.value.trim(),
-            jornada: manualInputs.jornada.value.trim(),
-            estado_loc: manualInputs.estado_localizacion_padron.value.trim(),
-            estado_localizacion_padron: manualInputs.estado_localizacion_padron.value.trim(),
+            cui: cui,
+            cui_loc: cui,
+            nombre_establecimiento: nombre,
+            nom_est: nombre,
+            numero_establecimiento: numero,
+            nro_est: numero,
+            region: region,
+            region_loc: region,
+            localidad: localidad,
+            departamento: departamento,
+            acronimo: acronimo,
+            ambito: ambito,
+            categoria: categoria,
+            jornada: jornada,
+            estado_loc: estadoLocalizacion,
+            estado_localizacion_padron: estadoLocalizacion,
             origen_datos: "MANUAL",
             estado_padron: "NO_ENCONTRADO"
         };
@@ -1692,15 +1790,19 @@
             return;
         }
         const esManual = modoPadronActual === MODO_MANUAL;
-        const titulo = esManual ? "Referencia manual seleccionada" : "Oferta seleccionada";
+        const cantidadOfertas = !esManual && Array.isArray(padronSeleccionado.ofertas_seleccionadas)
+            ? padronSeleccionado.ofertas_seleccionadas.length
+            : 1;
+        const seleccionMultiple = !esManual && cantidadOfertas > 1;
+        const titulo = esManual ? "Referencia manual seleccionada" : `${cantidadOfertas} oferta(s) seleccionada(s)`;
         const origen = esManual ? "Manual" : "Padrón";
         const datoPrincipal = esManual
             ? obtenerLineaPrincipalManual(padronSeleccionado)
             : obtenerLineaPrincipalOferta(padronSeleccionado, "");
         const detalle = esManual
             ? renderizarDetalleManual(padronSeleccionado)
-            : renderizarDetallePadron(padronSeleccionado);
-        const estado = esManual ? "" : renderizarBadgeEstadoOferta(padronSeleccionado);
+            : (seleccionMultiple ? "" : renderizarDetallePadron(padronSeleccionado));
+        const estado = esManual || seleccionMultiple ? "" : renderizarBadgeEstadoOferta(padronSeleccionado);
         const accion = esManual ? "Cambiar referencia" : "Cambiar oferta";
         const accionModo = esManual ? "manual" : "padron";
         detalleSeleccion.innerHTML = `
@@ -1714,9 +1816,11 @@
                 </div>
                 <div class="pof-offer-selected-meta">${escaparHtml(obtenerLineaSecundariaLocalizacion(padronSeleccionado))}</div>
                 <div class="pof-offer-selected-origin">Origen: ${escaparHtml(origen)}</div>
-                <div class="pof-offer-detail-compact pof-offer-detail-grid pof-mt-2">
-                    ${detalle}
-                </div>
+                ${detalle ? `
+                    <div class="pof-offer-detail-compact pof-offer-detail-grid pof-mt-2">
+                        ${detalle}
+                    </div>
+                ` : ""}
             </div>
 
             <div class="pof-actions pof-mt-2 pof-offer-selected-actions">
@@ -1741,7 +1845,7 @@
         } else {
             resultadosPadron.classList.add("pof-hidden");
         }
-        mostrarEstado(estadoPadron, "warn", "Seleccioná nuevamente una oferta del padrón.");
+        mostrarEstado(estadoPadron, "warn", "Modificá la selección de ofertas y volvé a confirmarla.");
         cueBaseInput.focus();
     }
 
@@ -2030,10 +2134,10 @@
     }
 
     /**
-     * Agrega o consolida un cargo temporal validado desde la selección CEIC.
+     * Agrega un cargo temporal independiente desde la selección CEIC.
      *
-     * - Usa CEIC y unidad como clave de duplicado.
-     * - Mantiene datos oficiales ya seleccionados y completa una observación vacía.
+     * - Permite repetir CEIC y unidad en filas separadas.
+     * - Mantiene la observación propia de cada fila ingresada.
      * - Restablece el formulario solo después de actualizar la lista temporal.
      */
     function agregarCargoALista() {
@@ -2075,23 +2179,10 @@
             puntos_asignados: puntosCargo.value,
             total: (cantidad * puntos).toFixed(2),
         };
-        const cargoExistente = cargosTemporales.find(cargo => (
-            claveCargoTemporal(cargo.ceic, cargo.unidad_cantidad) === claveCargoTemporal(cargoNuevo.ceic, cargoNuevo.unidad_cantidad)
-        ));
-        let mensajeDuplicado = "";
-        if (cargoExistente) {
-            cargoExistente.cantidad = String(Number(cargoExistente.cantidad || "0") + cantidad);
-            actualizarTotalCargoTemporal(cargoExistente);
-            if (!cargoExistente.observacion && cargoNuevo.observacion) {
-                cargoExistente.observacion = cargoNuevo.observacion;
-            }
-            mensajeDuplicado = "Este CEIC ya estaba cargado con la misma unidad. Se incrementó la cantidad sin crear una fila duplicada.";
-        } else {
-            cargosTemporales.push(cargoNuevo);
-        }
+        cargosTemporales.push(cargoNuevo);
         limpiarCargoActual();
         renderizarTablaCargos();
-        mostrarEstado(estadoGuardado, mensajeDuplicado ? "warn" : "", mensajeDuplicado);
+        mostrarEstado(estadoGuardado, "", "");
     }
 
     /**
@@ -2260,9 +2351,12 @@
             return;
         }
         ordenarCargosTemporales();
+        const mostrarOfertas = modoPadronActual === MODO_PADRON;
+        modalConfirmarOfertasHeader.classList.toggle("pof-hidden", !mostrarOfertas);
         tablaConfirmarCarga.innerHTML = cargosTemporales.map(cargo => `
             <tr>
                 <td>${valorHtml(cargo.ceic)}</td>
+                ${mostrarOfertas ? `<td>${valorHtml(padronSeleccionado && padronSeleccionado.oferta)}</td>` : ""}
                 <td>${valorHtml(cargo.cargo)}</td>
                 <td>${valorHtml(cargo.cantidad)}</td>
                 <td>${valorHtml(cargo.unidad_texto)}</td>
@@ -2434,6 +2528,11 @@
         );
     });
     resultadosPadron.addEventListener("click", function (event) {
+        const confirmar = event.target.closest("[data-confirmar-ofertas-padron]");
+        if (confirmar) {
+            confirmarOfertasPadron();
+            return;
+        }
         const toggle = event.target.closest("[data-oferta-toggle-index]");
         if (toggle) {
             alternarOfertaPadron(Number(toggle.dataset.ofertaToggleIndex));

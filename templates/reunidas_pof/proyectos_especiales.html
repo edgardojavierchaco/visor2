@@ -142,9 +142,9 @@
                                 </div>
                             </td>
                             <td class="pof-grid-cell-center">{{ proyecto.anio }}</td>
-                            <td>{{ proyecto.nombre }}</td>
-                            <td>{{ proyecto.resolucion|default:"-" }}</td>
-                            <td>
+                            <td class="pof-grid-cell-center">{{ proyecto.nombre }}</td>
+                            <td class="pof-grid-cell-center">{{ proyecto.resolucion|default:"-" }}</td>
+                            <td class="pof-grid-cell-center">
                                 {% if proyecto.proyecto_base_anterior %}
                                     {{ proyecto.proyecto_base_anterior.anio }} - {{ proyecto.proyecto_base_anterior.nombre }}
                                 {% else %}

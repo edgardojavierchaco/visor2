@@ -16,6 +16,7 @@
     let cabeceraReunidaValidada = false;
     let cabeceraReunida = null;
     let padronSeleccionado = null;
+    let ofertasPadronSeleccionadas = [];
     let resultadosPadronActuales = [];
     let ofertaAbiertaIndex = null;
     let mostrarOtrasOfertas = false;
@@ -445,6 +446,49 @@
         return padronBase;
     }
 
+    function claveOfertaPadron(item) {
+        return [
+            obtenerCampoOferta(item, ["id_oferta_local", "id"]),
+            obtenerCampoOferta(item, ["id_localizacion"]),
+            obtenerCampoOferta(item, ["cuof_loc", "cuof"]),
+        ].map(valorClave => String(valorClave || "").trim()).join("|");
+    }
+
+    function ofertaPadronEstaSeleccionada(item) {
+        const clave = claveOfertaPadron(item);
+        return ofertasPadronSeleccionadas.some(oferta => claveOfertaPadron(oferta) === clave);
+    }
+
+    function construirPadronSeleccionadoMultiple() {
+        if (ofertasPadronSeleccionadas.length === 0) {
+            return null;
+        }
+
+        const ofertasNormalizadas = ofertasPadronSeleccionadas.map(normalizarPadronSeleccionado);
+        const nombresOfertas = [];
+        ofertasNormalizadas.forEach(oferta => {
+            const nombre = obtenerOfertaReal(oferta);
+            if (nombre && !nombresOfertas.includes(nombre)) {
+                nombresOfertas.push(nombre);
+            }
+        });
+
+        const ofertaPrincipal = ofertasNormalizadas[0];
+        return normalizarPadronSeleccionado({
+            ...ofertaPrincipal,
+            oferta_real: nombresOfertas.join(", "),
+            oferta: nombresOfertas.join(", "),
+            ofertas_seleccionadas: ofertasNormalizadas.map(oferta => ({
+                id_localizacion: oferta.id_localizacion,
+                id_oferta_local: oferta.id_oferta_local,
+                padron_cueanexo: oferta.padron_cueanexo,
+                cueanexo: oferta.cueanexo,
+                cuof_loc: oferta.cuof_loc,
+                cuof: oferta.cuof,
+            })),
+        });
+    }
+
     function obtenerLineaPrincipalOferta(item, icono = "📌") {
         const oferta = obtenerOfertaReal(item);
         const establecimiento = obtenerCampoOferta(item, ["nom_est", "establecimiento", "nombre_establecimiento"]);
@@ -684,6 +728,7 @@
 
     function limpiarDatosDependientes() {
         padronSeleccionado = null;
+        ofertasPadronSeleccionadas = [];
         resultadosPadronActuales = [];
         limpiarFiltrosOfertas();
         cargosTemporales = [];
@@ -747,7 +792,6 @@
     async function validarCabeceraReunida() {
         const anio = anioInput.value.trim();
         const nivel = nivelSelect.value;
-        const anioActual = Number.MAX_SAFE_INTEGER;
 
         limpiarCabeceraValidada();
         limpiarDatosDependientes();
@@ -760,12 +804,6 @@
 
         if (anio.length !== 4) {
             mostrarEstadoCabecera("error", "El año debe tener 4 dígitos numéricos.");
-            anioInput.focus();
-            return;
-        }
-
-        if (parseInt(anio, 10) > anioActual) {
-            mostrarEstadoCabecera("error", "El año no puede ser posterior al año actual.");
             anioInput.focus();
             return;
         }
@@ -942,6 +980,7 @@
         const cueanexo = cueanexoInput.value.trim();
 
         padronSeleccionado = null;
+        ofertasPadronSeleccionadas = [];
         resultadosPadronActuales = [];
         limpiarFiltrosOfertas();
         cargosTemporales = [];
@@ -1068,9 +1107,10 @@
             <div class="pof-offer-list">
                 ${ofertasVisibles.map(({ item, index }) => {
                     const abierta = ofertaAbiertaIndex === index;
+                    const seleccionada = ofertaPadronEstaSeleccionada(item);
 
                     return `
-                        <div class="pof-offer-card${abierta ? " pof-offer-card-open" : ""}" data-oferta-index="${index}">
+                        <div class="pof-offer-card${abierta ? " pof-offer-card-open" : ""}${seleccionada ? " pof-offer-selected" : ""}" data-oferta-index="${index}">
                             <button type="button"
                                     class="pof-offer-card-header"
                                     aria-expanded="${abierta ? "true" : "false"}"
@@ -1091,8 +1131,8 @@
                                 </div>
 
                                 <div class="pof-mt-2">
-                                    <button type="button" class="pof-btn pof-btn-primary" onclick="seleccionarPadron(${index})">
-                                        Seleccionar oferta
+                                    <button type="button" class="pof-btn ${seleccionada ? "pof-btn-light" : "pof-btn-primary"}" onclick="seleccionarPadron(${index})">
+                                        ${seleccionada ? "Quitar selección" : "Seleccionar oferta"}
                                     </button>
                                 </div>
                             </div>
@@ -1153,6 +1193,12 @@
                         <strong>Se encontraron ${resultadosPadronActuales.length} ofertas para esta búsqueda.</strong>
                         <span class="pof-offer-results-count">Mostrando ${ofertasVisibles.length} de ${resultadosPadronActuales.length} ofertas.</span>
                     </div>
+                </div>
+
+                <div class="pof-actions pof-mt-2">
+                    <button type="button" class="pof-btn pof-btn-primary" onclick="confirmarOfertasPadron()"${ofertasPadronSeleccionadas.length ? "" : " disabled"}>
+                        Continuar con ${ofertasPadronSeleccionadas.length} oferta(s)
+                    </button>
                 </div>
 
                 <div class="pof-offer-filter-bar">
@@ -1259,6 +1305,10 @@
             detalleSeleccion.innerHTML = "";
             return;
         }
+        const cantidadOfertas = Array.isArray(padronSeleccionado.ofertas_seleccionadas)
+            ? padronSeleccionado.ofertas_seleccionadas.length
+            : 1;
+        const seleccionMultiple = cantidadOfertas > 1;
         const estadoSeleccionado = obtenerEstadoOferta(padronSeleccionado);
         const detalleSugerencia = ofertaEsSugerida(padronSeleccionado)
             ? ""
@@ -1266,19 +1316,21 @@
         detalleSeleccion.innerHTML = `
             <div class="pof-offer-selected-card">
                 <div class="pof-offer-selected-head">
-                    <span class="pof-offer-selected-title">✅ Oferta seleccionada</span>
+                    <span class="pof-offer-selected-title">✅ ${cantidadOfertas} oferta(s) seleccionada(s)</span>
                 </div>
                 <div class="pof-offer-card-main">
                     <span class="pof-offer-selected-main${claseCampoHistoricoModificado(padronSeleccionado, "establecimiento")}">${escaparHtml(obtenerLineaPrincipalOferta(padronSeleccionado, ""))}</span>
-                    ${renderizarBadgeEstadoOferta(padronSeleccionado)}
+                    ${seleccionMultiple ? "" : renderizarBadgeEstadoOferta(padronSeleccionado)}
                 </div>
                 <div class="pof-offer-selected-meta">${escaparHtml(obtenerLineaSecundariaOferta(padronSeleccionado))}</div>
                 <div class="pof-offer-selected-origin">
-                    Estado: ${escaparHtml(estadoSeleccionado.texto)} · Origen: ${escaparHtml(obtenerOrigenOferta(padronSeleccionado))}${detalleSugerencia}
+                    ${seleccionMultiple ? `Selección múltiple de ${cantidadOfertas} ofertas` : `Estado: ${escaparHtml(estadoSeleccionado.texto)}`} · Origen: ${escaparHtml(obtenerOrigenOferta(padronSeleccionado))}${seleccionMultiple ? "" : detalleSugerencia}
                 </div>
-                <div class="pof-offer-detail-compact pof-offer-detail-grid pof-mt-2">
-                    ${renderizarDetalleOferta(padronSeleccionado)}
-                </div>
+                ${seleccionMultiple ? "" : `
+                    <div class="pof-offer-detail-compact pof-offer-detail-grid pof-mt-2">
+                        ${renderizarDetalleOferta(padronSeleccionado)}
+                    </div>
+                `}
             </div>
 
             <div class="pof-actions pof-mt-2 pof-offer-selected-actions">
@@ -1296,8 +1348,35 @@
             return;
         }
 
-        padronSeleccionado = normalizarPadronSeleccionado(oferta);
+        const clave = claveOfertaPadron(oferta);
+        const indiceSeleccionado = ofertasPadronSeleccionadas.findIndex(item => claveOfertaPadron(item) === clave);
+        if (indiceSeleccionado >= 0) {
+            ofertasPadronSeleccionadas.splice(indiceSeleccionado, 1);
+        } else {
+            const cueanexoOferta = obtenerCampoOferta(oferta, ["padron_cueanexo", "cueanexo"]);
+            const cueanexoInicial = obtenerCampoOferta(ofertasPadronSeleccionadas[0], ["padron_cueanexo", "cueanexo"]);
+            if (cueanexoInicial && cueanexoOferta !== cueanexoInicial) {
+                mostrarEstado("error", "Las ofertas seleccionadas deben pertenecer al mismo CUEANEXO.");
+                return;
+            }
+            ofertasPadronSeleccionadas.push(oferta);
+        }
         ofertaAbiertaIndex = null;
+        renderizarResultadosPadron(resultadosPadronActuales, true);
+        mostrarEstado(
+            ofertasPadronSeleccionadas.length ? "ok" : "warn",
+            ofertasPadronSeleccionadas.length
+                ? `${ofertasPadronSeleccionadas.length} oferta(s) seleccionada(s). Confirmá para continuar.`
+                : "Seleccioná al menos una oferta.",
+        );
+    }
+
+    function confirmarOfertasPadron() {
+        padronSeleccionado = construirPadronSeleccionadoMultiple();
+        if (!padronSeleccionado) {
+            mostrarEstado("error", "Seleccioná al menos una oferta del padrón.");
+            return;
+        }
 
         bloquePadron.classList.add("pof-hidden");
         bloqueSeleccion.classList.remove("pof-hidden");
@@ -1309,10 +1388,7 @@
         limpiarEstadoGuardado();
         renderizarOfertaSeleccionada();
 
-        const mensajeSeleccion = ofertaEsSugerida(padronSeleccionado)
-            ? "Oferta seleccionada"
-            : "Oferta fuera de sugerencia seleccionada";
-        mostrarEstado("ok", `${mensajeSeleccion}: ${valor(padronSeleccionado.oferta)} - ${valor(padronSeleccionado.nom_est)}`);
+        mostrarEstado("ok", `${ofertasPadronSeleccionadas.length} oferta(s) confirmada(s): ${valor(padronSeleccionado.oferta)}.`);
     }
 
     function cambiarOfertaSeleccionada() {
@@ -1332,7 +1408,7 @@
 
         if (resultadosPadronActuales.length > 0) {
             renderizarResultadosPadron(resultadosPadronActuales);
-            mostrarEstado("warn", "Seleccioná otra oferta.");
+            mostrarEstado("warn", "Modificá la selección de ofertas y volvé a confirmarla.");
         }
     }
 
@@ -1625,13 +1701,6 @@
         totalCargo.value = (cantidad * puntos).toFixed(2);
     }
 
-    function buscarCargoTemporalDuplicado(ceic, unidadCantidad) {
-        const clave = claveCargoTemporal(ceic, unidadCantidad);
-        return cargosTemporales.find(cargo => (
-            claveCargoTemporal(cargo.ceic, cargo.unidad_cantidad) === clave
-        ));
-    }
-
     function agregarCargoALista() {
         if (!cabeceraReunidaValidada) {
             mostrarEstado("error", "Primero validá la cabecera de carga.");
@@ -1681,26 +1750,6 @@
             ceic_fuera_sugerencia: ceicSeleccionadoFueraSugerencia,
         };
         actualizarTotalCargoTemporal(cargoNuevo);
-
-        const cargoExistente = buscarCargoTemporalDuplicado(
-            cargoNuevo.ceic,
-            cargoNuevo.unidad_cantidad,
-        );
-
-        if (cargoExistente) {
-            const cantidadTotal = Number(cargoExistente.cantidad || "0") + cantidad;
-            cargoExistente.cantidad = String(cantidadTotal);
-            actualizarTotalCargoTemporal(cargoExistente);
-            if (!cargoExistente.observacion && cargoNuevo.observacion) {
-                cargoExistente.observacion = cargoNuevo.observacion;
-            }
-
-            alert("Este CEIC ya estaba cargado para este anexo/oferta. Se incrementó la cantidad manteniendo el nombre y los puntos ya cargados.");
-            renderizarTablaCargos();
-            limpiarCargoActual();
-            limpiarEstadoGuardado();
-            return;
-        }
 
         cargosTemporales.push(cargoNuevo);
 
@@ -1857,6 +1906,7 @@
         tablaConfirmarCarga.innerHTML = cargosTemporales.map(cargo => `
             <tr>
                 <td>${valorHtml(cargo.ceic)}</td>
+                <td>${valorHtml(padronSeleccionado && padronSeleccionado.oferta)}</td>
                 <td>${valorHtml(cargo.cargo)}</td>
                 <td>${valorHtml(cargo.cantidad)}</td>
                 <td>${valorHtml(cargo.unidad_texto)}</td>

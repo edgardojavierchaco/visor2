@@ -93,16 +93,50 @@ SNAPSHOT_COLUMNAS = {
     "region": "region",
     "localidad": "localidad",
     "departamento": "departamento",
-    "ambito": "ambito",
-    "categoria": "categoria",
-    "jornada": "jornada",
-    "oferta": "oferta",
-    "acronimo": "acronimo",
     "ubicacion": "ubicacion",
     "estado_localizacion_padron": "estado_localizacion_padron",
-    "estado_oferta_padron": "estado_oferta_padron",
     "estado_establecimiento_padron": "estado_establecimiento_padron",
 }
+
+OFERTA_CARGO_COLUMNAS = {
+    "ambito": ("ambito", "oferta_ambito"),
+    "categoria": ("categoria", "oferta_categoria"),
+    "jornada": ("jornada", "jornada_ofertalocal"),
+    "oferta": ("oferta_real", "oferta"),
+    "acronimo": ("acronimo",),
+    "estado_oferta_padron": ("est_oferta", "estado_oferta_padron"),
+}
+
+OFERTAS_FILTRO_VISUALIZACION = (
+    {"value": "Común - Ciclos de Enseñanza Artística", "label": "Común - Ciclos de Enseñanza Artística"},
+    {"value": "Común - Domiciliaria-hospitalaria. Nivel Primario/EGB", "label": "Común - Domiciliaria-hospitalaria. Nivel Primario/EGB"},
+    {"value": "Común - Jardín maternal", "label": "Común - Jardín maternal"},
+    {"value": "Común - SNU", "label": "Común - SNU"},
+    {"value": "Común - Trayecto Artístico Profesional", "label": "Común - Trayecto Artístico Profesional"},
+    {"value": "Común - Cursos de Capacitación de SNU", "label": "Común - Cursos de Capacitación de SNU"},
+    {"value": "Común - Otras Titulaciones Técnicas", "label": "Común - Otras Titulaciones Técnicas"},
+    {"value": "Común - Trayecto técnico profesional", "label": "Común - Trayecto tecnico profesional"},
+    {"value": "Común - Cursos y Talleres de Artística", "label": "Común - Cursos y Talleres de Artística"},
+    {"value": "Común - Itinerario formativo", "label": "Común - Itinerario formativo"},
+    {"value": "Común - Primaria de 7 años", "label": "Común - Primaria de 7 años"},
+    {"value": "Común - Secundaria Completa req. 7 años", "label": "Común - Secundaria Completa req. 7 años"},
+    {"value": "Sin Información", "label": "Sin Información"},
+    {"value": "Común - Domiciliaria-hospitalaria. Nivel Inicial", "label": "Común - Domiciliaria-hospitalaria. Nivel Inicial"},
+    {"value": "Común - Jardín de infantes", "label": "Común - Jardín de infantes"},
+    {"value": "Común - Servicios complementarios", "label": "Común - Servicios Complementarios"},
+    {"value": "Especial - Cursos/Talleres de la Escuela Especial", "label": "Especial - Cursos/Talleres de la Escuela Especial"},
+    {"value": "Especial - Educación Integral para adolescentes y jóvenes", "label": "Especial - Educacion integral para adolescentes y jovenes"},
+    {"value": "Especial - Integración", "label": "Especial - Integración"},
+    {"value": "Especial - Primaria de 7 años", "label": "Especial - Primaria de 7 años"},
+    {"value": "Especial - Domiciliaria-hospitalaria. Nivel Inicial", "label": "Especial - Domiciliaria-hospitalaria. Nivel Inicial"},
+    {"value": "Especial - Jardín de infantes", "label": "Especial - Jardín de infantes"},
+    {"value": "Especial - Domiciliaria-hospitalaria. Nivel Primario/EGB", "label": "Especial - Domiciliaria-hospitalaria. Nivel Primario/EGB"},
+    {"value": "Especial - Educación Integral para Adolescentes y Jóvenes/Secundaria Completa req. 7 años", "label": "Especial - Educación Integral para Adolescentes y Jóvenes/Secundaria Completa req. 7 años"},
+    {"value": "Especial - Jardín maternal", "label": "Especial - Jardín maternal"},
+    {"value": "Adultos - Primaria", "label": "Adultos - Primaria"},
+    {"value": "Adultos - Formación Profesional", "label": "Adultos - Formación Profesional"},
+    {"value": "Adultos - Secundaria Completa", "label": "Adultos - Secundaria Completa"},
+)
 
 COLUMNAS_CENTRADAS = {
     "cueanexo",
@@ -133,13 +167,8 @@ COLUMNAS_NO_REPETIR_POR_LOCALIZACION = {
     "region",
     "localidad",
     "departamento",
-    "ambito",
-    "categoria",
-    "jornada",
-    "acronimo",
     "ubicacion",
     "estado_localizacion_padron",
-    "estado_oferta_padron",
     "estado_establecimiento_padron",
 }
 
@@ -169,13 +198,7 @@ FILTROS_SELECT_SNAPSHOT = (
     "region",
     "localidad",
     "departamento",
-    "ambito",
-    "categoria",
-    "jornada",
-    "oferta",
-    "acronimo",
     "estado_localizacion_padron",
-    "estado_oferta_padron",
     "estado_establecimiento_padron",
 )
 
@@ -279,6 +302,12 @@ ORDER_LOCALIZACION = {
 }
 
 ORDER_CARGO = {
+    "ambito": "ofertas_seleccionadas__0__ambito",
+    "categoria": "ofertas_seleccionadas__0__categoria",
+    "jornada": "ofertas_seleccionadas__0__jornada",
+    "oferta": "oferta",
+    "acronimo": "ofertas_seleccionadas__0__acronimo",
+    "estado_oferta_padron": "ofertas_seleccionadas__0__est_oferta",
     "ceic": "ceic",
     "cargo": "cargo",
     "cantidad": "cantidad",
@@ -548,6 +577,10 @@ def _choices_options(choices):
     ]
 
 
+def _opciones_oferta_filtro_visualizacion():
+    return [dict(opcion) for opcion in OFERTAS_FILTRO_VISUALIZACION]
+
+
 def _normalizar_opcion(valor):
     texto = _limpiar_texto(valor, 240)
     return texto if texto and texto != GUION else ""
@@ -622,6 +655,32 @@ def _opciones_desde_queryset(queryset, campo):
     return _opciones_distintas(queryset.exclude(**{campo: ""}), campo)
 
 
+def _opciones_ofertas_cargo_desde_queryset(queryset, campo_id):
+    aliases = OFERTA_CARGO_COLUMNAS[campo_id]
+    opciones = set()
+
+    for ofertas, oferta_cargo in queryset.values_list(
+        "ofertas_seleccionadas",
+        "oferta",
+    ):
+        for oferta in ofertas or []:
+            if not isinstance(oferta, dict):
+                continue
+            for alias in aliases:
+                texto = _normalizar_opcion(oferta.get(alias))
+                if texto:
+                    opciones.add(texto)
+                    break
+
+        if campo_id == "oferta" and not ofertas:
+            for valor in str(oferta_cargo or "").split(","):
+                texto = _normalizar_opcion(valor)
+                if texto:
+                    opciones.add(texto)
+
+    return sorted(opciones, key=str.casefold)
+
+
 def _opciones_choices_desde_queryset(queryset, campo, choices):
     etiquetas = {str(codigo): str(etiqueta) for codigo, etiqueta in choices}
     return [
@@ -657,6 +716,12 @@ def _opciones_filtros_visualizacion_restringida(request):
         else:
             opciones[campo] = valores
 
+    for campo in OFERTA_CARGO_COLUMNAS:
+        valores = set(_opciones_ofertas_cargo_desde_queryset(queryset, campo))
+        campo_snapshot = f"localizacion__snapshots_padron__{campo}"
+        valores.update(_opciones_desde_queryset(queryset_snapshot, campo_snapshot))
+        opciones[campo] = sorted(valores, key=str.casefold)
+
     opciones["unidad_cantidad"] = _opciones_choices_desde_queryset(
         queryset,
         "unidad_cantidad",
@@ -675,7 +740,9 @@ def construir_opciones_filtros_visualizacion_cargos_localizacion(request=None):
         rol = obtener_rol_usuario_pof(request.user)
         if rol in {ROL_POF_REGIONAL, ROL_POF_DIRECTOR}:
             try:
-                return _opciones_filtros_visualizacion_restringida(request)
+                opciones = _opciones_filtros_visualizacion_restringida(request)
+                opciones["oferta"] = _opciones_oferta_filtro_visualizacion()
+                return opciones
             except (DatabaseError, ProgrammingError, OperationalError):
                 logger.exception(
                     "No se pudieron obtener opciones de filtros para el alcance POF."
@@ -698,6 +765,7 @@ def construir_opciones_filtros_visualizacion_cargos_localizacion(request=None):
     except (DatabaseError, ProgrammingError, OperationalError):
         logger.exception("No se pudieron obtener opciones de filtros desde Padron Interno.")
 
+    opciones["oferta"] = _opciones_oferta_filtro_visualizacion()
     return opciones
 
 
@@ -877,6 +945,31 @@ def _snapshot_lookup_q(campo, operador, valor):
     )
 
 
+def _oferta_cargo_lookup_q(campo_id, operador, valor):
+    exacto = operador in {"2", "7"}
+    sin_ofertas = Q(ofertas_seleccionadas=[]) | Q(ofertas_seleccionadas__isnull=True)
+
+    if campo_id == "oferta":
+        consulta = Q(oferta__icontains=valor)
+        return consulta | (
+            Q(oferta="")
+            & sin_ofertas
+            & _snapshot_filter_q("oferta", valor, exacto=exacto)
+        )
+
+    if not exacto:
+        consulta = Q(ofertas_seleccionadas__icontains=valor)
+    else:
+        consulta = Q()
+        for alias in OFERTA_CARGO_COLUMNAS[campo_id]:
+            consulta |= Q(ofertas_seleccionadas__contains=[{alias: valor}])
+
+    return consulta | (
+        sin_ofertas
+        & _snapshot_filter_q(campo_id, valor, exacto=exacto)
+    )
+
+
 def _cue_lookup_q(operador, valor):
     if operador in {"2", "7"}:
         return Q(localizacion__cueanexo__startswith=valor)
@@ -927,6 +1020,8 @@ def _filtro_avanzado_q(campo_id, operador, valor):
         return _anexo_lookup_q(operador, valor)
     if campo_id in FILTROS_AVANZADOS_LOCALIZACION:
         return _texto_lookup_q(FILTROS_AVANZADOS_LOCALIZACION[campo_id], operador, valor)
+    if campo_id in OFERTA_CARGO_COLUMNAS:
+        return _oferta_cargo_lookup_q(campo_id, operador, valor)
     if campo_id in SNAPSHOT_COLUMNAS:
         return _snapshot_lookup_q(SNAPSHOT_COLUMNAS[campo_id], operador, valor)
     if campo_id in FILTROS_AVANZADOS_CARGO_TEXTO:
@@ -1011,6 +1106,12 @@ def _aplicar_filtros(queryset, filtros):
         if filtros.get(campo):
             queryset = queryset.filter(_snapshot_filter_q(campo, filtros[campo], exacto=True))
 
+    for campo in OFERTA_CARGO_COLUMNAS:
+        if filtros.get(campo):
+            queryset = queryset.filter(
+                _oferta_cargo_lookup_q(campo, "2", filtros[campo])
+            )
+
     return queryset
 
 
@@ -1035,8 +1136,6 @@ def _busqueda_token_q(token):
         "region",
         "localidad",
         "departamento",
-        "oferta",
-        "acronimo",
         "ubicacion",
     ):
         snapshot_q |= Q(**{f"localizacion__snapshots_padron__{campo}__icontains": token})
@@ -1047,6 +1146,8 @@ def _busqueda_token_q(token):
         | Q(localizacion__cui__icontains=token)
         | Q(ceic_busqueda__icontains=token)
         | Q(cargo__icontains=token)
+        | Q(oferta__icontains=token)
+        | Q(ofertas_seleccionadas__icontains=token)
         | Q(observacion__icontains=token)
         | _estado_o_unidad_q(
             "estado_pof",
@@ -1081,6 +1182,8 @@ def _aplicar_busqueda_columna(queryset, columna_id, valor):
         return queryset.filter(localizacion__cuof__icontains=valor)
     if columna_id == "cui":
         return queryset.filter(localizacion__cui__icontains=valor)
+    if columna_id in OFERTA_CARGO_COLUMNAS:
+        return queryset.filter(_oferta_cargo_lookup_q(columna_id, "0", valor))
     if columna_id in SNAPSHOT_COLUMNAS:
         return queryset.filter(_snapshot_filter_q(SNAPSHOT_COLUMNAS[columna_id], valor))
     if columna_id == "ceic":
@@ -1248,6 +1351,29 @@ def _serializar_cargo(cargo, contexto_totales_generales=None):
         valor = getattr(snapshot, campo, "") if snapshot else ""
         if columna_id == "region":
             valor = normalizar_region_padron(valor)
+        fila[columna_id] = _valor_o_guion(valor)
+
+    ofertas = cargo.ofertas_seleccionadas or []
+    for columna_id, aliases in OFERTA_CARGO_COLUMNAS.items():
+        valores = []
+        vistos = set()
+        for oferta in ofertas:
+            if not isinstance(oferta, dict):
+                continue
+            valor = ""
+            for alias in aliases:
+                valor = _limpiar_texto(oferta.get(alias), 240)
+                if valor:
+                    break
+            if valor and valor not in vistos:
+                vistos.add(valor)
+                valores.append(valor)
+
+        valor = ", ".join(valores)
+        if columna_id == "oferta":
+            valor = _limpiar_texto(cargo.oferta, 1000) or valor
+        if not valor and snapshot:
+            valor = getattr(snapshot, columna_id, "")
         fila[columna_id] = _valor_o_guion(valor)
 
     return fila
@@ -1682,7 +1808,11 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
         celda = ws.cell(row=fila_encabezado, column=indice, value=columna["label"])
         celda.font = Font(bold=True, color="FFFFFF")
         celda.fill = PatternFill("solid", fgColor="2444D8")
-        celda.alignment = Alignment(horizontal="center", vertical="center")
+        celda.alignment = Alignment(
+            horizontal="center",
+            vertical="center",
+            wrap_text=True,
+        )
 
     paginator = Paginator(queryset, 1000)
     fila_actual = fila_encabezado + 1
@@ -1700,13 +1830,17 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
                 claves_totales_vistas,
             )
             for indice, columna in enumerate(columnas, start=1):
-                ws.cell(
+                celda = ws.cell(
                     row=fila_actual,
                     column=indice,
                     value=_valor_excel_columna(
                         columna["id"],
                         fila_display.get(columna["id"], ""),
                     ),
+                )
+                celda.alignment = Alignment(
+                    vertical="top",
+                    wrap_text=True,
                 )
             fila_actual += 1
 

@@ -637,6 +637,8 @@ OPERADOR_SQL = {
     '7': ('!=', lambda v: v),
 }
 
+TIPO_OFERTA_EXACT_SET_OPERATOR = '8'
+
 _ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
 _UNACCENTED_CHARS = 'AEIOUUNaeiouun'
 _ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
@@ -684,7 +686,52 @@ def _split_tipo_oferta_filter_params(oper, values):
     return tipo_param_groups, estado_params
 
 
+def _exact_tipo_oferta_filter_values(values):
+    normalized_values = []
+    seen = set()
+
+    for value in values:
+        folded = _fold_filter_text(value)
+        if not folded or _is_oferta_estado_filter_value(value) or folded in seen:
+            continue
+        seen.add(folded)
+        normalized_values.append(folded)
+
+    return normalized_values
+
+
+def _build_exact_tipo_oferta_clause(value_count):
+    descripcion = _folded_sql('olf.oferta')
+    placeholders = ', '.join(['%s'] * value_count)
+    return (
+        "("
+        "(SELECT COUNT(DISTINCT " + descripcion + ") "
+        "FROM padroninterno.mv_ofertaslocales olf "
+        "WHERE olf.id_localizacion = vl.id_localizacion "
+        f"AND {descripcion} <> '') = %s "
+        "AND NOT EXISTS ("
+        "SELECT 1 "
+        "FROM padroninterno.mv_ofertaslocales olf "
+        "WHERE olf.id_localizacion = vl.id_localizacion "
+        f"AND {descripcion} <> '' "
+        f"AND {descripcion} NOT IN ({placeholders})"
+        ")"
+        ")"
+    )
+
+
 def _append_tipo_oferta_filter(clauses, params, oper, values):
+    if oper == TIPO_OFERTA_EXACT_SET_OPERATOR:
+        exact_values = _exact_tipo_oferta_filter_values(values)
+        if not exact_values:
+            clauses.append('FALSE')
+            return
+
+        clauses.append(_build_exact_tipo_oferta_clause(len(exact_values)))
+        params.append(len(exact_values))
+        params.extend(exact_values)
+        return
+
     tipo_param_groups, estado_params = _split_tipo_oferta_filter_params(oper, values)
     if not tipo_param_groups and not estado_params:
         return
@@ -778,7 +825,16 @@ def _build_where(request):
         oper = opers[index].strip() if index < len(opers) else '0'
         valor = valores[index].strip() if index < len(valores) else ''
 
-        if not campo or not valor or campo not in CAMPO_SQL:
+        if not campo or campo not in CAMPO_SQL:
+            continue
+
+        if campo == 'tipo_oferta' and oper == TIPO_OFERTA_EXACT_SET_OPERATOR:
+            grouped_positive_filters.setdefault((campo, oper), [])
+            if valor and valor not in grouped_positive_filters[(campo, oper)]:
+                grouped_positive_filters[(campo, oper)].append(valor)
+            continue
+
+        if not valor:
             continue
 
         if oper in {'0', '2'}:
@@ -969,6 +1025,7 @@ def _armar_texto_filtros(request):
         '5': 'menor a',
         '6': 'menor o igual a',
         '7': 'distinto de',
+        '8': 'coincide exactamente con',
     }
 
     if request.GET.get('formato') == 'excel_todo':

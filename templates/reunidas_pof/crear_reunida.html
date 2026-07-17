@@ -12,7 +12,7 @@
         {% csrf_token %}
         <h2>Detalles de la POF</h2>
         <div class="pof-help">
-            El sistema evita duplicar una Reunida con el mismo a&ntilde;o y nivel.
+            El sistema evita duplicar una POF (Planta Org&aacute;nica Funcional) con el mismo a&ntilde;o y nivel.
         </div>
 
         {% if form.non_field_errors %}
@@ -80,7 +80,7 @@
 
         <div class="pof-actions">
             <button type="submit" class="pof-btn pof-btn-primary" id="crearReunidaSubmit">
-                Crear Reunida
+                Crear POF
             </button>
 
             <a class="pof-btn pof-btn-light" href="{% url 'reunidas_pof:reunidas_pof' %}">
@@ -94,17 +94,17 @@
 <div id="confirmarCrearReunidaModal" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
     <div class="pof-modal pof-reunida-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmarCrearReunidaTitulo">
         <div class="pof-modal-header">
-            <h2 id="confirmarCrearReunidaTitulo"><span class="pof-reunida-confirm-icon" aria-hidden="true">📝</span> Confirmar creación de Reunida</h2>
+            <h2 id="confirmarCrearReunidaTitulo"><span class="pof-reunida-confirm-icon" aria-hidden="true">📝</span> Confirmar creación de POF</h2>
             <button type="button" class="pof-modal-close" id="cerrarConfirmarCrearReunida" aria-label="Cerrar">&times;</button>
         </div>
 
         <div class="pof-reunida-confirm-section">
-            <p>Vas a crear la Reunida:</p>
+            <p>Vas a crear la POF (Planta Org&aacute;nica Funcional):</p>
             <div class="pof-reunida-confirm-block pof-reunida-confirm-block-destino" id="confirmarReunidaDestino">📤 —</div>
         </div>
 
         <div class="pof-reunida-confirm-section" id="confirmarReunidaConBase">
-            <p>Se tomará como base la Reunida:</p>
+            <p>Se tomar&aacute; como base la POF:</p>
             <div class="pof-reunida-confirm-block" id="confirmarReunidaBase">📆 —</div>
             <div class="pof-reunida-confirm-inheritance">
                 <p>Se heredarán automáticamente:</p>
@@ -118,9 +118,9 @@
         </div>
 
         <div class="pof-reunida-confirm-section pof-reunida-confirm-empty pof-hidden" id="confirmarReunidaSinBase">
-            <p>No se encontró una Reunida base para:</p>
+            <p>No se encontr&oacute; una POF base para:</p>
             <div class="pof-reunida-confirm-block">📆 —</div>
-            <p>La nueva Reunida comenzará vacía.</p>
+            <p>La nueva POF comenzar&aacute; vac&iacute;a.</p>
         </div>
 
         <div class="pof-modal-actions">
@@ -293,7 +293,7 @@ document.addEventListener("DOMContentLoaded", function () {
         modalConBase.classList.toggle("pof-hidden", !base.existe);
         modalSinBase.classList.toggle("pof-hidden", base.existe);
         modalSinBase.querySelector(".pof-reunida-confirm-block").textContent = baseTexto;
-        modalProteccion.textContent = "La Reunida " + base.anio + " no será modificada.";
+        modalProteccion.textContent = "La POF " + base.anio + " no será modificada.";
         modal.classList.remove("pof-hidden");
         modal.setAttribute("aria-hidden", "false");
         document.getElementById("confirmarCrearReunida").focus();
@@ -326,7 +326,7 @@ document.addEventListener("DOMContentLoaded", function () {
             abrirModal(datos);
         } catch (error) {
             mostrarErrorGeneral(
-                "No se pudo verificar la base de la Reunida. Intentá nuevamente."
+                "No se pudo verificar la base de la POF. Intentá nuevamente."
             );
         } finally {
             submitButton.disabled = false;

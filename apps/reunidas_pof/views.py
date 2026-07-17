@@ -208,15 +208,20 @@ def _normalizar_titulo_hoja(valor):
     return (titulo or "Reunida")[:31]
 
 
-def _ajustar_ancho_columnas_excel(ws):
+def _ajustar_ancho_columnas_excel(ws, fila_inicio=1):
     from openpyxl.utils import get_column_letter
 
-    for columna in ws.columns:
+    for indice_columna in range(1, ws.max_column + 1):
         ancho = 10
-        letra = get_column_letter(columna[0].column)
-        for celda in columna:
+        letra = get_column_letter(indice_columna)
+        for fila in ws.iter_rows(
+            min_row=fila_inicio,
+            min_col=indice_columna,
+            max_col=indice_columna,
+        ):
+            celda = fila[0]
             valor = "" if celda.value is None else str(celda.value)
-            ancho = max(ancho, min(len(valor) + 2, 42))
+            ancho = max(ancho, min(len(valor) + 4, 42))
         ws.column_dimensions[letra].width = ancho
 
 
@@ -300,6 +305,8 @@ def _es_columna_cantidad_entera_excel(columna):
 
 
 def _aplicar_formato_columnas_excel(ws, columnas, fila_inicio):
+    from openpyxl.styles import Alignment
+
     for indice, columna in enumerate(columnas, start=1):
         es_texto = _es_columna_texto_excel(columna)
         es_numerica = _es_columna_numerica_excel(columna)
@@ -310,6 +317,10 @@ def _aplicar_formato_columnas_excel(ws, columnas, fila_inicio):
             max_col=indice,
         ):
             celda = fila[0]
+            celda.alignment = Alignment(
+                vertical="top",
+                wrap_text=True,
+            )
             if es_texto:
                 if celda.value not in (None, ""):
                     celda.value = str(celda.value)
@@ -388,14 +399,13 @@ def _aplicar_bordes_grupos_visual_excel(ws, separadores_filas, fila_inicio, max_
 
 def _crear_respuesta_excel_exportacion(contexto):
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
+    from openpyxl.styles import Alignment, Font, PatternFill
 
     wb = Workbook()
     ws = wb.active
     reunida = contexto.get("reunida", {})
     columnas = contexto.get("columnas", [])
     filas = contexto.get("filas_exportacion", [])
-    filas_normalizadas = contexto.get("filas_normalizadas_exportacion", [])
     separadores_filas = contexto.get("separadores_filas_exportacion", [])
     secciones = contexto.get("secciones_exportacion", [])
     mensaje = contexto.get("mensaje_exportacion", "")
@@ -413,6 +423,11 @@ def _crear_respuesta_excel_exportacion(contexto):
     for celda in ws[2]:
         celda.font = Font(bold=True, color="FFFFFF")
         celda.fill = PatternFill("solid", fgColor="2444D8")
+        celda.alignment = Alignment(
+            horizontal="center",
+            vertical="center",
+            wrap_text=True,
+        )
 
     for fila in filas:
         ws.append([_valor_excel_exportacion(valor) for valor in fila])
@@ -439,39 +454,7 @@ def _crear_respuesta_excel_exportacion(contexto):
         max_columna=max_columna,
     )
 
-    _ajustar_ancho_columnas_excel(ws)
-
-    ws_normalizados = wb.create_sheet("DATOS_NORMALIZADOS")
-    columnas_normalizadas = list(filas_normalizadas[0].keys()) if filas_normalizadas else []
-    if columnas_normalizadas:
-        ws_normalizados.append(columnas_normalizadas)
-        for fila in filas_normalizadas:
-            ws_normalizados.append([
-                _valor_excel_exportacion(fila.get(columna, ""))
-                for columna in columnas_normalizadas
-            ])
-    elif mensaje:
-        ws_normalizados.append(["mensaje"])
-        ws_normalizados.append([mensaje])
-    else:
-        ws_normalizados.append(["mensaje"])
-
-    for celda in ws_normalizados[1]:
-        celda.font = Font(bold=True, color="FFFFFF")
-        celda.fill = PatternFill("solid", fgColor="2444D8")
-
-    ws_normalizados.freeze_panes = "A2"
-    _aplicar_autofiltro_excel(
-        ws_normalizados,
-        fila_encabezado=1,
-        max_columna=max(len(columnas_normalizadas), 1),
-    )
-    _aplicar_formato_columnas_excel(
-        ws_normalizados,
-        columnas_normalizadas,
-        fila_inicio=2,
-    )
-    _ajustar_ancho_columnas_excel(ws_normalizados)
+    _ajustar_ancho_columnas_excel(ws, fila_inicio=2)
 
     buffer = BytesIO()
     wb.save(buffer)

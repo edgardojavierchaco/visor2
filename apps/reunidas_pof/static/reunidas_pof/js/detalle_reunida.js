@@ -308,7 +308,7 @@
             if (["Común", "Especial", "Adultos"].indexOf(texto) !== -1) {
                 return texto;
             }
-            return texto.toLowerCase() === "sin información" ? "Sin Información" : "Otros";
+            return texto.toLowerCase() === "sin información" ? "Común" : "Otros";
         }
 
         function renderOpcionChecklist(value, label, selectedValues) {

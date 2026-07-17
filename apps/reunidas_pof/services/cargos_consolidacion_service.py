@@ -18,8 +18,8 @@ def _decimal(valor):
         decimal = Decimal(str(valor))
     except (InvalidOperation, TypeError, ValueError):
         raise ValidationError({"cantidad": ["La cantidad debe ser un numero valido."]})
-    if decimal <= 0:
-        raise ValidationError({"cantidad": ["La cantidad debe ser mayor a 0."]})
+    if decimal < 0:
+        raise ValidationError({"cantidad": ["La cantidad debe ser mayor o igual a 0."]})
     if decimal != decimal.to_integral_value():
         raise ValidationError({"cantidad": ["La cantidad debe ser un numero entero."]})
     return decimal.to_integral_value()
@@ -63,6 +63,38 @@ def clave_cargo_consolidable_desde_oficializacion(cargo_oficializado):
     )
 
 
+def normalizar_cargo_oficializado(cargo_oficializado):
+    datos_oficializados = dict(cargo_oficializado)
+    datos_oficializados["ceic"] = normalizar_ceic(
+        cargo_oficializado.get("ceic")
+    )
+    datos_oficializados["unidad_cantidad"] = normalizar_unidad_cantidad(
+        cargo_oficializado.get("unidad_cantidad")
+    )
+    datos_oficializados["cantidad"] = _decimal(
+        cargo_oficializado.get("cantidad")
+    )
+    datos_oficializados["puntos_asignados"] = _decimal_no_negativo(
+        cargo_oficializado.get("puntos_asignados")
+    )
+    datos_oficializados["total"] = (
+        datos_oficializados["cantidad"]
+        * datos_oficializados["puntos_asignados"]
+    )
+    datos_oficializados["cargo"] = _texto(datos_oficializados.get("cargo"))
+    if not datos_oficializados["cargo"]:
+        raise ValidationError({"cargo": ["El nombre del cargo es obligatorio."]})
+    datos_oficializados["observacion"] = _texto(
+        datos_oficializados.get("observacion")
+    )
+    datos_oficializados["snapshot_ceic"] = (
+        datos_oficializados.get("snapshot_ceic")
+        if isinstance(datos_oficializados.get("snapshot_ceic"), dict)
+        else {}
+    )
+    return datos_oficializados
+
+
 def consolidar_cargos_oficializados(cargos_oficializados):
     """
     Consolida cargos ya oficializados por backend antes de persistirlos.
@@ -77,27 +109,12 @@ def consolidar_cargos_oficializados(cargos_oficializados):
     cantidad_original = len(cargos_oficializados or [])
 
     for cargo_oficializado in cargos_oficializados or []:
-        clave = clave_cargo_consolidable_desde_oficializacion(cargo_oficializado)
-        cantidad = _decimal(cargo_oficializado.get("cantidad"))
-        puntos = _decimal_no_negativo(cargo_oficializado.get("puntos_asignados"))
-        total = cantidad * puntos
+        datos_oficializados = normalizar_cargo_oficializado(cargo_oficializado)
+        clave = clave_cargo_consolidable_desde_oficializacion(datos_oficializados)
+        cantidad = datos_oficializados["cantidad"]
+        puntos = datos_oficializados["puntos_asignados"]
 
         if clave not in consolidados:
-            datos_oficializados = dict(cargo_oficializado)
-            datos_oficializados["ceic"] = clave[0]
-            datos_oficializados["unidad_cantidad"] = clave[1]
-            datos_oficializados["cantidad"] = cantidad
-            datos_oficializados["puntos_asignados"] = puntos
-            datos_oficializados["total"] = total
-            datos_oficializados["cargo"] = _texto(datos_oficializados.get("cargo"))
-            if not datos_oficializados["cargo"]:
-                raise ValidationError({"cargo": ["El nombre del cargo es obligatorio."]})
-            datos_oficializados["observacion"] = _texto(datos_oficializados.get("observacion"))
-            datos_oficializados["snapshot_ceic"] = (
-                datos_oficializados.get("snapshot_ceic")
-                if isinstance(datos_oficializados.get("snapshot_ceic"), dict)
-                else {}
-            )
             consolidados[clave] = datos_oficializados
             continue
 
@@ -198,15 +215,25 @@ def incrementar_cargo_existente(cargo_existente, cargo_consolidado):
 
 
 def crear_cargo_desde_oficializacion(localizacion, lote_carga, cargo_oficializado):
+    ofertas_seleccionadas = cargo_oficializado.get("ofertas_seleccionadas")
+    if not isinstance(ofertas_seleccionadas, list):
+        ofertas_seleccionadas = []
+
     return CargoPof.objects.create(
         localizacion=localizacion,
         lote_carga=lote_carga,
         ceic=cargo_oficializado["ceic"],
         cargo=cargo_oficializado.get("cargo", ""),
+        oferta=_texto(cargo_oficializado.get("oferta")),
+        ofertas_seleccionadas=ofertas_seleccionadas,
         cantidad=cargo_oficializado["cantidad"],
         unidad_cantidad=cargo_oficializado["unidad_cantidad"],
         puntos_asignados=cargo_oficializado["puntos_asignados"],
-        estado_pof=CargoPof.EstadoPof.AFECTADO,
+        estado_pof=(
+            CargoPof.EstadoPof.DESAFECTADO
+            if cargo_oficializado["cantidad"] == 0
+            else CargoPof.EstadoPof.AFECTADO
+        ),
         observacion=cargo_oficializado.get("observacion", ""),
         snapshot_ceic=cargo_oficializado.get("snapshot_ceic") or {},
     )
@@ -263,4 +290,32 @@ def aplicar_alta_consolidada(localizacion, lote_carga, cargos_oficializados, usu
         "total_cargos_procesados": resultado_consolidacion["total_cargos_procesados"],
         "total_cargos_consolidados": resultado_consolidacion["total_cargos_consolidados"],
         "advertencias": advertencias,
+    }
+
+
+def aplicar_alta_independiente(localizacion, lote_carga, cargos_oficializados, usuario=None):
+    """
+    Crea un CargoPof independiente por cada fila oficializada recibida.
+
+    CEIC y unidad siguen siendo datos del cargo, pero no se utilizan para fusionar
+    filas de una misma carga ni para incrementar registros existentes.
+    """
+    creados = []
+    cargos_oficializados = list(cargos_oficializados or [])
+
+    for cargo_oficializado in cargos_oficializados:
+        cargo_normalizado = normalizar_cargo_oficializado(cargo_oficializado)
+        cargo = crear_cargo_desde_oficializacion(
+            localizacion,
+            lote_carga,
+            cargo_normalizado,
+        )
+        creados.append({"cargo": cargo, "cargo_data": cargo_normalizado})
+
+    return {
+        "creados": creados,
+        "incrementados": [],
+        "total_cargos_procesados": len(cargos_oficializados),
+        "total_cargos_consolidados": 0,
+        "advertencias": [],
     }

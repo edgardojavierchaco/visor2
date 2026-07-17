@@ -150,8 +150,8 @@ def _validar_origen(reunida_base, localizaciones_origen):
                 raise ValidationError("El estado de un cargo origen no es válido.")
             if cargo.unidad_cantidad not in unidades_validas:
                 raise ValidationError("La unidad de cantidad de un cargo origen no es válida.")
-            if cargo.cantidad <= 0:
-                raise ValidationError("La cantidad de un cargo origen debe ser mayor a cero.")
+            if cargo.cantidad < 0:
+                raise ValidationError("La cantidad de un cargo origen debe ser mayor o igual a cero.")
             if cargo.puntos_asignados < 0:
                 raise ValidationError("Los puntos de un cargo origen no pueden ser negativos.")
             if cargo.total != _decimal_dos_decimales(

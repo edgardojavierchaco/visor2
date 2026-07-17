@@ -45,6 +45,7 @@ OBSERVACION_PLACEHOLDERS = {"-", "--", "---", MOJIBAKE_GUION_VACIO, GUION_VACIO}
 NOMBRES_CAMPOS_DIFF = {
     "ceic": "CEIC",
     "cargo": "Cargo",
+    "oferta": "Ofertas",
     "cantidad": "Cantidad",
     "unidad_cantidad": "Unidad",
     "puntos_asignados": "Puntos asignados",
@@ -59,6 +60,7 @@ CAMPOS_DECIMALES_DIFF = {"puntos_asignados", "puntos", "total"}
 ORDEN_CAMPOS_DIFF = (
     "ceic",
     "cargo",
+    "oferta",
     "cantidad",
     "unidad_cantidad",
     "puntos_asignados",

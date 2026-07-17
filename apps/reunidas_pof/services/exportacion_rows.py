@@ -130,6 +130,25 @@ def _valor_snapshot_o_localizacion(snapshot, localizacion, campo):
     return texto(getattr(localizacion, campo, ""))
 
 
+def _valor_ofertas_cargo(cargo, *campos):
+    ofertas = getattr(cargo, "ofertas_seleccionadas", None)
+    if not isinstance(ofertas, list):
+        return ""
+
+    valores = []
+    for oferta in ofertas:
+        if not isinstance(oferta, dict):
+            continue
+        valor = ""
+        for campo in campos:
+            valor = texto(oferta.get(campo))
+            if valor:
+                break
+        if valor and valor not in valores:
+            valores.append(valor)
+    return ", ".join(valores)
+
+
 def construir_datos_normalizados_cargo(cargo, total_general=None, totales_especiales=None):
     localizacion = getattr(cargo, "localizacion", None)
     reunida = getattr(localizacion, "reunida", None)
@@ -148,12 +167,23 @@ def construir_datos_normalizados_cargo(cargo, total_general=None, totales_especi
         "numero_establecimiento",
     )
     nombre = _valor_snapshot_o_localizacion(snapshot, localizacion, "nombre_establecimiento")
-    categoria = _valor_snapshot_o_localizacion(snapshot, localizacion, "categoria")
-    jornada = _valor_snapshot_o_localizacion(snapshot, localizacion, "jornada")
-    modalidad = _valor_snapshot_o_localizacion(snapshot, localizacion, "acronimo")
+    oferta_cargo = texto(getattr(cargo, "oferta", ""))
+    if not oferta_cargo:
+        oferta_cargo = _valor_snapshot_o_localizacion(snapshot, localizacion, "oferta")
+    categoria = _valor_ofertas_cargo(cargo, "categoria", "oferta_categoria")
+    if not categoria:
+        categoria = _valor_snapshot_o_localizacion(snapshot, localizacion, "categoria")
+    jornada = _valor_ofertas_cargo(cargo, "jornada", "jornada_ofertalocal")
+    if not jornada:
+        jornada = _valor_snapshot_o_localizacion(snapshot, localizacion, "jornada")
+    modalidad = _valor_ofertas_cargo(cargo, "acronimo")
     if not modalidad:
-        modalidad = _valor_snapshot_o_localizacion(snapshot, localizacion, "oferta")
-    ambito = _valor_snapshot_o_localizacion(snapshot, localizacion, "ambito")
+        modalidad = _valor_snapshot_o_localizacion(snapshot, localizacion, "acronimo")
+    if not modalidad:
+        modalidad = oferta_cargo
+    ambito = _valor_ofertas_cargo(cargo, "ambito", "oferta_ambito")
+    if not ambito:
+        ambito = _valor_snapshot_o_localizacion(snapshot, localizacion, "ambito")
     ubicacion = _valor_snapshot_o_localizacion(snapshot, localizacion, "ubicacion")
     localidad = _valor_snapshot_o_localizacion(snapshot, localizacion, "localidad")
     departamento = _valor_snapshot_o_localizacion(snapshot, localizacion, "departamento")
@@ -218,7 +248,7 @@ def construir_datos_normalizados_cargo(cargo, total_general=None, totales_especi
         "total_puntos": total,
         "blank": "",
         "anexo": anexo,
-        "oferta": _valor_snapshot_o_localizacion(snapshot, localizacion, "oferta"),
+        "oferta": oferta_cargo,
         "unidad": texto(cargo.get_unidad_cantidad_display()) if hasattr(cargo, "get_unidad_cantidad_display") else "",
         "localizacion_id": getattr(cargo, "localizacion_id", "") or getattr(localizacion, "id", ""),
         "unidad_cantidad": texto(getattr(cargo, "unidad_cantidad", "")),
@@ -342,10 +372,12 @@ def _consolidar_filas_normalizadas(filas):
 def construir_filas_normalizadas(cargos, nivel_codigo=None, schema=None):
     cargos = list(cargos)
 
-    filas = _consolidar_filas_normalizadas([
+    filas = [
         construir_datos_normalizados_cargo(cargo)
         for cargo in cargos
-    ])
+    ]
+    for fila in filas:
+        fila.pop("_observaciones_cargo", None)
 
     totales_por_localizacion = defaultdict(lambda: Decimal("0"))
     for fila in filas:

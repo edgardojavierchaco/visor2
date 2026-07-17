@@ -235,7 +235,12 @@
         </div>
 
     <div class="pof-visual-preview">
-        <div class="pof-visual-preview-toolbar">
+        <div class="pof-visual-preview-toolbar pof-filter-summary">
+            <div class="pof-filter-summary-left">
+                <span class="pof-filter-summary-main" id="visualizacionResultadosContador">
+                    Resultados: {{ total_registros }} cargos
+                </span>
+            </div>
             <span class="pof-export-count"
                 id="visualizacionColumnasContadorTop"
                 data-visual-row-count="{{ total_registros }}">
@@ -307,6 +312,7 @@
     const checkboxes = Array.from(document.querySelectorAll(".pof-visual-column-check"));
     const contador = document.getElementById("visualizacionColumnasContador");
     const contadorTop = document.getElementById("visualizacionColumnasContadorTop");
+    const resultadosContador = document.getElementById("visualizacionResultadosContador");
     const tbody = document.querySelector("#visualizacionCargosTabla tbody");
     const excelFiltros = document.getElementById("visualizacionExcelFiltros");
     const liveSearch = document.getElementById("visualizacionLiveSearch");
@@ -441,12 +447,16 @@
 
     function updateColumnCounters() {
         const seleccionadas = selectedColumnIds().length;
+        const totalRegistros = contadorTop ? Number(contadorTop.dataset.visualRowCount || 0) : 0;
         const text = "Mostrando " + seleccionadas + " de " + checkboxes.length + " columnas";
         if (contador) {
             contador.textContent = text;
         }
+        if (resultadosContador) {
+            resultadosContador.textContent = "Resultados: " + totalRegistros + " cargos";
+        }
         if (contadorTop) {
-            contadorTop.textContent = seleccionadas + " columnas visibles \u00b7 " + contadorTop.dataset.visualRowCount + " cargos";
+            contadorTop.textContent = seleccionadas + " columnas visibles \u00b7 " + totalRegistros + " cargos";
         }
         if (columnasEstado) {
             columnasEstado.value = seleccionadas === 0 ? "none" : "custom";
@@ -831,7 +841,7 @@
         if (["Común", "Especial", "Adultos"].indexOf(texto) !== -1) {
             return texto;
         }
-        return texto.toLowerCase() === "sin información" ? "Sin Información" : "Otros";
+        return texto.toLowerCase() === "sin información" ? "Común" : "Otros";
     }
 
     function renderOpcionChecklist(value, label, selectedValues) {

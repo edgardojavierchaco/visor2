@@ -194,7 +194,7 @@ html {
 /* 4. Solo tabla principal de listados.
    No afecta tablas internas de modales. */
 .table-shell > .table-responsive {
-    min-height: 554px !important;
+    min-height: 0 !important;
 }
 
     .psize-container {
@@ -1303,7 +1303,6 @@ html {
             flex-direction: column;
             align-items: flex-start !important;
             justify-content: flex-start !important;
-            min-height: 71px;
         }
 
         .results-bar > span:first-child,
@@ -1315,10 +1314,6 @@ html {
         #colCounterTopLabel {
             align-self: flex-start;
             margin-top: 0.15rem;
-        }
-
-        #pagination-container {
-            min-height: 128px;
         }
 
         #paginador-lista {
