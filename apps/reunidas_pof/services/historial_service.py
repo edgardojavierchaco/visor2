@@ -629,17 +629,22 @@ def _serializar_usuario_movimiento(usuario):
             "cuil": GUION_VACIO,
         }
 
-    nombre = str(usuario).strip() or GUION_VACIO
-    cuil = (
+    nombre = str(usuario).strip()
+    identificador = str(
         getattr(usuario, "cuil", "")
         or getattr(usuario, "cuit", "")
         or getattr(usuario, "username", "")
         or ""
-    )
-    cuil = "".join(caracter for caracter in str(cuil) if caracter.isdigit())
+    ).strip()
+    if identificador and nombre.startswith(identificador):
+        nombre_sin_identificador = nombre[len(identificador):].lstrip(" -–—")
+        if nombre_sin_identificador:
+            nombre = nombre_sin_identificador
+
+    cuil = "".join(caracter for caracter in identificador if caracter.isdigit())
 
     return {
-        "nombre": nombre,
+        "nombre": nombre or GUION_VACIO,
         "cuil": cuil if len(cuil) == 11 else GUION_VACIO,
     }
 
