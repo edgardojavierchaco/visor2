@@ -1,5 +1,3 @@
-from django.utils import timezone
-
 from ..models import ReunidaPof
 from .niveles_service import (
     normalizar_nivel,
@@ -64,10 +62,6 @@ def validar_cabecera_reunida(anio, nivel):
         errores["anio"] = ["El año es obligatorio."]
     elif not anio_texto.isdigit() or len(anio_texto) != 4:
         errores["anio"] = ["El año debe tener 4 dígitos numéricos."]
-    else:
-        anio_entero = int(anio_texto)
-        if anio_entero > timezone.localdate().year:
-            errores["anio"] = ["El año no puede ser posterior al año actual."]
 
     nivel_normalizado = normalizar_nivel(nivel)
     if not nivel_normalizado:

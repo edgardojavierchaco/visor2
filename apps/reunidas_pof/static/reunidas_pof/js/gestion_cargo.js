@@ -33,6 +33,16 @@
   const cambiosPendientes = document.getElementById(
     "cargoGestionCambiosPendientes",
   );
+  const ofertasCampo = document.getElementById("cargoGestionOfertasCampo");
+  const ofertasSelector = document.getElementById(
+    "cargoGestionOfertasSelector",
+  );
+  const ofertasToggle = document.getElementById("cargoGestionOfertasToggle");
+  const ofertasResumen = document.getElementById("cargoGestionOfertasResumen");
+  const ofertasOpciones = document.getElementById(
+    "cargoGestionOfertasOpciones",
+  );
+  const ofertasError = document.getElementById("cargoGestionOfertasError");
   const camposEditables = [
     "cargoGestionEstado",
     "cargoGestionCantidad",
@@ -49,6 +59,9 @@
   let enviando = false;
   let ultimoTextoCeic = "";
   let triggerActivo = null;
+  let ofertasDisponibles = [];
+  let requiereOfertas = false;
+  let advertenciaCantidadCeroVisible = false;
 
   function buildUrl(base, cargoId) {
     return base.replace("/0/", "/" + cargoId + "/");
@@ -59,6 +72,12 @@
     btnEliminar.disabled = valor;
     btnConfirmarEliminar.disabled = valor;
     btnEstadoToggle.disabled = valor;
+    ofertasToggle.disabled = valor || !requiereOfertas;
+    ofertasOpciones
+      .querySelectorAll('input[type="checkbox"]')
+      .forEach(function (checkbox) {
+        checkbox.disabled = valor;
+      });
     actualizarBotonGuardarCargo();
   }
 
@@ -122,8 +141,22 @@
 
   function alternarEstadoPendiente() {
     const estadoCampo = document.getElementById("cargoGestionEstado");
+    const vaAAfectar = estadoCampo.value === "DESAFECTADO";
+    const cantidad = Number(
+      document.getElementById("cargoGestionCantidad").value,
+    );
+    if (vaAAfectar && (!Number.isInteger(cantidad) || cantidad <= 0)) {
+      api.showStatus(
+        estado,
+        "error",
+        "Cantidad: Para afectar el cargo, la cantidad debe ser superior a 0.",
+      );
+      return;
+    }
+
     estadoCampo.value =
-      estadoCampo.value === "DESAFECTADO" ? "AFECTADO" : "DESAFECTADO";
+      vaAAfectar ? "AFECTADO" : "DESAFECTADO";
+    api.clearStatus(estado);
     actualizarEstadoVisual();
     marcarCamposModificados();
   }
@@ -155,6 +188,153 @@
     return numero.toFixed(2);
   }
 
+  function obtenerCampoOferta(oferta, campos) {
+    for (const campo of campos) {
+      const valor = oferta && oferta[campo];
+      if (valor !== undefined && valor !== null && String(valor).trim()) {
+        return String(valor).trim();
+      }
+    }
+    return "";
+  }
+
+  function obtenerNombreOferta(oferta) {
+    return obtenerCampoOferta(oferta, ["oferta_real", "oferta"]);
+  }
+
+  function claveOfertaCargo(oferta) {
+    return [
+      obtenerCampoOferta(oferta, ["id_oferta_local", "id"]),
+      obtenerCampoOferta(oferta, ["id_localizacion"]),
+      obtenerCampoOferta(oferta, ["padron_cueanexo", "cueanexo"]),
+      obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]),
+      obtenerNombreOferta(oferta),
+    ].join("|");
+  }
+
+  function obtenerOfertasSeleccionadas() {
+    return Array.from(
+      ofertasOpciones.querySelectorAll('input[type="checkbox"]:checked'),
+    )
+      .map(function (checkbox) {
+        return ofertasDisponibles[Number(checkbox.dataset.ofertaIndex)];
+      })
+      .filter(Boolean);
+  }
+
+  function normalizarOfertasCargoModal(ofertas) {
+    if (!Array.isArray(ofertas)) {
+      return "";
+    }
+    return ofertas.map(claveOfertaCargo).sort().join("||");
+  }
+
+  function cerrarOpcionesOfertas() {
+    ofertasOpciones.classList.add("pof-hidden");
+    ofertasToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function actualizarResumenOfertas() {
+    const seleccionadas = obtenerOfertasSeleccionadas();
+    const nombres = seleccionadas
+      .map(obtenerNombreOferta)
+      .filter(Boolean);
+    const sinSeleccion = requiereOfertas && !seleccionadas.length;
+
+    ofertasResumen.textContent = nombres.length
+      ? nombres.join(", ")
+      : "Seleccioná al menos una oferta";
+    ofertasSelector.classList.toggle(
+      "pof-admin-offers-invalid",
+      sinSeleccion,
+    );
+    ofertasError.textContent = sinSeleccion
+      ? "Debe mantener al menos una oferta seleccionada."
+      : "";
+    ofertasError.classList.toggle("pof-hidden", !sinSeleccion);
+  }
+
+  function renderizarOfertasCargo(cargo) {
+    requiereOfertas = Boolean(cargo.requiere_ofertas);
+    ofertasDisponibles = Array.isArray(cargo.ofertas_disponibles)
+      ? cargo.ofertas_disponibles
+      : [];
+    ofertasCampo.classList.toggle("pof-hidden", !requiereOfertas);
+    cerrarOpcionesOfertas();
+
+    if (!requiereOfertas) {
+      ofertasOpciones.innerHTML = "";
+      actualizarResumenOfertas();
+      return;
+    }
+
+    if (!ofertasDisponibles.length) {
+      ofertasOpciones.innerHTML =
+        '<div class="pof-admin-offers-empty">No hay ofertas disponibles para este CUEANEXO.</div>';
+      actualizarResumenOfertas();
+      return;
+    }
+
+    function renderizarOpcionOferta(oferta, index) {
+        const nombre = obtenerNombreOferta(oferta) || "Oferta sin identificar";
+        const cuof = obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]);
+        return `
+          <label class="pof-admin-offers-option">
+            <input type="checkbox"
+                   data-oferta-index="${index}"
+                   ${oferta.seleccionada ? "checked" : ""}>
+            <span>
+              <strong>${escaparHtml(nombre)}</strong>
+              ${cuof ? `<small>CUOF: ${escaparHtml(cuof)}</small>` : ""}
+            </span>
+          </label>
+        `;
+    }
+
+    const ofertasIndexadas = ofertasDisponibles.map(function (oferta, index) {
+      return { oferta, index };
+    });
+    const clasificaPorReunida = ofertasDisponibles.some(function (oferta) {
+      return Object.prototype.hasOwnProperty.call(oferta, "oferta_sugerida");
+    });
+
+    if (clasificaPorReunida) {
+      const sugeridas = ofertasIndexadas.filter(function (item) {
+        return item.oferta.oferta_sugerida === true;
+      });
+      const otras = ofertasIndexadas.filter(function (item) {
+        return item.oferta.oferta_sugerida !== true;
+      });
+      const renderizarGrupo = function (titulo, items, mensajeVacio) {
+        const opciones = items.length
+          ? items
+              .map(function (item) {
+                return renderizarOpcionOferta(item.oferta, item.index);
+              })
+              .join("")
+          : `<div class="pof-admin-offers-empty">${escaparHtml(mensajeVacio)}</div>`;
+        return `
+          <div class="pof-admin-offers-empty"><strong>${escaparHtml(titulo)}</strong></div>
+          ${opciones}
+        `;
+      };
+
+      ofertasOpciones.innerHTML =
+        renderizarGrupo(
+          "Ofertas sugeridas",
+          sugeridas,
+          "No hay ofertas sugeridas para el nivel de la Reunida.",
+        ) + renderizarGrupo("Otras ofertas", otras, "No hay otras ofertas.");
+    } else {
+      ofertasOpciones.innerHTML = ofertasIndexadas
+        .map(function (item) {
+          return renderizarOpcionOferta(item.oferta, item.index);
+        })
+        .join("");
+    }
+    actualizarResumenOfertas();
+  }
+
   function normalizarEstadoCargoModal(estado) {
     return {
       cantidad: normalizarNumeroEnteroCargoModal(estado.cantidad),
@@ -163,6 +343,9 @@
       ).toUpperCase(),
       estado_pof: normalizarTextoCargoModal(estado.estado_pof).toUpperCase(),
       observacion: normalizarTextoCargoModal(estado.observacion),
+      ofertas_seleccionadas: normalizarOfertasCargoModal(
+        estado.ofertas_seleccionadas,
+      ),
     };
   }
 
@@ -172,6 +355,7 @@
       unidad_cantidad: document.getElementById("cargoGestionUnidad").value,
       estado_pof: document.getElementById("cargoGestionEstado").value,
       observacion: document.getElementById("cargoGestionObservacion").value,
+      ofertas_seleccionadas: obtenerOfertasSeleccionadas(),
     });
   }
 
@@ -190,9 +374,11 @@
 
   function actualizarBotonGuardarCargo() {
     const hayCambios = hayCambiosCargoModal();
+    const ofertasValidas =
+      !requiereOfertas || obtenerOfertasSeleccionadas().length > 0;
     setBotonDeshabilitadoPof(
       btnGuardar,
-      enviando || !cargoActual || !hayCambios,
+      enviando || !cargoActual || !hayCambios || !ofertasValidas,
     );
   }
 
@@ -219,6 +405,12 @@
           .classList.toggle("pof-admin-field-modified", modificado);
       }
     });
+    ofertasSelector.classList.toggle(
+      "pof-admin-field-modified",
+      estadoActual.ofertas_seleccionadas !==
+        (valoresOriginales.ofertas_seleccionadas || ""),
+    );
+    actualizarResumenOfertas();
     const hayCambios = hayCambiosCargoModal();
     cambiosPendientes.classList.toggle("pof-hidden", !hayCambios);
     actualizarBotonGuardarCargo();
@@ -235,6 +427,23 @@
     document.getElementById("cargoGestionTotal").value = (
       cantidad * puntos
     ).toFixed(2);
+  }
+
+  function actualizarAdvertenciaCantidadCero() {
+    const cantidad = document.getElementById("cargoGestionCantidad").value;
+    if (/^0+$/.test(cantidad)) {
+      api.showStatus(
+        estado,
+        "warning",
+        "Advertencia: la cantidad es 0. Al guardar los cambios, el cargo quedará automáticamente DESAFECTADO.",
+      );
+      advertenciaCantidadCeroVisible = true;
+      return;
+    }
+    if (advertenciaCantidadCeroVisible) {
+      api.clearStatus(estado);
+      advertenciaCantidadCeroVisible = false;
+    }
   }
 
   function aplicarCargo(cargo) {
@@ -269,6 +478,7 @@
       localizacion.cuof || "-";
     document.getElementById("cargoGestionResumenEstablecimiento").textContent =
       localizacion.establecimiento || "-";
+    renderizarOfertasCargo(cargo);
     actualizarEstadoVisual();
     guardarValoresOriginales();
     marcarCamposModificados();
@@ -290,9 +500,15 @@
     cargoActual = null;
     valoresOriginales = {};
     triggerActivo = null;
+    ofertasDisponibles = [];
+    requiereOfertas = false;
+    ofertasCampo.classList.add("pof-hidden");
+    ofertasOpciones.innerHTML = "";
+    cerrarOpcionesOfertas();
 
     setEnviando(false);
     api.clearStatus(estado);
+    advertenciaCantidadCeroVisible = false;
 
     if (triggerAnterior && document.contains(triggerAnterior)) {
       triggerAnterior.focus({ preventScroll: true });
@@ -320,6 +536,7 @@
       const data = await api.requestJson(buildUrl(detalleUrlBase, cargoId));
       aplicarCargo(data.data.cargo);
       api.clearStatus(estado);
+      actualizarAdvertenciaCantidadCero();
     } catch (error) {
       api.showStatus(estado, "error", api.formatError(error));
       api.logError("cargar cargo gestion", error);
@@ -418,6 +635,7 @@
     campo.addEventListener("input", function () {
       if (id === "cargoGestionCantidad") {
         actualizarTotal();
+        actualizarAdvertenciaCantidadCero();
       }
       if (id === "cargoGestionEstado") {
         actualizarEstadoVisual();
@@ -432,6 +650,28 @@
     });
   });
 
+  ofertasToggle.addEventListener("click", function () {
+    if (enviando || !requiereOfertas) {
+      return;
+    }
+    const abrir = ofertasOpciones.classList.contains("pof-hidden");
+    ofertasOpciones.classList.toggle("pof-hidden", !abrir);
+    ofertasToggle.setAttribute("aria-expanded", abrir ? "true" : "false");
+  });
+
+  ofertasOpciones.addEventListener("change", function (event) {
+    if (!event.target.matches('input[type="checkbox"]')) {
+      return;
+    }
+    marcarCamposModificados();
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!ofertasSelector.contains(event.target)) {
+      cerrarOpcionesOfertas();
+    }
+  });
+
   btnEstadoToggle.addEventListener("click", alternarEstadoPendiente);
 
   form.addEventListener("submit", function (event) {
@@ -440,8 +680,19 @@
       return;
     }
 
+    const ofertasSeleccionadas = obtenerOfertasSeleccionadas();
+    if (requiereOfertas && !ofertasSeleccionadas.length) {
+      actualizarResumenOfertas();
+      api.showStatus(
+        estado,
+        "error",
+        "Ofertas: Debe mantener al menos una oferta seleccionada.",
+      );
+      return;
+    }
+
     const cantidad = document.getElementById("cargoGestionCantidad").value;
-    if (!/^[1-9]\d*$/.test(cantidad)) {
+    if (!/^\d+$/.test(cantidad)) {
       api.showStatus(
         estado,
         "error",
@@ -450,7 +701,7 @@
       return;
     }
 
-    const estadoPof = document.getElementById("cargoGestionEstado").value;
+    let estadoPof = document.getElementById("cargoGestionEstado").value;
     if (!["AFECTADO", "DESAFECTADO"].includes(estadoPof)) {
       api.showStatus(
         estado,
@@ -459,15 +710,40 @@
       );
       return;
     }
+    if (Number(cantidad) === 0 && estadoPof !== "DESAFECTADO") {
+      estadoPof = "DESAFECTADO";
+      document.getElementById("cargoGestionEstado").value = estadoPof;
+      actualizarEstadoVisual();
+    }
+
+    const payload = {
+      cantidad: cantidad,
+      unidad_cantidad: document.getElementById("cargoGestionUnidad").value,
+      estado_pof: estadoPof,
+      observacion: document.getElementById("cargoGestionObservacion").value,
+    };
+    if (requiereOfertas) {
+      payload.ofertas_seleccionadas = ofertasSeleccionadas.map(
+        function (oferta) {
+          return {
+            id_localizacion: obtenerCampoOferta(oferta, ["id_localizacion"]),
+            id_oferta_local: obtenerCampoOferta(oferta, [
+              "id_oferta_local",
+              "id",
+            ]),
+            padron_cueanexo: obtenerCampoOferta(oferta, [
+              "padron_cueanexo",
+              "cueanexo",
+            ]),
+            cuof_loc: obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]),
+          };
+        },
+      );
+    }
 
     ejecutarAccionCargo(
       buildUrl(modificarUrlBase, cargoActual.id),
-      {
-        cantidad: cantidad,
-        unidad_cantidad: document.getElementById("cargoGestionUnidad").value,
-        estado_pof: estadoPof,
-        observacion: document.getElementById("cargoGestionObservacion").value,
-      },
+      payload,
       "modificar",
     );
   });

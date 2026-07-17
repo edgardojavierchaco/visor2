@@ -42,6 +42,7 @@ from .filtros_pof_service import (
 )
 from .niveles_service import limpiar_texto, normalizar_nivel, obtener_nombre_nivel
 from .padron_materializadas_service import obtener_opciones_filtros_visualizacion_padron
+from .visualizacion_cargos_localizacion_service import OFERTAS_FILTRO_VISUALIZACION
 
 
 PAGE_SIZE_OPTIONS = (10, 30, 50, 100)
@@ -95,9 +96,15 @@ FILTROS_SNAPSHOT_DETALLE_REUNIDA = {
     "localidad": "localidad",
     "departamento": "departamento",
     "region": "region",
-    "jornada": "jornada",
-    "categoria": "categoria",
-    "ambito": "ambito",
+}
+
+OFERTA_CARGO_COLUMNAS_DETALLE_REUNIDA = {
+    "ambito": ("ambito", "oferta_ambito"),
+    "categoria": ("categoria", "oferta_categoria"),
+    "jornada": ("jornada", "jornada_ofertalocal"),
+    "oferta": ("oferta_real", "oferta"),
+    "acronimo": ("acronimo",),
+    "estado_oferta_padron": ("est_oferta", "estado_oferta_padron"),
 }
 
 SNAPSHOT_COLUMNAS_DETALLE_REUNIDA = {
@@ -106,13 +113,7 @@ SNAPSHOT_COLUMNAS_DETALLE_REUNIDA = {
     "region": "region",
     "localidad": "localidad",
     "departamento": "departamento",
-    "ambito": "ambito",
-    "categoria": "categoria",
-    "jornada": "jornada",
-    "oferta": "oferta",
-    "acronimo": "acronimo",
     "estado_localizacion_padron": "estado_localizacion_padron",
-    "estado_oferta_padron": "estado_oferta_padron",
     "estado_establecimiento_padron": "estado_establecimiento_padron",
 }
 
@@ -595,6 +596,7 @@ def _construir_opciones_filtros_detalle_reunida():
         if campo_id in opciones_padron:
             opciones[campo_id] = opciones_padron[campo_id]
 
+    opciones["oferta"] = [dict(opcion) for opcion in OFERTAS_FILTRO_VISUALIZACION]
     return opciones
 
 
@@ -981,6 +983,13 @@ def _aplicar_filtros_detalle_reunida(queryset, filtros, incluir_cui=False):
             localizacion__snapshots_padron__vigente=True,
         ).distinct()
 
+    for campo_id in ("ambito", "categoria", "jornada"):
+        valor = filtros.get(campo_id)
+        if valor:
+            queryset = queryset.filter(
+                _oferta_cargo_lookup_q_detalle(campo_id, "2", valor)
+            ).distinct()
+
     return queryset, " ".join(mensajes), errores
 
 
@@ -1002,6 +1011,31 @@ def _snapshot_lookup_q_detalle(campo, operador, valor):
     return Q(
         localizacion__snapshots_padron__vigente=True,
         **{f"localizacion__snapshots_padron__{campo}__{lookup}": valor},
+    )
+
+
+def _oferta_cargo_lookup_q_detalle(campo_id, operador, valor):
+    exacto = operador in {"2", "7"}
+    sin_ofertas = Q(ofertas_seleccionadas=[]) | Q(ofertas_seleccionadas__isnull=True)
+
+    if campo_id == "oferta":
+        consulta = Q(oferta__icontains=valor)
+        return consulta | (
+            Q(oferta="")
+            & sin_ofertas
+            & _snapshot_filter_q_detalle("oferta", valor, exacto=exacto)
+        )
+
+    if not exacto:
+        consulta = Q(ofertas_seleccionadas__icontains=valor)
+    else:
+        consulta = Q()
+        for alias in OFERTA_CARGO_COLUMNAS_DETALLE_REUNIDA[campo_id]:
+            consulta |= Q(ofertas_seleccionadas__contains=[{alias: valor}])
+
+    return consulta | (
+        sin_ofertas
+        & _snapshot_filter_q_detalle(campo_id, valor, exacto=exacto)
     )
 
 
@@ -1059,6 +1093,8 @@ def _filtro_avanzado_detalle_q(campo_id, operador, valor):
             operador,
             valor,
         )
+    if campo_id in OFERTA_CARGO_COLUMNAS_DETALLE_REUNIDA:
+        return _oferta_cargo_lookup_q_detalle(campo_id, operador, valor)
     if campo_id in SNAPSHOT_COLUMNAS_DETALLE_REUNIDA:
         return _snapshot_lookup_q_detalle(
             SNAPSHOT_COLUMNAS_DETALLE_REUNIDA[campo_id],

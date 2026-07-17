@@ -62,6 +62,10 @@
         }
     }
 
+    function nativeCrossDocumentTransitionAvailable() {
+        return 'onpageswap' in window;
+    }
+
     function hideCurtain() {
         var wasActive = document.documentElement.classList.contains(ACTIVE_CLASS);
         if (wasActive) {
@@ -215,10 +219,10 @@
         }, SAFETY_TIMEOUT);
     }
 
-    if (curtainDisabledForTest()) {
+    if (nativeCrossDocumentTransitionAvailable() || curtainDisabledForTest()) {
         document.documentElement.classList.remove(ACTIVE_CLASS);
         clearState();
-        markForensic('curtain-disabled-for-root-cause-test');
+        markForensic(nativeCrossDocumentTransitionAvailable() ? 'curtain-disabled-for-native-transition' : 'curtain-disabled-for-root-cause-test');
         return;
     }
 

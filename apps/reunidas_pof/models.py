@@ -1158,7 +1158,7 @@ class LoteCargaPof(models.Model):
 class CargoPof(models.Model):
     """
     Representa un cargo cargado en POF para una localización.
-    Cada registro guarda CEIC, cantidad, unidad, puntos, total y estado POF.
+    Cada registro guarda CEIC, ofertas, cantidad, unidad, puntos, total y estado POF.
     """
 
     class EstadoPof(models.TextChoices):
@@ -1205,6 +1205,20 @@ class CargoPof(models.Model):
     cargo = models.TextField(
         blank=True,
         verbose_name="Cargo",
+    )
+
+    # Ofertas educativas asociadas específicamente a este cargo, separadas por coma.
+    oferta = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Ofertas",
+    )
+
+    # Filas oficiales seleccionadas para reconstruir y validar el selector de ofertas.
+    ofertas_seleccionadas = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Ofertas seleccionadas",
     )
 
     observacion = models.TextField(
@@ -1285,10 +1299,19 @@ class CargoPof(models.Model):
                 name="ck_cargo_pof_ceic_gt_0",
             ),
 
-            # Evita cantidades en cero o negativas.
+            # Evita cantidades negativas.
             models.CheckConstraint(
-                condition=models.Q(cantidad__gt=0),
-                name="ck_cargo_pof_cantidad_gt_0",
+                condition=models.Q(cantidad__gte=0),
+                name="ck_cargo_pof_cantidad_gte_0",
+            ),
+
+            # Un cargo afectado siempre debe tener cantidad positiva.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(estado_pof="DESAFECTADO")
+                    | models.Q(cantidad__gt=0)
+                ),
+                name="ck_cargo_pof_afectado_cant_gt0",
             ),
 
             # Evita puntos negativos.
@@ -1345,16 +1368,27 @@ class CargoPof(models.Model):
 
         self.cantidad = self.cantidad or Decimal("0")
         self.puntos_asignados = self.puntos_asignados or Decimal("0")
+        self.oferta = str(self.oferta or "").strip()
         self.observacion = str(self.observacion or "").strip()
+
+        if not isinstance(self.ofertas_seleccionadas, list):
+            raise ValidationError({
+                "ofertas_seleccionadas": "Las ofertas seleccionadas deben ser una lista."
+            })
 
         if not self.ceic or self.ceic <= 0:
             raise ValidationError({
                 "ceic": "El CEIC debe ser mayor a 0."
             })
 
-        if self.cantidad <= 0:
+        if self.cantidad < 0:
             raise ValidationError({
-                "cantidad": "La cantidad debe ser mayor a 0."
+                "cantidad": "La cantidad debe ser mayor o igual a 0."
+            })
+
+        if self.estado_pof == self.EstadoPof.AFECTADO and self.cantidad <= 0:
+            raise ValidationError({
+                "cantidad": "Para afectar el cargo, la cantidad debe ser superior a 0."
             })
 
         if self.puntos_asignados < 0:

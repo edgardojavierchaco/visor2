@@ -66,11 +66,30 @@
 
                 {% if cabecera_querystring %}
                     {% if es_proyecto_especial %}
-                        <a href="{% if excel_querystring %}?{{ excel_querystring }}{% else %}#{% endif %}"
-                        class="pof-export-btn-mini pof-export-btn-excel{% if not excel_querystring %} pof-export-btn-disabled{% endif %}"
-                        {% if not excel_querystring %}aria-disabled="true"{% endif %}>
-                            Exportar Excel
-                        </a>
+                        <div class="dropdown pof-grid-dropdown">
+                            <button type="button"
+                                    class="pof-btn pof-btn-excel pof-visual-toolbar-btn dropdown-toggle"
+                                    data-toggle="dropdown"
+                                    aria-haspopup="true"
+                                    aria-expanded="false">
+                                📗 Exportar
+                            </button>
+
+                            <div class="dropdown-menu dropdown-menu-right pof-grid-dropdown-menu">
+                                <a href="{% if excel_querystring %}?{{ excel_querystring }}{% else %}#{% endif %}"
+                                class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success{% if not excel_querystring %} pof-export-btn-disabled{% endif %}"
+                                data-pof-excel-link
+                                {% if not excel_querystring %}aria-disabled="true"{% endif %}>
+                                    📊 Exportar vista actual
+                                </a>
+
+                                <a href="#"
+                                class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
+                                data-pof-excel-all-link>
+                                    📁 Exportar todos los datos
+                                </a>
+                            </div>
+                        </div>
                     {% else %}
                         <div class="dropdown pof-grid-dropdown">
                             <button type="button"
@@ -212,7 +231,7 @@
                     {% for seccion in secciones_preview %}
 
                         {% for fila in seccion.filas %}
-                            <tr class="{% if es_proyecto_especial %}{% if forloop.first %}pof-section-start{% endif %} {% if forloop.last %}pof-section-end{% endif %}{% else %}{% if fila.es_inicio_cue %}pof-export-grupo-cue{% elif fila.es_inicio_anexo %}pof-export-grupo-anexo{% endif %}{% endif %}">
+                            <tr class="{% if fila.es_inicio_cue %}pof-export-grupo-cue{% elif fila.es_inicio_anexo %}pof-export-grupo-anexo{% endif %}">
                                 {% if fila.celdas %}
                                     {% for celda in fila.celdas %}
                                         <td data-column-key="{{ celda.key }}" {% if not celda.visible %}hidden{% endif %}>

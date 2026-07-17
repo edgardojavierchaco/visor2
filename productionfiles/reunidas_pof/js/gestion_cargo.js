@@ -33,6 +33,16 @@
   const cambiosPendientes = document.getElementById(
     "cargoGestionCambiosPendientes",
   );
+  const ofertasCampo = document.getElementById("cargoGestionOfertasCampo");
+  const ofertasSelector = document.getElementById(
+    "cargoGestionOfertasSelector",
+  );
+  const ofertasToggle = document.getElementById("cargoGestionOfertasToggle");
+  const ofertasResumen = document.getElementById("cargoGestionOfertasResumen");
+  const ofertasOpciones = document.getElementById(
+    "cargoGestionOfertasOpciones",
+  );
+  const ofertasError = document.getElementById("cargoGestionOfertasError");
   const camposEditables = [
     "cargoGestionEstado",
     "cargoGestionCantidad",
@@ -49,6 +59,8 @@
   let enviando = false;
   let ultimoTextoCeic = "";
   let triggerActivo = null;
+  let ofertasDisponibles = [];
+  let requiereOfertas = false;
 
   function buildUrl(base, cargoId) {
     return base.replace("/0/", "/" + cargoId + "/");
@@ -59,6 +71,12 @@
     btnEliminar.disabled = valor;
     btnConfirmarEliminar.disabled = valor;
     btnEstadoToggle.disabled = valor;
+    ofertasToggle.disabled = valor || !requiereOfertas;
+    ofertasOpciones
+      .querySelectorAll('input[type="checkbox"]')
+      .forEach(function (checkbox) {
+        checkbox.disabled = valor;
+      });
     actualizarBotonGuardarCargo();
   }
 
@@ -155,6 +173,113 @@
     return numero.toFixed(2);
   }
 
+  function obtenerCampoOferta(oferta, campos) {
+    for (const campo of campos) {
+      const valor = oferta && oferta[campo];
+      if (valor !== undefined && valor !== null && String(valor).trim()) {
+        return String(valor).trim();
+      }
+    }
+    return "";
+  }
+
+  function obtenerNombreOferta(oferta) {
+    return obtenerCampoOferta(oferta, ["oferta_real", "oferta"]);
+  }
+
+  function claveOfertaCargo(oferta) {
+    return [
+      obtenerCampoOferta(oferta, ["id_oferta_local", "id"]),
+      obtenerCampoOferta(oferta, ["id_localizacion"]),
+      obtenerCampoOferta(oferta, ["padron_cueanexo", "cueanexo"]),
+      obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]),
+      obtenerNombreOferta(oferta),
+    ].join("|");
+  }
+
+  function obtenerOfertasSeleccionadas() {
+    return Array.from(
+      ofertasOpciones.querySelectorAll('input[type="checkbox"]:checked'),
+    )
+      .map(function (checkbox) {
+        return ofertasDisponibles[Number(checkbox.dataset.ofertaIndex)];
+      })
+      .filter(Boolean);
+  }
+
+  function normalizarOfertasCargoModal(ofertas) {
+    if (!Array.isArray(ofertas)) {
+      return "";
+    }
+    return ofertas.map(claveOfertaCargo).sort().join("||");
+  }
+
+  function cerrarOpcionesOfertas() {
+    ofertasOpciones.classList.add("pof-hidden");
+    ofertasToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function actualizarResumenOfertas() {
+    const seleccionadas = obtenerOfertasSeleccionadas();
+    const nombres = seleccionadas
+      .map(obtenerNombreOferta)
+      .filter(Boolean);
+    const sinSeleccion = requiereOfertas && !seleccionadas.length;
+
+    ofertasResumen.textContent = nombres.length
+      ? nombres.join(", ")
+      : "Seleccioná al menos una oferta";
+    ofertasSelector.classList.toggle(
+      "pof-admin-offers-invalid",
+      sinSeleccion,
+    );
+    ofertasError.textContent = sinSeleccion
+      ? "Debe mantener al menos una oferta seleccionada."
+      : "";
+    ofertasError.classList.toggle("pof-hidden", !sinSeleccion);
+  }
+
+  function renderizarOfertasCargo(cargo) {
+    requiereOfertas = Boolean(cargo.requiere_ofertas);
+    ofertasDisponibles = Array.isArray(cargo.ofertas_disponibles)
+      ? cargo.ofertas_disponibles
+      : [];
+    ofertasCampo.classList.toggle("pof-hidden", !requiereOfertas);
+    cerrarOpcionesOfertas();
+
+    if (!requiereOfertas) {
+      ofertasOpciones.innerHTML = "";
+      actualizarResumenOfertas();
+      return;
+    }
+
+    if (!ofertasDisponibles.length) {
+      ofertasOpciones.innerHTML =
+        '<div class="pof-admin-offers-empty">No hay ofertas disponibles para este CUEANEXO.</div>';
+      actualizarResumenOfertas();
+      return;
+    }
+
+    ofertasOpciones.innerHTML = ofertasDisponibles
+      .map(function (oferta, index) {
+        const nombre = obtenerNombreOferta(oferta) || "Oferta sin identificar";
+        const cuof = obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]);
+        return `
+          <label class="pof-admin-offers-option">
+            <input type="checkbox"
+                   data-oferta-index="${index}"
+                   ${oferta.seleccionada ? "checked" : ""}>
+            <span>
+              <strong>${escaparHtml(nombre)}</strong>
+              ${cuof ? `<small>CUOF: ${escaparHtml(cuof)}</small>` : ""}
+            </span>
+          </label>
+        `;
+      })
+      .join("");
+    actualizarResumenOfertas();
+  }
+
   function normalizarEstadoCargoModal(estado) {
     return {
       cantidad: normalizarNumeroEnteroCargoModal(estado.cantidad),
@@ -163,6 +288,9 @@
       ).toUpperCase(),
       estado_pof: normalizarTextoCargoModal(estado.estado_pof).toUpperCase(),
       observacion: normalizarTextoCargoModal(estado.observacion),
+      ofertas_seleccionadas: normalizarOfertasCargoModal(
+        estado.ofertas_seleccionadas,
+      ),
     };
   }
 
@@ -172,6 +300,7 @@
       unidad_cantidad: document.getElementById("cargoGestionUnidad").value,
       estado_pof: document.getElementById("cargoGestionEstado").value,
       observacion: document.getElementById("cargoGestionObservacion").value,
+      ofertas_seleccionadas: obtenerOfertasSeleccionadas(),
     });
   }
 
@@ -190,9 +319,11 @@
 
   function actualizarBotonGuardarCargo() {
     const hayCambios = hayCambiosCargoModal();
+    const ofertasValidas =
+      !requiereOfertas || obtenerOfertasSeleccionadas().length > 0;
     setBotonDeshabilitadoPof(
       btnGuardar,
-      enviando || !cargoActual || !hayCambios,
+      enviando || !cargoActual || !hayCambios || !ofertasValidas,
     );
   }
 
@@ -219,6 +350,12 @@
           .classList.toggle("pof-admin-field-modified", modificado);
       }
     });
+    ofertasSelector.classList.toggle(
+      "pof-admin-field-modified",
+      estadoActual.ofertas_seleccionadas !==
+        (valoresOriginales.ofertas_seleccionadas || ""),
+    );
+    actualizarResumenOfertas();
     const hayCambios = hayCambiosCargoModal();
     cambiosPendientes.classList.toggle("pof-hidden", !hayCambios);
     actualizarBotonGuardarCargo();
@@ -269,6 +406,7 @@
       localizacion.cuof || "-";
     document.getElementById("cargoGestionResumenEstablecimiento").textContent =
       localizacion.establecimiento || "-";
+    renderizarOfertasCargo(cargo);
     actualizarEstadoVisual();
     guardarValoresOriginales();
     marcarCamposModificados();
@@ -290,6 +428,11 @@
     cargoActual = null;
     valoresOriginales = {};
     triggerActivo = null;
+    ofertasDisponibles = [];
+    requiereOfertas = false;
+    ofertasCampo.classList.add("pof-hidden");
+    ofertasOpciones.innerHTML = "";
+    cerrarOpcionesOfertas();
 
     setEnviando(false);
     api.clearStatus(estado);
@@ -432,11 +575,44 @@
     });
   });
 
+  ofertasToggle.addEventListener("click", function () {
+    if (enviando || !requiereOfertas) {
+      return;
+    }
+    const abrir = ofertasOpciones.classList.contains("pof-hidden");
+    ofertasOpciones.classList.toggle("pof-hidden", !abrir);
+    ofertasToggle.setAttribute("aria-expanded", abrir ? "true" : "false");
+  });
+
+  ofertasOpciones.addEventListener("change", function (event) {
+    if (!event.target.matches('input[type="checkbox"]')) {
+      return;
+    }
+    marcarCamposModificados();
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!ofertasSelector.contains(event.target)) {
+      cerrarOpcionesOfertas();
+    }
+  });
+
   btnEstadoToggle.addEventListener("click", alternarEstadoPendiente);
 
   form.addEventListener("submit", function (event) {
     event.preventDefault();
     if (!cargoActual || enviando || !hayCambiosCargoModal()) {
+      return;
+    }
+
+    const ofertasSeleccionadas = obtenerOfertasSeleccionadas();
+    if (requiereOfertas && !ofertasSeleccionadas.length) {
+      actualizarResumenOfertas();
+      api.showStatus(
+        estado,
+        "error",
+        "Ofertas: Debe mantener al menos una oferta seleccionada.",
+      );
       return;
     }
 
@@ -460,14 +636,34 @@
       return;
     }
 
+    const payload = {
+      cantidad: cantidad,
+      unidad_cantidad: document.getElementById("cargoGestionUnidad").value,
+      estado_pof: estadoPof,
+      observacion: document.getElementById("cargoGestionObservacion").value,
+    };
+    if (requiereOfertas) {
+      payload.ofertas_seleccionadas = ofertasSeleccionadas.map(
+        function (oferta) {
+          return {
+            id_localizacion: obtenerCampoOferta(oferta, ["id_localizacion"]),
+            id_oferta_local: obtenerCampoOferta(oferta, [
+              "id_oferta_local",
+              "id",
+            ]),
+            padron_cueanexo: obtenerCampoOferta(oferta, [
+              "padron_cueanexo",
+              "cueanexo",
+            ]),
+            cuof_loc: obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]),
+          };
+        },
+      );
+    }
+
     ejecutarAccionCargo(
       buildUrl(modificarUrlBase, cargoActual.id),
-      {
-        cantidad: cantidad,
-        unidad_cantidad: document.getElementById("cargoGestionUnidad").value,
-        estado_pof: estadoPof,
-        observacion: document.getElementById("cargoGestionObservacion").value,
-      },
+      payload,
       "modificar",
     );
   });

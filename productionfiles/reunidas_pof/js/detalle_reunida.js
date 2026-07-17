@@ -711,6 +711,32 @@
         return celda;
       }
 
+      function crearCeldaObservacionDetalleGrupo(cargo) {
+        const celda = document.createElement("td");
+        const contenido = document.createElement("span");
+        contenido.className = "pof-quantity-cell";
+        contenido.appendChild(
+          document.createTextNode(obtenerTextoDetalleGrupo(cargo.observacion)),
+        );
+
+        if (cargo.tiene_modificacion_observacion === true) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "pof-history-detail-btn pof-quantity-history-btn";
+          button.dataset.pofObservationHistory = "true";
+          button.dataset.cargoIds = Array.isArray(cargo.cargo_ids)
+            ? cargo.cargo_ids.join(",")
+            : "";
+          button.setAttribute("aria-label", "Ver historial de observación");
+          button.title = "Ver historial de observación";
+          button.textContent = "🕘";
+          contenido.appendChild(button);
+        }
+
+        celda.appendChild(contenido);
+        return celda;
+      }
+
       /**
        * Construye la celda Estado reutilizando los badges y el trigger de historial existentes.
        *
@@ -864,6 +890,7 @@
           "Unidad",
           "Puntos",
           "Total",
+          "Observación",
           "Estado",
           "Acción",
         ].forEach(function (tituloColumna) {
@@ -887,6 +914,7 @@
           fila.appendChild(crearCeldaDetalleGrupo(cargo.unidad_cantidad));
           fila.appendChild(crearCeldaDetalleGrupo(cargo.puntos_asignados));
           fila.appendChild(crearCeldaDetalleGrupo(cargo.total));
+          fila.appendChild(crearCeldaObservacionDetalleGrupo(cargo));
           fila.appendChild(crearCeldaEstadoDetalleGrupo(cargo));
           fila.appendChild(crearCeldaAccionDetalleGrupo(cargo, contextoGrupo));
 

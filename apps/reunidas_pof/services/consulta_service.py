@@ -200,6 +200,7 @@ def _serializar_cargo(cargo):
         "anexo": _derivar_anexo(localizacion.cueanexo),
         "establecimiento": _resumir_establecimiento(localizacion),
         "unidad": cargo.get_unidad_cantidad_display(),
+        "ceic": _valor_o_guion(cargo.ceic),
         "cargo": _valor_o_guion(cargo.cargo),
         "cantidad": _cantidad_texto(cargo.cantidad),
         "puntos": cargo.puntos_asignados,

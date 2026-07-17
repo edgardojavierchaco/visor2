@@ -143,7 +143,7 @@
 
                 <div class="pof-field pof-cargo-entry-small">
                     <label>Cantidad</label>
-                    <input type="number" id="cantidadCargo" min="1" step="1" value="1">
+                    <input type="number" id="cantidadCargo" min="0" step="1" value="1">
                 </div>
 
                 <div class="pof-field pof-cargo-entry-unit">
@@ -240,6 +240,7 @@
                 <thead>
                     <tr>
                         <th>CEIC</th>
+                        <th>Ofertas</th>
                         <th>Cargo</th>
                         <th>Cantidad</th>
                         <th>Unidad</th>
@@ -285,5 +286,5 @@
     {% include "reunidas_pof/_helpers_carga_cargos_comunes.html" %}
 </script>
 <script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}?v=20260717-2"></script>
 {% endblock %}

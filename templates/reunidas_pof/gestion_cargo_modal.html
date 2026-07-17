@@ -43,6 +43,18 @@
                 </div>
 
                 <div class="pof-grid">
+                    <div id="cargoGestionOfertasCampo" class="pof-field pof-col-12 pof-hidden">
+                        <label for="cargoGestionOfertasToggle">Ofertas</label>
+                        <div id="cargoGestionOfertasSelector" class="pof-admin-offers-select">
+                            <button type="button" id="cargoGestionOfertasToggle" class="pof-admin-offers-toggle" aria-expanded="false" aria-controls="cargoGestionOfertasOpciones">
+                                <span id="cargoGestionOfertasResumen">Seleccion&aacute; al menos una oferta</span>
+                                <span aria-hidden="true">&#9662;</span>
+                            </button>
+                            <div id="cargoGestionOfertasOpciones" class="pof-admin-offers-options pof-hidden"></div>
+                        </div>
+                        <span id="cargoGestionOfertasError" class="pof-field-hint pof-admin-offers-error pof-hidden"></span>
+                    </div>
+
                     <div class="pof-field pof-col-3">
                         <label for="cargoGestionCeicBusqueda">CEIC</label>
                         <input type="text" id="cargoGestionCeicBusqueda" class="pof-locked-control" readonly autocomplete="off" placeholder="CEIC">
@@ -56,7 +68,7 @@
 
                     <div class="pof-field pof-col-4">
                         <label for="cargoGestionCantidad">Cantidad</label>
-                        <input type="number" id="cargoGestionCantidad" min="1" step="1" required>
+                        <input type="number" id="cargoGestionCantidad" min="0" step="1" required>
                     </div>
                     <div class="pof-field pof-col-4">
                         <label for="cargoGestionUnidad">Unidad</label>

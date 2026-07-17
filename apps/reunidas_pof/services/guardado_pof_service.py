@@ -23,11 +23,12 @@ from .niveles_service import normalizar_nivel
 from .padron_materializadas_service import (
     armar_localizacion_payload,
     armar_snapshot_payload,
+    buscar_ofertas_padron,
     construir_cueanexo_sin_guion,
     normalizar_anexo,
     resolver_fila_padron_oficial,
 )
-from .cargos_consolidacion_service import aplicar_alta_consolidada
+from .cargos_consolidacion_service import aplicar_alta_independiente
 
 
 CABECERA_REUNIDA = "REUNIDA"
@@ -79,9 +80,9 @@ def _decimal(valor):
     return Decimal(str(valor))
 
 
-def _entero_positivo(valor):
+def _entero_no_negativo(valor):
     numero = Decimal(str(valor))
-    if numero != numero.to_integral_value() or numero <= 0:
+    if numero != numero.to_integral_value() or numero < 0:
         raise ValueError
     return numero
 
@@ -377,8 +378,6 @@ def _validar_datos_guardado_minimos(datos):
             anio_texto = str(anio)
             if not anio_texto.isdigit() or len(anio_texto) != 4:
                 errores["anio"] = ["El anio debe tener 4 digitos numericos."]
-            elif int(anio) > timezone.localdate().year:
-                errores["anio"] = ["El anio no puede ser posterior al anio actual."]
 
         if not nivel_normalizado:
             errores["nivel"] = ["El nivel ingresado no es valido."]
@@ -446,9 +445,9 @@ def _validar_datos_guardado_minimos(datos):
             errores_cargo["ceic"] = ["Ingresá solo números, hasta 3 dígitos."]
 
         try:
-            _entero_positivo(cargo.get("cantidad"))
-            if _decimal(cargo.get("cantidad")) <= 0:
-                errores_cargo["cantidad"] = ["La cantidad debe ser mayor a 0."]
+            _entero_no_negativo(cargo.get("cantidad"))
+            if _decimal(cargo.get("cantidad")) < 0:
+                errores_cargo["cantidad"] = ["La cantidad debe ser mayor o igual a 0."]
         except (InvalidOperation, TypeError, ValueError):
             errores_cargo["cantidad"] = ["La cantidad debe ser un numero valido."]
 
@@ -479,19 +478,119 @@ def _obtener_cabecera(datos):
     return None, proyecto
 
 
+def _oficializar_ofertas_padron_seleccionadas(
+    padron,
+    reunida=None,
+    validar_compatibilidad_reunida=True,
+):
+    """
+    Valida todas las ofertas seleccionadas y arma un único padrón para la carga.
+
+    - Conserva compatibilidad con payloads históricos de una sola oferta.
+    - Exige que todas las filas pertenezcan al mismo CUEANEXO.
+    - Mantiene como identidad principal la primera fila oficial seleccionada.
+    - Guarda los nombres sin repetir separados por coma y las filas completas en JSON.
+    """
+    selecciones = padron.get("ofertas_seleccionadas")
+    if selecciones is None:
+        selecciones = [padron]
+    elif not isinstance(selecciones, list) or not selecciones:
+        return {
+            "ok": False,
+            "errores": {"padron": ["Debe seleccionar al menos una oferta del padrón."]},
+        }
+
+    filas_oficiales = []
+    claves_oficiales = set()
+    cueanexo_principal = ""
+
+    for seleccion in selecciones:
+        if not isinstance(seleccion, dict):
+            return {
+                "ok": False,
+                "errores": {"padron": ["Cada oferta seleccionada debe ser un objeto válido."]},
+            }
+
+        cueanexo, cuof, _cui = _localizacion_desde_padron(seleccion)
+        if not cueanexo or not cuof:
+            return {
+                "ok": False,
+                "errores": {"padron": ["Cada oferta seleccionada debe informar CUEANEXO y CUOF."]},
+            }
+
+        validacion_padron = resolver_fila_padron_oficial(
+            cueanexo=cueanexo,
+            cuof=cuof,
+            id_localizacion=seleccion.get("id_localizacion"),
+            id_oferta_local=seleccion.get("id_oferta_local"),
+        )
+        if not validacion_padron["ok"]:
+            return {
+                "ok": False,
+                "errores": {"padron": [validacion_padron["mensaje"]]},
+            }
+
+        fila_oficial = validacion_padron["fila"]
+        cueanexo_oficial, cuof_oficial, _cui_oficial = _localizacion_desde_padron(fila_oficial)
+        if not cueanexo_principal:
+            cueanexo_principal = cueanexo_oficial
+        elif cueanexo_oficial != cueanexo_principal:
+            return {
+                "ok": False,
+                "errores": {"padron": ["Todas las ofertas seleccionadas deben pertenecer al mismo CUEANEXO."]},
+            }
+
+        oferta_real = _texto(fila_oficial.get("oferta_real") or fila_oficial.get("oferta"))
+        if (
+            reunida
+            and validar_compatibilidad_reunida
+            and not oferta_es_compatible_con_reunida(oferta_real, reunida.nivel)
+        ):
+            return {
+                "ok": False,
+                "errores": {
+                    "padron": [
+                        f"La oferta '{oferta_real}' no es compatible con el nivel de la Reunida."
+                    ]
+                },
+            }
+
+        clave_oficial = (
+            _texto(fila_oficial.get("id_oferta_local")),
+            _texto(fila_oficial.get("id_localizacion")),
+            cueanexo_oficial,
+            cuof_oficial,
+        )
+        if clave_oficial in claves_oficiales:
+            continue
+        claves_oficiales.add(clave_oficial)
+        filas_oficiales.append(fila_oficial)
+
+    nombres_ofertas = []
+    for fila_oficial in filas_oficiales:
+        nombre_oferta = _texto(fila_oficial.get("oferta_real") or fila_oficial.get("oferta"))
+        if nombre_oferta and nombre_oferta not in nombres_ofertas:
+            nombres_ofertas.append(nombre_oferta)
+
+    padron_oficial = dict(filas_oficiales[0])
+    ofertas_texto = ", ".join(nombres_ofertas)
+    padron_oficial["oferta_real"] = ofertas_texto
+    padron_oficial["oferta"] = ofertas_texto
+    padron_oficial["ofertas_seleccionadas"] = filas_oficiales
+    return {"ok": True, "padron": padron_oficial}
+
+
 def _validar_y_oficializar_padron_guardado(datos, reunida, proyecto):
     """
     Resuelve la localización real de padrón antes de persistir una alta.
 
-    - Para Reunidas exige una fila real por `cueanexo + cuof` y rechaza selecciones ambiguas o inexistentes.
-    - Valida compatibilidad de la oferta usando la fila oficial obtenida desde padrón, no el texto del frontend.
+    - Para cargas por padrón exige y valida cada fila real seleccionada por `cueanexo + cuof`.
+    - En Reunidas valida todas las ofertas contra filas oficiales sin restringirlas por nivel.
     - En Proyecto Especial manual rechaza identidad oficial cargada y conserva padrón manual sin resolver.
     - Si existe fila oficial resoluble, usa siempre padrón aunque el frontend envíe origen manual.
     """
     padron = datos["padron"]
     cueanexo, cuof, _cui = _localizacion_desde_padron(padron)
-    id_localizacion = padron.get("id_localizacion")
-    id_oferta_local = padron.get("id_oferta_local")
     puede_validar_padron = bool(cueanexo and cuof)
 
     if proyecto and _texto(datos.get("modo_padron")).upper() == MODO_PADRON_MANUAL_CONTROLADO:
@@ -507,48 +606,16 @@ def _validar_y_oficializar_padron_guardado(datos, reunida, proyecto):
         return {"ok": True, "padron": padron}
 
     if reunida:
-        validacion_padron = resolver_fila_padron_oficial(
-            cueanexo=cueanexo,
-            cuof=cuof,
-            id_localizacion=id_localizacion,
-            id_oferta_local=id_oferta_local,
+        return _oficializar_ofertas_padron_seleccionadas(
+            padron,
+            reunida=reunida,
+            validar_compatibilidad_reunida=False,
         )
-        if not validacion_padron["ok"]:
-            return {
-                "ok": False,
-                "errores": {"padron": [validacion_padron["mensaje"]]},
-            }
-
-        padron_oficial = validacion_padron["fila"]
-        oferta_real = _texto(padron_oficial.get("oferta_real") or padron_oficial.get("oferta"))
-        if not oferta_es_compatible_con_reunida(oferta_real, reunida.nivel):
-            return {
-                "ok": False,
-                "errores": {
-                    "padron": [
-                        "La oferta real del padrón no es compatible con el nivel de la Reunida."
-                    ]
-                },
-            }
-
-        return {"ok": True, "padron": padron_oficial}
 
     if not proyecto or not puede_validar_padron:
         return {"ok": True, "padron": padron}
 
-    validacion_padron = resolver_fila_padron_oficial(
-        cueanexo=cueanexo,
-        cuof=cuof,
-        id_localizacion=id_localizacion,
-        id_oferta_local=id_oferta_local,
-    )
-    if not validacion_padron["ok"]:
-        return {
-            "ok": False,
-            "errores": {"padron": [validacion_padron["mensaje"]]},
-        }
-
-    return {"ok": True, "padron": validacion_padron["fila"]}
+    return _oficializar_ofertas_padron_seleccionadas(padron)
 
 
 def _oficializar_cargos_desde_ceic(datos, reunida):
@@ -558,7 +625,7 @@ def _oficializar_cargos_desde_ceic(datos, reunida):
     - En Proyecto Especial consulta una sola vez los CEIC unicos enviados en el lote.
     - En Reunida consulta CEIC sugeridos y globales para controlar la confirmacion fuera de sugerencia.
     - Para Reunidas exige CEIC sugerido o una marca explícita de fuera de sugerencia.
-    - Devuelve cargos completos listos para consolidar y persistir.
+    - Devuelve cargos completos listos para persistir como registros independientes.
     """
     cargos = datos.get("cargos") or []
     ceics_cargos = [cargo.get("ceic") for cargo in cargos if isinstance(cargo, dict)]
@@ -611,7 +678,7 @@ def _oficializar_cargos_desde_ceic(datos, reunida):
             errores_cargos[indice] = {"ceic": [mensaje]}
             continue
 
-        cantidad = _entero_positivo(cargo.get("cantidad"))
+        cantidad = _entero_no_negativo(cargo.get("cantidad"))
         puntos_asignados = ceic_real["puntos_asignados"]
         cargos_normalizados.append(
             {
@@ -892,10 +959,8 @@ def _obtener_snapshot(localizacion, padron, usuario):
         vigente=True,
     ).first()
     if snapshot:
-        for campo, valor in datos_snapshot.items():
-            setattr(snapshot, campo, valor)
-        snapshot.save(update_fields=list(datos_snapshot.keys()))
-        return snapshot
+        snapshot.vigente = False
+        snapshot.save(update_fields=["vigente"])
 
     return SnapshotPadronLocalizacionPof.objects.create(
         localizacion=localizacion,
@@ -908,6 +973,7 @@ def _valores_nuevos_cargo(cargo):
         {
             "ceic": cargo.ceic,
             "cargo": cargo.cargo,
+            "oferta": cargo.oferta,
             "cantidad": _cantidad_texto(cargo.cantidad),
             "unidad_cantidad": cargo.unidad_cantidad,
             "puntos_asignados": _decimal_texto(cargo.puntos_asignados),
@@ -950,11 +1016,92 @@ def _crear_lote_administrativo(cargo, tipo_operacion, usuario):
     )
 
 
+def _clave_oferta_padron(oferta):
+    return (
+        _texto(oferta.get("id_oferta_local")),
+        _texto(oferta.get("id_localizacion")),
+        _texto(oferta.get("padron_cueanexo") or oferta.get("cueanexo")),
+        _texto(oferta.get("cuof_loc") or oferta.get("cuof")),
+    )
+
+
+def _ofertas_cargo_con_fallback(cargo, snapshot):
+    ofertas = cargo.ofertas_seleccionadas
+    if isinstance(ofertas, list) and ofertas:
+        return ofertas, _texto(cargo.oferta)
+
+    datos_padron = snapshot.datos_padron if snapshot and isinstance(snapshot.datos_padron, dict) else {}
+    ofertas_snapshot = datos_padron.get("ofertas_seleccionadas")
+    if isinstance(ofertas_snapshot, list) and ofertas_snapshot:
+        return ofertas_snapshot, _texto(cargo.oferta or snapshot.oferta)
+
+    if datos_padron:
+        return [datos_padron], _texto(cargo.oferta or (snapshot.oferta if snapshot else ""))
+
+    return [], _texto(cargo.oferta or (snapshot.oferta if snapshot else ""))
+
+
+def _cargo_requiere_ofertas(cargo, snapshot):
+    if not _texto(cargo.localizacion.cueanexo):
+        return False
+    if (
+        cargo.localizacion.proyecto_especial
+        and snapshot
+        and snapshot.origen_datos != SnapshotPadronLocalizacionPof.OrigenDatos.PADRON
+    ):
+        return False
+    return True
+
+
+def _catalogo_ofertas_cargo(cargo, snapshot):
+    cueanexo = _texto(cargo.localizacion.cueanexo)
+    if not _cargo_requiere_ofertas(cargo, snapshot):
+        return [], [], _texto(cargo.oferta)
+
+    reunida = cargo.localizacion.reunida
+    catalogo = buscar_ofertas_padron(
+        cueanexo=cueanexo,
+        limite=500,
+        nivel_reunida=reunida.nivel if reunida else "",
+    )
+    ofertas_actuales, oferta_texto = _ofertas_cargo_con_fallback(cargo, snapshot)
+    claves_actuales = {
+        _clave_oferta_padron(oferta)
+        for oferta in ofertas_actuales
+        if isinstance(oferta, dict)
+    }
+    nombres_actuales = {
+        _texto(nombre)
+        for nombre in oferta_texto.split(",")
+        if _texto(nombre)
+    }
+
+    disponibles = []
+    seleccionadas = []
+    for oferta in catalogo:
+        nombre = _texto(oferta.get("oferta_real") or oferta.get("oferta"))
+        seleccionada = (
+            _clave_oferta_padron(oferta) in claves_actuales
+            or (not claves_actuales and nombre in nombres_actuales)
+        )
+        fila = dict(oferta)
+        fila["seleccionada"] = seleccionada
+        disponibles.append(fila)
+        if seleccionada:
+            seleccionadas.append(oferta)
+
+    return disponibles, seleccionadas, oferta_texto
+
+
 def _serializar_cargo_detalle(cargo):
     localizacion = cargo.localizacion
     reunida = localizacion.reunida
     proyecto = localizacion.proyecto_especial
     snapshot = _obtener_snapshot_vigente(localizacion)
+    ofertas_disponibles, ofertas_seleccionadas, oferta_texto = _catalogo_ofertas_cargo(
+        cargo,
+        snapshot,
+    )
 
     if reunida:
         cabecera = f"Reunida {reunida.anio} - {reunida.get_nivel_display()}"
@@ -967,6 +1114,10 @@ def _serializar_cargo_detalle(cargo):
         "id": cargo.id,
         "ceic": cargo.ceic,
         "cargo": cargo.cargo,
+        "oferta": oferta_texto,
+        "ofertas_seleccionadas": ofertas_seleccionadas,
+        "ofertas_disponibles": ofertas_disponibles,
+        "requiere_ofertas": _cargo_requiere_ofertas(cargo, snapshot),
         "cantidad": _cantidad_texto(cargo.cantidad),
         "unidad_cantidad": cargo.unidad_cantidad,
         "unidad_cantidad_display": cargo.get_unidad_cantidad_display(),
@@ -1004,13 +1155,15 @@ def _validar_payload_modificacion(datos):
     Valida solo los campos realmente editables en administración de cargos.
 
     - Mantiene CEIC como dato de control para impedir cambios de identidad.
-    - Permite editar únicamente cantidad, unidad, estado y observación.
+    - Permite editar cantidad, unidad, estado, observación y ofertas de padrón.
+    - Convierte una cantidad igual a cero en estado DESAFECTADO.
     - Ignora cargo, puntos y snapshot enviados por frontend porque se oficializan desde backend.
     """
     errores = {}
 
-    cantidad_texto = _texto(datos.get("cantidad"))
-    if not re.fullmatch(r"[1-9]\d*", cantidad_texto):
+    cantidad_valor = datos.get("cantidad")
+    cantidad_texto = "" if cantidad_valor is None else str(cantidad_valor).strip()
+    if not re.fullmatch(r"\d+", cantidad_texto):
         cantidad = None
         errores["cantidad"] = ["La cantidad debe ser un número entero."]
     else:
@@ -1028,6 +1181,19 @@ def _validar_payload_modificacion(datos):
     estado_pof = _texto(datos.get("estado_pof")).upper()
     if estado_pof not in estados_editables:
         errores["estado_pof"] = ["El estado indicado no es válido."]
+    elif cantidad == 0:
+        estado_pof = CargoPof.EstadoPof.DESAFECTADO
+
+    ofertas_seleccionadas = datos.get("ofertas_seleccionadas")
+    if ofertas_seleccionadas is not None:
+        if not isinstance(ofertas_seleccionadas, list) or not ofertas_seleccionadas:
+            errores["ofertas_seleccionadas"] = [
+                "Debe mantener al menos una oferta seleccionada."
+            ]
+        elif any(not isinstance(oferta, dict) for oferta in ofertas_seleccionadas):
+            errores["ofertas_seleccionadas"] = [
+                "Cada oferta seleccionada debe ser un objeto válido."
+            ]
 
     return {
         "ok": not errores,
@@ -1037,6 +1203,7 @@ def _validar_payload_modificacion(datos):
             "unidad_cantidad": unidad_cantidad,
             "estado_pof": estado_pof,
             "observacion": _observacion_usuario(datos.get("observacion")),
+            "ofertas_seleccionadas": ofertas_seleccionadas,
         },
     }
 
@@ -1074,8 +1241,66 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
             cargo = CargoPof.objects.select_for_update().get(pk=cargo_id)
 
             etapa = "snapshot_anterior"
+            snapshot_vigente = _obtener_snapshot_vigente(cargo.localizacion)
+            requiere_ofertas = _cargo_requiere_ofertas(cargo, snapshot_vigente)
             valores_anteriores = _valores_nuevos_cargo(cargo)
+            if requiere_ofertas:
+                ofertas_anteriores, oferta_anterior = _ofertas_cargo_con_fallback(
+                    cargo,
+                    snapshot_vigente,
+                )
+                valores_anteriores["oferta"] = oferta_anterior
             datos_limpios = validacion["datos"]
+
+            etapa = "validacion_ofertas"
+            if requiere_ofertas:
+                if not datos_limpios["ofertas_seleccionadas"]:
+                    return {
+                        "ok": False,
+                        "tipo": "validacion",
+                        "mensaje": "Hay errores de validación.",
+                        "errores": {
+                            "ofertas_seleccionadas": [
+                                "Debe mantener al menos una oferta seleccionada."
+                            ]
+                        },
+                    }
+                validacion_ofertas = _oficializar_ofertas_padron_seleccionadas(
+                    {"ofertas_seleccionadas": datos_limpios["ofertas_seleccionadas"]},
+                    reunida=cargo.localizacion.reunida,
+                    validar_compatibilidad_reunida=False,
+                )
+                if not validacion_ofertas["ok"]:
+                    return {
+                        "ok": False,
+                        "tipo": "validacion",
+                        "mensaje": "Hay errores de validación.",
+                        "errores": validacion_ofertas["errores"],
+                    }
+                padron_oficial = validacion_ofertas["padron"]
+                oferta_texto = _texto(padron_oficial.get("oferta"))
+                ofertas_oficiales = padron_oficial.get("ofertas_seleccionadas") or []
+                claves_anteriores = {
+                    _clave_oferta_padron(oferta)
+                    for oferta in ofertas_anteriores
+                    if isinstance(oferta, dict)
+                }
+                claves_nuevas = {
+                    _clave_oferta_padron(oferta)
+                    for oferta in ofertas_oficiales
+                    if isinstance(oferta, dict)
+                }
+                if claves_anteriores and claves_anteriores == claves_nuevas:
+                    oferta_texto = oferta_anterior
+                    ofertas_oficiales = ofertas_anteriores
+            else:
+                oferta_texto = _texto(cargo.oferta)
+                ofertas_oficiales = (
+                    cargo.ofertas_seleccionadas
+                    if isinstance(cargo.ofertas_seleccionadas, list)
+                    else []
+                )
+
             etapa = "consulta_ceic_oficial"
             ceic_puntos = _obtener_ceic_puntos(cargo.ceic)
             if not ceic_puntos:
@@ -1101,6 +1326,7 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
                     "puntos_asignados": _decimal_texto(puntos_ceic),
                     "estado_pof": datos_limpios["estado_pof"],
                     "cargo": ceic_puntos["cargo"],
+                    "oferta": oferta_texto,
                     "observacion": datos_limpios["observacion"],
                 }
             )
@@ -1154,6 +1380,8 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
             cargo.unidad_cantidad = datos_limpios["unidad_cantidad"]
             cargo.estado_pof = datos_limpios["estado_pof"]
             cargo.cargo = ceic_puntos["cargo"]
+            cargo.oferta = oferta_texto
+            cargo.ofertas_seleccionadas = ofertas_oficiales
             cargo.puntos_asignados = puntos_ceic
             cargo.snapshot_ceic = _snapshot_ceic_seguro(ceic_puntos)
             cargo.observacion = datos_limpios["observacion"]
@@ -1164,7 +1392,6 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
             valores_nuevos = _valores_nuevos_cargo(cargo)
             valores_nuevos_sin_estado = dict(valores_nuevos)
             valores_nuevos_sin_estado["estado_pof"] = valores_anteriores["estado_pof"]
-            snapshot_vigente = _obtener_snapshot_vigente(cargo.localizacion)
 
             etapa = "crear_movimiento"
             if hay_cambios_datos:
@@ -1283,6 +1510,18 @@ def cambiar_estado_cargo_pof(cargo_id, estado_nuevo, usuario=None):
     try:
         with transaction.atomic():
             cargo = CargoPof.objects.select_for_update().get(pk=cargo_id)
+
+            if estado_nuevo == CargoPof.EstadoPof.AFECTADO and cargo.cantidad <= 0:
+                return {
+                    "ok": False,
+                    "tipo": "validacion",
+                    "mensaje": "Hay errores de validación.",
+                    "errores": {
+                        "cantidad": [
+                            "Para afectar el cargo, la cantidad debe ser superior a 0."
+                        ]
+                    },
+                }
 
             estado_anterior = cargo.estado_pof
             if estado_anterior == estado_nuevo:
@@ -1631,7 +1870,7 @@ def guardar_carga_pof(datos, usuario=None):
     Guarda una carga POF tomando al CEIC como fuente real de cargo y puntos.
 
     - Valida primero la entrada mínima editable del usuario.
-    - Oficializa luego cada cargo desde `cenpe.ceic_puntos` antes de consolidar.
+    - Oficializa luego cada cargo desde `cenpe.ceic_puntos` antes de persistirlo.
     - Persiste descripción, puntos, total y snapshot usando solo datos reales del CEIC.
     """
     errores = _validar_datos_guardado_minimos(datos)
@@ -1662,6 +1901,13 @@ def guardar_carga_pof(datos, usuario=None):
                     "mensaje": "Hay errores de validacion.",
                     "errores": {"cargos": oficializacion_ceic["errores"]},
                 }
+            oferta_texto = _texto(datos["padron"].get("oferta"))
+            ofertas_seleccionadas = datos["padron"].get("ofertas_seleccionadas")
+            if not isinstance(ofertas_seleccionadas, list):
+                ofertas_seleccionadas = []
+            for cargo_oficializado in oficializacion_ceic["cargos"]:
+                cargo_oficializado["oferta"] = oferta_texto
+                cargo_oficializado["ofertas_seleccionadas"] = ofertas_seleccionadas
             localizacion = _obtener_localizacion(
                 datos,
                 reunida,
@@ -1677,7 +1923,7 @@ def guardar_carga_pof(datos, usuario=None):
                 usuario=usuario,
             )
 
-            resultado_consolidado = aplicar_alta_consolidada(
+            resultado_consolidado = aplicar_alta_independiente(
                 localizacion,
                 lote,
                 oficializacion_ceic["cargos"],
@@ -1688,6 +1934,15 @@ def guardar_carga_pof(datos, usuario=None):
             for item_creado in resultado_consolidado["creados"]:
                 cargo = item_creado["cargo"]
                 cargo_data = item_creado["cargo_data"]
+                cargo.oferta = oferta_texto
+                cargo.ofertas_seleccionadas = ofertas_seleccionadas
+                cargo.save(
+                    update_fields=[
+                        "oferta",
+                        "ofertas_seleccionadas",
+                        "actualizado_en",
+                    ]
+                )
                 observacion_movimiento = _observacion_movimiento_desde_carga(
                     cargo_data,
                     datos,
@@ -1698,7 +1953,7 @@ def guardar_carga_pof(datos, usuario=None):
                     snapshot_padron=snapshot,
                     tipo_movimiento=MovimientoCargoPof.TipoMovimiento.ALTA,
                     estado_anterior="",
-                    estado_nuevo=CargoPof.EstadoPof.AFECTADO,
+                    estado_nuevo=cargo.estado_pof,
                     valores_anteriores={},
                     valores_nuevos=_valores_nuevos_cargo(cargo),
                     observacion=observacion_movimiento,
@@ -1709,6 +1964,7 @@ def guardar_carga_pof(datos, usuario=None):
                         "id": cargo.id,
                         "ceic": cargo.ceic,
                         "cargo": cargo.cargo,
+                        "oferta": cargo.oferta,
                         "cantidad": str(cargo.cantidad),
                         "unidad_cantidad": cargo.unidad_cantidad,
                         "puntos_asignados": str(cargo.puntos_asignados),
@@ -1722,6 +1978,16 @@ def guardar_carga_pof(datos, usuario=None):
                 cargo = item_incrementado["cargo"]
                 cargo_data = item_incrementado["cargo_data"]
                 valores_anteriores = item_incrementado["valores_anteriores"]
+                valores_anteriores["oferta"] = _texto(cargo.oferta)
+                cargo.oferta = oferta_texto
+                cargo.ofertas_seleccionadas = ofertas_seleccionadas
+                cargo.save(
+                    update_fields=[
+                        "oferta",
+                        "ofertas_seleccionadas",
+                        "actualizado_en",
+                    ]
+                )
                 valores_nuevos = _valores_nuevos_cargo(cargo)
                 MovimientoCargoPof.objects.create(
                     cargo=cargo,
@@ -1732,6 +1998,7 @@ def guardar_carga_pof(datos, usuario=None):
                     estado_nuevo=CargoPof.EstadoPof.AFECTADO,
                     valores_anteriores=valores_anteriores,
                     valores_nuevos={
+                        "oferta": valores_nuevos["oferta"],
                         "cantidad": valores_nuevos["cantidad"],
                         "total": valores_nuevos["total"],
                     },
@@ -1746,6 +2013,7 @@ def guardar_carga_pof(datos, usuario=None):
                         "id": cargo.id,
                         "ceic": cargo.ceic,
                         "cargo": cargo.cargo,
+                        "oferta": cargo.oferta,
                         "cantidad": str(cargo.cantidad),
                         "unidad_cantidad": cargo.unidad_cantidad,
                         "puntos_asignados": str(cargo.puntos_asignados),

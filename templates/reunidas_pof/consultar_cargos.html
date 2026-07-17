@@ -119,6 +119,7 @@
                     <th>Anexo</th>
                     <th>Establecimiento</th>
                     <th>Unidad</th>
+                    <th>CEIC</th>
                     <th>Cargo</th>
                     <th>Cantidad</th>
                     <th>Puntos</th>
@@ -145,6 +146,7 @@
                         <td class="pof-grid-cell-center">{{ cargo.anexo }}</td>
                         <td>{{ cargo.establecimiento }}</td>
                         <td class="pof-grid-cell-center">{{ cargo.unidad }}</td>
+                        <td class="pof-grid-cell-center">{{ cargo.ceic }}</td>
                         <td>{{ cargo.cargo }}</td>
                         <td class="pof-grid-cell-center">{{ cargo.cantidad }}</td>
                         <td class="pof-grid-cell-center">{{ cargo.puntos }}</td>
@@ -161,7 +163,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="11" class="pof-grid-empty">No se encontraron cargos asociados.</td>
+                        <td colspan="12" class="pof-grid-empty">No se encontraron cargos asociados.</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -222,5 +224,5 @@
 
 {% block scripts %}
 <script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
 {% endblock %}

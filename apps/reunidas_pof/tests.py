@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.test import RequestFactory, SimpleTestCase
 
+from . import forms as pof_forms
 from . import models, permisos, views
 from .models import (
     ROL_POF_DIRECTOR,
@@ -16,6 +17,8 @@ from .models import (
     obtener_cueanexos_director_pof,
     obtener_regiones_usuario_pof,
 )
+from .services import carga_service
+from .services import guardado_pof_service
 from .services import visualizacion_cargos_localizacion_service as visualizacion_service
 
 
@@ -25,6 +28,63 @@ class RolesPofTests(SimpleTestCase):
         self.assertIn("Director de Nivel Inicial", ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
         self.assertNotIn(ROL_POF_REGIONAL, ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
         self.assertNotIn(ROL_POF_DIRECTOR, ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
+
+
+class AniosDisponiblesCargaPofTests(SimpleTestCase):
+    def test_validacion_cabecera_admite_anio_posterior_si_la_pof_existe(self):
+        reunida = SimpleNamespace(
+            id=10,
+            anio=2099,
+            nivel="ADULTOS",
+            get_nivel_display=lambda: "Adultos",
+        )
+        manager = MagicMock()
+        manager.filter.return_value.first.return_value = reunida
+
+        with patch.object(carga_service.ReunidaPof, "objects", manager):
+            resultado = carga_service.validar_cabecera_reunida(2099, "ADULTOS")
+
+        self.assertTrue(resultado["ok"])
+        manager.filter.assert_called_once_with(anio=2099, nivel="ADULTOS")
+
+    def test_formulario_guardado_admite_anio_posterior_si_la_pof_existe(self):
+        manager = MagicMock()
+        manager.filter.return_value.exists.return_value = True
+
+        with patch.object(pof_forms.ReunidaPof, "objects", manager):
+            formulario = pof_forms.GuardarCargaPofForm({
+                "cabecera_tipo": "REUNIDA",
+                "anio": 2099,
+                "nivel": "ADULTOS",
+                "tipo_operacion": "ALTA",
+            })
+
+            self.assertTrue(formulario.is_valid(), formulario.errors)
+
+    def test_servicio_guardado_admite_anio_posterior_si_la_pof_existe(self):
+        manager = MagicMock()
+        manager.filter.return_value.exists.return_value = True
+        datos = {
+            "cabecera_tipo": "REUNIDA",
+            "anio": 2099,
+            "nivel": "ADULTOS",
+            "tipo_operacion": "ALTA",
+            "padron": {
+                "padron_cueanexo": "123456700",
+                "cuof_loc": "123",
+            },
+            "cargos": [{
+                "ceic": "1",
+                "cantidad": 1,
+                "unidad_cantidad": "CARGO",
+                "observacion": "",
+            }],
+        }
+
+        with patch.object(guardado_pof_service.ReunidaPof, "objects", manager):
+            errores = guardado_pof_service._validar_datos_guardado_minimos(datos)
+
+        self.assertNotIn("anio", errores)
 
 
 class AsociacionesPofTests(SimpleTestCase):
