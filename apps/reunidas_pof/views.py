@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, connection, transaction
+from django.db.models import Max
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -59,7 +60,10 @@ from .services.historial_service import (
     obtener_historial_observacion_cargos_pof,
     obtener_historial_estado_cargos_pof,
 )
-from .services.herencia_reunida_service import heredar_estado_inicial_reunida
+from .services.herencia_reunida_service import (
+    heredar_estado_inicial_proyecto_especial,
+    heredar_estado_inicial_reunida,
+)
 from .services.padron_materializadas_service import (
     buscar_ofertas_padron,
     construir_cueanexo_sin_guion,
@@ -637,7 +641,14 @@ def proyectos_especiales_pof(request):
     if page_size not in PAGE_SIZE_OPTIONS:
         page_size = PAGE_SIZE_OPTIONS[0]
 
-    proyectos = ProyectosEspecialesPof.objects.select_related("proyecto_base_anterior").all()
+    proyectos = (
+        ProyectosEspecialesPof.objects.select_related("proyecto_base_anterior")
+        .annotate(
+            ultima_modificacion_historial=Max(
+                "localizaciones__cargos__movimientos__fecha"
+            )
+        )
+    )
     proyectos_select = ProyectosEspecialesPof.objects.all()
 
     if errores_filtros:
@@ -660,6 +671,14 @@ def proyectos_especiales_pof(request):
         page_obj = paginator.get_page(request.GET.get("page"))
         total_registros = paginator.count
         proyectos_pagina = page_obj.object_list
+        for proyecto in proyectos_pagina:
+            ultima_modificacion_historial = proyecto.ultima_modificacion_historial
+            proyecto.ultima_modificacion = proyecto.actualizado_en
+            if ultima_modificacion_historial and (
+                proyecto.ultima_modificacion is None
+                or ultima_modificacion_historial > proyecto.ultima_modificacion
+            ):
+                proyecto.ultima_modificacion = ultima_modificacion_historial
         tabla_proyectos_no_migrada = False
     except (ProgrammingError, OperationalError):
         paginator = Paginator([], page_size)
@@ -714,7 +733,12 @@ def crear_proyecto_especial(request):
         form = ProyectoEspecialPofForm(request.POST)
         if form.is_valid():
             try:
-                form.save()
+                with transaction.atomic():
+                    proyecto = form.save()
+                    heredar_estado_inicial_proyecto_especial(
+                        proyecto,
+                        usuario=request.user,
+                    )
             except IntegrityError:
                 form.add_error(None, "Ya existe un Proyecto Especial POF para ese año, nombre y resolución.")
             except ValidationError as error:
@@ -987,7 +1011,7 @@ def historial_observacion_cargos_pof(request):
 @require_GET
 def historial_estado_cargos_pof(request):
     """
-    Devuelve el historial real de afectaciones y desafectaciones.
+    Devuelve el historial real de cambios entre Afectado y Desafectado.
 
     - Acepta uno o varios cargo_id de una misma fila consolidada.
     - Valida los identificadores en backend.

@@ -1,6 +1,6 @@
     const cargarCargosProyectoEspecialConfigElement = document.getElementById("cargarCargosProyectoEspecialConfig");
     if (!cargarCargosProyectoEspecialConfigElement) {
-        throw new Error("Falta la configuracion de Alta de Cargos de Proyecto Especial.");
+        throw new Error("Falta la configuracion de Carga de Cargos de Proyecto Especial.");
     }
     const CARGAR_CARGOS_PROYECTO_ESPECIAL_CONFIG = JSON.parse(cargarCargosProyectoEspecialConfigElement.textContent || "{}");
     const PROYECTO_ESPECIAL = Object.assign({ id: "", anio: "", nombre: "", resolucion: "" }, CARGAR_CARGOS_PROYECTO_ESPECIAL_CONFIG.proyectoEspecial || {});
@@ -13,7 +13,7 @@
     const URL_GUARDAR_CARGA_PE = URLS_CARGAR_CARGOS_PROYECTO_ESPECIAL.guardarCarga;
     const URL_DETALLE_REUNIDA = URLS_CARGAR_CARGOS_PROYECTO_ESPECIAL.detalleReunida;
     if (!URL_BUSCAR_PADRON_PE || !URL_CATALOGOS_MANUAL_PE || !URL_BUSCAR_CUOF_MANUAL_PE || !URL_CATALOGO_CEIC_PE || !URL_GUARDAR_CARGA_PE || !URL_DETALLE_REUNIDA) {
-        throw new Error("La configuracion de Alta de Cargos de Proyecto Especial esta incompleta.");
+        throw new Error("La configuracion de Carga de Cargos de Proyecto Especial esta incompleta.");
     }
     const MENSAJE_ERROR_GENERAL_CABECERA = "No se pudo validar la cabecera. Revisá los campos marcados.";
     const MENSAJE_ERROR_PROYECTO = "Seleccioná un Proyecto Especial POF.";
@@ -581,6 +581,22 @@
         });
     }
 
+    function seleccionConfirmadaEsPadron() {
+        if (padronSeleccionado) {
+            const ofertasSeleccionadas = padronSeleccionado.ofertas_seleccionadas;
+            if (Array.isArray(ofertasSeleccionadas) && ofertasSeleccionadas.length) {
+                return true;
+            }
+
+            const origenDatos = obtenerCampo(padronSeleccionado, ["origen_datos"]);
+            if (String(origenDatos || "").trim().toUpperCase() === MODO_PADRON) {
+                return true;
+            }
+        }
+
+        return modoPadronActual === MODO_PADRON;
+    }
+
     function obtenerOfertaReal(item) {
         return obtenerCampo(item, ["oferta_real", "oferta"]);
     }
@@ -846,19 +862,27 @@
 
                     return `
                         <div class="pof-offer-card${abierta ? " pof-offer-card-open" : ""}${seleccionada ? " pof-offer-selected" : ""}" data-oferta-index="${index}">
-                            <button type="button"
-                                    class="pof-offer-card-header"
-                                    aria-expanded="${abierta ? "true" : "false"}"
-                                    data-oferta-toggle-index="${index}">
-                                <span class="pof-offer-card-heading">
-                                    <span class="pof-offer-card-main">
-                                        <span class="pof-offer-card-title">${escaparHtml(obtenerLineaPrincipalOferta(item))}</span>
-                                        ${renderizarBadgeEstadoOferta(item)}
+                            <div class="pof-offer-card-row">
+                                <label class="pof-offer-card-select" title="${seleccionada ? "Quitar selección" : "Seleccionar oferta"}">
+                                    <input type="checkbox"
+                                           ${seleccionada ? "checked" : ""}
+                                           aria-label="${seleccionada ? "Quitar selección de esta oferta" : "Seleccionar esta oferta"}"
+                                           data-seleccionar-oferta-index="${index}">
+                                </label>
+                                <button type="button"
+                                        class="pof-offer-card-header"
+                                        aria-expanded="${abierta ? "true" : "false"}"
+                                        data-oferta-toggle-index="${index}">
+                                    <span class="pof-offer-card-heading">
+                                        <span class="pof-offer-card-main">
+                                            <span class="pof-offer-card-title">${escaparHtml(obtenerLineaPrincipalOferta(item))}</span>
+                                            ${renderizarBadgeEstadoOferta(item)}
+                                        </span>
+                                        <span class="pof-offer-card-meta">${escaparHtml(obtenerLineaSecundariaLocalizacion(item))}</span>
                                     </span>
-                                    <span class="pof-offer-card-meta">${escaparHtml(obtenerLineaSecundariaLocalizacion(item))}</span>
-                                </span>
-                                <span class="pof-offer-card-toggle" aria-hidden="true">${abierta ? "\uD83D\uDD3D" : "\u25B6\uFE0F"}</span>
-                            </button>
+                                    <span class="pof-offer-card-toggle" aria-hidden="true">${abierta ? "\uD83D\uDD3D" : "\u25B6\uFE0F"}</span>
+                                </button>
+                            </div>
 
                             <div class="pof-offer-card-body${abierta ? "" : " pof-hidden"}">
                                 <div class="pof-offer-detail-compact pof-offer-detail-grid">
@@ -1789,7 +1813,7 @@
             detalleSeleccion.innerHTML = "";
             return;
         }
-        const esManual = modoPadronActual === MODO_MANUAL;
+        const esManual = !seleccionConfirmadaEsPadron();
         const cantidadOfertas = !esManual && Array.isArray(padronSeleccionado.ofertas_seleccionadas)
             ? padronSeleccionado.ofertas_seleccionadas.length
             : 1;
@@ -2104,13 +2128,13 @@
     /**
      * Devuelve una cantidad temporal válida para los cálculos y la tabla de cargos.
      *
-     * - Acepta únicamente enteros positivos.
+     * - Acepta únicamente enteros no negativos.
      * - Evita que valores inválidos alteren totales temporales.
      * - Mantiene el mismo criterio que la carga de Reunida.
      */
     function obtenerCantidadCargoTemporal(cargo) {
         const cantidad = Number(cargo && cargo.cantidad);
-        return Number.isInteger(cantidad) && cantidad > 0 ? cantidad : 0;
+        return Number.isInteger(cantidad) && cantidad >= 0 ? cantidad : 0;
     }
 
     function calcularTotalCargoTemporal(cargo) {
@@ -2160,8 +2184,8 @@
             mostrarMensajeCeic("Ingresá un CEIC para buscar el cargo.");
             return;
         }
-        if (!Number.isInteger(cantidad) || cantidad <= 0) {
-            mostrarEstado(estadoGuardado, "error", "La cantidad debe ser un número entero mayor a 0.");
+        if (!Number.isInteger(cantidad) || cantidad < 0) {
+            mostrarEstado(estadoGuardado, "error", "La cantidad debe ser un número entero mayor o igual a 0.");
             return;
         }
         if (!puntosCargo.value.trim() || !Number.isFinite(puntos) || puntos < 0) {
@@ -2222,7 +2246,7 @@
     }
 
     /**
-     * Actualiza una cantidad temporal cuando cumple la validación de entero positivo.
+     * Actualiza una cantidad temporal cuando cumple la validación de entero no negativo.
      *
      * - Recalcula el total del cargo antes de renderizar la tabla.
      * - Devuelve falso para restaurar visualmente valores inválidos.
@@ -2234,7 +2258,7 @@
         }
 
         const cantidad = Number(valorCantidad);
-        if (!Number.isInteger(cantidad) || cantidad <= 0) {
+        if (!Number.isInteger(cantidad) || cantidad < 0) {
             return false;
         }
 
@@ -2246,11 +2270,22 @@
         return true;
     }
 
+    function actualizarObservacionCargoTemporal(index, valorObservacion) {
+        if (!Number.isInteger(index) || index < 0 || index >= cargosTemporales.length) {
+            return false;
+        }
+
+        cargosTemporales[index].observacion = String(valorObservacion || "").trim();
+        mostrarEstado(estadoGuardado, "", "");
+        return true;
+    }
+
     function renderizarInfoGeneralCargos() {
-        const etiquetaReferencia = modoPadronActual === MODO_MANUAL ? "Referencia" : "Oferta";
-        const valorReferencia = modoPadronActual === MODO_MANUAL
-            ? obtenerCampo(padronSeleccionado, ["nom_est", "nombre_establecimiento"])
-            : obtenerCampo(padronSeleccionado, ["oferta"]);
+        const esPadron = seleccionConfirmadaEsPadron();
+        const etiquetaReferencia = esPadron ? "Oferta" : "Referencia";
+        const valorReferencia = esPadron
+            ? obtenerCampo(padronSeleccionado, ["oferta"])
+            : obtenerCampo(padronSeleccionado, ["nom_est", "nombre_establecimiento"]);
         cargoInfoGeneral.innerHTML = `
             <div class="pof-cargos-info-item">
                 <span>Proyecto Especial</span>
@@ -2258,7 +2293,7 @@
             </div>
             <div class="pof-cargos-info-item">
                 <span>Origen</span>
-                <strong>${modoPadronActual === MODO_MANUAL ? "Manual" : "PADRON"}</strong>
+                <strong>${esPadron ? "PADRON" : "Manual"}</strong>
             </div>
             <div class="pof-cargos-info-item">
                 <span>CUOF</span>
@@ -2308,12 +2343,18 @@
                 <td>${valorHtml(cargo.ceic)}</td>
                 <td>${valorHtml(cargo.cargo)}</td>
                 <td>
-                    <input type="number" class="pof-cargo-quantity-input" min="1" step="1" value="${escaparHtml(obtenerCantidadCargoTemporal(cargo) || 1)}" data-cargo-quantity-index="${index}" aria-label="Cantidad del cargo ${escaparHtml(cargo.cargo)}">
+                    <input type="number" class="pof-cargo-quantity-input" min="0" step="1" value="${escaparHtml(obtenerCantidadCargoTemporal(cargo))}" data-cargo-quantity-index="${index}" aria-label="Cantidad del cargo ${escaparHtml(cargo.cargo)}">
                 </td>
                 <td>${valorHtml(cargo.unidad_texto)}</td>
                 <td>${valorHtml(cargo.puntos_asignados)}</td>
                 <td>${valorHtml(calcularTotalCargoTemporal(cargo).toFixed(2))}</td>
-                <td class="pof-cargo-observation-cell">${cargo.observacion ? escaparHtml(cargo.observacion) : "-"}</td>
+                <td class="pof-cargo-observation-cell">
+                    <textarea
+                        class="pof-form-control"
+                        rows="2"
+                        data-cargo-observation-index="${index}"
+                        aria-label="Observación del cargo ${escaparHtml(cargo.cargo)}">${escaparHtml(cargo.observacion || "")}</textarea>
+                </td>
                 <td class="pof-cargo-action-cell">
                     <button type="button" class="pof-cargo-remove-btn" title="Quitar cargo" aria-label="Quitar cargo" data-cargo-remove-index="${index}">
                         &times;
@@ -2328,8 +2369,8 @@
         return {
             cabecera_tipo: "PROYECTO_ESPECIAL",
             proyecto_especial_id: PROYECTO_ESPECIAL.id,
-            tipo_operacion: "ALTA",
-            modo_padron: modoPadronActual,
+            tipo_operacion: "AFECTADO",
+            modo_padron: seleccionConfirmadaEsPadron() ? MODO_PADRON : MODO_MANUAL,
             padron: padronSeleccionado,
             cargos: cargosTemporales.map(cargo => ({
                 ceic: cargo.ceic,
@@ -2351,7 +2392,7 @@
             return;
         }
         ordenarCargosTemporales();
-        const mostrarOfertas = modoPadronActual === MODO_PADRON;
+        const mostrarOfertas = seleccionConfirmadaEsPadron();
         modalConfirmarOfertasHeader.classList.toggle("pof-hidden", !mostrarOfertas);
         tablaConfirmarCarga.innerHTML = cargosTemporales.map(cargo => `
             <tr>
@@ -2540,6 +2581,9 @@
         }
         const boton = event.target.closest("[data-seleccionar-oferta-index]");
         if (boton) {
+            if (boton.matches('input[type="checkbox"]')) {
+                event.preventDefault();
+            }
             seleccionarOfertaPadron(Number(boton.dataset.seleccionarOfertaIndex));
         }
     });
@@ -2562,6 +2606,15 @@
         quitarCargoTemporal(Number(boton.dataset.cargoRemoveIndex));
     });
     tablaCargos.addEventListener("change", function (event) {
+        const inputObservacion = event.target.closest("[data-cargo-observation-index]");
+        if (inputObservacion) {
+            actualizarObservacionCargoTemporal(
+                Number(inputObservacion.dataset.cargoObservationIndex),
+                inputObservacion.value
+            );
+            return;
+        }
+
         const input = event.target.closest("[data-cargo-quantity-index]");
         if (!input) {
             return;

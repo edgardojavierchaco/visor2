@@ -9,6 +9,7 @@ from ..models import (
     CargoPof,
     LocalizacionPof,
     LoteCargaPof,
+    ProyectosEspecialesPof,
     ReunidaPof,
     SnapshotPadronLocalizacionPof,
     _decimal_dos_decimales,
@@ -195,13 +196,79 @@ def _crear_snapshot_destino(localizacion_destino, snapshot_origen, usuario, mome
     )
 
 
+def _copiar_localizaciones_destino(
+    localizaciones_origen,
+    resumen,
+    usuario_destino,
+    momento,
+    *,
+    reunida_destino=None,
+    proyecto_destino=None,
+):
+    """
+    Copia el estado funcional vigente de una cabecera POF a otra nueva.
+
+    - Crea identidades, snapshot vigente y lote AFECTADO propios del destino.
+    - Conserva todos los datos funcionales del cargo, incluidas sus ofertas.
+    - No copia IDs, fechas ni historial administrativo de la cabecera base.
+    """
+    for localizacion_origen in localizaciones_origen:
+        localizacion_destino = LocalizacionPof.objects.create(
+            reunida=reunida_destino,
+            proyecto_especial=proyecto_destino,
+            cueanexo=localizacion_origen.cueanexo,
+            cuof=localizacion_origen.cuof,
+            cui=localizacion_origen.cui,
+        )
+        resumen["localizaciones_creadas"] += 1
+
+        _crear_snapshot_destino(
+            localizacion_destino,
+            localizacion_origen.snapshots_vigentes_herencia[0],
+            usuario_destino,
+            momento,
+        )
+        resumen["snapshots_creados"] += 1
+
+        lote_destino = LoteCargaPof.objects.create(
+            reunida=reunida_destino,
+            proyecto_especial=proyecto_destino,
+            localizacion=localizacion_destino,
+            tipo_operacion=LoteCargaPof.TipoOperacion.AFECTADO,
+            usuario=usuario_destino,
+            fecha=momento,
+        )
+        resumen["lotes_creados"] += 1
+
+        for cargo_origen in localizacion_origen.cargos_herencia:
+            CargoPof.objects.create(
+                localizacion=localizacion_destino,
+                lote_carga=lote_destino,
+                ceic=cargo_origen.ceic,
+                cargo=cargo_origen.cargo,
+                oferta=cargo_origen.oferta,
+                ofertas_seleccionadas=deepcopy(
+                    cargo_origen.ofertas_seleccionadas
+                ),
+                observacion=cargo_origen.observacion,
+                cantidad=cargo_origen.cantidad,
+                unidad_cantidad=cargo_origen.unidad_cantidad,
+                puntos_asignados=cargo_origen.puntos_asignados,
+                estado_pof=cargo_origen.estado_pof,
+                snapshot_ceic=deepcopy(cargo_origen.snapshot_ceic),
+            )
+            resumen["cargos_creados"] += 1
+
+    return resumen
+
+
 @transaction.atomic
 def heredar_estado_inicial_reunida(reunida_destino, usuario=None):
     """
     Clona de forma atómica el estado inicial de la base de una Reunida nueva.
 
     - Retorna sin cambios cuando no existe reunida_base_anterior.
-    - Crea IDs propios para localizaciones, snapshot vigente, lote ALTA y todos los cargos.
+    - Crea IDs propios para localizaciones, snapshot vigente, lote AFECTADO y todos los cargos.
     - Mantiene la fuente estrictamente en modo lectura y rechaza destinos ya poblados.
     """
     if not reunida_destino or not reunida_destino.pk:
@@ -229,47 +296,160 @@ def heredar_estado_inicial_reunida(reunida_destino, usuario=None):
     momento = timezone.now()
     resumen["heredada"] = True
 
-    for localizacion_origen in localizaciones_origen:
-        localizacion_destino = LocalizacionPof.objects.create(
-            reunida=reunida_destino,
-            proyecto_especial=None,
-            cueanexo=localizacion_origen.cueanexo,
-            cuof=localizacion_origen.cuof,
-            cui=localizacion_origen.cui,
-        )
-        resumen["localizaciones_creadas"] += 1
+    return _copiar_localizaciones_destino(
+        localizaciones_origen,
+        resumen,
+        usuario_destino,
+        momento,
+        reunida_destino=reunida_destino,
+    )
 
-        _crear_snapshot_destino(
-            localizacion_destino,
-            localizacion_origen.snapshots_vigentes_herencia[0],
-            usuario_destino,
-            momento,
-        )
-        resumen["snapshots_creados"] += 1
 
-        lote_destino = LoteCargaPof.objects.create(
-            reunida=reunida_destino,
-            proyecto_especial=None,
-            localizacion=localizacion_destino,
-            tipo_operacion=LoteCargaPof.TipoOperacion.ALTA,
-            usuario=usuario_destino,
-            fecha=momento,
-        )
-        resumen["lotes_creados"] += 1
+def _resumen_herencia_proyecto(proyecto_base_id=None, heredada=False):
+    return {
+        "heredada": heredada,
+        "proyecto_base_id": proyecto_base_id,
+        "localizaciones_creadas": 0,
+        "snapshots_creados": 0,
+        "lotes_creados": 0,
+        "cargos_creados": 0,
+    }
 
-        for cargo_origen in localizacion_origen.cargos_herencia:
-            CargoPof.objects.create(
-                localizacion=localizacion_destino,
-                lote_carga=lote_destino,
-                ceic=cargo_origen.ceic,
-                cargo=cargo_origen.cargo,
-                observacion=cargo_origen.observacion,
-                cantidad=cargo_origen.cantidad,
-                unidad_cantidad=cargo_origen.unidad_cantidad,
-                puntos_asignados=cargo_origen.puntos_asignados,
-                estado_pof=cargo_origen.estado_pof,
-                snapshot_ceic=deepcopy(cargo_origen.snapshot_ceic),
+
+def _destino_proyecto_tiene_datos(proyecto_destino):
+    return (
+        LocalizacionPof.objects.filter(
+            proyecto_especial=proyecto_destino
+        ).exists()
+        or LoteCargaPof.objects.filter(
+            proyecto_especial=proyecto_destino
+        ).exists()
+        or SnapshotPadronLocalizacionPof.objects.filter(
+            localizacion__proyecto_especial=proyecto_destino
+        ).exists()
+        or CargoPof.objects.filter(
+            localizacion__proyecto_especial=proyecto_destino
+        ).exists()
+    )
+
+
+def _cargar_localizaciones_origen_proyecto(proyecto_base):
+    return list(
+        LocalizacionPof.objects.filter(
+            proyecto_especial=proyecto_base
+        ).prefetch_related(
+            Prefetch(
+                "snapshots_padron",
+                queryset=SnapshotPadronLocalizacionPof.objects.filter(vigente=True),
+                to_attr="snapshots_vigentes_herencia",
+            ),
+            Prefetch(
+                "cargos",
+                queryset=CargoPof.objects.select_related("lote_carga"),
+                to_attr="cargos_herencia",
+            ),
+        )
+    )
+
+
+def _validar_origen_proyecto(proyecto_base, localizaciones_origen):
+    estados_validos = set(CargoPof.EstadoPof.values)
+    unidades_validas = set(CargoPof.UnidadCantidad.values)
+
+    for localizacion in localizaciones_origen:
+        if localizacion.reunida_id:
+            raise ValidationError(
+                "La localización origen no puede pertenecer a una Reunida."
             )
-            resumen["cargos_creados"] += 1
+        if localizacion.proyecto_especial_id != proyecto_base.id:
+            raise ValidationError(
+                "La localización origen no corresponde al Proyecto Especial base."
+            )
 
-    return resumen
+        snapshots_vigentes = localizacion.snapshots_vigentes_herencia
+        if len(snapshots_vigentes) != 1:
+            raise ValidationError(
+                f"La localización {_identificador_localizacion(localizacion)} "
+                "no posee snapshot vigente."
+            )
+
+        for cargo in localizacion.cargos_herencia:
+            if cargo.lote_carga.localizacion_id != localizacion.id:
+                raise ValidationError(
+                    "Un cargo origen no corresponde a su localización."
+                )
+            if cargo.lote_carga.proyecto_especial_id != proyecto_base.id:
+                raise ValidationError(
+                    "El lote de un cargo origen no corresponde al Proyecto Especial base."
+                )
+            if cargo.estado_pof not in estados_validos:
+                raise ValidationError("El estado de un cargo origen no es válido.")
+            if cargo.unidad_cantidad not in unidades_validas:
+                raise ValidationError("La unidad de cantidad de un cargo origen no es válida.")
+            if cargo.cantidad < 0:
+                raise ValidationError(
+                    "La cantidad de un cargo origen debe ser mayor o igual a cero."
+                )
+            if cargo.puntos_asignados < 0:
+                raise ValidationError(
+                    "Los puntos de un cargo origen no pueden ser negativos."
+                )
+            if cargo.total != _decimal_dos_decimales(
+                cargo.cantidad * cargo.puntos_asignados
+            ):
+                raise ValidationError("El total de un cargo origen no es consistente.")
+
+
+@transaction.atomic
+def heredar_estado_inicial_proyecto_especial(proyecto_destino, usuario=None):
+    """
+    Clona el estado funcional del proyecto base al crear un Proyecto Especial.
+
+    La referencia de base puede editarse luego sin volver a copiar ni reemplazar
+    los datos que ya pertenecen al proyecto destino.
+    """
+    if not proyecto_destino or not proyecto_destino.pk:
+        raise ValidationError(
+            "El Proyecto Especial destino debe estar persistido antes de heredar."
+        )
+
+    proyecto_destino = ProyectosEspecialesPof.objects.select_for_update().get(
+        pk=proyecto_destino.pk
+    )
+    resumen = _resumen_herencia_proyecto(
+        proyecto_destino.proyecto_base_anterior_id
+    )
+
+    if not proyecto_destino.proyecto_base_anterior_id:
+        return resumen
+
+    if _destino_proyecto_tiene_datos(proyecto_destino):
+        raise ValidationError(
+            "El Proyecto Especial destino ya contiene datos y no puede recibir una herencia inicial automática."
+        )
+
+    proyecto_base = ProyectosEspecialesPof.objects.get(
+        pk=proyecto_destino.proyecto_base_anterior_id
+    )
+    if proyecto_base.id == proyecto_destino.id:
+        raise ValidationError(
+            "El Proyecto Especial base no puede ser el mismo registro."
+        )
+    if proyecto_base.anio >= proyecto_destino.anio:
+        raise ValidationError(
+            "El Proyecto Especial base debe corresponder a un año anterior."
+        )
+
+    localizaciones_origen = _cargar_localizaciones_origen_proyecto(
+        proyecto_base
+    )
+    _validar_origen_proyecto(proyecto_base, localizaciones_origen)
+
+    resumen["heredada"] = True
+    return _copiar_localizaciones_destino(
+        localizaciones_origen,
+        resumen,
+        _usuario_herencia(usuario),
+        timezone.now(),
+        proyecto_destino=proyecto_destino,
+    )

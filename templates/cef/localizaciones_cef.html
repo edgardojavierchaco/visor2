@@ -123,10 +123,10 @@
     }
 
     .padron-page-wrapper {
-        max-width: 100%;
+        max-width: 1480px;
         min-width: 0;
         margin: 0 auto;
-        padding: 1.1rem 0.9rem 2.5rem;
+        padding: 1rem clamp(.75rem, 2vw, 1.5rem) 2.5rem;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
@@ -3070,7 +3070,7 @@
 
     #headerActions #liveSearchContainer {
         height: 31px !important;
-        max-width: 660px !important;
+        max-width: none !important;
     }
 
     #headerActions #liveSearchContainer .input-group-text,
@@ -3130,6 +3130,23 @@
         color: #fff !important;
     }
 
+    @media (min-width: 1200px) {
+        #headerActions {
+            flex-wrap: nowrap !important;
+        }
+
+        #headerActions .search-slot {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            width: auto !important;
+        }
+
+        #headerActions #excelButtons {
+            flex: 0 0 auto !important;
+            flex-wrap: nowrap !important;
+        }
+    }
+
     .filter-btn-field {
         background: #e8eef6;
         border-color: #94a3b8;
@@ -3180,9 +3197,9 @@
     }
 
     .table-padron tbody tr:hover {
-        --bs-table-bg: #dbeafe;
-        --bs-table-hover-bg: #dbeafe;
-        background: #dbeafe;
+        --bs-table-bg: #eff6ff;
+        --bs-table-hover-bg: #eff6ff;
+        background: #eff6ff;
     }
 
     .server-filter-badge {
@@ -3289,18 +3306,18 @@
 
                 <div id="headerActions" class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
                     <div class="search-slot">
-                        <div id="liveSearchContainer" class="input-group input-group-sm">
-                            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <div id="liveSearchContainer" class="input-group input-group-sm shadow-sm flex-nowrap">
+                            <span class="input-group-text bg-white text-muted border-end-0"><i class="fa-solid fa-magnifying-glass"></i></span>
                             <span class="live-search-select-wrap">
-                                <select id="liveSearchSelect" class="form-select form-select-sm" aria-label="Campo de búsqueda">
+                                <select id="liveSearchSelect" class="form-select border-start-0 border-end-0 fw-bold text-secondary" aria-label="Campo de búsqueda">
                                     {% for column in columnas_config %}
                                         <option value="{{ column.key }}" {% if smart_search_col == column.key %}selected{% endif %}>{{ column.label }}</option>
                                     {% endfor %}
                                     <option value="all" {% if smart_search_col == 'all' %}selected{% endif %}>Todas</option>
                                 </select>
-                                <i class="fa-solid fa-chevron-down live-search-select-caret"></i>
+                                <span class="live-search-select-caret" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>
                             </span>
-                            <input type="text" id="liveSearchInput" class="form-control form-control-sm" placeholder="Buscar en esta columna..." value="{{ smart_search_value|default:'' }}">
+                            <input type="text" id="liveSearchInput" class="form-control border-start-0 shadow-none" placeholder="Buscar en esta columna..." value="{{ smart_search_value|default:'' }}" autocomplete="off">
                             <button class="btn btn-white border border-start-0 text-danger" type="button" id="liveSearchClear" title="Limpiar búsqueda">
                                 <i class="fa-solid fa-circle-xmark"></i>
                             </button>

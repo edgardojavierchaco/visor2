@@ -119,13 +119,13 @@
         --primary-dark:  var(--blue-800);
         --primary-light: var(--blue-50);
         --surface:       #ffffff;
-        --surface-soft:  #edf4fb;
-        --surface-muted: #dde8f3;
-        --border:        #b7c8da;
-        --border-strong: #8297ad;
+        --surface-soft:  #f8fafc;
+        --surface-muted: #eef2f6;
+        --border:        #d5dde7;
+        --border-strong: #94a3b8;
         --text-base:     var(--slate-900);
-        --text-muted:    var(--slate-800);
-        --text-faint:    var(--slate-700);
+        --text-muted:    var(--slate-600);
+        --text-faint:    var(--slate-500);
 
         /* Spacing */
         --r-sm: 6px;
@@ -156,7 +156,7 @@
        ============================================================ */
     html { overflow-y: scroll; }
 
-    .content-wrapper { background: #dce7f1; }
+    .content-wrapper { background: #f1f4f8; }
     .content-wrapper > .content-header { display: none !important; }
     .content-wrapper > .content > .container-fluid {
         max-width: 100% !important;
@@ -204,7 +204,9 @@
        MAIN CONTENT AREA
        ============================================================ */
     .cef-main {
-        padding: 1.25rem 0 0;
+        margin: 0 auto;
+        max-width: 1480px;
+        padding: 1rem clamp(.75rem, 2vw, 1.5rem) 0;
     }
 
     /* ============================================================
@@ -230,6 +232,11 @@
         margin: 0;
         padding: .7rem .8rem .7rem 1rem;
         transition: opacity .22s ease, transform .22s ease;
+    }
+
+    .cef-wrap .alert {
+        border-radius: var(--r-md);
+        font-size: var(--fs-base);
     }
 
     .cef-alert.is-hiding {
@@ -288,10 +295,10 @@
        ============================================================ */
     .cef-context-card {
         background: var(--surface);
-        border: 1.5px solid var(--border);
+        border: 1px solid var(--border);
         border-top: 3px solid var(--primary);
         border-radius: var(--r-lg);
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-xs);
         margin-bottom: 1.25rem;
         padding: .95rem 1.25rem 1rem;
         transition: box-shadow .2s ease;
@@ -405,22 +412,17 @@
 
     .cef-card {
         background: var(--surface);
-        border: 1.5px solid var(--border);
+        border: 1px solid var(--border);
         border-radius: var(--r-lg);
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-xs);
         margin-bottom: 1rem;
         overflow: hidden;
-        transition: box-shadow .2s ease;
-    }
-
-    .cef-card:hover {
-        box-shadow: var(--shadow-md);
     }
 
     .cef-card-header {
         align-items: center;
         background: var(--surface-muted);
-        border-bottom: 1.5px solid var(--border);
+        border-bottom: 1px solid var(--border);
         display: flex;
         flex-wrap: wrap;
         gap: .6rem;
@@ -461,21 +463,14 @@
 
     .cef-info-item {
         background: var(--surface-soft);
-        border: 1.5px solid var(--border);
-        border-top: 2px solid var(--blue-300);
-        border-radius: var(--r-md);
+        border: 1px solid var(--slate-200);
+        border-radius: var(--r-sm);
         min-height: 54px;
         padding: .55rem .75rem;
-        transition: border-top-color .2s ease, box-shadow .2s ease;
-    }
-
-    .cef-info-item:hover {
-        border-top-color: var(--primary);
-        box-shadow: var(--shadow-xs);
     }
 
     .cef-info-item span {
-        color: var(--text-muted);
+        color: var(--slate-600);
         display: block;
         font-size: var(--fs-xs);
         font-weight: 700;
@@ -499,9 +494,10 @@
        TABLE SYSTEM
        ============================================================ */
     .cef-table-wrap {
-        border: 1.5px solid var(--border);
+        background: var(--surface);
+        border: 1px solid var(--slate-200);
         border-radius: var(--r-md);
-        box-shadow: var(--shadow-xs);
+        box-shadow: none;
         overflow: auto;
         width: 100%;
     }
@@ -512,9 +508,9 @@
     }
 
     .cef-table thead th {
-        background: var(--surface-muted);
-        border-bottom: 2px solid var(--border-strong) !important;
-        color: var(--slate-600);
+        background: var(--blue-900);
+        border-bottom: 2px solid var(--blue-700) !important;
+        color: #fff;
         font-size: var(--fs-xs);
         font-weight: 700;
         letter-spacing: .06em;
@@ -524,7 +520,7 @@
     }
 
     .cef-table tbody td {
-        border-color: var(--border);
+        border-color: var(--slate-200);
         color: var(--slate-800);
         font-size: var(--fs-base);
         padding: .65rem .85rem;
@@ -536,7 +532,7 @@
     }
 
     .cef-table tbody tr:nth-child(even) {
-        background: var(--surface-soft);
+        background: var(--slate-50);
     }
 
     .cef-table tbody tr:hover {
@@ -548,16 +544,17 @@
        ============================================================ */
     .cef-panel {
         background: var(--surface);
-        border: 1.5px solid var(--border);
+        border: 1px solid var(--border);
         border-radius: var(--r-lg);
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-xs);
         overflow: hidden;
     }
 
     .cef-panel-head {
         align-items: center;
         background: var(--surface);
-        border-bottom: 1.5px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        border-left: 4px solid var(--primary);
         display: flex;
         flex-wrap: wrap;
         gap: .75rem;
@@ -592,6 +589,314 @@
     }
 
     /* ============================================================
+       COMPOSITION / COURSE MANAGEMENT
+       ============================================================ */
+    .cef-course-header {
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding-bottom: 1.1rem;
+        padding-top: 1.1rem;
+    }
+
+    .cef-course-heading {
+        flex: 1 1 32rem;
+        min-width: 0;
+    }
+
+    .cef-section-kicker {
+        color: var(--primary-dark);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .08em;
+        line-height: 1.2;
+        margin-bottom: .3rem;
+        text-transform: uppercase;
+    }
+
+    .cef-course-title-line {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .55rem .75rem;
+    }
+
+    .cef-course-title-line .cef-panel-title {
+        font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+    }
+
+    .cef-course-meta {
+        align-items: baseline;
+        color: var(--slate-600);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: var(--fs-sm);
+        gap: .35rem .9rem;
+        margin-top: .55rem;
+    }
+
+    .cef-course-meta span {
+        overflow-wrap: anywhere;
+    }
+
+    .cef-course-meta strong {
+        color: var(--slate-700);
+        font-size: var(--fs-xs);
+        letter-spacing: .04em;
+        margin-right: .2rem;
+        text-transform: uppercase;
+    }
+
+    .cef-course-body {
+        padding-top: 1rem;
+    }
+
+    .cef-course-section {
+        border-top: 1px solid var(--slate-200);
+        margin-top: 1.25rem;
+        padding-top: 1.15rem;
+    }
+
+    .cef-course-section-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .65rem 1rem;
+        justify-content: space-between;
+        margin-bottom: .7rem;
+    }
+
+    .cef-course-section-head h3 {
+        color: var(--slate-900);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .cef-section-count {
+        color: var(--slate-600);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin-right: auto;
+    }
+
+    .cef-course-section-head .cef-section-count {
+        margin-right: 0;
+    }
+
+    .cef-course-section-head .cef-panel-actions {
+        margin-left: auto;
+    }
+
+    .cef-coverage-grid {
+        display: grid;
+        gap: .75rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: .9rem;
+    }
+
+    .cef-coverage-item {
+        background: var(--surface-soft);
+        border: 1px solid var(--slate-200);
+        border-radius: var(--r-md);
+        min-width: 0;
+        padding: .85rem 1rem;
+    }
+
+    .cef-coverage-heading {
+        align-items: flex-start;
+        display: flex;
+        gap: .75rem;
+        justify-content: space-between;
+        margin-bottom: .7rem;
+    }
+
+    .cef-coverage-heading h3 {
+        color: var(--slate-900);
+        font-size: var(--fs-md);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .cef-coverage-primary {
+        align-items: end;
+        display: grid;
+        gap: .75rem;
+        grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr);
+    }
+
+    .cef-coverage-person span,
+    .cef-coverage-dates dt,
+    .cef-coverage-meta span,
+    .cef-coverage-observations span {
+        color: var(--slate-600);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+
+    .cef-coverage-person strong {
+        color: var(--slate-900);
+        display: block;
+        font-size: var(--fs-md);
+        line-height: 1.25;
+        margin-top: .2rem;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-coverage-dates {
+        display: grid;
+        gap: .45rem .75rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0;
+    }
+
+    .cef-coverage-dates dd {
+        color: var(--slate-800);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin: .15rem 0 0;
+    }
+
+    .cef-coverage-meta {
+        border-top: 1px solid var(--slate-200);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem .9rem;
+        margin-top: .75rem;
+        padding-top: .65rem;
+    }
+
+    .cef-coverage-meta span {
+        align-items: baseline;
+        display: inline-flex;
+        gap: .3rem;
+    }
+
+    .cef-coverage-meta strong {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        letter-spacing: 0;
+        text-transform: none;
+    }
+
+    .cef-coverage-observations {
+        border-top: 1px solid var(--slate-200);
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        margin-top: .65rem;
+        padding-top: .6rem;
+    }
+
+    .cef-coverage-observations p {
+        margin: .15rem 0 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-course-summary {
+        margin-bottom: .15rem;
+    }
+
+    .cef-course-summary-head {
+        align-items: baseline;
+        display: flex;
+        gap: .65rem;
+        margin-bottom: .7rem;
+    }
+
+    .cef-course-summary-head h3 {
+        color: var(--slate-900);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-summary-grid {
+        display: grid;
+        gap: .85rem;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .cef-summary-group {
+        background: var(--surface-soft);
+        border: 1px solid var(--slate-200);
+        border-radius: var(--r-md);
+        min-width: 0;
+        padding: .85rem 1rem;
+    }
+
+    .cef-summary-group h4 {
+        color: var(--primary-dark);
+        font-size: var(--fs-sm);
+        font-weight: 800;
+        margin: 0 0 .7rem;
+    }
+
+    .cef-definition-grid {
+        display: grid;
+        gap: .65rem .9rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0;
+    }
+
+    .cef-definition-grid.is-three-col {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cef-definition-item {
+        min-width: 0;
+    }
+
+    .cef-definition-item dt,
+    .cef-summary-note dt {
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+
+    .cef-definition-item dd,
+    .cef-summary-note dd {
+        color: var(--slate-900);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        line-height: 1.3;
+        margin: .15rem 0 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-summary-note {
+        border-top: 1px solid var(--slate-200);
+        margin-top: .85rem;
+        padding: .75rem .15rem 0;
+    }
+
+    .cef-summary-note dd {
+        color: var(--slate-700);
+        font-weight: 500;
+    }
+
+    .cef-table-section {
+        display: grid;
+        gap: .65rem;
+        min-width: 0;
+    }
+
+    .cef-table-section .cef-tools {
+        margin-bottom: 0;
+    }
+
+    .cef-table-section .cef-tfoot {
+        margin-top: 0;
+    }
+
+    /* ============================================================
        TABLE TOOLS (search + page-size)
        ============================================================ */
     .cef-tools {
@@ -601,6 +906,10 @@
         gap: .75rem;
         justify-content: space-between;
         margin-bottom: .9rem;
+        padding: .55rem .7rem;
+        background: var(--surface-soft);
+        border: 1px solid var(--slate-200);
+        border-radius: var(--r-md);
     }
 
     .cef-tools-left,
@@ -717,17 +1026,13 @@
         width: 100%;
     }
 
-    .cef-js .cef-dt[data-cef-table]:not(.is-ready) tbody {
-        display: none;
-    }
-
     .cef-dt thead tr {
-        background: var(--surface-muted);
-        border-bottom: 2px solid var(--border-strong);
+        background: var(--blue-900);
+        border-bottom: 2px solid var(--blue-700);
     }
 
     .cef-dt thead th {
-        color: var(--slate-600);
+        color: #fff;
         font-size: var(--fs-xs);
         font-weight: 700;
         letter-spacing: .07em;
@@ -738,7 +1043,7 @@
     }
 
     .cef-dt tbody td {
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--slate-200);
         color: var(--slate-800);
         font-size: var(--fs-base);
         padding: .65rem .75rem;
@@ -750,11 +1055,31 @@
     }
 
     .cef-dt tbody tr:nth-child(even) {
-        background: var(--surface-soft);
+        background: var(--slate-50);
     }
 
     .cef-dt tbody tr:hover {
         background: var(--blue-50);
+    }
+
+    .cef-dt tbody tr.cef-row-inactive,
+    .cef-table tbody tr.cef-row-inactive {
+        background: var(--slate-50);
+    }
+
+    .cef-dt tbody tr.cef-row-inactive td,
+    .cef-table tbody tr.cef-row-inactive td {
+        color: var(--slate-600);
+    }
+
+    .cef-dt tbody tr.cef-row-inactive td strong,
+    .cef-table tbody tr.cef-row-inactive td strong {
+        color: var(--slate-700);
+    }
+
+    .cef-dt tbody tr.cef-row-inactive:hover,
+    .cef-table tbody tr.cef-row-inactive:hover {
+        background: var(--slate-100);
     }
 
     .cef-dt tbody tr:last-child td {
@@ -827,6 +1152,8 @@
         gap: .6rem;
         justify-content: space-between;
         margin-top: .85rem;
+        padding-top: .75rem;
+        border-top: 1px solid var(--slate-200);
     }
 
     .cef-tfoot-count {
@@ -888,8 +1215,8 @@
        ============================================================ */
     .cef-context-pill {
         align-items: center;
-        background: #e7f1ff;
-        border: 1.5px solid var(--blue-300);
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
         border-radius: var(--r-md);
         color: var(--blue-800);
         display: inline-flex;
@@ -934,12 +1261,18 @@
     }
 
     .cef-context-summary-item {
-        background: #e7f1ff;
-        border: 1.5px solid var(--blue-300);
-        border-radius: var(--r-md);
+        background: transparent;
+        border: 0;
+        border-left: 1px solid var(--border);
+        border-radius: 0;
         color: var(--blue-900);
         min-width: 0;
         padding: .5rem .75rem;
+    }
+
+    .cef-context-summary-item:first-child {
+        border-left: 0;
+        padding-left: 0;
     }
 
     .cef-context-summary-item span {
@@ -970,9 +1303,10 @@
        EDIT PANEL (inline form)
        ============================================================ */
     .cef-edit-panel {
-        background: var(--surface-soft);
-        border: 1.5px solid var(--border);
-        border-radius: var(--r-lg);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--blue-200);
+        border-radius: var(--r-md);
         margin-top: 1.25rem;
         padding: 1.25rem;
     }
@@ -1039,6 +1373,14 @@
     .cef-field .form-control:hover:not(:focus),
     .cef-field .form-select:hover:not(:focus) {
         border-color: var(--slate-500);
+    }
+
+    .cef-field .form-control:disabled,
+    .cef-field .form-select:disabled {
+        background: var(--slate-100);
+        color: var(--slate-500);
+        cursor: not-allowed;
+        opacity: 1;
     }
 
     .cef-field textarea.form-control {
@@ -1172,6 +1514,16 @@
         padding: .28em .8em;
     }
 
+    .badge.text-bg-warning {
+        background: var(--amber-100) !important;
+        border: 1px solid #f2c572;
+        border-radius: 999px;
+        color: var(--amber-700) !important;
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        padding: .28em .8em;
+    }
+
     /* ============================================================
        BUTTONS
        ============================================================ */
@@ -1295,12 +1647,50 @@
         color: var(--green-700);
     }
 
+    .btn-outline-danger {
+        border-color: var(--red-700);
+        border-radius: var(--r-sm);
+        color: var(--red-700);
+        font-weight: 600;
+    }
+
+    .btn-outline-danger:hover,
+    .btn-outline-danger:focus-visible {
+        background: var(--red-100);
+        border-color: var(--red-700);
+        color: var(--red-700);
+    }
+
+    .cef-act-cell .btn-outline-danger {
+        border-color: var(--red-700);
+        color: var(--red-700);
+    }
+
+    .cef-act-cell .btn-outline-danger:hover,
+    .cef-act-cell .btn-outline-danger:focus-visible {
+        background: var(--red-100);
+        border-color: var(--red-700);
+        color: var(--red-700);
+    }
+
+    .cef-act-cell .btn-outline-success {
+        border-color: var(--green-700);
+        color: var(--green-700);
+    }
+
+    .cef-act-cell .btn-outline-success:hover,
+    .cef-act-cell .btn-outline-success:focus-visible {
+        background: var(--green-100);
+        border-color: var(--green-700);
+        color: var(--green-700);
+    }
+
     /* ============================================================
        EMPTY STATE
        ============================================================ */
     .cef-empty-state {
         align-items: center;
-        background: var(--surface-soft);
+        background: var(--slate-50);
         border: 1.5px dashed var(--border-strong);
         border-radius: var(--r-md);
         color: var(--text-muted);
@@ -1316,10 +1706,34 @@
     }
 
     /* ============================================================
+       BOOTSTRAP CONFIRMATION MODAL
+       ============================================================ */
+    .cef-wrap .modal-content {
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-xl);
+        overflow: hidden;
+    }
+
+    .cef-wrap .modal-header {
+        background: var(--surface-muted);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .cef-wrap .modal-footer {
+        border-top: 1px solid var(--border);
+    }
+
+    .cef-wrap .modal-title {
+        color: var(--slate-900);
+        font-weight: 800;
+    }
+
+    /* ============================================================
        RESPONSIVE
        ============================================================ */
     @media (max-width: 991.98px) {
-        .cef-main { padding: .9rem 0 0; }
+        .cef-main { padding: .9rem .75rem 0; }
 
         .cef-context-grid {
             grid-template-columns: 1fr;
@@ -1352,6 +1766,27 @@
         .cef-context-summary {
             grid-template-columns: 1fr;
         }
+
+        .cef-context-summary-item,
+        .cef-context-summary-item:first-child {
+            border-left: 0;
+            border-top: 1px solid var(--border);
+            padding-left: 0;
+        }
+
+        .cef-context-summary-item:first-child { border-top: 0; }
+
+        .cef-summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cef-summary-group:last-child {
+            grid-column: 1 / -1;
+        }
+
+        .cef-definition-grid.is-three-col {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     @media (max-width: 1299.98px) and (min-width: 992px) {
@@ -1377,6 +1812,40 @@
         .cef-panel-actions .btn,
         .cef-form-actions .btn {
             flex: 1 1 100%;
+        }
+
+        .cef-course-header {
+            gap: .85rem;
+        }
+
+        .cef-course-section-head {
+            align-items: flex-start;
+        }
+
+        .cef-course-section-head > .btn {
+            flex: 1 1 100%;
+            width: 100%;
+        }
+
+        .cef-course-meta {
+            display: grid;
+            gap: .3rem;
+        }
+
+        .cef-summary-grid,
+        .cef-definition-grid,
+        .cef-definition-grid.is-three-col,
+        .cef-coverage-grid,
+        .cef-coverage-primary {
+            grid-template-columns: 1fr;
+        }
+
+        .cef-summary-group:last-child {
+            grid-column: auto;
+        }
+
+        .cef-coverage-dates {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
@@ -1475,6 +1944,8 @@
         <script>
         (function () {
             function tableRoot(table) {
+                var localRoot = table.closest("[data-cef-table-root]");
+                if (localRoot) return localRoot;
                 return table.closest(".cef-panel-body, .cef-card-body, .cef-panel, .cef-card") || document;
             }
 
@@ -1508,7 +1979,21 @@
                         row.style.display = "";
                     });
 
-                    if (count) count.textContent = visible.length + " registros";
+                    if (count) {
+                        var countText;
+                        if (count.dataset.cefTableCount === "active-total") {
+                            var activeCount = visible.filter(function(row) {
+                                return !row.classList.contains("cef-row-inactive");
+                            }).length;
+                            countText = activeCount + " activos / " + visible.length + " total";
+                        } else {
+                            countText = visible.length + " registros";
+                        }
+                        count.textContent = countText;
+                        var section = root.closest(".cef-course-section");
+                        var sectionCount = section ? section.querySelector("[data-cef-section-count]") : null;
+                        if (sectionCount) sectionCount.textContent = countText;
+                    }
                     if (paginEl) {
                         if (pages <= 1) {
                             paginEl.innerHTML = "";

@@ -1,3 +1,4 @@
+<div class="cef-table-section" data-cef-table-root>
 <div class="cef-tools">
     <div class="cef-tools-left">
         <span class="cef-tools-label">Mostrar</span>
@@ -42,7 +43,7 @@
             </thead>
             <tbody>
                 {% for docente_banco in docentes %}
-                    <tr>
+                    <tr class="{% if docente_banco.estado != 'activo' %}cef-row-inactive{% endif %}">
                         <td><strong>{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}</strong></td>
                         <td>{{ docente_banco.docente_cuil }}</td>
                         <td>{{ docente_banco.docente_dni_snapshot|default:"-" }}</td>
@@ -137,4 +138,5 @@
 <div class="cef-tfoot">
     <span class="cef-tfoot-count" data-cef-table-count>{{ docentes|length }} registros</span>
     <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+</div>
 </div>

@@ -24,7 +24,7 @@
             <a href="{% url 'reunidas_pof:historial_movimientos' %}?{{ limpiar_filtros_querystring }}" class="pof-filter-clear-btn">Limpiar filtros</a>
         </div>
     </form>
-    <div class="pof-filter-summary">
+    <div class="pof-filter-summary" id="historialResultados">
         <div class="pof-filter-summary-left">
             <span class="pof-filter-summary-main">Resultados: Mostrando movimientos {{ showing_start }}-{{ showing_end }} de {{ total_registros }}</span>
             <div class="pof-filter-quick-bar">
@@ -79,7 +79,7 @@
                     {% endfor %}
                 </select>
             </form>
-            {% if paginator.num_pages > 1 %}<nav class="pof-pagination" aria-label="Paginación de historial">{% if page_obj.has_previous %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Anterior</span>{% endif %}{% for page_number in page_range %}{% if page_number == page_obj.number %}<span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>{% elif page_number == '…' %}<span class="pof-page-ellipsis">…</span>{% else %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}{% endfor %}{% if page_obj.has_next %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>{% endif %}</nav>{% endif %}
+            {% if paginator.num_pages > 1 %}<nav class="pof-pagination" aria-label="Paginación de historial">{% if page_obj.has_previous %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}#historialResultados">Anterior</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Anterior</span>{% endif %}{% for page_number in page_range %}{% if page_number == page_obj.number %}<span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>{% elif page_number == '…' %}<span class="pof-page-ellipsis">…</span>{% else %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}#historialResultados">{{ page_number }}</a>{% endif %}{% endfor %}{% if page_obj.has_next %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}#historialResultados">Siguiente</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>{% endif %}</nav>{% endif %}
     </div>
     <div class="pof-actions"><button type="button" class="pof-btn pof-btn-light" onclick="window.history.back()">Volver atrás</button></div>
 

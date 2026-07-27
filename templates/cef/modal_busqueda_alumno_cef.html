@@ -86,6 +86,11 @@
         color: #fff;
     }
 
+    .cef-modal-close:focus-visible {
+        box-shadow: 0 0 0 3px rgba(147,197,253,.45);
+        outline: none;
+    }
+
     .cef-modal-body {
         overflow-y: auto;
         padding: 1.25rem 1.5rem 1.5rem;
@@ -197,12 +202,12 @@
     }
 
     .cef-modal-table thead tr {
-        border-bottom: 2px solid #bfdbfe;
+        border-bottom: 2px solid var(--border-strong, #94a3b8);
     }
 
     .cef-modal-table thead th {
-        background: #f8fafc;
-        color: #475569;
+        background: var(--surface-muted, #eef2f6);
+        color: var(--slate-700, #334155);
         font-size: .7rem;
         font-weight: 700;
         letter-spacing: .07em;
@@ -213,13 +218,14 @@
     }
 
     .cef-modal-table tbody td {
-        border-bottom: 1px solid #e2e8f0;
-        color: #334155;
+        border-bottom: 1px solid var(--slate-200, #e2e8f0);
+        color: var(--slate-700, #334155);
         padding: .65rem .75rem;
         vertical-align: middle;
     }
 
     .cef-modal-table tbody tr:last-child td { border-bottom: none; }
+    .cef-modal-table tbody tr:nth-child(even) { background: var(--slate-50, #f8fafc); }
     .cef-modal-table tbody tr:hover { background: #eff6ff; }
 
     /* Action links inside table */

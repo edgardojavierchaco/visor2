@@ -1,13 +1,37 @@
-<h3>{{ titulo }}</h3>
+<div class="cef-coverage-heading">
+    <div>
+        <span class="cef-section-kicker">Cobertura docente</span>
+        <h3>{{ titulo }}</h3>
+    </div>
+    {% if docente_activo %}
+        <span class="badge text-bg-success">Activo</span>
+    {% endif %}
+</div>
 {% if docente_activo %}
-    <div class="cef-info-grid">
-        <div class="cef-info-item span-all"><span>Profesor</span><strong>{{ docente_activo.docente_nombre_snapshot|default:docente_activo.docente_cuil }}</strong></div>
-        <div class="cef-info-item"><span>CUIL</span><strong>{{ docente_activo.docente_cuil }}</strong></div>
-        <div class="cef-info-item"><span>DNI</span><strong>{{ docente_activo.docente_dni_snapshot|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Estado BNH</span><strong>{{ docente_activo.docente_estado_bnh_snapshot|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Desde</span><strong>{% if docente_activo.fecha_desde %}{{ docente_activo.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
-        <div class="cef-info-item"><span>Hasta</span><strong>{% if docente_activo.fecha_hasta %}{{ docente_activo.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
-        <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ docente_activo.observaciones|default:"Sin observaciones" }}</strong></div>
+    <div class="cef-coverage-primary">
+        <div class="cef-coverage-person">
+            <span>Profesor</span>
+            <strong>{{ docente_activo.docente_nombre_snapshot|default:docente_activo.docente_cuil }}</strong>
+        </div>
+        <dl class="cef-coverage-dates">
+            <div>
+                <dt>Desde</dt>
+                <dd>{% if docente_activo.fecha_desde %}{{ docente_activo.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</dd>
+            </div>
+            <div>
+                <dt>Hasta</dt>
+                <dd>{% if docente_activo.fecha_hasta %}{{ docente_activo.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</dd>
+            </div>
+        </dl>
+    </div>
+    <div class="cef-coverage-meta">
+        <span>CUIL <strong>{{ docente_activo.docente_cuil }}</strong></span>
+        <span>DNI <strong>{{ docente_activo.docente_dni_snapshot|default:"-" }}</strong></span>
+        <span>Estado BNH <strong>{{ docente_activo.docente_estado_bnh_snapshot|default:"-" }}</strong></span>
+    </div>
+    <div class="cef-coverage-observations">
+        <span>Observaciones</span>
+        <p>{{ docente_activo.observaciones|default:"Sin observaciones" }}</p>
     </div>
 {% else %}
     <div class="cef-empty-state">

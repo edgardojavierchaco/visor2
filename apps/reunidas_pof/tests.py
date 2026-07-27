@@ -56,7 +56,7 @@ class AniosDisponiblesCargaPofTests(SimpleTestCase):
                 "cabecera_tipo": "REUNIDA",
                 "anio": 2099,
                 "nivel": "ADULTOS",
-                "tipo_operacion": "ALTA",
+                "tipo_operacion": "AFECTADO",
             })
 
             self.assertTrue(formulario.is_valid(), formulario.errors)
@@ -68,7 +68,7 @@ class AniosDisponiblesCargaPofTests(SimpleTestCase):
             "cabecera_tipo": "REUNIDA",
             "anio": 2099,
             "nivel": "ADULTOS",
-            "tipo_operacion": "ALTA",
+            "tipo_operacion": "AFECTADO",
             "padron": {
                 "padron_cueanexo": "123456700",
                 "cuof_loc": "123",

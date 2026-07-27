@@ -326,10 +326,9 @@
 .pof-icon-btn { align-items: center; background: white; border: 1px solid #C9D4F5; border-radius: 4px; color: var(--pof-primary-dark); cursor: pointer; display: inline-flex; font-size: 14px; height: 30px; justify-content: center; padding: 0; width: 30px; }
 .pof-icon-btn:hover { background: var(--pof-primary-soft); border-color: var(--pof-primary); }
 .pof-movement-badge { border-radius: 4px; display: inline-flex; font-size: 12px; font-weight: 800; padding: 4px 7px; white-space: nowrap; }
-.pof-movement-badge-alta { background: #EAF7EF; color: #17633D; }
+.pof-movement-badge-afectado { background: #EAF7EF; color: #17633D; }
 .pof-movement-badge-modificacion { background: #EEF2FF; color: var(--pof-primary-dark); }
-.pof-movement-badge-afectacion { background: #FFF6D8; color: #876000; }
-.pof-movement-badge-desafectacion { background: #FDEBEC; color: #A92D3A; }
+.pof-movement-badge-desafectado { background: #FDEBEC; color: #A92D3A; }
 
 /* Base reutilizable para grillas administrativas POF. */
 .pof-grid-table-wrap { margin-top: 12px; overflow-x: auto; overflow-y: visible; position: relative; width: 100%; z-index: 2; }
@@ -389,11 +388,8 @@
     padding-top: 4px;
 }
 .pof-grid-badge { border: 1px solid #222; border-radius: 0; display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 8px; white-space: nowrap; }
-.pof-grid-badge-alta { background: #E6F3EA; color: #174D2C; }
-.pof-grid-badge-modificacion { background: #E8ECFA; color: #1F2FA3; }
-.pof-grid-badge-afectacion { background: #F8F1DE; color: #6B4A00; }
-.pof-grid-badge-desafectacion { background: #F7E6E7; color: #7A1F2A; }
 .pof-grid-badge-afectado { background: #E6F3EA; color: #174D2C; }
+.pof-grid-badge-modificacion { background: #E8ECFA; color: #1F2FA3; }
 .pof-grid-badge-desafectado { background: #E5E7EB; color: #374151; }
 
 .pof-list-status { align-items: center; background: var(--pof-primary-soft); border: 1px solid var(--pof-border); border-radius: 8px; color: var(--pof-text); display: flex; gap: 12px; justify-content: space-between; margin-bottom: 16px; padding: 11px 13px; }
@@ -875,6 +871,50 @@ body.pof-modal-open { overflow: hidden; }
     box-shadow: 0 6px 14px rgba(31, 42, 68, .08);
 }
 
+.pof-offer-card-row {
+    align-items: stretch;
+    background: white;
+    display: flex;
+}
+
+.pof-offer-card-select {
+    align-items: center;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    flex: 0 0 56px;
+    justify-content: center;
+    min-height: 52px;
+    transition: background .15s ease;
+}
+
+.pof-offer-card-select:hover,
+.pof-offer-card-select:focus-within {
+    background: rgba(59, 92, 255, .12);
+}
+
+.pof-offer-card-row:hover,
+.pof-offer-card-row:focus-within {
+    background: var(--pof-primary-soft);
+}
+
+.pof-offer-card-select input[type="checkbox"] {
+    accent-color: var(--pof-primary);
+    appearance: auto;
+    cursor: pointer;
+    height: 22px;
+    margin: 0;
+    min-height: auto;
+    width: 22px;
+}
+
+.pof-offer-card-row .pof-offer-card-header {
+    background: transparent;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+}
+
 .pof-offer-card-header {
     align-items: center;
     background: white;
@@ -1084,6 +1124,7 @@ body.pof-modal-open { overflow: hidden; }
 }
 
 .pof-cargo-entry-panel {
+    container-type: inline-size;
     overflow: visible;
     position: relative;
     z-index: 20;
@@ -1565,7 +1606,40 @@ body.pof-modal-open { overflow: hidden; }
 @media (max-width: 1320px) {
     .pof-cargo-entry-grid {
         column-gap: 12px;
-        grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) 82px minmax(150px, 180px) 90px 110px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pof-cargo-entry-grid > .pof-cargo-entry-small,
+    .pof-cargo-entry-unit {
+        padding-top: 0;
+    }
+}
+
+@container (max-width: 1100px) {
+    .pof-cargo-entry-grid {
+        column-gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pof-cargo-entry-grid > .pof-cargo-entry-small,
+    .pof-cargo-entry-unit {
+        padding-top: 0;
+    }
+}
+
+@container (max-width: 650px) {
+    .pof-cargo-entry-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pof-cargo-entry-selected,
+    .pof-cargo-entry-grid > .pof-cargo-entry-small,
+    .pof-cargo-entry-unit {
+        padding-top: 0;
+    }
+
+    .pof-ceic-mode {
+        flex-wrap: wrap;
     }
 }
 

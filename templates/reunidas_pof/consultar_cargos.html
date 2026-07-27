@@ -85,7 +85,7 @@
         <div class="pof-note">La tabla de cargos todav&iacute;a no est&aacute; migrada. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
     {% endif %}
 
-    <div class="pof-filter-summary">
+    <div class="pof-filter-summary" id="administracionCargosResultados">
         <div class="pof-filter-summary-left">
             <span class="pof-filter-summary-main">Resultados: Mostrando cargos {{ showing_start }}-{{ showing_end }} de {{ total_registros }}</span>
         </div>
@@ -193,7 +193,7 @@
         {% if paginator.num_pages > 1 %}
             <nav class="pof-pagination" aria-label="Paginaci&oacute;n de cargos">
                 {% if page_obj.has_previous %}
-                    <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                    <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}#administracionCargosResultados">Anterior</a>
                 {% else %}
                     <span class="pof-page-btn pof-page-btn-disabled">Anterior</span>
                 {% endif %}
@@ -204,12 +204,12 @@
                     {% elif page_number == '…' %}
                         <span class="pof-page-ellipsis">…</span>
                     {% else %}
-                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                        <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}#administracionCargosResultados">{{ page_number }}</a>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
-                    <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+                    <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}#administracionCargosResultados">Siguiente</a>
                 {% else %}
                     <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
                 {% endif %}

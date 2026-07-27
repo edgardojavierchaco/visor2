@@ -1,6 +1,6 @@
     const cargarCargosReunidaConfigElement = document.getElementById("cargarCargosReunidaConfig");
     if (!cargarCargosReunidaConfigElement) {
-        throw new Error("Falta la configuracion de Alta de Cargos de Reunida.");
+        throw new Error("Falta la configuracion de Carga de Cargos de Reunida.");
     }
     const CARGAR_CARGOS_REUNIDA_CONFIG = JSON.parse(cargarCargosReunidaConfigElement.textContent || "{}");
     const URLS_CARGAR_CARGOS_REUNIDA = CARGAR_CARGOS_REUNIDA_CONFIG.urls || {};
@@ -11,7 +11,7 @@
     const URL_GUARDAR_CARGA_POF = URLS_CARGAR_CARGOS_REUNIDA.guardarCargaPof;
     const URL_DETALLE_REUNIDA = URLS_CARGAR_CARGOS_REUNIDA.detalleReunida;
     if (!URL_VALIDAR_REUNIDA || !URL_BUSCAR_PADRON || !URL_BUSCAR_CEIC || !URL_CATALOGO_CEIC || !URL_GUARDAR_CARGA_POF || !URL_DETALLE_REUNIDA) {
-        throw new Error("La configuracion de Alta de Cargos de Reunida esta incompleta.");
+        throw new Error("La configuracion de Carga de Cargos de Reunida esta incompleta.");
     }
     let cabeceraReunidaValidada = false;
     let cabeceraReunida = null;
@@ -130,7 +130,7 @@
 
     function obtenerCantidadCargoTemporal(cargo) {
         const cantidad = Number(cargo && cargo.cantidad);
-        return Number.isInteger(cantidad) && cantidad > 0 ? cantidad : 0;
+        return Number.isInteger(cantidad) && cantidad >= 0 ? cantidad : 0;
     }
 
     function calcularTotalCargoTemporal(cargo) {
@@ -928,6 +928,15 @@
     btnMostrarObservacion.addEventListener("click", () => controlObservacionCargo.mostrar());
     btnQuitarObservacion.addEventListener("click", () => controlObservacionCargo.ocultar(true));
     tablaCargos.addEventListener("change", function (event) {
+        const inputObservacion = event.target.closest("[data-cargo-observation-index]");
+        if (inputObservacion) {
+            actualizarObservacionCargoTemporal(
+                Number(inputObservacion.dataset.cargoObservationIndex),
+                inputObservacion.value
+            );
+            return;
+        }
+
         const inputCantidad = event.target.closest("[data-cargo-quantity-index]");
         if (!inputCantidad) {
             return;
@@ -938,7 +947,7 @@
             return;
         }
 
-        alert("La cantidad debe ser un numero entero mayor a 0.");
+        alert("La cantidad debe ser un numero entero mayor o igual a 0.");
         renderizarTablaCargos();
     });
     tablaCargos.addEventListener("click", function (event) {
@@ -1111,19 +1120,27 @@
 
                     return `
                         <div class="pof-offer-card${abierta ? " pof-offer-card-open" : ""}${seleccionada ? " pof-offer-selected" : ""}" data-oferta-index="${index}">
-                            <button type="button"
-                                    class="pof-offer-card-header"
-                                    aria-expanded="${abierta ? "true" : "false"}"
-                                    onclick="alternarOfertaPadron(${index})">
-                                <span class="pof-offer-card-heading">
-                                    <span class="pof-offer-card-main">
-                                        <span class="pof-offer-card-title">${escaparHtml(obtenerLineaPrincipalOferta(item))}</span>
-                                        ${renderizarBadgeEstadoOferta(item)}
+                            <div class="pof-offer-card-row">
+                                <label class="pof-offer-card-select" title="${seleccionada ? "Quitar selección" : "Seleccionar oferta"}">
+                                    <input type="checkbox"
+                                           ${seleccionada ? "checked" : ""}
+                                           aria-label="${seleccionada ? "Quitar selección de esta oferta" : "Seleccionar esta oferta"}"
+                                           onclick="event.preventDefault(); seleccionarPadron(${index})">
+                                </label>
+                                <button type="button"
+                                        class="pof-offer-card-header"
+                                        aria-expanded="${abierta ? "true" : "false"}"
+                                        onclick="alternarOfertaPadron(${index})">
+                                    <span class="pof-offer-card-heading">
+                                        <span class="pof-offer-card-main">
+                                            <span class="pof-offer-card-title">${escaparHtml(obtenerLineaPrincipalOferta(item))}</span>
+                                            ${renderizarBadgeEstadoOferta(item)}
+                                        </span>
+                                        <span class="pof-offer-card-meta">${escaparHtml(obtenerLineaSecundariaOferta(item))}</span>
                                     </span>
-                                    <span class="pof-offer-card-meta">${escaparHtml(obtenerLineaSecundariaOferta(item))}</span>
-                                </span>
-                                <span class="pof-offer-card-toggle" aria-hidden="true">${abierta ? "🔽" : "▶️"}</span>
-                            </button>
+                                    <span class="pof-offer-card-toggle" aria-hidden="true">${abierta ? "🔽" : "▶️"}</span>
+                                </button>
+                            </div>
 
                             <div class="pof-offer-card-body${abierta ? "" : " pof-hidden"}">
                                 <div class="pof-offer-detail-compact pof-offer-detail-grid">
@@ -1727,8 +1744,8 @@
 
         const cantidad = Number(cantidadCargo.value || "0");
 
-        if (!Number.isInteger(cantidad) || cantidad <= 0) {
-            alert("La cantidad debe ser un número entero mayor a 0.");
+        if (!Number.isInteger(cantidad) || cantidad < 0) {
+            alert("La cantidad debe ser un número entero mayor o igual a 0.");
             return;
         }
 
@@ -1774,7 +1791,7 @@
         }
 
         const cantidad = Number(valorCantidad);
-        if (!Number.isInteger(cantidad) || cantidad <= 0) {
+        if (!Number.isInteger(cantidad) || cantidad < 0) {
             return false;
         }
 
@@ -1782,6 +1799,16 @@
         cargo.cantidad = String(cantidad);
         actualizarTotalCargoTemporal(cargo);
         renderizarTablaCargos();
+        limpiarEstadoGuardado();
+        return true;
+    }
+
+    function actualizarObservacionCargoTemporal(index, valorObservacion) {
+        if (!Number.isInteger(index) || index < 0 || index >= cargosTemporales.length) {
+            return false;
+        }
+
+        cargosTemporales[index].observacion = String(valorObservacion || "").trim();
         limpiarEstadoGuardado();
         return true;
     }
@@ -1851,16 +1878,22 @@
                     <input
                         type="number"
                         class="pof-cargo-quantity-input"
-                        min="1"
+                        min="0"
                         step="1"
-                        value="${escaparHtml(obtenerCantidadCargoTemporal(cargo) || 1)}"
+                        value="${escaparHtml(obtenerCantidadCargoTemporal(cargo))}"
                         data-cargo-quantity-index="${index}"
                         aria-label="Cantidad del cargo ${escaparHtml(cargo.cargo)}">
                 </td>
                 <td>${valorHtml(cargo.unidad_texto)}</td>
                 <td>${valorHtml(cargo.puntos_asignados)}</td>
                 <td>${valorHtml(calcularTotalCargoTemporal(cargo).toFixed(2))}</td>
-                <td class="pof-cargo-observation-cell">${cargo.observacion ? escaparHtml(cargo.observacion) : "-"}</td>
+                <td class="pof-cargo-observation-cell">
+                    <textarea
+                        class="pof-form-control"
+                        rows="2"
+                        data-cargo-observation-index="${index}"
+                        aria-label="Observación del cargo ${escaparHtml(cargo.cargo)}">${escaparHtml(cargo.observacion || "")}</textarea>
+                </td>
                 <td class="pof-cargo-action-cell">
                     <button type="button" class="pof-cargo-remove-btn" title="Quitar cargo" aria-label="Quitar cargo" data-cargo-remove-index="${index}">
                         ❌
@@ -1877,7 +1910,7 @@
             anio: cabeceraReunida.anio,
             nivel: cabeceraReunida.nivel,
             proyecto_especial_id: null,
-            tipo_operacion: "ALTA",
+            tipo_operacion: "AFECTADO",
             padron: padronSeleccionado,
             cargos: cargosTemporales.map(cargo => ({
                 ceic: cargo.ceic,

@@ -985,10 +985,9 @@ class LoteCargaPof(models.Model):
         """
         Tipos de operación que puede representar el lote de carga.
         """
-        ALTA = "ALTA", "Alta"
+        AFECTADO = "AFECTADO", "Afectado"
         MODIFICACION = "MODIFICACION", "Modificación"
-        AFECTACION = "AFECTACION", "Afectación"
-        DESAFECTACION = "DESAFECTACION", "Desafectación"
+        DESAFECTADO = "DESAFECTADO", "Desafectado"
 
     # Reunida a la que pertenece el lote de carga.
     reunida = models.ForeignKey(
@@ -1022,7 +1021,7 @@ class LoteCargaPof(models.Model):
     tipo_operacion = models.CharField(
         max_length=40,
         choices=TipoOperacion.choices,
-        default=TipoOperacion.ALTA,
+        default=TipoOperacion.AFECTADO,
         verbose_name="Tipo de operación",
     )
 
@@ -1453,17 +1452,16 @@ class CargoPof(models.Model):
 class MovimientoCargoPof(models.Model):
     """
     Registra el historial de acciones realizadas sobre un cargo POF.
-    Permite auditar altas, modificaciones, afectaciones y desafectaciones.
+    Permite auditar cargos afectados, modificaciones y cargos desafectados.
     """
 
     class TipoMovimiento(models.TextChoices):
         """
         Tipos de movimiento posibles sobre un cargo POF.
         """
-        ALTA = "ALTA", "Alta"
+        AFECTADO = "AFECTADO", "Afectado"
         MODIFICACION = "MODIFICACION", "Modificación"
-        AFECTACION = "AFECTACION", "Afectación"
-        DESAFECTACION = "DESAFECTACION", "Desafectación"
+        DESAFECTADO = "DESAFECTADO", "Desafectado"
 
     # Cargo afectado por el movimiento.
     cargo = models.ForeignKey(
@@ -1506,7 +1504,7 @@ class MovimientoCargoPof(models.Model):
         verbose_name="Estado anterior",
     )
 
-    # Estado nuevo del cargo, si corresponde.
+    # Estado nuevo del cargo, si corresponde.alta
     estado_nuevo = models.CharField(
         max_length=30,
         blank=True,
@@ -1624,16 +1622,16 @@ class MovimientoCargoPof(models.Model):
                     "snapshot_padron": "El snapshot no pertenece a la misma localización que el cargo."
                 })
 
-        if self.tipo_movimiento == self.TipoMovimiento.AFECTACION:
+        if self.tipo_movimiento == self.TipoMovimiento.AFECTADO:
             if self.estado_nuevo and self.estado_nuevo != CargoPof.EstadoPof.AFECTADO:
                 raise ValidationError({
-                    "estado_nuevo": "Una afectación debe dejar el cargo en estado AFECTADO."
+                    "estado_nuevo": "Un movimiento Afectado debe dejar el cargo en estado AFECTADO."
                 })
 
-        if self.tipo_movimiento == self.TipoMovimiento.DESAFECTACION:
+        if self.tipo_movimiento == self.TipoMovimiento.DESAFECTADO:
             if self.estado_nuevo and self.estado_nuevo != CargoPof.EstadoPof.DESAFECTADO:
                 raise ValidationError({
-                    "estado_nuevo": "Una desafectación debe dejar el cargo en estado DESAFECTADO."
+                    "estado_nuevo": "Un movimiento Desafectado debe dejar el cargo en estado DESAFECTADO."
                 })
 
     def save(self, *args, **kwargs):

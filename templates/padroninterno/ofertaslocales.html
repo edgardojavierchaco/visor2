@@ -1282,6 +1282,11 @@ $(document).ready(function() {
         exact: [
             { value: '2', label: 'igual a' },
             { value: '7', label: 'distinto de' }
+        ],
+        tipoOfertaExact: [
+            { value: '2', label: 'igual a' },
+            { value: '7', label: 'distinto de' },
+            { value: '8', label: 'coincide exactamente con' }
         ]
     };
     var FILTER_FIELD_LABELS = {
@@ -1319,12 +1324,13 @@ $(document).ready(function() {
     var FILTER_DIALOG_CONFIG = {
         tipo_oferta: {
             label: FILTER_FIELD_LABELS.tipo_oferta,
-            operators: 'exact',
+            operators: 'tipoOfertaExact',
             mode: 'grouped-checklist',
             dialogWidth: '760px',
             groups: [
                 {
                     title: 'Estado de la oferta',
+                    kind: 'estado_oferta',
                     options: ['Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes']
                 },
                 {
@@ -1663,7 +1669,7 @@ $(document).ready(function() {
                 '<div class="filter-dialog-checklist">' +
                     (config.groups || []).map(function(group, groupIndex) {
                         return '' +
-                            '<div class="filter-dialog-group">' +
+                            '<div class="filter-dialog-group" data-filter-group-kind="' + escapeHtml(group.kind || '') + '">' +
                                 '<div class="filter-dialog-group-title">' + escapeHtml(group.title) + '</div>' +
                                 '<div class="filter-dialog-checklist-grid">' + buildFilterChecklistOptionsHtml(group.options || [], field, groupIndex) + '</div>' +
                             '</div>';
@@ -1678,6 +1684,19 @@ $(document).ready(function() {
         if (config.helpText) {
             mount.append('<div class="filter-dialog-help">' + escapeHtml(config.helpText) + '</div>');
         }
+    }
+
+    function syncTipoOfertaExactOperatorState() {
+        var isExact = $('#campo_filtro_activo').val() === 'tipo_oferta' && $('#operador_filtro').val() === '8';
+        var stateGroup = $('#filterValueMount .filter-dialog-group[data-filter-group-kind="estado_oferta"]');
+        var stateOptions = stateGroup.find('.filter-dialog-option');
+
+        if (isExact) {
+            stateOptions.prop('checked', false);
+        }
+
+        stateOptions.prop('disabled', isExact);
+        stateGroup.attr('aria-disabled', isExact ? 'true' : 'false');
     }
 
     function resetFilterDialog() {
@@ -1710,6 +1729,7 @@ $(document).ready(function() {
         $('#operador_filtro').html(buildFilterOperatorOptionsHtml(operators));
         $('#dialog_filtro').css('width', config.dialogWidth || '360px');
         renderFilterValueControl(field);
+        syncTipoOfertaExactOperatorState();
         $('#dialog_filtro').show();
 
         setTimeout(function() {
@@ -1795,12 +1815,17 @@ $(document).ready(function() {
     }
 
     function getFilterOperatorLabel(operatorValue) {
-        var preset = FILTER_OPERATOR_PRESETS.default;
+        var presetNames = Object.keys(FILTER_OPERATOR_PRESETS);
+        var preset;
+        var presetIndex;
         var index;
 
-        for (index = 0; index < preset.length; index += 1) {
-            if (preset[index].value === operatorValue) {
-                return preset[index].label;
+        for (presetIndex = 0; presetIndex < presetNames.length; presetIndex += 1) {
+            preset = FILTER_OPERATOR_PRESETS[presetNames[presetIndex]];
+            for (index = 0; index < preset.length; index += 1) {
+                if (preset[index].value === operatorValue) {
+                    return preset[index].label;
+                }
             }
         }
 
@@ -1809,6 +1834,8 @@ $(document).ready(function() {
 
     var TIPO_OFERTA_BADGE_FIELD = 'tipo_oferta';
     var TIPO_OFERTA_ESTADO_VALUES = ['Activo', 'Inactivo', 'Baja', 'Inactivo sin Docentes'];
+
+    $('#operador_filtro').off('change.tipoOfertaExact').on('change.tipoOfertaExact', syncTipoOfertaExactOperatorState);
 
     function normalizeTipoOfertaBadgeText(value) {
         var normalized = String(value || '').trim().toLowerCase();
@@ -4536,6 +4563,11 @@ $btn.html('<i class="fa-solid fa-spinner fa-spin me-1"></i>Generando...');
             }
 
             selectedValues = collectFilterDialogSelections();
+            if (activeField === TIPO_OFERTA_BADGE_FIELD && activeOperator === '8') {
+                selectedValues = selectedValues.filter(function(selection) {
+                    return !isTipoOfertaEstadoValue(selection.value);
+                });
+            }
             url = new URL(window.location.href);
             url.searchParams.delete('page');
 

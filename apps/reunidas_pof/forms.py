@@ -322,7 +322,7 @@ class GuardarCargaPofForm(forms.Form):
 
         tipo_operacion = cleaned_data.get("tipo_operacion")
         if not tipo_operacion:
-            cleaned_data["tipo_operacion"] = LoteCargaPof.TipoOperacion.ALTA
+            cleaned_data["tipo_operacion"] = LoteCargaPof.TipoOperacion.AFECTADO
 
         if cabecera_tipo == "REUNIDA":
             anio = cleaned_data.get("anio")

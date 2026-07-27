@@ -5,7 +5,7 @@
 {% block cef_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Alumnos <span>» Gestión de Alumnos</span></h2>
+        <h2 class="cef-panel-title">Alumnos</h2>
         <div class="cef-panel-actions">
             <button class="btn btn-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Agregar alumno
@@ -14,6 +14,7 @@
     </div>
 
     <div class="cef-panel-body">
+        <div class="cef-table-section" data-cef-table-root>
         <div class="cef-tools">
             <div class="cef-tools-left">
                 <span class="cef-tools-label">Mostrar</span>
@@ -57,7 +58,7 @@
                     </thead>
                     <tbody>
                         {% for item in alumnos %}
-                            <tr>
+                            <tr class="{% if item.estado != 'activo' %}cef-row-inactive{% endif %}">
                                 <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
                                 <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
                                 <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
@@ -166,6 +167,7 @@
         <div class="cef-tfoot">
             <span class="cef-tfoot-count" data-cef-table-count>{{ alumnos|length }} registros</span>
             <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
         </div>
     </div>
 </div>

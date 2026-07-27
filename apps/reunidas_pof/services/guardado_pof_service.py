@@ -392,7 +392,7 @@ def _validar_datos_guardado_minimos(datos):
         elif not proyecto_especial_id.isdigit():
             errores["proyecto_especial_id"] = ["El proyecto especial no es valido."]
 
-    tipo_operacion = datos.get("tipo_operacion") or LoteCargaPof.TipoOperacion.ALTA
+    tipo_operacion = datos.get("tipo_operacion") or LoteCargaPof.TipoOperacion.AFECTADO
     tipos_operacion = {opcion for opcion, _ in LoteCargaPof.TipoOperacion.choices}
     if tipo_operacion not in tipos_operacion:
         errores["tipo_operacion"] = ["El tipo de operacion no es valido."]
@@ -1358,14 +1358,14 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
                 if hay_cambios_datos
                 else None
             )
-            es_afectacion = datos_limpios["estado_pof"] == CargoPof.EstadoPof.AFECTADO
+            queda_afectado = datos_limpios["estado_pof"] == CargoPof.EstadoPof.AFECTADO
             lote_estado = (
                 _crear_lote_administrativo(
                     cargo,
                     (
-                        LoteCargaPof.TipoOperacion.AFECTACION
-                        if es_afectacion
-                        else LoteCargaPof.TipoOperacion.DESAFECTACION
+                        LoteCargaPof.TipoOperacion.AFECTADO
+                        if queda_afectado
+                        else LoteCargaPof.TipoOperacion.DESAFECTADO
                     ),
                     usuario,
                 )
@@ -1410,9 +1410,9 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
 
             if hay_cambio_estado:
                 tipo_movimiento_estado = (
-                    MovimientoCargoPof.TipoMovimiento.AFECTACION
-                    if es_afectacion
-                    else MovimientoCargoPof.TipoMovimiento.DESAFECTACION
+                    MovimientoCargoPof.TipoMovimiento.AFECTADO
+                    if queda_afectado
+                    else MovimientoCargoPof.TipoMovimiento.DESAFECTADO
                 )
                 MovimientoCargoPof.objects.create(
                     cargo=cargo,
@@ -1537,16 +1537,16 @@ def cambiar_estado_cargo_pof(cargo_id, estado_nuevo, usuario=None):
             cargo.save()
             valores_nuevos = _valores_nuevos_cargo(cargo)
 
-            es_afectacion = estado_nuevo == CargoPof.EstadoPof.AFECTADO
+            queda_afectado = estado_nuevo == CargoPof.EstadoPof.AFECTADO
             tipo_operacion = (
-                LoteCargaPof.TipoOperacion.AFECTACION
-                if es_afectacion
-                else LoteCargaPof.TipoOperacion.DESAFECTACION
+                LoteCargaPof.TipoOperacion.AFECTADO
+                if queda_afectado
+                else LoteCargaPof.TipoOperacion.DESAFECTADO
             )
             tipo_movimiento = (
-                MovimientoCargoPof.TipoMovimiento.AFECTACION
-                if es_afectacion
-                else MovimientoCargoPof.TipoMovimiento.DESAFECTACION
+                MovimientoCargoPof.TipoMovimiento.AFECTADO
+                if queda_afectado
+                else MovimientoCargoPof.TipoMovimiento.DESAFECTADO
             )
 
             lote = _crear_lote_administrativo(cargo, tipo_operacion, usuario)
@@ -1919,7 +1919,7 @@ def guardar_carga_pof(datos, usuario=None):
                 reunida=reunida,
                 proyecto_especial=proyecto,
                 localizacion=localizacion,
-                tipo_operacion=datos.get("tipo_operacion") or LoteCargaPof.TipoOperacion.ALTA,
+                tipo_operacion=datos.get("tipo_operacion") or LoteCargaPof.TipoOperacion.AFECTADO,
                 usuario=usuario,
             )
 
@@ -1951,7 +1951,11 @@ def guardar_carga_pof(datos, usuario=None):
                     cargo=cargo,
                     lote_carga=lote,
                     snapshot_padron=snapshot,
-                    tipo_movimiento=MovimientoCargoPof.TipoMovimiento.ALTA,
+                    tipo_movimiento=(
+                        MovimientoCargoPof.TipoMovimiento.AFECTADO
+                        if cargo.estado_pof == CargoPof.EstadoPof.AFECTADO
+                        else MovimientoCargoPof.TipoMovimiento.DESAFECTADO
+                    ),
                     estado_anterior="",
                     estado_nuevo=cargo.estado_pof,
                     valores_anteriores={},

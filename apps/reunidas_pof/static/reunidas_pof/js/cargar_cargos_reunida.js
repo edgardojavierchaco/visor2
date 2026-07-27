@@ -1,6 +1,6 @@
     const cargarCargosReunidaConfigElement = document.getElementById("cargarCargosReunidaConfig");
     if (!cargarCargosReunidaConfigElement) {
-        throw new Error("Falta la configuracion de Alta de Cargos de Reunida.");
+        throw new Error("Falta la configuracion de Carga de Cargos de Reunida.");
     }
     const CARGAR_CARGOS_REUNIDA_CONFIG = JSON.parse(cargarCargosReunidaConfigElement.textContent || "{}");
     const URLS_CARGAR_CARGOS_REUNIDA = CARGAR_CARGOS_REUNIDA_CONFIG.urls || {};
@@ -11,7 +11,7 @@
     const URL_GUARDAR_CARGA_POF = URLS_CARGAR_CARGOS_REUNIDA.guardarCargaPof;
     const URL_DETALLE_REUNIDA = URLS_CARGAR_CARGOS_REUNIDA.detalleReunida;
     if (!URL_VALIDAR_REUNIDA || !URL_BUSCAR_PADRON || !URL_BUSCAR_CEIC || !URL_CATALOGO_CEIC || !URL_GUARDAR_CARGA_POF || !URL_DETALLE_REUNIDA) {
-        throw new Error("La configuracion de Alta de Cargos de Reunida esta incompleta.");
+        throw new Error("La configuracion de Carga de Cargos de Reunida esta incompleta.");
     }
     let cabeceraReunidaValidada = false;
     let cabeceraReunida = null;
@@ -1910,7 +1910,7 @@
             anio: cabeceraReunida.anio,
             nivel: cabeceraReunida.nivel,
             proyecto_especial_id: null,
-            tipo_operacion: "ALTA",
+            tipo_operacion: "AFECTADO",
             padron: padronSeleccionado,
             cargos: cargosTemporales.map(cargo => ({
                 ceic: cargo.ceic,
