@@ -308,7 +308,7 @@
             if (["Común", "Especial", "Adultos"].indexOf(texto) !== -1) {
                 return texto;
             }
-            return texto.toLowerCase() === "sin información" ? "Sin Información" : "Otros";
+            return texto.toLowerCase() === "sin información" ? "Común" : "Otros";
         }
 
         function renderOpcionChecklist(value, label, selectedValues) {
@@ -1078,6 +1078,7 @@
         let cueanexo = (params.get("cueanexo") || "").trim();
         let cuof = (params.get("cuof") || "").trim();
         let localizacionId = "";
+        let esReaperturaTrasGestion = false;
         const esProyectoEspecial =
           params.get("cabecera_tipo") === "PROYECTO_ESPECIAL" ||
           Boolean(params.get("proyecto_especial_id"));
@@ -1086,6 +1087,7 @@
           const grupoGuardado = obtenerGrupoParaReapertura();
 
           if (grupoGuardado) {
+            esReaperturaTrasGestion = true;
             localizacionId = grupoGuardado.localizacionId || "";
             cueanexo = grupoGuardado.cueanexo || "";
             cuof = grupoGuardado.cuof || "";
@@ -1110,7 +1112,9 @@
           return;
         }
 
-        button.scrollIntoView({ behavior: "auto", block: "center" });
+        if (!esReaperturaTrasGestion) {
+          button.scrollIntoView({ behavior: "auto", block: "center" });
+        }
         button.focus({ preventScroll: true });
         alternarDetalleGrupo(button);
       }

@@ -34,8 +34,8 @@ def obtener_filtros_historial(request):
 PAGE_SIZE_OPTIONS = (10, 30, 50, 100)
 MAX_CARGOS_HISTORIAL = 100
 TIPOS_MOVIMIENTO_ESTADO = (
-    MovimientoCargoPof.TipoMovimiento.AFECTACION,
-    MovimientoCargoPof.TipoMovimiento.DESAFECTACION,
+    MovimientoCargoPof.TipoMovimiento.AFECTADO,
+    MovimientoCargoPof.TipoMovimiento.DESAFECTADO,
 )
 FLECHA_CAMBIO = "\u2192"
 GUION_VACIO = "\u2014"
@@ -75,6 +75,13 @@ NOMBRES_CAMPOS_RESUMEN = {
     "puntos_asignados": "Puntos",
     "estado_pof": "Estado",
 }
+
+
+def _obtener_tipo_movimiento_display(movimiento):
+    return TIPOS_MOVIMIENTO_LABELS.get(
+        movimiento.tipo_movimiento,
+        movimiento.get_tipo_movimiento_display(),
+    )
 
 
 def _formatear_entero(valor):
@@ -256,7 +263,7 @@ def es_cambio_real_estado_movimiento(movimiento):
     """
     Detecta un cambio real de Estado POF auditable.
 
-    - Acepta solo movimientos de afectación o desafectación.
+    - Acepta solo movimientos Afectado o Desafectado.
     - Compara estado anterior y nuevo con la normalización existente.
     - Ignora movimientos sin cambio efectivo de estado.
     """
@@ -273,9 +280,11 @@ def es_cambio_real_estado_movimiento(movimiento):
     )
 
     return bool(
-        estado_nuevo
+        estado_anterior
+        and estado_nuevo
         and estado_anterior != estado_nuevo
     )
+
 
 def enriquecer_filas_con_historial_cantidad(filas):
     cargo_ids = sorted({
@@ -360,7 +369,7 @@ def enriquecer_filas_con_historial_estado(filas):
     Marca en lote las filas que poseen cambios reales de Estado POF.
 
     - Obtiene todos los cargo_ids de las filas recibidas.
-    - Ejecuta una única consulta para afectaciones y desafectaciones.
+    - Ejecuta una única consulta para movimientos Afectado y Desafectado.
     - Evita consultas N+1 independientemente de la cantidad de filas.
     - Expone `tiene_modificacion_estado` para el preview HTML.
     """
@@ -430,13 +439,29 @@ def _ordenar_claves_diff(claves):
     )
 
 
+def _es_movimiento_afectado_inicial(movimiento):
+    return bool(
+        movimiento.tipo_movimiento
+        == MovimientoCargoPof.TipoMovimiento.AFECTADO
+        and not _valor_comparable("estado_pof", movimiento.estado_anterior)
+    )
+
+
+def _es_movimiento_desafectado_inicial(movimiento):
+    return bool(
+        movimiento.tipo_movimiento
+        == MovimientoCargoPof.TipoMovimiento.DESAFECTADO
+        and not _valor_comparable("estado_pof", movimiento.estado_anterior)
+    )
+
+
 def _construir_diff_movimiento(movimiento):
     """
     Genera el diff visible del movimiento a partir de sus snapshots JSON.
 
     - Compara cada campo con normalización por tipo para evitar falsos positivos.
     - Incluye observación cuando cambió de forma real entre antes y después.
-    - Fuerza la presencia del cambio de estado en afectaciones/desafectaciones.
+    - Fuerza la presencia del cambio en movimientos de estado.
     """
     anteriores = movimiento.valores_anteriores if isinstance(movimiento.valores_anteriores, dict) else {}
     nuevos = movimiento.valores_nuevos if isinstance(movimiento.valores_nuevos, dict) else {}
@@ -445,7 +470,7 @@ def _construir_diff_movimiento(movimiento):
         if str(clave) not in (CAMPOS_EXCLUIDOS_DIFF - {"observacion"})
     )
     diff = []
-    es_alta = movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.ALTA
+    es_afectado_inicial = _es_movimiento_afectado_inicial(movimiento)
 
     for clave in claves:
         anterior_crudo = anteriores.get(clave)
@@ -453,10 +478,10 @@ def _construir_diff_movimiento(movimiento):
         anterior = _formatear_valor_campo(clave, anterior_crudo)
         nuevo = _formatear_valor_campo(clave, nuevo_crudo)
 
-        if _valores_equivalentes(clave, anterior_crudo, nuevo_crudo) and not (es_alta and clave in nuevos and not anteriores):
+        if _valores_equivalentes(clave, anterior_crudo, nuevo_crudo) and not (es_afectado_inicial and clave in nuevos and not anteriores):
             continue
 
-        if es_alta and clave in nuevos and not anteriores:
+        if es_afectado_inicial and clave in nuevos and not anteriores:
             tipo = "agregado"
         elif clave not in nuevos:
             tipo = "eliminado"
@@ -473,10 +498,7 @@ def _construir_diff_movimiento(movimiento):
             "tipo": tipo,
         })
 
-    if movimiento.tipo_movimiento in (
-        MovimientoCargoPof.TipoMovimiento.AFECTACION,
-        MovimientoCargoPof.TipoMovimiento.DESAFECTACION,
-    ):
+    if movimiento.tipo_movimiento in TIPOS_MOVIMIENTO_ESTADO:
         estado_anterior = _formatear_estado_pof(movimiento.estado_anterior)
         estado_nuevo = _formatear_estado_pof(movimiento.estado_nuevo)
         if (
@@ -779,19 +801,26 @@ def generar_detalle_movimiento(movimiento):
     referencia = _referencia_cargo_movimiento(movimiento)
     diff = _construir_diff_movimiento(movimiento)
 
-    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.ALTA:
-        partes = _partes_diff_resumen(diff, "alta")
-        detalle = f"Se añadió el cargo {referencia}."
+    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.AFECTADO:
+        if _es_movimiento_afectado_inicial(movimiento):
+            partes = _partes_diff_resumen(diff, "alta")
+            detalle = f"Se añadió el cargo {referencia}."
+        else:
+            partes = _partes_diff_resumen(diff, "modificacion")
+            detalle = f"Se reactivó el cargo {referencia}."
         return f"{detalle} {'; '.join(partes)}." if partes else detalle
 
-    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.AFECTACION:
-        partes = _partes_diff_resumen(diff, "modificacion")
-        detalle = f"Se reactivó el cargo {referencia}."
-        return f"{detalle} {'; '.join(partes)}." if partes else detalle
-
-    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.DESAFECTACION:
-        partes = _partes_diff_resumen(diff, "modificacion")
-        detalle = f"Se dio de baja el cargo {referencia}."
+    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.DESAFECTADO:
+        es_inicial = _es_movimiento_desafectado_inicial(movimiento)
+        partes = _partes_diff_resumen(
+            diff,
+            "alta" if es_inicial else "modificacion",
+        )
+        detalle = (
+            f"Se añadió el cargo {referencia} en estado Desafectado."
+            if es_inicial
+            else f"Se dio de baja el cargo {referencia}."
+        )
         return f"{detalle} {'; '.join(partes)}." if partes else detalle
 
     partes = _partes_diff_resumen(diff, "modificacion")
@@ -815,19 +844,26 @@ def _resumir_detalle_movimiento(movimiento, proyecto):
     referencia = _referencia_cargo_movimiento(movimiento)
     diff = _construir_diff_movimiento(movimiento)
 
-    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.ALTA:
-        partes = _partes_diff_resumen_compacto(diff, "alta")
-        detalle = f"Se añadió el cargo {referencia}."
+    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.AFECTADO:
+        if _es_movimiento_afectado_inicial(movimiento):
+            partes = _partes_diff_resumen_compacto(diff, "alta")
+            detalle = f"Se añadió el cargo {referencia}."
+        else:
+            partes = _partes_diff_resumen_compacto(diff, "modificacion")
+            detalle = f"Se reactivó el cargo {referencia}."
         return f"{detalle} {'; '.join(partes)}." if partes else detalle
 
-    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.AFECTACION:
-        partes = _partes_diff_resumen_compacto(diff, "modificacion")
-        detalle = f"Se reactivó el cargo {referencia}."
-        return f"{detalle} {'; '.join(partes)}." if partes else detalle
-
-    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.DESAFECTACION:
-        partes = _partes_diff_resumen_compacto(diff, "modificacion")
-        detalle = f"Se dio de baja el cargo {referencia}."
+    if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.DESAFECTADO:
+        es_inicial = _es_movimiento_desafectado_inicial(movimiento)
+        partes = _partes_diff_resumen_compacto(
+            diff,
+            "alta" if es_inicial else "modificacion",
+        )
+        detalle = (
+            f"Se añadió el cargo {referencia} en estado Desafectado."
+            if es_inicial
+            else f"Se dio de baja el cargo {referencia}."
+        )
         return f"{detalle} {'; '.join(partes)}." if partes else detalle
 
     partes = _partes_diff_resumen_compacto(diff, "modificacion")
@@ -846,7 +882,7 @@ def _preparar_movimiento_para_listado(movimiento):
     movimiento.localizacion_resumen = _serializar_localizacion_listado(movimiento)
     movimiento.usuario_movimiento = _serializar_usuario_movimiento(movimiento.usuario)
     movimiento.tiene_observacion_real = bool(_normalizar_observacion_real(movimiento.observacion))
-    movimiento.tipo_movimiento_display = movimiento.get_tipo_movimiento_display()
+    movimiento.tipo_movimiento_display = _obtener_tipo_movimiento_display(movimiento)
     movimiento.tipo_movimiento_clase = movimiento.tipo_movimiento.lower()
 
 
@@ -919,7 +955,7 @@ def obtener_ultimos_movimientos_reunida(anio, nivel, limite=5):
             "usuario": str(movimiento.usuario) if movimiento.usuario else GUION_VACIO,
             "cueanexo": movimiento.cargo.localizacion.cueanexo or GUION_VACIO,
             "ceic": movimiento.cargo.ceic,
-            "movimiento": movimiento.get_tipo_movimiento_display(),
+            "movimiento": _obtener_tipo_movimiento_display(movimiento),
             "detalle": generar_detalle_movimiento(movimiento),
         }
         for movimiento in movimientos
@@ -941,7 +977,7 @@ def obtener_ultimos_movimientos_proyecto(proyecto_especial_id, limite=5):
             "usuario": str(movimiento.usuario) if movimiento.usuario else GUION_VACIO,
             "cueanexo": movimiento.cargo.localizacion.cueanexo or GUION_VACIO,
             "ceic": movimiento.cargo.ceic,
-            "movimiento": movimiento.get_tipo_movimiento_display(),
+            "movimiento": _obtener_tipo_movimiento_display(movimiento),
             "detalle": generar_detalle_movimiento(movimiento),
         }
         for movimiento in movimientos
@@ -1293,7 +1329,7 @@ def obtener_historial_observacion_cargos_pof(cargo_ids_recibidos):
 
 def obtener_historial_estado_cargos_pof(cargo_ids_recibidos):
     """
-    Obtiene el historial real de afectaciones y desafectaciones de una fila.
+    Obtiene el historial real de cambios entre Afectado y Desafectado.
 
     - Acepta uno o varios cargo_ids de una misma fila consolidada.
     - Valida existencia y coherencia antes de consultar movimientos.
@@ -1413,7 +1449,7 @@ def obtener_detalle_movimiento_pof(movimiento_id):
         "usuario": usuario_movimiento["nombre"],
         "usuario_movimiento": usuario_movimiento,
         "tipo_movimiento": movimiento.tipo_movimiento,
-        "tipo_movimiento_display": movimiento.get_tipo_movimiento_display(),
+        "tipo_movimiento_display": _obtener_tipo_movimiento_display(movimiento),
         "estado_anterior": _formatear_estado_pof(movimiento.estado_anterior),
         "estado_nuevo": _formatear_estado_pof(movimiento.estado_nuevo),
         "observacion": _valor_serializable(_normalizar_observacion_real(movimiento.observacion)),

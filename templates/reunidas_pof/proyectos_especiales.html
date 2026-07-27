@@ -152,8 +152,8 @@
                                 {% endif %}
                             </td>
                             <td class="pof-grid-cell-center">
-                                {% if proyecto.actualizado_en %}
-                                    {{ proyecto.actualizado_en|date:"d/m/Y H:i" }}
+                                {% if proyecto.ultima_modificacion %}
+                                    {{ proyecto.ultima_modificacion|date:"d/m/Y H:i" }}
                                 {% else %}
                                     -
                                 {% endif %}

@@ -1,6 +1,6 @@
     const cargarCargosProyectoEspecialConfigElement = document.getElementById("cargarCargosProyectoEspecialConfig");
     if (!cargarCargosProyectoEspecialConfigElement) {
-        throw new Error("Falta la configuracion de Alta de Cargos de Proyecto Especial.");
+        throw new Error("Falta la configuracion de Carga de Cargos de Proyecto Especial.");
     }
     const CARGAR_CARGOS_PROYECTO_ESPECIAL_CONFIG = JSON.parse(cargarCargosProyectoEspecialConfigElement.textContent || "{}");
     const PROYECTO_ESPECIAL = Object.assign({ id: "", anio: "", nombre: "", resolucion: "" }, CARGAR_CARGOS_PROYECTO_ESPECIAL_CONFIG.proyectoEspecial || {});
@@ -13,7 +13,7 @@
     const URL_GUARDAR_CARGA_PE = URLS_CARGAR_CARGOS_PROYECTO_ESPECIAL.guardarCarga;
     const URL_DETALLE_REUNIDA = URLS_CARGAR_CARGOS_PROYECTO_ESPECIAL.detalleReunida;
     if (!URL_BUSCAR_PADRON_PE || !URL_CATALOGOS_MANUAL_PE || !URL_BUSCAR_CUOF_MANUAL_PE || !URL_CATALOGO_CEIC_PE || !URL_GUARDAR_CARGA_PE || !URL_DETALLE_REUNIDA) {
-        throw new Error("La configuracion de Alta de Cargos de Proyecto Especial esta incompleta.");
+        throw new Error("La configuracion de Carga de Cargos de Proyecto Especial esta incompleta.");
     }
     const MENSAJE_ERROR_GENERAL_CABECERA = "No se pudo validar la cabecera. Revisá los campos marcados.";
     const MENSAJE_ERROR_PROYECTO = "Seleccioná un Proyecto Especial POF.";
@@ -822,10 +822,6 @@
 
             resultadosPadronActuales = Array.isArray(data.resultados) ? data.resultados : [];
             renderizarResultadosPadron(resultadosPadronActuales);
-
-            if (resultadosPadronActuales.length > 0) {
-                cueBaseInput.disabled = true;
-            }
 
             mostrarEstado(estadoPadron, "ok", `Se encontraron ${resultadosPadronActuales.length} oferta(s) oficiales.`);
         } catch (error) {
@@ -2369,7 +2365,7 @@
         return {
             cabecera_tipo: "PROYECTO_ESPECIAL",
             proyecto_especial_id: PROYECTO_ESPECIAL.id,
-            tipo_operacion: "ALTA",
+            tipo_operacion: "AFECTADO",
             modo_padron: seleccionConfirmadaEsPadron() ? MODO_PADRON : MODO_MANUAL,
             padron: padronSeleccionado,
             cargos: cargosTemporales.map(cargo => ({

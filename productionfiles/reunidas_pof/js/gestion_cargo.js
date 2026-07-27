@@ -61,6 +61,7 @@
   let triggerActivo = null;
   let ofertasDisponibles = [];
   let requiereOfertas = false;
+  let advertenciaCantidadCeroVisible = false;
 
   function buildUrl(base, cargoId) {
     return base.replace("/0/", "/" + cargoId + "/");
@@ -140,8 +141,22 @@
 
   function alternarEstadoPendiente() {
     const estadoCampo = document.getElementById("cargoGestionEstado");
+    const vaAAfectar = estadoCampo.value === "DESAFECTADO";
+    const cantidad = Number(
+      document.getElementById("cargoGestionCantidad").value,
+    );
+    if (vaAAfectar && (!Number.isInteger(cantidad) || cantidad <= 0)) {
+      api.showStatus(
+        estado,
+        "error",
+        "Cantidad: Para afectar el cargo, la cantidad debe ser superior a 0.",
+      );
+      return;
+    }
+
     estadoCampo.value =
-      estadoCampo.value === "DESAFECTADO" ? "AFECTADO" : "DESAFECTADO";
+      vaAAfectar ? "AFECTADO" : "DESAFECTADO";
+    api.clearStatus(estado);
     actualizarEstadoVisual();
     marcarCamposModificados();
   }
@@ -260,8 +275,7 @@
       return;
     }
 
-    ofertasOpciones.innerHTML = ofertasDisponibles
-      .map(function (oferta, index) {
+    function renderizarOpcionOferta(oferta, index) {
         const nombre = obtenerNombreOferta(oferta) || "Oferta sin identificar";
         const cuof = obtenerCampoOferta(oferta, ["cuof_loc", "cuof"]);
         return `
@@ -275,8 +289,49 @@
             </span>
           </label>
         `;
-      })
-      .join("");
+    }
+
+    const ofertasIndexadas = ofertasDisponibles.map(function (oferta, index) {
+      return { oferta, index };
+    });
+    const clasificaPorReunida = ofertasDisponibles.some(function (oferta) {
+      return Object.prototype.hasOwnProperty.call(oferta, "oferta_sugerida");
+    });
+
+    if (clasificaPorReunida) {
+      const sugeridas = ofertasIndexadas.filter(function (item) {
+        return item.oferta.oferta_sugerida === true;
+      });
+      const otras = ofertasIndexadas.filter(function (item) {
+        return item.oferta.oferta_sugerida !== true;
+      });
+      const renderizarGrupo = function (titulo, items, mensajeVacio) {
+        const opciones = items.length
+          ? items
+              .map(function (item) {
+                return renderizarOpcionOferta(item.oferta, item.index);
+              })
+              .join("")
+          : `<div class="pof-admin-offers-empty">${escaparHtml(mensajeVacio)}</div>`;
+        return `
+          <div class="pof-admin-offers-empty"><strong>${escaparHtml(titulo)}</strong></div>
+          ${opciones}
+        `;
+      };
+
+      ofertasOpciones.innerHTML =
+        renderizarGrupo(
+          "Ofertas sugeridas",
+          sugeridas,
+          "No hay ofertas sugeridas para el nivel de la Reunida.",
+        ) + renderizarGrupo("Otras ofertas", otras, "No hay otras ofertas.");
+    } else {
+      ofertasOpciones.innerHTML = ofertasIndexadas
+        .map(function (item) {
+          return renderizarOpcionOferta(item.oferta, item.index);
+        })
+        .join("");
+    }
     actualizarResumenOfertas();
   }
 
@@ -374,6 +429,23 @@
     ).toFixed(2);
   }
 
+  function actualizarAdvertenciaCantidadCero() {
+    const cantidad = document.getElementById("cargoGestionCantidad").value;
+    if (/^0+$/.test(cantidad)) {
+      api.showStatus(
+        estado,
+        "warning",
+        "Advertencia: la cantidad es 0. Al guardar los cambios, el cargo quedará automáticamente DESAFECTADO.",
+      );
+      advertenciaCantidadCeroVisible = true;
+      return;
+    }
+    if (advertenciaCantidadCeroVisible) {
+      api.clearStatus(estado);
+      advertenciaCantidadCeroVisible = false;
+    }
+  }
+
   function aplicarCargo(cargo) {
     cargoActual = cargo;
     document.getElementById("cargoGestionId").value = cargo.id;
@@ -436,6 +508,7 @@
 
     setEnviando(false);
     api.clearStatus(estado);
+    advertenciaCantidadCeroVisible = false;
 
     if (triggerAnterior && document.contains(triggerAnterior)) {
       triggerAnterior.focus({ preventScroll: true });
@@ -463,6 +536,7 @@
       const data = await api.requestJson(buildUrl(detalleUrlBase, cargoId));
       aplicarCargo(data.data.cargo);
       api.clearStatus(estado);
+      actualizarAdvertenciaCantidadCero();
     } catch (error) {
       api.showStatus(estado, "error", api.formatError(error));
       api.logError("cargar cargo gestion", error);
@@ -561,6 +635,7 @@
     campo.addEventListener("input", function () {
       if (id === "cargoGestionCantidad") {
         actualizarTotal();
+        actualizarAdvertenciaCantidadCero();
       }
       if (id === "cargoGestionEstado") {
         actualizarEstadoVisual();
@@ -617,7 +692,7 @@
     }
 
     const cantidad = document.getElementById("cargoGestionCantidad").value;
-    if (!/^[1-9]\d*$/.test(cantidad)) {
+    if (!/^\d+$/.test(cantidad)) {
       api.showStatus(
         estado,
         "error",
@@ -626,7 +701,7 @@
       return;
     }
 
-    const estadoPof = document.getElementById("cargoGestionEstado").value;
+    let estadoPof = document.getElementById("cargoGestionEstado").value;
     if (!["AFECTADO", "DESAFECTADO"].includes(estadoPof)) {
       api.showStatus(
         estado,
@@ -634,6 +709,11 @@
         "Estado: El estado indicado no es válido.",
       );
       return;
+    }
+    if (Number(cantidad) === 0 && estadoPof !== "DESAFECTADO") {
+      estadoPof = "DESAFECTADO";
+      document.getElementById("cargoGestionEstado").value = estadoPof;
+      actualizarEstadoVisual();
     }
 
     const payload = {

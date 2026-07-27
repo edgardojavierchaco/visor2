@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
 from django.db import DatabaseError, OperationalError, ProgrammingError
-from django.db.models import Prefetch, Q
+from django.db.models import Max, Prefetch, Q
 from django.utils import timezone
 from .filtros_pof_service import (
     MENSAJE_FILTROS_INVALIDOS,
@@ -196,12 +196,24 @@ FILTROS_AVANZADOS_NUMERICOS_DETALLE = {
 
 
 def serializar_reunida(reunida):
+    ultima_modificacion = reunida.actualizado_en
+    ultima_modificacion_historial = getattr(
+        reunida,
+        "ultima_modificacion_historial",
+        None,
+    )
+    if ultima_modificacion_historial and (
+        ultima_modificacion is None
+        or ultima_modificacion_historial > ultima_modificacion
+    ):
+        ultima_modificacion = ultima_modificacion_historial
+
     return {
         "id": reunida.id,
         "anio": reunida.anio,
         "nivel_codigo": reunida.nivel,
         "nivel_nombre": reunida.get_nivel_display(),
-        "actualizado_en": reunida.actualizado_en,
+        "actualizado_en": ultima_modificacion,
     }
 
 
@@ -271,7 +283,11 @@ def construir_contexto_reunidas(request):
     if page_size not in PAGE_SIZE_OPTIONS:
         page_size = 10
 
-    reunidas = ReunidaPof.objects.all()
+    reunidas = ReunidaPof.objects.annotate(
+        ultima_modificacion_historial=Max(
+            "localizaciones__cargos__movimientos__fecha"
+        )
+    )
 
     if errores_filtros:
         reunidas = reunidas.none()

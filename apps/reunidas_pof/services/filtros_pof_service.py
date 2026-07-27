@@ -17,10 +17,9 @@ VISTAS_RAPIDAS = {
 }
 
 TIPOS_MOVIMIENTO_LABELS = {
-    "ALTA": "Alta",
+    "AFECTADO": "Afectado",
     "MODIFICACION": "Modificación",
-    "AFECTACION": "Afectación",
-    "DESAFECTACION": "Desafectación",
+    "DESAFECTADO": "Desafectado",
 }
 
 NIVEL_TODOS = "__todos__"

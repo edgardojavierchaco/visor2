@@ -237,6 +237,8 @@ OPERADOR_SQL = {
     '7': ('!=', lambda v: v),
 }
 
+TIPO_OFERTA_EXACT_OPERATOR = '8'
+
 _ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
 _UNACCENTED_CHARS = 'AEIOUUNaeiouun'
 _ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
@@ -289,6 +291,20 @@ def _split_tipo_oferta_filter_params(oper, values):
     return tipo_param_groups, estado_params
 
 
+def _exact_tipo_oferta_filter_values(values):
+    normalized_values = []
+    seen = set()
+
+    for value in values:
+        folded = _fold_filter_text(value)
+        if not folded or _is_oferta_estado_filter_value(value) or folded in seen:
+            continue
+        seen.add(folded)
+        normalized_values.append(folded)
+
+    return normalized_values
+
+
 def _tipo_oferta_clause_operator(oper):
     if oper in {'0', '1'}:
         return 'LIKE'
@@ -320,6 +336,17 @@ def _tipo_oferta_filter_clause(oper, tipo_value_counts=None, estado_count=0):
 
 
 def _append_tipo_oferta_filter(clauses, params, oper, values):
+    if oper == TIPO_OFERTA_EXACT_OPERATOR:
+        exact_values = _exact_tipo_oferta_filter_values(values)
+        if not exact_values:
+            clauses.append('FALSE')
+            return
+
+        placeholders = ', '.join(['%s'] * len(exact_values))
+        clauses.append(f"{_folded_sql('ol.oferta')} IN ({placeholders})")
+        params.extend(exact_values)
+        return
+
     tipo_param_groups, estado_params = _split_tipo_oferta_filter_params(oper, values)
     if not tipo_param_groups and not estado_params:
         return
@@ -348,7 +375,17 @@ def _build_where(request):
         oper = opers[i] if i < len(opers) else '0'
         valor = valores[i].strip() if i < len(valores) else ''
 
-        if campo and valor and campo in CAMPO_SQL:
+        if not campo or campo not in CAMPO_SQL:
+            continue
+
+        if campo == 'tipo_oferta' and oper == TIPO_OFERTA_EXACT_OPERATOR:
+            group_key = (campo, oper)
+            grouped_positive_filters.setdefault(group_key, [])
+            if valor and valor not in grouped_positive_filters[group_key]:
+                grouped_positive_filters[group_key].append(valor)
+            continue
+
+        if valor:
             if oper in {'0', '2'}:
                 group_key = (campo, oper)
                 grouped_positive_filters.setdefault(group_key, [])
@@ -441,6 +478,7 @@ def _armar_texto_filtros(request):
         '5': 'menor a',
         '6': 'menor o igual a',
         '7': 'distinto de',
+        '8': 'coincide exactamente con',
     }
 
     _nombres_campos_legacy = {
