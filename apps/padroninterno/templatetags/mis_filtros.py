@@ -2,16 +2,9 @@ from django import template
 
 register = template.Library()
 
-@register.filter
-def get_item(dictionary, key):
-    """
-    Permite acceder a un diccionario con una key dinámica en el template.
-    Ejemplo: {{ mi_diccionario|get_item:variable_key }}
-    """
-    if isinstance(dictionary, dict):
-        return dictionary.get(key)
-    return getattr(dictionary, str(key), None)
 
+# Tag usado por los templates para conservar filtros/paginacion en links.
+# Recibe nuevos parametros y devuelve una querystring actualizada.
 @register.simple_tag
 def query_transform(request, **kwargs):
     """
@@ -20,8 +13,10 @@ def query_transform(request, **kwargs):
     """
     updated = request.GET.copy()
     for k, v in kwargs.items():
+        # Valor no nulo: se agrega o reemplaza el parametro.
         if v is not None:
             updated[k] = v
+        # Valor nulo: se elimina el parametro de la URL.
         else:
             updated.pop(k, 0)
     return updated.urlencode()

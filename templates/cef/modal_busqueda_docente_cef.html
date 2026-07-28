@@ -64,6 +64,11 @@
 
     .cef-docente-close:hover { color: #fff; }
 
+    .cef-docente-close:focus-visible {
+        box-shadow: 0 0 0 3px rgba(147,197,253,.45);
+        outline: none;
+    }
+
     .cef-docente-modal-body {
         max-height: calc(100vh - 130px);
         overflow-y: auto;
@@ -121,6 +126,11 @@
         padding: .2rem 0;
     }
 
+    .cef-docente-input-wrap:focus-within {
+        border-color: var(--primary, #2d7dd2);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.13);
+    }
+
     .cef-docente-search-btn {
         align-items: center;
         display: inline-flex;
@@ -156,9 +166,9 @@
     }
 
     .cef-docente-table th {
-        background: #f8fafc;
-        border-bottom: 2px solid #bfdbfe;
-        color: #475569;
+        background: var(--surface-muted, #eef2f6);
+        border-bottom: 2px solid var(--border-strong, #94a3b8);
+        color: var(--slate-700, #334155);
         font-size: .7rem;
         font-weight: 700;
         letter-spacing: .07em;
@@ -169,11 +179,14 @@
     }
 
     .cef-docente-table td {
-        border-bottom: 1px solid #e2e8f0;
-        color: #334155;
+        border-bottom: 1px solid var(--slate-200, #e2e8f0);
+        color: var(--slate-700, #334155);
         padding: .65rem .75rem;
         vertical-align: middle;
     }
+
+    .cef-docente-table tbody tr:nth-child(even) { background: var(--slate-50, #f8fafc); }
+    .cef-docente-table tbody tr:hover { background: var(--blue-50, #eff6ff); }
 
     .cef-docente-msg {
         align-items: center;

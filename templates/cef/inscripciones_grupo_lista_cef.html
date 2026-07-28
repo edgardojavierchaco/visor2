@@ -1,3 +1,4 @@
+<div class="cef-table-section" data-cef-table-root>
 <div class="cef-tools">
     <div class="cef-tools-left">
         <span class="cef-tools-label">Mostrar</span>
@@ -35,7 +36,7 @@
             </thead>
             <tbody>
                 {% for inscripcion in inscripciones %}
-                    <tr>
+                    <tr class="{% if inscripcion.estado != 'activo' %}cef-row-inactive{% endif %}">
                         <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
                         <td>{{ inscripcion.alumno.nro_doc }}</td>
                         <td>{{ inscripcion.alumno.cuil|default:"—" }}</td>
@@ -58,7 +59,7 @@
                                          {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                         <input type="hidden" name="accion" value="baja_alumno">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
-                                        <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                        <button class="btn btn-outline-danger btn-sm" type="submit">
                                              <i class="fa-solid fa-user-minus"></i> Dar de baja
                                          </button>
                                      </form>
@@ -91,4 +92,5 @@
 <div class="cef-tfoot">
     <span class="cef-tfoot-count" data-cef-table-count>{{ inscripciones|length }} registros</span>
     <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+</div>
 </div>

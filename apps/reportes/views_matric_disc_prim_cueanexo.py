@@ -4,18 +4,13 @@ import dotenv
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from .db_helpers import conectar_ra, obtener_dblink_visualizador
 
 # Función para conectar a la base de datos
 def conectar_bd(request):
     try:
-        connection = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD'),
-            database=os.getenv('DB_NAME2') 
-        )
-        return connection
-    except psycopg2.Error as e:
+        return conectar_ra()
+    except psycopg2.Error:
         return None
 
 # Vista para mostrar la página/formulario inicialmente
@@ -47,6 +42,13 @@ def matric_disc_prim_ajax(request):
 
         try:
             cursor = connection.cursor()
+
+            dblink_conn = obtener_dblink_visualizador()
+
+            dblink_sql = """
+                SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc
+                FROM public.v_capa_unica_ofertas_ant
+            """
 
             # =================================================================================================
             # BLINDAJE DE DATOS: EXPRESIONES REGULARES (REGEX) PARA COLUMNAS NUMÉRICAS
@@ -112,15 +114,15 @@ def matric_disc_prim_ajax(request):
                         localidad
                     FROM 
                         dblink(
-                            'dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                            'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant'
-                        ) AS padron(cueanexo character varying, nom_est character varying, ambito character varying, sector character varying, departamento character varying, localidad character varying, region_loc character varying)
+                        %s,
+                        %s
+                    ) AS padron(cueanexo character varying, nom_est character varying, ambito character varying, sector character varying, departamento character varying, localidad character varying, region_loc character varying)
                 ) AS p
                 ON mc.cueanexo = p.cueanexo
                 WHERE 1=1
             """
 
-            parameters = []       
+            parameters = [dblink_conn, dblink_sql]   
             if cueanexo:
                 query += " AND mc.cueanexo = %s"
                 parameters.append(cueanexo) 
@@ -217,6 +219,13 @@ def filter_data_matric_disc_prim_cueanexo(request):
 
         cursor = connection.cursor()
 
+        dblink_conn = obtener_dblink_visualizador()
+
+        dblink_sql = """
+            SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc
+            FROM public.v_capa_unica_ofertas_ant
+        """
+
         query = f"""
             SELECT 
                 mc.cueanexo, 
@@ -252,15 +261,15 @@ def filter_data_matric_disc_prim_cueanexo(request):
                     localidad
                 FROM 
                     dblink(
-                        'dbname=visualizador user=visualizador password=Estadisticas24 host=visoreducativochaco.com.ar port=5432',
-                        'SELECT DISTINCT cueanexo, nom_est, ambito, sector, departamento, localidad, region_loc FROM public.v_capa_unica_ofertas_ant'
+                     %s,
+                      %s
                     ) AS padron(cueanexo character varying, nom_est character varying, ambito character varying, sector character varying, departamento character varying, localidad character varying, region_loc character varying)
-            ) AS p
+                ) AS p
             ON mc.cueanexo = p.cueanexo
             WHERE 1=1
         """
 
-        parameters = []       
+        parameters = [dblink_conn, dblink_sql]       
         if cueanexo:
             query += " AND mc.cueanexo = %s"
             parameters.append(cueanexo) 

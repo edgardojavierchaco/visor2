@@ -109,4 +109,10 @@ def get_redirect_url(user):
     if ctx.rol == 'Aplicador':
         return 'directores:institucional'
 
+    if ctx.rol == 'Infraestructura':
+        return 'archivos:portada_gestor'
+
+    if ctx.rol == 'Pof':
+        return 'archivos:portada_gestor'
+
     return None

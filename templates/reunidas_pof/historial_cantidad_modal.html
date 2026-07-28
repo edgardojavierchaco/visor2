@@ -1,0 +1,34 @@
+<div class="pof-modal-backdrop pof-hidden"
+     aria-hidden="true"
+     data-pof-quantity-history-modal
+     data-url="{% url 'reunidas_pof:historial_cantidad_cargos_pof' %}">
+    <div class="pof-modal pof-history-modal pof-quantity-history-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="pofQuantityHistoryTitle">
+        <div class="pof-modal-header">
+            <div>
+                <h2 id="pofQuantityHistoryTitle">Historial de cantidad</h2>
+                <p class="pof-help">Cambios reales registrados para la cantidad del cargo.</p>
+            </div>
+            <button type="button"
+                    class="pof-modal-close"
+                    aria-label="Cerrar"
+                    data-pof-quantity-history-close>&times;</button>
+        </div>
+
+        <div class="pof-detail-grid pof-quantity-history-summary pof-hidden"
+             data-pof-quantity-history-summary></div>
+        <div class="pof-status pof-api-status"
+             role="status"
+             aria-live="polite"
+             data-pof-quantity-history-status></div>
+        <div data-pof-quantity-history-content></div>
+
+        <div class="pof-modal-actions">
+            <button type="button"
+                    class="pof-btn pof-btn-light"
+                    data-pof-quantity-history-close>Cerrar</button>
+        </div>
+    </div>
+</div>
