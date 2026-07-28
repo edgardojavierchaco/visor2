@@ -1,3 +1,4 @@
+<div class="cef-table-section" data-cef-table-root>
 <div class="cef-tools">
     <div class="cef-tools-left">
         <span class="cef-tools-label">Mostrar</span>
@@ -43,7 +44,7 @@
             </thead>
             <tbody>
                 {% for asignacion in docentes %}
-                    <tr class="{% if asignacion.estado != 'activo' %}table-light text-muted{% endif %}">
+                    <tr class="{% if asignacion.estado != 'activo' %}cef-row-inactive{% endif %}">
                         <td><strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong></td>
                         <td>{{ asignacion.docente_cuil }}</td>
                         <td>{{ asignacion.docente_dni_snapshot|default:"-" }}</td>
@@ -68,7 +69,7 @@
                                      {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                     <input type="hidden" name="accion" value="{% if gestionar_grupo_modo %}baja_docente{% else %}baja{% endif %}">
                                     <input type="hidden" name="docente_grupo_id" value="{{ asignacion.pk }}">
-                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                    <button class="btn btn-outline-danger btn-sm" type="submit">
                                          <i class="fa-solid fa-user-minus"></i> Dar de baja
                                      </button>
                                  </form>
@@ -99,6 +100,7 @@
 {% endif %}
 
 <div class="cef-tfoot">
-    <span class="cef-tfoot-count">{{ docentes_activos_count|default:0 }} activos / {{ docentes|length }} total</span>
+    <span class="cef-tfoot-count" data-cef-table-count="active-total">{{ docentes_activos_count|default:0 }} activos / {{ docentes|length }} total</span>
     <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+</div>
 </div>

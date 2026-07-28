@@ -51,21 +51,10 @@ def consulta_carrerastitulos(request):
 
     # lógica para obtener los datos según los filtros seleccionados
     query = """
-        SELECT DISTINCT ON (cueanexo)
-            cueanexo,
-            nom_est,
-            sector,
-            calle,
-            numero,
-            telefono_loc,
-            email_loc,
-            localidad,
-            carrera,
-            titulo,
-            niveltitulotipo
+        SELECT DISTINCT cueanexo, nom_est, sector, calle, numero, telefono_loc, email_loc, localidad, carrera, titulo, niveltitulotipo
         FROM public.carreras_titulos
-        WHERE est_oferta='Activo'
-        """
+        WHERE est_oferta = 'Activo'
+    """
     if selected_localidades:
         query += f" AND localidad IN ({localidades_str})"
     if selected_nivel:
@@ -73,10 +62,7 @@ def consulta_carrerastitulos(request):
     if selected_titulo:
         query += f" AND titulo='{selected_titulo}'"
     
-    query += """
-        ORDER BY cueanexo,
-                nom_est
-        """
+    
     with connection.cursor() as cursor:
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -150,27 +136,13 @@ def dashboard_carreras(request):
     # -----------------------------
     # Datos para la tabla
     # -----------------------------
-    query = """
-        SELECT
-            cueanexo,
-            MAX(nom_est) AS nom_est,
-            MAX(sector) AS sector,
-            MAX(localidad) AS localidad,
-            MAX(niveltitulotipo) AS niveltitulotipo
-        FROM public.carreras_titulos
-        WHERE est_oferta='Activo'
-        """
+    query = "SELECT cueanexo, nom_est, sector, localidad, niveltitulotipo FROM public.carreras_titulos WHERE est_oferta='Activo'"
     if selected_localidades:
         query += f" AND localidad IN ({loc_str})"
     if selected_nivel:
         query += f" AND niveltitulotipo='{selected_nivel}'"
     if selected_titulo:
         query += f" AND titulo='{selected_titulo}'"
-    
-    query += """
-        GROUP BY cueanexo
-        ORDER BY nom_est
-        """
 
     with connection.cursor() as cursor:
         cursor.execute(query)
@@ -244,7 +216,7 @@ def datoscarreras(request):
             AND cueanexo=%s
         """, [cueanexo])
 
-        resultado = cursor.fetchall()
+        resultado = cursor.fetchone()
 
     if not resultado:
         return JsonResponse({'error': 'No se encontraron datos'}, status=404)

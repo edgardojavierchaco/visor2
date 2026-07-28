@@ -5,7 +5,7 @@
 {% block cef_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Inventario <span>» Gestión de Inventario</span></h2>
+        <h2 class="cef-panel-title">Inventario</h2>
         <div class="cef-panel-actions">
             <a class="btn btn-primary" href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}accion=agregar">
                 <i class="fa-solid fa-plus"></i> Agregar material
@@ -14,6 +14,7 @@
     </div>
 
     <div class="cef-panel-body">
+        <div class="cef-table-section" data-cef-table-root>
         <div class="cef-tools">
             <div class="cef-tools-left">
                 <span class="cef-tools-label">Mostrar</span>
@@ -82,6 +83,7 @@
         <div class="cef-tfoot">
             <span class="cef-tfoot-count" data-cef-table-count>{{ inventario|length }} registros</span>
             <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+        </div>
         </div>
     </div>
 </div>

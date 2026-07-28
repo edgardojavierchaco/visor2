@@ -1,0 +1,37 @@
+<div class="pof-modal-backdrop pof-hidden"
+     aria-hidden="true"
+     data-pof-observation-history-modal
+     data-url="{% url 'reunidas_pof:historial_observacion_cargos_pof' %}">
+    <div class="pof-modal pof-history-modal pof-quantity-history-modal pof-observation-history-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="pofObservationHistoryTitle">
+        <div class="pof-modal-header">
+            <div>
+                <h2 id="pofObservationHistoryTitle">Historial de observaci&oacute;n</h2>
+                <p class="pof-help">Cambios reales registrados para la observaci&oacute;n del cargo.</p>
+            </div>
+            <button type="button"
+                    class="pof-modal-close"
+                    aria-label="Cerrar"
+                    data-pof-observation-history-close>&times;</button>
+        </div>
+
+        <div class="pof-detail-grid pof-quantity-history-summary pof-hidden"
+             data-pof-observation-history-summary
+             data-pof-quantity-history-summary></div>
+        <div class="pof-status pof-api-status"
+             role="status"
+             aria-live="polite"
+             data-pof-observation-history-status
+             data-pof-quantity-history-status></div>
+        <div data-pof-observation-history-content
+             data-pof-quantity-history-content></div>
+
+        <div class="pof-modal-actions">
+            <button type="button"
+                    class="pof-btn pof-btn-light"
+                    data-pof-observation-history-close>Cerrar</button>
+        </div>
+    </div>
+</div>

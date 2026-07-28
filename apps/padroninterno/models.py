@@ -12,6 +12,7 @@ from django.db import models
 
 
 class PadronRolUsuario(models.Model):
+    # Refleja los roles globales usados por el sistema de usuarios.
     nombre = models.CharField(max_length=100)
 
     class Meta:
@@ -25,6 +26,7 @@ class PadronRolUsuario(models.Model):
 
 
 class PadronUsuarioPerfil(models.Model):
+    # Relaciona el usuario autenticado con su rol global.
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.DO_NOTHING,
@@ -59,6 +61,7 @@ class PadronUsuarioPerfil(models.Model):
 # views_*.py -> solo usan el decorador
 
 ROLES_PADRON_INTERNO = {
+    # Roles habilitados para entrar al modulo Padron Interno.
     'Administrador',
     'Gestor',
     'Ministro',
@@ -76,6 +79,7 @@ ROLES_PADRON_INTERNO = {
     'Director de Servicios Complementarios',
     'Regional',
     'Supervisor',
+    'Evaluacion',
 }
 
 
@@ -88,6 +92,7 @@ def obtener_rol_usuario_padron(user):
         return None
 
     try:
+        # Busca el perfil por username para enlazar contra la tabla global existente.
         perfil = (
             PadronUsuarioPerfil.objects
             .select_related('rol')
@@ -107,14 +112,17 @@ def usuario_puede_ver_padron_interno(user):
     if not rol:
         return False
 
+    # El acceso queda centralizado en la lista ROLES_PADRON_INTERNO.
     return rol in ROLES_PADRON_INTERNO
 
 
 def usuario_es_admin_padron(user):
+    # Helper usado para mostrar acciones administrativas en pantalla.
     return obtener_rol_usuario_padron(user) == "Administrador"
 
 
 class FechaActualizacionPadronInterno(models.Model):
+    # Tabla externa que guarda la fecha visible en las pantallas del padron.
     id = models.IntegerField(primary_key=True)
     fecha = models.DateTimeField(verbose_name='Fecha de Actualización')
 

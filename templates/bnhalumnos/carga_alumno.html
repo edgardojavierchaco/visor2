@@ -1,4 +1,4 @@
-{% extends "archivos/base/layout.html" %}
+﻿{% extends "archivos/base/layout.html" %}
 {% block content %}
 {# Estas URLs son el puente entre el template y urls.py: Django las resuelve por nombre y las deja listas para JavaScript. #}
 {% url "bnhalumnos:buscar_alumno_cuil" as url_buscar_alumno %}
@@ -310,6 +310,7 @@
     .bnh-btn-danger { background: #fff; border-color: #fecaca; color: #dc2626; padding: .28rem .55rem; }
     /* Mensajes generales mostrados por JavaScript tras validaciones o guardado. */
     .bnh-alert { display: none; margin: 0 0 1rem; border-radius: .45rem; padding: .75rem .9rem; font-size: .87rem; font-weight: 650; border: 1px solid transparent; white-space: pre-line; }
+    #bnhAlertBottom { margin: 0 1.25rem 1rem; }
     .bnh-alert.show { display: block; }
     .bnh-alert-info { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
     .bnh-alert-ok { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
@@ -1448,7 +1449,7 @@ function blindarAutofillBnh(input, token) {
                 <!-- CUIL es el disparador de búsqueda/autocompletado del alumno. -->
                 <div class="bnh-field bnh-col-6">
                     <label class="bnh-required">CUIL / CUIT</label>
-                    <input type="text" data-field="cuil" maxlength="11" placeholder="Sin guiones ni espacios" required>
+                    <input type="text" data-field="cuil" maxlength="11" placeholder="Sin guiones ni espacios" value="{{ cuil_inicial }}" required>
                     <span class="bnh-help">Al salir del campo se valida el CUIL y, si existe, se autocompleta la carga.</span>
                 </div>
                 <div class="bnh-field bnh-col-6">
@@ -1697,9 +1698,15 @@ function blindarAutofillBnh(input, token) {
             </div>
         </div>
 
+        <!-- Mensaje repetido junto a las acciones inferiores para evitar volver al inicio. -->
+        <div id="bnhAlertBottom" class="bnh-alert"></div>
+
         <!-- Botones principales del formulario. -->
         <div class="bnh-actions">
             <button type="button" class="bnh-btn" id="btnLimpiarFormulario"><i class="fas fa-eraser"></i> Limpiar</button>
+            {% if next_url %}
+                <a class="bnh-btn" href="{{ next_url }}"><i class="fas fa-arrow-left"></i> {{ return_label }}</a>
+            {% endif %}
             <button type="button" class="bnh-btn bnh-btn-success" id="btnGuardarAlumno"><i class="fas fa-save"></i> Guardar carga</button>
         </div>
     </form>
@@ -1820,6 +1827,7 @@ function blindarAutofillBnh(input, token) {
     /* Estado en memoria del formulario: el guardado final envía alumno y relaciones juntas. */
     var form = document.getElementById("formCargaAlumno");
     var alertBox = document.getElementById("bnhAlert");
+    var alertBottomBox = document.getElementById("bnhAlertBottom");
     var tutorAlertBox = document.getElementById("bnhTutorAlert");
 
     function inicializarBlindajeAutofillBnh() {
@@ -1910,12 +1918,14 @@ function blindarAutofillBnh(input, token) {
 
     /* Mensajes visibles para validaciones frontend, búsquedas AJAX y respuesta de guardado. */
     function setAlert(target, type, message) {
+        if (!target) return;
         target.className = "bnh-alert show bnh-alert-" + type;
         target.textContent = mensajeErrorHumano(message);
     }
 
     function showAlert(type, message) {
         setAlert(alertBox, type, message);
+        setAlert(alertBottomBox, type, message);
     }
 
     function showTutorAlert(type, message) {
@@ -1923,9 +1933,13 @@ function blindarAutofillBnh(input, token) {
     }
 
     function clearAlert() {
-        /* Vuelve el contenedor de alertas a estado oculto. */
+        /* Vuelve los contenedores de alertas a estado oculto. */
         alertBox.className = "bnh-alert";
         alertBox.textContent = "";
+        if (alertBottomBox) {
+            alertBottomBox.className = "bnh-alert";
+            alertBottomBox.textContent = "";
+        }
     }
 
     function clearTutorAlert() {
@@ -3717,6 +3731,13 @@ function blindarAutofillBnh(input, token) {
             });
     });
 
+
+    if (alumnoCuilInput && alumnoCuilInput.value) {
+        alumnoCuilInput.value = cleanDigits(alumnoCuilInput.value);
+        if (alumnoCuilInput.value.length === 11) {
+            alumnoCuilInput.dispatchEvent(new Event("blur"));
+        }
+    }
     var alumnoCuilTimer = null;
     alumnoCuilInput.addEventListener("input", function () {
         alumnoCuilInput.value = cleanDigits(alumnoCuilInput.value);

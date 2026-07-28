@@ -1,44 +1,71 @@
-<div class="cef-context-summary mb-3">
-    <div class="cef-context-summary-item">
-        <span>CUE-Anexo</span>
-        <strong>{{ cef_context.cueanexo }}</strong>
+<section class="cef-course-summary" aria-labelledby="cef-course-summary-title">
+    <div class="cef-course-summary-head">
+        <span class="cef-section-kicker">Resumen</span>
+        <h3 id="cef-course-summary-title">Datos del curso</h3>
     </div>
-    {% if cef_context.establecimiento %}
-        <div class="cef-context-summary-item is-wide">
-            <span>CEF</span>
-            <strong>{{ cef_context.establecimiento.nom_est|default:"CEF" }}</strong>
-        </div>
-    {% endif %}
-    {% if cef_context.ciclo %}
-        <div class="cef-context-summary-item">
-            <span>Ciclo</span>
-            <strong>{{ cef_context.ciclo }}</strong>
-        </div>
-    {% endif %}
-</div>
 
-<div class="cef-edit-panel">
-    <h3>Datos del curso</h3>
-    <div class="cef-info-grid">
-        <div class="cef-info-item"><span>Actividad</span><strong>{{ grupo.actividad|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>N°</span><strong>{{ grupo.numero|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Nombre</span><strong>{{ grupo.nombre|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Nivel</span><strong>{{ grupo.nivel|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Rango etario</span><strong>{{ grupo.rango_etario|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Turno</span><strong>{{ grupo.turno|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Horario</span><strong>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</strong></div>
-        <div class="cef-info-item"><span>Días</span><strong>{{ grupo_dias_texto|default:"Sin días cargados" }}</strong></div>
-        <div class="cef-info-item"><span>Cupo</span><strong>{{ grupo.cupo_maximo|default:"-" }}</strong></div>
-        <div class="cef-info-item">
-            <span>Estado</span>
-            <strong>
-                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% elif grupo.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
-                    {{ grupo.get_estado_display }}
-                </span>
-            </strong>
-        </div>
-        <div class="cef-info-item"><span>Profesores activos</span><strong>{{ docentes_activos|length }}</strong></div>
-        <div class="cef-info-item"><span>Inscripciones registradas</span><strong>{{ inscripciones|length }}</strong></div>
-        <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ grupo.observaciones|default:"Sin observaciones" }}</strong></div>
+    <div class="cef-summary-grid">
+        <section class="cef-summary-group" aria-labelledby="cef-summary-identificacion">
+            <h4 id="cef-summary-identificacion">Identificación</h4>
+            <dl class="cef-definition-grid">
+                <div class="cef-definition-item">
+                    <dt>Actividad</dt>
+                    <dd>{{ grupo.actividad|default:"-" }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Grupo</dt>
+                    <dd>{{ grupo.nombre|default:"Sin nombre" }} · N° {{ grupo.numero|default:"-" }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Nivel</dt>
+                    <dd>{{ grupo.nivel|default:"-" }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Rango etario</dt>
+                    <dd>{{ grupo.rango_etario|default:"-" }}</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="cef-summary-group" aria-labelledby="cef-summary-funcionamiento">
+            <h4 id="cef-summary-funcionamiento">Funcionamiento</h4>
+            <dl class="cef-definition-grid is-three-col">
+                <div class="cef-definition-item">
+                    <dt>Turno</dt>
+                    <dd>{{ grupo.turno|default:"-" }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Horario</dt>
+                    <dd>{{ grupo.hora_inicio|time:"H:i" }} - {{ grupo.hora_fin|time:"H:i" }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Días</dt>
+                    <dd>{{ grupo_dias_texto|default:"Sin días cargados" }}</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="cef-summary-group" aria-labelledby="cef-summary-situacion">
+            <h4 id="cef-summary-situacion">Situación operativa</h4>
+            <dl class="cef-definition-grid is-three-col">
+                <div class="cef-definition-item">
+                    <dt>Cupo</dt>
+                    <dd>{{ grupo.cupo_maximo|default:"-" }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Inscripciones</dt>
+                    <dd>{{ inscripciones|length }}</dd>
+                </div>
+                <div class="cef-definition-item">
+                    <dt>Profesores activos</dt>
+                    <dd>{{ docentes_activos|length }}</dd>
+                </div>
+            </dl>
+        </section>
     </div>
-</div>
+
+    <dl class="cef-summary-note">
+        <dt>Observaciones</dt>
+        <dd>{{ grupo.observaciones|default:"Sin observaciones" }}</dd>
+    </dl>
+</section>

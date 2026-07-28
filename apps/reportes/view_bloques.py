@@ -1,11 +1,9 @@
 import json
-import psycopg2
-import os
 import logging
 from django.http import JsonResponse
-from django.db import connection
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from .db_helpers import conectar_visualizador
 
 
 # Configuración básica de logging
@@ -14,13 +12,8 @@ logger = logging.getLogger(__name__)
 def obtener_tablas(request):
     try:
         logger.info("Iniciando conexión a la base de datos...")
-        
-        connection = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD'),
-            database=os.getenv('POSTGRES_DB')
-        )
+
+        connection = conectar_visualizador()
         cursor = connection.cursor()
         
         # Ejecuta la consulta para obtener las tablas del esquema 'public'
@@ -68,13 +61,7 @@ def ejecutar_sql(request):
             body = json.loads(request.body)
             query = body.get('query')
 
-            # Conectar a la base de datos
-            connection = psycopg2.connect(
-                host=os.getenv('POSTGRES_HOST'),
-                user=os.getenv('POSTGRES_USER'),
-                password=os.getenv('POSTGRES_PASSWORD'),
-                database=os.getenv('POSTGRES_DB')
-            )
+            connection = conectar_visualizador()
             cursor = connection.cursor()
 
             # Ejecutar la consulta SQL generada
