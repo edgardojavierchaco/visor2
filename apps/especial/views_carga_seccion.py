@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -153,7 +154,7 @@ def _inscripciones_seccion(seccion):
 
 def _docentes_seccion(seccion):
     return (
-        DocenteSeccion.objects.filter(grupo=seccion)
+        DocenteSeccion.objects.filter(seccion=seccion)
         .order_by("estado", "rol", "docente_nombre_snapshot", "docente_cuil")
     )
 
@@ -307,7 +308,7 @@ def _baja_docente_gestionar(request, seccion):
         return False, "La asignación seleccionada no es válida."
 
     asignacion = get_object_or_404(
-        DocenteSeccion.objects.filter(grupo=seccion),
+        DocenteSeccion.objects.filter(seccion=seccion),
         pk=docente_grupo_id,
     )
     try:
@@ -324,7 +325,7 @@ def _alta_docente_gestionar(request, seccion):
         return False, "La asignación seleccionada no es válida."
 
     asignacion = get_object_or_404(
-        DocenteSeccion.objects.filter(grupo=seccion),
+        DocenteSeccion.objects.filter(seccion=seccion),
         pk=docente_grupo_id,
     )
     try:

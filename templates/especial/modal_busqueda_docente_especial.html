@@ -215,8 +215,8 @@
             <div class="cef-docente-search">
                 <span class="cef-docente-search-label">Buscar por CUIL</span>
                 <form method="get" action="{{ modal_action_url }}" class="cef-docente-search-form" novalidate data-docente-modal-search-form>
-                    <input type="hidden" name="cueanexo" value="{{ cef_context.cueanexo }}">
-                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                    <input type="hidden" name="cueanexo" value="{{ especial_context.cueanexo }}">
+                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo" value="{{ especial_context.ciclo.pk }}">{% endif %}
                     <input type="hidden" name="abrir_modal_docente" value="1">
                     <label class="cef-docente-input-wrap" for="cefDocenteCuilInput">
                         <i class="fa-solid fa-id-card"></i>
@@ -261,8 +261,8 @@
                                         {% elif modal_puede_agregar_banco %}
                                             <form method="post" action="{{ modal_action_url }}" style="display:contents" data-docente-modal-post-form>
                                                 {% csrf_token %}
-                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                                                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                                {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                                 <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
                                                 <button class="btn btn-primary btn-sm" type="submit">
                                                     <i class="fa-solid fa-user-check"></i> Agregar al banco del CEF
@@ -316,15 +316,15 @@
 
             {% if docente_row and modal_tiene_grupo and docente_asignacion_activa %}
                 <div class="alert alert-info mb-3">
-                    Este profesor ya está asignado a este grupo como {{ docente_asignacion_activa.get_rol_display }}.
+                    Este profesor ya está asignado a esta sección como {{ docente_asignacion_activa.get_rol_display }}.
                 </div>
             {% elif docente_row and modal_tiene_grupo %}
                 <div class="cef-edit-panel">
                     <h3><i class="fa-solid fa-user-check"></i> Asociar profesor al grupo</h3>
                     <form method="post" action="{{ modal_action_url }}" novalidate data-docente-modal-post-form>
                         {% csrf_token %}
-                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                        <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                        {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                         <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
 
                         {% if docente_form.non_field_errors %}

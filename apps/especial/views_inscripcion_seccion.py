@@ -11,7 +11,7 @@ from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 
-from .forms import EspecialBusquedaAlumnoForm
+from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
 from .models import SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto
@@ -19,7 +19,6 @@ from .views_contexto import contexto_base, redirect_con_contexto
 
 ESTADOS_INSCRIPCION_ABIERTA = [
     AlumnoSeccion.Estado.ACTIVO,
-    AlumnoSeccion.Estado.INACTIVO,
 ]
 
 
@@ -171,6 +170,17 @@ def _url_inscripcion_seccion(seccion, especial_context):
     return f"{url}?{querystring}" if querystring else url
 
 
+def _url_gestionar_seccion(seccion, especial_context):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    querystring = urlencode(params)
+    url = reverse("especial:gestionar_seccion", kwargs={"seccion_id": seccion.pk})
+    return f"{url}?{querystring}" if querystring else url
+
+
 def _errores_form(form):
     return " ".join(error for errors in form.errors.values() for error in errors)
 
@@ -216,10 +226,21 @@ def inscripcion_seccion(request, seccion_id):
             ).first()
 
             if inscripcion_abierta:
-                pass
+                pass # Ya está inscripto
             else:
                 try:
                     with transaction.atomic():
+                        # Validación de capacidad
+                        total_activos = AlumnoSeccion.objects.filter(
+                            seccion=seccion,
+                            estado=AlumnoSeccion.Estado.ACTIVO
+                        ).count()
+                        
+                        if seccion.capacidad_total and total_activos >= seccion.capacidad_total:
+                            raise ValidationError(
+                                f"No se puede inscribir. La sección alcanzó su capacidad máxima ({seccion.capacidad_total})."
+                            )
+
                         AlumnoSeccion.objects.create(
                             seccion=seccion,
                             alumno=alumno,
@@ -235,7 +256,9 @@ def inscripcion_seccion(request, seccion_id):
                             seccion_id=seccion.pk,
                         )
                     )
-                except (IntegrityError, ValidationError):
+                except ValidationError as exc:
+                    messages.error(request, "; ".join(exc.messages))
+                except (IntegrityError):
                     messages.error(
                         request,
                         "No se pudo crear la inscripción. Verificá que no exista una inscripción activa.",
@@ -278,3 +301,60 @@ def inscripcion_seccion(request, seccion_id):
         }
     )
     return render(request, "especial/inscripcion_seccion_especial.html", context)
+
+
+@especial_required
+def editar_inscripcion_seccion(request, seccion_id, inscripcion_id):
+    """Vista para editar una inscripción de alumno a sección."""
+    context = contexto_base(request, "secciones", "Editar inscripción Educación Especial")
+    especial_context = context["especial_context"]
+
+    if not especial_context["puede_operar"]:
+        messages.warning(
+            request,
+            "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
+        )
+        return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+
+    seccion = _seccion_segura(seccion_id, especial_context)
+    volver_gestionar = (
+        request.GET.get("volver") == "gestionar"
+        or request.POST.get("volver") == "gestionar"
+    )
+    volver_url = (
+        _url_gestionar_seccion(seccion, especial_context)
+        if volver_gestionar
+        else _url_inscripcion_seccion(seccion, especial_context)
+    )
+    inscripcion = get_object_or_404(
+        AlumnoSeccion.objects.filter(
+            seccion=seccion,
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+        ).select_related("alumno", "alumno__sexo"),
+        pk=inscripcion_id,
+    )
+
+    if request.method == "POST":
+        form = EspecialInscripcionForm(request.POST, instance=inscripcion)
+        if form.is_valid():
+            inscripcion = form.save(commit=False)
+            inscripcion.actualizado_por = request.user
+            inscripcion.save()
+            messages.success(request, "Inscripción actualizada correctamente.")
+            return redirect(volver_url)
+
+        messages.error(request, "Revisá los datos de la inscripción.")
+    else:
+        form = EspecialInscripcionForm(instance=inscripcion)
+
+    context.update(
+        {
+            "seccion": seccion,
+            "inscripcion": inscripcion,
+            "form": form,
+            "volver_url": volver_url,
+            "volver_gestionar": volver_gestionar,
+        }
+    )
+    return render(request, "especial/inscripcion_seccion_form_especial.html", context)

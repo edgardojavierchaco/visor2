@@ -1,16 +1,11 @@
 {% extends 'archivos/base/layout.html' %}
 {% block content %}
-
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
 <script>
 (function () {
-    document.documentElement.classList.add("cef-js");
-
     var STORAGE_KEY = "padron_sidebar_state";
-
     function restoreSidebar() {
         if (!document.body) return;
         if (sessionStorage.getItem(STORAGE_KEY) === "closed") {
@@ -18,11 +13,9 @@
             document.body.classList.remove("sidebar-open", "sidebar-expanded");
         }
     }
-
     restoreSidebar();
     document.addEventListener("DOMContentLoaded", restoreSidebar);
     window.addEventListener("pageshow", restoreSidebar);
-
     document.addEventListener("click", function (event) {
         if (!event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
             return;
@@ -34,7 +27,6 @@
     }, true);
 })();
 </script>
-
 <script>
 (function () {
     function syncSearchClear(input) {
@@ -44,7 +36,6 @@
             clear.classList.toggle("is-visible", Boolean(input.value));
         }
     }
-
     function initSearchClears() {
         document.querySelectorAll(".cef-search-wrap input").forEach(function (input) {
             syncSearchClear(input);
@@ -53,7 +44,6 @@
             });
         });
     }
-
     document.addEventListener("DOMContentLoaded", initSearchClears);
     document.addEventListener("input", function (event) {
         if (event.target && event.target.matches(".cef-search-wrap input")) {
@@ -66,7 +56,6 @@
         var wrap = clear.closest(".cef-search-wrap");
         var input = wrap ? wrap.querySelector("input") : null;
         if (!input) return;
-
         input.value = "";
         input.focus();
         syncSearchClear(input);
@@ -74,7 +63,6 @@
     });
 })();
 </script>
-
 <style>
     /* ============================================================
        DESIGN TOKENS
@@ -91,7 +79,6 @@
         --blue-200: #bfdbfe;
         --blue-100: #dbeafe;
         --blue-50:  #eff6ff;
-
         --slate-950: #020617;
         --slate-900: #0f172a;
         --slate-800: #1e293b;
@@ -103,17 +90,14 @@
         --slate-200: #e2e8f0;
         --slate-100: #f1f5f9;
         --slate-50:  #f8fafc;
-
         --green-700: #15803d;
         --green-600: #16a34a;
         --green-100: #dcfce7;
         --green-300: #86efac;
-
         --red-700: #b91c1c;
         --red-100: #fee2e2;
         --amber-700: #b45309;
         --amber-100: #fef3c7;
-
         /* Semantic */
         --primary:       var(--blue-500);
         --primary-dark:  var(--blue-800);
@@ -126,20 +110,17 @@
         --text-base:     var(--slate-900);
         --text-muted:    var(--slate-800);
         --text-faint:    var(--slate-700);
-
         /* Spacing */
         --r-sm: 6px;
         --r-md: 10px;
         --r-lg: 14px;
         --r-xl: 18px;
-
         /* Shadows */
         --shadow-xs: 0 1px 2px rgba(15,23,42,.10);
         --shadow-sm: 0 1px 4px rgba(15,23,42,.13), 0 1px 2px rgba(15,23,42,.08);
         --shadow-md: 0 4px 10px rgba(15,23,42,.12), 0 2px 4px rgba(15,23,42,.07);
         --shadow-lg: 0 10px 28px rgba(15,23,42,.12), 0 4px 8px rgba(15,23,42,.06);
         --shadow-xl: 0 20px 48px rgba(15,23,42,.16), 0 8px 16px rgba(15,23,42,.07);
-
         /* Typography scale */
         --fs-xs:   0.7rem;
         --fs-sm:   0.8125rem;
@@ -150,22 +131,16 @@
         --fs-2xl:  1.5rem;
         --fs-3xl:  1.875rem;
     }
-
     /* ============================================================
        RESET / BASE
        ============================================================ */
     html { overflow-y: scroll; }
-
     .content-wrapper { background: #dce7f1; }
     .content-wrapper > .content-header { display: none !important; }
     .content-wrapper > .content > .container-fluid {
         max-width: 100% !important;
         padding-top: 0 !important;
     }
-    .main-header .navbar-nav:first-child .nav-item:not(:first-child) {
-        display: none !important;
-    }
-
     /* ============================================================
        WRAPPER
        ============================================================ */
@@ -179,7 +154,6 @@
         padding: 0 0 2.5rem;
         width: 100%;
     }
-
     .cef-wrap select,
     .cef-wrap .form-select {
         max-width: 100%;
@@ -188,101 +162,116 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-
     .cef-wrap .dropdown-menu {
         max-width: min(420px, calc(100vw - 2rem));
         overflow-x: hidden;
     }
-
     .cef-wrap .dropdown-item {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-
+    /* ============================================================
+       TOP BAR
+       ============================================================ */
+    .cef-topbar {
+        align-items: center;
+        background: var(--surface);
+        border-bottom: 1.5px solid var(--border);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+    }
+    .cef-topbar-title {
+        align-items: center;
+        display: flex;
+        gap: .6rem;
+    }
+    .cef-topbar-title h2 {
+        border-left: 4px solid var(--primary);
+        color: var(--slate-900);
+        font-size: var(--fs-xl);
+        font-weight: 800;
+        line-height: 1.15;
+        margin: 0;
+        padding-left: .75rem;
+    }
+    .cef-topbar-sub {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        margin-left: calc(.75rem + 4px);
+        margin-top: .15rem;
+    }
+    /* ============================================================
+       MODULE NAV
+       ============================================================ */
+    .cef-module-nav {
+        background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-950) 100%) !important;
+        border-bottom: 2px solid var(--blue-600);
+        border-radius: 0;
+        box-shadow: 0 2px 8px rgba(7,26,51,.35);
+        margin-bottom: 0;
+        min-height: 46px;
+        padding: 0 1.5rem;
+    }
+    .cef-module-nav .container-fluid { padding: 0; }
+    .cef-module-nav .navbar-brand {
+        color: #fff !important;
+        font-size: var(--fs-md);
+        font-weight: 800;
+        letter-spacing: .04em;
+        margin-right: 0;
+        opacity: .95;
+        padding: .55rem 0;
+    }
+    .cef-module-nav .navbar-brand::after {
+        content: "|";
+        margin: 0 .65rem;
+        opacity: .3;
+    }
+    .cef-module-nav .nav-link {
+        border-radius: var(--r-sm);
+        color: rgba(255,255,255,.65) !important;
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        letter-spacing: .01em;
+        padding: .45rem .7rem !important;
+        transition: color .18s ease, background .18s ease;
+    }
+    .cef-module-nav .nav-link.active {
+        background: rgba(255,255,255,.14);
+        color: #fff !important;
+        font-weight: 700;
+    }
+    .cef-module-nav .nav-link:hover {
+        background: rgba(255,255,255,.09);
+        color: rgba(255,255,255,.9) !important;
+        text-decoration: none;
+    }
+    .cef-module-nav .nav-link:focus-visible {
+        box-shadow: 0 0 0 3px rgba(147,197,253,.3);
+        outline: none;
+    }
     /* ============================================================
        MAIN CONTENT AREA
        ============================================================ */
     .cef-main {
         padding: 1.25rem 0 0;
     }
-
     /* ============================================================
        ALERTS
        ============================================================ */
-    .cef-alert-stack {
-        display: grid;
-        gap: .55rem;
-        margin-bottom: 1rem;
-    }
-
-    .cef-alert {
-        align-items: center;
-        border: 1px solid rgba(100,116,139,.22);
+    .cef-alert-stack { margin-bottom: 1rem; }
+    .cef-alert-stack .alert {
         border-radius: var(--r-md);
-        box-shadow: 0 8px 22px rgba(15,23,42,.08);
-        display: flex;
         font-size: var(--fs-base);
-        font-weight: 700;
-        gap: .65rem;
-        justify-content: space-between;
-        line-height: 1.35;
-        margin: 0;
-        padding: .7rem .8rem .7rem 1rem;
-        transition: opacity .22s ease, transform .22s ease;
+        font-weight: 500;
+        margin-bottom: .6rem;
+        padding: .7rem 1rem;
     }
-
-    .cef-alert.is-hiding {
-        opacity: 0;
-        transform: translateY(-6px);
-    }
-
-    .cef-alert-success {
-        background: rgba(220,252,231,.78);
-        border-color: rgba(21,128,61,.26);
-        color: var(--green-700);
-    }
-
-    .cef-alert-info {
-        background: rgba(239,246,255,.86);
-        border-color: rgba(45,125,210,.24);
-        color: var(--blue-800);
-    }
-
-    .cef-alert-warning {
-        background: rgba(254,243,199,.88);
-        border-color: rgba(180,83,9,.28);
-        color: var(--amber-700);
-    }
-
-    .cef-alert-error,
-    .cef-alert-danger {
-        background: rgba(254,226,226,.9);
-        border-color: rgba(185,28,28,.25);
-        color: var(--red-700);
-    }
-
-    .cef-alert-close {
-        align-items: center;
-        background: rgba(255,255,255,.55);
-        border: 1px solid rgba(100,116,139,.18);
-        border-radius: var(--r-sm);
-        color: inherit;
-        cursor: pointer;
-        display: inline-flex;
-        flex: 0 0 auto;
-        height: 28px;
-        justify-content: center;
-        opacity: .7;
-        width: 28px;
-    }
-
-    .cef-alert-close:hover,
-    .cef-alert-close:focus-visible {
-        opacity: 1;
-        outline: none;
-    }
-
     /* ============================================================
        CONTEXT CARD (selector CUE/Ciclo)
        ============================================================ */
@@ -296,22 +285,18 @@
         padding: .95rem 1.25rem 1rem;
         transition: box-shadow .2s ease;
     }
-
     .cef-context-card:hover {
         box-shadow: var(--shadow-md);
     }
-
     .cef-context-grid {
         align-items: end;
         display: grid;
         gap: .85rem;
         grid-template-columns: minmax(0, 1fr) minmax(120px, 175px) auto;
     }
-
     .cef-context-grid > * {
         min-width: 0;
     }
-
     .cef-context-label {
         color: var(--slate-900);
         display: block;
@@ -321,14 +306,12 @@
         margin-bottom: .3rem;
         text-transform: uppercase;
     }
-
     .cef-context-selected {
         border-bottom: 1.5px solid var(--border);
         grid-column: 1 / -1;
         min-width: 0;
         padding-bottom: .75rem;
     }
-
     .cef-context-selected strong {
         color: var(--blue-800);
         display: block;
@@ -337,7 +320,6 @@
         line-height: 1.2;
         overflow-wrap: anywhere;
     }
-
     .cef-context-selected > span {
         color: var(--slate-800);
         display: block;
@@ -346,7 +328,6 @@
         margin-top: .2rem;
         overflow-wrap: anywhere;
     }
-
     #id_contexto_cueanexo,
     #id_contexto_ciclo {
         appearance: auto;
@@ -362,7 +343,6 @@
         transition: border-color .15s ease, box-shadow .15s ease;
         width: 100%;
     }
-
     #id_contexto_cueanexo option,
     #id_contexto_ciclo option,
     .cef-wrap select option {
@@ -370,19 +350,16 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-
     #id_contexto_cueanexo:hover:not(:focus),
     #id_contexto_ciclo:hover:not(:focus) {
         border-color: var(--slate-500);
     }
-
     #id_contexto_cueanexo:focus,
     #id_contexto_ciclo:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.15);
         outline: none;
     }
-
     .cef-context-actions {
         align-items: center;
         align-self: end;
@@ -393,7 +370,6 @@
         padding-bottom: 0;
         white-space: nowrap;
     }
-
     /* ============================================================
        CARDS
        ============================================================ */
@@ -402,7 +378,6 @@
         gap: 1rem;
         grid-template-columns: minmax(0, 1fr);
     }
-
     .cef-card {
         background: var(--surface);
         border: 1.5px solid var(--border);
@@ -412,11 +387,9 @@
         overflow: hidden;
         transition: box-shadow .2s ease;
     }
-
     .cef-card:hover {
         box-shadow: var(--shadow-md);
     }
-
     .cef-card-header {
         align-items: center;
         background: var(--surface-muted);
@@ -428,7 +401,6 @@
         min-height: 50px;
         padding: .7rem 1rem;
     }
-
     .cef-card-header h3 {
         align-items: center;
         color: var(--slate-900);
@@ -439,17 +411,14 @@
         line-height: 1.2;
         margin: 0;
     }
-
     .cef-card-header h3 .fa-solid,
     .cef-card-header h3 .fa-regular {
         color: var(--primary);
         font-size: .9em;
     }
-
     .cef-card-body {
         padding: 1rem;
     }
-
     /* ============================================================
        INFO GRID / ITEMS
        ============================================================ */
@@ -458,7 +427,6 @@
         gap: .6rem;
         grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
     }
-
     .cef-info-item {
         background: var(--surface-soft);
         border: 1.5px solid var(--border);
@@ -468,12 +436,10 @@
         padding: .55rem .75rem;
         transition: border-top-color .2s ease, box-shadow .2s ease;
     }
-
     .cef-info-item:hover {
         border-top-color: var(--primary);
         box-shadow: var(--shadow-xs);
     }
-
     .cef-info-item span {
         color: var(--text-muted);
         display: block;
@@ -482,7 +448,6 @@
         letter-spacing: .07em;
         text-transform: uppercase;
     }
-
     .cef-info-item strong {
         color: var(--slate-900);
         display: block;
@@ -492,9 +457,7 @@
         margin-top: .2rem;
         overflow-wrap: anywhere;
     }
-
     .cef-info-item.span-all { grid-column: 1 / -1; }
-
     /* ============================================================
        TABLE SYSTEM
        ============================================================ */
@@ -505,12 +468,10 @@
         overflow: auto;
         width: 100%;
     }
-
     .cef-table {
         margin-bottom: 0;
         min-width: 600px;
     }
-
     .cef-table thead th {
         background: var(--surface-muted);
         border-bottom: 2px solid var(--border-strong) !important;
@@ -522,7 +483,6 @@
         text-transform: uppercase;
         white-space: nowrap;
     }
-
     .cef-table tbody td {
         border-color: var(--border);
         color: var(--slate-800);
@@ -530,21 +490,17 @@
         padding: .65rem .85rem;
         vertical-align: middle;
     }
-
     .cef-table tbody tr {
         transition: background .12s ease;
     }
-
     .cef-table tbody tr:nth-child(even) {
         background: var(--surface-soft);
     }
-
     .cef-table tbody tr:hover {
         background: var(--blue-50);
     }
-
     /* ============================================================
-       MANAGEMENT PANEL (alumnos / grupos / inventario / inscripcion)
+       MANAGEMENT PANEL
        ============================================================ */
     .cef-panel {
         background: var(--surface);
@@ -553,7 +509,6 @@
         box-shadow: var(--shadow-sm);
         overflow: hidden;
     }
-
     .cef-panel-head {
         align-items: center;
         background: var(--surface);
@@ -564,7 +519,6 @@
         justify-content: space-between;
         padding: 1rem 1.25rem;
     }
-
     .cef-panel-title {
         color: var(--slate-900);
         font-size: var(--fs-xl);
@@ -572,13 +526,11 @@
         line-height: 1.15;
         margin: 0;
     }
-
     .cef-panel-title span {
         color: var(--text-muted);
         font-size: var(--fs-lg);
         font-weight: 400;
     }
-
     .cef-panel-actions {
         align-items: center;
         display: flex;
@@ -586,11 +538,9 @@
         flex-wrap: wrap;
         min-width: 0;
     }
-
     .cef-panel-body {
         padding: 1.1rem 1.25rem 1.5rem;
     }
-
     /* ============================================================
        TABLE TOOLS (search + page-size)
        ============================================================ */
@@ -602,20 +552,17 @@
         justify-content: space-between;
         margin-bottom: .9rem;
     }
-
     .cef-tools-left,
     .cef-tools-right {
         align-items: center;
         display: flex;
         gap: .5rem;
     }
-
     .cef-tools-label {
         color: var(--slate-800);
         font-size: var(--fs-sm);
         font-weight: 600;
     }
-
     .cef-tools select {
         appearance: auto;
         background: var(--surface);
@@ -628,13 +575,11 @@
         padding: .2rem .55rem;
         transition: border-color .15s ease, box-shadow .15s ease;
     }
-
     .cef-tools select:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.12);
         outline: none;
     }
-
     .cef-search-wrap {
         align-items: center;
         background: var(--surface);
@@ -646,17 +591,14 @@
         padding: .22rem .65rem;
         transition: border-color .15s ease, box-shadow .15s ease;
     }
-
     .cef-search-wrap:focus-within {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.12);
     }
-
     .cef-search-wrap i {
         color: var(--text-faint);
         font-size: .85rem;
     }
-
     .cef-search-wrap input {
         background: transparent;
         border: none;
@@ -667,15 +609,12 @@
         padding: .2rem 0;
         width: 100%;
     }
-
     .cef-search-wrap input::placeholder { color: var(--text-faint); }
-
     .cef-search-wrap input[type="search"]::-webkit-search-cancel-button,
     .cef-search-wrap input[type="search"]::-webkit-search-decoration {
         appearance: none;
         -webkit-appearance: none;
     }
-
     .cef-search-clear {
         align-items: center;
         background: transparent;
@@ -691,11 +630,9 @@
         padding: 0;
         width: 26px;
     }
-
     .cef-search-clear.is-visible {
         display: inline-flex;
     }
-
     .cef-search-clear:hover,
     .cef-search-clear:focus-visible {
         background: var(--blue-50);
@@ -703,29 +640,21 @@
         color: var(--blue-900);
         outline: none;
     }
-
     .cef-search-clear i {
         font-size: .85rem;
         line-height: 1;
     }
-
     /* ============================================================
-       DATA TABLE (clean table used by management panels)
+       DATA TABLE
        ============================================================ */
     .cef-dt {
         border-collapse: collapse;
         width: 100%;
     }
-
-    .cef-js .cef-dt[data-cef-table]:not(.is-ready) tbody {
-        display: none;
-    }
-
     .cef-dt thead tr {
         background: var(--surface-muted);
         border-bottom: 2px solid var(--border-strong);
     }
-
     .cef-dt thead th {
         color: var(--slate-600);
         font-size: var(--fs-xs);
@@ -736,7 +665,6 @@
         text-transform: uppercase;
         white-space: nowrap;
     }
-
     .cef-dt tbody td {
         border-bottom: 1px solid var(--border);
         color: var(--slate-800);
@@ -744,30 +672,24 @@
         padding: .65rem .75rem;
         vertical-align: middle;
     }
-
     .cef-dt tbody tr {
         transition: background .1s ease;
     }
-
     .cef-dt tbody tr:nth-child(even) {
         background: var(--surface-soft);
     }
-
     .cef-dt tbody tr:hover {
         background: var(--blue-50);
     }
-
     .cef-dt tbody tr:last-child td {
         border-bottom: none;
     }
-
     /* ============================================================
-       ACTION CELL / BUTTONS in table rows
+       ACTION CELL
        ============================================================ */
     .cef-act-cell {
         white-space: nowrap;
     }
-
     .cef-act-cell a,
     .cef-act-cell button {
         align-items: center;
@@ -786,7 +708,6 @@
         text-decoration: none;
         transition: all .15s ease;
     }
-
     .cef-act-cell a:hover,
     .cef-act-cell button:hover {
         background: var(--blue-50);
@@ -794,31 +715,8 @@
         color: var(--primary);
         transform: translateY(-1px);
     }
-
-    .cef-act-cell .cef-dots {
-        background: transparent;
-        border: 1.5px solid var(--border-strong);
-        border-radius: var(--r-sm);
-        color: var(--slate-700);
-        cursor: pointer;
-        display: inline-flex;
-        font-size: .85rem;
-        font-weight: 700;
-        height: 28px;
-        letter-spacing: .15em;
-        padding: 0 .4rem;
-        align-items: center;
-        transition: all .15s ease;
-    }
-
-    .cef-act-cell .cef-dots:hover {
-        background: var(--slate-100);
-        border-color: var(--slate-400);
-        color: var(--slate-700);
-    }
-
     /* ============================================================
-       TABLE FOOTER (count + pagination)
+       TABLE FOOTER
        ============================================================ */
     .cef-tfoot {
         align-items: center;
@@ -828,19 +726,16 @@
         justify-content: space-between;
         margin-top: .85rem;
     }
-
     .cef-tfoot-count {
         color: var(--slate-800);
         font-size: var(--fs-sm);
         font-weight: 700;
     }
-
     .cef-tfoot-pagination {
         align-items: center;
         display: flex;
         gap: .3rem;
     }
-
     .cef-tfoot-pagination button {
         align-items: center;
         background: var(--surface);
@@ -856,19 +751,11 @@
         padding: 0 .75rem;
         transition: all .15s ease;
     }
-
     .cef-tfoot-pagination button:hover {
         background: var(--blue-50);
         border-color: var(--primary);
         color: var(--primary);
     }
-
-    .cef-tfoot-pagination button.is-active {
-        background: var(--primary);
-        border-color: var(--primary);
-        color: #fff;
-    }
-
     .cef-tfoot-pagination .page-num {
         align-items: center;
         background: var(--primary);
@@ -882,49 +769,9 @@
         min-width: 32px;
         padding: 0 .5rem;
     }
-
     /* ============================================================
-       CONTEXT PILL (group summary strip)
+       CONTEXT SUMMARY STRIP
        ============================================================ */
-    .cef-context-pill {
-        align-items: center;
-        background: #e7f1ff;
-        border: 1.5px solid var(--blue-300);
-        border-radius: var(--r-md);
-        color: var(--blue-800);
-        display: inline-flex;
-        flex-wrap: wrap;
-        font-size: var(--fs-sm);
-        font-weight: 600;
-        gap: .5rem;
-        line-height: 1.35;
-        max-width: 100%;
-        overflow-wrap: anywhere;
-        padding: .45rem .9rem;
-    }
-
-    .cef-context-pill i {
-        color: var(--primary);
-        font-size: .85em;
-    }
-
-    .cef-context-pill > span {
-        align-items: center;
-        display: inline-flex;
-        gap: .25rem;
-        min-width: 0;
-    }
-
-    .cef-context-pill > span + span {
-        border-left: 1px solid var(--blue-300);
-        padding-left: .65rem;
-    }
-
-    .cef-context-pill strong {
-        color: var(--blue-950);
-        font-weight: 800;
-    }
-
     .cef-context-summary {
         align-items: stretch;
         display: grid;
@@ -932,7 +779,6 @@
         grid-template-columns: minmax(120px, max-content) minmax(220px, 1fr) minmax(90px, max-content);
         max-width: 100%;
     }
-
     .cef-context-summary-item {
         background: #e7f1ff;
         border: 1.5px solid var(--blue-300);
@@ -941,7 +787,6 @@
         min-width: 0;
         padding: .5rem .75rem;
     }
-
     .cef-context-summary-item span {
         color: var(--slate-700);
         display: block;
@@ -952,7 +797,6 @@
         margin-bottom: .2rem;
         text-transform: uppercase;
     }
-
     .cef-context-summary-item strong {
         color: var(--blue-950);
         display: block;
@@ -961,29 +805,9 @@
         line-height: 1.25;
         overflow-wrap: anywhere;
     }
-
     .cef-context-summary-item.is-wide strong {
         white-space: normal;
     }
-
-    /* ============================================================
-       EDIT PANEL (inline form)
-       ============================================================ */
-    .cef-edit-panel {
-        background: var(--surface-soft);
-        border: 1.5px solid var(--border);
-        border-radius: var(--r-lg);
-        margin-top: 1.25rem;
-        padding: 1.25rem;
-    }
-
-    .cef-edit-panel h3 {
-        color: var(--slate-900);
-        font-size: var(--fs-lg);
-        font-weight: 700;
-        margin: 0 0 1rem;
-    }
-
     /* ============================================================
        FORM GRID / FIELDS
        ============================================================ */
@@ -992,20 +816,15 @@
         gap: .85rem;
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-
     .cef-form-grid.is-two-col {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-
     .cef-form-grid.is-one-col {
         grid-template-columns: 1fr;
     }
-
     .cef-form-grid .span-2 { grid-column: span 2; }
     .cef-form-grid .span-3 { grid-column: 1 / -1; }
-
     .cef-field { min-width: 0; }
-
     .cef-field label,
     .cef-check-label {
         color: var(--slate-900);
@@ -1016,7 +835,6 @@
         margin-bottom: .28rem;
         text-transform: uppercase;
     }
-
     .cef-field .form-control,
     .cef-field .form-select {
         background: var(--surface);
@@ -1028,88 +846,32 @@
         transition: border-color .15s ease, box-shadow .15s ease;
         width: 100%;
     }
-
     .cef-field .form-control:focus,
     .cef-field .form-select:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.13);
         outline: none;
     }
-
     .cef-field .form-control:hover:not(:focus),
     .cef-field .form-select:hover:not(:focus) {
         border-color: var(--slate-500);
     }
-
     .cef-field textarea.form-control {
         min-height: 80px;
         resize: vertical;
     }
-
     .cef-error {
         color: var(--red-700);
         font-size: var(--fs-xs);
         font-weight: 600;
         margin-top: .25rem;
     }
-
     /* ============================================================
-       CHECK CHIPS (days)
+       SWITCH / CHECKBOX
        ============================================================ */
-    .cef-check-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .45rem;
-    }
-
-    .cef-check-chip,
-    .cef-field label.cef-check-chip {
-        align-items: center;
-        background: var(--surface);
-        border: 1.5px solid var(--border-strong);
-        border-radius: var(--r-sm);
-        cursor: pointer;
-        display: inline-flex;
-        font-size: var(--fs-sm);
-        font-weight: 500;
-        gap: .38rem;
-        justify-content: flex-start;
-        line-height: 1.2;
-        min-height: 34px;
-        padding: .3rem .6rem;
-        transition: all .15s ease;
-        white-space: nowrap;
-    }
-
-    .cef-check-chip:hover,
-    .cef-field label.cef-check-chip:hover {
-        border-color: var(--primary);
-        background: var(--blue-50);
-        color: var(--blue-800);
-    }
-
-    .cef-check-chip:has(input:checked),
-    .cef-field label.cef-check-chip:has(input:checked) {
-        background: var(--blue-100);
-        border-color: var(--blue-700);
-        box-shadow: inset 0 0 0 1px var(--blue-300);
-        color: var(--blue-900);
-        font-weight: 700;
-    }
-
-    .cef-check-chip input { flex: 0 0 auto; margin: 0; }
-    .cef-check-chip span { display: inline-block; min-width: 0; }
-
-    .cef-check-chip .form-check-input {
-        float: none;
-        margin-left: 0;
-        margin-top: 0;
-    }
-
     .cef-field.is-checkbox-field {
         align-self: end;
     }
-
     .cef-switch-line {
         align-items: center;
         background: var(--surface);
@@ -1125,19 +887,16 @@
         text-transform: none;
         white-space: normal;
     }
-
     .cef-switch-line .form-check-input {
         flex: 0 0 auto;
         float: none;
         margin: 0;
     }
-
     .cef-switch-line span {
         font-size: var(--fs-sm);
         font-weight: 700;
         line-height: 1.2;
     }
-
     /* ============================================================
        BADGES
        ============================================================ */
@@ -1151,7 +910,6 @@
         letter-spacing: .01em;
         padding: .28em .8em;
     }
-
     .badge.text-bg-success {
         background: var(--green-100) !important;
         border: 1px solid var(--green-300);
@@ -1161,7 +919,6 @@
         font-weight: 700;
         padding: .28em .8em;
     }
-
     .badge.text-bg-secondary {
         background: var(--surface-muted) !important;
         border: 1px solid var(--border-strong);
@@ -1171,7 +928,6 @@
         font-weight: 600;
         padding: .28em .8em;
     }
-
     /* ============================================================
        BUTTONS
        ============================================================ */
@@ -1189,31 +945,13 @@
         vertical-align: middle;
         white-space: nowrap;
     }
-
-    .cef-wrap .btn-sm,
-    .cef-panel .btn-sm {
-        min-height: 34px;
-        padding-bottom: .35rem;
-        padding-top: .35rem;
-    }
-
     .cef-context-actions .btn {
         height: 38px;
         min-height: 38px;
-        padding-bottom: 0;
-        padding-top: 0;
     }
-
     .cef-panel-actions .btn {
         min-height: 40px;
     }
-
-    .cef-wrap .btn i,
-    .cef-panel .btn i {
-        flex: 0 0 auto;
-        line-height: 1;
-    }
-
     .cef-form-actions {
         align-items: center;
         display: flex;
@@ -1221,7 +959,6 @@
         gap: .75rem;
         justify-content: flex-end;
     }
-
     .btn-primary {
         background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
         border: 1px solid var(--blue-800);
@@ -1230,7 +967,6 @@
         color: #fff;
         font-weight: 700;
     }
-
     .btn-primary:hover,
     .btn-primary:focus-visible {
         background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
@@ -1239,35 +975,29 @@
         color: #fff;
         transform: translateY(-1px);
     }
-
     .btn-primary:active { transform: translateY(0); box-shadow: var(--shadow-xs); }
-
     .btn-outline-primary {
         border-color: var(--primary);
         border-radius: var(--r-sm);
         color: var(--blue-800);
         font-weight: 700;
     }
-
     .btn-outline-primary:hover {
         background: var(--blue-50);
         border-color: var(--blue-800);
         color: var(--blue-900);
     }
-
     .btn-outline-secondary {
         border-color: var(--border-strong);
         border-radius: var(--r-sm);
         color: var(--slate-700);
         font-weight: 600;
     }
-
     .btn-outline-secondary:hover {
         background: var(--surface-muted);
         border-color: var(--slate-600);
         color: var(--slate-900);
     }
-
     .btn-success {
         background: var(--green-600);
         border-color: var(--green-700);
@@ -1275,26 +1005,12 @@
         color: #fff;
         font-weight: 700;
     }
-
     .btn-success:hover,
     .btn-success:focus-visible {
         background: var(--green-700);
         color: #fff;
         transform: translateY(-1px);
     }
-
-    .btn-outline-success {
-        border-color: var(--green-700);
-        border-radius: var(--r-sm);
-        color: var(--green-700);
-        font-weight: 600;
-    }
-
-    .btn-outline-success:hover {
-        background: var(--green-100);
-        color: var(--green-700);
-    }
-
     /* ============================================================
        EMPTY STATE
        ============================================================ */
@@ -1314,416 +1030,129 @@
         padding: 1.75rem 1.5rem;
         text-align: center;
     }
-
     /* ============================================================
        RESPONSIVE
        ============================================================ */
     @media (max-width: 991.98px) {
         .cef-main { padding: .9rem 0 0; }
-
+        .cef-topbar { padding: .85rem .9rem; }
+        .cef-module-nav { padding: 0 .9rem; }
         .cef-context-grid {
             grid-template-columns: 1fr;
         }
-
-        .cef-context-selected { padding-right: 0; }
-
-        .cef-context-actions {
-            flex-wrap: wrap;
-            justify-content: flex-start;
-            white-space: normal;
-        }
-
         .cef-info-grid,
         .cef-form-grid,
         .cef-form-grid.is-two-col {
             grid-template-columns: 1fr;
         }
-
         .cef-form-grid .span-2,
         .cef-form-grid .span-3 { grid-column: auto; }
-
         .cef-panel-head {
             flex-direction: column;
             align-items: flex-start;
         }
-
         .cef-tools { flex-direction: column; align-items: flex-start; }
-
         .cef-context-summary {
             grid-template-columns: 1fr;
         }
     }
-
-    @media (max-width: 1299.98px) and (min-width: 992px) {
-        .cef-context-grid {
-            grid-template-columns: minmax(0, 1fr) minmax(120px, 175px);
-        }
-
-        .cef-context-actions {
-            flex-wrap: wrap;
-            justify-content: flex-start;
-            white-space: normal;
-        }
-    }
-
     @media (max-width: 575.98px) {
         .cef-context-actions,
         .cef-panel-actions,
         .cef-form-actions {
             width: 100%;
         }
-
         .cef-context-actions .btn,
         .cef-panel-actions .btn,
         .cef-form-actions .btn {
             flex: 1 1 100%;
         }
     }
-
     @media (max-width: 1199.98px) and (min-width: 992px) {
         .cef-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cef-form-grid .span-3 { grid-column: 1 / -1; }
     }
 </style>
-
 <div class="cef-wrap">
-    {% include "cef/componentes/nav_operativo_cef.html" %}
-
+    <!-- TOP BAR -->
+    <div class="cef-topbar">
+        <div class="cef-topbar-title">
+            <div>
+                <h2>{{ title }}</h2>
+                <div class="cef-topbar-sub">{% block especial_subtitle %}Carga operativa por CUE-Anexo y ciclo lectivo.{% endblock %}</div>
+            </div>
+        </div>
+    </div>
+    <!-- MODULE NAV -->
+    <nav class="navbar navbar-expand-lg navbar-dark cef-module-nav">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'especial:visualizacion_localizaciones' %}">Especial</a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#especialDirectorNav" aria-controls="especialDirectorNav" aria-expanded="false" aria-label="Alternar navegación">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="especialDirectorNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link {% if active_menu == 'localizaciones' %}active{% endif %}" href="{% url 'especial:visualizacion_localizaciones' %}">Localizaciones</a></li>
+                    <li class="nav-item"><a class="nav-link {% if active_menu == 'alumnos' %}active{% endif %}" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Alumnos</a></li>
+                    <li class="nav-item"><a class="nav-link {% if active_menu == 'cueanexo' %}active{% endif %}" href="{% url 'especial:carga_cueanexo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Datos CUE-Anexo</a></li>
+                    <li class="nav-item"><a class="nav-link {% if active_menu == 'secciones' %}active{% endif %}" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Secciones</a></li>
+                    {% if especial_context.es_admin_especial %}
+                        <li class="nav-item"><a class="nav-link {% if active_menu == 'ciclos' %}active{% endif %}" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Ciclos</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
     <div class="cef-main">
         {% if messages %}
             <div class="cef-alert-stack">
                 {% for message in messages %}
-                    <div class="cef-alert cef-alert-{{ message.tags|default:'info' }}" role="alert" data-cef-alert{% if message.tags == "success" %} data-cef-alert-autohide{% endif %}>
-                        <span>{{ message }}</span>
-                        <button class="cef-alert-close" type="button" aria-label="Cerrar mensaje" data-cef-alert-close>
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
+                    <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}
-
-        {% block cef_context_selector %}
-            <!-- CONTEXT CARD -->
-            <section class="cef-context-card">
-                <form method="get" class="cef-context-grid">
-                    <div>
-                        <label class="cef-context-label" for="id_contexto_cueanexo">CEF</label>
-                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
-                            {% for option in cef_context.cueanexo_options %}
-                                <option value="{{ option.cueanexo }}" title="{{ option.cueanexo }} - {{ option.nombre }}" {% if option.cueanexo == cef_context.cueanexo %}selected{% endif %}>{{ option.cueanexo }} - {{ option.nombre }}</option>
-                            {% empty %}
-                                <option value="">Sin CEF disponibles</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
-                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm">
-                            {% for ciclo in cef_context.ciclos %}
-                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.actual %} &middot; actual{% endif %}</option>
-                            {% empty %}
-                                <option value="">Sin ciclo activo</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="cef-context-actions">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fa-solid fa-check"></i> Aplicar
-                        </button>
-                        {% if cef_context.es_admin_cef %}
-                            <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:administrar_ciclos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                                <i class="fa-solid fa-calendar-plus"></i> Ciclos
-                            </a>
-                        {% endif %}
-                    </div>
-                </form>
-            </section>
-        {% endblock %}
-
-        {% if cef_context.sin_cueanexo %}
-            <div class="alert alert-warning">No hay CUE-Anexos cargables para tu usuario.</div>
+        <!-- CONTEXT CARD (selector CUE-Anexo / Ciclo) -->
+        <section class="cef-context-card">
+            <form method="get" class="cef-context-grid">
+                <div>
+                    <label class="cef-context-label" for="id_contexto_cueanexo">Escuela Especial</label>
+                    <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
+                        {% for option in especial_context.cueanexo_options %}
+                            <option value="{{ option.cueanexo }}" title="{{ option.cueanexo }} - {{ option.nombre }}" {% if option.cueanexo == especial_context.cueanexo %}selected{% endif %}>{{ option.cueanexo }} - {{ option.nombre }}</option>
+                        {% empty %}
+                            <option value="">Sin establecimientos disponibles</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
+                    <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm">
+                        {% for ciclo in especial_context.ciclos %}
+                            <option value="{{ ciclo.pk }}" {% if especial_context.ciclo and ciclo.pk == especial_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.actual %} · actual{% endif %}</option>
+                        {% empty %}
+                            <option value="">Sin ciclo activo</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cef-context-actions">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-check"></i> Aplicar
+                    </button>
+                    {% if especial_context.es_admin_especial %}
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                            <i class="fa-solid fa-calendar-plus"></i> Ciclos
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </section>
+        {% if especial_context.sin_cueanexo %}
+            <div class="alert alert-warning">No hay establecimientos de Educación Especial disponibles para tu usuario.</div>
         {% endif %}
-        {% if cef_context.sin_ciclo %}
+        {% if especial_context.sin_ciclo %}
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
         {% endif %}
-
-        {% block cef_content %}{% endblock %}
-
-        <div class="modal fade" id="cefConfirmActionModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" data-cef-confirm-title>Confirmar acción</h5>
-                        <button type="button" class="btn-close" data-cef-confirm-cancel aria-label="Cerrar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-1" data-cef-confirm-message>¿Confirmás esta acción?</p>
-                        <p class="small text-muted mb-0" data-cef-confirm-entity></p>
-                        <div class="alert alert-danger mt-3 mb-0 d-none" data-cef-confirm-feedback></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-cef-confirm-cancel>Cancelar</button>
-                        <button type="button" class="btn btn-primary" data-cef-confirm-accept>Confirmar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-        (function () {
-            function tableRoot(table) {
-                return table.closest(".cef-panel-body, .cef-card-body, .cef-panel, .cef-card") || document;
-            }
-
-            function initTable(table) {
-                if (!table || table.dataset.cefTableReady === "1") return;
-                table.dataset.cefTableReady = "1";
-
-                var root = tableRoot(table);
-                var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
-                var search = root.querySelector("[data-cef-table-search]");
-                var size = root.querySelector("[data-cef-page-size]");
-                var count = root.querySelector("[data-cef-table-count]");
-                var paginEl = root.querySelector("[data-cef-table-pagination]");
-                var page = 1;
-
-                function filteredRows() {
-                    var term = search ? search.value.toLowerCase().trim() : "";
-                    return rows.filter(function(row) {
-                        return !term || row.textContent.toLowerCase().includes(term);
-                    });
-                }
-
-                function render() {
-                    var visible = filteredRows();
-                    var pageSize = parseInt(size ? size.value : "10", 10) || 10;
-                    var pages = Math.max(1, Math.ceil(visible.length / pageSize));
-                    page = Math.min(page, pages);
-
-                    rows.forEach(function(row) { row.style.display = "none"; });
-                    visible.slice((page - 1) * pageSize, page * pageSize).forEach(function(row) {
-                        row.style.display = "";
-                    });
-
-                    if (count) count.textContent = visible.length + " registros";
-                    if (paginEl) {
-                        if (pages <= 1) {
-                            paginEl.innerHTML = "";
-                        } else {
-                            paginEl.innerHTML = '<button type="button" data-page-prev>Anterior</button>' +
-                                '<span class="page-num">' + page + ' / ' + pages + '</span>' +
-                                '<button type="button" data-page-next>Siguiente</button>';
-                        }
-                    }
-                    table.classList.add("is-ready");
-                }
-
-                if (search) search.addEventListener("input", function() { page = 1; render(); });
-                if (size) size.addEventListener("change", function() { page = 1; render(); });
-                if (paginEl) {
-                    paginEl.addEventListener("click", function(event) {
-                        if (event.target.hasAttribute("data-page-prev")) page = Math.max(1, page - 1);
-                        if (event.target.hasAttribute("data-page-next")) page = page + 1;
-                        render();
-                    });
-                }
-                render();
-            }
-
-            window.initCefTable = initTable;
-            window.initCefTables = function(root) {
-                (root || document).querySelectorAll("[data-cef-table]").forEach(initTable);
-            };
-            window.initCefAlumnosTable = window.initCefTables;
-            window.initCefProfesoresTable = window.initCefTables;
-            window.initCefInscripcionTable = window.initCefTables;
-            window.initCefDocentesGrupoTable = window.initCefTables;
-
-            window.initCefTables();
-
-            function dismissAlert(alert) {
-                if (!alert) return;
-                alert.classList.add("is-hiding");
-                window.setTimeout(function() {
-                    if (alert.parentNode) alert.parentNode.removeChild(alert);
-                }, 240);
-            }
-
-            document.addEventListener("click", function(event) {
-                var close = event.target.closest("[data-cef-alert-close]");
-                if (!close) return;
-                dismissAlert(close.closest("[data-cef-alert]"));
-            });
-
-            document.querySelectorAll("[data-cef-alert-autohide]").forEach(function(alert) {
-                window.setTimeout(function() {
-                    dismissAlert(alert);
-                }, 3800);
-            });
-
-            var confirmModal = document.getElementById("cefConfirmActionModal");
-            var pendingConfirmForm = null;
-
-            function submitFormFallback(form) {
-                if (!form) return;
-                form.dataset.cefConfirmed = "1";
-                form.submit();
-            }
-
-            function modalController() {
-                if (!confirmModal) return null;
-                if (window.bootstrap && window.bootstrap.Modal) {
-                    return window.bootstrap.Modal.getOrCreateInstance(confirmModal);
-                }
-                return {
-                    show: function() {
-                        confirmModal.classList.add("show");
-                        confirmModal.style.display = "block";
-                        confirmModal.removeAttribute("aria-hidden");
-                        confirmModal.setAttribute("aria-modal", "true");
-                        document.body.classList.add("modal-open");
-                    },
-                    hide: function() {
-                        confirmModal.classList.remove("show");
-                        confirmModal.style.display = "none";
-                        confirmModal.setAttribute("aria-hidden", "true");
-                        confirmModal.removeAttribute("aria-modal");
-                        document.body.classList.remove("modal-open");
-                    }
-                };
-            }
-
-            function setConfirmText(selector, value) {
-                var el = confirmModal ? confirmModal.querySelector(selector) : null;
-                if (el) el.textContent = value || "";
-            }
-
-            function setConfirmFeedback(message) {
-                var feedback = confirmModal ? confirmModal.querySelector("[data-cef-confirm-feedback]") : null;
-                if (!feedback) return;
-                feedback.textContent = message || "";
-                feedback.classList.toggle("d-none", !message);
-            }
-
-            function showPageFeedback(message, ok) {
-                if (!message) return;
-                var panelBody = document.querySelector(".cef-panel-body") || document.querySelector(".cef-panel") || document.body;
-                var alert = document.createElement("div");
-                alert.className = "alert alert-" + (ok ? "success" : "danger") + " mb-3";
-                alert.textContent = message;
-                panelBody.insertBefore(alert, panelBody.firstChild);
-                window.setTimeout(function() {
-                    if (alert.parentNode) alert.parentNode.removeChild(alert);
-                }, 4200);
-            }
-
-            function replaceAjaxFragment(selector, html) {
-                var target = selector ? document.querySelector(selector) : null;
-                if (!target || typeof html !== "string") return false;
-                target.innerHTML = html;
-                window.initCefTables(target);
-                return true;
-            }
-
-            function applyAjaxPayload(data) {
-                if (!data || typeof data !== "object") return false;
-                var replaced = true;
-                if (Array.isArray(data.fragments)) {
-                    replaced = data.fragments.every(function(fragment) {
-                        return replaceAjaxFragment(fragment.selector, fragment.html);
-                    });
-                    if (!replaced) return false;
-                } else if (data.fragment_html) {
-                    replaced = replaceAjaxFragment(data.fragment_selector, data.fragment_html);
-                    if (!replaced) return false;
-                }
-                showPageFeedback(data.message, !!data.ok);
-                return true;
-            }
-
-            function submitAjaxForm(form, submitter) {
-                var controller = modalController();
-                var button = submitter || (confirmModal ? confirmModal.querySelector("[data-cef-confirm-accept]") : null);
-                if (button) button.disabled = true;
-                setConfirmFeedback("");
-
-                fetch(form.getAttribute("action") || window.location.href, {
-                    method: "POST",
-                    body: new FormData(form),
-                    headers: { "X-Requested-With": "XMLHttpRequest" },
-                    credentials: "same-origin"
-                })
-                    .then(function(response) {
-                        var contentType = response.headers.get("content-type") || "";
-                        if (contentType.indexOf("application/json") === -1) {
-                            if (!response.ok) throw new Error("No se pudo completar la acción.");
-                            submitFormFallback(form);
-                            return null;
-                        }
-                        return response.json();
-                    })
-                    .then(function(data) {
-                        if (!data) return;
-                        if (!applyAjaxPayload(data)) {
-                            submitFormFallback(form);
-                            return;
-                        }
-                        if (data.ok && data.close_modal !== false && controller) {
-                            controller.hide();
-                            pendingConfirmForm = null;
-                        } else if (!data.ok) {
-                            setConfirmFeedback(data.message || "No se pudo completar la acción.");
-                        }
-                    })
-                    .catch(function() {
-                        submitFormFallback(form);
-                    })
-                    .finally(function() {
-                        if (button) button.disabled = false;
-                    });
-            }
-
-            document.addEventListener("submit", function(event) {
-                var form = event.target.closest("[data-cef-confirm-submit]");
-                if (!form || form.dataset.cefConfirmed === "1") return;
-                var controller = modalController();
-                if (!controller) return;
-                event.preventDefault();
-                pendingConfirmForm = form;
-                setConfirmText("[data-cef-confirm-title]", form.dataset.cefConfirmTitle || "Confirmar acción");
-                setConfirmText("[data-cef-confirm-message]", form.dataset.cefConfirmMessage || "¿Confirmás esta acción?");
-                setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
-                setConfirmFeedback("");
-                try {
-                    controller.show();
-                } catch (error) {
-                    pendingConfirmForm = null;
-                    submitFormFallback(form);
-                }
-            });
-
-            document.addEventListener("click", function(event) {
-                if (event.target.closest("[data-cef-confirm-cancel]")) {
-                    var controller = modalController();
-                    if (controller) controller.hide();
-                    pendingConfirmForm = null;
-                    return;
-                }
-
-                if (!event.target.closest("[data-cef-confirm-accept]")) return;
-                if (!pendingConfirmForm) return;
-                if (pendingConfirmForm.hasAttribute("data-cef-ajax-post")) {
-                    submitAjaxForm(pendingConfirmForm, event.target.closest("[data-cef-confirm-accept]"));
-                    return;
-                }
-                submitFormFallback(pendingConfirmForm);
-            });
-        })();
-        </script>
+        {% block especial_content %}{% endblock %}
     </div>
 </div>
-
 {% endblock %}

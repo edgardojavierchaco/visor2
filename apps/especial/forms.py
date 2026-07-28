@@ -15,7 +15,7 @@ from .models import (
     DocenteSeccion,
     ModalidadDictadoTipo,
     SeccionEspecial,
-    seccion_tipo,
+    SeccionTipo,
     TurnoTipo,
     normalizar_cueanexo,
     solo_digitos,
@@ -118,7 +118,7 @@ class EspecialSeccionForm(forms.ModelForm):
         self.ciclo = ciclo
         # Mapeo de campos y sus querysets
         campos_catalogo = {
-            "cd_tipo_seccion": seccion_tipo.objects.all(),
+            "cd_tipo_seccion": SeccionTipo.objects.all(),
             "tipo_estructura_especial": CatalogoTipoEstructuraEspecial.objects.all(),
             "turno": TurnoTipo.objects.all(),
             "rango_etario": CatalogoTipoRangoEtario.objects.all(),

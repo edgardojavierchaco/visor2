@@ -87,4 +87,14 @@ urlpatterns = [
         views_ciclo.administrar_ciclos,
         name="administrar_ciclos",
     ),
+    path(
+    "carga/secciones/<int:seccion_id>/docentes/<int:docente_id>/editar/",
+    views_docentes.editar_docente_seccion, # Asegúrate de importar la función
+    name="editar_docente_seccion",
+    ),
+    path(
+        "carga/secciones/<int:seccion_id>/inscripciones/<int:inscripcion_id>/editar/",
+        views_inscripcion_seccion.editar_inscripcion_seccion,
+        name="editar_inscripcion_seccion",
+    ),
 ]
