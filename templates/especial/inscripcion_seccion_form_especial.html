@@ -1,8 +1,8 @@
-{% extends "cef/base_operativo_cef.html" %}
+{% extends "especial/base_operativo_especial.html" %}
 
-{% block cef_subtitle %}Edición del estado de la inscripción del alumno en el grupo seleccionado.{% endblock %}
+{% block especial_subtitle %}Edición del estado de la inscripción del alumno en el grupo seleccionado.{% endblock %}
 
-{% block cef_content %}
+{% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Grupos <span>&raquo; Editar inscripción</span></h2>
@@ -42,10 +42,10 @@
             </div>
         </div>
 
-        <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
+        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate>
             {% csrf_token %}
-            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-            {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+            <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+            {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
             {% if volver_gestionar %}<input type="hidden" name="volver" value="gestionar">{% endif %}
 
             {% if form.non_field_errors %}

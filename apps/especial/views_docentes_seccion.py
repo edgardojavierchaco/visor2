@@ -23,7 +23,7 @@ def dar_alta_docente_seccion(asignacion, user):
 
     # Verificar que no haya otro activo en el mismo rol para la misma sección
     duplicado = DocenteSeccion.objects.filter(
-        grupo=asignacion.grupo,
+        seccion=asignacion.seccion,
         rol=asignacion.rol,
         estado=DocenteSeccion.Estado.ACTIVO,
     ).exclude(pk=asignacion.pk).exists()

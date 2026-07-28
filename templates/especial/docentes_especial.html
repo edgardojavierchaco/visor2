@@ -1,8 +1,8 @@
-{% extends "cef/base_operativo_cef.html" %}
+{% extends "especial/base_operativo_especial.html" %}
 
-{% block cef_subtitle %}Gestión de Profesores CEF.{% endblock %}
+{% block especial_subtitle %}Gestión de Profesores CEF.{% endblock %}
 
-{% block cef_content %}
+{% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Profesores <span>» Gestión de Profesores</span></h2>
@@ -73,7 +73,7 @@
                                 <td>
                                     {% if docente_banco.asignaciones_grupo %}
                                         {% for asignacion in docente_banco.asignaciones_grupo %}
-                                            <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'cef:docentes_grupo' asignacion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                            <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'especial:docentes_grupo' asignacion.grupo.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                 Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }} - {{ asignacion.get_rol_display }}{% if asignacion.estado != 'activo' %} - {{ asignacion.get_estado_display }}{% endif %}
                                             </a>
                                         {% endfor %}
@@ -86,7 +86,7 @@
                                         {% if grupos_disponibles %}
                                             {% if docente_banco.grupos_asignables|length == 1 and not docente_banco.grupos_bloqueados %}
                                                 {% for grupo in docente_banco.grupos_asignables %}
-                                                    <a class="btn btn-primary btn-sm" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                    <a class="btn btn-primary btn-sm" href="{% url 'especial:docentes_grupo' grupo.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
                                                         <i class="fa-solid fa-user-plus"></i> Asignar a grupo
                                                     </a>
                                                 {% endfor %}
@@ -98,7 +98,7 @@
                                                     <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
                                                     {% for grupo in docente_banco.grupos_asignables %}
                                                         <li>
-                                                            <a class="dropdown-item" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                            <a class="dropdown-item" href="{% url 'especial:docentes_grupo' grupo.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
                                                                 <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
                                                                 <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
                                                             </a>
@@ -120,7 +120,7 @@
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted small">Sin grupos cargados</span>
-                                            <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                            <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'especial:carga_seccion_nuevo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                 <i class="fa-solid fa-plus"></i> Crear grupo
                                             </a>
                                         {% endif %}
@@ -139,7 +139,7 @@
                 <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
                 Listado pendiente hasta crear la tabla cef.docentes_cef.
             </div>
-        {% elif cef_context.puede_operar %}
+        {% elif especial_context.puede_operar %}
             <div class="cef-empty-state">
                 <i class="fa-solid fa-chalkboard-user" style="font-size:1.5rem;color:var(--text-faint)"></i>
                 Todavía no hay profesores en el banco de este CEF y ciclo.
@@ -235,10 +235,10 @@
                 <span data-cef-asignar-grupo-label>{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.actividad }} N° {{ asignacion_grupo_seleccionado.numero }} - {{ asignacion_grupo_seleccionado.turno }}{% else %}Grupo{% endif %}</span>
             </div>
 
-            <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
+            <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
                 {% csrf_token %}
-                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                 <input type="hidden" name="accion" value="asignar_grupo">
                 <input type="hidden" name="grupo_id" value="{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.pk }}{% endif %}" data-cef-asignar-grupo-id>
                 <input type="hidden" name="cuil" value="{{ asignacion_docente_cuil }}" data-cef-asignar-docente-cuil>

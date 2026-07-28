@@ -1,0 +1,4078 @@
+TXT generado con comando: tx
+Carpeta raiz: D:\NachoRepositorios\Trabajo_Ministerio\visor2\apps\especial
+Fecha: 2026-07-16 12:45:27
+Archivos .py: 21
+Archivos .html: 0
+Archivos .css: 0
+Total archivos incluidos: 21
+Directorios leidos: 3
+Directorios ignorados: 0
+Reparse points leidos: 0
+Reparse points ignorados: 0
+Accesos directos leidos: 0
+Accesos directos ignorados: 0
+Profundidad maxima ignorada: 0
+
+Nota: se ignoraron archivos .txt y carpetas backup/backpu/respaldo/copia, TodoPyHtml, ademas de .git, node_modules, venv y similares.
+
+
+================================================================================
+ARCHIVO: __init__.py
+================================================================================
+
+
+
+
+================================================================================
+ARCHIVO: admin.py
+================================================================================
+
+
+
+
+================================================================================
+ARCHIVO: apps.py
+================================================================================
+
+from django.apps import AppConfig
+
+
+class EspecialConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = 'apps.especial'
+
+
+
+================================================================================
+ARCHIVO: forms.py
+================================================================================
+
+# apps/especial/forms.py
+# -*- coding: utf-8 -*-
+import re
+from django import forms
+from django.core.exceptions import ValidationError
+from django.forms import ModelChoiceField
+from django.utils import timezone
+from .models import (
+    AlumnoSeccion,
+    CatalogoTipoEstructuraEspecial,
+    CatalogoTipoRangoEtario,
+    EspecialCiclo,
+    EspecialAlumnoBanco,
+    EspecialDocenteBanco,
+    DocenteSeccion,
+    ModalidadDictadoTipo,
+    SeccionEspecial,
+    SeccionTipo,
+    TurnoTipo,
+    normalizar_cueanexo,
+    solo_digitos,
+)
+
+def _aplicar_clases_bootstrap(field):
+    widget = field.widget
+    clases = widget.attrs.get("class", "")
+    if isinstance(widget, forms.CheckboxSelectMultiple):
+        return
+    if isinstance(widget, forms.CheckboxInput):
+        widget.attrs["class"] = f"{clases} form-check-input".strip()
+        return
+    if isinstance(widget, forms.Textarea):
+        nueva = "form-control"
+    elif isinstance(widget, forms.Select):
+        nueva = "form-select"
+    else:
+        nueva = "form-control"
+    widget.attrs["class"] = f"{clases} {nueva}".strip()
+
+class EspecialBusquedaAlumnoForm(forms.Form):
+    """Formulario de búsqueda de alumno por CUIL."""
+    cuil = forms.CharField(
+        max_length=13,
+        required=True,
+        label="CUIL",
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Ej: 20-12345678-9",
+            "pattern": r"\d{11}|[\d-]{13}",
+        }),
+    )
+    def clean_cuil(self):
+        cuil = re.sub(r"\D", "", self.cleaned_data.get("cuil", ""))
+        if len(cuil) != 11:
+            raise ValidationError("El CUIL debe tener 11 dígitos.")
+        return cuil
+
+class EspecialBusquedaDocenteForm(forms.Form):
+    """Formulario de búsqueda de docente por CUIL."""
+    cuil = forms.CharField(
+        max_length=13,
+        required=True,
+        label="CUIL del Docente",
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Ej: 20-12345678-9",
+            "pattern": r"\d{11}|[\d-]{13}",
+        }),
+    )
+    def clean_cuil(self):
+        cuil = re.sub(r"\D", "", self.cleaned_data.get("cuil", ""))
+        if len(cuil) != 11:
+            raise ValidationError("El CUIL debe tener 11 dígitos.")
+        return cuil
+
+class EspecialSeccionForm(forms.ModelForm):
+    """Formulario de creación/edición de sección de Educación Especial."""
+    class Meta:
+        model = SeccionEspecial
+        fields = [
+            "cd_tipo_seccion",
+            "tipo_estructura_especial",
+            "nombre_seccion",
+            "descripcion",
+            "capacidad_total",
+            "turno",
+            "rango_etario",
+            "modalidad",
+            "lugar_dictado",
+            "estado",
+        ]
+        labels = {
+            "cd_tipo_seccion": "Tipo de sección",
+            "tipo_estructura_especial": "Tipo de estructura especial",
+            "rango_etario": "Rango etario",
+            "modalidad": "Modalidad de dictado",
+            "turno": "Turno",
+            "nombre_seccion": "Nombre de la sección",
+            "capacidad_total": "Capacidad total",
+            "lugar_dictado": "Lugar de dictado",
+            "estado": "Estado",
+        }
+        widgets = {
+            "descripcion": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "lugar_dictado": forms.TextInput(attrs={"class": "form-control"}),
+            "nombre_seccion": forms.TextInput(attrs={"class": "form-control"}),
+            "capacidad_total": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+            "cd_tipo_seccion": forms.Select(attrs={"class": "form-select"}),
+            "tipo_estructura_especial": forms.Select(attrs={"class": "form-select"}),
+            "turno": forms.Select(attrs={"class": "form-select"}),
+            "rango_etario": forms.Select(attrs={"class": "form-select"}),
+            "modalidad": forms.Select(attrs={"class": "form-select"}),
+            "estado": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def __init__(self, *args, ciclo=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ciclo = ciclo
+        # Mapeo de campos y sus querysets
+        campos_catalogo = {
+            "cd_tipo_seccion": SeccionTipo.objects.all(),
+            "tipo_estructura_especial": CatalogoTipoEstructuraEspecial.objects.all(),
+            "turno": TurnoTipo.objects.all(),
+            "rango_etario": CatalogoTipoRangoEtario.objects.all(),
+            "modalidad": ModalidadDictadoTipo.objects.all(),
+        }
+        for nombre_campo, queryset in campos_catalogo.items():
+            field = self.fields.get(nombre_campo)
+            if isinstance(field, ModelChoiceField):
+                field.queryset = queryset
+                field.label_from_instance = lambda obj: getattr(obj, "descripcion", str(obj))
+        
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_capacidad_total(self):
+        capacidad = self.cleaned_data.get("capacidad_total")
+        if capacidad is not None and capacidad < 1:
+            raise ValidationError("La capacidad debe ser mayor a 0.")
+        return capacidad
+
+    def clean_nombre_seccion(self):
+        nombre = self.cleaned_data.get("nombre_seccion", "").strip()
+        if not nombre:
+            raise ValidationError("El nombre de la sección es obligatorio.")
+        return nombre
+
+    def save(self, commit=True):
+        seccion = super().save(commit=False)
+        if self.ciclo:
+            seccion.ciclo = self.ciclo
+        if commit:
+            seccion.save()
+        return seccion
+
+class EspecialCicloForm(forms.ModelForm):
+    """Formulario de creación de ciclo lectivo."""
+    class Meta:
+        model = EspecialCiclo
+        fields = ["anio", "descripcion", "fecha_inicio", "fecha_fin", "activo", "actual"]
+        labels = {
+            "anio": "Año",
+            "descripcion": "Descripción",
+            "fecha_inicio": "Fecha de inicio",
+            "fecha_fin": "Fecha de fin",
+            "activo": "Activo",
+            "actual": "Ciclo actual",
+        }
+        widgets = {
+            "anio": forms.NumberInput(attrs={"class": "form-control", "min": 1900, "max": 2100}),
+            "descripcion": forms.TextInput(attrs={"class": "form-control"}),
+            "fecha_inicio": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "fecha_fin": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "activo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "actual": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def save(self, user=None, commit=True):
+        ciclo = super().save(commit=False)
+        if user:
+            ciclo.creado_por = user
+            ciclo.actualizado_por = user
+        if commit:
+            ciclo.save()
+        return ciclo
+
+class EspecialInscripcionForm(forms.ModelForm):
+    """Formulario para inscribir/alumno a sección (AlumnoSeccion)."""
+    class Meta:
+        model = AlumnoSeccion
+        fields = [
+            "estado",
+            "fecha_inscripcion",
+            "fecha_baja",
+            "motivo_baja",
+            "observaciones",
+        ]
+        widgets = {
+            "fecha_inscripcion": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "fecha_baja": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+        labels = {
+            "estado": "Estado",
+            "fecha_inscripcion": "Fecha de inscripción",
+            "fecha_baja": "Fecha de baja",
+            "motivo_baja": "Motivo de baja",
+            "observaciones": "Observaciones",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and not getattr(self.instance, "pk", None):
+            self.fields["fecha_inscripcion"].initial = timezone.localdate
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+class EspecialDocenteSeccionForm(forms.ModelForm):
+    """Formulario para asignar docente a sección."""
+    class Meta:
+        model = DocenteSeccion
+        fields = [
+            "rol",
+            "estado",
+            "fecha_desde",
+            "fecha_hasta",
+            "observaciones",
+        ]
+        widgets = {
+            "fecha_desde": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "fecha_hasta": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+        labels = {
+            "rol": "Rol en la sección",
+            "estado": "Estado en esta sección",
+            "fecha_desde": "Fecha de asignación",
+            "fecha_hasta": "Fecha de finalización",
+            "observaciones": "Observaciones",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and not getattr(self.instance, "pk", None):
+            self.fields["fecha_desde"].initial = timezone.localdate
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+
+================================================================================
+ARCHIVO: migrations\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+ARCHIVO: migrations\0001_initial.py
+================================================================================
+
+# Generated by Django 5.2.15 on 2026-06-30 13:01
+
+import django.core.validators
+import django.db.models.deletion
+import django.utils.timezone
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    initial = True
+
+    dependencies = [
+        (
+            "bnhalumnos",
+            "0012_remove_alumno_nivel_formacion_tutor_nivel_formacion_and_more",
+        ),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="EspecialPadronOferta",
+            fields=[
+                ("id", models.BigIntegerField(primary_key=True, serialize=False)),
+                ("cueanexo", models.CharField(blank=True, max_length=9, null=True)),
+                ("nom_est", models.TextField(blank=True, null=True)),
+                (
+                    "padron_cueanexo",
+                    models.CharField(blank=True, max_length=9, null=True),
+                ),
+                ("acronimo", models.CharField(blank=True, max_length=50, null=True)),
+                ("oferta", models.TextField(blank=True, null=True)),
+                ("etiqueta", models.TextField(blank=True, null=True)),
+                ("nro_est", models.TextField(blank=True, null=True)),
+                ("ambito", models.TextField(blank=True, null=True)),
+                ("sector", models.TextField(blank=True, null=True)),
+                ("region_loc", models.TextField(blank=True, null=True)),
+                ("ref_loc", models.TextField(blank=True, null=True)),
+                ("calle", models.TextField(blank=True, null=True)),
+                ("numero", models.TextField(blank=True, null=True)),
+                ("localidad", models.TextField(blank=True, null=True)),
+                ("departamento", models.TextField(blank=True, null=True)),
+                ("estado_loc", models.TextField(blank=True, null=True)),
+                ("est_oferta", models.TextField(blank=True, null=True)),
+                ("estado_est", models.TextField(blank=True, null=True)),
+                ("resploc_cuitcuil", models.TextField(blank=True, null=True)),
+                ("resploc_doc", models.TextField(blank=True, null=True)),
+                ("apellido_resp", models.TextField(blank=True, null=True)),
+                ("nombre_resp", models.TextField(blank=True, null=True)),
+                ("resploc_email", models.TextField(blank=True, null=True)),
+                ("resploc_telefono", models.TextField(blank=True, null=True)),
+                ("sup_tecnico", models.TextField(blank=True, null=True)),
+                ("email_suptecnico", models.TextField(blank=True, null=True)),
+                ("tel_suptecnico", models.TextField(blank=True, null=True)),
+                ("categoria", models.TextField(blank=True, null=True)),
+                ("cui_loc", models.TextField(blank=True, null=True)),
+                ("cua_loc", models.TextField(blank=True, null=True)),
+                ("cuof_loc", models.TextField(blank=True, null=True)),
+                ("jornada", models.TextField(blank=True, null=True)),
+            ],
+            options={
+                "verbose_name": "Oferta Especial desde Padrón",
+                "verbose_name_plural": "Ofertas Especial desde Padrón",
+                "db_table": "v_capa_unica_ofertas_ant",
+                "managed": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="EspecialRolUsuario",
+            fields=[
+                ("id", models.BigIntegerField(primary_key=True, serialize=False)),
+                ("nombre", models.CharField(blank=True, max_length=100, null=True)),
+            ],
+            options={
+                "verbose_name": "Rol de usuario Especial",
+                "verbose_name_plural": "Roles de usuario Especial",
+                "db_table": "usuarios_rol",
+                "managed": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="EspecialUsuarioPerfil",
+            fields=[
+                ("id", models.BigIntegerField(primary_key=True, serialize=False)),
+            ],
+            options={
+                "verbose_name": "Perfil de usuario Especial",
+                "verbose_name_plural": "Perfiles de usuario Especial",
+                "db_table": "usuarios_perfilusuario",
+                "managed": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="CatalogoTipoEstructuraEspecial",
+            fields=[
+                (
+                    "cd_tipoestructuraespecial",
+                    models.IntegerField(primary_key=True, serialize=False),
+                ),
+                ("descripcion", models.CharField(max_length=100)),
+            ],
+            options={
+                "verbose_name": "Tipo de estructura especial",
+                "verbose_name_plural": "Tipos de estructuras especiales",
+                "db_table": "catalogo_tipo_estructura_especial",
+            },
+        ),
+        migrations.CreateModel(
+            name="CatalogoTipoRangoEtario",
+            fields=[
+                (
+                    "cd_tiporangoetario",
+                    models.IntegerField(primary_key=True, serialize=False),
+                ),
+                ("descripcion", models.CharField(max_length=100)),
+            ],
+            options={
+                "verbose_name": "Tipo de rango etario",
+                "verbose_name_plural": "Tipos de rangos etarios",
+                "db_table": "catalogo_tipo_rango_etario",
+            },
+        ),
+        migrations.CreateModel(
+            name="ModalidadDictadoTipo",
+            fields=[
+                (
+                    "cd_modalidad_dictado",
+                    models.IntegerField(primary_key=True, serialize=False),
+                ),
+                ("descripcion", models.CharField(max_length=100)),
+            ],
+            options={
+                "verbose_name": "Tipo de modalidad de cursado",
+                "verbose_name_plural": "Tipos de modalidad de cursado",
+                "db_table": "modalidad_dictado_tipo",
+            },
+        ),
+        migrations.CreateModel(
+            name="seccion_tipo",
+            fields=[
+                (
+                    "cd_tipo_seccion",
+                    models.IntegerField(primary_key=True, serialize=False),
+                ),
+                ("descripcion", models.CharField(max_length=100)),
+            ],
+            options={
+                "verbose_name": "Tipo de sección",
+                "verbose_name_plural": "Tipos de sección",
+                "db_table": "seccion_tipo",
+            },
+        ),
+        migrations.CreateModel(
+            name="SinoTipo",
+            fields=[
+                ("cd_sino", models.IntegerField(primary_key=True, serialize=False)),
+                ("descripcion", models.CharField(max_length=100)),
+            ],
+            options={
+                "verbose_name": "Si/No/Sin info",
+                "verbose_name_plural": "Si/No/Sin info",
+                "db_table": "sino_tipo",
+            },
+        ),
+        migrations.CreateModel(
+            name="TurnoTipo",
+            fields=[
+                ("cd_turno", models.IntegerField(primary_key=True, serialize=False)),
+                ("descripcion", models.CharField(max_length=100)),
+            ],
+            options={
+                "verbose_name": "Turno",
+                "verbose_name_plural": "Turnos",
+                "db_table": "turno_tipo",
+            },
+        ),
+        migrations.CreateModel(
+            name="EspecialCiclo",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("creado_en", models.DateTimeField(auto_now_add=True)),
+                ("actualizado_en", models.DateTimeField(auto_now=True)),
+                (
+                    "anio",
+                    models.PositiveSmallIntegerField(
+                        unique=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(1900),
+                            django.core.validators.MaxValueValidator(2100),
+                        ],
+                    ),
+                ),
+                ("descripcion", models.CharField(blank=True, max_length=120)),
+                ("fecha_inicio", models.DateField(blank=True, null=True)),
+                ("fecha_fin", models.DateField(blank=True, null=True)),
+                ("activo", models.BooleanField(default=True)),
+                ("actual", models.BooleanField(default=False)),
+                (
+                    "actualizado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_actualizados",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "creado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_creados",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Ciclo Especial",
+                "verbose_name_plural": "Ciclos Especial",
+                "db_table": "especial_ciclos",
+                "ordering": ["-anio"],
+            },
+        ),
+        migrations.CreateModel(
+            name="SeccionEspecial",
+            fields=[
+                ("creado_en", models.DateTimeField(auto_now_add=True)),
+                ("actualizado_en", models.DateTimeField(auto_now=True)),
+                ("id", models.BigAutoField(primary_key=True, serialize=False)),
+                ("cueanexo", models.CharField(db_index=True, max_length=9)),
+                ("nombre_seccion", models.CharField(max_length=50)),
+                (
+                    "descripcion",
+                    models.TextField(blank=True, max_length=255, null=True),
+                ),
+                ("capacidad_total", models.PositiveIntegerField()),
+                (
+                    "lugar_dictado",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                (
+                    "estado",
+                    models.CharField(
+                        choices=[
+                            ("borrador", "Borrador"),
+                            ("activo", "Activo"),
+                            ("inactivo", "Inactivo"),
+                            ("cerrado", "Cerrado"),
+                        ],
+                        db_index=True,
+                        default="activo",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "actualizado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_actualizados",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "cd_tipo_seccion",
+                    models.ForeignKey(
+                        db_column="cd_tipo_seccion",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones",
+                        to="especial.seccion_tipo",
+                    ),
+                ),
+                (
+                    "ciclo",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones",
+                        to="especial.especialciclo",
+                    ),
+                ),
+                (
+                    "creado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_creados",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "modalidad",
+                    models.ForeignKey(
+                        db_column="cd_modalidad_dictado",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones",
+                        to="especial.modalidaddictadotipo",
+                    ),
+                ),
+                (
+                    "rango_etario",
+                    models.ForeignKey(
+                        db_column="cd_tiporangoetario",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones",
+                        to="especial.catalogotiporangoetario",
+                    ),
+                ),
+                (
+                    "tipo_estructura_especial",
+                    models.ForeignKey(
+                        db_column="cd_tipoestructuraespecial",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones",
+                        to="especial.catalogotipoestructuraespecial",
+                    ),
+                ),
+                (
+                    "turno",
+                    models.ForeignKey(
+                        db_column="cd_turno",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones",
+                        to="especial.turnotipo",
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Sección de Educación Especial",
+                "verbose_name_plural": "Secciones de Educación Especial",
+                "db_table": "especial_seccion",
+            },
+        ),
+        migrations.CreateModel(
+            name="AlumnoSeccion",
+            fields=[
+                ("creado_en", models.DateTimeField(auto_now_add=True)),
+                ("actualizado_en", models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(primary_key=True, serialize=False, unique=True),
+                ),
+                (
+                    "estado",
+                    models.CharField(
+                        choices=[
+                            ("activo", "Activo"),
+                            ("inactivo", "Inactivo"),
+                            ("baja", "Baja"),
+                        ],
+                        db_index=True,
+                        default="activo",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "fecha_inscripcion",
+                    models.DateField(default=django.utils.timezone.localdate),
+                ),
+                ("fecha_baja", models.DateField(blank=True, null=True)),
+                ("motivo_baja", models.CharField(blank=True, max_length=255)),
+                ("observaciones", models.TextField(blank=True)),
+                (
+                    "actualizado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_actualizados",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "alumno",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="secciones_especial",
+                        to="bnhalumnos.alumno",
+                    ),
+                ),
+                (
+                    "creado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_creados",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "seccion",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="alumnos",
+                        to="especial.seccionespecial",
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Alumno de Educación Especial",
+                "verbose_name_plural": "Alumnos de Educación Especial",
+                "db_table": "especial_alumnoseccion",
+            },
+        ),
+        migrations.AddConstraint(
+            model_name="especialciclo",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("actual", True)),
+                fields=("actual",),
+                name="uq_especial_ciclo_actual",
+            ),
+        ),
+        migrations.AddIndex(
+            model_name="alumnoseccion",
+            index=models.Index(fields=["estado"], name="idx_esp_alsec_est"),
+        ),
+        migrations.AddIndex(
+            model_name="alumnoseccion",
+            index=models.Index(
+                fields=["alumno", "estado"], name="idx_esp_alsec_alum_est"
+            ),
+        ),
+        migrations.AddIndex(
+            model_name="alumnoseccion",
+            index=models.Index(
+                fields=["seccion", "estado"], name="idx_esp_alsec_sec_est"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="alumnoseccion",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("estado__in", ["activo", "inactivo"])),
+                fields=("alumno", "seccion"),
+                name="uq_esp_alumno_seccion_abierta",
+            ),
+        ),
+        migrations.AddIndex(
+            model_name="seccionespecial",
+            index=models.Index(
+                fields=["cueanexo", "ciclo"], name="idx_esp_sec_cue_cic"
+            ),
+        ),
+        migrations.AddIndex(
+            model_name="seccionespecial",
+            index=models.Index(
+                fields=["cueanexo", "estado"], name="idx_esp_sec_cue_est"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="seccionespecial",
+            constraint=models.UniqueConstraint(
+                fields=("cueanexo", "ciclo", "nombre_seccion", "cd_tipo_seccion"),
+                name="uq_esp_sec_cue_cic_nom_tipo",
+            ),
+        ),
+    ]
+
+
+
+================================================================================
+ARCHIVO: models.py
+================================================================================
+
+# -*- coding: utf-8 -*-
+import re
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models import CharField, Func, Q, Value
+from django.db.models.functions import Cast
+from django.utils import timezone
+from apps.bnhalumnos.models import Alumno
+
+# ============================================================
+# CONSTANTES DEL MODULO ESPECIAL
+# ============================================================
+ACRONIMO_ESPECIAL = "EEE"
+LONGITUD_CUEANEXO = 9
+PADRON_DB_ALIAS = "default"
+ROLES_AUTORIZADOS_ESPECIAL = {
+    "Administrador",
+    "Director",
+    "Director de Modalidad Especial",
+}
+
+# ============================================================
+# MODELOS EXTERNOS / INTEGRACION
+# ============================================================
+
+class EspecialDocenteBnh(models.Model):
+    """Modelo proxy para consultar personas en el esquema BNH."""
+    cuil = models.CharField(max_length=11, primary_key=True)
+    dni = models.CharField(max_length=20, blank=True, null=True)
+    apellido = models.CharField(max_length=150, blank=True, null=True)
+    nombre = models.CharField(max_length=150, blank=True, null=True)
+    estado = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = '"bnh"."personas"'
+        ordering = ["apellido", "nombre", "cuil"]
+
+    @property
+    def nombre_completo(self):
+        apellidos = (self.apellido or "").strip()
+        nombres = (self.nombre or "").strip()
+        if apellidos and nombres:
+            return f"{apellidos}, {nombres}"
+        return apellidos or nombres
+        
+    def __str__(self):
+        nombre = self.nombre_completo
+        if nombre:
+            return f"{nombre} - {self.cuil}"
+        return self.cuil or ""
+
+
+class EspecialPadronOferta(models.Model):
+    """Modelo de integración Especial contra la vista de Padrón."""
+    id = models.BigIntegerField(primary_key=True)
+    cueanexo = models.CharField(max_length=9, blank=True, null=True)
+    nom_est = models.TextField(blank=True, null=True)
+    padron_cueanexo = models.CharField(max_length=9, blank=True, null=True)
+    acronimo = models.CharField(max_length=50, blank=True, null=True)
+    oferta = models.TextField(blank=True, null=True)
+    etiqueta = models.TextField(blank=True, null=True)
+    nro_est = models.TextField(blank=True, null=True)
+    ambito = models.TextField(blank=True, null=True)
+    sector = models.TextField(blank=True, null=True)
+    region_loc = models.TextField(blank=True, null=True)
+    ref_loc = models.TextField(blank=True, null=True)
+    calle = models.TextField(blank=True, null=True)
+    numero = models.TextField(blank=True, null=True)
+    localidad = models.TextField(blank=True, null=True)
+    departamento = models.TextField(blank=True, null=True)
+    estado_loc = models.TextField(blank=True, null=True)
+    est_oferta = models.TextField(blank=True, null=True)
+    estado_est = models.TextField(blank=True, null=True)
+    resploc_cuitcuil = models.TextField(blank=True, null=True)
+    resploc_doc = models.TextField(blank=True, null=True)
+    apellido_resp = models.TextField(blank=True, null=True)
+    nombre_resp = models.TextField(blank=True, null=True)
+    resploc_email = models.TextField(blank=True, null=True)
+    resploc_telefono = models.TextField(blank=True, null=True)
+    sup_tecnico = models.TextField(blank=True, null=True)
+    email_suptecnico = models.TextField(blank=True, null=True)
+    tel_suptecnico = models.TextField(blank=True, null=True)
+    categoria = models.TextField(blank=True, null=True)
+    cui_loc = models.TextField(blank=True, null=True)
+    cua_loc = models.TextField(blank=True, null=True)
+    cuof_loc = models.TextField(blank=True, null=True)
+    jornada = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "v_capa_unica_ofertas_ant"
+        verbose_name = "Oferta Especial desde Padrón"
+        verbose_name_plural = "Ofertas Especial desde Padrón"
+
+    def __str__(self):
+        cueanexo = self.cueanexo or ""
+        nombre = self.nom_est or ""
+        return f"{cueanexo} - {nombre}".strip(" -")
+
+
+class EspecialRolUsuario(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    nombre = models.CharField(max_length=100, blank=True, null=True)
+    class Meta:
+        managed = False
+        db_table = "usuarios_rol"
+        verbose_name = "Rol de usuario Especial"
+        verbose_name_plural = "Roles de usuario Especial"
+
+
+class EspecialUsuarioPerfil(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.DO_NOTHING,
+        db_column="usuario_id",
+        related_name="perfil_especial_integracion",
+    )
+    rol = models.ForeignKey(
+        EspecialRolUsuario,
+        on_delete=models.DO_NOTHING,
+        db_column="rol_id",
+        related_name="perfiles_especial_integracion",
+    )
+    class Meta:
+        managed = False
+        db_table = "usuarios_perfilusuario"
+        verbose_name = "Perfil de usuario Especial"
+        verbose_name_plural = "Perfiles de usuario Especial"
+
+
+# ============================================================
+# FUNCIONES DE NORMALIZACION Y ACCESO A PADRON
+# ============================================================
+def solo_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+
+def normalizar_cueanexo(valor):
+    cueanexo = solo_digitos(valor)
+    if len(cueanexo) != LONGITUD_CUEANEXO:
+        return ""
+    return cueanexo
+
+
+def normalizar_cuil_usuario(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return ""
+    cuil = solo_digitos(getattr(user, "username", ""))
+    if len(cuil) != 11:
+        return ""
+    return cuil
+
+
+def get_escuelas_especiales_base_queryset():
+    return (
+        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        .filter(acronimo__iexact=ACRONIMO_ESPECIAL)
+    )
+
+
+def get_todas_las_escuelas_especiales():
+    return get_escuelas_especiales_base_queryset().order_by("cueanexo")
+
+
+def get_escuelas_especiales_por_cuil_responsable(user):
+    cuil = normalizar_cuil_usuario(user)
+    queryset = get_escuelas_especiales_base_queryset()
+    if not cuil:
+        return queryset.none()
+    return (
+        queryset
+        .annotate(
+            responsable_cuil_limpio=Func(
+                Cast("resploc_cuitcuil", CharField()),
+                Value(r"\D"),
+                Value(""),
+                Value("g"),
+                function="REGEXP_REPLACE",
+                output_field=CharField(),
+            )
+        )
+        .filter(responsable_cuil_limpio=cuil)
+        .order_by("cueanexo")
+    )
+
+
+def get_datos_establecimiento_especial(cueanexo):
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return None
+    return (
+        get_escuelas_especiales_base_queryset()
+        .filter(cueanexo=cueanexo)
+        .order_by("cueanexo", "nom_est")
+        .first()
+    )
+
+
+# ============================================================
+# PERMISOS FUNCIONALES
+# ============================================================
+def obtener_rol_usuario_especial(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+    username = (getattr(user, "username", "") or "").strip()
+    if not username:
+        return None
+    try:
+        perfil = (
+            EspecialUsuarioPerfil.objects.using(PADRON_DB_ALIAS)
+            .select_related("rol")
+            .get(usuario__username=username)
+        )
+    except EspecialUsuarioPerfil.DoesNotExist:
+        return None
+    rol_nombre = getattr(perfil.rol, "nombre", "") or ""
+    return rol_nombre.strip() or None
+
+
+def usuario_puede_ver_especial(user):
+    rol = obtener_rol_usuario_especial(user)
+    if not rol:
+        return False
+    return rol in ROLES_AUTORIZADOS_ESPECIAL
+
+
+def usuario_es_admin_especial(user):
+    return obtener_rol_usuario_especial(user) == "Administrador"
+
+
+def get_escuelas_especiales_cargables_usuario(user):
+    queryset = get_todas_las_escuelas_especiales()
+    if not usuario_puede_ver_especial(user):
+        return queryset.none()
+    if usuario_es_admin_especial(user):
+        return queryset
+    return get_escuelas_especiales_por_cuil_responsable(user)
+
+
+def get_cueanexos_cargables_usuario(user):
+    cueanexos = []
+    for cueanexo in (
+        get_escuelas_especiales_cargables_usuario(user)
+        .values_list("cueanexo", flat=True)
+        .distinct()
+    ):
+        cueanexo_norm = normalizar_cueanexo(cueanexo)
+        if cueanexo_norm and cueanexo_norm not in cueanexos:
+            cueanexos.append(cueanexo_norm)
+    return cueanexos
+
+
+def usuario_puede_cargar_cueanexo(user, cueanexo):
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    return cueanexo in get_cueanexos_cargables_usuario(user)
+
+
+# ============================================================
+# MIXIN DE AUDITORIA
+# ============================================================
+class EspecialAuditoriaMixin(models.Model):
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True, null=True,
+        related_name="%(app_label)s_%(class)s_creados",
+    )
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True, null=True,
+        related_name="%(app_label)s_%(class)s_actualizados",
+    )
+    class Meta:
+        abstract = True
+
+
+# ============================================================
+# CICLO LECTIVO
+# ============================================================
+class EspecialCiclo(EspecialAuditoriaMixin):
+    anio = models.PositiveSmallIntegerField(
+        unique=True,
+        validators=[MinValueValidator(1900), MaxValueValidator(2100)],
+    )
+    descripcion = models.CharField(max_length=120, blank=True)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    fecha_fin = models.DateField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    actual = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = '"especial"."ciclos"'
+        ordering = ["-anio"]
+        verbose_name = "Ciclo Especial"
+        verbose_name_plural = "Ciclos Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["actual"],
+                condition=Q(actual=True),
+                name="uq_especial_ciclo_actual",
+            ),
+        ]
+
+    def clean(self):
+        if (
+            self.fecha_inicio
+            and self.fecha_fin
+            and self.fecha_fin < self.fecha_inicio
+        ):
+            raise ValidationError({
+                "fecha_fin": "La fecha de fin no puede ser anterior a la de inicio."
+            })
+
+    def __str__(self):
+        return str(self.anio)
+
+
+# ============================================================
+# CATALOGOS OPERATIVOS ESPECIAL
+# ============================================================
+class CatalogoTipoEstructuraEspecial(models.Model):
+    """Catálogo de tipos de estructura especial (CEAT, SEAT, SAI, CEFOL, etc.)."""
+    cd_tipoestructuraespecial = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = '"especial"."catalogo_tipo_estructura"'
+        verbose_name = "Tipo de estructura especial"
+        verbose_name_plural = "Tipos de estructuras especiales"
+    def __str__(self):
+        return self.descripcion
+
+
+class CatalogoTipoRangoEtario(models.Model):
+    """Catálogo de rangos etarios (0 a 99 años)."""
+    cd_tiporangoetario = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."catalogo_rango_etario"'
+        verbose_name = "Tipo de rango etario"
+        verbose_name_plural = "Tipos de rangos etarios"
+    def __str__(self):
+        return self.descripcion
+
+
+class SinoTipo(models.Model):
+    """Modelo genérico para representar respuestas Si/No/Sin información."""
+    cd_sino = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."sino_tipo"'
+        verbose_name = "Si/No/Sin info"
+        verbose_name_plural = "Si/No/Sin info"
+    def __str__(self):
+        return self.descripcion
+
+
+class SeccionTipo(models.Model):
+    """Tipo de sección en la que cursa el alumno (Independiente, Múltiple, etc.)."""
+    cd_tipo_seccion = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."seccion_tipo"'
+        verbose_name = "Tipo de sección"
+        verbose_name_plural = "Tipos de sección"
+    def __str__(self):
+        return self.descripcion
+
+
+class TurnoTipo(models.Model):
+    """Turno en el que cursa el alumno (Mañana, Tarde, etc.)."""
+    cd_turno = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."turno_tipo"'
+        verbose_name = "Turno"
+        verbose_name_plural = "Turnos"
+    def __str__(self):
+        return self.descripcion
+
+
+class ModalidadDictadoTipo(models.Model):
+    """Modalidad de dictado del plan de estudios (Presencial, A distancia, etc.)."""
+    cd_modalidad_dictado = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."modalidad_dictado_tipo"'
+        verbose_name = "Tipo de modalidad de cursado"
+        verbose_name_plural = "Tipos de modalidad de cursado"
+    def __str__(self):
+        return self.descripcion
+
+
+# ============================================================
+# MODELOS PRINCIPALES
+# ============================================================
+
+class SeccionEspecial(EspecialAuditoriaMixin):
+    """
+    Sección/cursada en la que cursan los alumnos de educación especial.
+    Equivalente a CefGrupo pero manteniendo la terminología de Sección.
+    """
+    class Estado(models.TextChoices):
+        BORRADOR = "borrador", "Borrador"
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        CERRADO = "cerrado", "Cerrado"
+
+    id = models.BigAutoField(primary_key=True)
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    
+    cd_tipo_seccion = models.ForeignKey(
+        SeccionTipo,
+        on_delete=models.PROTECT,
+        db_column="cd_tipo_seccion",
+        related_name="secciones",
+    )
+    tipo_estructura_especial = models.ForeignKey(
+        CatalogoTipoEstructuraEspecial,
+        on_delete=models.PROTECT,
+        db_column="cd_tipoestructuraespecial",
+        related_name="secciones",
+    )
+    
+    nombre_seccion = models.CharField(max_length=50)
+    descripcion = models.TextField(max_length=255, blank=True, null=True)
+    capacidad_total = models.PositiveIntegerField()
+    
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="secciones",
+    )
+    
+    turno = models.ForeignKey(
+        TurnoTipo,
+        on_delete=models.PROTECT,
+        db_column="cd_turno",
+        related_name="secciones",
+    )
+    
+    rango_etario = models.ForeignKey(
+        CatalogoTipoRangoEtario,
+        on_delete=models.PROTECT,
+        db_column="cd_tiporangoetario",
+        related_name="secciones",
+    )
+    
+    modalidad = models.ForeignKey(
+        ModalidadDictadoTipo,
+        on_delete=models.PROTECT,
+        db_column="cd_modalidad_dictado",
+        related_name="secciones",
+    )
+    
+    lugar_dictado = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+
+    # Snapshots para histórico (estilo CEF)
+    turno_nombre_snapshot = models.CharField(max_length=80, blank=True, editable=False)
+    tipo_seccion_snapshot = models.CharField(max_length=100, blank=True, editable=False)
+    estructura_snapshot = models.CharField(max_length=100, blank=True, editable=False)
+
+    class Meta:
+        db_table = '"especial"."seccion"'
+        verbose_name = "Sección de Educación Especial"
+        verbose_name_plural = "Secciones de Educación Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo", "nombre_seccion", "cd_tipo_seccion"],
+                name="uq_esp_sec_cue_cic_nom_tipo",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_sec_cue_cic"),
+            models.Index(fields=["cueanexo", "estado"], name="idx_esp_sec_cue_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        cueanexo_norm = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_norm:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_norm
+        
+        if self.capacidad_total < 1:
+            errors["capacidad_total"] = "La capacidad debe ser mayor a cero."
+        
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots(self):
+        """Actualiza los campos snapshot para conservar histórico si cambian los catálogos."""
+        if self.turno_id:
+            self.turno_nombre_snapshot = str(self.turno)
+        if self.cd_tipo_seccion_id:
+            self.tipo_seccion_snapshot = str(self.cd_tipo_seccion)
+        if self.tipo_estructura_especial_id:
+            self.estructura_snapshot = str(self.tipo_estructura_especial)
+
+    def save(self, *args, **kwargs):
+        self.actualizar_snapshots()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.cueanexo} - {self.nombre_seccion} ({self.ciclo})"
+
+
+class EspecialAlumnoBanco(EspecialAuditoriaMixin):
+    """
+    Banco de alumnos activos en el establecimiento para un ciclo determinado.
+    Similar a CefAlumnoCef.
+    """
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"
+
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="alumnos_banco_especial",
+    )
+    alumno = models.ForeignKey(
+        Alumno,
+        on_delete=models.PROTECT,
+        related_name="bancos_especial",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_alta = models.DateField(default=timezone.localdate)
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+    
+    # Snapshots
+    alumno_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
+    alumno_documento_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    alumno_cuil_snapshot = models.CharField(max_length=11, blank=True, editable=False)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."alumno_banco"'
+        verbose_name = "Alumno en Banco Especial"
+        verbose_name_plural = "Alumnos en Banco Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo", "alumno"],
+                condition=Q(estado="activo"),
+                name="uq_esp_alumno_banco_act",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_alum_banco_cic"),
+            models.Index(fields=["alumno", "estado"], name="idx_esp_alum_banco_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        cueanexo_norm = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_norm:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_norm
+
+        if self.fecha_baja and self.fecha_baja < self.fecha_alta:
+            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de alta."
+        
+        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
+            
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots_alumno(self):
+        if not self.alumno_id:
+            return
+        apellidos = str(getattr(self.alumno, "apellidos", "") or "").strip()
+        nombres = str(getattr(self.alumno, "nombres", "") or "").strip()
+        if apellidos and nombres:
+            self.alumno_nombre_snapshot = f"{apellidos}, {nombres}"
+        else:
+            self.alumno_nombre_snapshot = apellidos or nombres
+        
+        self.alumno_documento_snapshot = str(getattr(self.alumno, "nro_doc", "") or "")
+        self.alumno_cuil_snapshot = solo_digitos(getattr(self.alumno, "cuil", "") or "")
+
+    def save(self, *args, **kwargs):
+        self.actualizar_snapshots_alumno()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        alumno = self.alumno_nombre_snapshot or str(self.alumno_id)
+        return f"{self.cueanexo} - {self.ciclo} - {alumno}"
+
+
+class EspecialDocenteBanco(EspecialAuditoriaMixin):
+    """
+    Banco de docentes activos en el establecimiento para un ciclo determinado.
+    Similar a CefDocenteCef.
+    """
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"
+
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="docentes_banco_especial",
+    )
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_alta = models.DateField(default=timezone.localdate)
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+    
+    # Snapshots
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
+    docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."docente_banco"'
+        verbose_name = "Docente en Banco Especial"
+        verbose_name_plural = "Docentes en Banco Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo", "docente_cuil"],
+                condition=Q(estado="activo"),
+                name="uq_esp_docente_banco_act",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_doc_banco_cic"),
+            models.Index(fields=["docente_cuil", "estado"], name="idx_esp_doc_banco_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        cueanexo_norm = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_norm:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_norm
+        
+        docente_cuil_norm = solo_digitos(self.docente_cuil)
+        if len(docente_cuil_norm) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        else:
+            self.docente_cuil = docente_cuil_norm
+
+        if self.fecha_baja and self.fecha_baja < self.fecha_alta:
+            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de alta."
+            
+        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
+            
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots_docente(self):
+        """
+        Copia datos basicos del docente BNH si se encuentra por CUIL.
+        Similar a CefDocenteCef.actualizar_snapshots_docente().
+        """
+        docente = (
+            EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+            .filter(cuil=self.docente_cuil)
+            .first()
+        )
+
+        if not docente:
+            return
+
+        self.docente_nombre_snapshot = docente.nombre_completo
+        self.docente_dni_snapshot = docente.dni or ""
+        self.docente_estado_bnh_snapshot = docente.estado or ""
+
+    def save(self, *args, **kwargs):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.actualizar_snapshots_docente()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        docente = self.docente_nombre_snapshot or self.docente_cuil
+        return f"{self.cueanexo} - {self.ciclo} - {docente}"
+
+
+class AlumnoSeccion(EspecialAuditoriaMixin):
+    """
+    Relación entre un alumno del banco y una sección de Educación Especial.
+    Equivalente a CefInscripcion.
+    """
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        BAJA = "baja", "Baja"
+
+    id = models.BigAutoField(unique=True, primary_key=True)
+    
+    alumno = models.ForeignKey(
+        Alumno,
+        on_delete=models.PROTECT,
+        related_name="secciones_especial",
+    )
+    
+    seccion = models.ForeignKey(
+        SeccionEspecial,
+        on_delete=models.PROTECT,
+        related_name="alumnos",
+    )
+    
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_inscripcion = models.DateField(default=timezone.localdate)
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."alumno_seccion"'
+        verbose_name = "Alumno de Educación Especial"
+        verbose_name_plural = "Alumnos de Educación Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["alumno", "seccion"],
+                condition=Q(estado="activo"),
+                name="uq_esp_alumno_seccion_abierta",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["estado"], name="idx_esp_alsec_est"),
+            models.Index(fields=["alumno", "estado"], name="idx_esp_alsec_alum_est"),
+            models.Index(fields=["seccion", "estado"], name="idx_esp_alsec_sec_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.fecha_baja and self.fecha_baja < self.fecha_inscripcion:
+            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de inscripción."
+        
+        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
+            
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+
+        # Validar que el alumno esté en el banco activo de esa escuela/ciclo
+        if self.seccion_id and self.alumno_id:
+            en_banco = EspecialAlumnoBanco.objects.filter(
+                cueanexo=self.seccion.cueanexo,
+                ciclo=self.seccion.ciclo,
+                alumno=self.alumno,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO
+            ).exists()
+            if not en_banco:
+                errors["alumno"] = "El alumno no se encuentra activo en el banco de este establecimiento y ciclo."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"{self.alumno.apellidos}, {self.alumno.nombres} "
+            f"- {self.alumno.nro_doc} | {self.seccion.nombre_seccion}"
+        )
+
+
+class DocenteSeccion(EspecialAuditoriaMixin):
+    """
+    Relación entre un docente del banco y una sección de Educación Especial.
+    Equivalente a CefDocenteGrupo.
+    """
+    class Rol(models.TextChoices):
+        TITULAR = "titular", "Titular"
+        SUPLENTE = "suplente", "Suplente"
+        APOYO = "apoyo", "Apoyo"
+
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"
+
+    seccion = models.ForeignKey(
+        SeccionEspecial,
+        on_delete=models.PROTECT,
+        related_name="docentes",
+    )
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    rol = models.CharField(
+        max_length=20,
+        choices=Rol.choices,
+        db_index=True,
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_desde = models.DateField(blank=True, null=True)
+    fecha_hasta = models.DateField(blank=True, null=True)
+    
+    # Snapshots
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
+    docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."docente_seccion"'
+        verbose_name = "Docente de Sección Especial"
+        verbose_name_plural = "Docentes de Secciones Especiales"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["seccion", "docente_cuil"],
+                condition=Q(estado="activo"),
+                name="uq_esp_doc_sec_cuil_act",
+            ),
+            models.UniqueConstraint(
+                fields=["seccion", "rol"],
+                condition=Q(estado="activo"),
+                name="uq_esp_doc_sec_rol_act",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["docente_cuil", "estado"], name="idx_esp_doc_sec_cuil_est"),
+            models.Index(fields=["seccion", "estado"], name="idx_esp_doc_sec_grp_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        docente_cuil_norm = solo_digitos(self.docente_cuil)
+        if len(docente_cuil_norm) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        else:
+            self.docente_cuil = docente_cuil_norm
+
+        if self.fecha_desde and self.fecha_hasta and self.fecha_hasta < self.fecha_desde:
+            errors["fecha_hasta"] = "La fecha hasta no puede ser anterior a la fecha desde."
+            
+        if self.estado == self.Estado.BAJA and not self.fecha_hasta:
+            errors["fecha_hasta"] = "Debe indicar fecha hasta cuando la asignación está en baja."
+
+        # Validar que el docente esté en el banco activo
+        if self.seccion_id and self.docente_cuil:
+            en_banco = EspecialDocenteBanco.objects.filter(
+                cueanexo=self.seccion.cueanexo,
+                ciclo=self.seccion.ciclo,
+                docente_cuil=self.docente_cuil,
+                estado=EspecialDocenteBanco.Estado.ACTIVO
+            ).exists()
+            if not en_banco:
+                errors["docente_cuil"] = "El docente no se encuentra activo en el banco de este establecimiento y ciclo."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots_docente(self):
+        """
+        Copia datos basicos del docente BNH si se encuentra por CUIL.
+        Similar a CefDocenteGrupo.actualizar_snapshots_docente().
+        """
+        docente = (
+            EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+            .filter(cuil=self.docente_cuil)
+            .first()
+        )
+
+        if not docente:
+            return
+
+        self.docente_nombre_snapshot = docente.nombre_completo
+        self.docente_dni_snapshot = docente.dni or ""
+        self.docente_estado_bnh_snapshot = docente.estado or ""
+
+    def save(self, *args, **kwargs):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.actualizar_snapshots_docente()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        docente = self.docente_nombre_snapshot or self.docente_cuil
+        return f"{self.seccion} - {self.get_rol_display()} - {docente}"
+
+
+================================================================================
+ARCHIVO: permisos.py
+================================================================================
+
+"""
+Control de acceso para las vistas activas del módulo 'especial'.
+"""
+
+from functools import wraps
+
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+
+from .models import usuario_puede_ver_especial
+
+
+def especial_required(view_func):
+    """
+    Protege las vistas activas del módulo 'especial'.
+
+    - Usuario no autenticado: redirección al login.
+    - Usuario autenticado sin rol autorizado: respuesta 403.
+    - Usuario autorizado: ejecución normal de la vista.
+    """
+
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not usuario_puede_ver_especial(request.user):
+            raise PermissionDenied(
+                "No tenés permisos para acceder al módulo 'especial'."
+            )
+
+        return view_func(request, *args, **kwargs)
+
+    return login_required(_wrapped_view)
+
+
+
+================================================================================
+ARCHIVO: templatetags\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+ARCHIVO: templatetags\especial_filters.py
+================================================================================
+
+# apps/especial/templatetags/especial_filters.py
+from django import template
+
+register = template.Library()
+
+@register.filter
+def get_item(obj, key):
+    """Accede a un diccionario u objeto por clave/atributo dinámicamente."""
+    if isinstance(obj, dict):
+        return obj.get(key, "")
+    return getattr(obj, key, "")
+
+
+================================================================================
+ARCHIVO: tests.py
+================================================================================
+
+from django.test import TestCase
+
+# Create your tests here.
+
+
+
+================================================================================
+ARCHIVO: urls.py
+================================================================================
+
+# apps/especial/urls.py
+from django.urls import path
+from django.views.generic import RedirectView
+from . import (
+    views_alumnos,
+    views_docentes, # Nuevo import
+    views_carga_cueanexo,
+    views_carga_seccion,
+    views_ciclo,
+    views_inscripcion_seccion,
+    views_localizaciones,
+)
+
+app_name = "especial"
+
+urlpatterns = [
+    # Entrada del módulo
+    path(
+        "",
+        RedirectView.as_view(
+            pattern_name="especial:visualizacion_localizaciones",
+            permanent=False,
+        ),
+        name="inicio",
+    ),
+    path(
+        "visualizacion/",
+        RedirectView.as_view(
+            pattern_name="especial:visualizacion_localizaciones",
+            permanent=False,
+        ),
+        name="visualizacion_inicio",
+    ),
+    path(
+        "visualizacion/localizaciones/",
+        views_localizaciones.visualizacion_localizaciones,
+        name="visualizacion_localizaciones",
+    ),
+    # Alumnos
+    path(
+        "alumnos/",
+        views_alumnos.alumnos,
+        name="alumnos",
+    ),
+    # Docentes (Nuevo)
+    path(
+        "docentes/",
+        views_docentes.docentes,
+        name="docentes",
+    ),
+    # CUE-Anexo
+    path(
+        "carga/cueanexo/",
+        views_carga_cueanexo.carga_cueanexo,
+        name="carga_cueanexo",
+    ),
+    # Secciones (Grupos)
+    path(
+        "carga/secciones/",
+        views_carga_seccion.carga_seccion,
+        name="carga_seccion",
+    ),
+    path(
+        "carga/secciones/nueva/",
+        views_carga_seccion.carga_seccion_form,
+        name="carga_seccion_nueva",
+    ),
+    path(
+        "carga/secciones/<int:seccion_id>/",
+        views_carga_seccion.carga_seccion_form,
+        name="carga_seccion_editar",
+    ),
+    path(
+        "carga/secciones/<int:seccion_id>/gestionar/",
+        views_carga_seccion.gestionar_seccion,
+        name="gestionar_seccion",
+    ),
+    # Inscripción de alumnos a secciones
+    path(
+        "carga/secciones/<int:seccion_id>/inscripciones/",
+        views_inscripcion_seccion.inscripcion_seccion,
+        name="inscripcion_seccion",
+    ),
+    # Ciclos
+    path(
+        "carga/ciclos/",
+        views_ciclo.administrar_ciclos,
+        name="administrar_ciclos",
+    ),
+    path(
+    "carga/secciones/<int:seccion_id>/docentes/<int:docente_id>/editar/",
+    views_docentes.editar_docente_seccion, # Asegúrate de importar la función
+    name="editar_docente_seccion",
+    ),
+    path(
+        "carga/secciones/<int:seccion_id>/inscripciones/<int:inscripcion_id>/editar/",
+        views_inscripcion_seccion.editar_inscripcion_seccion,
+        name="editar_inscripcion_seccion",
+    ),
+    
+    # Docentes de sección (si decides tener vista propia de edición)
+    path(
+        "carga/secciones/<int:seccion_id>/docentes/<int:docente_id>/editar/",
+        views_docentes.editar_docente_seccion, # Necesitas crear esta vista o reutilizar una
+        name="editar_docente_seccion",
+    ),
+]
+
+
+================================================================================
+ARCHIVO: views_alumnos.py
+================================================================================
+
+# apps/especial/views_alumnos.py
+# -*- coding: utf-8 -*-
+import re
+from urllib.parse import urlencode
+from django.apps import apps
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.db.utils import OperationalError, ProgrammingError
+from django.urls import NoReverseMatch, reverse
+from django.shortcuts import redirect, render
+from .forms import EspecialBusquedaAlumnoForm
+from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
+from .permisos import especial_required
+from .views_contexto import contexto_base
+
+MSG_BANCO_ALUMNOS_PENDIENTE = (
+    "El banco de alumnos de Educación Especial está pendiente de creación en base de datos."
+)
+
+def _solo_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+def _alumno_model():
+    return apps.get_model("bnhalumnos", "Alumno")
+
+def _buscar_alumno(cuil):
+    return _alumno_model().objects.filter(cuil=cuil).first()
+
+def _texto(valor):
+    if valor is None:
+        return ""
+    return str(valor)
+
+def _alumno_row(alumno):
+    if not alumno:
+        return None
+    return {
+        "apellidos": getattr(alumno, "apellidos", "") or "",
+        "nombres": getattr(alumno, "nombres", "") or "",
+        "tipo_doc": _texto(getattr(alumno, "tipo_doc", "")),
+        "nro_doc": getattr(alumno, "nro_doc", "") or "",
+        "cuil": getattr(alumno, "cuil", "") or "",
+        "fecha_nac": getattr(alumno, "fecha_nacimiento", None),
+        "sexo": _texto(getattr(alumno, "sexo", "")),
+        "lugar_nac": (
+            _texto(getattr(alumno, "loc_nacimiento", ""))
+            or getattr(alumno, "lugar_nacimiento", "")
+            or ""
+        ),
+    }
+
+def _url_carga_alumno(cuil, next_url, return_label="Volver a Alumnos"):
+    try:
+        base = reverse("bnhalumnos:carga_alumno")
+    except NoReverseMatch:
+        return ""
+    params = {}
+    if cuil:
+        params["cuil"] = cuil
+    if next_url:
+        params["next"] = next_url
+    if return_label:
+        params["return_label"] = return_label
+    return f"{base}?{urlencode(params)}" if params else base
+
+def _url_modal_alumnos(especial_context, cuil=""):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    params["abrir_modal_alumno"] = "1"
+    if cuil:
+        params["cuil"] = cuil
+    return f"{reverse('especial:alumnos')}?{urlencode(params)}"
+
+def _url_alumnos(especial_context):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    querystring = urlencode(params)
+    url = reverse("especial:alumnos")
+    return f"{url}?{querystring}" if querystring else url
+
+def _errores_form(form):
+    return " ".join(error for errors in form.errors.values() for error in errors)
+
+def _alumnos_banco(especial_context):
+    if not especial_context["puede_operar"]:
+        return EspecialAlumnoBanco.objects.none()
+    return (
+        EspecialAlumnoBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+        )
+        .select_related("alumno")
+        .order_by("alumno_nombre_snapshot", "alumno_cuil_snapshot")
+    )
+
+def _inscripciones_por_alumno(especial_context, alumnos_banco):
+    alumnos_ids = [item.alumno_id for item in alumnos_banco]
+    if not alumnos_ids:
+        return {}
+    inscripciones = (
+        AlumnoSeccion.objects.filter(
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+            alumno_id__in=alumnos_ids,
+        )
+        .select_related("seccion", "seccion__cd_tipo_seccion")
+        .order_by("seccion__nombre_seccion")
+    )
+    por_alumno = {}
+    for inscripcion in inscripciones:
+        por_alumno.setdefault(inscripcion.alumno_id, []).append(inscripcion)
+    return por_alumno
+
+def _secciones_disponibles(especial_context):
+    if not especial_context["puede_operar"]:
+        return SeccionEspecial.objects.none()
+    return (
+        SeccionEspecial.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            estado=SeccionEspecial.Estado.ACTIVO,
+        )
+        .select_related("cd_tipo_seccion", "turno")
+        .order_by("nombre_seccion")
+    )
+
+def _alumno_en_banco_activo(alumno, especial_context):
+    if not alumno or not especial_context["puede_operar"]:
+        return False
+    return EspecialAlumnoBanco.objects.filter(
+        cueanexo=especial_context["cueanexo"],
+        ciclo=especial_context["ciclo"],
+        alumno=alumno,
+        estado=EspecialAlumnoBanco.Estado.ACTIVO,
+    ).exists()
+
+def _asegurar_alumno_banco(alumno, especial_context, user):
+    if not alumno or not especial_context["puede_operar"]:
+        return None, False, False
+    try:
+        existente = EspecialAlumnoBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            alumno=alumno,
+            estado=EspecialAlumnoBanco.Estado.ACTIVO,
+        ).first()
+        if existente:
+            return existente, False, False
+        with transaction.atomic():
+            banco = EspecialAlumnoBanco.objects.create(
+                cueanexo=especial_context["cueanexo"],
+                ciclo=especial_context["ciclo"],
+                alumno=alumno,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO,
+                creado_por=user,
+                actualizado_por=user,
+            )
+            return banco, True, False
+    except (OperationalError, ProgrammingError):
+        return None, False, True
+
+@especial_required
+def alumnos(request):
+    context = contexto_base(request, "alumnos", "Alumnos Educación Especial")
+    especial_context = context["especial_context"]
+    
+    alumno = None
+    cuil_buscado = ""
+    cuil_error = ""
+    alumno_en_banco = False
+    abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
+
+    if request.method == "POST":
+        busqueda_form = EspecialBusquedaAlumnoForm(request.POST)
+        abrir_modal = True
+        if busqueda_form.is_valid():
+            cuil_buscado = busqueda_form.cleaned_data["cuil"]
+            alumno = _buscar_alumno(cuil_buscado)
+        else:
+            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
+            cuil_error = _errores_form(busqueda_form)
+
+        if not alumno:
+            messages.error(request, "Primero buscá un alumno existente por CUIL.")
+        elif not especial_context["puede_operar"]:
+            messages.error(
+                request,
+                "Seleccioná un CUE-Anexo y un ciclo lectivo para agregar alumnos al banco.",
+            )
+        else:
+            try:
+                banco, creado, tabla_pendiente = _asegurar_alumno_banco(
+                    alumno,
+                    especial_context,
+                    request.user,
+                )
+                alumno_en_banco = bool(banco)
+                if tabla_pendiente:
+                    messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
+                elif creado:
+                    messages.success(request, "Alumno agregado al banco de Educación Especial.")
+                    return redirect(_url_alumnos(especial_context))
+                else:
+                    messages.info(
+                        request,
+                        "Ese alumno ya está activo en el banco de este establecimiento y ciclo.",
+                    )
+            except (IntegrityError, ValidationError):
+                messages.error(
+                    request,
+                    "No se pudo agregar el alumno al banco. Verificá que no exista ya activo.",
+                )
+    else:
+        busqueda_form = EspecialBusquedaAlumnoForm(
+            request.GET if request.GET.get("cuil") else None
+        )
+        if busqueda_form.is_valid():
+            cuil_buscado = busqueda_form.cleaned_data["cuil"]
+            alumno = _buscar_alumno(cuil_buscado)
+        elif request.GET.get("cuil"):
+            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+            cuil_error = _errores_form(busqueda_form)
+
+    next_url = _url_modal_alumnos(especial_context, cuil_buscado)
+    url_alumnos = _url_alumnos(especial_context)
+    
+    alumnos_banco_tabla_pendiente = False
+    try:
+        alumnos_banco = list(_alumnos_banco(especial_context))
+        if alumno and not alumno_en_banco:
+            alumno_en_banco = _alumno_en_banco_activo(alumno, especial_context)
+    except (OperationalError, ProgrammingError):
+        alumnos_banco = []
+        alumnos_banco_tabla_pendiente = True
+
+    try:
+        inscripciones_por_alumno = _inscripciones_por_alumno(
+            especial_context,
+            alumnos_banco,
+        )
+    except (OperationalError, ProgrammingError):
+        inscripciones_por_alumno = {}
+
+    secciones_disponibles = list(_secciones_disponibles(especial_context))
+    
+    # Preparar datos para el template
+    for item in alumnos_banco:
+        item.inscripciones_seccion = inscripciones_por_alumno.get(item.alumno_id, [])
+        inscripciones_activas = [
+            inscripcion
+            for inscripcion in item.inscripciones_seccion
+            if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
+        ]
+        secciones_activas_ids = {inscripcion.seccion_id for inscripcion in inscripciones_activas}
+        item.secciones_asignables = [
+            sec for sec in secciones_disponibles if sec.pk not in secciones_activas_ids
+        ]
+        item.secciones_bloqueadas = inscripciones_activas
+        item.url_editar_alumno = _url_carga_alumno(
+            item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
+            url_alumnos,
+        )
+
+    context.update(
+        {
+            "busqueda_form": busqueda_form,
+            "alumno": alumno,
+            "alumno_row": _alumno_row(alumno),
+            "alumnos": alumnos_banco,
+            "secciones_disponibles": secciones_disponibles,
+            "alumnos_banco_tabla_pendiente": alumnos_banco_tabla_pendiente,
+            "alumno_en_banco": alumno_en_banco,
+            "cuil_buscado": cuil_buscado,
+            "cuil_error": cuil_error,
+            "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "modal_alumno_abierto": abrir_modal,
+            "modal_action_url": _url_modal_alumnos(especial_context),
+            "modal_volver_url": url_alumnos,
+        }
+    )
+    return render(request, "especial/alumnos_especial.html", context)
+
+
+================================================================================
+ARCHIVO: views_carga_cueanexo.py
+================================================================================
+
+# apps/especial/views_carga_cueanexo.py
+# -*- coding: utf-8 -*-
+
+from django.shortcuts import render
+
+from .permisos import especial_required
+from .views_contexto import (
+    contexto_base,
+    datos_establecimiento_items,
+)
+
+
+@especial_required
+def carga_cueanexo(request):
+    """Vista que muestra los datos del CUE-Anexo seleccionado."""
+    context = contexto_base(request, "cueanexo", "Datos CUE-Anexo Educación Especial")
+    especial_context = context["especial_context"]
+
+    context.update(
+        {
+            "establecimiento_items": datos_establecimiento_items(
+                especial_context["establecimiento"]
+            ),
+        }
+    )
+    return render(request, "especial/carga_cueanexo_especial.html", context)
+
+
+================================================================================
+ARCHIVO: views_carga_seccion.py
+================================================================================
+
+# apps/especial/views_carga_seccion.py
+# -*- coding: utf-8 -*-
+
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, redirect, render
+
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+
+from .forms import EspecialSeccionForm
+from .models import SeccionEspecial, AlumnoSeccion, DocenteSeccion
+from .permisos import especial_required
+from .views_contexto import contexto_base, redirect_con_contexto
+from .views_docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .views_inscripcion_seccion import dar_alta_inscripcion_seccion, dar_baja_inscripcion_seccion
+
+def _is_ajax(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+
+def _secciones_queryset(especial_context):
+    """QuerySet de secciones filtrado por CUE-Anexo y ciclo."""
+    return (
+        SeccionEspecial.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+        )
+        .select_related(
+            "cd_tipo_seccion",
+            "turno",
+            "rango_etario",
+            "modalidad",
+            "tipo_estructura_especial",
+        )
+        .annotate(
+            alumnos_activos=Count(
+                "alumnos",
+                filter=Q(alumnos__estado__in=["activo", "inactivo"]),
+            )
+        )
+        .order_by("nombre_seccion")
+    )
+
+
+def _seccion_segura(seccion_id, especial_context):
+    """Obtiene una sección validando que pertenezca al CUE-Anexo y ciclo actual."""
+    return get_object_or_404(
+        SeccionEspecial.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+        ).select_related(
+            "cd_tipo_seccion",
+            "turno",
+            "rango_etario",
+            "modalidad",
+            "tipo_estructura_especial",
+        ),
+        pk=seccion_id,
+    )
+
+
+@especial_required
+def carga_seccion(request):
+    """Vista principal de gestión de secciones."""
+    context = contexto_base(request, "secciones", "Secciones Educación Especial")
+    especial_context = context["especial_context"]
+
+    if request.GET.get("accion") == "agregar":
+        return redirect(redirect_con_contexto("especial:carga_seccion_nueva", especial_context))
+
+    secciones = (
+        list(_secciones_queryset(especial_context))
+        if especial_context["puede_operar"]
+        else []
+    )
+
+    context.update(
+        {
+            "secciones": secciones,
+            "total_secciones": len(secciones),
+        }
+    )
+    return render(request, "especial/carga_seccion_especial.html", context)
+
+
+def _guardar_seccion(form, especial_context, user):
+    """Guarda una sección asignando CUE-Anexo, ciclo y auditoría."""
+    with transaction.atomic():
+        seccion = form.save(commit=False)
+        seccion.cueanexo = especial_context["cueanexo"]
+        seccion.ciclo = especial_context["ciclo"]
+        if not seccion.pk:
+            seccion.creado_por = user
+        seccion.actualizado_por = user
+        seccion.save()
+    return seccion
+
+
+@especial_required
+def carga_seccion_form(request, seccion_id=None):
+    """Formulario de creación/edición de sección."""
+    context = contexto_base(request, "secciones", "Secciones Educación Especial")
+    especial_context = context["especial_context"]
+
+    if not especial_context["puede_operar"]:
+        messages.error(request, "Seleccioná un CUE-Anexo y un ciclo para cargar secciones.")
+        return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+
+    seccion_edicion = _seccion_segura(seccion_id, especial_context) if seccion_id else None
+    
+    if not seccion_edicion:
+        seccion_edicion = SeccionEspecial(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"]
+        )
+
+    if request.method == "POST":
+        form = EspecialSeccionForm(
+            request.POST,
+            instance=seccion_edicion,
+            ciclo=especial_context["ciclo"],
+        )
+
+        if form.is_valid():
+            _guardar_seccion(form, especial_context, request.user)
+            messages.success(request, "Sección guardada correctamente.")
+            return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+
+        messages.error(request, "Revisá los datos del formulario para guardar la sección.")
+    else:
+        form = EspecialSeccionForm(instance=seccion_edicion, ciclo=especial_context["ciclo"])
+
+    context.update(
+        {
+            "form": form,
+            "seccion_edicion": seccion_edicion,
+            "form_title": "Editar Sección" if seccion_edicion else "Agregar Sección",
+        }
+    )
+    return render(request, "especial/form_seccion_especial.html", context)
+
+
+def _inscripciones_seccion(seccion):
+    return (
+        AlumnoSeccion.objects.filter(seccion=seccion)
+        .select_related("alumno", "alumno__sexo")
+        .order_by("estado", "alumno__apellidos", "alumno__nombres")
+    )
+
+
+def _docentes_seccion(seccion):
+    return (
+        DocenteSeccion.objects.filter(seccion=seccion)
+        .order_by("estado", "rol", "docente_nombre_snapshot", "docente_cuil")
+    )
+
+
+def _docente_activo_por_rol(docentes, rol):
+    return next(
+        (
+            docente
+            for docente in docentes
+            if docente.rol == rol and docente.estado == DocenteSeccion.Estado.ACTIVO
+        ),
+        None,
+    )
+
+
+def _gestionar_fragment_context(seccion, especial_context):
+    inscripciones = list(_inscripciones_seccion(seccion))
+    docentes = list(_docentes_seccion(seccion))
+    docentes_activos = [
+        docente for docente in docentes if docente.estado == DocenteSeccion.Estado.ACTIVO
+    ]
+    return {
+        "especial_context": especial_context,
+        "seccion": seccion,
+        "inscripciones": inscripciones,
+        "docentes": docentes,
+        "docentes_activos": docentes_activos,
+        "gestionar_seccion_modo": True,
+        "gestionar_seccion_url": redirect_con_contexto("especial:gestionar_seccion", especial_context, seccion_id=seccion.pk),
+        "docente_titular": _docente_activo_por_rol(
+            docentes,
+            DocenteSeccion.Rol.TITULAR,
+        ),
+        "docente_suplente": _docente_activo_por_rol(
+            docentes,
+            DocenteSeccion.Rol.SUPLENTE,
+        ),
+        "docentes_activos_count": len(docentes_activos),
+    }
+
+
+def _render_docente_activo_fragment(request, context, titulo, docente_activo, rol_texto):
+    fragment_context = {
+        **context,
+        "titulo": titulo,
+        "docente_activo": docente_activo,
+        "rol_texto": rol_texto,
+    }
+    return render_to_string(
+        "especial/gestionar_seccion_docente_activo_especial.html",
+        fragment_context,
+        request=request,
+    )
+
+
+def _ajax_gestionar_fragment_response(request, seccion, especial_context, ok, message):
+    context = _gestionar_fragment_context(seccion, especial_context)
+    return JsonResponse(
+        {
+            "ok": ok,
+            "message": message,
+            "fragments": [
+                {
+                    "selector": "[data-cef-fragment='gestion-resumen']",
+                    "html": render_to_string(
+                        "especial/gestionar_seccion_resumen_especial.html",
+                        context,
+                        request=request,
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='inscripciones-seccion']",
+                    "html": render_to_string(
+                        "especial/inscripciones_seccion_lista_especial.html",
+                        context,
+                        request=request,
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='docentes-seccion']",
+                    "html": render_to_string(
+                        "especial/docentes_seccion_lista_especial.html",
+                        context,
+                        request=request,
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='docente-titular-activo']",
+                    "html": _render_docente_activo_fragment(
+                        request,
+                        context,
+                        "Profesor titular activo",
+                        context["docente_titular"],
+                        "profesor titular",
+                    ),
+                },
+                {
+                    "selector": "[data-cef-fragment='docente-suplente-activo']",
+                    "html": _render_docente_activo_fragment(
+                        request,
+                        context,
+                        "Profesor suplente activo",
+                        context["docente_suplente"],
+                        "profesor suplente",
+                    ),
+                },
+            ],
+            "close_modal": ok,
+        }
+    )
+
+
+def _baja_alumno_gestionar(request, seccion):
+    try:
+        inscripcion_id = int(request.POST.get("inscripcion_id"))
+    except (TypeError, ValueError):
+        return False, "La inscripción seleccionada no es válida."
+
+    inscripcion = get_object_or_404(
+        AlumnoSeccion.objects.filter(seccion=seccion),
+        pk=inscripcion_id,
+    )
+    try:
+        dar_baja_inscripcion_seccion(inscripcion, request.user)
+        return True, "Alumno dado de baja de la sección correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+def _alta_alumno_gestionar(request, seccion):
+    try:
+        inscripcion_id = int(request.POST.get("inscripcion_id"))
+    except (TypeError, ValueError):
+        return False, "La inscripción seleccionada no es válida."
+
+    inscripcion = get_object_or_404(
+        AlumnoSeccion.objects.filter(seccion=seccion),
+        pk=inscripcion_id,
+    )
+    try:
+        dar_alta_inscripcion_seccion(inscripcion, request.user)
+        return True, "Alumno reinscripto correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+def _baja_docente_gestionar(request, seccion):
+    try:
+        docente_grupo_id = int(request.POST.get("docente_grupo_id"))
+    except (TypeError, ValueError):
+        return False, "La asignación seleccionada no es válida."
+
+    asignacion = get_object_or_404(
+        DocenteSeccion.objects.filter(seccion=seccion),
+        pk=docente_grupo_id,
+    )
+    try:
+        dar_baja_docente_seccion(asignacion, request.user)
+        return True, "Profesor dado de baja de la sección correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+def _alta_docente_gestionar(request, seccion):
+    try:
+        docente_grupo_id = int(request.POST.get("docente_grupo_id"))
+    except (TypeError, ValueError):
+        return False, "La asignación seleccionada no es válida."
+
+    asignacion = get_object_or_404(
+        DocenteSeccion.objects.filter(seccion=seccion),
+        pk=docente_grupo_id,
+    )
+    try:
+        dar_alta_docente_seccion(asignacion, request.user)
+        return True, "Profesor reasignado a la sección correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+
+
+@especial_required
+def gestionar_seccion(request, seccion_id):
+    """Vista de gestión integral de una sección."""
+    context = contexto_base(request, "secciones", "Gestionar sección")
+    especial_context = context["especial_context"]
+
+    if not especial_context["puede_operar"]:
+        messages.warning(
+            request,
+            "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar secciones.",
+        )
+        return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+
+    seccion = _seccion_segura(seccion_id, especial_context)
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        if accion == "baja_alumno":
+            ok, message = _baja_alumno_gestionar(request, seccion)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    seccion,
+                    especial_context,
+                    ok,
+                    message,
+                )
+        elif accion == "alta_alumno":
+            ok, message = _alta_alumno_gestionar(request, seccion)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    seccion,
+                    especial_context,
+                    ok,
+                    message,
+                )
+        elif accion == "baja_docente":
+            ok, message = _baja_docente_gestionar(request, seccion)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    seccion,
+                    especial_context,
+                    ok,
+                    message,
+                )
+        elif accion == "alta_docente":
+            ok, message = _alta_docente_gestionar(request, seccion)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    seccion,
+                    especial_context,
+                    ok,
+                    message,
+                )
+        else:
+            ok = False
+            message = "La acción solicitada no es válida."
+            if _is_ajax(request):
+                return JsonResponse({"ok": False, "message": message}, status=400)
+        
+        if ok:
+            messages.success(request, message)
+        else:
+            messages.error(request, message)
+        return redirect(redirect_con_contexto("especial:gestionar_seccion", especial_context, seccion_id=seccion.pk))
+
+    context.update(_gestionar_fragment_context(seccion, especial_context))
+    return render(request, "especial/gestionar_seccion_especial.html", context)
+
+
+================================================================================
+ARCHIVO: views_ciclo.py
+================================================================================
+
+# apps/especial/views_ciclo.py
+# -*- coding: utf-8 -*-
+
+from urllib.parse import urlencode
+
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import EspecialCicloForm
+from .models import EspecialCiclo, usuario_es_admin_especial
+from .permisos import especial_required
+from .views_contexto import contexto_base, redirect_con_contexto
+
+
+def _query_ciclo(especial_context, ciclo):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if ciclo:
+        params["ciclo"] = ciclo.pk
+    return urlencode(params)
+
+
+def _redirect_admin_ciclos(especial_context, ciclo=None):
+    if ciclo is None:
+        return redirect(redirect_con_contexto("especial:administrar_ciclos", especial_context))
+    querystring = _query_ciclo(especial_context, ciclo)
+    return redirect(
+        redirect_con_contexto("especial:administrar_ciclos", {"querystring": querystring})
+    )
+
+
+def _exigir_admin(request):
+    if not usuario_es_admin_especial(request.user):
+        raise PermissionDenied("Solo el rol Administrador puede administrar ciclos de Educación Especial.")
+
+
+@especial_required
+def administrar_ciclos(request):
+    """Vista para administrar ciclos lectivos (solo administradores)."""
+    _exigir_admin(request)
+    context = contexto_base(request, "ciclos", "Ciclos lectivos Educación Especial")
+    especial_context = context["especial_context"]
+
+    if request.method == "POST":
+        form = EspecialCicloForm(request.POST)
+        accion = request.POST.get("accion", "crear")
+
+        if accion == "marcar_actual":
+            ciclo = get_object_or_404(EspecialCiclo, pk=request.POST.get("ciclo_id"))
+            with transaction.atomic():
+                EspecialCiclo.objects.filter(actual=True).exclude(pk=ciclo.pk).update(actual=False)
+                ciclo.actual = True
+                ciclo.activo = True
+                ciclo.actualizado_por = request.user
+                ciclo.save(update_fields=["actual", "activo", "actualizado_por", "actualizado_en"])
+            messages.success(request, "Ciclo actual actualizado correctamente.")
+            return _redirect_admin_ciclos(especial_context, ciclo)
+
+        if form.is_valid():
+            with transaction.atomic():
+                if form.cleaned_data.get("actual"):
+                    EspecialCiclo.objects.filter(actual=True).update(actual=False)
+                ciclo = form.save(user=request.user)
+            messages.success(request, "Ciclo creado correctamente.")
+            return _redirect_admin_ciclos(
+                especial_context,
+                ciclo if form.cleaned_data.get("actual") else None,
+            )
+    else:
+        form = EspecialCicloForm()
+
+    context.update(
+        {
+            "form": form,
+            "ciclos_admin": EspecialCiclo.objects.all().order_by("-anio"),
+        }
+    )
+    return render(request, "especial/ciclos_especial.html", context)
+
+
+================================================================================
+ARCHIVO: views_contexto.py
+================================================================================
+
+# apps/especial/views_contexto.py
+# -*- coding: utf-8 -*-
+
+from urllib.parse import urlencode
+
+from django.core.exceptions import PermissionDenied
+from django.urls import NoReverseMatch, reverse
+
+from .models import (
+    EspecialCiclo,
+    get_escuelas_especiales_cargables_usuario,
+    get_datos_establecimiento_especial,
+    normalizar_cueanexo,
+    usuario_es_admin_especial,
+)
+
+
+def _clean(valor):
+    return str(valor or "").strip()
+
+
+def _especial_options_usuario(user):
+    """Devuelve las escuelas especiales que el usuario puede gestionar."""
+    options = []
+    vistos = set()
+
+    for cueanexo, nombre in (
+        get_escuelas_especiales_cargables_usuario(user)
+        .order_by("cueanexo", "nom_est")
+        .values_list("cueanexo", "nom_est")
+        .distinct()
+    ):
+        cueanexo_normalizado = normalizar_cueanexo(cueanexo)
+        if not cueanexo_normalizado or cueanexo_normalizado in vistos:
+            continue
+        vistos.add(cueanexo_normalizado)
+        options.append(
+            {
+                "cueanexo": cueanexo_normalizado,
+                "nombre": _clean(nombre) or "Escuela Especial sin nombre",
+            }
+        )
+
+    return options
+
+
+def _resolver_cueanexo(request, options):
+    """Resuelve el CUE-Anexo desde GET/POST y valida permisos."""
+    raw = (
+        request.GET.get("cueanexo")
+        or request.POST.get("cueanexo_contexto")
+        or ""
+    )
+
+    if raw:
+        cueanexo = normalizar_cueanexo(raw)
+        cueanexos_permitidos = {option["cueanexo"] for option in options}
+        if not cueanexo or cueanexo not in cueanexos_permitidos:
+            raise PermissionDenied("No podés operar sobre el CUE-Anexo solicitado.")
+        return cueanexo
+
+    return options[0]["cueanexo"] if options else ""
+
+
+def _resolver_ciclo(request):
+    """Resuelve el ciclo lectivo desde GET/POST."""
+    ciclos = list(EspecialCiclo.objects.filter(activo=True).order_by("-anio"))
+    raw = request.GET.get("ciclo") or request.POST.get("ciclo_contexto") or ""
+
+    if raw:
+        try:
+            ciclo_id = int(raw)
+        except (TypeError, ValueError):
+            raise PermissionDenied("El ciclo solicitado no es válido.")
+
+        for ciclo in ciclos:
+            if ciclo.pk == ciclo_id:
+                return ciclo, ciclos
+
+        raise PermissionDenied("El ciclo solicitado no está disponible.")
+
+    ciclo_actual = next((ciclo for ciclo in ciclos if ciclo.actual), None)
+    ciclo_operativo = ciclo_actual or (ciclos[0] if ciclos else None)
+    return ciclo_operativo, ciclos
+
+
+def _context_querystring(cueanexo, ciclo):
+    """Construye el querystring con CUE-Anexo y ciclo."""
+    params = {}
+    if cueanexo:
+        params["cueanexo"] = cueanexo
+    if ciclo:
+        params["ciclo"] = ciclo.pk
+    return urlencode(params)
+
+
+def _alumnos_url():
+    """URL para la vista de alumnos."""
+    try:
+        return reverse("especial:alumnos")
+    except NoReverseMatch:
+        return ""
+
+
+def resolver_contexto_operativo(request):
+    """Resuelve el contexto operativo completo para Especial."""
+    cueanexo_options = _especial_options_usuario(request.user)
+    cueanexo = _resolver_cueanexo(request, cueanexo_options)
+    ciclo, ciclos = _resolver_ciclo(request)
+    establecimiento = get_datos_establecimiento_especial(cueanexo) if cueanexo else None
+
+    return {
+        "cueanexo": cueanexo,
+        "cueanexo_options": cueanexo_options,
+        "ciclo": ciclo,
+        "ciclos": ciclos,
+        "establecimiento": establecimiento,
+        "querystring": _context_querystring(cueanexo, ciclo),
+        "alumnos_url": _alumnos_url(),
+        "es_admin_especial": usuario_es_admin_especial(request.user),
+        "puede_operar": bool(cueanexo and ciclo),
+        "sin_cueanexo": not bool(cueanexo),
+        "sin_ciclo": not bool(ciclo),
+    }
+
+
+def contexto_base(request, active_menu, titulo):
+    """Contexto base para todas las vistas de Especial."""
+    especial_context = resolver_contexto_operativo(request)
+    return {
+        "title": titulo,
+        "active_menu": active_menu,
+        "especial_context": especial_context,
+        "request": request,
+    }
+
+
+def datos_establecimiento_items(establecimiento):
+    """Convierte los datos del establecimiento en una lista de tuplas para el template."""
+    if not establecimiento:
+        return []
+
+    responsable = " ".join(
+        item
+        for item in [
+            _clean(getattr(establecimiento, "apellido_resp", "")),
+            _clean(getattr(establecimiento, "nombre_resp", "")),
+        ]
+        if item
+    )
+
+    return [
+        ("CUE-Anexo", _clean(getattr(establecimiento, "cueanexo", ""))),
+        ("Establecimiento", _clean(getattr(establecimiento, "nom_est", ""))),
+        ("Oferta", _clean(getattr(establecimiento, "oferta", ""))),
+        ("Región", _clean(getattr(establecimiento, "region_loc", ""))),
+        ("Localidad", _clean(getattr(establecimiento, "localidad", ""))),
+        ("Departamento", _clean(getattr(establecimiento, "departamento", ""))),
+        ("Responsable", responsable),
+        ("Supervisor técnico", _clean(getattr(establecimiento, "sup_tecnico", ""))),
+        ("Teléfono responsable", _clean(getattr(establecimiento, "resploc_telefono", ""))),
+        ("Email responsable", _clean(getattr(establecimiento, "resploc_email", ""))),
+        ("Teléfono supervisor", _clean(getattr(establecimiento, "tel_suptecnico", ""))),
+        ("Email supervisor", _clean(getattr(establecimiento, "email_suptecnico", ""))),
+    ]
+
+
+def redirect_con_contexto(viewname, especial_context, *args, **kwargs):
+    """Redirige manteniendo el contexto de CUE-Anexo y ciclo."""
+    url = reverse(viewname, args=args, kwargs=kwargs)
+    querystring = especial_context.get("querystring")
+    return f"{url}?{querystring}" if querystring else url
+
+
+================================================================================
+ARCHIVO: views_docentes.py
+================================================================================
+
+# apps/especial/views_docentes.py
+# -*- coding: utf-8 -*-
+import re
+from urllib.parse import urlencode
+
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.db.utils import OperationalError, ProgrammingError
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
+from django.urls import reverse
+
+from .forms import EspecialBusquedaDocenteForm
+from .models import (
+    EspecialDocenteBnh,
+    EspecialDocenteBanco,
+    DocenteSeccion,
+    SeccionEspecial,
+    PADRON_DB_ALIAS,
+)
+from .permisos import especial_required
+from .views_contexto import contexto_base
+
+URL_CARGA_DOCENTE = "/bnh/carga-personal/"
+MSG_BANCO_DOCENTES_PENDIENTE = (
+    "El banco de docentes de Educación Especial está pendiente de creación en base de datos."
+)
+
+
+def _solo_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+
+def _is_ajax(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def _buscar_docente(cuil):
+    return (
+        EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+        .filter(cuil=cuil)
+        .first()
+    )
+
+
+def _docente_row(docente):
+    if not docente:
+        return None
+
+    return {
+        "apellido": docente.apellido or "",
+        "nombre": docente.nombre or "",
+        "nombre_completo": docente.nombre_completo,
+        "cuil": docente.cuil or "",
+        "dni": docente.dni or "",
+        "estado": docente.estado or "",
+    }
+
+
+def _docentes_especial(especial_context):
+    if not especial_context["puede_operar"]:
+        return EspecialDocenteBanco.objects.none()
+
+    return (
+        EspecialDocenteBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+        )
+        .order_by(
+            "docente_nombre_snapshot",
+            "docente_cuil",
+            "estado",
+        )
+    )
+
+
+def _asignaciones_por_docente(especial_context, docentes_banco):
+    cuiles = [item.docente_cuil for item in docentes_banco]
+    if not cuiles:
+        return {}
+
+    asignaciones = (
+        DocenteSeccion.objects.filter(
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+            docente_cuil__in=cuiles,
+        )
+        .select_related("seccion", "seccion__cd_tipo_seccion")
+        .order_by("seccion__nombre_seccion", "rol")
+    )
+
+    por_docente = {}
+    for asignacion in asignaciones:
+        por_docente.setdefault(asignacion.docente_cuil, []).append(asignacion)
+    return por_docente
+
+
+def _secciones_disponibles(especial_context):
+    if not especial_context["puede_operar"]:
+        return SeccionEspecial.objects.none()
+
+    return (
+        SeccionEspecial.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            estado=SeccionEspecial.Estado.ACTIVO,
+        )
+        .select_related("cd_tipo_seccion", "turno")
+        .order_by("nombre_seccion")
+    )
+
+
+def _docente_en_banco_activo(docente, especial_context):
+    if not docente or not especial_context["puede_operar"]:
+        return False
+
+    return EspecialDocenteBanco.objects.filter(
+        cueanexo=especial_context["cueanexo"],
+        ciclo=especial_context["ciclo"],
+        docente_cuil=docente.cuil,
+        estado=EspecialDocenteBanco.Estado.ACTIVO,
+    ).exists()
+
+
+def _asegurar_docente_banco(docente, especial_context, user):
+    if not docente or not especial_context["puede_operar"]:
+        return None, False, False
+
+    try:
+        existente = EspecialDocenteBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            docente_cuil=docente.cuil,
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+        ).first()
+        if existente:
+            return existente, False, False
+
+        with transaction.atomic():
+            banco = EspecialDocenteBanco.objects.create(
+                cueanexo=especial_context["cueanexo"],
+                ciclo=especial_context["ciclo"],
+                docente_cuil=docente.cuil,
+                estado=EspecialDocenteBanco.Estado.ACTIVO,
+                creado_por=user,
+                actualizado_por=user,
+            )
+        return banco, True, False
+    except (OperationalError, ProgrammingError):
+        return None, False, True
+
+
+def _url_carga_docente(cuil, next_url=None, return_label="Volver a Especial"):
+    params = {}
+    if cuil:
+        params["cuil"] = cuil
+    if next_url:
+        params["next"] = next_url
+    if return_label:
+        params["return_label"] = return_label
+    return f"{URL_CARGA_DOCENTE}?{urlencode(params)}" if params else URL_CARGA_DOCENTE
+
+
+def _url_modal_docentes(especial_context, cuil=""):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    params["abrir_modal_docente"] = "1"
+    if cuil:
+        params["cuil"] = cuil
+    return f"{reverse('especial:docentes')}?{urlencode(params)}"
+
+
+def _url_docentes(especial_context):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    querystring = urlencode(params)
+    url = reverse("especial:docentes")
+    return f"{url}?{querystring}" if querystring else url
+
+
+def _errores_form(form):
+    return " ".join(error for errors in form.errors.values() for error in errors)
+
+
+@especial_required
+def docentes(request):
+    context = contexto_base(request, "docentes", "Docentes Educación Especial")
+    especial_context = context["especial_context"]
+    docente = None
+    cuil_buscado = ""
+    cuil_error = ""
+    docente_en_banco = False
+    abrir_modal = request.GET.get("abrir_modal_docente") == "1"
+
+    if request.method == "POST":
+        busqueda_form = EspecialBusquedaDocenteForm(request.POST)
+        abrir_modal = True
+
+        if busqueda_form.is_valid():
+            cuil_buscado = busqueda_form.cleaned_data["cuil"]
+            docente = _buscar_docente(cuil_buscado)
+        else:
+            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
+            cuil_error = _errores_form(busqueda_form)
+
+        if not docente:
+            messages.error(request, "Primero buscá un docente existente por CUIL.")
+        elif not especial_context["puede_operar"]:
+            messages.error(
+                request,
+                "Seleccioná un CUE-Anexo y un ciclo lectivo para agregar docentes al banco.",
+            )
+        else:
+            try:
+                banco, creado, tabla_pendiente = _asegurar_docente_banco(
+                    docente,
+                    especial_context,
+                    request.user,
+                )
+                docente_en_banco = bool(banco)
+
+                if tabla_pendiente:
+                    messages.error(request, MSG_BANCO_DOCENTES_PENDIENTE)
+                elif creado:
+                    messages.success(request, "Docente agregado al banco de Educación Especial.")
+                    return redirect(_url_docentes(especial_context))
+                else:
+                    messages.info(
+                        request,
+                        "Ese docente ya está activo en el banco de este establecimiento y ciclo.",
+                    )
+            except (IntegrityError, ValidationError):
+                messages.error(
+                    request,
+                    "No se pudo agregar el docente al banco. Verificá que no exista ya activo.",
+                )
+    else:
+        busqueda_form = EspecialBusquedaDocenteForm(
+            request.GET if request.GET.get("cuil") else None
+        )
+
+        if busqueda_form.is_valid():
+            cuil_buscado = busqueda_form.cleaned_data["cuil"]
+            docente = _buscar_docente(cuil_buscado)
+        elif request.GET.get("cuil"):
+            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+            cuil_error = _errores_form(busqueda_form)
+
+    next_url = _url_modal_docentes(especial_context, cuil_buscado)
+    url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
+    url_docentes = _url_docentes(especial_context)
+    docentes_banco_tabla_pendiente = False
+
+    try:
+        docentes = list(_docentes_especial(especial_context))
+        if docente and not docente_en_banco:
+            docente_en_banco = _docente_en_banco_activo(docente, especial_context)
+    except (OperationalError, ProgrammingError):
+        docentes = []
+        docentes_banco_tabla_pendiente = True
+
+    try:
+        asignaciones_por_docente = _asignaciones_por_docente(especial_context, docentes)
+    except (OperationalError, ProgrammingError):
+        asignaciones_por_docente = {}
+
+    secciones_disponibles = list(_secciones_disponibles(especial_context))
+
+    for item in docentes:
+        item.asignaciones_seccion = asignaciones_por_docente.get(item.docente_cuil, [])
+        asignaciones_activas = [
+            asignacion
+            for asignacion in item.asignaciones_seccion
+            if asignacion.estado == DocenteSeccion.Estado.ACTIVO
+        ]
+        secciones_activas_ids = {asignacion.seccion_id for asignacion in asignaciones_activas}
+        item.secciones_asignables = [
+            seccion for seccion in secciones_disponibles if seccion.pk not in secciones_activas_ids
+        ]
+        item.secciones_bloqueadas = asignaciones_activas
+        item.url_editar_docente = _url_carga_docente(
+            item.docente_cuil,
+            url_docentes,
+            "Volver a Docentes Especial",
+        )
+
+    context.update(
+        {
+            "busqueda_form": busqueda_form,
+            "docente": docente,
+            "docente_row": _docente_row(docente),
+            "docentes": docentes,
+            "secciones_disponibles": secciones_disponibles,
+            "docentes_banco_tabla_pendiente": docentes_banco_tabla_pendiente,
+            "docente_en_banco": docente_en_banco,
+            "cuil_buscado": cuil_buscado,
+            "cuil_error": cuil_error,
+            "url_carga_docente": url_carga_docente,
+            "url_editar_docente": url_carga_docente,
+            "modal_docente_abierto": abrir_modal,
+            "modal_action_url": _url_modal_docentes(especial_context),
+            "modal_volver_url": url_docentes,
+        }
+    )
+    
+    return render(request, "especial/docentes_especial.html", context)
+
+
+================================================================================
+ARCHIVO: views_docentes_seccion.py
+================================================================================
+
+# apps/especial/views_docentes_seccion.py
+# -*- coding: utf-8 -*-
+"""
+Funciones reutilizables para dar alta y baja de docentes en una sección.
+Equivalente a apps/cef/views_docentes_grupo.py.
+Son llamadas desde gestionar_seccion (vía AJAX) y desde views_docentes.py.
+"""
+
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
+
+from .models import DocenteSeccion
+
+
+def dar_alta_docente_seccion(asignacion, user):
+    """
+    Reactiva una asignación de docente que estaba en baja.
+    Lanza ValidationError si ya existe otra asignación activa para ese rol.
+    """
+    if asignacion.estado == DocenteSeccion.Estado.ACTIVO:
+        raise ValidationError("La asignación ya está activa.")
+
+    # Verificar que no haya otro activo en el mismo rol para la misma sección
+    duplicado = DocenteSeccion.objects.filter(
+        seccion=asignacion.seccion,
+        rol=asignacion.rol,
+        estado=DocenteSeccion.Estado.ACTIVO,
+    ).exclude(pk=asignacion.pk).exists()
+
+    if duplicado:
+        raise ValidationError(
+            f"Ya existe un docente activo con rol «{asignacion.get_rol_display()}» "
+            f"en esta sección. Dalo de baja antes de reasignar."
+        )
+
+    with transaction.atomic():
+        asignacion.estado = DocenteSeccion.Estado.ACTIVO
+        asignacion.fecha_hasta = None
+        asignacion.actualizado_por = user
+        asignacion.save(update_fields=["estado", "fecha_hasta", "actualizado_por", "actualizado_en"])
+
+
+def dar_baja_docente_seccion(asignacion, user):
+    """
+    Marca una asignación de docente como baja y registra la fecha de baja.
+    Lanza ValidationError si la asignación ya está en baja.
+    """
+    if asignacion.estado == DocenteSeccion.Estado.BAJA:
+        raise ValidationError("La asignación ya está en baja.")
+
+    with transaction.atomic():
+        asignacion.estado = DocenteSeccion.Estado.BAJA
+        asignacion.fecha_hasta = timezone.localdate()
+        asignacion.actualizado_por = user
+        asignacion.save(update_fields=["estado", "fecha_hasta", "actualizado_por", "actualizado_en"])
+
+
+================================================================================
+ARCHIVO: views_inscripcion_seccion.py
+================================================================================
+
+# apps/especial/views_inscripcion_seccion.py
+# -*- coding: utf-8 -*-
+
+import re
+from urllib.parse import urlencode
+
+from django.apps import apps
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import NoReverseMatch, reverse
+
+from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
+from .models import SeccionEspecial, AlumnoSeccion
+from .permisos import especial_required
+from .views_contexto import contexto_base, redirect_con_contexto
+
+
+ESTADOS_INSCRIPCION_ABIERTA = [
+    AlumnoSeccion.Estado.ACTIVO,
+]
+
+
+def _solo_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+
+def _alumno_model():
+    return apps.get_model("bnhalumnos", "Alumno")
+
+
+def _seccion_segura(seccion_id, especial_context):
+    """Obtiene una sección validando permisos."""
+    return get_object_or_404(
+        SeccionEspecial.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+        )
+        .select_related(
+            "cd_tipo_seccion",
+            "turno",
+            "rango_etario",
+            "modalidad",
+            "tipo_estructura_especial",
+        ),
+        pk=seccion_id,
+    )
+
+
+def _inscripciones_seccion(seccion):
+    """QuerySet de inscripciones de una sección."""
+    return (
+        AlumnoSeccion.objects.filter(seccion=seccion)
+        .select_related("alumno", "alumno__sexo")
+        .order_by("alumno__apellidos", "alumno__nombres")
+    )
+
+
+def _buscar_alumno(cuil):
+    return _alumno_model().objects.filter(cuil=cuil).first()
+
+
+def dar_alta_inscripcion_seccion(inscripcion, user):
+    """
+    Reactiva una inscripción de alumno que estaba en baja.
+    Lanza ValidationError si ya existe otra inscripción activa.
+    """
+    if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO:
+        raise ValidationError("La inscripción ya está activa.")
+
+    duplicado = AlumnoSeccion.objects.filter(
+        seccion=inscripcion.seccion,
+        alumno=inscripcion.alumno,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+    ).exclude(pk=inscripcion.pk).exists()
+
+    if duplicado:
+        raise ValidationError(
+            "El alumno ya tiene otra inscripción activa en esta sección. "
+            "Da de baja esa inscripción antes de reinscribir."
+        )
+
+    with transaction.atomic():
+        inscripcion.estado = AlumnoSeccion.Estado.ACTIVO
+        inscripcion.fecha_baja = None
+        inscripcion.motivo_baja = ""
+        inscripcion.actualizado_por = user
+        inscripcion.save(update_fields=["estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"])
+
+
+def dar_baja_inscripcion_seccion(inscripcion, user):
+    """
+    Marca una inscripción de alumno como baja y registra la fecha de baja.
+    Lanza ValidationError si la inscripción ya está en baja.
+    """
+    if inscripcion.estado == AlumnoSeccion.Estado.BAJA:
+        raise ValidationError("La inscripción ya está dada de baja.")
+
+    from django.utils import timezone
+    with transaction.atomic():
+        inscripcion.estado = AlumnoSeccion.Estado.BAJA
+        inscripcion.fecha_baja = timezone.localdate()
+        inscripcion.motivo_baja = "Baja desde gestión"
+        inscripcion.actualizado_por = user
+        inscripcion.save(update_fields=["estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"])
+
+
+def _texto(valor):
+    if valor is None:
+        return ""
+    return str(valor)
+
+
+def _alumno_row(alumno):
+    if not alumno:
+        return None
+    return {
+        "apellidos": getattr(alumno, "apellidos", "") or "",
+        "nombres": getattr(alumno, "nombres", "") or "",
+        "tipo_doc": _texto(getattr(alumno, "tipo_doc", "")),
+        "nro_doc": getattr(alumno, "nro_doc", "") or "",
+        "cuil": getattr(alumno, "cuil", "") or "",
+        "fecha_nac": getattr(alumno, "fecha_nacimiento", None),
+        "sexo": _texto(getattr(alumno, "sexo", "")),
+        "lugar_nac": (
+            _texto(getattr(alumno, "loc_nacimiento", ""))
+            or getattr(alumno, "lugar_nacimiento", "")
+            or ""
+        ),
+    }
+
+
+def _url_carga_alumno(cuil, next_url, return_label="Volver a la sección"):
+    try:
+        base = reverse("bnhalumnos:carga_alumno")
+    except NoReverseMatch:
+        return ""
+
+    params = {}
+    if cuil:
+        params["cuil"] = cuil
+    if next_url:
+        params["next"] = next_url
+    if return_label:
+        params["return_label"] = return_label
+    return f"{base}?{urlencode(params)}" if params else base
+
+
+def _url_modal_seccion(seccion, especial_context, cuil=""):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    params["abrir_modal_alumno"] = "1"
+    if cuil:
+        params["cuil"] = cuil
+    return f"{reverse('especial:inscripcion_seccion', kwargs={'seccion_id': seccion.pk})}?{urlencode(params)}"
+
+
+def _url_inscripcion_seccion(seccion, especial_context):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    querystring = urlencode(params)
+    url = reverse("especial:inscripcion_seccion", kwargs={"seccion_id": seccion.pk})
+    return f"{url}?{querystring}" if querystring else url
+
+
+def _url_gestionar_seccion(seccion, especial_context):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    querystring = urlencode(params)
+    url = reverse("especial:gestionar_seccion", kwargs={"seccion_id": seccion.pk})
+    return f"{url}?{querystring}" if querystring else url
+
+
+def _errores_form(form):
+    return " ".join(error for errors in form.errors.values() for error in errors)
+
+
+@especial_required
+def inscripcion_seccion(request, seccion_id):
+    """Vista de inscripción de alumnos a una sección."""
+    context = contexto_base(request, "secciones", "Inscripción de alumnos Educación Especial")
+    especial_context = context["especial_context"]
+
+    if not especial_context["puede_operar"]:
+        messages.warning(
+            request,
+            "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
+        )
+        return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+
+    seccion = _seccion_segura(seccion_id, especial_context)
+    alumno = None
+    inscripcion_abierta = None
+    cuil_buscado = ""
+    cuil_error = ""
+    abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
+
+    if request.method == "POST":
+        busqueda_form = EspecialBusquedaAlumnoForm(request.POST)
+        abrir_modal = True
+
+        if busqueda_form.is_valid():
+            cuil_buscado = busqueda_form.cleaned_data["cuil"]
+            alumno = _buscar_alumno(cuil_buscado)
+        else:
+            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
+            cuil_error = _errores_form(busqueda_form)
+
+        if not alumno:
+            messages.error(request, "Primero buscá un alumno existente por CUIL.")
+        else:
+            inscripcion_abierta = AlumnoSeccion.objects.filter(
+                seccion=seccion,
+                alumno=alumno,
+                estado__in=ESTADOS_INSCRIPCION_ABIERTA,
+            ).first()
+
+            if inscripcion_abierta:
+                pass # Ya está inscripto
+            else:
+                try:
+                    with transaction.atomic():
+                        # Validación de capacidad
+                        total_activos = AlumnoSeccion.objects.filter(
+                            seccion=seccion,
+                            estado=AlumnoSeccion.Estado.ACTIVO
+                        ).count()
+                        
+                        if seccion.capacidad_total and total_activos >= seccion.capacidad_total:
+                            raise ValidationError(
+                                f"No se puede inscribir. La sección alcanzó su capacidad máxima ({seccion.capacidad_total})."
+                            )
+
+                        AlumnoSeccion.objects.create(
+                            seccion=seccion,
+                            alumno=alumno,
+                            estado=AlumnoSeccion.Estado.ACTIVO,
+                            creado_por=request.user,
+                            actualizado_por=request.user,
+                        )
+                    messages.success(request, "Alumno inscripto correctamente.")
+                    return redirect(
+                        redirect_con_contexto(
+                            "especial:inscripcion_seccion",
+                            especial_context,
+                            seccion_id=seccion.pk,
+                        )
+                    )
+                except ValidationError as exc:
+                    messages.error(request, "; ".join(exc.messages))
+                except (IntegrityError):
+                    messages.error(
+                        request,
+                        "No se pudo crear la inscripción. Verificá que no exista una inscripción activa.",
+                    )
+    else:
+        busqueda_form = EspecialBusquedaAlumnoForm(
+            request.GET if request.GET.get("cuil") else None
+        )
+
+        if busqueda_form.is_valid():
+            cuil_buscado = busqueda_form.cleaned_data["cuil"]
+            alumno = _buscar_alumno(cuil_buscado)
+            if alumno:
+                inscripcion_abierta = AlumnoSeccion.objects.filter(
+                    seccion=seccion,
+                    alumno=alumno,
+                    estado__in=ESTADOS_INSCRIPCION_ABIERTA,
+                ).first()
+        elif request.GET.get("cuil"):
+            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+            cuil_error = _errores_form(busqueda_form)
+
+    next_url = _url_modal_seccion(seccion, especial_context, cuil_buscado)
+    context.update(
+        {
+            "seccion": seccion,
+            "inscripciones": _inscripciones_seccion(seccion),
+            "busqueda_form": busqueda_form,
+            "alumno": alumno,
+            "alumno_row": _alumno_row(alumno),
+            "cuil_buscado": cuil_buscado,
+            "cuil_error": cuil_error,
+            "inscripcion_abierta": inscripcion_abierta,
+            "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "modal_alumno_abierto": abrir_modal,
+            "modal_action_url": _url_modal_seccion(seccion, especial_context),
+            "modal_tiene_seccion": True,
+            "modal_volver_url": _url_inscripcion_seccion(seccion, especial_context),
+        }
+    )
+    return render(request, "especial/inscripcion_seccion_especial.html", context)
+
+
+@especial_required
+def editar_inscripcion_seccion(request, seccion_id, inscripcion_id):
+    """Vista para editar una inscripción de alumno a sección."""
+    context = contexto_base(request, "secciones", "Editar inscripción Educación Especial")
+    especial_context = context["especial_context"]
+
+    if not especial_context["puede_operar"]:
+        messages.warning(
+            request,
+            "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
+        )
+        return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+
+    seccion = _seccion_segura(seccion_id, especial_context)
+    volver_gestionar = (
+        request.GET.get("volver") == "gestionar"
+        or request.POST.get("volver") == "gestionar"
+    )
+    volver_url = (
+        _url_gestionar_seccion(seccion, especial_context)
+        if volver_gestionar
+        else _url_inscripcion_seccion(seccion, especial_context)
+    )
+    inscripcion = get_object_or_404(
+        AlumnoSeccion.objects.filter(
+            seccion=seccion,
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+        ).select_related("alumno", "alumno__sexo"),
+        pk=inscripcion_id,
+    )
+
+    if request.method == "POST":
+        form = EspecialInscripcionForm(request.POST, instance=inscripcion)
+        if form.is_valid():
+            inscripcion = form.save(commit=False)
+            inscripcion.actualizado_por = request.user
+            inscripcion.save()
+            messages.success(request, "Inscripción actualizada correctamente.")
+            return redirect(volver_url)
+
+        messages.error(request, "Revisá los datos de la inscripción.")
+    else:
+        form = EspecialInscripcionForm(instance=inscripcion)
+
+    context.update(
+        {
+            "seccion": seccion,
+            "inscripcion": inscripcion,
+            "form": form,
+            "volver_url": volver_url,
+            "volver_gestionar": volver_gestionar,
+        }
+    )
+    return render(request, "especial/inscripcion_seccion_form_especial.html", context)
+
+
+================================================================================
+ARCHIVO: views_localizaciones.py
+================================================================================
+
+# apps/especial/views_localizaciones.py
+# -*- coding: utf-8 -*-
+
+import json
+import logging
+import time
+import unicodedata
+from datetime import datetime
+from io import BytesIO
+from urllib import request
+
+from django.core.cache import cache
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.http import HttpResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
+
+from .models import (
+    get_todas_las_escuelas_especiales,
+    normalizar_cueanexo,
+)
+from .permisos import especial_required
+
+
+logger = logging.getLogger(__name__)
+
+
+PAGE_SIZE = 10
+PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+CACHE_TTL_LOCALIZACIONES_ESPECIAL = 60 * 5
+CACHE_VERSION_LOCALIZACIONES_ESPECIAL = "v1_especial_20260623"
+
+# Columnas que se leen desde Padrón y se exponen en tabla, filtros y Excel.
+COLUMNAS_LOCALIZACIONES_ESPECIAL = [
+    "cueanexo",
+    "nom_est",
+    "oferta",
+    "ambito",
+    "sector",
+    "region_loc",
+    "ref_loc",
+    "calle",
+    "numero",
+    "localidad",
+    "departamento",
+    "estado_loc",
+    "est_oferta",
+    "estado_est",
+    "resploc_cuitcuil",
+    "resploc_doc",
+    "apellido_resp",
+    "nombre_resp",
+    "resploc_email",
+    "resploc_telefono",
+    "sup_tecnico",
+    "email_suptecnico",
+    "tel_suptecnico",
+    "categoria",
+    "jornada",
+]
+
+LABELS_COLUMNAS = {
+    "cueanexo": "CUE-Anexo",
+    "nom_est": "Establecimiento",
+    "oferta": "Oferta",
+    "ambito": "Ámbito",
+    "sector": "Sector",
+    "region_loc": "Región",
+    "ref_loc": "Referencia localización",
+    "calle": "Calle",
+    "numero": "Número",
+    "localidad": "Localidad",
+    "departamento": "Departamento",
+    "estado_loc": "Estado localización",
+    "est_oferta": "Estado oferta",
+    "estado_est": "Estado establecimiento",
+    "resploc_cuitcuil": "CUIL/CUIT responsable",
+    "resploc_doc": "Documento responsable",
+    "apellido_resp": "Apellido responsable",
+    "nombre_resp": "Nombre responsable",
+    "resploc_email": "Email responsable",
+    "resploc_telefono": "Teléfono responsable",
+    "sup_tecnico": "Supervisor técnico",
+    "email_suptecnico": "Email supervisor técnico",
+    "tel_suptecnico": "Teléfono supervisor técnico",
+    "categoria": "Categoría",
+    "jornada": "Jornada",
+}
+
+COLUMNAS_VISIBLES_DEFAULT = [
+    "cueanexo",
+    "nom_est",
+    "oferta",
+    "region_loc",
+    "localidad",
+    "departamento",
+    "apellido_resp",
+    "nombre_resp",
+    "sup_tecnico",
+    "categoria",
+    "jornada",
+]
+
+ONLY_FIELDS_LOCALIZACIONES_ESPECIAL = COLUMNAS_LOCALIZACIONES_ESPECIAL
+
+def _get_filter_options(items):
+    """Extrae opciones únicas para los filtros desde los items cacheados."""
+    regiones = sorted(set(item.get("region_loc", "") for item in items if item.get("region_loc")))
+    departamentos = sorted(set(item.get("departamento", "") for item in items if item.get("departamento")))
+    localidades = sorted(set(item.get("localidad", "") for item in items if item.get("localidad")))
+    
+    return {
+        "opciones_regiones": [r for r in regiones if r],
+        "opciones_departamentos": [d for d in departamentos if d],
+        "opciones_localidades": [l for l in localidades if l],
+    }
+
+
+
+def _log_perf(label, started):
+    logger.debug(
+        "ESPECIAL_LOCALIZACIONES %s %.1fms",
+        label,
+        (time.perf_counter() - started) * 1000,
+    )
+
+
+def _clean(value):
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _serialize_item(item):
+    return {
+        "cueanexo": _clean(getattr(item, "cueanexo", "")),
+        "nom_est": _clean(getattr(item, "nom_est", "")),
+        "oferta": _clean(getattr(item, "oferta", "")),
+        "ambito": _clean(getattr(item, "ambito", "")),
+        "sector": _clean(getattr(item, "sector", "")),
+        "region_loc": _clean(getattr(item, "region_loc", "")),
+        "ref_loc": _clean(getattr(item, "ref_loc", "")),
+        "calle": _clean(getattr(item, "calle", "")),
+        "numero": _clean(getattr(item, "numero", "")),
+        "localidad": _clean(getattr(item, "localidad", "")),
+        "departamento": _clean(getattr(item, "departamento", "")),
+        "estado_loc": _clean(getattr(item, "estado_loc", "")),
+        "est_oferta": _clean(getattr(item, "est_oferta", "")),
+        "estado_est": _clean(getattr(item, "estado_est", "")),
+        "resploc_cuitcuil": _clean(getattr(item, "resploc_cuitcuil", "")),
+        "resploc_doc": _clean(getattr(item, "resploc_doc", "")),
+        "apellido_resp": _clean(getattr(item, "apellido_resp", "")),
+        "nombre_resp": _clean(getattr(item, "nombre_resp", "")),
+        "resploc_email": _clean(getattr(item, "resploc_email", "")),
+        "resploc_telefono": _clean(getattr(item, "resploc_telefono", "")),
+        "sup_tecnico": _clean(getattr(item, "sup_tecnico", "")),
+        "email_suptecnico": _clean(getattr(item, "email_suptecnico", "")),
+        "tel_suptecnico": _clean(getattr(item, "tel_suptecnico", "")),
+        "categoria": _clean(getattr(item, "categoria", "")),
+        "jornada": _clean(getattr(item, "jornada", "")),
+    }
+
+
+def _cache_key_localizaciones_especial(request):
+    user_id = getattr(request.user, "pk", None) or "anon"
+    return f"especial:localizaciones:{CACHE_VERSION_LOCALIZACIONES_ESPECIAL}:user:{user_id}"
+
+
+def _get_items_base_cached(request):
+    """Obtiene y serializa las escuelas especiales visibles."""
+    started = time.perf_counter()
+    cache_key = _cache_key_localizaciones_especial(request)
+    if request.GET.get("refresh") == "1":
+        cache.delete(cache_key)
+
+    sentinel = object()
+    cached_items = cache.get(cache_key, sentinel)
+    if cached_items is not sentinel:
+        _log_perf("_get_items_base_cached hit", started)
+        return cached_items
+
+    qs = get_todas_las_escuelas_especiales()
+    try:
+        qs = qs.only(*ONLY_FIELDS_LOCALIZACIONES_ESPECIAL)
+        items = [_serialize_item(item) for item in qs]
+    except Exception:
+        items = [_serialize_item(item) for item in get_todas_las_escuelas_especiales()]
+
+    cache.set(cache_key, items, CACHE_TTL_LOCALIZACIONES_ESPECIAL)
+    _log_perf("_get_items_base_cached miss", started)
+    return items
+
+
+def _normalize_text(value):
+    """Normaliza texto para comparar sin distinguir mayúsculas ni acentos."""
+    text = _clean(value).casefold()
+    text = unicodedata.normalize("NFKD", text)
+    return "".join(char for char in text if not unicodedata.combining(char))
+
+
+def _contains(value, needle):
+    return _normalize_text(needle) in _normalize_text(value)
+
+
+def _apply_filters_list(items, request):
+    """Aplica filtros de búsqueda sobre la lista cacheada."""
+    started = time.perf_counter()
+    q = request.GET.get("q", "").strip()
+    if q:
+        items = [
+            item
+            for item in items
+            if any(_contains(item.get(field, ""), q) for field in COLUMNAS_LOCALIZACIONES_ESPECIAL)
+        ]
+
+    for campo in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+        value = request.GET.get(campo, "").strip()
+        if not value:
+            continue
+        items = [item for item in items if _contains(item.get(campo, ""), value)]
+
+    _log_perf("_apply_filters_list", started)
+    return items
+
+
+def _sort_key_default(item):
+    return (
+        _normalize_text(item.get("region_loc", "")),
+        _normalize_text(item.get("departamento", "")),
+        _normalize_text(item.get("localidad", "")),
+        _normalize_text(item.get("cueanexo", "")),
+    )
+
+
+def _apply_order_list(items, request):
+    """Ordena los items."""
+    started = time.perf_counter()
+    orden_param = request.GET.get("orden", "region_loc").strip()
+    raw_field = orden_param.lstrip("-")
+    reverse = orden_param.startswith("-")
+
+    ordered_items = sorted(items, key=_sort_key_default)
+    if raw_field in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+        ordered_items = sorted(
+            ordered_items,
+            key=lambda item: _normalize_text(item.get(raw_field, "")),
+            reverse=reverse,
+        )
+        _log_perf("_apply_order_list", started)
+        return ordered_items, orden_param
+
+    _log_perf("_apply_order_list", started)
+    return ordered_items, ""
+
+
+def _get_page_size(request):
+    try:
+        page_size = int(request.GET.get("page_size", PAGE_SIZE))
+    except (TypeError, ValueError):
+        return PAGE_SIZE
+    return page_size if page_size in PAGE_SIZE_OPTIONS else PAGE_SIZE
+
+
+def _exportar_excel_especial(datos, request):
+    """Genera el archivo Excel."""
+    from openpyxl.worksheet.worksheet import Worksheet
+    from openpyxl.cell.cell import Cell
+    
+    columnas: list[tuple[str, str]] = [
+        (LABELS_COLUMNAS[col], col) for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
+    ]
+
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws.title = "Localizaciones Especial"
+
+    num_columnas: int = len(columnas)
+    ultima_columna: str = get_column_letter(num_columnas)
+
+    # Encabezado del informe
+    rango_titulo: str = f"A1:{ultima_columna}1"
+    ws.merge_cells(rango_titulo)
+    celda_titulo: Cell = ws["A1"]
+    celda_titulo.value = "Informe Localizaciones Educación Especial"
+    celda_titulo.font = Font(bold=True, size=10)
+    celda_titulo.alignment = Alignment(horizontal="left", vertical="center")
+
+    fecha_str: str = datetime.now().strftime("%d/%m/%Y a las %I:%M %p").lstrip("0")
+    fecha_str = fecha_str.replace("AM", "a. m.").replace("PM", "p. m.")
+    
+    rango_fecha: str = f"A2:{ultima_columna}2"
+    ws.merge_cells(rango_fecha)
+    celda_fecha: Cell = ws["A2"]
+    celda_fecha.value = f"Informe generado el: {fecha_str}"
+    celda_fecha.font = Font(size=9)
+    celda_fecha.alignment = Alignment(horizontal="left", vertical="center")
+
+    # Encabezados de columnas
+    header_row: int = 3
+    for col_idx, (label, _) in enumerate(columnas, start=1):
+        cell: Cell = ws.cell(row=header_row, column=col_idx, value=label)
+        cell.font = Font(bold=True, size=9)
+        cell.alignment = Alignment(horizontal="left", vertical="center")
+
+    # Datos
+    for item in datos:
+        fila: list = [item.get(field, "") for _, field in columnas]
+        ws.append(fila)
+
+    ws.freeze_panes = "A4"
+    max_row: int = ws.max_row or header_row
+    rango_filtro: str = f"A{header_row}:{ultima_columna}{max_row}"
+    ws.auto_filter.ref = rango_filtro
+
+    # Ajuste de ancho de columnas
+    for col_num in range(1, num_columnas + 1):
+        col_letter: str = get_column_letter(col_num)
+        max_length: int = 0
+        for row in ws.iter_rows(min_row=header_row, max_col=col_num, max_row=max_row):
+            if not row:
+                continue
+            cell_value = row[0].value
+            if cell_value is not None:
+                max_length = max(max_length, len(str(cell_value)))
+        ws.column_dimensions[col_letter].width = min(max_length + 2, 42)
+
+    # Generar respuesta
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    nombre_archivo: str = f"Localizaciones_Especial_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+    return response
+
+@especial_required
+@ensure_csrf_cookie
+def visualizacion_localizaciones(request):
+    """Vista principal de Localizaciones de Educación Especial."""
+    view_started = time.perf_counter()
+    formato = request.GET.get("formato")
+
+    base_items = _get_items_base_cached(request)
+    total_escuelas = len(base_items)
+
+    # Obtener opciones de filtros UNA SOLA VEZ
+    filter_options = _get_filter_options(base_items)
+
+    if formato == "excel":
+        items = list(base_items)
+        items = _apply_filters_list(items, request)
+        items, orden = _apply_order_list(items, request)
+        return _exportar_excel_especial(items, request)
+
+    items = list(base_items)
+    items = _apply_filters_list(items, request)
+    items, orden = _apply_order_list(items, request)
+
+    page_size = _get_page_size(request)
+    lista_items_total = items
+
+    paginator = Paginator(lista_items_total, page_size)
+    page_number = request.GET.get("page", 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except (EmptyPage, PageNotAnInteger):
+        page_obj = paginator.page(1)
+
+    lista_items = list(page_obj.object_list)
+    total = paginator.count
+    desde = (page_obj.number - 1) * page_size + 1 if total else 0
+    hasta = min(page_obj.number * page_size, total)
+
+# En views_localizaciones.py, dentro de visualizacion_localizaciones():
+
+    context = {
+        "title": "Localizaciones Educación Especial",
+        "active_menu": "localizaciones",
+        "lista_items": lista_items,
+        "localizaciones": lista_items,
+        "total_localizaciones": total,
+        "resultado_total": total,
+        "resultado_desde": desde,
+        "resultado_hasta": hasta,
+        "page_size": page_size,
+        "page_size_options": PAGE_SIZE_OPTIONS,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "columnas": COLUMNAS_LOCALIZACIONES_ESPECIAL,
+        "labels_columnas": LABELS_COLUMNAS,
+        "columnas_visibles_default": COLUMNAS_VISIBLES_DEFAULT,
+        "orden": orden,
+        "mostrar_contexto": False,
+        "opciones_regiones": sorted(set(item["region_loc"] for item in base_items if item["region_loc"])),
+        "opciones_departamentos": sorted(set(item["departamento"] for item in base_items if item["departamento"])),
+        "opciones_localidades": sorted(set(item["localidad"] for item in base_items if item["localidad"])),
+        "limpiar_filtros_url": request.path,
+        "request": request,
+        # ✅ AGREGAR ESTO PARA QUE LOS FILTROS FUNCIONEN:
+        **filter_options, 
+    }
+
+    render_started = time.perf_counter()
+    response = render(request, "especial/localizaciones_especial.html", context)
+    _log_perf("render final", render_started)
+    _log_perf("visualizacion_localizaciones total", view_started)
+    return response
+

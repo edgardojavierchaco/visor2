@@ -20,10 +20,10 @@
                 <div class="alert alert-success mb-3">{{ asignacion_modal_feedback }}</div>
             {% endif %}
 
-            <form method="post" action="{{ request.path }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
+            <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
                 {% csrf_token %}
-                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                 <input type="hidden" name="accion" value="asignar_grupo">
                 <input type="hidden" name="grupo_id" value="{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.pk }}{% endif %}" data-cef-asignar-grupo-id>
                 <input type="hidden" name="cuil" value="{{ asignacion_docente_cuil }}" data-cef-asignar-docente-cuil>

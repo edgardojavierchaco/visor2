@@ -1,6 +1,6 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'especial/base_operativo_especial.html' %}
 {% load mis_filtros %}
-{% block content %}
+{% block especial_content %}
 
 {# Mantiene el estado del menu lateral antes de pintar la pantalla para evitar saltos visuales. #}
 <script>
@@ -3277,7 +3277,7 @@
 
 {# Contenedor principal: navegacion, buscador, acciones, filtros, tabla y paginacion. #}
 <div class="padron-page-wrapper">
-    {% include "cef/componentes/nav_operativo_cef.html" %}
+    
 
     <div class="card shadow-sm border-0 mb-3">
         <div class="card-body">
@@ -3790,7 +3790,7 @@
                     <div class="padron-modal-breadcrumbs">
                         <span class="fw-semibold text-muted">CEF</span>
                         <span class="crumb-sep">&raquo;</span>
-                        <a href="{% url 'cef:visualizacion_localizaciones' %}" class="crumb-link">Localizaciones</a>
+                        <a href="{% url 'especial:visualizacion_localizaciones' %}" class="crumb-link">Localizaciones</a>
                         <span class="crumb-sep">&raquo;</span>
                         <span class="text-muted">Guía de uso</span>
                     </div>

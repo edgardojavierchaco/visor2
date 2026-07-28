@@ -14,7 +14,7 @@ from apps.bnhalumnos.models import Alumno
 # ============================================================
 ACRONIMO_ESPECIAL = "EEE"
 LONGITUD_CUEANEXO = 9
-PADRON_DB_ALIAS = "default" # TODO: Check if this should be 'padron' or 'default' (BNH uses 'padron' probably, but in `models.py` it's 'default'. I will leave it as is or check later)
+PADRON_DB_ALIAS = "default"
 ROLES_AUTORIZADOS_ESPECIAL = {
     "Administrador",
     "Director",
@@ -22,7 +22,7 @@ ROLES_AUTORIZADOS_ESPECIAL = {
 }
 
 # ============================================================
-# MODELOS EXTERNOS / INTEGRACION (Sin cambios mayores, solo limpieza)
+# MODELOS EXTERNOS / INTEGRACION
 # ============================================================
 
 class EspecialDocenteBnh(models.Model):
@@ -45,12 +45,19 @@ class EspecialDocenteBnh(models.Model):
         if apellidos and nombres:
             return f"{apellidos}, {nombres}"
         return apellidos or nombres
+        
+    def __str__(self):
+        nombre = self.nombre_completo
+        if nombre:
+            return f"{nombre} - {self.cuil}"
+        return self.cuil or ""
+
+
 class EspecialPadronOferta(models.Model):
     """Modelo de integración Especial contra la vista de Padrón."""
     id = models.BigIntegerField(primary_key=True)
     cueanexo = models.CharField(max_length=9, blank=True, null=True)
     nom_est = models.TextField(blank=True, null=True)
-    # ... (resto de campos igual que antes) ...
     padron_cueanexo = models.CharField(max_length=9, blank=True, null=True)
     acronimo = models.CharField(max_length=50, blank=True, null=True)
     oferta = models.TextField(blank=True, null=True)
@@ -93,6 +100,7 @@ class EspecialPadronOferta(models.Model):
         nombre = self.nom_est or ""
         return f"{cueanexo} - {nombre}".strip(" -")
 
+
 class EspecialRolUsuario(models.Model):
     id = models.BigIntegerField(primary_key=True)
     nombre = models.CharField(max_length=100, blank=True, null=True)
@@ -101,6 +109,7 @@ class EspecialRolUsuario(models.Model):
         db_table = "usuarios_rol"
         verbose_name = "Rol de usuario Especial"
         verbose_name_plural = "Roles de usuario Especial"
+
 
 class EspecialUsuarioPerfil(models.Model):
     id = models.BigIntegerField(primary_key=True)
@@ -122,17 +131,20 @@ class EspecialUsuarioPerfil(models.Model):
         verbose_name = "Perfil de usuario Especial"
         verbose_name_plural = "Perfiles de usuario Especial"
 
+
 # ============================================================
 # FUNCIONES DE NORMALIZACION Y ACCESO A PADRON
 # ============================================================
 def solo_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
 
+
 def normalizar_cueanexo(valor):
     cueanexo = solo_digitos(valor)
     if len(cueanexo) != LONGITUD_CUEANEXO:
         return ""
     return cueanexo
+
 
 def normalizar_cuil_usuario(user):
     if not user or not getattr(user, "is_authenticated", False):
@@ -142,14 +154,17 @@ def normalizar_cuil_usuario(user):
         return ""
     return cuil
 
+
 def get_escuelas_especiales_base_queryset():
     return (
         EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
         .filter(acronimo__iexact=ACRONIMO_ESPECIAL)
     )
 
+
 def get_todas_las_escuelas_especiales():
     return get_escuelas_especiales_base_queryset().order_by("cueanexo")
+
 
 def get_escuelas_especiales_por_cuil_responsable(user):
     cuil = normalizar_cuil_usuario(user)
@@ -172,6 +187,7 @@ def get_escuelas_especiales_por_cuil_responsable(user):
         .order_by("cueanexo")
     )
 
+
 def get_datos_establecimiento_especial(cueanexo):
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
@@ -182,6 +198,7 @@ def get_datos_establecimiento_especial(cueanexo):
         .order_by("cueanexo", "nom_est")
         .first()
     )
+
 
 # ============================================================
 # PERMISOS FUNCIONALES
@@ -203,14 +220,17 @@ def obtener_rol_usuario_especial(user):
     rol_nombre = getattr(perfil.rol, "nombre", "") or ""
     return rol_nombre.strip() or None
 
+
 def usuario_puede_ver_especial(user):
     rol = obtener_rol_usuario_especial(user)
     if not rol:
         return False
     return rol in ROLES_AUTORIZADOS_ESPECIAL
 
+
 def usuario_es_admin_especial(user):
     return obtener_rol_usuario_especial(user) == "Administrador"
+
 
 def get_escuelas_especiales_cargables_usuario(user):
     queryset = get_todas_las_escuelas_especiales()
@@ -219,6 +239,7 @@ def get_escuelas_especiales_cargables_usuario(user):
     if usuario_es_admin_especial(user):
         return queryset
     return get_escuelas_especiales_por_cuil_responsable(user)
+
 
 def get_cueanexos_cargables_usuario(user):
     cueanexos = []
@@ -232,11 +253,13 @@ def get_cueanexos_cargables_usuario(user):
             cueanexos.append(cueanexo_norm)
     return cueanexos
 
+
 def usuario_puede_cargar_cueanexo(user, cueanexo):
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
         return False
     return cueanexo in get_cueanexos_cargables_usuario(user)
+
 
 # ============================================================
 # MIXIN DE AUDITORIA
@@ -259,6 +282,7 @@ class EspecialAuditoriaMixin(models.Model):
     class Meta:
         abstract = True
 
+
 # ============================================================
 # CICLO LECTIVO
 # ============================================================
@@ -274,7 +298,7 @@ class EspecialCiclo(EspecialAuditoriaMixin):
     actual = models.BooleanField(default=False)
 
     class Meta:
-        db_table = "especial_ciclos"
+        db_table = '"especial"."ciclos"'
         ordering = ["-anio"]
         verbose_name = "Ciclo Especial"
         verbose_name_plural = "Ciclos Especial"
@@ -299,6 +323,7 @@ class EspecialCiclo(EspecialAuditoriaMixin):
     def __str__(self):
         return str(self.anio)
 
+
 # ============================================================
 # CATALOGOS OPERATIVOS ESPECIAL
 # ============================================================
@@ -308,69 +333,75 @@ class CatalogoTipoEstructuraEspecial(models.Model):
     descripcion = models.CharField(max_length=100)
 
     class Meta:
-        db_table = "catalogo_tipo_estructura_especial"
+        db_table = '"especial"."catalogo_tipo_estructura"'
         verbose_name = "Tipo de estructura especial"
         verbose_name_plural = "Tipos de estructuras especiales"
     def __str__(self):
         return self.descripcion
+
 
 class CatalogoTipoRangoEtario(models.Model):
     """Catálogo de rangos etarios (0 a 99 años)."""
     cd_tiporangoetario = models.IntegerField(primary_key=True)
     descripcion = models.CharField(max_length=100)
     class Meta:
-        db_table = "catalogo_tipo_rango_etario"
+        db_table = '"especial"."catalogo_rango_etario"'
         verbose_name = "Tipo de rango etario"
         verbose_name_plural = "Tipos de rangos etarios"
     def __str__(self):
         return self.descripcion
+
 
 class SinoTipo(models.Model):
     """Modelo genérico para representar respuestas Si/No/Sin información."""
     cd_sino = models.IntegerField(primary_key=True)
     descripcion = models.CharField(max_length=100)
     class Meta:
-        db_table = "sino_tipo"
+        db_table = '"especial"."sino_tipo"'
         verbose_name = "Si/No/Sin info"
         verbose_name_plural = "Si/No/Sin info"
     def __str__(self):
         return self.descripcion
 
-class seccion_tipo(models.Model):
+
+class SeccionTipo(models.Model):
     """Tipo de sección en la que cursa el alumno (Independiente, Múltiple, etc.)."""
     cd_tipo_seccion = models.IntegerField(primary_key=True)
     descripcion = models.CharField(max_length=100)
     class Meta:
-        db_table = "seccion_tipo"
+        db_table = '"especial"."seccion_tipo"'
         verbose_name = "Tipo de sección"
         verbose_name_plural = "Tipos de sección"
     def __str__(self):
         return self.descripcion
+
 
 class TurnoTipo(models.Model):
     """Turno en el que cursa el alumno (Mañana, Tarde, etc.)."""
     cd_turno = models.IntegerField(primary_key=True)
     descripcion = models.CharField(max_length=100)
     class Meta:
-        db_table = "turno_tipo"
+        db_table = '"especial"."turno_tipo"'
         verbose_name = "Turno"
         verbose_name_plural = "Turnos"
     def __str__(self):
         return self.descripcion
+
 
 class ModalidadDictadoTipo(models.Model):
     """Modalidad de dictado del plan de estudios (Presencial, A distancia, etc.)."""
     cd_modalidad_dictado = models.IntegerField(primary_key=True)
     descripcion = models.CharField(max_length=100)
     class Meta:
-        db_table = "modalidad_dictado_tipo"
+        db_table = '"especial"."modalidad_dictado_tipo"'
         verbose_name = "Tipo de modalidad de cursado"
         verbose_name_plural = "Tipos de modalidad de cursado"
     def __str__(self):
         return self.descripcion
 
+
 # ============================================================
-# MODELOS PRINCIPALES (Adaptados a estilo CEF)
+# MODELOS PRINCIPALES
 # ============================================================
 
 class SeccionEspecial(EspecialAuditoriaMixin):
@@ -388,7 +419,7 @@ class SeccionEspecial(EspecialAuditoriaMixin):
     cueanexo = models.CharField(max_length=9, db_index=True)
     
     cd_tipo_seccion = models.ForeignKey(
-        seccion_tipo,
+        SeccionTipo,
         on_delete=models.PROTECT,
         db_column="cd_tipo_seccion",
         related_name="secciones",
@@ -445,7 +476,7 @@ class SeccionEspecial(EspecialAuditoriaMixin):
     estructura_snapshot = models.CharField(max_length=100, blank=True, editable=False)
 
     class Meta:
-        db_table = "especial_seccion"
+        db_table = '"especial"."seccion"'
         verbose_name = "Sección de Educación Especial"
         verbose_name_plural = "Secciones de Educación Especial"
         constraints = [
@@ -494,8 +525,7 @@ class SeccionEspecial(EspecialAuditoriaMixin):
 class EspecialAlumnoBanco(EspecialAuditoriaMixin):
     """
     Banco de alumnos activos en el establecimiento para un ciclo determinado.
-    Similar a CefAlumnoCef. Permite gestionar qué alumnos están disponibles 
-    para ser inscritos en secciones.
+    Similar a CefAlumnoCef.
     """
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"
@@ -530,7 +560,7 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
     observaciones = models.TextField(blank=True)
 
     class Meta:
-        db_table = "especial_alumno_banco"
+        db_table = '"especial"."alumno_banco"'
         verbose_name = "Alumno en Banco Especial"
         verbose_name_plural = "Alumnos en Banco Especial"
         constraints = [
@@ -618,10 +648,11 @@ class EspecialDocenteBanco(EspecialAuditoriaMixin):
     # Snapshots
     docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
     docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
+    docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
     observaciones = models.TextField(blank=True)
 
     class Meta:
-        db_table = "especial_docente_banco"
+        db_table = '"especial"."docente_banco"'
         verbose_name = "Docente en Banco Especial"
         verbose_name_plural = "Docentes en Banco Especial"
         constraints = [
@@ -655,14 +686,34 @@ class EspecialDocenteBanco(EspecialAuditoriaMixin):
             
         if self.estado == self.Estado.BAJA and not self.fecha_baja:
             errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
+            
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
 
         if errors:
             raise ValidationError(errors)
 
+    def actualizar_snapshots_docente(self):
+        """
+        Copia datos basicos del docente BNH si se encuentra por CUIL.
+        Similar a CefDocenteCef.actualizar_snapshots_docente().
+        """
+        docente = (
+            EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+            .filter(cuil=self.docente_cuil)
+            .first()
+        )
+
+        if not docente:
+            return
+
+        self.docente_nombre_snapshot = docente.nombre_completo
+        self.docente_dni_snapshot = docente.dni or ""
+        self.docente_estado_bnh_snapshot = docente.estado or ""
+
     def save(self, *args, **kwargs):
         self.docente_cuil = solo_digitos(self.docente_cuil)
-        # Aquí podrías buscar datos del docente en bnhpersonas si quisieras llenar snapshots
-        # Por simplicidad, asumimos que se llenan manualmente o vía otra vista
+        self.actualizar_snapshots_docente()
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -678,15 +729,10 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
     """
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"
-        INACTIVO = "inactivo", "Inactivo"
         BAJA = "baja", "Baja"
 
     id = models.BigAutoField(unique=True, primary_key=True)
     
-    # Ya no vinculamos directo a Alumno, sino al registro del banco para trazabilidad
-    # Pero para mantener compatibilidad con vistas antiguas, podemos mantener la FK a Alumno
-    # o cambiarla. En CefInscripcion usan Alumno directo. Vamos a usar Alumno directo para simplificar
-    # la consulta de datos personales, pero validando que esté en el banco.
     alumno = models.ForeignKey(
         Alumno,
         on_delete=models.PROTECT,
@@ -711,13 +757,13 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
     observaciones = models.TextField(blank=True)
 
     class Meta:
-        db_table = "especial_alumnoseccion"
+        db_table = '"especial"."alumno_seccion"'
         verbose_name = "Alumno de Educación Especial"
         verbose_name_plural = "Alumnos de Educación Especial"
         constraints = [
             models.UniqueConstraint(
                 fields=["alumno", "seccion"],
-                condition=Q(estado__in=["activo", "inactivo"]),
+                condition=Q(estado="activo"),
                 name="uq_esp_alumno_seccion_abierta",
             ),
         ]
@@ -778,8 +824,8 @@ class DocenteSeccion(EspecialAuditoriaMixin):
         INACTIVO = "inactivo", "Inactivo"
         BAJA = "baja", "Baja"
 
-    grupo = models.ForeignKey(
-        SeccionEspecial, # Usamos SeccionEspecial como 'grupo'
+    seccion = models.ForeignKey(
+        SeccionEspecial,
         on_delete=models.PROTECT,
         related_name="docentes",
     )
@@ -801,27 +847,28 @@ class DocenteSeccion(EspecialAuditoriaMixin):
     # Snapshots
     docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
     docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
+    docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
     observaciones = models.TextField(blank=True)
 
     class Meta:
-        db_table = "especial_docente_seccion"
+        db_table = '"especial"."docente_seccion"'
         verbose_name = "Docente de Sección Especial"
         verbose_name_plural = "Docentes de Secciones Especiales"
         constraints = [
             models.UniqueConstraint(
-                fields=["grupo", "docente_cuil"],
+                fields=["seccion", "docente_cuil"],
                 condition=Q(estado="activo"),
                 name="uq_esp_doc_sec_cuil_act",
             ),
             models.UniqueConstraint(
-                fields=["grupo", "rol"],
+                fields=["seccion", "rol"],
                 condition=Q(estado="activo"),
                 name="uq_esp_doc_sec_rol_act",
             ),
         ]
         indexes = [
             models.Index(fields=["docente_cuil", "estado"], name="idx_esp_doc_sec_cuil_est"),
-            models.Index(fields=["grupo", "estado"], name="idx_esp_doc_sec_grp_est"),
+            models.Index(fields=["seccion", "estado"], name="idx_esp_doc_sec_grp_est"),
         ]
 
     def clean(self):
@@ -839,10 +886,10 @@ class DocenteSeccion(EspecialAuditoriaMixin):
             errors["fecha_hasta"] = "Debe indicar fecha hasta cuando la asignación está en baja."
 
         # Validar que el docente esté en el banco activo
-        if self.grupo_id and self.docente_cuil:
+        if self.seccion_id and self.docente_cuil:
             en_banco = EspecialDocenteBanco.objects.filter(
-                cueanexo=self.grupo.cueanexo,
-                ciclo=self.grupo.ciclo,
+                cueanexo=self.seccion.cueanexo,
+                ciclo=self.seccion.ciclo,
                 docente_cuil=self.docente_cuil,
                 estado=EspecialDocenteBanco.Estado.ACTIVO
             ).exists()
@@ -852,12 +899,30 @@ class DocenteSeccion(EspecialAuditoriaMixin):
         if errors:
             raise ValidationError(errors)
 
+    def actualizar_snapshots_docente(self):
+        """
+        Copia datos basicos del docente BNH si se encuentra por CUIL.
+        Similar a CefDocenteGrupo.actualizar_snapshots_docente().
+        """
+        docente = (
+            EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+            .filter(cuil=self.docente_cuil)
+            .first()
+        )
+
+        if not docente:
+            return
+
+        self.docente_nombre_snapshot = docente.nombre_completo
+        self.docente_dni_snapshot = docente.dni or ""
+        self.docente_estado_bnh_snapshot = docente.estado or ""
+
     def save(self, *args, **kwargs):
         self.docente_cuil = solo_digitos(self.docente_cuil)
-        # Aquí podrías buscar datos del docente para llenar snapshots
+        self.actualizar_snapshots_docente()
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
         docente = self.docente_nombre_snapshot or self.docente_cuil
-        return f"{self.grupo} - {self.get_rol_display()} - {docente}"
+        return f"{self.seccion} - {self.get_rol_display()} - {docente}"

@@ -1,13 +1,13 @@
-{% extends "cef/base_operativo_cef.html" %}
+{% extends "especial/base_operativo_especial.html" %}
 
-{% block cef_subtitle %}Búsqueda por CUIL e inscripción de alumnos al grupo seleccionado.{% endblock %}
+{% block especial_subtitle %}Búsqueda por CUIL e inscripción de alumnos al grupo seleccionado.{% endblock %}
 
-{% block cef_content %}
+{% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Grupos <span>» Inscripción de Alumnos</span></h2>
         <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a grupos
             </a>
             <button class="btn btn-primary" type="button" data-open-personas-modal>
