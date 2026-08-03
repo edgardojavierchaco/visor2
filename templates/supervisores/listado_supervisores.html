@@ -1,0 +1,1303 @@
+{% extends "superv/home.html" %}
+{% load static %}
+
+{% block extra_css %}
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/select2-bootstrap4-theme@1.0.0/dist/select2-bootstrap4.min.css">
+
+
+<link rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
+
+
+<link rel="stylesheet"
+      href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css">
+
+
+<style>
+
+.select2-container {
+    width: 100% !important;
+}
+
+
+.select2-container--bootstrap4 .select2-selection {
+    min-height: 38px;
+}
+
+
+.select2-dropdown {
+    z-index: 999999 !important;
+}
+
+
+.select2-container--open {
+    z-index: 999999 !important;
+}
+
+
+.content-wrapper,
+.content,
+.container-fluid,
+.card,
+.card-body,
+.row,
+.form-group {
+    overflow: visible !important;
+}
+
+
+</style>
+
+{% endblock %}
+
+{% block body %}
+
+<div class="wrapper">
+
+
+    {% include "vtc/header_archivos.html" %}
+
+    {% include "vtc/sidebar_archivos.html" %}
+
+
+
+    <div class="content-wrapper">
+
+
+        <!-- ================================================= -->
+        <!-- CABECERA -->
+        <!-- ================================================= -->
+
+        <section class="content-header">
+
+            <div class="container-fluid">
+
+
+                <div class="row mb-2">
+
+
+                    <div class="col-sm-6">
+
+
+                        <h1>
+
+                            <i class="fas fa-user-tie text-primary"></i>
+
+                            Supervisores
+
+                        </h1>
+
+
+                    </div>
+
+
+
+                    <div class="col-sm-6">
+
+
+                        <ol class="breadcrumb float-sm-right">
+
+
+                            <li class="breadcrumb-item">
+
+                                <a href="{% url 'supervisor_registro:dashboard' %}">
+
+                                    Dashboard
+
+                                </a>
+
+                            </li>
+
+
+                            <li class="breadcrumb-item active">
+
+                                Supervisores
+
+                            </li>
+
+
+                        </ol>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+
+        <!-- ================================================= -->
+        <!-- CONTENIDO -->
+        <!-- ================================================= -->
+
+
+        <section class="content">
+
+
+            <div class="container-fluid">
+
+
+
+
+
+                <!-- ================================================= -->
+                <!-- FILTROS -->
+                <!-- ================================================= -->
+
+
+                <div class="card card-primary card-outline shadow-sm">
+
+
+                    <div class="card-header">
+
+
+                        <h3 class="card-title">
+
+
+                            <i class="fas fa-filter"></i>
+
+
+                            Filtros de búsqueda
+
+
+                        </h3>
+
+
+                    </div>
+
+
+
+
+
+                    <form id="formFiltros">
+
+
+
+                        <div class="card-body">
+
+
+                            <div class="row">
+
+
+
+
+
+                                <!-- BUSCAR -->
+
+
+                                <div class="col-lg-4 col-md-6 mb-3">
+
+
+                                    <label>
+
+                                        Buscar
+
+                                    </label>
+
+
+                                    <input
+
+                                        type="text"
+
+                                        id="txtBuscar"
+
+                                        class="form-control"
+
+                                        placeholder="Apellido, Nombre o CUIL"
+
+                                    >
+
+
+                                </div>
+
+
+
+
+
+
+
+                                <!-- REGION -->
+
+
+                                <div class="col-lg-3 col-md-6 mb-3">
+
+
+                                    <label>
+
+                                        Regional
+
+                                    </label>
+
+
+
+                                    <select
+
+                                        id="filtroRegion"
+
+                                        class="form-control select2"
+                                        
+
+                                    >
+
+
+
+                                        <option value="">
+
+                                            Todas
+
+                                        </option>
+
+
+
+
+                                        {% for r in regiones %}
+
+
+                                            <option value="{{ r.id }}">
+
+                                                {{ r.nombre }}
+
+                                            </option>
+
+
+
+                                        {% endfor %}
+
+
+
+                                    </select>
+
+
+                                </div>
+
+
+
+
+
+
+
+                                <!-- SITUACION -->
+
+
+                                <div class="col-lg-3 col-md-6 mb-3">
+
+
+                                    <label>
+
+                                        Situación de Revista
+
+                                    </label>
+
+
+
+                                    <select
+
+                                        id="filtroSituacion"
+
+                                        class="form-control select2"
+                                        
+
+                                    >
+
+
+                                        <option value="">
+
+                                            Todas
+
+                                        </option>
+
+
+
+
+
+                                        {% for s in situaciones %}
+
+
+
+                                            <option value="{{ s.id }}">
+
+
+                                                {{ s }}
+
+
+                                            </option>
+
+
+
+                                        {% endfor %}
+
+
+
+
+                                    </select>
+
+
+                                </div>
+
+
+
+
+
+
+                                <!-- NIVEL -->
+
+
+                                <div class="col-lg-2 col-md-6 mb-3">
+
+
+                                    <label>
+
+                                        Nivel
+
+                                    </label>
+
+
+
+                                    <select
+
+                                        id="filtroNivel"
+
+                                        class="form-control select2"
+
+                                    >
+
+
+                                        <option value="">
+
+                                            Todos
+
+                                        </option>
+
+
+
+
+
+                                        {% for n in niveles %}
+
+
+
+                                            <option value="{{ n.id }}">
+
+
+                                                {{ n }}
+
+
+                                            </option>
+
+
+
+                                        {% endfor %}
+
+
+
+                                    </select>
+
+
+                                </div>
+
+
+
+                            </div>
+
+
+                        </div>
+
+
+
+
+
+
+                        <div class="card-footer">
+
+
+
+                            <button
+
+                                type="button"
+
+                                id="btnBuscar"
+
+                                class="btn btn-primary"
+
+                            >
+
+                                <i class="fas fa-search"></i>
+
+                                Buscar
+
+                            </button>
+
+
+
+
+
+                            <button
+
+                                type="button"
+
+                                id="btnLimpiar"
+
+                                class="btn btn-secondary"
+
+                            >
+
+                                <i class="fas fa-times"></i>
+
+                                Limpiar
+
+                            </button>
+
+
+
+
+
+
+                            <button
+
+                                type="button"
+
+                                id="btnExcel"
+
+                                class="btn btn-success float-right"
+
+                                data-url="{% url 'supervisor_registro:exportar_excel' %}"
+
+                            >
+
+                                <i class="fas fa-file-excel"></i>
+
+                                Exportar Excel
+
+
+                            </button>
+
+
+
+                        </div>
+
+
+
+                    </form>
+
+
+
+                </div>
+                                <!-- ================================================= -->
+                <!-- TABLA -->
+                <!-- ================================================= -->
+
+
+                <div class="card shadow-sm">
+
+
+                    <div class="card-header">
+
+
+                        <h3 class="card-title">
+
+
+                            <i class="fas fa-list"></i>
+
+
+                            Listado de Supervisores
+
+
+                        </h3>
+
+
+
+                    </div>
+
+
+
+
+
+                    <div class="card-body">
+
+
+                        <div class="table-responsive">
+
+
+
+                            <table
+
+                                id="tablaSupervisores"
+
+                                class="table table-striped table-bordered table-hover w-100"
+
+
+                            >
+
+
+
+                                <thead>
+
+
+                                    <tr>
+
+
+                                        <th>
+                                            CUIL
+                                        </th>
+
+
+                                        <th>
+                                            Apellido
+                                        </th>
+
+
+                                        <th>
+                                            Nombres
+                                        </th>
+
+
+                                        <th>
+                                            Regional
+                                        </th>
+
+
+                                        <th>
+                                            Nivel
+                                        </th>
+
+
+                                        <th>
+                                            Situación
+                                        </th>
+
+
+                                        <th>
+                                            Email
+                                        </th>
+
+
+                                        <th>
+                                            Teléfono
+                                        </th>
+
+
+                                        <th class="text-center">
+                                            Acciones
+                                        </th>
+
+
+
+                                    </tr>
+
+
+
+                                </thead>
+
+
+
+                                <tbody>
+
+
+                                </tbody>
+
+
+
+                            </table>
+
+
+
+                        </div>
+
+
+
+                    </div>
+
+
+
+                </div>
+
+
+
+
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+    </div>
+
+
+
+
+
+    {% include "superv/footer.html" %}
+
+
+
+
+</div>
+
+
+{% endblock %}
+
+
+
+
+
+
+{% block scripts %}
+
+
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
+
+<script>
+$(function(){
+
+
+
+    /* =====================================================
+       SELECT2
+    ===================================================== */
+
+
+    $(".select2").select2({
+
+
+        theme:"bootstrap4",
+
+
+        width:"100%",
+
+        dropdownParent: $(".content-wrapper"),
+
+        placeholder:"Seleccione",
+
+
+        allowClear:true,
+
+        language: {
+            noResults: function () {
+                return "Sin resultados";
+            }
+        }
+
+
+    });
+
+
+
+
+
+
+
+    /* =====================================================
+       DATATABLE SERVER SIDE
+    ===================================================== */
+
+
+
+    let tabla = $("#tablaSupervisores").DataTable({
+
+
+
+        processing:true,
+
+
+        serverSide:true,
+
+
+
+        responsive:true,
+
+
+        autoWidth:false,
+
+
+
+        pageLength:25,
+
+
+
+        ajax:{
+
+
+
+            url:
+
+            "{% url 'supervisor_registro:supervisores_datatable' %}",
+
+
+
+            type:"GET",
+
+
+
+            data:function(d){
+
+
+
+                d.q = $("#txtBuscar").val();
+
+
+                d.region = $("#filtroRegion").val();
+
+
+                d.situacion = $("#filtroSituacion").val();
+
+
+                d.nivel = $("#filtroNivel").val();
+
+
+
+            }
+
+
+
+        },
+
+
+
+
+
+        columns:[
+
+
+
+
+            {
+                data:"cuil"
+            },
+
+
+
+            {
+                data:"apellido"
+            },
+
+
+
+            {
+                data:"nombres"
+            },
+
+
+
+            {
+                data:"regiones",
+
+                orderable:false,
+
+                searchable:false
+            },
+
+
+
+            {
+                data:"niveles",
+
+                orderable:false,
+
+                searchable:false
+            },
+
+
+
+            {
+                data:"situaciones",
+
+                orderable:false,
+
+                searchable:false
+            },
+
+
+
+            {
+                data:"email"
+            },
+
+
+
+            {
+                data:"telefono"
+            },
+
+
+
+            {
+                data:"acciones",
+
+                orderable:false,
+
+                searchable:false
+
+            }
+
+
+
+
+        ],
+
+
+
+
+
+        order:[
+
+            [
+
+                1,
+
+                "asc"
+
+            ]
+
+        ],
+
+
+
+
+
+        language:{
+
+
+
+            processing:
+
+            "Procesando...",
+
+
+
+            lengthMenu:
+
+            "Mostrar _MENU_ registros",
+
+
+
+            zeroRecords:
+
+            "No se encontraron resultados",
+
+
+
+            emptyTable:
+
+            "No existen supervisores",
+
+
+
+            info:
+
+            "Mostrando _START_ a _END_ de _TOTAL_ registros",
+
+
+
+            infoEmpty:
+
+            "Sin registros",
+
+
+
+            infoFiltered:
+
+            "(filtrado de _MAX_ registros)",
+
+
+
+            search:
+
+            "Buscar:",
+
+
+
+            loadingRecords:
+
+            "Cargando...",
+
+
+
+
+            paginate:{
+
+
+
+                first:
+
+                "Primero",
+
+
+
+                last:
+
+                "Último",
+
+
+
+                next:
+
+                ">",
+
+
+
+                previous:
+
+                "<"
+
+
+
+            }
+
+
+
+        },
+
+
+
+
+
+        dom:
+
+
+        "<'row'<'col-md-6'l>>"+
+
+        "<'row'<'col-12'tr>>"+
+
+        "<'row mt-3'<'col-md-5'i><'col-md-7'p>>"
+
+    });
+
+
+
+
+
+
+
+
+    /* =====================================================
+       BOTON BUSCAR
+    ===================================================== */
+
+
+    $("#btnBuscar").click(function(){
+
+
+        tabla.ajax.reload();
+
+
+
+    });
+
+
+
+
+
+
+
+
+    /* =====================================================
+       ENTER BUSQUEDA
+    ===================================================== */
+
+
+    $("#txtBuscar").keypress(function(e){
+
+
+        if(e.which===13){
+
+
+            tabla.ajax.reload();
+
+
+
+        }
+
+
+
+    });
+
+
+
+
+
+
+
+
+    /* =====================================================
+       CAMBIO FILTROS
+    ===================================================== */
+
+
+    $("#filtroRegion,#filtroSituacion,#filtroNivel")
+
+    .change(function(){
+
+
+        tabla.ajax.reload();
+
+
+
+    });
+
+
+
+
+
+
+
+
+    /* =====================================================
+       LIMPIAR FILTROS
+    ===================================================== */
+
+
+    $("#btnLimpiar").click(function(){
+
+
+
+        $("#txtBuscar").val("");
+
+
+
+        $("#filtroRegion")
+
+            .val("")
+
+            .trigger("change");
+
+
+
+        $("#filtroSituacion")
+
+            .val("")
+
+            .trigger("change");
+
+
+
+        $("#filtroNivel")
+
+            .val("")
+
+            .trigger("change");
+
+
+
+        tabla.ajax.reload();
+
+
+
+    });
+
+
+
+
+
+
+
+
+    /* =====================================================
+       EXPORTAR EXCEL
+    ===================================================== */
+
+
+    $("#btnExcel").click(function(){
+
+        console.log("Exportando Excel");
+
+        let url = $(this).data("url");
+
+        let params = new URLSearchParams();
+
+        params.append(
+
+            "q",
+
+            $("#txtBuscar").val()
+
+        );
+
+
+
+        params.append(
+
+            "region",
+
+            $("#filtroRegion").val()
+
+        );
+
+
+
+        params.append(
+
+            "situacion",
+
+            $("#filtroSituacion").val()
+
+        );
+
+
+
+        params.append(
+
+            "nivel",
+
+            $("#filtroNivel").val()
+
+        );
+
+        console.log(
+            url + "?" + params.toString()
+        );
+
+        window.location.href =
+            url +
+            "?" +
+            params.toString();
+
+
+
+
+    });
+
+
+    /* =====================================================
+       TOOLTIP
+    ===================================================== */
+
+
+    $('[data-toggle="tooltip"]').tooltip();
+
+
+
+
+
+
+
+    /* =====================================================
+       HOVER TABLA
+    ===================================================== */
+
+
+    $("#tablaSupervisores tbody")
+
+    .on(
+
+        "mouseenter",
+
+        "tr",
+
+        function(){
+
+
+            $(this)
+
+            .addClass("table-active");
+
+
+        }
+
+    )
+
+
+
+    .on(
+
+        "mouseleave",
+
+        "tr",
+
+        function(){
+
+
+            $(this)
+
+            .removeClass("table-active");
+
+
+        }
+
+    );
+
+
+
+
+
+
+
+    /* =====================================================
+       DOBLE CLICK -> DETALLE
+    ===================================================== */
+
+
+    $("#tablaSupervisores tbody")
+
+    .on(
+
+        "dblclick",
+
+        "tr",
+
+        function(){
+
+
+            let url = $(this)
+
+                .find("a.btn-primary")
+
+                .attr("href");
+
+
+
+            if(url){
+
+
+                window.location.href = url;
+
+
+            }
+
+
+
+        }
+
+    );
+
+
+
+
+
+});
+
+
+
+</script>
+
+
+
+{% endblock %}

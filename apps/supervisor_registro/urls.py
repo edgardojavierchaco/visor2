@@ -1,6 +1,7 @@
 from django.urls import path
 from .api import expediente, supervisor, regiones, regionales, catalogos, ofertas
-from .views import dashboard
+from .views import dashboard, SupervisoresList, SupervisorDetalle, detalle_supervisor, SupervisorEditar, exportar_excel
+from .views_ajax import supervisores_datatable
 
 app_name = "supervisor_registro"
 
@@ -75,4 +76,33 @@ urlpatterns = [
         supervisor.listado_supervisores,
         name="listado_supervisores"
     ),
+    
+    path(
+        "supervisores/",SupervisoresList,name="listado_supervisores"),
+    
+    path(
+        "api/listado/",
+        supervisores_datatable,
+        name="supervisores_datatable"
+    ),
+    
+    path(
+        "supervisores/<int:pk>/detalle/",
+        detalle_supervisor,
+        name="detalle"
+    ),
+
+
+    path(
+        "supervisores/<int:pk>/editar/",
+        SupervisorEditar,
+        name="editar"
+    ),
+    
+    path(
+        "supervisores/exportar-excel/",
+        exportar_excel,
+        name="exportar_excel"
+    ),
+
 ]
