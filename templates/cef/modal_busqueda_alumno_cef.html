@@ -120,7 +120,7 @@
     }
 
     .cef-modal-search-form {
-        align-items: center;
+        align-items: stretch;
         display: flex;
         gap: .65rem;
         width: 100%;
@@ -134,6 +134,7 @@
         display: flex;
         flex: 1 1 auto;
         gap: .5rem;
+        margin-bottom: 0;
         min-width: 0;
         min-height: 40px;
         padding: .35rem .75rem;
@@ -348,6 +349,7 @@
                 <form method="get" action="{{ modal_action_url }}" class="cef-modal-search-form" novalidate data-modal-search-form>
                     <input type="hidden" name="cueanexo" value="{{ cef_context.cueanexo }}">
                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                    {% if origen %}<input type="hidden" name="origen" value="{{ origen }}">{% endif %}
                     <input type="hidden" name="abrir_modal_alumno" value="1">
                     <label class="cef-modal-input-wrap" for="cefCuilInput">
                         <i class="fa-solid fa-id-card"></i>
@@ -402,6 +404,7 @@
                                                     {% csrf_token %}
                                                     <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                    {% if origen %}<input type="hidden" name="origen" value="{{ origen }}">{% endif %}
                                                     <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
                                                     <button class="cef-modal-inline-btn" type="submit">
                                                         <i class="fa-solid fa-user-check"></i> Inscribir
@@ -415,6 +418,7 @@
                                                 {% csrf_token %}
                                                 <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                                 {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                {% if origen %}<input type="hidden" name="origen" value="{{ origen }}">{% endif %}
                                                 <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
                                                 <button class="cef-modal-inline-btn" type="submit">
                                                     <i class="fa-solid fa-user-check"></i> Agregar al banco del CEF
@@ -517,7 +521,9 @@
             window.location.href = url;
             return;
         }
+        if (window.CEFSelects) window.CEFSelects.destroy(currentDialog);
         currentDialog.innerHTML = incomingDialog.innerHTML;
+        if (window.initCefSelects) window.initCefSelects(currentDialog);
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         if (window.history && window.history.replaceState) {
@@ -531,6 +537,7 @@
         var currentPanel = document.querySelector(".cef-panel");
         var incomingPanel = doc.querySelector(".cef-panel");
         if (!currentPanel || !incomingPanel) return false;
+        if (window.CEFSelects) window.CEFSelects.destroy(currentPanel);
         currentPanel.replaceWith(incomingPanel);
         if (window.initCefInscripcionTable) {
             window.initCefInscripcionTable();
@@ -538,12 +545,14 @@
         if (window.initCefAlumnosTable) {
             window.initCefAlumnosTable();
         }
+        if (window.initCefSelects) window.initCefSelects(incomingPanel);
         return true;
     }
 
     function replaceFragmentContent(selector, html) {
         var current = selector ? document.querySelector(selector) : null;
         if (!current || typeof html !== "string") return false;
+        if (window.CEFSelects) window.CEFSelects.destroy(current);
         current.innerHTML = html;
         if (window.initCefInscripcionTable) {
             window.initCefInscripcionTable(current);
@@ -551,17 +560,25 @@
         if (window.initCefAlumnosTable) {
             window.initCefAlumnosTable(current);
         }
+        if (window.initCefSelects) window.initCefSelects(current);
         return true;
     }
 
     function handleJsonPost(data) {
         if (!data || typeof data !== "object") return false;
         var replaced = true;
-        if (data.fragment_html) {
+        if (Array.isArray(data.fragments)) {
+            replaced = data.fragments.every(function (fragment) {
+                return replaceFragmentContent(fragment.selector, fragment.html);
+            });
+        } else if (data.fragment_html) {
             replaced = replaceFragmentContent(data.fragment_selector, data.fragment_html);
         }
         if (data.modal_html) {
             replaceModalContent(data.modal_html, window.location.href);
+        }
+        if (data.ok && data.close_modal) {
+            closeModal();
         }
         return replaced;
     }
@@ -621,7 +638,33 @@
 
         e.preventDefault();
         var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn) submitBtn.disabled = true;
+        var cefLoading = window.CEFLoading;
+        var traditionalFallback = false;
+        if (submitBtn && cefLoading && cefLoading.startButton) {
+            if (!cefLoading.startButton(submitBtn)) return;
+        } else if (submitBtn) {
+            if (submitBtn.disabled) return;
+            submitBtn.disabled = true;
+        }
+
+        function restoreSubmitButton() {
+            if (!submitBtn) return;
+            if (cefLoading && cefLoading.restoreButton) {
+                cefLoading.restoreButton(submitBtn);
+            } else {
+                submitBtn.disabled = false;
+            }
+        }
+
+        function submitTraditionally() {
+            traditionalFallback = true;
+            restoreSubmitButton();
+            if (cefLoading && cefLoading.submitForm) {
+                cefLoading.submitForm(form, submitBtn);
+            } else {
+                form.submit();
+            }
+        }
 
         fetch(form.getAttribute("action"), {
             method: "POST",
@@ -646,7 +689,7 @@
                     if (handleJsonPost(result.json)) {
                         return;
                     }
-                    form.submit();
+                    submitTraditionally();
                     return;
                 }
                 if (result.redirected && replacePagePanel(result.html)) {
@@ -659,11 +702,10 @@
                 replaceModalContent(result.html, window.location.href);
             })
             .catch(function () {
-                if (submitBtn) submitBtn.disabled = false;
-                form.submit();
+                submitTraditionally();
             })
             .finally(function () {
-                if (submitBtn) submitBtn.disabled = false;
+                if (!traditionalFallback) restoreSubmitButton();
             });
     });
 })();

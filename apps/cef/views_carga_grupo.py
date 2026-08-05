@@ -3,12 +3,17 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Prefetch, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_GET
 
-from .forms import CefGrupoDiasForm, CefGrupoForm
+from .forms import (
+    CefDocenteGrupoForm,
+    CefGrupoDiasForm,
+    CefGrupoForm,
+)
 from .models import (
     CefDocenteGrupo,
     CefGrupo,
@@ -17,9 +22,24 @@ from .models import (
     docentes_grupo_tiene_duplicados_activos,
 )
 from .permisos import cef_required
-from .views_contexto import contexto_base, redirect_con_contexto
-from .views_docentes_grupo import dar_alta_docente_grupo, dar_baja_docente_grupo
-from .views_inscripcion_grupo import dar_alta_inscripcion_grupo, dar_baja_inscripcion_grupo
+from .performance import perf_render, perf_start_view
+from .views_contexto import (
+    contexto_base,
+    redirect_con_contexto,
+    render_fragmento_cef,
+    resolver_contexto_operativo,
+    resolver_origen_gestion_grupo,
+)
+from .views_docentes_grupo import (
+    _url_modal_grupo as _url_modal_docente_grupo,
+    dar_alta_docente_grupo,
+    dar_baja_docente_grupo,
+)
+from .views_inscripcion_grupo import (
+    _url_modal_grupo as _url_modal_inscripcion_grupo,
+    dar_alta_inscripcion_grupo,
+    dar_baja_inscripcion_grupo,
+)
 
 
 def _grupos_queryset(cef_context):
@@ -35,7 +55,14 @@ def _grupos_queryset(cef_context):
             "turno",
             "codigo_ra_override",
         )
-        .prefetch_related("dias_funcionamiento__dia_semana")
+        .prefetch_related(
+            Prefetch(
+                "dias_funcionamiento",
+                queryset=CefGrupoDiaFuncionamiento.objects.select_related(
+                    "dia_semana"
+                ),
+            )
+        )
         .annotate(
             alumnos_activos=Count(
                 "inscripciones",
@@ -96,15 +123,23 @@ def _docente_activo_por_rol(docentes, rol):
     )
 
 
-def _url_gestionar_grupo(grupo, cef_context):
-    return redirect_con_contexto("cef:gestionar_grupo", cef_context, grupo_id=grupo.pk)
+def _url_gestionar_grupo(grupo, cef_context, origen="grupos", ancla=""):
+    url = redirect_con_contexto(
+        "cef:gestionar_grupo",
+        cef_context,
+        grupo_id=grupo.pk,
+    )
+    separador = "&" if "?" in url else "?"
+    url = f"{url}{separador}origen={resolver_origen_gestion_grupo(origen)}"
+    return f"{url}#{ancla}" if ancla else url
 
 
 def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
 
 
-def _gestionar_fragment_context(grupo, cef_context):
+def _gestionar_fragment_context(grupo, cef_context, origen="grupos"):
+    origen = resolver_origen_gestion_grupo(origen)
     inscripciones = list(_inscripciones_grupo(grupo))
     docentes = list(_docentes_grupo(grupo))
     docentes_activos = [
@@ -116,8 +151,13 @@ def _gestionar_fragment_context(grupo, cef_context):
         "inscripciones": inscripciones,
         "docentes": docentes,
         "docentes_activos": docentes_activos,
+        "origen": origen,
         "gestionar_grupo_modo": True,
-        "gestionar_grupo_url": _url_gestionar_grupo(grupo, cef_context),
+        "gestionar_grupo_url": _url_gestionar_grupo(
+            grupo,
+            cef_context,
+            origen,
+        ),
         "docente_titular": _docente_activo_por_rol(
             docentes,
             CefDocenteGrupo.Rol.TITULAR,
@@ -146,61 +186,75 @@ def _render_docente_activo_fragment(request, context, titulo, docente_activo, ro
     )
 
 
-def _ajax_gestionar_fragment_response(request, grupo, cef_context, ok, message):
-    context = _gestionar_fragment_context(grupo, cef_context)
-    return JsonResponse(
-        {
-            "ok": ok,
-            "message": message,
-            "fragments": [
-                {
-                    "selector": "[data-cef-fragment='gestion-resumen']",
-                    "html": render_to_string(
-                        "cef/gestionar_grupo_resumen_cef.html",
-                        context,
-                        request=request,
-                    ),
-                },
-                {
-                    "selector": "[data-cef-fragment='inscripciones-grupo']",
-                    "html": render_to_string(
-                        "cef/inscripciones_grupo_lista_cef.html",
-                        context,
-                        request=request,
-                    ),
-                },
-                {
-                    "selector": "[data-cef-fragment='docentes-grupo']",
-                    "html": render_to_string(
-                        "cef/docentes_grupo_lista_cef.html",
-                        context,
-                        request=request,
-                    ),
-                },
-                {
-                    "selector": "[data-cef-fragment='docente-titular-activo']",
-                    "html": _render_docente_activo_fragment(
-                        request,
-                        context,
-                        "Profesor titular activo",
-                        context["docente_titular"],
-                        "profesor titular",
-                    ),
-                },
-                {
-                    "selector": "[data-cef-fragment='docente-suplente-activo']",
-                    "html": _render_docente_activo_fragment(
-                        request,
-                        context,
-                        "Profesor suplente activo",
-                        context["docente_suplente"],
-                        "profesor suplente",
-                    ),
-                },
-            ],
-            "close_modal": ok,
-        }
-    )
+def _ajax_gestionar_fragment_response(
+    request,
+    grupo,
+    cef_context,
+    ok,
+    message,
+    origen="grupos",
+    modal_template=None,
+    modal_context=None,
+):
+    context = _gestionar_fragment_context(grupo, cef_context, origen)
+    data = {
+        "ok": ok,
+        "message": message,
+        "fragments": [
+            {
+                "selector": "[data-cef-fragment='gestion-resumen']",
+                "html": render_to_string(
+                    "cef/gestionar_grupo_resumen_cef.html",
+                    context,
+                    request=request,
+                ),
+            },
+            {
+                "selector": "[data-cef-fragment='inscripciones-grupo']",
+                "html": render_to_string(
+                    "cef/inscripciones_grupo_lista_cef.html",
+                    context,
+                    request=request,
+                ),
+            },
+            {
+                "selector": "[data-cef-fragment='docentes-grupo']",
+                "html": render_to_string(
+                    "cef/docentes_grupo_lista_cef.html",
+                    context,
+                    request=request,
+                ),
+            },
+            {
+                "selector": "[data-cef-fragment='docente-titular-activo']",
+                "html": _render_docente_activo_fragment(
+                    request,
+                    context,
+                    "Profesor titular activo",
+                    context["docente_titular"],
+                    "profesor titular",
+                ),
+            },
+            {
+                "selector": "[data-cef-fragment='docente-suplente-activo']",
+                "html": _render_docente_activo_fragment(
+                    request,
+                    context,
+                    "Profesor suplente activo",
+                    context["docente_suplente"],
+                    "profesor suplente",
+                ),
+            },
+        ],
+        "close_modal": ok,
+    }
+    if modal_template and modal_context is not None:
+        data["modal_html"] = render_to_string(
+            modal_template,
+            modal_context,
+            request=request,
+        )
+    return JsonResponse(data)
 
 
 def _baja_alumno_gestionar(request, grupo):
@@ -254,7 +308,7 @@ def _baja_docente_gestionar(request, grupo):
         return False, "; ".join(exc.messages)
 
 
-def _alta_docente_gestionar(request, grupo):
+def _alta_docente_gestionar(request, grupo, cef_context):
     try:
         docente_grupo_id = int(request.POST.get("docente_grupo_id"))
     except (TypeError, ValueError):
@@ -265,7 +319,7 @@ def _alta_docente_gestionar(request, grupo):
         pk=docente_grupo_id,
     )
     try:
-        dar_alta_docente_grupo(asignacion, request.user)
+        dar_alta_docente_grupo(asignacion, request.user, cef_context)
         return True, "Profesor reasignado al curso correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)
@@ -302,6 +356,18 @@ def _preparar_grupos(grupos):
             str(item.dia_semana) for item in grupo.dias_funcionamiento.all()
         )
     return grupos
+
+
+def _grupos_listado_context(cef_context):
+    grupos = (
+        _preparar_grupos(list(_grupos_queryset(cef_context)))
+        if cef_context["puede_operar"]
+        else []
+    )
+    return {
+        "grupos": grupos,
+        "total_grupos": len(grupos),
+    }
 
 
 def _proximo_numero_grupo(grupo):
@@ -347,30 +413,32 @@ def _aplicar_contexto_grupo_form(form, cef_context):
 @cef_required
 def carga_grupo(request):
     context = contexto_base(request, "grupos", "Grupos / Cursos CEF")
+    perf_start_view(request)
     cef_context = context["cef_context"]
 
     if request.GET.get("accion") == "agregar":
         return redirect(redirect_con_contexto("cef:carga_grupo_nuevo", cef_context))
 
-    grupos = (
-        _preparar_grupos(list(_grupos_queryset(cef_context)))
-        if cef_context["puede_operar"]
-        else []
-    )
+    context.update(_grupos_listado_context(cef_context))
+    return perf_render(request, "cef/carga_grupo_cef.html", context)
 
-    context.update(
-        {
-            "grupos": grupos,
-            "total_grupos": len(grupos),
-        }
-    )
-    return render(request, "cef/carga_grupo_cef.html", context)
+
+@cef_required
+@require_GET
+def grupos_fragmento(request):
+    cef_context = resolver_contexto_operativo(request)
+    context = {"cef_context": cef_context, "cef_partial": True}
+    context.update(_grupos_listado_context(cef_context))
+    return render_fragmento_cef(request, "cef/grupos_seccion_cef.html", context)
 
 
 @cef_required
 def gestionar_grupo(request, grupo_id):
     context = contexto_base(request, "grupos", "Gestionar curso CEF")
     cef_context = context["cef_context"]
+    origen = resolver_origen_gestion_grupo(
+        request.GET.get("origen") or request.POST.get("origen")
+    )
 
     if not cef_context["puede_operar"]:
         messages.warning(
@@ -391,6 +459,7 @@ def gestionar_grupo(request, grupo_id):
                     cef_context,
                     ok,
                     message,
+                    origen,
                 )
         elif accion == "alta_alumno":
             ok, message = _alta_alumno_gestionar(request, grupo)
@@ -401,6 +470,7 @@ def gestionar_grupo(request, grupo_id):
                     cef_context,
                     ok,
                     message,
+                    origen,
                 )
         elif accion == "baja_docente":
             ok, message = _baja_docente_gestionar(request, grupo)
@@ -411,9 +481,14 @@ def gestionar_grupo(request, grupo_id):
                     cef_context,
                     ok,
                     message,
+                    origen,
                 )
         elif accion == "alta_docente":
-            ok, message = _alta_docente_gestionar(request, grupo)
+            ok, message = _alta_docente_gestionar(
+                request,
+                grupo,
+                cef_context,
+            )
             if _is_ajax(request):
                 return _ajax_gestionar_fragment_response(
                     request,
@@ -421,6 +496,7 @@ def gestionar_grupo(request, grupo_id):
                     cef_context,
                     ok,
                     message,
+                    origen,
                 )
         else:
             ok = False
@@ -431,10 +507,40 @@ def gestionar_grupo(request, grupo_id):
             messages.success(request, message)
         else:
             messages.error(request, message)
-        return redirect(_url_gestionar_grupo(grupo, cef_context))
+        return redirect(_url_gestionar_grupo(grupo, cef_context, origen))
 
-    context.update(_gestionar_fragment_context(grupo, cef_context))
+    destinos_volver = {
+        "alumnos": ("cef:alumnos", "Volver a Alumnos"),
+        "profesores": ("cef:profesores", "Volver a Profesores"),
+        "grupos": ("cef:carga_grupo", "Volver a Grupos / Cursos"),
+    }
+    volver_viewname, volver_label = destinos_volver[origen]
+    gestionar_grupo_url = _url_gestionar_grupo(grupo, cef_context, origen)
+    context.update(_gestionar_fragment_context(grupo, cef_context, origen))
     context["grupo_dias_texto"] = _dias_texto(grupo)
+    context.update(
+        {
+            "volver_url": redirect_con_contexto(volver_viewname, cef_context),
+            "volver_label": volver_label,
+            "modal_alumno_action_url": _url_modal_inscripcion_grupo(
+                grupo,
+                cef_context,
+                origen=origen,
+                destino="gestionar",
+            ),
+            "modal_docente_action_url": _url_modal_docente_grupo(
+                grupo,
+                cef_context,
+                origen=origen,
+                destino="gestionar",
+            ),
+            "modal_alumno_abierto": request.GET.get("abrir_modal_alumno") == "1",
+            "modal_docente_abierto": request.GET.get("abrir_modal_docente") == "1",
+            "modal_volver_url": gestionar_grupo_url,
+            "modal_tiene_grupo": True,
+            "docente_form": CefDocenteGrupoForm(),
+        }
+    )
     return render(request, "cef/gestionar_grupo_cef.html", context)
 
 

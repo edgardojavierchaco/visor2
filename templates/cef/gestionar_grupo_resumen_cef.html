@@ -17,6 +17,14 @@
                     <dd>{{ grupo.nombre|default:"Sin nombre" }} · N° {{ grupo.numero|default:"-" }}</dd>
                 </div>
                 <div class="cef-definition-item">
+                    <dt>Estado</dt>
+                    <dd>
+                        <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% elif grupo.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
+                            {{ grupo.get_estado_display }}
+                        </span>
+                    </dd>
+                </div>
+                <div class="cef-definition-item">
                     <dt>Nivel</dt>
                     <dd>{{ grupo.nivel|default:"-" }}</dd>
                 </div>
