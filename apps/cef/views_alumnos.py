@@ -9,12 +9,18 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.urls import NoReverseMatch, reverse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
+from django.views.decorators.http import require_GET
 
 from .forms import CefBusquedaAlumnoForm
 from .models import CefAlumnoCef, CefGrupo, CefInscripcion
 from .permisos import cef_required
-from .views_contexto import contexto_base
+from .performance import perf_render, perf_start_view
+from .views_contexto import (
+    contexto_base,
+    render_fragmento_cef,
+    resolver_contexto_operativo,
+)
 
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
@@ -222,6 +228,56 @@ def _grupos_disponibles(cef_context):
     )
 
 
+def _alumnos_listado_context(cef_context):
+    alumnos_banco_tabla_pendiente = False
+    try:
+        alumnos_banco = list(_alumnos_banco(cef_context))
+    except (OperationalError, ProgrammingError):
+        alumnos_banco = []
+        alumnos_banco_tabla_pendiente = True
+
+    try:
+        inscripciones_por_alumno = _inscripciones_por_alumno(
+            cef_context,
+            alumnos_banco,
+        )
+    except (OperationalError, ProgrammingError):
+        inscripciones_por_alumno = {}
+
+    grupos_disponibles = list(_grupos_disponibles(cef_context))
+    url_alumnos = _url_alumnos(cef_context)
+
+    for item in alumnos_banco:
+        item.inscripciones_grupo = inscripciones_por_alumno.get(
+            item.alumno_id,
+            [],
+        )
+        inscripciones_activas = [
+            inscripcion
+            for inscripcion in item.inscripciones_grupo
+            if inscripcion.estado == CefInscripcion.Estado.ACTIVO
+        ]
+        grupos_activos_ids = {
+            inscripcion.grupo_id for inscripcion in inscripciones_activas
+        }
+        item.grupos_asignables = [
+            grupo
+            for grupo in grupos_disponibles
+            if grupo.pk not in grupos_activos_ids
+        ]
+        item.grupos_bloqueados = inscripciones_activas
+        item.url_editar_alumno = _url_carga_alumno(
+            item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
+            url_alumnos,
+        )
+
+    return {
+        "alumnos": alumnos_banco,
+        "grupos_disponibles": grupos_disponibles,
+        "alumnos_banco_tabla_pendiente": alumnos_banco_tabla_pendiente,
+    }
+
+
 def _alumno_en_banco_activo(alumno, cef_context):
     if not alumno or not cef_context["puede_operar"]:
         return False
@@ -265,6 +321,7 @@ def _asegurar_alumno_banco(alumno, cef_context, user):
 @cef_required
 def alumnos(request):
     context = contexto_base(request, "alumnos", "Alumnos CEF")
+    perf_start_view(request)
     cef_context = context["cef_context"]
     alumno = None
     cuil_buscado = ""
@@ -332,51 +389,17 @@ def alumnos(request):
 
     next_url = _url_modal_alumnos(cef_context, cuil_buscado)
     url_alumnos = _url_alumnos(cef_context)
-    alumnos_banco_tabla_pendiente = False
-
-    try:
-        alumnos_banco = list(_alumnos_banco(cef_context))
-        if alumno and not alumno_en_banco:
+    if alumno and not alumno_en_banco:
+        try:
             alumno_en_banco = _alumno_en_banco_activo(alumno, cef_context)
-    except (OperationalError, ProgrammingError):
-        alumnos_banco = []
-        alumnos_banco_tabla_pendiente = True
-
-    try:
-        inscripciones_por_alumno = _inscripciones_por_alumno(
-            cef_context,
-            alumnos_banco,
-        )
-    except (OperationalError, ProgrammingError):
-        inscripciones_por_alumno = {}
-
-    grupos_disponibles = list(_grupos_disponibles(cef_context))
-
-    for item in alumnos_banco:
-        item.inscripciones_grupo = inscripciones_por_alumno.get(item.alumno_id, [])
-        inscripciones_activas = [
-            inscripcion
-            for inscripcion in item.inscripciones_grupo
-            if inscripcion.estado == CefInscripcion.Estado.ACTIVO
-        ]
-        grupos_activos_ids = {inscripcion.grupo_id for inscripcion in inscripciones_activas}
-        item.grupos_asignables = [
-            grupo for grupo in grupos_disponibles if grupo.pk not in grupos_activos_ids
-        ]
-        item.grupos_bloqueados = inscripciones_activas
-        item.url_editar_alumno = _url_carga_alumno(
-            item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
-            url_alumnos,
-        )
+        except (OperationalError, ProgrammingError):
+            alumno_en_banco = False
 
     context.update(
         {
             "busqueda_form": busqueda_form,
             "alumno": alumno,
             "alumno_row": _alumno_row(alumno),
-            "alumnos": alumnos_banco,
-            "grupos_disponibles": grupos_disponibles,
-            "alumnos_banco_tabla_pendiente": alumnos_banco_tabla_pendiente,
             "alumno_en_banco": alumno_en_banco,
             "cuil_buscado": cuil_buscado,
             "cuil_error": cuil_error,
@@ -389,4 +412,18 @@ def alumnos(request):
             "modal_volver_url": url_alumnos,
         }
     )
-    return render(request, "cef/alumnos_cef.html", context)
+    context.update(_alumnos_listado_context(cef_context))
+    return perf_render(request, "cef/alumnos_cef.html", context)
+
+
+@cef_required
+@require_GET
+def alumnos_fragmento(request):
+    cef_context = resolver_contexto_operativo(request)
+    context = {
+        "cef_context": cef_context,
+        "cef_partial": True,
+        "modal_action_url": _url_modal_alumnos(cef_context),
+    }
+    context.update(_alumnos_listado_context(cef_context))
+    return render_fragmento_cef(request, "cef/alumnos_seccion_cef.html", context)

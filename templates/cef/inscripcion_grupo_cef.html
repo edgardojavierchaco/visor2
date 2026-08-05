@@ -7,8 +7,8 @@
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Inscripción de alumnos</h2>
         <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+            <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                <i class="fa-solid fa-arrow-left"></i> {{ volver_label }}
             </a>
             <button class="btn btn-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Agregar alumno

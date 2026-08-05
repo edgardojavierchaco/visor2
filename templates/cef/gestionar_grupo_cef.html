@@ -21,8 +21,8 @@
             </div>
         </div>
         <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a Grupos / Cursos
+            <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                <i class="fa-solid fa-arrow-left"></i> {{ volver_label }}
             </a>
             <a class="btn btn-outline-primary" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-pen"></i> Editar curso
@@ -35,26 +35,13 @@
             {% include "cef/gestionar_grupo_resumen_cef.html" %}
         </div>
 
-        <section class="cef-course-section cef-course-section-students">
-            <div class="cef-course-section-head">
-                <h3 class="mb-0">Alumnos del curso</h3>
-                <span class="cef-section-count" data-cef-section-count>{{ inscripciones|length }} registros</span>
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:inscripcion_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
-                    <i class="fa-solid fa-user-plus"></i> Inscribir alumno
-                </a>
-            </div>
-            <div data-cef-fragment="inscripciones-grupo">
-                {% include "cef/inscripciones_grupo_lista_cef.html" %}
-            </div>
-        </section>
-
-        <section class="cef-course-section cef-course-section-teachers">
+        <section id="profesores-curso" class="cef-course-section cef-course-section-teachers">
             <div class="cef-course-section-head">
                 <h3 class="mb-0">Profesores del curso</h3>
                 <span class="cef-section-count" data-cef-section-count>{{ docentes_activos_count|default:0 }} activos / {{ docentes|length }} total</span>
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:docentes_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1">
+                <button class="btn btn-outline-primary btn-sm" type="button" data-open-docentes-modal>
                     <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
-                </a>
+                </button>
             </div>
             <div data-cef-fragment="docentes-grupo">
                 {% include "cef/docentes_grupo_lista_cef.html" %}
@@ -69,6 +56,21 @@
             </div>
         </section>
 
+        <section id="alumnos-curso" class="cef-course-section cef-course-section-students">
+            <div class="cef-course-section-head">
+                <h3 class="mb-0">Alumnos del curso</h3>
+                <span class="cef-section-count" data-cef-section-count>{{ inscripciones|length }} registros</span>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-open-personas-modal>
+                    <i class="fa-solid fa-user-plus"></i> Inscribir alumno
+                </button>
+            </div>
+            <div data-cef-fragment="inscripciones-grupo">
+                {% include "cef/inscripciones_grupo_lista_cef.html" %}
+            </div>
+        </section>
+
     </div>
 </div>
+{% include "cef/modal_busqueda_alumno_cef.html" with modal_action_url=modal_alumno_action_url %}
+{% include "cef/modal_busqueda_docente_cef.html" with modal_action_url=modal_docente_action_url %}
 {% endblock %}

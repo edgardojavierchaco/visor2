@@ -59,7 +59,7 @@
                         <td>{{ asignacion.observaciones|default:"-" }}</td>
                         <td class="cef-act-cell">
                             <div class="d-flex flex-wrap gap-1 align-items-center">
-                                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_docente_grupo' grupo.pk asignacion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% if gestionar_grupo_modo %}&volver=gestionar{% endif %}{% elif gestionar_grupo_modo %}?volver=gestionar{% endif %}">
+                                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_docente_grupo' grupo.pk asignacion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% if gestionar_grupo_modo %}&volver=gestionar&origen={{ origen }}{% endif %}{% elif gestionar_grupo_modo %}?volver=gestionar&origen={{ origen }}{% endif %}">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </a>
                                  {% if asignacion.estado == 'activo' %}

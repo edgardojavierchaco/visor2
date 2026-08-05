@@ -1,0 +1,233 @@
+{% if inventario_mensaje %}
+    <div class="alert alert-info mb-3">{{ inventario_mensaje }}</div>
+{% endif %}
+
+<div class="cef-table-section" data-cef-table-root>
+    <div class="cef-tools">
+        <div class="cef-tools-left">
+            <span class="cef-tools-label">Mostrar</span>
+            <select data-cef-page-size>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+            <span class="cef-tools-label">registros</span>
+        </div>
+        <div class="cef-tools-right">
+            <div class="cef-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input id="searchInventario" type="search" placeholder="Buscar…" data-cef-table-search>
+                <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if inventario %}
+        <div class="cef-table-wrap">
+            <table class="cef-dt" data-inventario-table>
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Cantidad</th>
+                        <th>Observaciones</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventario %}
+                        <tr data-inventario-item="{{ item.pk }}" data-inventario-search="{{ item.texto_busqueda }}">
+                            <td><strong>{{ item.material|default:item.material_nombre_snapshot }}</strong></td>
+                            <td><span class="badge text-bg-primary">{{ item.cantidad_visible }}</span></td>
+                            <td>{{ item.observaciones|default:"—" }}</td>
+                            <td class="cef-act-cell">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    title="Gestionar material"
+                                    aria-label="Gestionar {{ item.material|default:item.material_nombre_snapshot }}"
+                                    aria-controls="inventarioPanel{{ item.pk }}"
+                                    aria-expanded="{% if detalle_item and detalle_item.pk == item.pk %}true{% else %}false{% endif %}"
+                                    data-inventario-panel-toggle="{{ item.pk }}"
+                                >
+                                    <i class="fa-solid {% if detalle_item and detalle_item.pk == item.pk %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" aria-hidden="true"></i>
+                                    Gestionar
+                                </button>
+                            </td>
+                        </tr>
+                        <tr
+                            id="inventarioPanel{{ item.pk }}"
+                            data-inventario-panel="{{ item.pk }}"
+                            {% if not detalle_item or detalle_item.pk != item.pk %}hidden{% endif %}
+                        >
+                            <td colspan="4">
+                                <div class="p-3">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                        <h3 class="h5 mb-0">
+                                            {{ item.material|default:item.material_nombre_snapshot }} — {{ item.cantidad_visible }} unidades
+                                        </h3>
+                                    </div>
+
+                                    <form method="post" action="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
+                                        {% csrf_token %}
+                                        <input type="hidden" name="accion" value="guardar_observaciones">
+                                        <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                        {% if item.observaciones_form.non_field_errors %}
+                                            <div class="alert alert-danger mb-3">{{ item.observaciones_form.non_field_errors }}</div>
+                                        {% endif %}
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-12 col-lg-9">
+                                                <label for="{{ item.observaciones_form.observaciones.id_for_label }}" class="form-label">
+                                                    {{ item.observaciones_form.observaciones.label }}
+                                                </label>
+                                                {{ item.observaciones_form.observaciones }}
+                                                {% if item.observaciones_form.observaciones.errors %}
+                                                    <div class="cef-error">{{ item.observaciones_form.observaciones.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-12 col-lg-3">
+                                                <button type="submit" class="btn btn-primary w-100">
+                                                    <i class="fa-solid fa-floppy-disk"></i> Guardar observaciones
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
+                                        <h4 class="h6 mb-0">Distribución por estado</h4>
+                                        {% if catalogo_estados_disponible and not item.todos_estados_cargados %}
+                                            <a
+                                                class="btn btn-primary btn-sm"
+                                                href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}detalle={{ item.pk }}&estado_accion=agregar"
+                                            >
+                                                <i class="fa-solid fa-plus"></i> Agregar estado
+                                            </a>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if item.todos_estados_cargados and catalogo_estados_disponible %}
+                                        <div class="alert alert-info py-2">
+                                            El material ya tiene cargados todos los estados disponibles.
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="table-responsive">
+                                        <table class="cef-dt">
+                                            <thead>
+                                                <tr>
+                                                    <th>Estado</th>
+                                                    <th>Cantidad</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for estado in item.estados_prefetched %}
+                                                    <tr>
+                                                        <td>{{ estado.estado.nombre }}</td>
+                                                        <td><span class="badge text-bg-primary">{{ estado.cantidad }}</span></td>
+                                                        <td class="cef-act-cell">
+                                                            <a
+                                                                class="btn btn-outline-secondary btn-sm"
+                                                                title="Editar estado"
+                                                                aria-label="Editar estado {{ estado.estado.nombre }}"
+                                                                href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}detalle={{ item.pk }}&estado_accion=editar&estado_id={{ estado.pk }}"
+                                                            >
+                                                                <i class="fa-solid fa-pen"></i> Editar
+                                                            </a>
+                                                            <form
+                                                                method="post"
+                                                                action="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"
+                                                                class="d-inline"
+                                                                data-cef-confirm-submit
+                                                                data-cef-confirm-title="Eliminar estado"
+                                                                data-cef-confirm-message="Se eliminará el estado “{{ estado.estado.nombre }}” de {{ item.material|default:item.material_nombre_snapshot }}. Esta acción no se puede deshacer."
+                                                                data-cef-confirm-entity="{{ estado.estado.nombre }}: {{ estado.cantidad }}"
+                                                            >
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="accion" value="eliminar_estado">
+                                                                <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                                                <input type="hidden" name="estado_id" value="{{ estado.pk }}">
+                                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar estado">
+                                                                    <i class="fa-solid fa-trash"></i> Eliminar
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                {% empty %}
+                                                    <tr><td colspan="3">No hay estados cargados para este material.</td></tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {% if detalle_item and detalle_item.pk == item.pk and mostrar_form_estado and estado_form %}
+                                        <hr>
+                                        <h4 class="h6">{% if estado_edicion %}Editar estado{% else %}Agregar estado{% endif %}</h4>
+                                        <form method="post" action="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate data-inventario-estado-form>
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="guardar_estado">
+                                            <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                            {% if estado_edicion %}<input type="hidden" name="estado_id" value="{{ estado_edicion.pk }}">{% endif %}
+                                            {% if estado_form.non_field_errors %}
+                                                <div class="alert alert-danger mb-3">{{ estado_form.non_field_errors }}</div>
+                                            {% endif %}
+                                            <div class="cef-form-grid">
+                                                {% for field in estado_form %}
+                                                    <div class="cef-field">
+                                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                        {{ field }}
+                                                        {% if field.errors %}<div class="cef-error">{{ field.errors|join:", " }}</div>{% endif %}
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            <div class="cef-form-actions mt-3">
+                                                <a class="btn btn-outline-secondary" href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}detalle={{ item.pk }}">Cancelar</a>
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fa-solid fa-floppy-disk"></i>
+                                                    {% if estado_edicion %}Guardar cambios{% else %}Guardar estado{% endif %}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    {% endif %}
+
+                                    <hr>
+                                    <form
+                                        method="post"
+                                        action="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"
+                                        data-cef-confirm-submit
+                                        data-cef-confirm-title="Eliminar material"
+                                        data-cef-confirm-message="Se eliminará “{{ item.material|default:item.material_nombre_snapshot }}” y toda su distribución por estados. Esta acción no se puede deshacer."
+                                        data-cef-confirm-entity="{{ item.material|default:item.material_nombre_snapshot }}"
+                                    >
+                                        {% csrf_token %}
+                                        <input type="hidden" name="accion" value="eliminar_material">
+                                        <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                        <button type="submit" class="btn btn-outline-danger">
+                                            <i class="fa-solid fa-trash"></i> Eliminar material
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif cef_context.puede_operar %}
+        <div class="cef-empty-state">
+            <i class="fa-solid fa-box-open"></i>
+            Todavía no hay materiales cargados para este CEF y ciclo.
+        </div>
+    {% else %}
+        <div class="cef-empty-state">
+            <i class="fa-solid fa-hand-pointer"></i>
+            Seleccioná un CUE-Anexo y un ciclo para ver inventario.
+        </div>
+    {% endif %}
+
+    <div class="cef-tfoot">
+        <span class="cef-tfoot-count" data-cef-table-count>{{ inventario|length }} registros</span>
+        <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+    </div>
+</div>

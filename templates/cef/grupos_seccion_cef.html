@@ -1,0 +1,35 @@
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Cursos / grupos</h2>
+        <div class="cef-panel-actions">
+            <a class="btn btn-primary" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-plus"></i> Agregar Curso
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        {% if cef_context.establecimiento %}
+            <div class="mb-3">
+                <div class="cef-context-summary">
+                    <div class="cef-context-summary-item">
+                        <span>CUE-Anexo</span>
+                        <strong>{{ cef_context.cueanexo }}</strong>
+                    </div>
+                    <div class="cef-context-summary-item is-wide">
+                        <span>CEF</span>
+                        <strong>{{ cef_context.establecimiento.nom_est|default:"CEF" }}</strong>
+                    </div>
+                    {% if cef_context.ciclo %}
+                        <div class="cef-context-summary-item">
+                            <span>Ciclo</span>
+                            <strong>{{ cef_context.ciclo }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% include "cef/grupos_lista_cef.html" %}
+    </div>
+</div>

@@ -61,12 +61,12 @@ def editar_datos_cueanexo(request):
         catalogos_faltantes = []
     elif request.method == "POST":
         form = CefDatosRelevamientoForm(request.POST, instance=datos)
+        form.instance.cueanexo = cef_context["cueanexo"]
+        form.instance.ciclo = cef_context["ciclo"]
         catalogos_faltantes = form.catalogos_faltantes()
 
         if form.is_valid() and not catalogos_faltantes:
             obj = form.save(commit=False)
-            obj.cueanexo = cef_context["cueanexo"]
-            obj.ciclo = cef_context["ciclo"]
             if not obj.pk:
                 obj.creado_por = request.user
             obj.actualizado_por = request.user
