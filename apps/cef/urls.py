@@ -46,9 +46,19 @@ urlpatterns = [
         name="alumnos",
     ),
     path(
+        "alumnos/fragmento/lista/",
+        views_alumnos.alumnos_fragmento,
+        name="alumnos_fragmento",
+    ),
+    path(
         "profesores/",
         views_profesores.profesores,
         name="profesores",
+    ),
+    path(
+        "profesores/fragmento/lista/",
+        views_profesores.profesores_fragmento,
+        name="profesores_fragmento",
     ),
     path(
         "carga/cueanexo/",
@@ -64,6 +74,11 @@ urlpatterns = [
         "carga/grupos/",
         views_carga_grupo.carga_grupo,
         name="carga_grupo",
+    ),
+    path(
+        "carga/grupos/fragmento/lista/",
+        views_carga_grupo.grupos_fragmento,
+        name="grupos_fragmento",
     ),
     path(
         "carga/grupos/nuevo/",
@@ -104,6 +119,11 @@ urlpatterns = [
         "carga/inventario/",
         views_inventario.carga_inventario,
         name="carga_inventario",
+    ),
+    path(
+        "carga/inventario/fragmento/lista/",
+        views_inventario.inventario_fragmento,
+        name="inventario_fragmento",
     ),
     path(
         "carga/inventario/<int:item_id>/",

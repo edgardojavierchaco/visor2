@@ -13,10 +13,12 @@ from .models import (
     CefDiaSemana,
     CefDocenteGrupo,
     CefEspacioComedorTipo,
+    CefEstadoMaterialTipo,
     CefFuenteFinanciamientoTipo,
     CefGrupo,
     CefInscripcion,
     CefInventarioMaterial,
+    CefInventarioMaterialEstado,
     CefMaterial,
     CefNivelActividad,
     CefOrientacionTipo,
@@ -39,7 +41,30 @@ def _queryset_activos(modelo):
     return modelo.objects.filter(activo=True)
 
 
+def _normalizar_placeholder_vacio(field):
+    if (
+        isinstance(field, forms.ModelChoiceField)
+        and getattr(field, "empty_label", None) == "---------"
+    ):
+        field.empty_label = "Seleccione"
+        return
+
+    if isinstance(field, forms.ChoiceField) and not isinstance(
+        field,
+        forms.ModelChoiceField,
+    ):
+        choices = list(field.choices)
+        if (
+            choices
+            and choices[0][0] in ("", None)
+            and str(choices[0][1]) == "---------"
+        ):
+            choices[0] = (choices[0][0], "Seleccione")
+            field.choices = choices
+
+
 def _aplicar_clases_bootstrap(field):
+    _normalizar_placeholder_vacio(field)
     widget = field.widget
     clases = widget.attrs.get("class", "")
 
@@ -53,6 +78,8 @@ def _aplicar_clases_bootstrap(field):
         nueva = "form-control"
     elif isinstance(widget, forms.Select):
         nueva = "form-select"
+        if not isinstance(widget, forms.SelectMultiple):
+            widget.attrs["data-cef-select"] = "true"
     else:
         nueva = "form-control"
 
@@ -139,7 +166,6 @@ class CefDatosRelevamientoForm(forms.ModelForm):
             "prestacion_tipo",
             "espacio_comedor",
             "c_orientacion",
-            "nombre_seccion",
             "observaciones",
         ]
         widgets = {
@@ -151,7 +177,6 @@ class CefDatosRelevamientoForm(forms.ModelForm):
             "prestacion_tipo": "Tipo de prestación",
             "espacio_comedor": "Espacio comedor",
             "c_orientacion": "Orientación",
-            "nombre_seccion": "Nombre de sección",
         }
 
     def __init__(self, *args, **kwargs):
@@ -309,19 +334,14 @@ class CefInventarioMaterialForm(forms.ModelForm):
         model = CefInventarioMaterial
         fields = [
             "material",
-            "cantidad",
-            "estado_descripcion",
             "observaciones",
         ]
         widgets = {
-            "estado_descripcion": forms.Textarea(attrs={"rows": 2}),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
             "material": "Material",
-            "cantidad": "Cantidad",
-            "estado_descripcion": "Estado",
-            "observaciones": "Observaciones",
+            "observaciones": "Observaciones generales",
         }
 
     def __init__(self, *args, **kwargs):
@@ -332,6 +352,106 @@ class CefInventarioMaterialForm(forms.ModelForm):
         )
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+
+class CefInventarioMaterialObservacionesForm(forms.ModelForm):
+    class Meta:
+        model = CefInventarioMaterial
+        fields = ["observaciones"]
+        widgets = {
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+        labels = {
+            "observaciones": "Observaciones generales",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _aplicar_clases_bootstrap(self.fields["observaciones"])
+
+
+class CefInventarioMaterialEstadoForm(forms.ModelForm):
+    class Meta:
+        model = CefInventarioMaterialEstado
+        fields = [
+            "estado",
+            "cantidad",
+        ]
+        labels = {
+            "estado": "Estado",
+            "cantidad": "Cantidad de unidades",
+        }
+
+    def __init__(self, *args, **kwargs):
+        inventario_material = kwargs.pop("inventario_material", None)
+        super().__init__(*args, **kwargs)
+
+        if inventario_material is not None:
+            self.instance.inventario_material = inventario_material
+
+        estados = CefEstadoMaterialTipo.objects.filter(activo=True).order_by(
+            "orden",
+            "codigo",
+            "nombre",
+        )
+        inventario_material = getattr(
+            self.instance,
+            "inventario_material",
+            None,
+        )
+        if inventario_material and getattr(inventario_material, "pk", None):
+            usados = CefInventarioMaterialEstado.objects.filter(
+                inventario_material=inventario_material,
+                estado_id__isnull=False,
+            ).exclude(pk=getattr(self.instance, "pk", None)).values_list(
+                "estado_id",
+                flat=True,
+            )
+            estados = estados.exclude(pk__in=usados)
+
+            if self.is_bound:
+                estado_enviado = self.data.get(self.add_prefix("estado"))
+                if estado_enviado and str(estado_enviado).isdigit():
+                    estados = estados | CefEstadoMaterialTipo.objects.filter(
+                        activo=True,
+                        pk=estado_enviado,
+                    )
+
+        estado_field = self.fields["estado"]
+        estado_field.queryset = estados.order_by("orden", "codigo", "nombre")
+        estado_field.required = True
+        estado_field.empty_label = "Seleccioná un estado"
+        estado_field.label_from_instance = lambda estado: estado.nombre
+
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        estado = cleaned_data.get("estado")
+
+        inventario_material = getattr(
+            self.instance,
+            "inventario_material",
+            None,
+        )
+        if (
+            estado
+            and inventario_material
+            and getattr(inventario_material, "pk", None)
+        ):
+            repetido = CefInventarioMaterialEstado.objects.filter(
+                inventario_material=inventario_material,
+                estado=estado,
+            ).exclude(pk=getattr(self.instance, "pk", None))
+            if repetido.exists():
+                self.add_error(
+                    "estado",
+                    "Ese estado ya está cargado para el material. "
+                    "Editá su cantidad.",
+                )
+
+        return cleaned_data
 
 
 class CefBusquedaAlumnoForm(forms.Form):

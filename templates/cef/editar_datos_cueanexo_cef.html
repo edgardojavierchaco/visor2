@@ -102,12 +102,17 @@
         if (!select) return;
         select.disabled = disabled;
         select.classList.toggle("bg-light", disabled);
+        if (window.CEFSelects) window.CEFSelects.sync(select);
     }
 
     function sync() {
         var debe = requiereNoCorresponde();
         if (debe && fuenteNoCorresponde) fuente.value = fuenteNoCorresponde;
         if (debe && prestacionNoCorresponde) prestacion.value = prestacionNoCorresponde;
+        if (window.CEFSelects) {
+            window.CEFSelects.sync(fuente);
+            window.CEFSelects.sync(prestacion);
+        }
         setVisualDisabled(fuente, debe);
         setVisualDisabled(prestacion, debe);
     }

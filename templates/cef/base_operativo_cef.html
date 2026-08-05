@@ -1,27 +1,69 @@
 {% extends 'archivos/base/layout.html' %}
-{% block content %}
-
+{% load static %}
+{% block head %}
+{{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}">
+<link rel="stylesheet" href="{% static 'cef/cef_async_blocks.css' %}">
+<script>
+(function () {
+    document.documentElement.classList.toggle(
+        "padron-sidebar-initial-collapsed",
+        sessionStorage.getItem("padron_sidebar_state") === "closed"
+    );
+})();
+</script>
+<style id="cef-prepaint-stability">
+    .content-wrapper > .content-header { display: none !important; }
+    .content-wrapper,
+    .main-header,
+    .main-sidebar,
+    .main-footer { transition: none !important; animation: none !important; }
+    html.padron-sidebar-initial-collapsed .content-wrapper,
+    html.padron-sidebar-initial-collapsed .main-header,
+    html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar,
+    html.padron-sidebar-initial-collapsed .main-sidebar::before { width: 4.6rem !important; overflow-x: hidden !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover,
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover::before,
+    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within,
+    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within::before { width: 250px !important; overflow-x: visible !important; }
+    .content-wrapper > .content { padding: .45rem .55rem 0 !important; }
+    .content-wrapper > .content > .container-fluid { max-width: 100% !important; min-width: 0 !important; padding: 0 !important; }
+    @media (max-width: 991.98px) {
+        html.padron-sidebar-initial-collapsed .content-wrapper,
+        html.padron-sidebar-initial-collapsed .main-header,
+        html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; }
+        html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; }
+    }
+    @media (max-width: 768px) {
+        .content-wrapper > .content { padding-left: .35rem !important; padding-right: .35rem !important; }
+    }
+</style>
+{% endblock %}
+{% block content %}
 
 <script>
 (function () {
-    document.documentElement.classList.add("cef-js");
-
+    var root = document.documentElement;
     var STORAGE_KEY = "padron_sidebar_state";
 
-    function restoreSidebar() {
+    function syncSidebar() {
         if (!document.body) return;
-        if (sessionStorage.getItem(STORAGE_KEY) === "closed") {
+        var savedState = sessionStorage.getItem(STORAGE_KEY);
+        if (savedState === "closed") {
             document.body.classList.add("sidebar-collapse");
             document.body.classList.remove("sidebar-open", "sidebar-expanded");
+        } else if (savedState === "open") {
+            document.body.classList.remove("sidebar-collapse", "sidebar-closed");
+            document.body.classList.add("sidebar-open", "sidebar-expanded");
         }
     }
 
-    restoreSidebar();
-    document.addEventListener("DOMContentLoaded", restoreSidebar);
-    window.addEventListener("pageshow", restoreSidebar);
+    syncSidebar();
 
     document.addEventListener("click", function (event) {
         if (!event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
@@ -30,6 +72,7 @@
         window.setTimeout(function () {
             var isClosed = document.body && document.body.classList.contains("sidebar-collapse");
             sessionStorage.setItem(STORAGE_KEY, isClosed ? "closed" : "open");
+            root.classList.toggle("padron-sidebar-initial-collapsed", isClosed);
         }, 120);
     }, true);
 })();
@@ -143,9 +186,9 @@
         /* Typography scale */
         --fs-xs:   0.7rem;
         --fs-sm:   0.8125rem;
-        --fs-base: 0.875rem;
-        --fs-md:   0.9375rem;
-        --fs-lg:   1.0625rem;
+        --fs-base: 0.95rem;
+        --fs-md:   1rem;
+        --fs-lg:   1.125rem;
         --fs-xl:   1.25rem;
         --fs-2xl:  1.5rem;
         --fs-3xl:  1.875rem;
@@ -157,11 +200,6 @@
     html { overflow-y: scroll; }
 
     .content-wrapper { background: #f1f4f8; }
-    .content-wrapper > .content-header { display: none !important; }
-    .content-wrapper > .content > .container-fluid {
-        max-width: 100% !important;
-        padding-top: 0 !important;
-    }
     .main-header .navbar-nav:first-child .nav-item:not(:first-child) {
         display: none !important;
     }
@@ -184,20 +222,30 @@
     .cef-wrap .form-select {
         max-width: 100%;
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     .cef-wrap .dropdown-menu {
-        max-width: min(420px, calc(100vw - 2rem));
+        box-sizing: border-box;
+        max-width: min(420px, calc(100vw - 24px));
+        min-width: 0;
         overflow-x: hidden;
     }
 
     .cef-wrap .dropdown-item {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        height: auto;
+        min-width: 0;
+        overflow-wrap: break-word;
+        white-space: normal;
+        word-break: normal;
+    }
+
+    .cef-row-actions-menu,
+    .cef-alumno-dropdown-menu,
+    .cef-profesor-dropdown-menu {
+        max-height: min(24rem, calc(100vh - 24px));
+        max-height: min(24rem, calc(100dvh - 24px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
     }
 
     /* ============================================================
@@ -205,7 +253,7 @@
        ============================================================ */
     .cef-main {
         margin: 0 auto;
-        max-width: 1480px;
+        max-width: none;
         padding: 1rem clamp(.75rem, 2vw, 1.5rem) 0;
     }
 
@@ -370,14 +418,6 @@
         width: 100%;
     }
 
-    #id_contexto_cueanexo option,
-    #id_contexto_ciclo option,
-    .cef-wrap select option {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
     #id_contexto_cueanexo:hover:not(:focus),
     #id_contexto_ciclo:hover:not(:focus) {
         border-color: var(--slate-500);
@@ -388,6 +428,102 @@
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.15);
         outline: none;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container {
+        display: block;
+        max-width: 100%;
+        min-width: 0;
+        width: 100% !important;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection--single {
+        align-items: center;
+        background: var(--surface);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--r-sm);
+        display: flex;
+        height: auto;
+        min-height: 36px;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection__rendered {
+        color: var(--slate-800);
+        font-size: var(--fs-base);
+        font-weight: 600;
+        line-height: 1.3;
+        overflow: visible;
+        overflow-wrap: anywhere;
+        padding: .45rem 2.25rem .45rem .75rem;
+        text-overflow: clip;
+        white-space: normal;
+        word-break: normal;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection__arrow {
+        height: 100%;
+        right: .35rem;
+        top: 0;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container.select2-container--focus .select2-selection--single,
+    .cef-wrap [data-cef-select] + .select2-container.select2-container--open .select2-selection--single {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.15);
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container.select2-container--disabled .select2-selection--single {
+        background: var(--surface-muted);
+        cursor: not-allowed;
+    }
+
+    .cef-select2-dropdown {
+        border-color: var(--border-strong);
+        border-radius: var(--r-sm);
+        box-sizing: border-box;
+        box-shadow: var(--shadow-lg);
+        color: var(--slate-800);
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        max-width: calc(100vw - 24px);
+        min-width: 0;
+        z-index: 1095;
+    }
+
+    .cef-select2-dropdown .select2-results__options {
+        max-height: min(20rem, calc(100vh - 9rem));
+        max-height: min(20rem, calc(100dvh - 9rem));
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .cef-select2-dropdown .select2-results__option {
+        height: auto;
+        line-height: 1.3;
+        max-width: 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        padding: .55rem .7rem;
+        white-space: normal;
+        word-break: normal;
+    }
+
+    .cef-select2-dropdown .select2-search__field {
+        border-color: var(--border-strong);
+        border-radius: var(--r-sm);
+        box-sizing: border-box;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .cef-select2-dropdown .select2-results__option--highlighted[aria-selected] {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-select2-dropdown .select2-results__option[aria-selected="true"] {
+        background: var(--blue-100);
+        color: var(--blue-900);
     }
 
     .cef-context-actions {
@@ -1210,6 +1346,82 @@
         padding: 0 .5rem;
     }
 
+    .cef-docente-overlay {
+        align-items: center;
+        background: rgba(7, 26, 51, .55);
+        backdrop-filter: blur(3px);
+        bottom: 0;
+        display: none;
+        justify-content: center;
+        left: 0;
+        overflow-y: auto;
+        padding: 24px 18px;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 1080;
+    }
+
+    .cef-docente-overlay.is-open { display: flex; }
+
+    .cef-docente-modal {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(7,26,51,.28), 0 8px 20px rgba(7,26,51,.12);
+        color: #0f172a;
+        max-height: calc(100vh - 48px);
+        max-width: 980px;
+        overflow: hidden;
+        width: min(980px, 92vw);
+    }
+
+    .cef-docente-modal-head {
+        align-items: center;
+        background: linear-gradient(135deg, #0d2748 0%, #071a33 100%);
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+    }
+
+    .cef-docente-modal-title {
+        color: #fff;
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-docente-modal-title span {
+        color: rgba(255,255,255,.55);
+        font-size: 1rem;
+        font-weight: 400;
+    }
+
+    .cef-docente-close {
+        align-items: center;
+        background: rgba(255,255,255,.1);
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px;
+        color: rgba(255,255,255,.75);
+        display: inline-flex;
+        height: 34px;
+        justify-content: center;
+        text-decoration: none;
+        width: 34px;
+    }
+
+    .cef-docente-close:hover { color: #fff; }
+
+    .cef-docente-close:focus-visible {
+        box-shadow: 0 0 0 3px rgba(147,197,253,.45);
+        outline: none;
+    }
+
+    .cef-docente-modal-body {
+        max-height: calc(100vh - 130px);
+        overflow-y: auto;
+        padding: 1.25rem 1.5rem 1.5rem;
+    }
+
     /* ============================================================
        CONTEXT PILL (group summary strip)
        ============================================================ */
@@ -1452,19 +1664,24 @@
         align-self: end;
     }
 
-    .cef-switch-line {
+    .cef-switch-line,
+    .cef-field label.cef-switch-line {
         align-items: center;
         background: var(--surface);
         border: 1.5px solid var(--border-strong);
         border-radius: var(--r-sm);
         color: var(--slate-900);
         cursor: pointer;
-        display: inline-flex;
+        display: flex;
         gap: .5rem;
+        justify-content: flex-start;
+        letter-spacing: 0;
+        margin-bottom: 0;
         min-height: 38px;
         max-width: 100%;
         padding: .45rem .75rem;
         text-transform: none;
+        width: 100%;
         white-space: normal;
     }
 
@@ -1472,6 +1689,7 @@
         flex: 0 0 auto;
         float: none;
         margin: 0;
+        position: static;
     }
 
     .cef-switch-line span {
@@ -1878,7 +2096,7 @@
                 <form method="get" class="cef-context-grid">
                     <div>
                         <label class="cef-context-label" for="id_contexto_cueanexo">CEF</label>
-                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
+                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm" data-cef-select="true" data-cef-select-search="always">
                             {% for option in cef_context.cueanexo_options %}
                                 <option value="{{ option.cueanexo }}" title="{{ option.cueanexo }} - {{ option.nombre }}" {% if option.cueanexo == cef_context.cueanexo %}selected{% endif %}>{{ option.cueanexo }} - {{ option.nombre }}</option>
                             {% empty %}
@@ -1889,7 +2107,7 @@
 
                     <div>
                         <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
-                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm">
+                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm" data-cef-select="true">
                             {% for ciclo in cef_context.ciclos %}
                                 <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.actual %} &middot; actual{% endif %}</option>
                             {% empty %}
@@ -1919,7 +2137,9 @@
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
         {% endif %}
 
-        {% block cef_content %}{% endblock %}
+        <div id="cef-content-region" data-cef-content-region>
+            {% block cef_content %}{% endblock %}
+        </div>
 
         <div class="modal fade" id="cefConfirmActionModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -2055,6 +2275,10 @@
             function submitFormFallback(form) {
                 if (!form) return;
                 form.dataset.cefConfirmed = "1";
+                if (window.CEFLoading) {
+                    window.CEFLoading.submitForm(form);
+                    return;
+                }
                 form.submit();
             }
 
@@ -2093,7 +2317,41 @@
                 feedback.classList.toggle("d-none", !message);
             }
 
-            function showPageFeedback(message, ok) {
+            function captureAjaxViewport(source) {
+                var anchor = null;
+                if (source && source.matches && source.matches(".cef-course-section")) {
+                    anchor = source;
+                } else if (source && source.closest) {
+                    anchor = source.closest(".cef-course-section");
+                }
+                return {
+                    anchor: anchor,
+                    anchorTop: anchor ? anchor.getBoundingClientRect().top : null,
+                    scrollY: window.scrollY
+                };
+            }
+
+            function restoreAjaxViewport(viewport) {
+                if (!viewport) return;
+                if (viewport.anchor && viewport.anchor.isConnected) {
+                    var delta = viewport.anchor.getBoundingClientRect().top - viewport.anchorTop;
+                    if (Math.abs(delta) > 0.5) window.scrollBy(0, delta);
+                    return;
+                }
+                if (Math.abs(window.scrollY - viewport.scrollY) > 0.5) {
+                    window.scrollTo(0, viewport.scrollY);
+                }
+            }
+
+            function scheduleAjaxViewportRestore(viewport) {
+                window.requestAnimationFrame(function() {
+                    window.requestAnimationFrame(function() {
+                        restoreAjaxViewport(viewport);
+                    });
+                });
+            }
+
+            function showPageFeedback(message, ok, viewport) {
                 if (!message) return;
                 var panelBody = document.querySelector(".cef-panel-body") || document.querySelector(".cef-panel") || document.body;
                 var alert = document.createElement("div");
@@ -2101,19 +2359,28 @@
                 alert.textContent = message;
                 panelBody.insertBefore(alert, panelBody.firstChild);
                 window.setTimeout(function() {
-                    if (alert.parentNode) alert.parentNode.removeChild(alert);
+                    if (!alert.parentNode) return;
+                    var removalViewport = captureAjaxViewport(
+                        viewport && viewport.anchor && viewport.anchor.isConnected
+                            ? viewport.anchor
+                            : null
+                    );
+                    alert.parentNode.removeChild(alert);
+                    scheduleAjaxViewportRestore(removalViewport);
                 }, 4200);
             }
 
             function replaceAjaxFragment(selector, html) {
                 var target = selector ? document.querySelector(selector) : null;
                 if (!target || typeof html !== "string") return false;
+                if (window.CEFSelects) window.CEFSelects.destroy(target);
                 target.innerHTML = html;
                 window.initCefTables(target);
+                if (window.initCefSelects) window.initCefSelects(target);
                 return true;
             }
 
-            function applyAjaxPayload(data) {
+            function applyAjaxPayload(data, viewport) {
                 if (!data || typeof data !== "object") return false;
                 var replaced = true;
                 if (Array.isArray(data.fragments)) {
@@ -2125,12 +2392,13 @@
                     replaced = replaceAjaxFragment(data.fragment_selector, data.fragment_html);
                     if (!replaced) return false;
                 }
-                showPageFeedback(data.message, !!data.ok);
+                showPageFeedback(data.message, !!data.ok, viewport);
                 return true;
             }
 
             function submitAjaxForm(form, submitter) {
                 var controller = modalController();
+                var viewport = captureAjaxViewport(form);
                 var button = submitter || (confirmModal ? confirmModal.querySelector("[data-cef-confirm-accept]") : null);
                 if (button) button.disabled = true;
                 setConfirmFeedback("");
@@ -2152,16 +2420,22 @@
                     })
                     .then(function(data) {
                         if (!data) return;
-                        if (!applyAjaxPayload(data)) {
+                        if (!applyAjaxPayload(data, viewport)) {
                             submitFormFallback(form);
                             return;
                         }
                         if (data.ok && data.close_modal !== false && controller) {
+                            if (confirmModal && window.bootstrap && window.bootstrap.Modal) {
+                                confirmModal.addEventListener("hidden.bs.modal", function() {
+                                    scheduleAjaxViewportRestore(viewport);
+                                }, { once: true });
+                            }
                             controller.hide();
                             pendingConfirmForm = null;
                         } else if (!data.ok) {
                             setConfirmFeedback(data.message || "No se pudo completar la acción.");
                         }
+                        scheduleAjaxViewportRestore(viewport);
                     })
                     .catch(function() {
                         submitFormFallback(form);
@@ -2210,5 +2484,12 @@
         </script>
     </div>
 </div>
+
+<script src="{% static 'cef/cef_loading.js' %}"></script>
+<script src="{% static 'cef/cef_inventario.js' %}"></script>
+<script src="{% static 'cef/cef_context_selector.js' %}"></script>
+<script src="{% static 'cef/cef_dropdowns.js' %}"></script>
+<script src="{% static 'cef/cef_profesores.js' %}"></script>
+<script src="{% static 'cef/cef_partial_navigation.js' %}"></script>
 
 {% endblock %}
