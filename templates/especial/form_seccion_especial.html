@@ -1,6 +1,6 @@
 {% extends "especial/base_operativo_especial.html" %}
 
-{% block especial_subtitle %}Carga y edición de cursos/grupos del CEF activo.{% endblock %}
+{% block especial_subtitle %}Carga y edición de secciones del establecimiento activo.{% endblock %}
 
 {% block especial_content %}
 <div class="cef-panel">
@@ -8,7 +8,7 @@
         <h2 class="cef-panel-title">{{ form_title }}</h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+                <i class="fa-solid fa-arrow-left"></i> Volver a secciones
             </a>
         </div>
     </div>
@@ -22,8 +22,8 @@
                         <strong>{{ especial_context.cueanexo }}</strong>
                     </div>
                     <div class="cef-context-summary-item is-wide">
-                        <span>CEF</span>
-                        <strong>{{ especial_context.establecimiento.nom_est|default:"CEF" }}</strong>
+                        <span>Establecimiento</span>
+                        <strong>{{ especial_context.establecimiento.nom_est|default:"Establecimiento" }}</strong>
                     </div>
                     {% if especial_context.ciclo %}
                         <div class="cef-context-summary-item">
@@ -68,7 +68,7 @@
 
             <div class="cef-form-actions mt-4">
                 <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+                    <i class="fa-solid fa-arrow-left"></i> Volver a secciones
                 </a>
                 <button type="submit" class="btn btn-primary">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar

@@ -23,6 +23,7 @@ from .models import (
     normalizar_cueanexo,
 )
 from .permisos import especial_required
+from .views_contexto import resolver_contexto_operativo
 
 
 logger = logging.getLogger(__name__)
@@ -216,6 +217,10 @@ def _apply_filters_list(items, request):
             if any(_contains(item.get(field, ""), q) for field in COLUMNAS_LOCALIZACIONES_ESPECIAL)
         ]
 
+    establecimientos = request.GET.getlist("establecimientos")
+    if establecimientos:
+        items = [item for item in items if str(item.get("cueanexo", "")) in establecimientos]
+
     for campo in COLUMNAS_LOCALIZACIONES_ESPECIAL:
         value = request.GET.get(campo, "").strip()
         if not value:
@@ -379,11 +384,23 @@ def visualizacion_localizaciones(request):
     desde = (page_obj.number - 1) * page_size + 1 if total else 0
     hasta = min(page_obj.number * page_size, total)
 
-# En views_localizaciones.py, dentro de visualizacion_localizaciones():
+    establecimientos_options = [
+        {"cueanexo": str(item["cueanexo"]), "nom_est": item.get("nom_est", "")}
+        for item in base_items
+    ]
+    establecimientos_options = list({v['cueanexo']:v for v in establecimientos_options}.values())
+    establecimientos_options.sort(key=lambda x: x["cueanexo"])
 
+    establecimientos_seleccionados = request.GET.getlist("establecimientos")
+
+    especial_context = resolver_contexto_operativo(request)
     context = {
         "title": "Localizaciones Educación Especial",
         "active_menu": "localizaciones",
+        "especial_context": especial_context,
+        "establecimientos_options": establecimientos_options,
+        "establecimientos_seleccionados": establecimientos_seleccionados,
+        "total_establecimientos_seleccionados": len(establecimientos_seleccionados),
         "lista_items": lista_items,
         "localizaciones": lista_items,
         "total_localizaciones": total,
