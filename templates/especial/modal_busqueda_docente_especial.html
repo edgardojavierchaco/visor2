@@ -255,29 +255,30 @@
                                 <td>{{ docente_row.dni|default:"-" }}</td>
                                 <td>{{ docente_row.estado|default:"-" }}</td>
                                 <td>
+                                    {# Lógica corregida para Especial: usa especial_context.puede_operar #}
                                     {% if not modal_tiene_grupo %}
                                         {% if docente_en_banco %}
-                                            <span class="text-muted small">Ya está en el banco del CEF.</span>
-                                        {% elif modal_puede_agregar_banco %}
+                                            <span class="text-muted small">Ya está en el banco.</span>
+                                        {% elif especial_context.puede_operar %}
                                             <form method="post" action="{{ modal_action_url }}" style="display:contents" data-docente-modal-post-form>
                                                 {% csrf_token %}
                                                 <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                                 {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                                 <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
                                                 <button class="btn btn-primary btn-sm" type="submit">
-                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco del CEF
+                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco
                                                 </button>
                                             </form>
                                         {% else %}
                                             <span class="text-muted small">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
                                         {% endif %}
                                     {% endif %}
-                                    {% if url_editar_profesor %}
-                                        <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_profesor }}" target="_blank" rel="noopener">
+
+                                    {# Botón editar: usa url_editar_docente (enviado por views_docentes.py) #}
+                                    {% if url_editar_docente %}
+                                        <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_docente }}" target="_blank" rel="noopener">
                                             <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                         </a>
-                                    {% else %}
-                                        <span class="text-muted small">No está configurada la URL de carga externa de profesor.</span>
                                     {% endif %}
                                 </td>
                             </tr>

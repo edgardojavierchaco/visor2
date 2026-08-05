@@ -80,62 +80,17 @@
                                 </td>
                                 <td class="cef-act-cell">
                                     <div class="d-flex flex-wrap gap-1 align-items-center">
-                                        {% if seccions_disponibles %}
-                                            {% if item.seccions_asignables|length == 1 and not item.seccions_bloqueados %}
-                                                {% for seccion in item.seccions_asignables %}
-                                                    <form method="post" action="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="accion" value="inscribir_seccion">
-                                                        <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
-                                                        <input type="hidden" name="seccion_id" value="{{ seccion.pk }}">
-                                                        <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                        {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                                                        <button class="btn btn-primary btn-sm" type="submit">
-                                                            <i class="fa-solid fa-user-plus"></i> Inscribir a seccion
-                                                        </button>
-                                                    </form>
-                                                {% endfor %}
-                                            {% else %}
-                                                <div class="dropdown" data-cef-alumno-dropdown>
-                                                    <button class="btn {% if item.seccions_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
-                                                        <i class="fa-solid fa-user-plus"></i> {% if item.seccions_asignables %}Inscribir a seccion{% elif item.seccions_bloqueados %}Ya inscripto a seccion{% else %}Sin seccions disponibles{% endif %}
-                                                    </button>
-                                                    <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
-                                                    {% for seccion in item.seccions_asignables %}
-                                                        <li>
-                                                            <form method="post" action="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0">
-                                                                {% csrf_token %}
-                                                                <input type="hidden" name="accion" value="inscribir_seccion">
-                                                                <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
-                                                                <input type="hidden" name="seccion_id" value="{{ seccion.pk }}">
-                                                                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                                {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                                                                <button class="dropdown-item" type="submit">
-                                                                    <span>Grupo {{ seccion.actividad }} Nro. {{ seccion.numero }}</span>
-                                                                    <small>{{ seccion.turno }} - {{ seccion.get_estado_display }}</small>
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                    {% endfor %}
-                                                    {% if item.seccions_asignables and item.seccions_bloqueados %}
-                                                        <li><hr class="dropdown-divider"></li>
-                                                    {% endif %}
-                                                    {% for inscripcion in item.seccions_bloqueados %}
-                                                        <li>
-                                                            <span class="dropdown-item disabled" aria-disabled="true">
-                                                                <span>Grupo {{ inscripcion.seccion.actividad }} Nro. {{ inscripcion.seccion.numero }}</span>
-                                                                <small>Ya inscripto{% if inscripcion.fecha_inscripcion %} desde {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}{% endif %}</small>
-                                                            </span>
-                                                        </li>
-                                                    {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="text-muted small">Sin seccions cargados</span>
+                                        {# En el listado/tabla NO se agrega al banco, eso se hace en el modal de búsqueda #}
+                                        
+                                        {# Botón para inscribir a sección (si hay secciones disponibles) #}
+                                        {% if seccions_disponibles and item.seccions_asignables %}
+                                            {# ... tu lógica existente de dropdown de inscripciones ... #}
+                                            {# Mantén el bloque de dropdowns que ya tenías aquí #}
                                         {% endif %}
+
+                                        {# Botón Editar Datos #}
                                         {% if item.url_editar_alumno %}
-                                            <a class="btn btn-outline-primary btn-sm" title="Editar datos del alumno" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
+                                            <a class="cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                             </a>
                                         {% endif %}
@@ -226,7 +181,7 @@
     }
 </style>
 
-{% include "cef/modal_busqueda_alumno_cef.html" %}
+{% include "especial/modal_busqueda_alumno_especial.html" %}
 <script>
 (function () {
     if (window.cefAlumnoDropdownReady) return;

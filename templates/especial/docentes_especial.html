@@ -83,50 +83,70 @@
                                 </td>
                                 <td class="cef-act-cell">
                                     <div class="d-flex flex-wrap gap-1 align-items-center">
-                                        {% if grupos_disponibles %}
-                                            {% if docente_banco.grupos_asignables|length == 1 and not docente_banco.grupos_bloqueados %}
-                                                {% for grupo in docente_banco.grupos_asignables %}
-                                                    <a class="btn btn-primary btn-sm" href="{% url 'especial:docentes_grupo' grupo.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
-                                                        <i class="fa-solid fa-user-plus"></i> Asignar a grupo
+                                        {% if secciones_disponibles %}
+                                            {% if docente_banco.secciones_asignables|length == 1 and not docente_banco.secciones_bloqueadas %}
+                                                {# Caso: Solo hay una sección disponible y no está asignado -> Botón directo #}
+                                                {% for seccion in docente_banco.secciones_asignables %}
+                                                    <a class="btn btn-primary btn-sm" 
+                                                    href="{% url 'especial:gestionar_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" 
+                                                    title="Asignar a {{ seccion.nombre_seccion }}">
+                                                        <i class="fa-solid fa-user-plus"></i> Asignar a sección
                                                     </a>
                                                 {% endfor %}
                                             {% else %}
+                                                {# Caso: Múltiples opciones o ya asignado -> Dropdown #}
                                                 <div class="dropdown" data-cef-profesor-dropdown>
-                                                    <button class="btn {% if docente_banco.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-profesor-dropdown-toggle aria-expanded="false">
-                                                        <i class="fa-solid fa-user-plus"></i> {% if docente_banco.grupos_asignables %}Asignar a grupo{% elif docente_banco.grupos_bloqueados %}Ya asignado a grupo{% else %}Sin grupos disponibles{% endif %}
+                                                    <button class="btn {% if docente_banco.secciones_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" 
+                                                            type="button" 
+                                                            data-cef-profesor-dropdown-toggle 
+                                                            aria-expanded="false">
+                                                        <i class="fa-solid fa-user-plus"></i> 
+                                                        {% if docente_banco.secciones_asignables %}
+                                                            Asignar a sección
+                                                        {% elif docente_banco.secciones_bloqueadas %}
+                                                            Ya asignado
+                                                        {% else %}
+                                                            Sin secciones disponibles
+                                                        {% endif %}
                                                     </button>
                                                     <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
-                                                    {% for grupo in docente_banco.grupos_asignables %}
-                                                        <li>
-                                                            <a class="dropdown-item" href="{% url 'especial:docentes_grupo' grupo.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ docente_banco.docente_cuil }}" data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
-                                                                <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
-                                                                <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
-                                                            </a>
-                                                        </li>
-                                                    {% endfor %}
-                                                    {% if docente_banco.grupos_asignables and docente_banco.grupos_bloqueados %}
-                                                        <li><hr class="dropdown-divider"></li>
-                                                    {% endif %}
-                                                    {% for asignacion in docente_banco.grupos_bloqueados %}
-                                                        <li>
-                                                            <span class="dropdown-item disabled" aria-disabled="true">
-                                                                <span>Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }}</span>
-                                                                <small>Ya asignado como {{ asignacion.get_rol_display }}</small>
-                                                            </span>
-                                                        </li>
-                                                    {% endfor %}
+                                                        {% for seccion in docente_banco.secciones_asignables %}
+                                                            <li>
+                                                                <a class="dropdown-item" 
+                                                                href="{% url 'especial:gestionar_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&cuil={{ docente_banco.docente_cuil }}">
+                                                                    <span>{{ seccion.nombre_seccion }}</span>
+                                                                    <small>{{ seccion.turno }} - {{ seccion.get_estado_display }}</small>
+                                                                </a>
+                                                            </li>
+                                                        {% endfor %}
+                                                        
+                                                        {% if docente_banco.secciones_asignables and docente_banco.secciones_bloqueadas %}
+                                                            <li><hr class="dropdown-divider"></li>
+                                                        {% endif %}
+                                                        
+                                                        {% for asignacion in docente_banco.secciones_bloqueadas %}
+                                                            <li>
+                                                                <span class="dropdown-item disabled" aria-disabled="true">
+                                                                    <span>{{ asignacion.seccion.nombre_seccion }}</span>
+                                                                    <small>Ya asignado como {{ asignacion.get_rol_display }}</small>
+                                                                </span>
+                                                            </li>
+                                                        {% endfor %}
                                                     </ul>
                                                 </div>
                                             {% endif %}
                                         {% else %}
-                                            <span class="text-muted small">Sin grupos cargados</span>
-                                            <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'especial:carga_seccion_nuevo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                                                <i class="fa-solid fa-plus"></i> Crear grupo
+                                            <span class="text-muted small">Sin secciones cargadas</span>
+                                            <a class="btn btn-outline-primary btn-sm" title="Crear sección" href="{% url 'especial:carga_seccion_nueva' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                                <i class="fa-solid fa-plus"></i> Crear sección
                                             </a>
                                         {% endif %}
-                                        <a class="btn btn-outline-primary btn-sm" title="Editar datos del profesor" href="{{ docente_banco.url_editar_profesor }}" target="_blank" rel="noopener">
-                                            <i class="fa-solid fa-pen-to-square"></i> Editar datos
-                                        </a>
+
+                                        {% if docente_banco.url_editar_docente %}
+                                            <a class="btn btn-outline-primary btn-sm" title="Editar datos del profesor" href="{{ docente_banco.url_editar_docente }}" target="_blank" rel="noopener">
+                                                <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                            </a>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -159,7 +179,7 @@
     </div>
 </div>
 
-{% include "cef/modal_busqueda_docente_cef.html" %}
+{% include "especial/modal_busqueda_docente_especial.html" %}
 
 <style>
     .cef-profesor-dropdown-menu {
