@@ -1,5 +1,8 @@
 {% extends 'especial/base_operativo_especial.html' %}
 {% load mis_filtros %}
+
+{% block especial_context_card %}{% endblock %}
+
 {% block especial_content %}
 
 {# Mantiene el estado del menu lateral antes de pintar la pantalla para evitar saltos visuales. #}
@@ -3282,10 +3285,6 @@
     <div class="card shadow-sm border-0 mb-3">
         <div class="card-body">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-                <div class="page-heading">
-                    <h2>Localizaciones CEF</h2>
-                    <div class="small">Consulta institucional desde Padrón, con filtros, columnas y exportación estilo Padrón Interno.</div>
-                </div>
 
                 <div id="headerActions" class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
                     <div class="search-slot">
@@ -3503,41 +3502,29 @@
 
                             <div class="cef-selector-layout">
                                 <div class="cef-selector-copy">
-                                    <span class="cef-selector-kicker"> CEF</span>
+                                    <span class="cef-selector-kicker"> Establecimiento</span>
                                     <strong>
-                                        {% if selector_cef_usa_explicitos %}
-                                            {% if seleccion_cef_explicita %}
-                                                {{ total_cefs_seleccionados|default:0 }} seleccionados
-                                            {% else %}
-                                                Todos los CEF
-                                            {% endif %}
+                                        {% if total_establecimientos_seleccionados > 0 %}
+                                            {{ total_establecimientos_seleccionados }} seleccionados
                                         {% else %}
-                                            {{ total_cefs_seleccionados|default:0 }} seleccionados
+                                            Todos los establecimientos
                                         {% endif %}
                                     </strong>
-                                    <small>Sin seleccion manual se muestran todos los CEF disponibles.</small>
+                                    <small>Sin selección manual se muestran todos los establecimientos disponibles.</small>
                                 </div>
 
-                                <div class="cef-selector-control" data-cef-initial-display="{% if selector_cef_usa_explicitos %}{% if seleccion_cef_explicita %}{{ total_cefs_seleccionados|default:0 }} CEF seleccionados{% else %}Todos los CEF{% endif %}{% else %}{{ total_cefs_seleccionados|default:0 }} CEF seleccionados{% endif %}">
+                                <div class="cef-selector-control" data-cef-initial-display="{% if total_establecimientos_seleccionados > 0 %}{{ total_establecimientos_seleccionados }} establecimientos seleccionados{% else %}Todos los establecimientos{% endif %}">
                                     <label for="cefSelectorSelect">
-                                        <i class="fa-solid fa-school me-1"></i> CEF
+                                        <i class="fa-solid fa-school me-1"></i> Establecimiento
                                     </label>
-                                    <select id="cefSelectorSelect" name="cefs" multiple="multiple" class="form-select cef-selector-select" data-placeholder="Todos los CEF">
-                                        {% if cef_selector_options %}
-                                            {% for cef in cef_selector_options %}
-                                                <option value="{{ cef.cueanexo }}" {% if selector_cef_usa_explicitos %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados_explicitos %}selected{% endif %}{% else %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados %}selected{% endif %}{% endif %}>
-                                                    {{ cef.cueanexo }} - {{ cef.nom_est|default:"CEF sin nombre" }}
-                                                </option>
-                                            {% endfor %}
-                                        {% else %}
-                                            {% for cef in cefs_visualizacion %}
-                                                <option value="{{ cef.cueanexo }}" {% if selector_cef_usa_explicitos %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados_explicitos %}selected{% endif %}{% else %}{% if cef.cueanexo|stringformat:"s" in cueanexos_seleccionados %}selected{% endif %}{% endif %}>
-                                                    {{ cef.cueanexo }} - {{ cef.nom_est|default:"CEF sin nombre" }}
-                                                </option>
-                                            {% empty %}
-                                                <option value="" disabled>No hay CEF disponibles</option>
-                                            {% endfor %}
-                                        {% endif %}
+                                    <select id="cefSelectorSelect" name="establecimientos" multiple="multiple" class="form-select cef-selector-select" data-placeholder="Todos los establecimientos">
+                                        {% for est in establecimientos_options %}
+                                            <option value="{{ est.cueanexo }}" {% if est.cueanexo|stringformat:"s" in establecimientos_seleccionados %}selected{% endif %}>
+                                                {{ est.cueanexo }} - {{ est.nom_est|default:"Establecimiento sin nombre" }}
+                                            </option>
+                                        {% empty %}
+                                            <option value="" disabled>No hay establecimientos disponibles</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
 
@@ -3800,9 +3787,9 @@
             <div class="modal-body">
                 <div class="padron-guide-hero">
                     <h6 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-compass me-2"></i>Cómo aprovechar la pantalla</h6>
-                    <p class="mb-2 text-secondary">Esta vista combina selector múltiple de CEF, búsqueda rápida, filtros, control de columnas, paginación y exportación a Excel. Si no elegís CEF manualmente, se muestran todos los CEF autorizados.</p>
+                    <p class="mb-2 text-secondary">Esta vista combina selector múltiple de establecimientos, búsqueda rápida, filtros, control de columnas, paginación y exportación a Excel. Si no elegís un establecimiento manualmente, se muestran todos los establecimientos disponibles.</p>
                     <div class="padron-guide-chip-row">
-                        <span class="padron-guide-chip"><i class="fa-solid fa-school text-primary"></i>Selector CEF</span>
+                        <span class="padron-guide-chip"><i class="fa-solid fa-school text-primary"></i>Selector Establecimiento</span>
                         <span class="padron-guide-chip"><i class="fa-solid fa-magnifying-glass text-primary"></i>Buscador</span>
                         <span class="padron-guide-chip"><i class="fa-solid fa-filter text-success"></i>Filtros</span>
                         <span class="padron-guide-chip"><i class="fa-solid fa-table-columns text-info"></i>Columnas</span>
@@ -3811,8 +3798,8 @@
                 </div>
                 <div class="padron-guide-grid">
                     <div class="padron-guide-card">
-                        <h6><i class="fa-solid fa-school text-primary me-2"></i>1. Selector CEF</h6>
-                        <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">1</span><div>El campo muestra <strong>Todos los CEF</strong> cuando no hay selección explícita.</div></div>
+                        <h6><i class="fa-solid fa-school text-primary me-2"></i>1. Selector Establecimiento</h6>
+                        <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">1</span><div>El campo muestra <strong>Todos los establecimientos</strong> cuando no hay selección explícita.</div></div>
                         <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">2</span><div>Al abrir el desplegable podés buscar por CUE-Anexo o nombre y seleccionar uno, varios o todos.</div></div>
                         <div class="padron-guide-note"><i class="fa-solid fa-check me-2 text-primary"></i>Las opciones elegidas quedan marcadas con tilde y se aplican por AJAX al cerrar el desplegable.</div>
                     </div>
@@ -3833,11 +3820,11 @@
                     </div>
                     <div class="padron-guide-card">
                         <h6><i class="fa-solid fa-file-excel text-success me-2"></i>5. Exportación</h6>
-                        <ul><li><strong>Filtros Excel</strong> exporta todos los registros que coinciden con filtros, búsqueda y selección CEF actuales.</li><li>Respeta las columnas visibles configuradas en pantalla.</li><li><strong>Todo Excel</strong> exporta todo lo autorizado, sin filtros y con todas las columnas.</li></ul>
+                        <ul><li><strong>Filtros Excel</strong> exporta todos los registros que coinciden con filtros, búsqueda y selección de establecimientos actuales.</li><li>Respeta las columnas visibles configuradas en pantalla.</li><li><strong>Todo Excel</strong> exporta todo lo autorizado, sin filtros y con todas las columnas.</li></ul>
                     </div>
                     <div class="padron-guide-card">
                         <h6><i class="fa-solid fa-broom text-danger me-2"></i>6. Limpiar y volver a empezar</h6>
-                        <ul><li><strong>Limpiar Filtros</strong> borra búsqueda, filtros y selección CEF.</li><li>No borra columnas visibles ni modo contraído.</li><li>Si no hay resultados, la tabla muestra un mensaje claro para ajustar la búsqueda.</li></ul>
+                        <ul><li><strong>Limpiar Filtros</strong> borra búsqueda, filtros y selección de establecimientos.</li><li>No borra columnas visibles ni modo contraído.</li><li>Si no hay resultados, la tabla muestra un mensaje claro para ajustar la búsqueda.</li></ul>
                     </div>
                 </div>
             </div>
@@ -4151,7 +4138,7 @@
         suppressCefChange = false;
 
         if (title) {
-            title.textContent = selected.length ? selected.length + " seleccionados" : "Todos los CEF";
+            title.textContent = selected.length ? selected.length + " seleccionados" : "Todos los establecimientos";
         }
 
         updateCefPlaceholder();
@@ -4468,7 +4455,7 @@
             : $select.nextAll(".select2-container").first();
         var $selection = $container.find(".select2-selection--multiple");
         var $searchInput = $container.find(".select2-search__field");
-        var text = "Todos los CEF";
+        var text = "Todos los establecimientos";
         var stateClass = "is-empty";
         var displayText;
         var shell = qs("#cefSelectorShell");
@@ -4486,7 +4473,7 @@
             text = getCefOptionLabel(selected[0]) || String(selected[0] || "");
             stateClass = "is-single";
         } else if (selected.length > 1) {
-            text = selected.length + " CEF seleccionados";
+            text = selected.length + " establecimientos seleccionados";
             stateClass = "is-multiple";
         }
 
@@ -4520,7 +4507,7 @@
                 .val("");
 
             if (!selected.length) {
-                $searchInput.attr("placeholder", "Todos los CEF").addClass("empty-placeholder");
+                $searchInput.attr("placeholder", "Todos los establecimientos").addClass("empty-placeholder");
             } else if (selected.length === 1) {
                 $searchInput.attr("placeholder", text);
             } else {
@@ -5076,7 +5063,7 @@
         if (values.length === 1) {
             return getCefOptionLabel(values[0]);
         }
-        return values.length + " CEF seleccionados";
+        return values.length + " establecimientos seleccionados";
     }
 
     function renderBadges() {
@@ -5105,7 +5092,7 @@
 
         // CEF_PATCH_BADGES_FORZAR_INDIVIDUALES_20260515
         cefs.forEach(function(cef) {
-            html.push('<span class="server-filter-badge server-filter-badge-cef"><span class="server-filter-badge__text">CEF: ' + escapeHtml(getCefOptionLabel(cef)) + '</span><button type="button" data-remove-cef-value="' + escapeHtml(cef) + '" title="Quitar este CEF"><i class="fa-solid fa-xmark"></i></button></span>');
+            html.push('<span class="server-filter-badge server-filter-badge-cef"><span class="server-filter-badge__text">Estab.: ' + escapeHtml(getCefOptionLabel(cef)) + '</span><button type="button" data-remove-cef-value="' + escapeHtml(cef) + '" title="Quitar este establecimiento"><i class="fa-solid fa-xmark"></i></button></span>');
         });
 
         campos.forEach(function(campo, index) {

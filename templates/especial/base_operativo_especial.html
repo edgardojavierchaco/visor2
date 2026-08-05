@@ -1094,6 +1094,7 @@
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'localizaciones' %}active{% endif %}" href="{% url 'especial:visualizacion_localizaciones' %}">Localizaciones</a></li>
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'alumnos' %}active{% endif %}" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Alumnos</a></li>
+                    <li class="nav-item"><a class="nav-link {% if active_menu == 'docentes' %}active{% endif %}" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Docentes</a></li>
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'cueanexo' %}active{% endif %}" href="{% url 'especial:carga_cueanexo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Datos CUE-Anexo</a></li>
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'secciones' %}active{% endif %}" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Secciones</a></li>
                     {% if especial_context.es_admin_especial %}
@@ -1111,6 +1112,7 @@
                 {% endfor %}
             </div>
         {% endif %}
+        {% block especial_context_card %}
         <!-- CONTEXT CARD (selector CUE-Anexo / Ciclo) -->
         <section class="cef-context-card">
             <form method="get" class="cef-context-grid">
@@ -1146,11 +1148,24 @@
                 </div>
             </form>
         </section>
+        {% endblock %}
         {% if especial_context.sin_cueanexo %}
             <div class="alert alert-warning">No hay establecimientos de Educación Especial disponibles para tu usuario.</div>
         {% endif %}
         {% if especial_context.sin_ciclo %}
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin ciclos lectivos',
+                        text: 'Actualmente no hay ningún ciclo lectivo configurado o activo en el sistema. Para operar en este módulo se requiere un ciclo activo.',
+                        confirmButtonColor: '#2e7bd4',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
+            </script>
         {% endif %}
         {% block especial_content %}{% endblock %}
     </div>

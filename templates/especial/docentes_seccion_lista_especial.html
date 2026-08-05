@@ -62,7 +62,7 @@
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </a>
                                  {% if asignacion.estado == 'activo' %}
-                                 <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Dar de baja profesor" data-cef-confirm-message="La asignación quedará registrada como baja, no se eliminará." data-cef-confirm-entity="{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}">
+                                 <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Dar de baja docente" data-cef-confirm-message="La asignación quedará registrada como baja, no se eliminará." data-cef-confirm-entity="{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}">
                                      {% csrf_token %}
                                      <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                      {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
@@ -73,7 +73,7 @@
                                      </button>
                                  </form>
                                 {% elif asignacion.estado == 'baja' or asignacion.estado == 'inactivo' %}
-                                <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reasignar profesor" data-cef-confirm-message="Se creará una asignación activa nueva con el mismo rol si no existe conflicto activo." data-cef-confirm-entity="{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}">
+                                <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reasignar docente" data-cef-confirm-message="Se creará una asignación activa nueva con el mismo rol si no existe conflicto activo." data-cef-confirm-entity="{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}">
                                     {% csrf_token %}
                                     <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                     {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
@@ -94,7 +94,7 @@
 {% else %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-        Todavia no hay profesores asignados a esta sección.
+        Todavia no hay docentes asignados a esta sección.
     </div>
 {% endif %}
 

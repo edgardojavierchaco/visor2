@@ -71,13 +71,12 @@ def _resolver_ciclo(request):
         try:
             ciclo_id = int(raw)
         except (TypeError, ValueError):
-            raise PermissionDenied("El ciclo solicitado no es válido.")
-
-        for ciclo in ciclos:
-            if ciclo.pk == ciclo_id:
-                return ciclo, ciclos
-
-        raise PermissionDenied("El ciclo solicitado no está disponible.")
+            # If invalid, fallback gracefully instead of crashing
+            pass
+        else:
+            for ciclo in ciclos:
+                if ciclo.pk == ciclo_id:
+                    return ciclo, ciclos
 
     ciclo_actual = next((ciclo for ciclo in ciclos if ciclo.actual), None)
     ciclo_operativo = ciclo_actual or (ciclos[0] if ciclos else None)

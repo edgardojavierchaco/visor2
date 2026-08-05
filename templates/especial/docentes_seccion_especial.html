@@ -1,17 +1,17 @@
 {% extends "especial/base_operativo_especial.html" %}
 
-{% block especial_subtitle %}Administración de profesores asignados al grupo seleccionado.{% endblock %}
+{% block especial_subtitle %}Administración de docentes asignados a la sección seleccionada.{% endblock %}
 
 {% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Profesores asignados al grupo</h2>
+        <h2 class="cef-panel-title">Docentes asignados a la sección</h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+                <i class="fa-solid fa-arrow-left"></i> Volver a secciones
             </a>
             <button class="btn btn-primary" type="button" data-open-docentes-modal>
-                <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+                <i class="fa-solid fa-chalkboard-user"></i> Agregar docente
             </button>
         </div>
     </div>
@@ -30,7 +30,7 @@
         {% endif %}
 
         <p class="small text-muted mb-3">
-            Desde esta pantalla podés agregar, editar o dar de baja profesores asignados a esta sección.
+            Desde esta pantalla podés agregar, editar o dar de baja docentes asignados a esta sección.
         </p>
 
         <div data-cef-fragment="docentes-grupo">
