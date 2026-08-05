@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 
-from .forms import EspecialSeccionForm
+from .forms import EspecialSeccionForm, EspecialDocenteSeccionForm
 from .models import SeccionEspecial, AlumnoSeccion, DocenteSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto
@@ -335,6 +335,27 @@ def _alta_docente_gestionar(request, seccion):
         return False, "; ".join(exc.messages)
 
 
+def _alta_docente_nuevo_gestionar(request, seccion):
+    """Create a new DocenteSeccion assignment for a docente identified by CUIL.
+    Expected POST fields: cuil, rol, estado, fecha_desde, fecha_hasta, observaciones.
+    """
+    cuil = request.POST.get("cuil")
+    if not cuil:
+        return False, "CUIL del docente no proporcionado."
+    # Create a new assignment instance
+    asignacion = DocenteSeccion(seccion=seccion, docente_cuil=cuil)
+    form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
+    if form.is_valid():
+        asignacion = form.save(commit=False)
+        try:
+            dar_alta_docente_seccion(asignacion, request.user)
+            return True, "Profesor asignado a la sección correctamente."
+        except ValidationError as exc:
+            return False, "; ".join(exc.messages)
+    else:
+        return False, "; ".join(form.errors.get_json_data(escape_html=True).values())
+
+
 @especial_required
 def gestionar_seccion(request, seccion_id):
     """Vista de gestión integral de una sección."""
@@ -382,7 +403,22 @@ def gestionar_seccion(request, seccion_id):
                     message,
                 )
         elif accion == "alta_docente":
-            ok, message = _alta_docente_gestionar(request, seccion)
+            docente_grupo_id = request.POST.get("docente_grupo_id")
+            if docente_grupo_id:
+                ok, message = _alta_docente_gestionar(request, seccion)
+            else:
+                ok, message = _alta_docente_nuevo_gestionar(request, seccion)
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    seccion,
+                    especial_context,
+                    ok,
+                    message,
+                )
+        elif accion == "asignar_seccion":
+            # Assign a docente to the section using CUIL (new assignment)
+            ok, message = _alta_docente_nuevo_gestionar(request, seccion)
             if _is_ajax(request):
                 return _ajax_gestionar_fragment_response(
                     request,

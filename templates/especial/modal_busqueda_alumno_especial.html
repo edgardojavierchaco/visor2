@@ -388,35 +388,23 @@
                                 <td>{{ alumno_row.lugar_nac|default:"—" }}</td>
                                 <td>
                                     <div class="cef-modal-actions">
-                                        {% if modal_tiene_grupo %}
-                                            {% if inscripcion_abierta %}
-                                                <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya inscripto</span>
-                                            {% else %}
-                                                <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                                                    <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
-                                                    <button class="cef-modal-inline-btn" type="submit">
-                                                        <i class="fa-solid fa-user-check"></i> Inscribir
-                                                    </button>
-                                                </form>
-                                            {% endif %}
-                                        {% elif alumno_en_banco %}
-                                            <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya está en el banco del CEF.</span>
-                                        {% elif modal_puede_agregar_banco %}
+                                        {# Lógica para Especial: usa especial_context.puede_operar #}
+                                        {% if alumno_en_banco %}
+                                            <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya está en el banco.</span>
+                                        {% elif especial_context.puede_operar %}
                                             <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
                                                 {% csrf_token %}
                                                 <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                                 {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                                 <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
                                                 <button class="cef-modal-inline-btn" type="submit">
-                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco del CEF
+                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco
                                                 </button>
                                             </form>
                                         {% else %}
                                             <span style="font-size:.8rem;color:#64748b;font-style:italic">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
                                         {% endif %}
+
                                         {% if url_editar_alumno %}
                                             <a class="cef-modal-link" href="{{ url_editar_alumno }}">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos

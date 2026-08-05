@@ -246,7 +246,6 @@ def docentes(request):
     if request.method == "POST":
         busqueda_form = EspecialBusquedaDocenteForm(request.POST)
         abrir_modal = True
-
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
             docente = _buscar_docente(cuil_buscado)
@@ -269,7 +268,6 @@ def docentes(request):
                     request.user,
                 )
                 docente_en_banco = bool(banco)
-
                 if tabla_pendiente:
                     messages.error(request, MSG_BANCO_DOCENTES_PENDIENTE)
                 elif creado:
@@ -289,7 +287,6 @@ def docentes(request):
         busqueda_form = EspecialBusquedaDocenteForm(
             request.GET if request.GET.get("cuil") else None
         )
-
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
             docente = _buscar_docente(cuil_buscado)
