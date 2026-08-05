@@ -114,9 +114,9 @@ def _get_filter_options(items):
     localidades = sorted(set(item.get("localidad", "") for item in items if item.get("localidad")))
     
     return {
-        "opciones_regiones": [r for r in regiones if r],
-        "opciones_departamentos": [d for d in departamentos if d],
-        "opciones_localidades": [l for l in localidades if l],
+        "region_loc": [r for r in regiones if r],
+        "departamento": [d for d in departamentos if d],
+        "localidad": [l for l in localidades if l],
     }
 
 
@@ -393,7 +393,21 @@ def visualizacion_localizaciones(request):
 
     establecimientos_seleccionados = request.GET.getlist("establecimientos")
 
+
+    columnas_config = [
+        {
+            "key": col,
+            "label": LABELS_COLUMNAS[col],
+            "slug": col.replace("_", "-"),
+            "default": col in COLUMNAS_VISIBLES_DEFAULT,
+        }
+        for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
+    ]
+    import json
+    columnas_config_json = json.dumps(columnas_config)
+
     especial_context = resolver_contexto_operativo(request)
+
     context = {
         "title": "Localizaciones Educación Especial",
         "active_menu": "localizaciones",
@@ -414,15 +428,18 @@ def visualizacion_localizaciones(request):
         "columnas": COLUMNAS_LOCALIZACIONES_ESPECIAL,
         "labels_columnas": LABELS_COLUMNAS,
         "columnas_visibles_default": COLUMNAS_VISIBLES_DEFAULT,
+        "columnas_config": columnas_config,
+        "columnas_config_json": columnas_config_json,
         "orden": orden,
         "mostrar_contexto": False,
-        "opciones_regiones": sorted(set(item["region_loc"] for item in base_items if item["region_loc"])),
-        "opciones_departamentos": sorted(set(item["departamento"] for item in base_items if item["departamento"])),
-        "opciones_localidades": sorted(set(item["localidad"] for item in base_items if item["localidad"])),
+        "region_loc": sorted(set(item["region_loc"] for item in base_items if item["region_loc"])),
+        "departamento": sorted(set(item["departamento"] for item in base_items if item["departamento"])),
+        "localidad": sorted(set(item["localidad"] for item in base_items if item["localidad"])),
         "limpiar_filtros_url": request.path,
         "request": request,
         # ✅ AGREGAR ESTO PARA QUE LOS FILTROS FUNCIONEN:
-        **filter_options, 
+        **filter_options,
+        "filter_options_json": json.dumps(filter_options), 
     }
 
     render_started = time.perf_counter()
