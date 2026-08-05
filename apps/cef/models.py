@@ -332,28 +332,39 @@ def obtener_rol_usuario_cef(user):
     return rol_nombre.strip() or None
 
 
-def usuario_puede_ver_cef(user):
+def obtener_permisos_usuario_cef(user):
+    """Resuelve una sola vez el rol y sus permisos funcionales CEF."""
+    rol = obtener_rol_usuario_cef(user)
+    return {
+        "rol": rol,
+        "puede_ver": rol in ROLES_AUTORIZADOS_CEF,
+        "es_admin": rol == "Administrador",
+    }
+
+
+def usuario_puede_ver_cef(user, permisos=None):
     """
     Indica si el usuario puede acceder actualmente al modulo CEF.
     """
 
-    rol = obtener_rol_usuario_cef(user)
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
 
-    if not rol:
-        return False
-
-    return rol in ROLES_AUTORIZADOS_CEF
+    return permisos["puede_ver"]
 
 
-def usuario_es_admin_cef(user):
+def usuario_es_admin_cef(user, permisos=None):
     """
     Atajo para controles puntuales que requieran rol Administrador.
     """
 
-    return obtener_rol_usuario_cef(user) == "Administrador"
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+
+    return permisos["es_admin"]
 
 
-def get_cefs_visualizacion_usuario(user):
+def get_cefs_visualizacion_usuario(user, permisos=None):
     """
     Devuelve todos los CEF para los roles autorizados.
 
@@ -363,13 +374,13 @@ def get_cefs_visualizacion_usuario(user):
 
     queryset = get_todos_los_cef()
 
-    if not usuario_puede_ver_cef(user):
+    if not usuario_puede_ver_cef(user, permisos=permisos):
         return queryset.none()
 
     return queryset
 
 
-def get_cefs_cargables_usuario(user):
+def get_cefs_cargables_usuario(user, permisos=None):
     """
     Devuelve los CEF sobre los que el usuario puede cargar datos operativos.
 
@@ -380,23 +391,29 @@ def get_cefs_cargables_usuario(user):
 
     queryset = get_todos_los_cef()
 
-    if not usuario_puede_ver_cef(user):
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+
+    if not usuario_puede_ver_cef(user, permisos=permisos):
         return queryset.none()
 
-    if usuario_es_admin_cef(user):
+    if usuario_es_admin_cef(user, permisos=permisos):
         return queryset
 
     return get_cefs_por_cuil_responsable(user)
 
 
-def get_cueanexos_cargables_usuario(user):
+def get_cueanexos_cargables_usuario(user, permisos=None):
     """
     Devuelve una lista normalizada de CUE-Anexos cargables para el usuario.
     """
 
     cueanexos = []
 
-    for cueanexo in get_cefs_cargables_usuario(user).values_list("cueanexo", flat=True).distinct():
+    for cueanexo in get_cefs_cargables_usuario(
+        user,
+        permisos=permisos,
+    ).values_list("cueanexo", flat=True).distinct():
         cueanexo_normalizado = normalizar_cueanexo(cueanexo)
 
         if cueanexo_normalizado and cueanexo_normalizado not in cueanexos:
@@ -405,7 +422,7 @@ def get_cueanexos_cargables_usuario(user):
     return cueanexos
 
 
-def usuario_puede_cargar_cueanexo(user, cueanexo):
+def usuario_puede_cargar_cueanexo(user, cueanexo, permisos=None):
     """
     Valida si el usuario puede operar sobre un CUE-Anexo determinado.
     """
@@ -415,7 +432,10 @@ def usuario_puede_cargar_cueanexo(user, cueanexo):
     if not cueanexo:
         return False
 
-    return cueanexo in get_cueanexos_cargables_usuario(user)
+    return cueanexo in get_cueanexos_cargables_usuario(
+        user,
+        permisos=permisos,
+    )
 
 
 # ============================================================
@@ -790,6 +810,17 @@ class CefOrientacionTipo(CefCatalogoCodigoBase):
         verbose_name_plural = "Tipos de orientacion CEF"
 
 
+class CefEstadoMaterialTipo(CefCatalogoCodigoBase):
+    """
+    Catalogo de estados permitidos para materiales del inventario CEF.
+    """
+
+    class Meta(CefCatalogoCodigoBase.Meta):
+        db_table = '"cef"."estado_material_tipo"'
+        verbose_name = "Tipo de estado de material CEF"
+        verbose_name_plural = "Tipos de estado de materiales CEF"
+
+
 # ============================================================
 # DATOS COMPLEMENTARIOS / RELEVAMIENTO CEF
 # ============================================================
@@ -837,7 +868,6 @@ class CefDatosRelevamiento(CefAuditoriaMixin):
         related_name="datos_orientacion",
     )
 
-    nombre_seccion = models.CharField(max_length=120, default="No corresponde")
     observaciones = models.TextField(blank=True)
 
     beneficio_codigo_snapshot = models.IntegerField(blank=True, null=True, editable=False)
@@ -885,9 +915,6 @@ class CefDatosRelevamiento(CefAuditoriaMixin):
             errors["cueanexo"] = "CUE-Anexo invalido."
         else:
             self.cueanexo = cueanexo_normalizado
-
-        nombre_seccion = (self.nombre_seccion or "").strip()
-        self.nombre_seccion = nombre_seccion or "No corresponde"
 
         if self._beneficio_requiere_no_corresponde():
             if self.fuente_financiamiento_id and self.fuente_financiamiento.codigo != -1:
@@ -1781,6 +1808,7 @@ class CefInventarioMaterial(CefAuditoriaMixin):
         related_name="inventarios",
     )
 
+    # Campos heredados/transitorios hasta adaptar formularios, vistas, templates y datos existentes.
     cantidad = models.PositiveIntegerField(default=0)
     estado_descripcion = models.TextField(blank=True)
     material_nombre_snapshot = models.CharField(max_length=150, blank=True, editable=False)
@@ -1844,10 +1872,120 @@ class CefInventarioMaterial(CefAuditoriaMixin):
         if self.material_id and (material_cambiado or snapshot_vacio):
             self.material_nombre_snapshot = self.material.nombre
 
-    def save(self, *args, **kwargs):
-        self.actualizar_snapshots_catalogo()
-        self.full_clean()
+    def save(
+        self,
+        *args,
+        validar=True,
+        actualizar_snapshot=True,
+        **kwargs,
+    ):
+        if actualizar_snapshot:
+            self.actualizar_snapshots_catalogo()
+        if validar:
+            self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.cueanexo} - {self.ciclo} - {self.material} x {self.cantidad}"
+
+
+class CefInventarioMaterialEstado(CefAuditoriaMixin):
+    """
+    Distribucion de unidades por estado para un material del inventario CEF.
+    """
+
+    inventario_material = models.ForeignKey(
+        CefInventarioMaterial,
+        on_delete=models.CASCADE,
+        related_name="distribuciones_estado",
+    )
+    estado = models.ForeignKey(
+        CefEstadoMaterialTipo,
+        on_delete=models.PROTECT,
+        related_name="distribuciones_inventario",
+        null=True,
+        blank=True,
+    )
+    # Transitorios: retirar tras crear la tabla, cargar el catalogo, asociar datos,
+    # adaptar formularios/vistas/templates y verificar cobertura total.
+    estado_descripcion = models.CharField(max_length=150)
+    estado_normalizado = models.CharField(max_length=150, editable=False)
+    cantidad = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = '"cef"."inventario_materiales_estados"'
+        ordering = ["inventario_material", "estado_normalizado"]
+        verbose_name = "Estado de material de inventario CEF"
+        verbose_name_plural = "Estados de materiales de inventario CEF"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["inventario_material", "estado_normalizado"],
+                name="uq_cef_inv_est_norm",
+            ),
+            models.UniqueConstraint(
+                fields=["inventario_material", "estado"],
+                name="uq_cef_inv_est_cat",
+            ),
+            models.CheckConstraint(
+                condition=Q(cantidad__gt=0),
+                name="ck_cef_inv_est_cant_pos",
+            ),
+            models.CheckConstraint(
+                condition=~Q(estado_normalizado=""),
+                name="ck_cef_inv_est_no_vacio",
+            ),
+        ]
+
+    def _sincronizar_estado_heredado_desde_catalogo(self):
+        if not self.estado_id:
+            return
+
+        estado_descripcion = " ".join((self.estado.nombre or "").split())
+        self.estado_descripcion = estado_descripcion
+        self.estado_normalizado = estado_descripcion.lower()
+
+    def clean(self):
+        errors = {}
+
+        self._sincronizar_estado_heredado_desde_catalogo()
+
+        if self.estado_id:
+            estado_descripcion = self.estado_descripcion
+        else:
+            estado_descripcion = " ".join((self.estado_descripcion or "").split())
+            self.estado_descripcion = estado_descripcion
+            self.estado_normalizado = estado_descripcion.lower()
+
+        if not estado_descripcion:
+            errors["estado_descripcion"] = "Debe indicar el estado del material."
+
+        if self.cantidad is None or self.cantidad <= 0:
+            errors["cantidad"] = "La cantidad debe ser mayor que cero."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(
+        self,
+        *args,
+        validar=True,
+        sincronizar_estado=True,
+        **kwargs,
+    ):
+        if sincronizar_estado:
+            self._sincronizar_estado_heredado_desde_catalogo()
+        if validar:
+            self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        material_nombre = (
+            self.inventario_material.material_nombre_snapshot
+            or str(self.inventario_material_id)
+        )
+        estado_nombre = (
+            self.estado.nombre
+            if self.estado_id
+            else self.estado_descripcion
+        )
+        return f"{material_nombre} - {estado_nombre}: {self.cantidad}"

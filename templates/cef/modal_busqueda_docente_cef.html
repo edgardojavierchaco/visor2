@@ -1,80 +1,4 @@
 <style>
-    .cef-docente-overlay {
-        align-items: center;
-        background: rgba(7, 26, 51, .55);
-        backdrop-filter: blur(3px);
-        bottom: 0;
-        display: none;
-        justify-content: center;
-        left: 0;
-        overflow-y: auto;
-        padding: 24px 18px;
-        position: fixed;
-        right: 0;
-        top: 0;
-        z-index: 1080;
-    }
-
-    .cef-docente-overlay.is-open { display: flex; }
-
-    .cef-docente-modal {
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 24px 60px rgba(7,26,51,.28), 0 8px 20px rgba(7,26,51,.12);
-        color: #0f172a;
-        max-height: calc(100vh - 48px);
-        max-width: 980px;
-        overflow: hidden;
-        width: min(980px, 92vw);
-    }
-
-    .cef-docente-modal-head {
-        align-items: center;
-        background: linear-gradient(135deg, #0d2748 0%, #071a33 100%);
-        display: flex;
-        justify-content: space-between;
-        padding: 1rem 1.5rem;
-    }
-
-    .cef-docente-modal-title {
-        color: #fff;
-        font-size: 1.2rem;
-        font-weight: 800;
-        margin: 0;
-    }
-
-    .cef-docente-modal-title span {
-        color: rgba(255,255,255,.55);
-        font-size: 1rem;
-        font-weight: 400;
-    }
-
-    .cef-docente-close {
-        align-items: center;
-        background: rgba(255,255,255,.1);
-        border: 1px solid rgba(255,255,255,.15);
-        border-radius: 8px;
-        color: rgba(255,255,255,.75);
-        display: inline-flex;
-        height: 34px;
-        justify-content: center;
-        text-decoration: none;
-        width: 34px;
-    }
-
-    .cef-docente-close:hover { color: #fff; }
-
-    .cef-docente-close:focus-visible {
-        box-shadow: 0 0 0 3px rgba(147,197,253,.45);
-        outline: none;
-    }
-
-    .cef-docente-modal-body {
-        max-height: calc(100vh - 130px);
-        overflow-y: auto;
-        padding: 1.25rem 1.5rem 1.5rem;
-    }
-
     .cef-docente-search {
         align-items: center;
         background: #f8fafc;
@@ -97,7 +21,7 @@
     }
 
     .cef-docente-search-form {
-        align-items: center;
+        align-items: stretch;
         display: flex;
         gap: .65rem;
         width: 100%;
@@ -111,6 +35,7 @@
         display: flex;
         flex: 1 1 auto;
         gap: .5rem;
+        margin-bottom: 0;
         min-width: 0;
         min-height: 40px;
         padding: .35rem .75rem;
@@ -133,6 +58,7 @@
 
     .cef-docente-search-btn {
         align-items: center;
+        border-radius: 8px;
         display: inline-flex;
         gap: .4rem;
         justify-content: center;
@@ -426,7 +352,9 @@
             window.location.href = url;
             return;
         }
+        if (window.CEFSelects) window.CEFSelects.destroy(currentDialog);
         currentDialog.innerHTML = incomingDialog.innerHTML;
+        if (window.initCefSelects) window.initCefSelects(currentDialog);
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         if (window.history && window.history.replaceState) {
@@ -440,6 +368,7 @@
         var currentPanel = document.querySelector(".cef-panel");
         var incomingPanel = doc.querySelector(".cef-panel");
         if (!currentPanel || !incomingPanel) return false;
+        if (window.CEFSelects) window.CEFSelects.destroy(currentPanel);
         currentPanel.replaceWith(incomingPanel);
         if (window.initCefDocentesGrupoTable) {
             window.initCefDocentesGrupoTable();
@@ -447,12 +376,14 @@
         if (window.initCefProfesoresTable) {
             window.initCefProfesoresTable();
         }
+        if (window.initCefSelects) window.initCefSelects(incomingPanel);
         return true;
     }
 
     function replaceFragmentContent(selector, html) {
         var current = selector ? document.querySelector(selector) : null;
         if (!current || typeof html !== "string") return false;
+        if (window.CEFSelects) window.CEFSelects.destroy(current);
         current.innerHTML = html;
         if (window.initCefDocentesGrupoTable) {
             window.initCefDocentesGrupoTable(current);
@@ -460,17 +391,25 @@
         if (window.initCefProfesoresTable) {
             window.initCefProfesoresTable(current);
         }
+        if (window.initCefSelects) window.initCefSelects(current);
         return true;
     }
 
     function handleJsonPost(data) {
         if (!data || typeof data !== "object") return false;
         var replaced = true;
-        if (data.fragment_html) {
+        if (Array.isArray(data.fragments)) {
+            replaced = data.fragments.every(function (fragment) {
+                return replaceFragmentContent(fragment.selector, fragment.html);
+            });
+        } else if (data.fragment_html) {
             replaced = replaceFragmentContent(data.fragment_selector, data.fragment_html);
         }
         if (data.modal_html) {
             replaceModalContent(data.modal_html, window.location.href);
+        }
+        if (data.ok && data.close_modal) {
+            closeModal();
         }
         return replaced;
     }
@@ -522,7 +461,33 @@
 
         event.preventDefault();
         var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn) submitBtn.disabled = true;
+        var cefLoading = window.CEFLoading;
+        var traditionalFallback = false;
+        if (submitBtn && cefLoading && cefLoading.startButton) {
+            if (!cefLoading.startButton(submitBtn)) return;
+        } else if (submitBtn) {
+            if (submitBtn.disabled) return;
+            submitBtn.disabled = true;
+        }
+
+        function restoreSubmitButton() {
+            if (!submitBtn) return;
+            if (cefLoading && cefLoading.restoreButton) {
+                cefLoading.restoreButton(submitBtn);
+            } else {
+                submitBtn.disabled = false;
+            }
+        }
+
+        function submitTraditionally() {
+            traditionalFallback = true;
+            restoreSubmitButton();
+            if (cefLoading && cefLoading.submitForm) {
+                cefLoading.submitForm(form, submitBtn);
+            } else {
+                form.submit();
+            }
+        }
 
         fetch(form.getAttribute("action"), {
             method: "POST",
@@ -547,7 +512,7 @@
                     if (handleJsonPost(result.json)) {
                         return;
                     }
-                    form.submit();
+                    submitTraditionally();
                     return;
                 }
                 if (result.redirected && replacePagePanel(result.html)) {
@@ -560,11 +525,10 @@
                 replaceModalContent(result.html, window.location.href);
             })
             .catch(function () {
-                if (submitBtn) submitBtn.disabled = false;
-                form.submit();
+                submitTraditionally();
             })
             .finally(function () {
-                if (submitBtn) submitBtn.disabled = false;
+                if (!traditionalFallback) restoreSubmitButton();
             });
     });
 
