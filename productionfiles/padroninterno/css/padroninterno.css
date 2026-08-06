@@ -1,0 +1,264 @@
+/* Estilos comunes de legibilidad para el modulo Padron Interno. */
+
+.padron-page-wrapper,
+.padron-modal {
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.content-wrapper > .content {
+    padding: 0.45rem 0.55rem 0 !important;
+}
+
+.content-wrapper > .content > .container-fluid {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+}
+
+.content-wrapper > .content > .container-fluid > .padron-page-wrapper,
+.content-wrapper > .content > .container-fluid > .establecimientos-wrapper.padron-page-wrapper {
+    max-width: 100% !important;
+    padding: 0.65rem 0.45rem 2rem !important;
+}
+
+.padron-page-wrapper > .container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+@media (max-width: 768px) {
+    .content-wrapper > .content {
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }
+
+    .content-wrapper > .content > .container-fluid > .padron-page-wrapper,
+    .content-wrapper > .content > .container-fluid > .establecimientos-wrapper.padron-page-wrapper {
+        padding: 0.55rem 0.25rem 1.75rem !important;
+    }
+
+    .padron-page-wrapper > .container-fluid {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
+
+.padron-page-wrapper .text-muted,
+.padron-modal .text-muted,
+.padron-page-wrapper .small.text-muted,
+.padron-modal .small.text-muted {
+    color: #374151 !important;
+}
+
+.padron-page-wrapper .form-control,
+.padron-page-wrapper .form-select,
+.padron-page-wrapper input,
+.padron-page-wrapper select,
+.padron-modal .form-control,
+.padron-modal .form-select,
+.padron-modal input,
+.padron-modal select {
+    color: #111827 !important;
+    border-color: #9ca3af !important;
+}
+
+.padron-page-wrapper .form-control::placeholder,
+.padron-page-wrapper input::placeholder,
+.padron-modal .form-control::placeholder,
+.padron-modal input::placeholder {
+    color: #4b5563 !important;
+    opacity: 1 !important;
+}
+
+.padron-page-wrapper .filter-card {
+    border-color: #b7c7dd !important;
+    color: #111827;
+}
+
+.padron-page-wrapper .filter-toolbar {
+    color: #111827;
+}
+
+.padron-page-wrapper .filter-btn-field {
+    color: #0b3763 !important;
+    font-size: 0.9rem !important;
+    border-color: #7fa6d8 !important;
+}
+
+.padron-page-wrapper .filter-btn-field:hover,
+.padron-page-wrapper .filter-btn-field:focus {
+    color: #062f57 !important;
+    border-color: #3f7fc3 !important;
+}
+
+.padron-page-wrapper #pnlColumnas .form-check {
+    border-color: #86a8d4 !important;
+}
+
+.padron-page-wrapper #pnlColumnas .form-check-label,
+.padron-page-wrapper #colCounterLabel {
+    color: #173f66 !important;
+    font-size: 0.86rem !important;
+}
+
+.padron-page-wrapper #liveSearchContainer .input-group-text,
+.padron-page-wrapper #liveSearchContainer .form-select,
+.padron-page-wrapper #liveSearchContainer .form-control,
+.padron-page-wrapper #liveSearchClear {
+    color: #111827 !important;
+    border-color: #9ca3af !important;
+    font-size: 0.86rem !important;
+}
+
+.padron-page-wrapper #liveSearchContainer .input-group-text {
+    color: #374151 !important;
+}
+
+.padron-page-wrapper .dropdown-menu,
+.padron-page-wrapper .dropdown-item,
+.padron-module-nav .dropdown-menu,
+.padron-module-nav .dropdown-item {
+    color: #111827 !important;
+    font-size: 0.92rem;
+}
+
+.padron-page-wrapper .dropdown-item:hover,
+.padron-page-wrapper .dropdown-item:focus,
+.padron-module-nav .dropdown-item:hover,
+.padron-module-nav .dropdown-item:focus {
+    color: #0f3f73 !important;
+    background-color: #e8f0fe !important;
+}
+
+.padron-page-wrapper .select2-container--default .select2-selection--single,
+.padron-page-wrapper .select2-container--default .select2-selection--multiple,
+.padron-modal .select2-container--default .select2-selection--single,
+.padron-modal .select2-container--default .select2-selection--multiple {
+    border-color: #9ca3af !important;
+    color: #111827 !important;
+}
+
+.select2-container--default .select2-results__option {
+    color: #111827 !important;
+    font-size: 0.92rem !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    color: #ffffff !important;
+    background-color: #1a4f8a !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered,
+.select2-container--default .select2-selection--multiple .select2-selection__choice,
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    color: #111827 !important;
+}
+
+.padron-page-wrapper .table-padron {
+    color: #111827 !important;
+    border-color: #aebed2 !important;
+}
+
+.padron-page-wrapper .table-padron th,
+.padron-page-wrapper .table-padron td {
+    border-color: #b9c7d8 !important;
+}
+
+.padron-page-wrapper .table-padron thead th {
+    color: #ffffff !important;
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0;
+}
+
+.padron-page-wrapper .table-padron thead th a,
+.padron-page-wrapper .table-padron thead th span {
+    color: #ffffff !important;
+}
+
+.padron-page-wrapper .table-padron tbody,
+.padron-page-wrapper .table-padron tbody tr,
+.padron-page-wrapper .table-padron tbody td {
+    color: #111827 !important;
+    font-size: 0.92rem !important;
+    line-height: 1.35;
+}
+
+.padron-page-wrapper .table-padron tbody tr.padron-table-loading-row > td,
+.padron-page-wrapper .table-padron tbody tr.padron-table-loading-row > .padron-table-loading-cell {
+    text-align: left !important;
+    vertical-align: middle;
+    padding-left: 0.75rem !important;
+}
+
+.padron-page-wrapper .table-padron tbody tr.padron-table-loading-row .padron-empty-inline,
+.padron-page-wrapper .table-padron tbody tr.padron-table-loading-row .padron-table-loading-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    min-height: 42px;
+    line-height: 1.35;
+    position: sticky;
+    left: 0.75rem;
+    max-width: min(720px, calc(100vw - 3rem));
+}
+
+.padron-page-wrapper .table-padron.table-striped > tbody > tr:nth-of-type(odd) > * {
+    --bs-table-accent-bg: #f3f7fc;
+    color: #111827 !important;
+}
+
+.padron-page-wrapper .table-padron.table-hover > tbody > tr:hover > * {
+    --bs-table-accent-bg: #e7f0fb;
+    color: #111827 !important;
+}
+
+
+.padron-page-wrapper .table-responsive.is-contracted .table-padron th,
+.padron-page-wrapper .table-responsive.is-contracted .table-padron td {
+    font-size: 0.82rem !important;
+    line-height: 1.25;
+}
+
+.padron-modal .modal-title {
+    color: #ffffff !important;
+    font-weight: 800;
+}
+
+.padron-modal .modal-body {
+    color: #111827;
+}
+
+.padron-modal-breadcrumbs,
+.padron-modal-breadcrumbs .crumb-link,
+.padron-modal-breadcrumbs .crumb-sep {
+    color: #374151 !important;
+}
+
+.padron-modal-card {
+    color: #111827;
+    border-color: #b9c7d8 !important;
+}
+
+.padron-detail-table {
+    color: #111827 !important;
+    border-color: #b9c7d8 !important;
+}
+
+.padron-detail-table > :not(caption) > * > * {
+    color: #111827 !important;
+    border-color: #b9c7d8 !important;
+    font-size: 0.9rem;
+}
+
+.padron-detail-table.table-striped > tbody > tr:nth-of-type(odd) > * {
+    --bs-table-accent-bg: #f3f7fc;
+}
+
+.padron-detail-table .padron-label-cell,
+.padron-detail-table > tbody > tr.padron-empty-row > .padron-label-cell {
+    color: #374151 !important;
+    font-weight: 700 !important;
+}
