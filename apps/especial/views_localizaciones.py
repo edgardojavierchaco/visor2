@@ -7,7 +7,6 @@ import time
 import unicodedata
 from datetime import datetime
 from io import BytesIO
-from urllib import request
 
 from django.core.cache import cache
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
@@ -19,11 +18,11 @@ from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
 from .models import (
-    get_todas_las_escuelas_especiales,
+    get_escuelas_especiales_base_queryset,
     normalizar_cueanexo,
 )
 from .permisos import especial_required
-from .views_contexto import resolver_contexto_operativo
+from .views_contexto import contexto_base
 
 
 logger = logging.getLogger(__name__)
@@ -106,6 +105,13 @@ COLUMNAS_VISIBLES_DEFAULT = [
 ]
 
 ONLY_FIELDS_LOCALIZACIONES_ESPECIAL = COLUMNAS_LOCALIZACIONES_ESPECIAL
+SORTABLE_FIELDS_LOCALIZACIONES_ESPECIAL = {col: col for col in COLUMNAS_LOCALIZACIONES_ESPECIAL}
+DEFAULT_ORDER_LOCALIZACIONES_ESPECIAL = (
+    "region_loc",
+    "departamento",
+    "localidad",
+    "cueanexo",
+)
 
 def _get_filter_options(items):
     """Extrae opciones únicas para los filtros desde los items cacheados."""
@@ -170,6 +176,17 @@ def _cache_key_localizaciones_especial(request):
     return f"especial:localizaciones:{CACHE_VERSION_LOCALIZACIONES_ESPECIAL}:user:{user_id}"
 
 
+def _normalizar_orden_localizaciones(orden_param):
+    orden = (orden_param or "").strip()
+    if not orden:
+        return ""
+    signo = "-" if orden.startswith("-") else ""
+    campo = orden[1:] if signo else orden
+    if campo not in SORTABLE_FIELDS_LOCALIZACIONES_ESPECIAL:
+        return ""
+    return f"{signo}{campo}"
+
+
 def _get_items_base_cached(request):
     """Obtiene y serializa las escuelas especiales visibles."""
     started = time.perf_counter()
@@ -183,12 +200,9 @@ def _get_items_base_cached(request):
         _log_perf("_get_items_base_cached hit", started)
         return cached_items
 
-    qs = get_todas_las_escuelas_especiales()
-    try:
-        qs = qs.only(*ONLY_FIELDS_LOCALIZACIONES_ESPECIAL)
-        items = [_serialize_item(item) for item in qs]
-    except Exception:
-        items = [_serialize_item(item) for item in get_todas_las_escuelas_especiales()]
+    qs = get_escuelas_especiales_base_queryset()
+    qs = qs.only(*ONLY_FIELDS_LOCALIZACIONES_ESPECIAL)
+    items = [_serialize_item(item) for item in qs]
 
     cache.set(cache_key, items, CACHE_TTL_LOCALIZACIONES_ESPECIAL)
     _log_perf("_get_items_base_cached miss", started)
@@ -206,7 +220,35 @@ def _contains(value, needle):
     return _normalize_text(needle) in _normalize_text(value)
 
 
-def _apply_filters_list(items, request):
+def _iexact(value, needle):
+    return _normalize_text(value) == _normalize_text(needle)
+
+
+def _compare_text(value, operator, needle):
+    left = _normalize_text(value)
+    right = _normalize_text(needle)
+    return {
+        "3": left > right,
+        "4": left >= right,
+        "5": left < right,
+        "6": left <= right,
+    }.get(operator, False)
+
+
+def _item_matches_operator(item, field_key, operator, value):
+    item_value = item.get(field_key, "")
+    if operator == "1":
+        return not _contains(item_value, value)
+    if operator == "2":
+        return _iexact(item_value, value)
+    if operator in {"3", "4", "5", "6"}:
+        return _compare_text(item_value, operator, value)
+    if operator == "7":
+        return not _iexact(item_value, value)
+    return _contains(item_value, value)
+
+
+def _apply_filters_list(items, request, establecimientos=None):
     """Aplica filtros de búsqueda sobre la lista cacheada."""
     started = time.perf_counter()
     q = request.GET.get("q", "").strip()
@@ -217,15 +259,55 @@ def _apply_filters_list(items, request):
             if any(_contains(item.get(field, ""), q) for field in COLUMNAS_LOCALIZACIONES_ESPECIAL)
         ]
 
-    establecimientos = request.GET.getlist("establecimientos")
+    smart_col = request.GET.get("smart_ui_col", "").strip()
+    smart_val = request.GET.get("smart_ui_val", "").strip()
+    if smart_col in COLUMNAS_LOCALIZACIONES_ESPECIAL and smart_val:
+        items = [item for item in items if _contains(item.get(smart_col, ""), smart_val)]
+
+    if establecimientos is None:
+        establecimientos = {
+            normalizar_cueanexo(value)
+            for value in request.GET.getlist("establecimientos")
+        }
+    else:
+        establecimientos = {normalizar_cueanexo(value) for value in establecimientos}
+    establecimientos.discard("")
     if establecimientos:
-        items = [item for item in items if str(item.get("cueanexo", "")) in establecimientos]
+        items = [
+            item
+            for item in items
+            if normalizar_cueanexo(item.get("cueanexo", "")) in establecimientos
+        ]
 
     for campo in COLUMNAS_LOCALIZACIONES_ESPECIAL:
         value = request.GET.get(campo, "").strip()
         if not value:
             continue
         items = [item for item in items if _contains(item.get(campo, ""), value)]
+
+    campos = request.GET.getlist("campo_filtro")
+    operadores = request.GET.getlist("operador_filtro")
+    valores = request.GET.getlist("valor_filtro")
+    grouped_filters = {}
+    for index, campo in enumerate(campos):
+        campo = campo.strip()
+        valor = valores[index].strip() if index < len(valores) else ""
+        operador = operadores[index].strip() if index < len(operadores) else "0"
+        if not campo or not valor or campo not in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+            continue
+        grouped_filters.setdefault((campo, operador), [])
+        if valor not in grouped_filters[(campo, operador)]:
+            grouped_filters[(campo, operador)].append(valor)
+
+    for (campo, operador), valores_grupo in grouped_filters.items():
+        items = [
+            item
+            for item in items
+            if any(
+                _item_matches_operator(item, campo, operador, valor)
+                for valor in valores_grupo
+            )
+        ]
 
     _log_perf("_apply_filters_list", started)
     return items
@@ -241,24 +323,28 @@ def _sort_key_default(item):
 
 
 def _apply_order_list(items, request):
-    """Ordena los items."""
+    """Ordena la lista filtrada completa antes de paginar."""
     started = time.perf_counter()
-    orden_param = request.GET.get("orden", "region_loc").strip()
-    raw_field = orden_param.lstrip("-")
-    reverse = orden_param.startswith("-")
-
+    orden = _normalizar_orden_localizaciones(request.GET.get("orden", ""))
     ordered_items = sorted(items, key=_sort_key_default)
-    if raw_field in COLUMNAS_LOCALIZACIONES_ESPECIAL:
-        ordered_items = sorted(
-            ordered_items,
-            key=lambda item: _normalize_text(item.get(raw_field, "")),
-            reverse=reverse,
-        )
-        _log_perf("_apply_order_list", started)
-        return ordered_items, orden_param
 
+    if not orden:
+        _log_perf("_apply_order_list", started)
+        return ordered_items, ""
+
+    reverse = orden.startswith("-")
+    campo = orden[1:] if reverse else orden
+    if campo not in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+        _log_perf("_apply_order_list", started)
+        return ordered_items, ""
+
+    ordered_items = sorted(
+        ordered_items,
+        key=lambda item: _normalize_text(item.get(campo, "")),
+        reverse=reverse,
+    )
     _log_perf("_apply_order_list", started)
-    return ordered_items, ""
+    return ordered_items, orden
 
 
 def _get_page_size(request):
@@ -269,14 +355,31 @@ def _get_page_size(request):
     return page_size if page_size in PAGE_SIZE_OPTIONS else PAGE_SIZE
 
 
-def _exportar_excel_especial(datos, request):
+def _resolver_columnas_exportar(request, formato):
+    if formato == "excel_todo":
+        return [(LABELS_COLUMNAS[col], col) for col in COLUMNAS_LOCALIZACIONES_ESPECIAL]
+
+    visibles = {
+        value.strip().replace("-", "_")
+        for value in request.GET.getlist("visible_col")
+        if value.strip()
+    }
+    columnas = [
+        (LABELS_COLUMNAS[col], col)
+        for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
+        if col in visibles
+    ]
+    return columnas or [
+        (LABELS_COLUMNAS[col], col) for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
+    ]
+
+
+def _exportar_excel_especial(datos, request, formato):
     """Genera el archivo Excel."""
     from openpyxl.worksheet.worksheet import Worksheet
     from openpyxl.cell.cell import Cell
     
-    columnas: list[tuple[str, str]] = [
-        (LABELS_COLUMNAS[col], col) for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
-    ]
+    columnas = _resolver_columnas_exportar(request, formato)
 
     wb = Workbook()
     ws = wb.active
@@ -304,8 +407,17 @@ def _exportar_excel_especial(datos, request):
     celda_fecha.font = Font(size=9)
     celda_fecha.alignment = Alignment(horizontal="left", vertical="center")
 
+    ws.merge_cells(f"A3:{ultima_columna}3")
+    ws["A3"] = (
+        "Filtros aplicados: Sin filtros aplicados"
+        if formato == "excel_todo"
+        else "Filtros aplicados desde la vista"
+    )
+    ws["A3"].font = Font(size=9)
+    ws["A3"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
     # Encabezados de columnas
-    header_row: int = 3
+    header_row: int = 4
     for col_idx, (label, _) in enumerate(columnas, start=1):
         cell: Cell = ws.cell(row=header_row, column=col_idx, value=label)
         cell.font = Font(bold=True, size=9)
@@ -316,7 +428,7 @@ def _exportar_excel_especial(datos, request):
         fila: list = [item.get(field, "") for _, field in columnas]
         ws.append(fila)
 
-    ws.freeze_panes = "A4"
+    ws.freeze_panes = "A5"
     max_row: int = ws.max_row or header_row
     rango_filtro: str = f"A{header_row}:{ultima_columna}{max_row}"
     ws.auto_filter.ref = rango_filtro
@@ -338,7 +450,8 @@ def _exportar_excel_especial(datos, request):
     wb.save(output)
     output.seek(0)
 
-    nombre_archivo: str = f"Localizaciones_Especial_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    sufijo = "Filtros" if formato == "excel_pagina" else "Todo"
+    nombre_archivo: str = f"Localizaciones_Especial_{sufijo}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     response = HttpResponse(
         output.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -359,15 +472,32 @@ def visualizacion_localizaciones(request):
     # Obtener opciones de filtros UNA SOLA VEZ
     filter_options = _get_filter_options(base_items)
 
-    if formato == "excel":
-        items = list(base_items)
-        items = _apply_filters_list(items, request)
-        items, orden = _apply_order_list(items, request)
-        return _exportar_excel_especial(items, request)
+    establecimientos_seleccionados = []
+    establecimientos_visibles = {
+        normalizar_cueanexo(item.get("cueanexo", "")) for item in base_items
+    }
+    for value in request.GET.getlist("establecimientos"):
+        normalized = normalizar_cueanexo(value)
+        if normalized in establecimientos_visibles and normalized not in establecimientos_seleccionados:
+            establecimientos_seleccionados.append(normalized)
+    seleccion_establecimientos_explicita = bool(establecimientos_seleccionados)
+
+    if formato == "excel_todo":
+        return _exportar_excel_especial(list(base_items), request, formato)
 
     items = list(base_items)
-    items = _apply_filters_list(items, request)
-    items, orden = _apply_order_list(items, request)
+    if seleccion_establecimientos_explicita:
+        seleccion_set = set(establecimientos_seleccionados)
+        items = [
+            item
+            for item in items
+            if normalizar_cueanexo(item.get("cueanexo", "")) in seleccion_set
+        ]
+    items = _apply_filters_list(items, request, establecimientos=establecimientos_seleccionados)
+    items, orden_actual = _apply_order_list(items, request)
+
+    if formato == "excel_pagina":
+        return _exportar_excel_especial(items, request, formato)
 
     page_size = _get_page_size(request)
     lista_items_total = items
@@ -391,9 +521,6 @@ def visualizacion_localizaciones(request):
     establecimientos_options = list({v['cueanexo']:v for v in establecimientos_options}.values())
     establecimientos_options.sort(key=lambda x: x["cueanexo"])
 
-    establecimientos_seleccionados = request.GET.getlist("establecimientos")
-
-
     columnas_config = [
         {
             "key": col,
@@ -403,18 +530,16 @@ def visualizacion_localizaciones(request):
         }
         for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
     ]
-    import json
     columnas_config_json = json.dumps(columnas_config)
 
-    especial_context = resolver_contexto_operativo(request)
+    context = contexto_base(request, "localizaciones")
+    especial_context = context["especial_context"]
 
-    context = {
-        "title": "Localizaciones Educación Especial",
-        "active_menu": "localizaciones",
-        "especial_context": especial_context,
+    context.update({
         "establecimientos_options": establecimientos_options,
         "establecimientos_seleccionados": establecimientos_seleccionados,
         "total_establecimientos_seleccionados": len(establecimientos_seleccionados),
+        "seleccion_establecimientos_explicita": seleccion_establecimientos_explicita,
         "lista_items": lista_items,
         "localizaciones": lista_items,
         "total_localizaciones": total,
@@ -425,12 +550,13 @@ def visualizacion_localizaciones(request):
         "page_size_options": PAGE_SIZE_OPTIONS,
         "page_obj": page_obj,
         "paginator": paginator,
+        "filter_options": filter_options,
         "columnas": COLUMNAS_LOCALIZACIONES_ESPECIAL,
         "labels_columnas": LABELS_COLUMNAS,
         "columnas_visibles_default": COLUMNAS_VISIBLES_DEFAULT,
         "columnas_config": columnas_config,
         "columnas_config_json": columnas_config_json,
-        "orden": orden,
+        "orden": orden_actual,
         "mostrar_contexto": False,
         "region_loc": sorted(set(item["region_loc"] for item in base_items if item["region_loc"])),
         "departamento": sorted(set(item["departamento"] for item in base_items if item["departamento"])),
@@ -439,11 +565,21 @@ def visualizacion_localizaciones(request):
         "request": request,
         # ✅ AGREGAR ESTO PARA QUE LOS FILTROS FUNCIONEN:
         **filter_options,
-        "filter_options_json": json.dumps(filter_options), 
-    }
+        "smart_search_col": request.GET.get("smart_ui_col", "") or ("all" if request.GET.get("q") else "cueanexo"),
+        "smart_search_value": request.GET.get("smart_ui_val", "") or request.GET.get("q", ""),
+    })
 
     render_started = time.perf_counter()
-    response = render(request, "especial/localizaciones_especial.html", context)
+    is_fragment_request = (
+        request.GET.get("fragmento") == "resultados"
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    )
+    template_name = (
+        "especial/componentes/localizaciones_resultados_especial.html"
+        if is_fragment_request
+        else "especial/localizaciones_especial.html"
+    )
+    response = render(request, template_name, context)
     _log_perf("render final", render_started)
     _log_perf("visualizacion_localizaciones total", view_started)
     return response

@@ -168,7 +168,7 @@ def _asegurar_alumno_banco(alumno, especial_context, user):
 
 @especial_required
 def alumnos(request):
-    context = contexto_base(request, "alumnos", "Alumnos Educación Especial")
+    context = contexto_base(request, "alumnos")
     especial_context = context["especial_context"]
     
     alumno = None

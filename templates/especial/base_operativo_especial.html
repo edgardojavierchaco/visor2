@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+﻿{% extends 'archivos/base/layout.html' %}
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -64,6 +64,74 @@
 })();
 </script>
 <style>
+
+    /* ============================================================
+   MODULE NAV
+   ============================================================ */
+    .cef-module-nav {
+        background: linear-gradient(
+            135deg,
+            var(--blue-900) 0%,
+            var(--blue-950) 100%
+        ) !important;
+        border: 1px solid rgba(147, 197, 253, .18);
+        border-top: 0;
+        border-radius: 0 0 var(--r-md) var(--r-md);
+        box-shadow: none;
+        margin: 0 !important;
+        min-height: 42px;
+        padding: .08rem .7rem;
+    }
+
+    .cef-module-nav .container-fluid {
+        min-width: 0;
+        padding: 0;
+    }
+
+    .cef-module-nav .navbar-brand {
+        color: #fff !important;
+        font-size: var(--fs-md);
+        font-weight: 800;
+        letter-spacing: .04em;
+        margin-right: 0;
+        opacity: .96;
+        padding: .58rem 0;
+    }
+
+    .cef-module-nav .navbar-brand::after {
+        content: "|";
+        margin: 0 .7rem;
+        opacity: .3;
+    }
+
+    .cef-module-nav .nav-link {
+        border-radius: var(--r-sm);
+        color: rgba(255, 255, 255, .72) !important;
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        letter-spacing: 0;
+        padding: .46rem .72rem !important;
+        transition: color .18s ease, background .18s ease;
+    }
+
+    .cef-module-nav .nav-link.active {
+        background: rgba(255, 255, 255, .16);
+        color: #fff !important;
+        font-weight: 800;
+    }
+
+    .cef-module-nav .nav-link:hover {
+        background: rgba(255, 255, 255, .1);
+        color: rgba(255, 255, 255, .94) !important;
+        text-decoration: none;
+    }
+
+    .cef-module-nav .nav-link:focus-visible {
+        box-shadow: 0 0 0 3px rgba(147, 197, 253, .3);
+        outline: none;
+    }
+
+
     /* ============================================================
        DESIGN TOKENS
        ============================================================ */
@@ -157,7 +225,7 @@
         line-height: 1.5;
         margin: 0;
         max-width: none;
-        padding: .9rem 0 2.5rem;
+        padding: .35rem 0 2.5rem;
         width: 100%;
     }
     .cef-wrap select,
@@ -178,105 +246,178 @@
         white-space: nowrap;
     }
     /* ============================================================
-       TOP BAR
+       MODULE HEADER
        ============================================================ */
-    .cef-topbar {
-        align-items: center;
-        background: var(--surface);
-        border-bottom: 1.5px solid var(--border);
+    .especial-module-shell {
+        border-radius: var(--r-md);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, .12);
         display: flex;
-        flex-wrap: wrap;
-        gap: .75rem;
-        justify-content: space-between;
-        margin-bottom: 1rem;
-        padding: 1rem 1.5rem;
-    }
-    .cef-topbar-title {
-        align-items: center;
-        display: flex;
-        gap: .6rem;
-    }
-    .cef-topbar-title h2 {
-        border-left: 4px solid var(--primary);
-        color: var(--slate-900);
-        font-size: var(--fs-xl);
-        font-weight: 800;
-        line-height: 1.15;
-        margin: 0;
-        padding-left: .75rem;
-    }
-    .cef-topbar-sub {
-        color: var(--slate-700);
-        font-size: var(--fs-sm);
-        font-weight: 600;
-        margin-left: calc(.75rem + 4px);
-        margin-top: .15rem;
-    }
-    /* ============================================================
-       MODULE NAV
-       ============================================================ */
-    .cef-module-nav {
-        background: linear-gradient(
-            135deg,
-            var(--blue-900, #0d2748) 0%,
-            var(--blue-950, #071a33) 100%
-        ) !important;
-        border: 1px solid rgba(147, 197, 253, .18);
-        border-bottom: 2px solid var(--blue-600, #2366c4);
-        border-radius: var(--r-md, 10px);
-        box-shadow: var(
-            --shadow-sm,
-            0 1px 4px rgba(15, 23, 42, .13),
-            0 1px 2px rgba(15, 23, 42, .08)
-        );
-        margin-bottom: .95rem;
-        min-height: 48px;
-        padding: .12rem .85rem;
-    }
-    .cef-wrap > .cef-module-nav {
+        flex-direction: column;
+        gap: 0;
         margin: 0 var(--especial-page-gutter);
-        max-width: none;
-    }
-    .cef-module-nav .container-fluid {
-        min-width: 0;
+        overflow: hidden;
         padding: 0;
     }
-    .cef-module-nav .navbar-brand {
-        color: #fff !important;
-        font-size: 1rem;
+
+    .especial-module-shell > .especial-module-hero,
+    .especial-module-shell > .cef-module-nav {
+        flex: 0 0 auto;
+        margin: 0 !important;
+        width: 100%;
+    }
+    .especial-module-hero {
+        background: linear-gradient(
+            135deg,
+            var(--blue-900) 0%,
+            var(--blue-800) 54%,
+            var(--blue-700) 100%
+        );
+        border: 1px solid rgba(255, 255, 255, .16);
+        border-bottom: 0;
+        border-radius: var(--r-md) var(--r-md) 0 0;
+        color: #fff;
+        overflow: hidden;
+        padding: 1.15rem 1.4rem;
+        position: relative;
+    }
+    .especial-module-hero::after {
+        background: rgba(255, 255, 255, .08);
+        border-radius: 999px;
+        content: "";
+        height: 128px;
+        position: absolute;
+        right: -44px;
+        top: -48px;
+        width: 128px;
+    }
+    .especial-module-hero-inner {
+        align-items: center;
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        min-height: 96px;
+        position: relative;
+        z-index: 1;
+    }
+    .especial-module-hero-copy {
+        max-width: 760px;
+        min-width: 0;
+    }
+    .especial-module-hero h1,
+    .especial-module-hero p {
+        position: relative;
+        z-index: 1;
+    }
+    .especial-module-hero h1 {
+        font-size: 1.85rem;
         font-weight: 800;
-        letter-spacing: .04em;
-        margin-right: 0;
-        opacity: .96;
-        padding: .58rem 0;
+        line-height: 1.08;
+        margin: 0 0 .35rem;
     }
-    .cef-module-nav .navbar-brand::after {
-        content: "|";
-        margin: 0 .7rem;
-        opacity: .3;
+    .especial-module-hero p {
+        color: rgba(255, 255, 255, .86);
+        font-size: .92rem;
+        font-weight: 500;
+        margin: 0 0 .6rem;
     }
-    .cef-module-nav .nav-link {
-        border-radius: var(--r-sm);
-        color: rgba(255, 255, 255, .72) !important;
-        font-size: .8125rem;
-        font-weight: 700;
-        letter-spacing: 0;
-        padding: .46rem .72rem !important;
-        transition: color .18s ease, background .18s ease;
+    .especial-module-hero-art {
+        align-items: center;
+        display: flex;
+        flex: 0 0 180px;
+        justify-content: flex-end;
+        min-height: 76px;
+        position: relative;
     }
-    .cef-module-nav .nav-link.active {
-        background: rgba(255, 255, 255, .16);
-        color: #fff !important;
-        font-weight: 800;
+    .especial-module-hero-art::before {
+        background: radial-gradient(
+            circle at 35% 35%,
+            rgba(125, 211, 252, .22) 0 14%,
+            transparent 15% 100%
+        );
+        border: 1px solid rgba(191, 219, 254, .16);
+        border-radius: 999px;
+        content: "";
+        height: 118px;
+        opacity: .95;
+        position: absolute;
+        right: 10px;
+        top: 2px;
+        width: 118px;
     }
-    .cef-module-nav .nav-link:hover {
-        background: rgba(255, 255, 255, .1);
-        color: rgba(255, 255, 255, .94) !important;
-        text-decoration: none;
+    .especial-module-hero-art::after {
+        background:
+            radial-gradient(
+                circle,
+                rgba(255, 255, 255, .92) 0 2.6px,
+                transparent 3px
+            ) 0 0 / 28px 28px,
+            radial-gradient(
+                circle,
+                rgba(255, 255, 255, .34) 0 1px,
+                transparent 1.8px
+            ) 14px 14px / 28px 28px;
+        content: "";
+        height: 88px;
+        mask-image: radial-gradient(circle at center, #000 58%, transparent 100%);
+        opacity: .55;
+        position: absolute;
+        right: 34px;
+        top: 22px;
+        width: 88px;
     }
-    .cef-module-nav .nav-link:focus-visible {
-        box-shadow: 0 0 0 3px rgba(147, 197, 253, .3);
-        outline: none;
+    .especial-module-hero-orbit {
+        border: 2px solid rgba(255, 255, 255, .18);
+        border-radius: 999px;
+        height: 84px;
+        opacity: .9;
+        position: absolute;
+        right: 0;
+        top: 14px;
+        width: 84px;
+    }
+    .especial-module-hero-nodes {
+        align-items: center;
+        display: flex;
+        gap: .55rem;
+        margin-right: 16px;
+        position: relative;
+    }
+    .especial-module-hero-nodes::before {
+        background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, .5),
+            rgba(255, 255, 255, 0)
+        );
+        content: "";
+        height: 2px;
+        left: -20px;
+        opacity: .35;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 72px;
+    }
+    .especial-module-hero-node {
+        border-radius: 999px;
+        box-shadow: 0 0 0 5px rgba(255, 255, 255, .06);
+        display: block;
+        flex: 0 0 auto;
+        opacity: .95;
+    }
+    .especial-module-hero-node.is-lg {
+        background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
+        height: 14px;
+        width: 14px;
+    }
+    .especial-module-hero-node.is-md {
+        background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+        height: 11px;
+        width: 11px;
+    }
+    .especial-module-hero-node.is-sm {
+        background: linear-gradient(135deg, #34d399 0%, #14b8a6 100%);
+        height: 8px;
+        width: 8px;
     }
     /* ============================================================
        MAIN CONTENT AREA
@@ -1059,18 +1200,33 @@
        RESPONSIVE
        ============================================================ */
     @media (max-width: 991.98px) {
+
+        .cef-module-nav {
+            padding: .08rem .6rem;
+        }
         .cef-wrap {
             --especial-page-gutter: .75rem;
         }
         .cef-main {
-            padding: .9rem var(--especial-page-gutter) 0;
+            padding: .75rem var(--especial-page-gutter) 0;
         }
-        .cef-module-nav {
-            padding: .12rem .7rem;
+        .especial-module-hero-inner {
+            gap: .8rem;
         }
-        .cef-wrap > .cef-module-nav {
-            margin-left: var(--especial-page-gutter);
-            margin-right: var(--especial-page-gutter);
+        .especial-module-hero-art {
+            flex-basis: 150px;
+        }
+        .especial-module-hero-art::before {
+            height: 92px;
+            width: 92px;
+        }
+        .especial-module-hero-art::after {
+            height: 68px;
+            width: 68px;
+        }
+        .especial-module-hero-orbit {
+            height: 64px;
+            width: 64px;
         }
         .cef-context-grid {
             grid-template-columns: 1fr;
@@ -1092,6 +1248,23 @@
         }
     }
     @media (max-width: 575.98px) {
+        .especial-module-shell {
+            border-radius: var(--r-sm);
+        }
+        .especial-module-hero {
+            border-radius: var(--r-sm) var(--r-sm) 0 0;
+            padding: .9rem 1rem;
+        }
+        .especial-module-hero-inner {
+            display: block;
+            min-height: 0;
+        }
+        .especial-module-hero-art {
+            display: none;
+        }
+        .especial-module-hero h1 {
+            font-size: 1.45rem;
+        }
         .cef-context-actions,
         .cef-panel-actions,
         .cef-form-actions {
@@ -1109,40 +1282,29 @@
     }
 </style>
 <div class="cef-wrap">
-    <!-- MODULE NAV -->
-    <nav class="navbar navbar-expand-lg navbar-dark cef-module-nav">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'especial:inicio' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Especial</a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#especialDirectorNav" aria-controls="especialDirectorNav" aria-expanded="false" aria-label="Alternar navegación">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="especialDirectorNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link {% if active_menu == 'inicio' %}active{% endif %}" href="{% url 'especial:inicio' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Inicio</a></li>
-                    <li class="nav-item"><a class="nav-link {% if active_menu == 'localizaciones' %}active{% endif %}" href="{% url 'especial:visualizacion_localizaciones' %}">Localizaciones</a></li>
-                    <li class="nav-item"><a class="nav-link {% if active_menu == 'alumnos' %}active{% endif %}" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Alumnos</a></li>
-                    <li class="nav-item"><a class="nav-link {% if active_menu == 'docentes' %}active{% endif %}" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Docentes</a></li>
-                    <li class="nav-item"><a class="nav-link {% if active_menu == 'cueanexo' %}active{% endif %}" href="{% url 'especial:carga_cueanexo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Datos CUE-Anexo</a></li>
-                    <li class="nav-item"><a class="nav-link {% if active_menu == 'secciones' %}active{% endif %}" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Secciones</a></li>
-                    {% if especial_context.es_admin_especial %}
-                        <li class="nav-item"><a class="nav-link {% if active_menu == 'ciclos' %}active{% endif %}" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Ciclos</a></li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
-    <div class="cef-main">
-    <!-- TOP BAR -->
     {% block especial_header %}
-    <div class="cef-topbar">
-        <div class="cef-topbar-title">
-            <div>
-                <h2>{{ title }}</h2>
-                <div class="cef-topbar-sub">{% block especial_subtitle %}Carga operativa por CUE-Anexo y ciclo lectivo.{% endblock %}</div>
+    <section class="especial-module-shell">
+        <header class="especial-module-hero">
+            <div class="especial-module-hero-inner">
+                <div class="especial-module-hero-copy">
+                    <h1>{% block especial_header_title %}{{ especial_header.title|default:"Educación Especial" }}{% endblock %}</h1>
+                    <p>{% block especial_subtitle %}{{ especial_header.subtitle|default:"Gestión institucional, alumnos, docentes, datos CUE-Anexo y secciones." }}{% endblock %}</p>
+                </div>
+                <div class="especial-module-hero-art" aria-hidden="true">
+                    <span class="especial-module-hero-orbit"></span>
+                    <div class="especial-module-hero-nodes">
+                        <span class="especial-module-hero-node is-lg"></span>
+                        <span class="especial-module-hero-node is-md"></span>
+                        <span class="especial-module-hero-node is-sm"></span>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
+        </header>
+        {% include "especial/componentes/nav_operativo_especial.html" %}
+    </section>
     {% endblock %}
+
+    <main class="cef-main">
         {% if messages %}
             <div class="cef-alert-stack">
                 {% for message in messages %}
@@ -1206,6 +1368,6 @@
             </script>
         {% endif %}
         {% block especial_content %}{% endblock %}
-    </div>
+    </main>
 </div>
 {% endblock %}

@@ -16,6 +16,85 @@ from .models import (
 )
 
 
+ESPECIAL_MENU_METADATA = {
+    "inicio": {
+        "title": "Educación Especial",
+        "subtitle": "Gestión institucional, alumnos, docentes, datos CUE-Anexo y secciones.",
+    },
+    "localizaciones": {
+        "title": "Localizaciones",
+        "subtitle": "Consulta institucional desde Padrón, con filtros, columnas y exportación Excel.",
+    },
+    "alumnos": {
+        "title": "Alumnos",
+        "subtitle": "Buscar, consultar y vincular alumnos al módulo Especial.",
+    },
+    "docentes": {
+        "title": "Docentes",
+        "subtitle": "Buscar, consultar y vincular docentes al módulo Especial.",
+    },
+    "cueanexo": {
+        "title": "Datos CUE-Anexo",
+        "subtitle": "Consultar los datos institucionales del establecimiento seleccionado.",
+    },
+    "secciones": {
+        "title": "Secciones",
+        "subtitle": "Administrar secciones, modalidades, turnos, capacidades e inscripciones.",
+    },
+    "ciclos": {
+        "title": "Ciclos",
+        "subtitle": "Administrar ciclos lectivos del módulo Especial.",
+    },
+}
+
+ESPECIAL_MENU_DEFAULT = "inicio"
+
+ESPECIAL_ACCESOS_RAPIDOS = (
+    {
+        "menu": "localizaciones",
+        "url_name": "especial:visualizacion_localizaciones",
+        "icon": "fa-location-dot",
+        "append_querystring": False,
+        "requires_admin": False,
+    },
+    {
+        "menu": "alumnos",
+        "url_name": "especial:alumnos",
+        "icon": "fa-user-graduate",
+        "append_querystring": True,
+        "requires_admin": False,
+    },
+    {
+        "menu": "docentes",
+        "url_name": "especial:docentes",
+        "icon": "fa-chalkboard-user",
+        "append_querystring": True,
+        "requires_admin": False,
+    },
+    {
+        "menu": "cueanexo",
+        "url_name": "especial:carga_cueanexo",
+        "icon": "fa-school",
+        "append_querystring": True,
+        "requires_admin": False,
+    },
+    {
+        "menu": "secciones",
+        "url_name": "especial:carga_seccion",
+        "icon": "fa-people-group",
+        "append_querystring": True,
+        "requires_admin": False,
+    },
+    {
+        "menu": "ciclos",
+        "url_name": "especial:administrar_ciclos",
+        "icon": "fa-calendar-days",
+        "append_querystring": True,
+        "requires_admin": True,
+    },
+)
+
+
 def _clean(valor):
     return str(valor or "").strip()
 
@@ -102,6 +181,39 @@ def _alumnos_url():
         return ""
 
 
+def metadata_menu_especial(active_menu):
+    """Devuelve la metadata visual de la sección activa, con fallback a Inicio."""
+    return ESPECIAL_MENU_METADATA.get(active_menu or "", ESPECIAL_MENU_METADATA[ESPECIAL_MENU_DEFAULT]).copy()
+
+
+def construir_accesos_rapidos_especial(especial_context):
+    """Arma los accesos rápidos de Inicio reutilizando la metadata centralizada."""
+    querystring = especial_context.get("querystring", "")
+    es_admin = bool(especial_context.get("es_admin_especial"))
+    accesos = []
+
+    for acceso in ESPECIAL_ACCESOS_RAPIDOS:
+        if acceso["requires_admin"] and not es_admin:
+            continue
+
+        metadata = metadata_menu_especial(acceso["menu"])
+        url = reverse(acceso["url_name"])
+        if acceso["append_querystring"] and querystring:
+            url = f"{url}?{querystring}"
+
+        accesos.append(
+            {
+                "menu": acceso["menu"],
+                "url": url,
+                "icon": acceso["icon"],
+                "title": metadata["title"],
+                "subtitle": metadata["subtitle"],
+            }
+        )
+
+    return accesos
+
+
 def resolver_contexto_operativo(request):
     """Resuelve el contexto operativo completo para Especial."""
     cueanexo_options = _especial_options_usuario(request.user)
@@ -124,12 +236,19 @@ def resolver_contexto_operativo(request):
     }
 
 
-def contexto_base(request, active_menu, titulo):
+def contexto_base(request, active_menu, title=None, subtitle=None):
     """Contexto base para todas las vistas de Especial."""
     especial_context = resolver_contexto_operativo(request)
+    metadata = metadata_menu_especial(active_menu)
+    if title is not None:
+        metadata["title"] = title
+    if subtitle is not None:
+        metadata["subtitle"] = subtitle
     return {
-        "title": titulo,
-        "active_menu": active_menu,
+        "title": metadata["title"],
+        "subtitle": metadata["subtitle"],
+        "especial_header": metadata,
+        "active_menu": active_menu or ESPECIAL_MENU_DEFAULT,
         "especial_context": especial_context,
         "request": request,
     }
@@ -137,7 +256,10 @@ def contexto_base(request, active_menu, titulo):
 
 def inicio(request):
     """Pantalla de acceso rápido del módulo Especial."""
-    context = contexto_base(request, "inicio", "Inicio Educación Especial")
+    context = contexto_base(request, "inicio")
+    context["especial_accesos_rapidos"] = construir_accesos_rapidos_especial(
+        context["especial_context"]
+    )
     return render(request, "especial/inicio_especial.html", context)
 
 
