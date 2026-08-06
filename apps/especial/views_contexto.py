@@ -4,6 +4,7 @@
 from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 
 from .models import (
@@ -132,6 +133,12 @@ def contexto_base(request, active_menu, titulo):
         "especial_context": especial_context,
         "request": request,
     }
+
+
+def inicio(request):
+    """Pantalla de acceso rápido del módulo Especial."""
+    context = contexto_base(request, "inicio", "Inicio Educación Especial")
+    return render(request, "especial/inicio_especial.html", context)
 
 
 def datos_establecimiento_items(establecimiento):
