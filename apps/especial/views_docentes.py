@@ -1,5 +1,6 @@
 # apps/especial/views_docentes.py
 # -*- coding: utf-8 -*-
+from multiprocessing import context
 import re
 from urllib.parse import urlencode
 
@@ -12,6 +13,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.shortcuts import get_object_or_404 # Asegúrate de tener este import
+from .forms import EspecialDocenteSeccionForm
 
 from .forms import EspecialBusquedaDocenteForm
 from .models import (
@@ -242,10 +244,111 @@ def docentes(request):
     cuil_error = ""
     docente_en_banco = False
     abrir_modal = request.GET.get("abrir_modal_docente") == "1"
+    url_docentes = _url_docentes(especial_context)
 
     if request.method == "POST":
+        accion = request.POST.get("accion")
+
+        if accion == "asignar_seccion" and especial_context["puede_operar"]:
+            
+            seccion_id = request.POST.get("seccion_id")
+            cuil = request.POST.get("cuil")
+            
+            if not seccion_id or not cuil:
+                if _is_ajax(request):
+                    return JsonResponse({"error": "Faltan datos obligatorios."}, status=400)
+                messages.error(request, "Faltan datos obligatorios.")
+                return redirect(url_docentes)
+
+            try:
+                seccion = SeccionEspecial.objects.get(
+                    pk=seccion_id, 
+                    cueanexo=especial_context["cueanexo"],
+                    ciclo=especial_context["ciclo"]
+                )
+            except SeccionEspecial.DoesNotExist:
+                if _is_ajax(request):
+                    return JsonResponse({"error": "Sección no encontrada."}, status=404)
+                messages.error(request, "Sección no encontrada.")
+                return redirect(url_docentes)
+
+            form_data = request.POST.copy()
+            for campo_extra in ['cuil', 'seccion_id', 'accion', 'cueanexo_contexto', 'ciclo_contexto']:
+                if campo_extra in form_data:
+                    del form_data[campo_extra]
+
+            form = EspecialDocenteSeccionForm(form_data)
+            
+            if form.is_valid():
+                asignacion = form.save(commit=False)
+                asignacion.seccion = seccion
+                asignacion.docente_cuil = cuil
+                asignacion.creado_por = request.user
+                asignacion.actualizado_por = request.user
+                
+                try:
+                    asignacion.save()
+                except ValidationError as e:
+                    if _is_ajax(request):
+                        return JsonResponse({"error": str(e)}, status=400)
+                    messages.error(request, str(e))
+                    return redirect(url_docentes)
+                
+                if _is_ajax(request):
+                    docentes_actualizados = list(_docentes_especial(especial_context))
+                    asignaciones_actualizadas = _asignaciones_por_docente(especial_context, docentes_actualizados)
+                    secciones_disp = list(_secciones_disponibles(especial_context))
+                    
+                    for item in docentes_actualizados:
+                        item.asignaciones_seccion = asignaciones_actualizadas.get(item.docente_cuil, [])
+                        activas = [a for a in item.asignaciones_seccion if a.estado == DocenteSeccion.Estado.ACTIVO]
+                        ids_activas = {a.seccion_id for a in activas}
+                        item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_activas]
+                        item.secciones_bloqueadas = activas
+                        item.url_editar_docente = _url_carga_docente(item.docente_cuil, url_docentes, "Volver a Docentes Especial")
+
+                    ctx_fragmento = {
+                        "docentes": docentes_actualizados,
+                        "especial_context": especial_context,
+                        "secciones_disponibles": secciones_disp,
+                    }
+                    
+                    html_tabla = render_to_string(
+                        "especial/partials/profesores_tabla_especial.html", 
+                        ctx_fragmento, 
+                        request=request
+                    )
+                    
+                    return JsonResponse({
+                        "fragment_html": html_tabla,
+                        "fragment_selector": "[data-cef-fragment='profesores-banco']",
+                        "close_modal": True
+                    })
+                
+                messages.success(request, "Docente asignado correctamente.")
+                return redirect(url_docentes)
+            else:
+                if _is_ajax(request):
+                    ctx_modal = {
+                        "docente_grupo_form": form,
+                        "asignacion_docente_cuil": cuil,
+                        "asignacion_grupo_seleccionado": seccion,
+                        "especial_context": especial_context,
+                    }
+                    modal_html = render_to_string(
+                        "especial/asignar_docente_seccion_modal_especial.html",
+                        ctx_modal,
+                        request=request
+                    )
+                    return JsonResponse({"modal_html": modal_html})
+                
+                for error in form.errors.values():
+                    messages.error(request, " ".join(error))
+                return redirect(url_docentes)
+
         busqueda_form = EspecialBusquedaDocenteForm(request.POST)
         abrir_modal = True
+
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
             docente = _buscar_docente(cuil_buscado)
@@ -272,7 +375,7 @@ def docentes(request):
                     messages.error(request, MSG_BANCO_DOCENTES_PENDIENTE)
                 elif creado:
                     messages.success(request, "Docente agregado al banco de Educación Especial.")
-                    return redirect(_url_docentes(especial_context))
+                    return redirect(url_docentes)
                 else:
                     messages.info(
                         request,
@@ -296,7 +399,6 @@ def docentes(request):
 
     next_url = _url_modal_docentes(especial_context, cuil_buscado)
     url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
-    url_docentes = _url_docentes(especial_context)
     docentes_banco_tabla_pendiente = False
 
     try:
@@ -332,6 +434,8 @@ def docentes(request):
             "Volver a Docentes Especial",
         )
 
+    docente_grupo_form = EspecialDocenteSeccionForm()
+    
     context.update(
         {
             "busqueda_form": busqueda_form,
@@ -348,7 +452,8 @@ def docentes(request):
             "modal_docente_abierto": abrir_modal,
             "modal_action_url": _url_modal_docentes(especial_context),
             "modal_volver_url": url_docentes,
+            "docente_grupo_form": docente_grupo_form,
         }
     )
-    
+
     return render(request, "especial/docentes_especial.html", context)

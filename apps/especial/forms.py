@@ -246,7 +246,19 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        if not self.instance.pk:
+            # Sobrescribir full_clean para excluir docente_cuil
+            original_full_clean = self.instance.full_clean
+            def patched_full_clean(exclude=None, validate_unique=True):
+                exclude = exclude or []
+                if 'docente_cuil' not in exclude:
+                    exclude.append('docente_cuil')
+                return original_full_clean(exclude=exclude, validate_unique=validate_unique)
+            self.instance.full_clean = patched_full_clean
+            
         if not self.is_bound and not getattr(self.instance, "pk", None):
             self.fields["fecha_desde"].initial = timezone.localdate
+            
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
