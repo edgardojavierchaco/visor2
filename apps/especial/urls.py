@@ -7,6 +7,7 @@ from . import (
     views_carga_cueanexo,
     views_carga_seccion,
     views_ciclo,
+    views_contexto,
     views_inscripcion_seccion,
     views_localizaciones,
 )
@@ -17,10 +18,7 @@ urlpatterns = [
     # Entrada del módulo
     path(
         "",
-        RedirectView.as_view(
-            pattern_name="especial:visualizacion_localizaciones",
-            permanent=False,
-        ),
+        views_contexto.inicio,
         name="inicio",
     ),
     path(

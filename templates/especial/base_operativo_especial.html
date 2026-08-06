@@ -135,23 +135,29 @@
        RESET / BASE
        ============================================================ */
     html { overflow-y: scroll; }
-    .content-wrapper { background: #dce7f1; }
+    .content-wrapper,
+    .content-wrapper > .content {
+        background: #f1f4f8;
+    }
     .content-wrapper > .content-header { display: none !important; }
     .content-wrapper > .content > .container-fluid {
         max-width: 100% !important;
-        padding-top: 0 !important;
+        min-width: 0 !important;
+        padding: 0 !important;
     }
     /* ============================================================
        WRAPPER
        ============================================================ */
     .cef-wrap {
+        --especial-page-gutter: clamp(.75rem, 2vw, 1.5rem);
+        background: #f1f4f8;
         color: var(--text-base);
         font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
         font-size: var(--fs-base);
         line-height: 1.5;
         margin: 0;
         max-width: none;
-        padding: 0 0 2.5rem;
+        padding: .9rem 0 2.5rem;
         width: 100%;
     }
     .cef-wrap select,
@@ -182,6 +188,7 @@
         flex-wrap: wrap;
         gap: .75rem;
         justify-content: space-between;
+        margin-bottom: 1rem;
         padding: 1rem 1.5rem;
     }
     .cef-topbar-title {
@@ -209,57 +216,75 @@
        MODULE NAV
        ============================================================ */
     .cef-module-nav {
-        background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-950) 100%) !important;
-        border-bottom: 2px solid var(--blue-600);
-        border-radius: 0;
-        box-shadow: 0 2px 8px rgba(7,26,51,.35);
-        margin-bottom: 0;
-        min-height: 46px;
-        padding: 0 1.5rem;
+        background: linear-gradient(
+            135deg,
+            var(--blue-900, #0d2748) 0%,
+            var(--blue-950, #071a33) 100%
+        ) !important;
+        border: 1px solid rgba(147, 197, 253, .18);
+        border-bottom: 2px solid var(--blue-600, #2366c4);
+        border-radius: var(--r-md, 10px);
+        box-shadow: var(
+            --shadow-sm,
+            0 1px 4px rgba(15, 23, 42, .13),
+            0 1px 2px rgba(15, 23, 42, .08)
+        );
+        margin-bottom: .95rem;
+        min-height: 48px;
+        padding: .12rem .85rem;
     }
-    .cef-module-nav .container-fluid { padding: 0; }
+    .cef-wrap > .cef-module-nav {
+        margin: 0 var(--especial-page-gutter);
+        max-width: none;
+    }
+    .cef-module-nav .container-fluid {
+        min-width: 0;
+        padding: 0;
+    }
     .cef-module-nav .navbar-brand {
         color: #fff !important;
-        font-size: var(--fs-md);
+        font-size: 1rem;
         font-weight: 800;
         letter-spacing: .04em;
         margin-right: 0;
-        opacity: .95;
-        padding: .55rem 0;
+        opacity: .96;
+        padding: .58rem 0;
     }
     .cef-module-nav .navbar-brand::after {
         content: "|";
-        margin: 0 .65rem;
+        margin: 0 .7rem;
         opacity: .3;
     }
     .cef-module-nav .nav-link {
         border-radius: var(--r-sm);
-        color: rgba(255,255,255,.65) !important;
-        font-size: var(--fs-sm);
-        font-weight: 600;
-        letter-spacing: .01em;
-        padding: .45rem .7rem !important;
+        color: rgba(255, 255, 255, .72) !important;
+        font-size: .8125rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        padding: .46rem .72rem !important;
         transition: color .18s ease, background .18s ease;
     }
     .cef-module-nav .nav-link.active {
-        background: rgba(255,255,255,.14);
+        background: rgba(255, 255, 255, .16);
         color: #fff !important;
-        font-weight: 700;
+        font-weight: 800;
     }
     .cef-module-nav .nav-link:hover {
-        background: rgba(255,255,255,.09);
-        color: rgba(255,255,255,.9) !important;
+        background: rgba(255, 255, 255, .1);
+        color: rgba(255, 255, 255, .94) !important;
         text-decoration: none;
     }
     .cef-module-nav .nav-link:focus-visible {
-        box-shadow: 0 0 0 3px rgba(147,197,253,.3);
+        box-shadow: 0 0 0 3px rgba(147, 197, 253, .3);
         outline: none;
     }
     /* ============================================================
        MAIN CONTENT AREA
        ============================================================ */
     .cef-main {
-        padding: 1.25rem 0 0;
+        margin: 0;
+        max-width: none;
+        padding: 1rem var(--especial-page-gutter) 0;
     }
     /* ============================================================
        ALERTS
@@ -1034,9 +1059,19 @@
        RESPONSIVE
        ============================================================ */
     @media (max-width: 991.98px) {
-        .cef-main { padding: .9rem 0 0; }
-        .cef-topbar { padding: .85rem .9rem; }
-        .cef-module-nav { padding: 0 .9rem; }
+        .cef-wrap {
+            --especial-page-gutter: .75rem;
+        }
+        .cef-main {
+            padding: .9rem var(--especial-page-gutter) 0;
+        }
+        .cef-module-nav {
+            padding: .12rem .7rem;
+        }
+        .cef-wrap > .cef-module-nav {
+            margin-left: var(--especial-page-gutter);
+            margin-right: var(--especial-page-gutter);
+        }
         .cef-context-grid {
             grid-template-columns: 1fr;
         }
@@ -1074,24 +1109,16 @@
     }
 </style>
 <div class="cef-wrap">
-    <!-- TOP BAR -->
-    <div class="cef-topbar">
-        <div class="cef-topbar-title">
-            <div>
-                <h2>{{ title }}</h2>
-                <div class="cef-topbar-sub">{% block especial_subtitle %}Carga operativa por CUE-Anexo y ciclo lectivo.{% endblock %}</div>
-            </div>
-        </div>
-    </div>
     <!-- MODULE NAV -->
     <nav class="navbar navbar-expand-lg navbar-dark cef-module-nav">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'especial:visualizacion_localizaciones' %}">Especial</a>
+            <a class="navbar-brand" href="{% url 'especial:inicio' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Especial</a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#especialDirectorNav" aria-controls="especialDirectorNav" aria-expanded="false" aria-label="Alternar navegación">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="especialDirectorNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link {% if active_menu == 'inicio' %}active{% endif %}" href="{% url 'especial:inicio' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Inicio</a></li>
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'localizaciones' %}active{% endif %}" href="{% url 'especial:visualizacion_localizaciones' %}">Localizaciones</a></li>
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'alumnos' %}active{% endif %}" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Alumnos</a></li>
                     <li class="nav-item"><a class="nav-link {% if active_menu == 'docentes' %}active{% endif %}" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Docentes</a></li>
@@ -1105,6 +1132,17 @@
         </div>
     </nav>
     <div class="cef-main">
+    <!-- TOP BAR -->
+    {% block especial_header %}
+    <div class="cef-topbar">
+        <div class="cef-topbar-title">
+            <div>
+                <h2>{{ title }}</h2>
+                <div class="cef-topbar-sub">{% block especial_subtitle %}Carga operativa por CUE-Anexo y ciclo lectivo.{% endblock %}</div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
         {% if messages %}
             <div class="cef-alert-stack">
                 {% for message in messages %}
