@@ -41,7 +41,7 @@ def _exigir_admin(request):
 def administrar_ciclos(request):
     """Vista para administrar ciclos lectivos (solo administradores)."""
     _exigir_admin(request)
-    context = contexto_base(request, "ciclos", "Ciclos lectivos Educación Especial")
+    context = contexto_base(request, "ciclos")
     especial_context = context["especial_context"]
 
     if request.method == "POST":

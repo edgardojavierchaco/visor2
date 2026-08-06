@@ -6,82 +6,6 @@
 {% url 'especial:carga_seccion' as especial_secciones_url %}
 {% url 'especial:administrar_ciclos' as especial_ciclos_url %}
 
-<style id="cef-module-nav-style">
-    .cef-module-nav {
-        background: linear-gradient(135deg, var(--blue-900, #0d2748) 0%, var(--blue-950, #071a33) 100%) !important;
-        border: 1px solid rgba(147,197,253,.18);
-        border-bottom: 2px solid var(--blue-600, #2366c4);
-        border-radius: var(--r-md, 10px);
-        box-shadow: var(--shadow-sm, 0 1px 4px rgba(15,23,42,.13), 0 1px 2px rgba(15,23,42,.08));
-        margin-bottom: .95rem;
-        min-height: 48px;
-        padding: .12rem .85rem;
-    }
-
-    .cef-wrap > .cef-module-nav {
-        margin: .9rem 0 0;
-    }
-
-    .cef-module-nav .container-fluid {
-        min-width: 0;
-        padding: 0;
-    }
-
-    .cef-module-nav .navbar-brand {
-        color: #fff !important;
-        font-size: var(--fs-md, .9375rem);
-        font-weight: 800;
-        letter-spacing: .04em;
-        margin-right: 0;
-        opacity: .96;
-        padding: .58rem 0;
-    }
-
-    .cef-module-nav .navbar-brand::after {
-        content: "|";
-        margin: 0 .7rem;
-        opacity: .3;
-    }
-
-    .cef-module-nav .nav-link {
-        border-radius: var(--r-sm, 6px);
-        color: rgba(255,255,255,.72) !important;
-        font-size: var(--fs-sm, .8125rem);
-        font-weight: 700;
-        letter-spacing: 0;
-        padding: .46rem .72rem !important;
-        transition: color .18s ease, background .18s ease;
-    }
-
-    .cef-module-nav .nav-link.active {
-        background: rgba(255,255,255,.16);
-        color: #fff !important;
-        font-weight: 800;
-    }
-
-    .cef-module-nav .nav-link:hover {
-        background: rgba(255,255,255,.1);
-        color: rgba(255,255,255,.94) !important;
-        text-decoration: none;
-    }
-
-    .cef-module-nav .nav-link:focus-visible {
-        box-shadow: 0 0 0 3px rgba(147,197,253,.3);
-        outline: none;
-    }
-
-    @media (max-width: 991.98px) {
-        .cef-module-nav {
-            padding: .12rem .7rem;
-        }
-
-        .cef-wrap > .cef-module-nav {
-            margin-left: 0;
-            margin-right: 0;
-        }
-    }
-</style>
-
 <nav class="navbar navbar-expand-lg navbar-dark cef-module-nav" aria-label="Navegación interna Especial">
     <div class="container-fluid">
         <a class="navbar-brand" href="{{ especial_inicio_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Especial</a>
@@ -90,16 +14,27 @@
         </button>
         <div class="collapse navbar-collapse" id="especialDirectorNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                
-                {% if especial_context %}
-                    {% if especial_context.es_admin_especial %}
-                        <li class="nav-item">
-                            <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ especial_ciclos_url }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Ciclos</a>
-                        </li>
-                    {% endif %}
-                {% elif es_admin_especial %}
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'inicio' %} active{% endif %}" href="{{ especial_inicio_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'localizaciones' %} active{% endif %}" href="{{ especial_localizaciones_url }}">Localizaciones</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ especial_alumnos_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Alumnos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'docentes' %} active{% endif %}" href="{{ especial_docentes_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Docentes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'cueanexo' %} active{% endif %}" href="{{ especial_cueanexo_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Datos CUE-Anexo</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'secciones' %} active{% endif %}" href="{{ especial_secciones_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Secciones</a>
+                </li>
+                {% if especial_context and especial_context.es_admin_especial %}
                     <li class="nav-item">
-                        <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ especial_ciclos_url }}">Ciclos</a>
+                        <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ especial_ciclos_url }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Ciclos</a>
                     </li>
                 {% endif %}
             </ul>

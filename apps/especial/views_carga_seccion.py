@@ -66,7 +66,7 @@ def _seccion_segura(seccion_id, especial_context):
 @especial_required
 def carga_seccion(request):
     """Vista principal de gestión de secciones."""
-    context = contexto_base(request, "secciones", "Secciones Educación Especial")
+    context = contexto_base(request, "secciones")
     especial_context = context["especial_context"]
 
     if request.GET.get("accion") == "agregar":
@@ -103,7 +103,7 @@ def _guardar_seccion(form, especial_context, user):
 @especial_required
 def carga_seccion_form(request, seccion_id=None):
     """Formulario de creación/edición de sección."""
-    context = contexto_base(request, "secciones", "Secciones Educación Especial")
+    context = contexto_base(request, "secciones")
     especial_context = context["especial_context"]
 
     if not especial_context["puede_operar"]:

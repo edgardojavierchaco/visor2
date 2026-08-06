@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
 
-{# Estilos propios de la pantalla de Localizaciones CEF. #}
+{# Estilos propios de la pantalla de Localizaciones Especial. #}
 <style id="cef-localizaciones-padron-style">
     
 
@@ -129,7 +129,7 @@
         max-width: 100%;
         min-width: 0;
         margin: 0 auto;
-        padding: 1.1rem 0.9rem 2.5rem;
+        padding: 1.1rem 0 2.5rem;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
@@ -410,6 +410,7 @@
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: .04em;
+        margin-bottom: .35rem;
     }
 
     .cef-selector-copy strong {
@@ -1504,25 +1505,57 @@
         display: block;
     }
 
+    .padron-columns-grid {
+        display: grid;
+        gap: .6rem .75rem;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .padron-columns-item {
+        min-width: 0;
+    }
+
     #pnlColumnas .form-check {
+        align-items: center !important;
+        background: #fff !important;
+        border: 1px solid #d8e2ef !important;
+        border-radius: .55rem !important;
+        column-gap: .6rem !important;
+        cursor: pointer !important;
         display: grid !important;
-        grid-template-columns: 1.25rem minmax(0, 1fr) !important;
-        align-items: start !important;
-        column-gap: 0.55rem !important;
-        min-height: 36px !important;
+        grid-template-columns: 1.2rem minmax(0, 1fr) !important;
         width: 100% !important;
         margin: 0 !important;
-        padding: 0.48rem 0.58rem !important;
-        border: 1px solid #d8e2ef !important;
-        border-radius: 0.55rem !important;
-        background: #fff !important;
-        cursor: pointer !important;
+        min-height: 44px !important;
+        padding: .55rem .7rem !important;
+        transition:
+            background-color .16s ease,
+            border-color .16s ease,
+            box-shadow .16s ease !important;
+        box-sizing: border-box !important;
     }
 
     #pnlColumnas .form-check:hover {
-        background: #f4f8ff !important;
-        border-color: #aec6e8 !important;
-        box-shadow: none !important;
+        background: #f8fbff !important;
+        border-color: #bfdbfe !important;
+    }
+
+    #pnlColumnas .form-check:has(.toggle-col:checked) {
+        background: linear-gradient(180deg, #f5f9ff 0%, #edf5ff 100%) !important;
+        border-color: #93c5fd !important;
+        box-shadow:
+            inset 0 0 0 1px rgba(45, 125, 210, .08),
+            0 2px 8px rgba(45, 125, 210, .08) !important;
+    }
+
+    #pnlColumnas .form-check:has(.toggle-col:checked):hover {
+        background: #eaf3ff !important;
+        border-color: #60a5fa !important;
+    }
+
+    #pnlColumnas .form-check:focus-within {
+        border-color: #2e7bd4 !important;
+        box-shadow: 0 0 0 3px rgba(45, 125, 210, .16) !important;
     }
 
     #pnlColumnas .form-check-input {
@@ -1530,22 +1563,70 @@
         position: static !important;
         width: 1.08rem !important;
         height: 1.08rem !important;
-        margin: 0.12rem 0 0 0 !important;
+        margin: 0 !important;
         cursor: pointer !important;
     }
 
     #pnlColumnas .form-check-label {
-        display: block !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        margin: 0 !important;
         color: #29435a !important;
+        cursor: pointer !important;
+        display: block !important;
         font-size: var(--text-xs) !important;
         font-weight: 700 !important;
         line-height: 1.25 !important;
-        cursor: pointer !important;
-        user-select: none !important;
+        margin: 0 !important;
+        min-width: 0 !important;
         overflow-wrap: anywhere !important;
+        user-select: none !important;
+        width: 100% !important;
+        text-align: left !important;
+    }
+
+    #pnlColumnas .form-check:has(.toggle-col:checked) .form-check-label {
+        color: #0f2d52 !important;
+        font-weight: 700 !important;
+    }
+
+    .padron-columns-footer {
+        align-items: center;
+        border-top: 1px solid #dbe4ef;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem 1rem;
+        justify-content: space-between;
+        margin-top: 1rem;
+        padding-top: .85rem;
+    }
+
+    .padron-columns-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+    }
+
+    .padron-columns-actions .btn {
+        margin: 0 !important;
+        min-height: 36px;
+        padding: .42rem .78rem;
+    }
+
+    @media (max-width: 1199.98px) {
+        .padron-columns-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .padron-columns-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 479.98px) {
+        .padron-columns-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .results-bar {
@@ -1630,7 +1711,9 @@
         font-weight: 700;
         text-transform: none;
         border-color: #1a5a99;
-        white-space: nowrap !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: normal;
         text-align: center !important;
         vertical-align: middle !important;
     }
@@ -1639,6 +1722,8 @@
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        flex-wrap: wrap;
+        gap: .15rem .35rem;
         width: 100% !important;
         min-height: 1.4rem !important;
         margin: 0 !important;
@@ -1646,6 +1731,13 @@
         text-align: center !important;
         color: #fff !important;
         text-decoration: none;
+    }
+
+    .table-padron thead th a:focus-visible {
+        border-radius: .35rem;
+        box-shadow: 0 0 0 3px rgba(191, 219, 254, .34);
+        outline: 2px solid #fff;
+        outline-offset: 2px;
     }
 
     .table-padron thead th a:hover {
@@ -1676,6 +1768,11 @@
 
     .table-padron tbody td {
         text-align: center !important;
+    }
+
+    .table-padron .text-start {
+        text-align: center !important;
+        padding-left: 12px !important;
     }
 
     .table-padron thead th.col-nom-est,
@@ -1862,10 +1959,19 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: .8rem;
     }
 
     .pageSizeSelector {
         width: 82px !important;
+        padding-left: .35rem;
+        padding-right: .35rem;
+        text-align: center;
+        text-align-last: center;
+    }
+
+    .psize-container > span {
+        margin-right: 0 !important;
     }
 
     .pagination .page-link {
@@ -3147,20 +3253,17 @@
         box-shadow: 0 2px 8px rgba(15,23,42,.16);
     }
 
-    #pnlColumnas .form-check,
     .filter-dialog-check {
         background: #ffffff !important;
         border-color: #cbd5e1 !important;
         color: #1e293b !important;
     }
 
-    #pnlColumnas .form-check:hover,
     .filter-dialog-check:hover {
         background: #e8eef6 !important;
         border-color: #94a3b8 !important;
     }
 
-    #pnlColumnas .form-check-label,
     .filter-dialog-check span {
         color: #1e293b !important;
         font-weight: 700 !important;
@@ -3289,7 +3392,7 @@
                 <div id="headerActions" class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
                     <div class="search-slot">
                         <div id="liveSearchContainer" class="input-group input-group-sm">
-                            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <span class="input-group-text">🔍</span>
                             <span class="live-search-select-wrap">
                                 <select id="liveSearchSelect" class="form-select form-select-sm" aria-label="Campo de búsqueda">
                                     {% for column in columnas_config %}
@@ -3321,7 +3424,7 @@
             </div>
 
             <form id="filterForm" method="get">
-                {% for cueanexo in cueanexos_seleccionados_explicitos %}
+                {% for cueanexo in establecimientos_seleccionados %}
                     <input type="hidden" name="establecimientos" value="{{ cueanexo }}">
                 {% endfor %}
                 <input type="hidden" name="page" value="1">
@@ -3351,10 +3454,6 @@
                         </div>
                     </div>
 
-                    {# Datos JSON precargados para que los filtros y el selector funcionen sin pedir otra vista. #}
-                    <script type="application/json" id="cefOptionsData">{{ cef_options_json|default:"[]"|safe }}</script>
-                    <script type="application/json" id="cefFilterOptionsData">{{ filter_options_json|default:"{}"|safe }}</script>
-
                     {# Ajustes visuales especificos del selector multiple de CEF. #}
                     <style id="cef-selector-multiple-base-style">
                         .cef-selector-shell {
@@ -3383,6 +3482,7 @@
                             font-weight: 800;
                             text-transform: uppercase;
                             letter-spacing: .04em;
+                            margin-bottom: .35rem;
                         }
 
                         .cef-selector-copy strong {
@@ -3489,7 +3589,7 @@
                         }
                     </style>
 
-                    {# Selector multiple de CEF; conserva el resto de parametros GET al aplicar seleccion. #}
+                    {# Selector multiple de establecimientos; conserva el resto de parametros GET al aplicar seleccion. #}
                     <section id="cefSelectorShell" class="cef-selector-shell mb-3">
                         <form method="get" id="cefSelectorForm" class="cef-selector-form">
                             {% for key, values in request.GET.lists %}
@@ -3502,7 +3602,7 @@
 
                             <div class="cef-selector-layout">
                                 <div class="cef-selector-copy">
-                                    <span class="cef-selector-kicker"> Establecimiento</span>
+                                    <span class="cef-selector-kicker">Establecimiento Especial</span>
                                     <strong>
                                         {% if total_establecimientos_seleccionados > 0 %}
                                             {{ total_establecimientos_seleccionados }} seleccionados
@@ -3515,7 +3615,7 @@
 
                                 <div class="cef-selector-control" data-cef-initial-display="{% if total_establecimientos_seleccionados > 0 %}{{ total_establecimientos_seleccionados }} establecimientos seleccionados{% else %}Todos los establecimientos{% endif %}">
                                     <label for="cefSelectorSelect">
-                                        <i class="fa-solid fa-school me-1"></i> Establecimiento
+                                        <i class="fa-solid fa-school me-1"></i> Establecimiento Especial
                                     </label>
                                     <select id="cefSelectorSelect" name="establecimientos" multiple="multiple" class="form-select cef-selector-select" data-placeholder="Todos los establecimientos">
                                         {% for est in establecimientos_options %}
@@ -3528,16 +3628,6 @@
                                     </select>
                                 </div>
 
-                                {% if not selector_cef_usa_explicitos %}
-                                <div class="cef-selector-actions">
-                                    <button type="submit" class="btn btn-primary btn-sm cef-selector-submit">
-                                        <i class="fa-solid fa-filter me-1"></i>Aplicar
-                                    </button>
-                                    <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm cef-selector-clear">
-                                        Todos
-                                    </a>
-                                </div>
-                                {% endif %}
                             </div>
                         </form>
                     </section>
@@ -3553,9 +3643,9 @@
                     </div>
 
                     <div id="pnlColumnas" class="mt-3">
-                        <div class="row g-2">
+                        <div class="padron-columns-grid">
                             {% for column in columnas_config %}
-                                <div class="col-6 col-md-3 col-xl-2">
+                                <div class="padron-columns-item">
                                     <div class="form-check">
                                         <input class="form-check-input toggle-col" type="checkbox" id="chk-{{ column.slug }}" data-column="col-{{ column.slug }}" {% if column.default %}checked{% endif %}>
                                         <label class="form-check-label" for="chk-{{ column.slug }}">{{ column.label }}</label>
@@ -3563,8 +3653,8 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 border-top pt-2">
-                            <div class="d-flex flex-wrap gap-2">
+                        <div class="padron-columns-footer">
+                            <div class="padron-columns-actions">
                                 <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" id="btnRestaurarCols">
                                     <i class="fa-solid fa-check-double me-1"></i>Todas
                                 </button>
@@ -3580,150 +3670,7 @@
                     </div>
                 </div>
 
-            <div class="d-flex align-items-center justify-content-between results-bar" style="margin-bottom: 0 !important;">
-                <span>
-                    <i class="fa-solid fa-table me-1 text-muted"></i>
-                    <strong>Resultados:</strong> Mostrando Localizaciones {{ resultado_desde|default:0 }}-{{ resultado_hasta|default:0 }} de {{ resultado_total|default:0 }}.
-                </span>
-                <span id="colCounterTopLabel" class="badge bg-secondary text-white shadow-sm" style="font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.6rem;"></span>
-            </div>
-
-            <div id="serverBadgesContainer" style="min-height: 0; margin-top: 4px; margin-bottom: 8px;" class="d-flex flex-wrap align-items-center gap-1"></div>
-
-            {# Tabla principal: las clases col-* se usan tambien para mostrar/ocultar columnas desde JS. #}
-            <div class="table-shell">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle table-padron">
-                        <thead>
-                            <tr>
-                                <th class="col-cueanexo" data-dbcol="cueanexo"><a href='?{% query_transform request orden="cueanexo" page=1 %}'>CUE-Anexo</a></th>
-                                <th class="col-nom-est text-start" data-dbcol="nom_est"><a href='?{% query_transform request orden="nom_est" page=1 %}'>Establecimiento</a></th>
-                                <th class="col-oferta text-start" data-dbcol="oferta"><a href='?{% query_transform request orden="oferta" page=1 %}'>Oferta</a></th>
-                                <th class="col-ambito" data-dbcol="ambito"><a href='?{% query_transform request orden="ambito" page=1 %}'>Ámbito</a></th>
-                                <th class="col-sector" data-dbcol="sector"><a href='?{% query_transform request orden="sector" page=1 %}'>Sector</a></th>
-                                <th class="col-region-loc" data-dbcol="region_loc"><a href='?{% query_transform request orden="region_loc" page=1 %}'>Región</a></th>
-                                <th class="col-ref-loc text-start" data-dbcol="ref_loc"><a href='?{% query_transform request orden="ref_loc" page=1 %}'>Referencia localización</a></th>
-                                <th class="col-calle text-start" data-dbcol="calle"><a href='?{% query_transform request orden="calle" page=1 %}'>Calle</a></th>
-                                <th class="col-numero" data-dbcol="numero"><a href='?{% query_transform request orden="numero" page=1 %}'>Número</a></th>
-                                <th class="col-localidad" data-dbcol="localidad"><a href='?{% query_transform request orden="localidad" page=1 %}'>Localidad</a></th>
-                                <th class="col-departamento" data-dbcol="departamento"><a href='?{% query_transform request orden="departamento" page=1 %}'>Departamento</a></th>
-                                <th class="col-estado-loc" data-dbcol="estado_loc"><a href='?{% query_transform request orden="estado_loc" page=1 %}'>Estado localización</a></th>
-                                <th class="col-est-oferta" data-dbcol="est_oferta"><a href='?{% query_transform request orden="est_oferta" page=1 %}'>Estado oferta</a></th>
-                                <th class="col-estado-est" data-dbcol="estado_est"><a href='?{% query_transform request orden="estado_est" page=1 %}'>Estado establecimiento</a></th>
-                                <th class="col-resploc-cuitcuil" data-dbcol="resploc_cuitcuil"><a href='?{% query_transform request orden="resploc_cuitcuil" page=1 %}'>CUIL/CUIT responsable</a></th>
-                                <th class="col-resploc-doc" data-dbcol="resploc_doc"><a href='?{% query_transform request orden="resploc_doc" page=1 %}'>Documento responsable</a></th>
-                                <th class="col-apellido-resp text-start" data-dbcol="apellido_resp"><a href='?{% query_transform request orden="apellido_resp" page=1 %}'>Apellido responsable</a></th>
-                                <th class="col-nombre-resp text-start" data-dbcol="nombre_resp"><a href='?{% query_transform request orden="nombre_resp" page=1 %}'>Nombre responsable</a></th>
-                                <th class="col-resploc-email text-start" data-dbcol="resploc_email"><a href='?{% query_transform request orden="resploc_email" page=1 %}'>Email responsable</a></th>
-                                <th class="col-resploc-telefono text-start" data-dbcol="resploc_telefono"><a href='?{% query_transform request orden="resploc_telefono" page=1 %}'>Teléfono responsable</a></th>
-                                <th class="col-sup-tecnico text-start" data-dbcol="sup_tecnico"><a href='?{% query_transform request orden="sup_tecnico" page=1 %}'>Supervisor técnico</a></th>
-                                <th class="col-email-suptecnico text-start" data-dbcol="email_suptecnico"><a href='?{% query_transform request orden="email_suptecnico" page=1 %}'>Email supervisor técnico</a></th>
-                                <th class="col-tel-suptecnico text-start" data-dbcol="tel_suptecnico"><a href='?{% query_transform request orden="tel_suptecnico" page=1 %}'>Teléfono supervisor técnico</a></th>
-                                <th class="col-categoria" data-dbcol="categoria"><a href='?{% query_transform request orden="categoria" page=1 %}'>Categoría</a></th>
-                                <th class="col-jornada" data-dbcol="jornada"><a href='?{% query_transform request orden="jornada" page=1 %}'>Jornada</a></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in lista_items %}
-                                <tr>
-                                    <td class="col-cueanexo"><strong>{{ item.cueanexo|default:"" }}</strong></td>
-                                    <td class="col-nom-est text-start">{{ item.nom_est|default:"Sin dato" }}</td>
-                                    <td class="col-oferta text-start">{{ item.oferta|default:"Sin dato" }}</td>
-                                    <td class="col-ambito">{{ item.ambito|default:"Sin dato" }}</td>
-                                    <td class="col-sector">{{ item.sector|default:"Sin dato" }}</td>
-                                    <td class="col-region-loc">{{ item.region_loc|default:"Sin dato" }}</td>
-                                    <td class="col-ref-loc text-start">{{ item.ref_loc|default:"Sin dato" }}</td>
-                                    <td class="col-calle text-start">{{ item.calle|default:"Sin dato" }}</td>
-                                    <td class="col-numero">{{ item.numero|default:"Sin dato" }}</td>
-                                    <td class="col-localidad">{{ item.localidad|default:"Sin dato" }}</td>
-                                    <td class="col-departamento">{{ item.departamento|default:"Sin dato" }}</td>
-                                    <td class="col-estado-loc">
-                                        {% if item.estado_loc %}
-                                            <span class="estado-pill {% if item.estado_loc == 'Baja' %}estado-pill-baja{% else %}estado-pill-activo{% endif %}">{{ item.estado_loc }}</span>
-                                        {% else %}
-                                            Sin dato
-                                        {% endif %}
-                                    </td>
-                                    <td class="col-est-oferta">
-                                        {% if item.est_oferta %}
-                                            <span class="estado-pill {% if item.est_oferta == 'Baja' %}estado-pill-baja{% else %}estado-pill-activo{% endif %}">{{ item.est_oferta }}</span>
-                                        {% else %}
-                                            Sin dato
-                                        {% endif %}
-                                    </td>
-                                    <td class="col-estado-est">
-                                        {% if item.estado_est %}
-                                            <span class="estado-pill {% if item.estado_est == 'Baja' %}estado-pill-baja{% else %}estado-pill-activo{% endif %}">{{ item.estado_est }}</span>
-                                        {% else %}
-                                            Sin dato
-                                        {% endif %}
-                                    </td>
-                                    <td class="col-resploc-cuitcuil">{{ item.resploc_cuitcuil|default:"Sin dato" }}</td>
-                                    <td class="col-resploc-doc">{{ item.resploc_doc|default:"Sin dato" }}</td>
-                                    <td class="col-apellido-resp text-start">{{ item.apellido_resp|default:"Sin dato" }}</td>
-                                    <td class="col-nombre-resp text-start">{{ item.nombre_resp|default:"Sin dato" }}</td>
-                                    <td class="col-resploc-email text-start">{{ item.resploc_email|default:"Sin dato" }}</td>
-                                    <td class="col-resploc-telefono text-start">{{ item.resploc_telefono|default:"Sin dato" }}</td>
-                                    <td class="col-sup-tecnico text-start">{{ item.sup_tecnico|default:"Sin dato" }}</td>
-                                    <td class="col-email-suptecnico text-start">{{ item.email_suptecnico|default:"Sin dato" }}</td>
-                                    <td class="col-tel-suptecnico text-start">{{ item.tel_suptecnico|default:"Sin dato" }}</td>
-                                    <td class="col-categoria">{{ item.categoria|default:"Sin dato" }}</td>
-                                    <td class="col-jornada">{{ item.jornada|default:"Sin dato" }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr class="padron-table-empty-row">
-                                    <td colspan="25">
-                                        <span class="padron-empty-inline">
-                                            <i class="fa-solid fa-circle-info"></i>
-                                            Prueba quitando algunos filtros o ajustando la búsqueda para volver a ver resultados.
-                                        </span>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="pagination-container" class="mt-3">
-                <div class="d-flex align-items-center mb-2 mx-auto justify-content-center psize-container">
-                    <span class="text-muted small fw-bold me-2">Registros por página:</span>
-                    <select id="pageSizeSelectorMain" class="form-select form-select-sm pageSizeSelector" style="width: 82px;">
-                        {% for size in page_size_options %}
-                            <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                {# Paginacion server-side; los enlaces preservan filtros con query_transform. #}
-                {% if page_obj and page_obj.paginator.num_pages > 1 %}
-                    <nav id="pagination-nav" aria-label="Paginación de localizaciones CEF" data-current-page="{{ page_obj.number }}" data-total-pages="{{ page_obj.paginator.num_pages }}">
-                        <ul id="paginador-lista" class="pagination justify-content-center flex-wrap mb-0">
-                            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-                                {% if page_obj.has_previous %}
-                                    <a class="page-link" href='?{% query_transform request page=page_obj.previous_page_number %}'><i class="fa-solid fa-chevron-left me-1"></i>Anterior</a>
-                                {% else %}
-                                    <span class="page-link"><i class="fa-solid fa-chevron-left me-1"></i>Anterior</span>
-                                {% endif %}
-                            </li>
-                            {% for num in page_obj.paginator.page_range %}
-                                {% if num == page_obj.number %}
-                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                                {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
-                                    <li class="page-item"><a class="page-link" href='?{% query_transform request page=num %}'>{{ num }}</a></li>
-                                {% endif %}
-                            {% endfor %}
-                            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-                                {% if page_obj.has_next %}
-                                    <a class="page-link" href='?{% query_transform request page=page_obj.next_page_number %}'>Siguiente<i class="fa-solid fa-chevron-right ms-1"></i></a>
-                                {% else %}
-                                    <span class="page-link">Siguiente<i class="fa-solid fa-chevron-right ms-1"></i></span>
-                                {% endif %}
-                            </li>
-                        </ul>
-                    </nav>
-                {% endif %}
-            </div>
+            {% include "especial/componentes/localizaciones_resultados_especial.html" %}
         </div>
     </div>
 </div>
@@ -3775,7 +3722,7 @@
                 <div class="w-100">
                     <h5 class="modal-title mb-2"><i class="fa-solid fa-circle-question me-2 text-primary"></i>Guía de Uso</h5>
                     <div class="padron-modal-breadcrumbs">
-                        <span class="fw-semibold text-muted">CEF</span>
+                        <span class="fw-semibold text-muted">Especial</span>
                         <span class="crumb-sep">&raquo;</span>
                         <a href="{% url 'especial:visualizacion_localizaciones' %}" class="crumb-link">Localizaciones</a>
                         <span class="crumb-sep">&raquo;</span>
@@ -3837,7 +3784,7 @@
     </div>
 </div>
 
-{# Logica principal de la pantalla: filtros, columnas, selector CEF, AJAX parcial y exportacion. #}
+{# Logica principal de la pantalla: filtros, columnas, selector de establecimientos, AJAX parcial y exportacion. #}
 <script id="cef-localizaciones-padron-js">
 (function() {
     "use strict";
@@ -3850,6 +3797,7 @@
     var filterOptions = {};
     var columnsConfig = [];
     var ajaxController = null;
+    var ajaxPendingUrl = "";
     var liveSearchTimer = null;
     var cefSelectorTimer = null;
     var select2Loaded = false;
@@ -3874,7 +3822,8 @@
     };
 
     try {
-        filterOptions = JSON.parse('{{ filter_options_json|default:"{}"|escapejs }}');
+        var filterOptionsData = document.getElementById("cefFilterOptionsData");
+        filterOptions = filterOptionsData ? JSON.parse(filterOptionsData.textContent || "{}") : {};
     } catch (error) {
         filterOptions = {};
     }
@@ -3886,7 +3835,8 @@
     }
 
     try {
-        cefOptions = JSON.parse('{{ cef_options_json|default:"[]"|escapejs }}');
+        var cefOptionsData = document.getElementById("cefOptionsData");
+        cefOptions = cefOptionsData ? JSON.parse(cefOptionsData.textContent || "[]") : [];
     } catch (error) {
         cefOptions = [];
     }
@@ -4069,25 +4019,80 @@
         });
     }
 
-    function syncCefExcelLinks(parsedDocument) {
-        var current = qs("#excelButtons");
-        var next = qs("#excelButtons", parsedDocument);
-
-        if (current && next && current.innerHTML !== next.innerHTML) {
-            current.innerHTML = next.innerHTML;
-        }
-
-        syncExcelLinks();
+    function normalizeAjaxUrl(url) {
+        var normalized = new URL(url, window.location.href);
+        normalized.searchParams.delete("fragmento");
+        normalized.hash = "";
+        return normalized.toString();
     }
 
-    function syncCefFilterOptions(parsedDocument) {
-        var current = qs("#cefFilterOptionsData");
-        var next = qs("#cefFilterOptionsData", parsedDocument);
+    function buildAjaxRequestUrl(url) {
+        var requestUrl = new URL(url, window.location.href);
+        requestUrl.searchParams.set("fragmento", "resultados");
+        requestUrl.hash = "";
+        return requestUrl.toString();
+    }
 
-        if (current && next) {
-            current.textContent = next.textContent || "{}";
-            loadFilterOptionsFromDom();
+    function getRefreshFocusSelector(source) {
+        var element = source || document.activeElement;
+        var header;
+
+        if (!element) {
+            return "";
         }
+
+        if (element.id) {
+            return "#" + element.id;
+        }
+
+        header = closest(element, "th[data-dbcol]");
+        if (header && header.dataset.dbcol) {
+            return 'th[data-dbcol="' + header.dataset.dbcol + '"] a';
+        }
+
+        if (closest(element, "#pagination-container")) {
+            return "#pagination-container .page-item.active .page-link";
+        }
+
+        return "";
+    }
+
+    function captureRefreshState(trigger) {
+        var viewport = qs(".table-shell .table-responsive");
+        return {
+            scrollLeft: viewport ? viewport.scrollLeft : 0,
+            scrollTop: viewport ? viewport.scrollTop : 0,
+            windowScrollY: window.scrollY || window.pageYOffset || 0,
+            focusSelector: getRefreshFocusSelector(trigger)
+        };
+    }
+
+    function restoreRefreshState(state) {
+        if (!state) {
+            return;
+        }
+
+        window.requestAnimationFrame(function() {
+            window.requestAnimationFrame(function() {
+                var viewport = qs(".table-shell .table-responsive");
+                var focusTarget = state.focusSelector ? qs(state.focusSelector) : null;
+
+                if (viewport) {
+                    viewport.scrollLeft = state.scrollLeft || 0;
+                    viewport.scrollTop = state.scrollTop || 0;
+                }
+
+                window.scrollTo(window.scrollX || 0, state.windowScrollY || 0);
+
+                if (focusTarget && typeof focusTarget.focus === "function") {
+                    focusTarget.focus({ preventScroll: true });
+                }
+            });
+        });
+    }
+
+    function syncCefExcelLinks() {
+        syncExcelLinks();
     }
 
     function syncCefSelectorFormFromParams() {
@@ -4202,6 +4207,7 @@
         syncCefLiveSearchFromParams();
         renderBadges();
         syncCefColumnState();
+        syncTableSortHeaders();
         scheduleReapplyHighlights();
     }
 
@@ -4243,8 +4249,18 @@
         }
 
         if (totalPages > 1 && firstItem && lastItem) {
-            firstItem.insertAdjacentHTML("afterend", '<li class="page-item edge-first"><a class="page-link" href="' + buildPageUrl(1) + '"><i class="fa-solid fa-angles-left"></i></a></li>');
-            lastItem.insertAdjacentHTML("beforebegin", '<li class="page-item edge-last"><a class="page-link" href="' + buildPageUrl(totalPages) + '"><i class="fa-solid fa-angles-right"></i></a></li>');
+            firstItem.insertAdjacentHTML(
+                "afterend",
+                currentPage <= 1
+                    ? '<li class="page-item edge-first disabled"><span class="page-link" aria-disabled="true"><i class="fa-solid fa-angles-left"></i></span></li>'
+                    : '<li class="page-item edge-first"><a class="page-link" href="' + buildPageUrl(1) + '" aria-label="Primera página"><i class="fa-solid fa-angles-left"></i></a></li>'
+            );
+            lastItem.insertAdjacentHTML(
+                "beforebegin",
+                currentPage >= totalPages
+                    ? '<li class="page-item edge-last disabled"><span class="page-link" aria-disabled="true"><i class="fa-solid fa-angles-right"></i></span></li>'
+                    : '<li class="page-item edge-last"><a class="page-link" href="' + buildPageUrl(totalPages) + '" aria-label="Última página"><i class="fa-solid fa-angles-right"></i></a></li>'
+            );
 
             if (firstVisible > 1) {
                 paginationList.querySelector(".edge-first").insertAdjacentHTML("afterend", '<li class="page-item edge-boundary"><a class="page-link" href="' + buildPageUrl(1) + '">1</a></li>' + (firstVisible > 2 ? '<li class="page-item edge-gap"><span class="page-link border-0 text-muted bg-transparent">...</span></li>' : ""));
@@ -4258,18 +4274,12 @@
 
     function replaceCefTableFragments(parsedDocument, options) {
         var opts = options || {};
-        var currentResultsBar = qs(".results-bar");
-        var currentBadges = qs("#serverBadgesContainer");
-        var currentTableShell = qs(".table-shell");
-        var currentPagination = qs("#pagination-container");
-        var nextResultsBar = qs(".results-bar", parsedDocument);
-        var nextBadges = qs("#serverBadgesContainer", parsedDocument);
-        var nextTableShell = qs(".table-shell", parsedDocument);
-        var nextPagination = qs("#pagination-container", parsedDocument);
+        var currentFragment = qs("#localizacionesResultsFragment");
+        var nextFragment = qs("#localizacionesResultsFragment", parsedDocument);
         var viewport = qs(".table-shell .table-responsive");
 
         // CEF_PATCH_LOCALIZACIONES_REFRESH_COMO_RESPONSABLES_20260515
-        if (!currentResultsBar || !currentTableShell || !currentPagination || !nextResultsBar || !nextTableShell || !nextPagination) {
+        if (!currentFragment || !nextFragment) {
             throw new Error("No se pudieron actualizar los resultados.");
         }
 
@@ -4277,15 +4287,11 @@
             viewport.style.opacity = "0.82";
         }
 
-        currentResultsBar.innerHTML = nextResultsBar.innerHTML;
-        if (currentBadges && nextBadges) {
-            currentBadges.innerHTML = nextBadges.innerHTML;
-        }
-        currentTableShell.innerHTML = nextTableShell.innerHTML;
-        currentPagination.innerHTML = nextPagination.innerHTML;
+        currentFragment.replaceWith(nextFragment);
         initCefPagination(opts.currentUrl);
-        syncCefExcelLinks(parsedDocument);
-        syncCefFilterOptions(parsedDocument);
+        loadCefOptionsFromDom();
+        loadFilterOptionsFromDom();
+        syncCefExcelLinks();
 
         window.requestAnimationFrame(function() {
             restoreCefTableOpacity();
@@ -4296,25 +4302,41 @@
     function refreshUrl(url, options) {
         var opts = options || {};
         var controller;
+        var currentUrl;
+        var requestUrl;
+        var refreshState;
 
         if (!url) {
             return;
         }
 
-        if (new URL(url, window.location.href).searchParams.has("formato")) {
+        currentUrl = normalizeAjaxUrl(url);
+
+        if (new URL(currentUrl, window.location.href).searchParams.has("formato")) {
             return;
         }
 
-        if (ajaxController) {
+        if (!opts.force && ajaxPendingUrl && ajaxPendingUrl === currentUrl) {
+            return;
+        }
+
+        if (!opts.force && currentUrl === normalizeAjaxUrl(window.location.href) && !ajaxController) {
+            return;
+        }
+
+        if (ajaxController && ajaxPendingUrl !== currentUrl) {
             ajaxController.abort();
         }
 
-        opts.currentUrl = url;
+        opts.currentUrl = currentUrl;
+        requestUrl = buildAjaxRequestUrl(currentUrl);
+        refreshState = captureRefreshState(opts.trigger);
         controller = new AbortController();
         ajaxController = controller;
+        ajaxPendingUrl = currentUrl;
         setBusy(true);
 
-        fetch(url, {
+        fetch(requestUrl, {
             method: "GET",
             credentials: "same-origin",
             headers: {
@@ -4330,26 +4352,31 @@
             return response.text();
         })
         .then(function(html) {
+            if (ajaxController !== controller || controller.signal.aborted) {
+                return;
+            }
             var doc = new DOMParser().parseFromString(html, "text/html");
             replaceCefTableFragments(doc, opts);
 
             if (opts.replaceHistory) {
-                window.history.replaceState({}, "", url);
+                window.history.replaceState({}, "", currentUrl);
             } else if (opts.pushHistory !== false) {
-                window.history.pushState({}, "", url);
+                window.history.pushState({}, "", currentUrl);
             }
 
             hydrateCefTableFragments();
+            restoreRefreshState(refreshState);
         })
         .catch(function(error) {
             if (error && error.name === "AbortError") {
                 return;
             }
-            window.location.href = url;
+            window.location.href = currentUrl;
         })
         .finally(function() {
             if (ajaxController === controller) {
                 ajaxController = null;
+                ajaxPendingUrl = "";
                 setBusy(false);
                 window.requestAnimationFrame(restoreCefTableOpacity);
                 window.setTimeout(restoreCefTableOpacity, 220);
@@ -5666,7 +5693,7 @@
         clear.classList.toggle("is-visible", Boolean(input.value.trim()));
     }
 
-    function applyLiveSearch(replaceHistory) {
+    function applyLiveSearch(replaceHistory, trigger) {
         var input = qs("#liveSearchInput");
         var select = qs("#liveSearchSelect");
         var params = getParams();
@@ -5688,10 +5715,10 @@
             }
         }
 
-        refreshUrl(makeUrl(params), { replaceHistory: !!replaceHistory });
+        refreshUrl(makeUrl(params), { replaceHistory: !!replaceHistory, trigger: trigger || input || select });
     }
 
-    function clearLiveSearch() {
+    function clearLiveSearch(trigger) {
         var input = qs("#liveSearchInput");
         var params = getParams();
         if (input) {
@@ -5703,8 +5730,69 @@
         params.delete("page");
         params.delete("formato");
         syncSearchClear();
-        refreshUrl(makeUrl(params), { pushHistory: true });
+        refreshUrl(makeUrl(params), { pushHistory: true, trigger: trigger || input || qs("#liveSearchClear") });
     }
+
+    function getTableSortState() {
+        var params = getParams();
+        var orden = (params.get("orden") || "").trim();
+        var descending = orden.charAt(0) === "-";
+        var field = descending ? orden.slice(1) : orden;
+        return {
+            field: field,
+            descending: descending && !!field
+        };
+    }
+
+    function buildTableSortUrl(field) {
+        var params = getParams();
+        var state = getTableSortState();
+
+        if (!field) {
+            return makeUrl(params);
+        }
+
+        if (state.field === field && !state.descending) {
+            params.set("orden", "-" + field);
+        } else if (state.field === field && state.descending) {
+            params.delete("orden");
+        } else {
+            params.set("orden", field);
+        }
+
+        return makeUrl(params);
+    }
+
+    function syncTableSortHeaders() {
+        var state = getTableSortState();
+
+        qsa(".table-padron thead th[data-dbcol]").forEach(function(th) {
+            var field = th.dataset.dbcol || "";
+            var link = qs("a", th);
+            var indicator = link ? qs(".sort-indicator", link) : null;
+            var active = field && state.field === field;
+
+            th.setAttribute("aria-sort", active ? (state.descending ? "descending" : "ascending") : "none");
+
+            if (!link) {
+                return;
+            }
+
+            link.href = buildTableSortUrl(field);
+
+            if (!indicator) {
+                indicator = document.createElement("span");
+                indicator.className = "sort-indicator";
+                indicator.setAttribute("aria-hidden", "true");
+                link.appendChild(indicator);
+            }
+
+            indicator.textContent = active ? (state.descending ? "\u25BC" : "\u25B2") : "";
+            indicator.hidden = !active;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", syncTableSortHeaders);
 
     function openFilterDialog(field, label) {
         var modalEl = qs("#dialog_filtro");
@@ -5883,7 +5971,7 @@
 
         if (closest(target, "#liveSearchClear")) {
             event.preventDefault();
-            clearLiveSearch();
+            clearLiveSearch(closest(target, "#liveSearchClear"));
             return;
         }
 
@@ -5986,13 +6074,13 @@
 
         if (link && link.closest("#pagination-container")) {
             event.preventDefault();
-            refreshUrl(link.href, { pushHistory: true });
+            refreshUrl(link.href, { pushHistory: true, trigger: link });
             return;
         }
 
         if (link && link.closest(".table-padron thead")) {
             event.preventDefault();
-            refreshUrl(link.href, { pushHistory: true });
+            refreshUrl(buildTableSortUrl(link.closest("th") ? link.closest("th").dataset.dbcol : ""), { pushHistory: true, trigger: link });
             return;
         }
 
@@ -6022,12 +6110,12 @@
             params.set("page_size", target.value);
             params.delete("page");
             params.delete("formato");
-            refreshUrl(makeUrl(params), { pushHistory: true });
+            refreshUrl(makeUrl(params), { pushHistory: true, trigger: target });
             return;
         }
 
         if (target.matches("#liveSearchSelect") && qs("#liveSearchInput") && qs("#liveSearchInput").value.trim()) {
-            applyLiveSearch(false);
+            applyLiveSearch(false, target);
         }
     }, true);
 
@@ -6039,7 +6127,7 @@
         syncSearchClear();
         clearTimeout(liveSearchTimer);
         liveSearchTimer = setTimeout(function() {
-            applyLiveSearch(true);
+            applyLiveSearch(true, event.target);
         }, 280);
     }, true);
 
@@ -6047,7 +6135,7 @@
         if (event.target.matches("#liveSearchInput") && event.key === "Enter") {
             event.preventDefault();
             clearTimeout(liveSearchTimer);
-            applyLiveSearch(false);
+            applyLiveSearch(false, event.target);
         }
     }, true);
 
@@ -6056,7 +6144,7 @@
     });
 
     window.addEventListener("popstate", function() {
-        refreshUrl(window.location.href, { pushHistory: false });
+        refreshUrl(window.location.href, { pushHistory: false, force: true });
     });
 
     function boot() {
