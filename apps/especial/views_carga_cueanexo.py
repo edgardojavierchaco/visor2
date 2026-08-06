@@ -13,7 +13,7 @@ from .views_contexto import (
 @especial_required
 def carga_cueanexo(request):
     """Vista que muestra los datos del CUE-Anexo seleccionado."""
-    context = contexto_base(request, "cueanexo", "Datos CUE-Anexo Educación Especial")
+    context = contexto_base(request, "cueanexo")
     especial_context = context["especial_context"]
 
     context.update(

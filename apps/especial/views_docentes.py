@@ -237,7 +237,7 @@ def editar_docente_seccion(request, seccion_id, docente_id):
 
 @especial_required
 def docentes(request):
-    context = contexto_base(request, "docentes", "Docentes Educación Especial")
+    context = contexto_base(request, "docentes")
     especial_context = context["especial_context"]
     docente = None
     cuil_buscado = ""
@@ -455,5 +455,4 @@ def docentes(request):
             "docente_grupo_form": docente_grupo_form,
         }
     )
-
     return render(request, "especial/docentes_especial.html", context)
