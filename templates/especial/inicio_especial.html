@@ -1,7 +1,5 @@
 {% extends "especial/base_operativo_especial.html" %}
 
-{% block especial_header %}{% endblock %}
-
 {% block especial_context_card %}{% endblock %}
 
 {% block especial_content %}
@@ -9,182 +7,6 @@
     .content-wrapper {
         background: #f1f4f8;
     }
-
-    .especial-home-hero {
-        background: linear-gradient(
-            135deg,
-            var(--blue-900) 0%,
-            var(--blue-800) 54%,
-            var(--blue-700) 100%
-        );
-        border: 1px solid rgba(255, 255, 255, .16);
-        border-radius: var(--r-lg);
-        box-shadow: var(--shadow-lg);
-        color: #fff;
-        margin-bottom: 1.25rem;
-        overflow: hidden;
-        padding: 1.7rem 1.8rem;
-        position: relative;
-    }
-
-    .especial-home-hero::after {
-        background: rgba(255, 255, 255, .08);
-        border-radius: 999px;
-        content: "";
-        height: 170px;
-        position: absolute;
-        right: -44px;
-        top: -64px;
-        width: 170px;
-    }
-
-    .especial-home-hero-inner {
-        align-items: center;
-        display: flex;
-        gap: 1.25rem;
-        justify-content: space-between;
-        min-height: 136px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .especial-home-hero-copy {
-        max-width: 760px;
-        min-width: 0;
-    }
-
-    .especial-home-hero h1,
-    .especial-home-hero p {
-        position: relative;
-        z-index: 1;
-    }
-
-    .especial-home-hero h1 {
-        font-size: 2.25rem;
-        font-weight: 800;
-        line-height: 1.12;
-        margin: 0 0 .55rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .especial-home-hero p {
-        color: rgba(255, 255, 255, .86);
-        font-size: 1rem;
-        font-weight: 500;
-        margin: 0;
-        position: relative;
-        z-index: 1;
-    }
-
-    .especial-home-hero-art {
-    align-items: center;
-    display: flex;
-    flex: 0 0 260px;
-    justify-content: flex-end;
-    min-height: 100px;
-    position: relative;
-}
-
-.especial-home-hero-art::before {
-    background: radial-gradient(
-        circle at 35% 35%,
-        rgba(125, 211, 252, .22) 0 14%,
-        transparent 15% 100%
-    );
-    border: 1px solid rgba(191, 219, 254, .16);
-    border-radius: 999px;
-    content: "";
-    height: 152px;
-    opacity: .95;
-    position: absolute;
-    right: 10px;
-    top: 2px;
-    width: 152px;
-}
-
-.especial-home-hero-art::after {
-    background:
-        radial-gradient(
-            circle,
-            rgba(255, 255, 255, .92) 0 2.6px,
-            transparent 3px
-        ) 0 0 / 28px 28px,
-        radial-gradient(
-            circle,
-            rgba(255, 255, 255, .34) 0 1px,
-            transparent 1.8px
-        ) 14px 14px / 28px 28px;
-    content: "";
-    height: 120px;
-    mask-image: radial-gradient(circle at center, #000 58%, transparent 100%);
-    opacity: .55;
-    position: absolute;
-    right: 40px;
-    top: 26px;
-    width: 120px;
-}
-
-.especial-home-hero-orbit {
-    border: 2px solid rgba(255, 255, 255, .18);
-    border-radius: 999px;
-    height: 108px;
-    opacity: .9;
-    position: absolute;
-    right: 0;
-    top: 18px;
-    width: 108px;
-}
-
-.especial-home-hero-nodes {
-    align-items: center;
-    display: flex;
-    gap: .8rem;
-    margin-right: 22px;
-    position: relative;
-}
-
-.especial-home-hero-nodes::before {
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, .5),
-        rgba(255, 255, 255, 0)
-    );
-    content: "";
-    height: 2px;
-    left: -26px;
-    opacity: .35;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 92px;
-}
-
-.especial-home-hero-node {
-    border-radius: 999px;
-    box-shadow: 0 0 0 8px rgba(255, 255, 255, .06);
-    display: block;
-    flex: 0 0 auto;
-    opacity: .95;
-}
-
-.especial-home-hero-node.is-lg {
-    background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
-    height: 18px;
-    width: 18px;
-}
-
-.especial-home-hero-node.is-md {
-    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-    height: 14px;
-    width: 14px;
-}
-
-.especial-home-hero-node.is-sm {
-    background: linear-gradient(135deg, #34d399 0%, #14b8a6 100%);
-    height: 11px;
-    width: 11px;
-}
 
     .especial-home-section-title {
 
@@ -271,49 +93,7 @@
         margin: 0;
     }
 
-    @media (max-width: 991.98px) {
-        .especial-home-hero-inner {
-            gap: .9rem;
-        }
-
-        .especial-home-hero-art {
-            flex-basis: 190px;
-        }
-
-        .especial-home-hero-art::before {
-            height: 120px;
-            width: 120px;
-        }
-
-        .especial-home-hero-art::after {
-            height: 92px;
-            width: 92px;
-        }
-
-        .especial-home-hero-orbit {
-            height: 84px;
-            width: 84px;
-        }
-    }
-
     @media (max-width: 575.98px) {
-        .especial-home-hero {
-            padding: 1.35rem;
-        }
-
-        .especial-home-hero-inner {
-            display: block;
-            min-height: 0;
-        }
-
-        .especial-home-hero-art {
-            display: none;
-        }
-
-        .especial-home-hero h1 {
-            font-size: 1.85rem;
-        }
-
         .especial-home-grid {
             grid-template-columns: 1fr;
         }
@@ -321,6 +101,7 @@
 </style>
 
 
+{% comment %}
 <section class="especial-home-hero">
     <div class="especial-home-hero-inner">
         <div class="especial-home-hero-copy">
@@ -338,48 +119,19 @@
         </div>
     </div>
 </section>
+{% endcomment %}
 
 <section aria-labelledby="especial-home-acceso-rapido">
     <h2 id="especial-home-acceso-rapido" class="especial-home-section-title">Acceso rápido</h2>
 
     <div class="especial-home-grid">
-        <a class="especial-home-card" href="{% url 'especial:visualizacion_localizaciones' %}">
-            <span class="especial-home-icon"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
-            <h2>Localizaciones</h2>
-            <p>Consulta institucional desde Padrón, con filtros, columnas y exportación Excel.</p>
-        </a>
-
-        <a class="especial-home-card" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-            <span class="especial-home-icon"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></span>
-            <h2>Alumnos</h2>
-            <p>Buscar, consultar y vincular alumnos al módulo Especial.</p>
-        </a>
-
-        <a class="especial-home-card" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-            <span class="especial-home-icon"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></span>
-            <h2>Docentes</h2>
-            <p>Buscar, consultar y vincular docentes al módulo Especial.</p>
-        </a>
-
-        <a class="especial-home-card" href="{% url 'especial:carga_cueanexo' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-            <span class="especial-home-icon"><i class="fa-solid fa-school" aria-hidden="true"></i></span>
-            <h2>Datos CUE-Anexo</h2>
-            <p>Consultar los datos institucionales del establecimiento seleccionado.</p>
-        </a>
-
-        <a class="especial-home-card" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-            <span class="especial-home-icon"><i class="fa-solid fa-people-group" aria-hidden="true"></i></span>
-            <h2>Secciones</h2>
-            <p>Administrar secciones, modalidades, turnos, capacidades e inscripciones.</p>
-        </a>
-
-        {% if especial_context.es_admin_especial %}
-            <a class="especial-home-card" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <span class="especial-home-icon"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i></span>
-                <h2>Ciclos</h2>
-                <p>Administrar ciclos lectivos del módulo Especial.</p>
+        {% for acceso in especial_accesos_rapidos %}
+            <a class="especial-home-card" href="{{ acceso.url }}">
+                <span class="especial-home-icon"><i class="fa-solid {{ acceso.icon }}" aria-hidden="true"></i></span>
+                <h2>{{ acceso.title }}</h2>
+                <p>{{ acceso.subtitle }}</p>
             </a>
-        {% endif %}
+        {% endfor %}
     </div>
 </section>
 {% endblock %}
