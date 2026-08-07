@@ -3,7 +3,7 @@
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -19,6 +19,14 @@ from .views_inscripcion_seccion import dar_alta_inscripcion_seccion, dar_baja_in
 
 def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def _errores_form(form):
+    return " ".join(
+        str(error)
+        for errors in form.errors.values()
+        for error in errors
+    )
 
 
 
@@ -295,7 +303,14 @@ def _alta_alumno_gestionar(request, seccion):
         pk=inscripcion_id,
     )
     try:
-        dar_alta_inscripcion_seccion(inscripcion, request.user)
+        dar_alta_inscripcion_seccion(
+            inscripcion,
+            request.user,
+            seccion_queryset=SeccionEspecial.objects.filter(
+                cueanexo=seccion.cueanexo,
+                ciclo=seccion.ciclo,
+            ),
+        )
         return True, "Alumno reinscripto correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)
@@ -347,13 +362,19 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
     if form.is_valid():
         asignacion = form.save(commit=False)
+        asignacion.seccion = seccion
+        asignacion.creado_por = request.user
+        asignacion.actualizado_por = request.user
         try:
-            dar_alta_docente_seccion(asignacion, request.user)
+            with transaction.atomic():
+                asignacion.save()
             return True, "Profesor asignado a la sección correctamente."
         except ValidationError as exc:
             return False, "; ".join(exc.messages)
+        except IntegrityError:
+            return False, "No se pudo asignar el profesor porque ya existe una asignación compatible."
     else:
-        return False, "; ".join(form.errors.get_json_data(escape_html=True).values())
+        return False, _errores_form(form)
 
 
 @especial_required

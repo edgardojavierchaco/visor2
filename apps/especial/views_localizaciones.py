@@ -8,8 +8,9 @@ import unicodedata
 from datetime import datetime
 from io import BytesIO
 
-from django.core.cache import cache
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import CharField, F, Func, Q, Value
+from django.db.models.functions import Cast, Coalesce, Lower, Trim
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -17,11 +18,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
-from .models import (
-    get_escuelas_especiales_base_queryset,
-    normalizar_cueanexo,
-)
-from .permisos import especial_required
+from .models import normalizar_cueanexo
+from .permisos import especial_required, get_permisos_especial_request
 from .views_contexto import contexto_base
 
 
@@ -30,8 +28,6 @@ logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 10
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
-CACHE_TTL_LOCALIZACIONES_ESPECIAL = 60 * 5
-CACHE_VERSION_LOCALIZACIONES_ESPECIAL = "v1_especial_20260623"
 
 # Columnas que se leen desde Padrón y se exponen en tabla, filtros y Excel.
 COLUMNAS_LOCALIZACIONES_ESPECIAL = [
@@ -113,19 +109,9 @@ DEFAULT_ORDER_LOCALIZACIONES_ESPECIAL = (
     "cueanexo",
 )
 
-def _get_filter_options(items):
-    """Extrae opciones únicas para los filtros desde los items cacheados."""
-    regiones = sorted(set(item.get("region_loc", "") for item in items if item.get("region_loc")))
-    departamentos = sorted(set(item.get("departamento", "") for item in items if item.get("departamento")))
-    localidades = sorted(set(item.get("localidad", "") for item in items if item.get("localidad")))
-    
-    return {
-        "region_loc": [r for r in regiones if r],
-        "departamento": [d for d in departamentos if d],
-        "localidad": [l for l in localidades if l],
-    }
-
-
+_ACCENT_SOURCE = "áéíóúüñàèìòùäëïöâêîôûãõåçýÿ"
+_ACCENT_TARGET = "aeiouunaeiouaeioaeiouaoacyy"
+_NORMALIZED_ALIAS_PREFIX = "loc_norm_"
 
 def _log_perf(label, started):
     logger.debug(
@@ -171,9 +157,49 @@ def _serialize_item(item):
     }
 
 
-def _cache_key_localizaciones_especial(request):
-    user_id = getattr(request.user, "pk", None) or "anon"
-    return f"especial:localizaciones:{CACHE_VERSION_LOCALIZACIONES_ESPECIAL}:user:{user_id}"
+def _get_items_base_authorized(permisos):
+    """Devuelve el QuerySet autorizado con solo las columnas de Localizaciones."""
+    started = time.perf_counter()
+    queryset = permisos["escuelas_visualizacion"].only(*ONLY_FIELDS_LOCALIZACIONES_ESPECIAL)
+    _log_perf("_get_items_base_authorized", started)
+    return queryset
+
+
+def _get_filter_options(queryset):
+    """Obtiene opciones únicas mediante proyecciones del QuerySet autorizado."""
+    options = {}
+    for field in ("region_loc", "departamento", "localidad"):
+        clean_field = f"{_NORMALIZED_ALIAS_PREFIX}{field}_clean"
+        values = (
+            queryset.order_by()
+            .filter(**{f"{field}__isnull": False})
+            .annotate(**{clean_field: Trim(field)})
+            .exclude(**{clean_field: ""})
+            .values_list(clean_field, flat=True)
+            .distinct()
+            .order_by(clean_field)
+        )
+        options[field] = list(values)
+    return options
+
+
+def _get_establecimientos_options(queryset):
+    """Obtiene CUE-Anexo y nombre sin materializar las demás columnas."""
+    options_by_cue = {}
+    values = (
+        queryset.filter(cueanexo__isnull=False)
+        .values_list("cueanexo", "nom_est")
+        .distinct()
+        .order_by("cueanexo", "nom_est")
+    )
+    for cueanexo, nombre in values:
+        cueanexo = _clean(cueanexo)
+        if cueanexo:
+            options_by_cue[cueanexo] = {
+                "cueanexo": cueanexo,
+                "nom_est": _clean(nombre),
+            }
+    return sorted(options_by_cue.values(), key=lambda item: item["cueanexo"])
 
 
 def _normalizar_orden_localizaciones(orden_param):
@@ -187,28 +213,6 @@ def _normalizar_orden_localizaciones(orden_param):
     return f"{signo}{campo}"
 
 
-def _get_items_base_cached(request):
-    """Obtiene y serializa las escuelas especiales visibles."""
-    started = time.perf_counter()
-    cache_key = _cache_key_localizaciones_especial(request)
-    if request.GET.get("refresh") == "1":
-        cache.delete(cache_key)
-
-    sentinel = object()
-    cached_items = cache.get(cache_key, sentinel)
-    if cached_items is not sentinel:
-        _log_perf("_get_items_base_cached hit", started)
-        return cached_items
-
-    qs = get_escuelas_especiales_base_queryset()
-    qs = qs.only(*ONLY_FIELDS_LOCALIZACIONES_ESPECIAL)
-    items = [_serialize_item(item) for item in qs]
-
-    cache.set(cache_key, items, CACHE_TTL_LOCALIZACIONES_ESPECIAL)
-    _log_perf("_get_items_base_cached miss", started)
-    return items
-
-
 def _normalize_text(value):
     """Normaliza texto para comparar sin distinguir mayúsculas ni acentos."""
     text = _clean(value).casefold()
@@ -216,135 +220,134 @@ def _normalize_text(value):
     return "".join(char for char in text if not unicodedata.combining(char))
 
 
-def _contains(value, needle):
-    return _normalize_text(needle) in _normalize_text(value)
+def _normalized_text_expression(field):
+    """Normaliza texto en PostgreSQL para igualar la comparación de la vista."""
+    return Func(
+        Coalesce(Lower(Cast(F(field), CharField())), Value("")),
+        Value(_ACCENT_SOURCE),
+        Value(_ACCENT_TARGET),
+        function="TRANSLATE",
+        output_field=CharField(),
+    )
 
 
-def _iexact(value, needle):
-    return _normalize_text(value) == _normalize_text(needle)
+def _normalized_cueanexo_expression():
+    return Func(
+        Coalesce(Cast(F("cueanexo"), CharField()), Value("")),
+        Value(r"\D"),
+        Value(""),
+        Value("g"),
+        function="REGEXP_REPLACE",
+        output_field=CharField(),
+    )
 
 
-def _compare_text(value, operator, needle):
-    left = _normalize_text(value)
-    right = _normalize_text(needle)
-    return {
-        "3": left > right,
-        "4": left >= right,
-        "5": left < right,
-        "6": left <= right,
-    }.get(operator, False)
+def _normalized_alias(field):
+    return f"{_NORMALIZED_ALIAS_PREFIX}{field}"
 
 
-def _item_matches_operator(item, field_key, operator, value):
-    item_value = item.get(field_key, "")
-    if operator == "1":
-        return not _contains(item_value, value)
-    if operator == "2":
-        return _iexact(item_value, value)
-    if operator in {"3", "4", "5", "6"}:
-        return _compare_text(item_value, operator, value)
-    if operator == "7":
-        return not _iexact(item_value, value)
-    return _contains(item_value, value)
-
-
-def _apply_filters_list(items, request, establecimientos=None):
-    """Aplica filtros de búsqueda sobre la lista cacheada."""
+def _apply_filters_queryset(queryset, request, establecimientos=None):
+    """Aplica todos los filtros al QuerySet autorizado mediante SQL/ORM."""
     started = time.perf_counter()
+    aliases = {
+        _normalized_alias(field): _normalized_text_expression(field)
+        for field in COLUMNAS_LOCALIZACIONES_ESPECIAL
+    }
+    aliases[_normalized_alias("cueanexo")] = _normalized_cueanexo_expression()
+    queryset = queryset.alias(**aliases)
+
     q = request.GET.get("q", "").strip()
     if q:
-        items = [
-            item
-            for item in items
-            if any(_contains(item.get(field, ""), q) for field in COLUMNAS_LOCALIZACIONES_ESPECIAL)
-        ]
+        q_normalized = _normalize_text(q)
+        query = Q()
+        for field in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+            query |= Q(**{f"{_normalized_alias(field)}__contains": q_normalized})
+        queryset = queryset.filter(query)
 
     smart_col = request.GET.get("smart_ui_col", "").strip()
     smart_val = request.GET.get("smart_ui_val", "").strip()
     if smart_col in COLUMNAS_LOCALIZACIONES_ESPECIAL and smart_val:
-        items = [item for item in items if _contains(item.get(smart_col, ""), smart_val)]
+        queryset = queryset.filter(
+            **{
+                f"{_normalized_alias(smart_col)}__contains": _normalize_text(smart_val),
+            }
+        )
 
     if establecimientos is None:
-        establecimientos = {
-            normalizar_cueanexo(value)
-            for value in request.GET.getlist("establecimientos")
-        }
-    else:
-        establecimientos = {normalizar_cueanexo(value) for value in establecimientos}
+        establecimientos = request.GET.getlist("establecimientos")
+    establecimientos = {
+        normalizar_cueanexo(value) for value in establecimientos
+    }
     establecimientos.discard("")
     if establecimientos:
-        items = [
-            item
-            for item in items
-            if normalizar_cueanexo(item.get("cueanexo", "")) in establecimientos
-        ]
+        queryset = queryset.filter(
+            **{f"{_normalized_alias('cueanexo')}__in": establecimientos}
+        )
 
-    for campo in COLUMNAS_LOCALIZACIONES_ESPECIAL:
-        value = request.GET.get(campo, "").strip()
-        if not value:
-            continue
-        items = [item for item in items if _contains(item.get(campo, ""), value)]
-
-    campos = request.GET.getlist("campo_filtro")
-    operadores = request.GET.getlist("operador_filtro")
-    valores = request.GET.getlist("valor_filtro")
-    grouped_filters = {}
-    for index, campo in enumerate(campos):
-        campo = campo.strip()
-        valor = valores[index].strip() if index < len(valores) else ""
-        operador = operadores[index].strip() if index < len(operadores) else "0"
-        if not campo or not valor or campo not in COLUMNAS_LOCALIZACIONES_ESPECIAL:
-            continue
-        grouped_filters.setdefault((campo, operador), [])
-        if valor not in grouped_filters[(campo, operador)]:
-            grouped_filters[(campo, operador)].append(valor)
-
-    for (campo, operador), valores_grupo in grouped_filters.items():
-        items = [
-            item
-            for item in items
-            if any(
-                _item_matches_operator(item, campo, operador, valor)
-                for valor in valores_grupo
+    for field in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+        value = request.GET.get(field, "").strip()
+        if value:
+            queryset = queryset.filter(
+                **{f"{_normalized_alias(field)}__contains": _normalize_text(value)}
             )
-        ]
 
-    _log_perf("_apply_filters_list", started)
-    return items
+    fields = request.GET.getlist("campo_filtro")
+    operators = request.GET.getlist("operador_filtro")
+    values = request.GET.getlist("valor_filtro")
+    grouped_filters = {}
+    for index, field in enumerate(fields):
+        field = field.strip()
+        value = values[index].strip() if index < len(values) else ""
+        operator = operators[index].strip() if index < len(operators) else "0"
+        if not field or not value or field not in COLUMNAS_LOCALIZACIONES_ESPECIAL:
+            continue
+        grouped_filters.setdefault((field, operator), [])
+        if value not in grouped_filters[(field, operator)]:
+            grouped_filters[(field, operator)].append(value)
+
+    for (field, operator), group_values in grouped_filters.items():
+        group_query = Q()
+        alias = _normalized_alias(field)
+        for value in group_values:
+            normalized_value = _normalize_text(value)
+            if operator == "1":
+                condition = ~Q(**{f"{alias}__contains": normalized_value})
+            elif operator == "2":
+                condition = Q(**{f"{alias}__exact": normalized_value})
+            elif operator == "3":
+                condition = Q(**{f"{alias}__gt": normalized_value})
+            elif operator == "4":
+                condition = Q(**{f"{alias}__gte": normalized_value})
+            elif operator == "5":
+                condition = Q(**{f"{alias}__lt": normalized_value})
+            elif operator == "6":
+                condition = Q(**{f"{alias}__lte": normalized_value})
+            elif operator == "7":
+                condition = ~Q(**{f"{alias}__exact": normalized_value})
+            else:
+                condition = Q(**{f"{alias}__contains": normalized_value})
+            group_query |= condition
+        queryset = queryset.filter(group_query)
+
+    _log_perf("_apply_filters_queryset", started)
+    return queryset
 
 
-def _sort_key_default(item):
-    return (
-        _normalize_text(item.get("region_loc", "")),
-        _normalize_text(item.get("departamento", "")),
-        _normalize_text(item.get("localidad", "")),
-        _normalize_text(item.get("cueanexo", "")),
-    )
-
-
-def _apply_order_list(items, request):
-    """Ordena la lista filtrada completa antes de paginar."""
+def _apply_order_queryset(queryset, request):
+    """Ordena en SQL, manteniendo el orden por defecto como desempate."""
     started = time.perf_counter()
     orden = _normalizar_orden_localizaciones(request.GET.get("orden", ""))
-    ordered_items = sorted(items, key=_sort_key_default)
-
+    default_order = [_normalized_text_expression(field) for field in DEFAULT_ORDER_LOCALIZACIONES_ESPECIAL]
     if not orden:
-        _log_perf("_apply_order_list", started)
-        return ordered_items, ""
+        _log_perf("_apply_order_queryset", started)
+        return queryset.order_by(*default_order), ""
 
-    reverse = orden.startswith("-")
-    campo = orden[1:] if reverse else orden
-    if campo not in COLUMNAS_LOCALIZACIONES_ESPECIAL:
-        _log_perf("_apply_order_list", started)
-        return ordered_items, ""
-
-    ordered_items = sorted(
-        ordered_items,
-        key=lambda item: _normalize_text(item.get(campo, "")),
-        reverse=reverse,
-    )
-    _log_perf("_apply_order_list", started)
-    return ordered_items, orden
+    descending = orden.startswith("-")
+    field = orden[1:] if descending else orden
+    selected_order = _normalized_text_expression(field)
+    selected_order = selected_order.desc() if descending else selected_order.asc()
+    _log_perf("_apply_order_queryset", started)
+    return queryset.order_by(selected_order, *default_order), orden
 
 
 def _get_page_size(request):
@@ -372,6 +375,12 @@ def _resolver_columnas_exportar(request, formato):
     return columnas or [
         (LABELS_COLUMNAS[col], col) for col in COLUMNAS_LOCALIZACIONES_ESPECIAL
     ]
+
+
+def _iter_serialized_items(queryset):
+    """Serializa únicamente los registros que la exportación debe recorrer."""
+    for item in queryset.only(*ONLY_FIELDS_LOCALIZACIONES_ESPECIAL).iterator():
+        yield _serialize_item(item)
 
 
 def _exportar_excel_especial(datos, request, formato):
@@ -466,60 +475,72 @@ def visualizacion_localizaciones(request):
     view_started = time.perf_counter()
     formato = request.GET.get("formato")
 
-    base_items = _get_items_base_cached(request)
-    total_escuelas = len(base_items)
-
-    # Obtener opciones de filtros UNA SOLA VEZ
-    filter_options = _get_filter_options(base_items)
-
-    establecimientos_seleccionados = []
-    establecimientos_visibles = {
-        normalizar_cueanexo(item.get("cueanexo", "")) for item in base_items
-    }
-    for value in request.GET.getlist("establecimientos"):
-        normalized = normalizar_cueanexo(value)
-        if normalized in establecimientos_visibles and normalized not in establecimientos_seleccionados:
-            establecimientos_seleccionados.append(normalized)
-    seleccion_establecimientos_explicita = bool(establecimientos_seleccionados)
+    permisos = get_permisos_especial_request(request)
+    base_queryset = _get_items_base_authorized(permisos)
 
     if formato == "excel_todo":
-        return _exportar_excel_especial(list(base_items), request, formato)
+        return _exportar_excel_especial(
+            _iter_serialized_items(base_queryset), request, formato
+        )
 
-    items = list(base_items)
-    if seleccion_establecimientos_explicita:
-        seleccion_set = set(establecimientos_seleccionados)
-        items = [
-            item
-            for item in items
-            if normalizar_cueanexo(item.get("cueanexo", "")) in seleccion_set
-        ]
-    items = _apply_filters_list(items, request, establecimientos=establecimientos_seleccionados)
-    items, orden_actual = _apply_order_list(items, request)
+    establecimientos_solicitados = []
+    for value in request.GET.getlist("establecimientos"):
+        normalized = normalizar_cueanexo(value)
+        if normalized and normalized not in establecimientos_solicitados:
+            establecimientos_solicitados.append(normalized)
 
     if formato == "excel_pagina":
-        return _exportar_excel_especial(items, request, formato)
+        establecimientos_seleccionados = establecimientos_solicitados
+        if establecimientos_seleccionados:
+            establecimientos_autorizados = set(
+                normalizar_cueanexo(cueanexo)
+                for cueanexo in base_queryset.filter(cueanexo__in=establecimientos_seleccionados)
+                .values_list("cueanexo", flat=True)
+            )
+            establecimientos_seleccionados = [
+                cueanexo
+                for cueanexo in establecimientos_seleccionados
+                if cueanexo in establecimientos_autorizados
+            ]
+    else:
+        filter_options = _get_filter_options(base_queryset)
+        establecimientos_options = _get_establecimientos_options(base_queryset)
+        establecimientos_visibles = {
+            normalizar_cueanexo(option["cueanexo"])
+            for option in establecimientos_options
+        }
+        establecimientos_seleccionados = [
+            cueanexo
+            for cueanexo in establecimientos_solicitados
+            if cueanexo in establecimientos_visibles
+        ]
+
+    seleccion_establecimientos_explicita = bool(establecimientos_seleccionados)
+
+    queryset = _apply_filters_queryset(
+        base_queryset,
+        request,
+        establecimientos=establecimientos_seleccionados,
+    )
+    queryset, orden_actual = _apply_order_queryset(queryset, request)
+
+    if formato == "excel_pagina":
+        return _exportar_excel_especial(
+            _iter_serialized_items(queryset), request, formato
+        )
 
     page_size = _get_page_size(request)
-    lista_items_total = items
-
-    paginator = Paginator(lista_items_total, page_size)
+    paginator = Paginator(queryset, page_size)
     page_number = request.GET.get("page", 1)
     try:
         page_obj = paginator.page(page_number)
     except (EmptyPage, PageNotAnInteger):
         page_obj = paginator.page(1)
 
-    lista_items = list(page_obj.object_list)
+    lista_items = [_serialize_item(item) for item in page_obj.object_list]
     total = paginator.count
     desde = (page_obj.number - 1) * page_size + 1 if total else 0
     hasta = min(page_obj.number * page_size, total)
-
-    establecimientos_options = [
-        {"cueanexo": str(item["cueanexo"]), "nom_est": item.get("nom_est", "")}
-        for item in base_items
-    ]
-    establecimientos_options = list({v['cueanexo']:v for v in establecimientos_options}.values())
-    establecimientos_options.sort(key=lambda x: x["cueanexo"])
 
     columnas_config = [
         {
@@ -558,9 +579,9 @@ def visualizacion_localizaciones(request):
         "columnas_config_json": columnas_config_json,
         "orden": orden_actual,
         "mostrar_contexto": False,
-        "region_loc": sorted(set(item["region_loc"] for item in base_items if item["region_loc"])),
-        "departamento": sorted(set(item["departamento"] for item in base_items if item["departamento"])),
-        "localidad": sorted(set(item["localidad"] for item in base_items if item["localidad"])),
+        "region_loc": filter_options["region_loc"],
+        "departamento": filter_options["departamento"],
+        "localidad": filter_options["localidad"],
         "limpiar_filtros_url": request.path,
         "request": request,
         # ✅ AGREGAR ESTO PARA QUE LOS FILTROS FUNCIONEN:

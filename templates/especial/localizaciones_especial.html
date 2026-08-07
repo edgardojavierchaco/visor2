@@ -22,7 +22,7 @@
 
 {# Estilos propios de la pantalla de Localizaciones Especial. #}
 <style id="cef-localizaciones-padron-style">
-    
+
 
     :root {
         --c-blue-950: #0b2340;
@@ -1707,10 +1707,12 @@
     .table-padron thead th {
         background-color: var(--padron-primary);
         color: #fff !important;
-        font-size: var(--text-xs);
+        font-size: 0.72rem;
         font-weight: 700;
         text-transform: none;
         border-color: #1a5a99;
+        line-height: 1.15;
+        padding: .55rem .5rem !important;
         white-space: normal !important;
         overflow-wrap: anywhere;
         word-break: normal;
@@ -1722,15 +1724,30 @@
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        flex-wrap: wrap;
-        gap: .15rem .35rem;
+        flex-wrap: nowrap;
+        gap: .15rem .25rem;
         width: 100% !important;
+        min-width: 0;
         min-height: 1.4rem !important;
         margin: 0 !important;
         padding: 0 !important;
         text-align: center !important;
         color: #fff !important;
         text-decoration: none;
+    }
+
+    .table-padron thead th a .sort-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        white-space: normal;
+    }
+
+    .table-padron thead th a .sort-indicator {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        line-height: 1;
+        margin-left: 0;
+        margin-top: -.02em;
     }
 
     .table-padron thead th a:focus-visible {
@@ -1773,36 +1790,6 @@
     .table-padron .text-start {
         text-align: center !important;
         padding-left: 12px !important;
-    }
-
-    .table-padron thead th.col-nom-est,
-    .table-padron thead th.col-calle,
-    .table-padron thead th.col-oferta,
-    .table-padron thead th.col-ref-loc,
-    .table-padron thead th.col-apellido-resp,
-    .table-padron thead th.col-nombre-resp,
-    .table-padron thead th.col-resploc-email,
-    .table-padron thead th.col-resploc-telefono,
-    .table-padron thead th.col-sup-tecnico,
-    .table-padron thead th.col-email-suptecnico,
-    .table-padron thead th.col-tel-suptecnico {
-        text-align: left !important;
-        padding-left: 18px !important;
-    }
-
-    .table-padron thead th.col-nom-est > a,
-    .table-padron thead th.col-calle > a,
-    .table-padron thead th.col-oferta > a,
-    .table-padron thead th.col-ref-loc > a,
-    .table-padron thead th.col-apellido-resp > a,
-    .table-padron thead th.col-nombre-resp > a,
-    .table-padron thead th.col-resploc-email > a,
-    .table-padron thead th.col-resploc-telefono > a,
-    .table-padron thead th.col-sup-tecnico > a,
-    .table-padron thead th.col-email-suptecnico > a,
-    .table-padron thead th.col-tel-suptecnico > a {
-        justify-content: flex-start !important;
-        text-align: left !important;
     }
 
     .table-padron th.col-cueanexo,
@@ -2730,7 +2717,7 @@
         padding-top: 0 !important;
         border-top: 0 !important;
     }
-    
+
         /* CEF_PATCH_DROPDOWN_SELECCION_VISUAL_SYNC_FIX_20260617
     La visual del dropdown depende solo del estado real sincronizado, no de la clase interna de Select2. */
     .cef-selector-select2-dropdown .select2-results__option.cef-option-selected,
@@ -2976,10 +2963,14 @@
         border-color: var(--c-blue-800) !important;
         box-shadow: 0 1px 0 var(--c-blue-600);
         color: #fff !important;
-        font-size: var(--text-xs);
+        font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: .06em;
+        line-height: 1.15;
+        padding: .55rem .5rem !important;
         text-transform: uppercase;
+        text-align: center !important;
+        vertical-align: middle !important;
     }
 
     .table-padron tbody tr {
@@ -3383,7 +3374,7 @@
 
 {# Contenedor principal: navegacion, buscador, acciones, filtros, tabla y paginacion. #}
 <div class="padron-page-wrapper">
-    
+
 
     <div class="card shadow-sm border-0 mb-3">
         <div class="card-body">
