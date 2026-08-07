@@ -9,8 +9,8 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import EspecialCicloForm
-from .models import EspecialCiclo, usuario_es_admin_especial
-from .permisos import especial_required
+from .models import EspecialCiclo
+from .permisos import especial_required, get_permisos_especial_request
 from .views_contexto import contexto_base, redirect_con_contexto
 
 
@@ -33,7 +33,7 @@ def _redirect_admin_ciclos(especial_context, ciclo=None):
 
 
 def _exigir_admin(request):
-    if not usuario_es_admin_especial(request.user):
+    if not get_permisos_especial_request(request)["es_admin"]:
         raise PermissionDenied("Solo el rol Administrador puede administrar ciclos de Educación Especial.")
 
 

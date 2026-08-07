@@ -232,19 +232,30 @@ def usuario_es_admin_especial(user):
     return obtener_rol_usuario_especial(user) == "Administrador"
 
 
-def get_escuelas_especiales_cargables_usuario(user):
+def get_escuelas_especiales_visualizacion_usuario(user, permisos=None):
+    """Devuelve los establecimientos que el usuario puede consultar."""
     queryset = get_todas_las_escuelas_especiales()
-    if not usuario_puede_ver_especial(user):
+    rol = (
+        (permisos or {}).get("rol")
+        if permisos is not None
+        else obtener_rol_usuario_especial(user)
+    )
+    if rol not in ROLES_AUTORIZADOS_ESPECIAL:
         return queryset.none()
-    if usuario_es_admin_especial(user):
+    if rol == "Administrador":
         return queryset
     return get_escuelas_especiales_por_cuil_responsable(user)
 
 
-def get_cueanexos_cargables_usuario(user):
+def get_escuelas_especiales_cargables_usuario(user, permisos=None):
+    """Devuelve los establecimientos sobre los que el usuario puede operar."""
+    return get_escuelas_especiales_visualizacion_usuario(user, permisos=permisos)
+
+
+def get_cueanexos_cargables_usuario(user, permisos=None):
     cueanexos = []
     for cueanexo in (
-        get_escuelas_especiales_cargables_usuario(user)
+        get_escuelas_especiales_cargables_usuario(user, permisos=permisos)
         .values_list("cueanexo", flat=True)
         .distinct()
     ):

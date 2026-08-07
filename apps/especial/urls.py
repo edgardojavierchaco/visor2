@@ -1,6 +1,5 @@
 # apps/especial/urls.py
 from django.urls import path
-from django.views.generic import RedirectView
 from . import (
     views_alumnos,
     views_docentes, # Nuevo import
@@ -23,10 +22,7 @@ urlpatterns = [
     ),
     path(
         "visualizacion/",
-        RedirectView.as_view(
-            pattern_name="especial:visualizacion_localizaciones",
-            permanent=False,
-        ),
+        views_contexto.visualizacion_inicio,
         name="visualizacion_inicio",
     ),
     path(

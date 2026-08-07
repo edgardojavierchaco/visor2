@@ -4,16 +4,14 @@
 from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import NoReverseMatch, reverse
 
 from .models import (
     EspecialCiclo,
-    get_escuelas_especiales_cargables_usuario,
-    get_datos_establecimiento_especial,
     normalizar_cueanexo,
-    usuario_es_admin_especial,
 )
+from .permisos import especial_required, get_permisos_especial_request
 
 
 ESPECIAL_MENU_METADATA = {
@@ -99,13 +97,14 @@ def _clean(valor):
     return str(valor or "").strip()
 
 
-def _especial_options_usuario(user):
+def _especial_options_usuario(permisos, scope="cargables"):
     """Devuelve las escuelas especiales que el usuario puede gestionar."""
     options = []
     vistos = set()
+    queryset = permisos[f"escuelas_{scope}"]
 
     for cueanexo, nombre in (
-        get_escuelas_especiales_cargables_usuario(user)
+        queryset
         .order_by("cueanexo", "nom_est")
         .values_list("cueanexo", "nom_est")
         .distinct()
@@ -126,13 +125,14 @@ def _especial_options_usuario(user):
 
 def _resolver_cueanexo(request, options):
     """Resuelve el CUE-Anexo desde GET/POST y valida permisos."""
-    raw = (
-        request.GET.get("cueanexo")
-        or request.POST.get("cueanexo_contexto")
-        or ""
-    )
+    if "cueanexo" in request.GET:
+        raw = request.GET.get("cueanexo")
+    elif "cueanexo_contexto" in request.POST:
+        raw = request.POST.get("cueanexo_contexto")
+    else:
+        raw = ""
 
-    if raw:
+    if raw is not None and raw != "":
         cueanexo = normalizar_cueanexo(raw)
         cueanexos_permitidos = {option["cueanexo"] for option in options}
         if not cueanexo or cueanexo not in cueanexos_permitidos:
@@ -145,18 +145,23 @@ def _resolver_cueanexo(request, options):
 def _resolver_ciclo(request):
     """Resuelve el ciclo lectivo desde GET/POST."""
     ciclos = list(EspecialCiclo.objects.filter(activo=True).order_by("-anio"))
-    raw = request.GET.get("ciclo") or request.POST.get("ciclo_contexto") or ""
+    if "ciclo" in request.GET:
+        raw = request.GET.get("ciclo")
+    elif "ciclo_contexto" in request.POST:
+        raw = request.POST.get("ciclo_contexto")
+    else:
+        raw = None
 
-    if raw:
+    if raw is not None:
         try:
             ciclo_id = int(raw)
         except (TypeError, ValueError):
-            # If invalid, fallback gracefully instead of crashing
-            pass
+            raise PermissionDenied("El ciclo solicitado no es válido.")
         else:
             for ciclo in ciclos:
                 if ciclo.pk == ciclo_id:
                     return ciclo, ciclos
+            raise PermissionDenied("El ciclo solicitado no está disponible.")
 
     ciclo_actual = next((ciclo for ciclo in ciclos if ciclo.actual), None)
     ciclo_operativo = ciclo_actual or (ciclos[0] if ciclos else None)
@@ -214,14 +219,26 @@ def construir_accesos_rapidos_especial(especial_context):
     return accesos
 
 
-def resolver_contexto_operativo(request):
+def resolver_contexto_operativo(request, scope="cargables"):
     """Resuelve el contexto operativo completo para Especial."""
-    cueanexo_options = _especial_options_usuario(request.user)
+    contexto_cacheado = getattr(request, "_especial_contexto_operativo", None)
+    if contexto_cacheado is not None and getattr(request, "_especial_contexto_scope", None) == scope:
+        return contexto_cacheado
+
+    permisos = get_permisos_especial_request(request)
+    cueanexo_options = _especial_options_usuario(permisos, scope=scope)
     cueanexo = _resolver_cueanexo(request, cueanexo_options)
     ciclo, ciclos = _resolver_ciclo(request)
-    establecimiento = get_datos_establecimiento_especial(cueanexo) if cueanexo else None
+    establecimiento = (
+        permisos["escuelas_visualizacion"]
+        .filter(cueanexo=cueanexo)
+        .order_by("cueanexo", "nom_est")
+        .first()
+        if cueanexo
+        else None
+    )
 
-    return {
+    contexto = {
         "cueanexo": cueanexo,
         "cueanexo_options": cueanexo_options,
         "ciclo": ciclo,
@@ -229,16 +246,20 @@ def resolver_contexto_operativo(request):
         "establecimiento": establecimiento,
         "querystring": _context_querystring(cueanexo, ciclo),
         "alumnos_url": _alumnos_url(),
-        "es_admin_especial": usuario_es_admin_especial(request.user),
+        "es_admin_especial": permisos["es_admin"],
         "puede_operar": bool(cueanexo and ciclo),
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),
     }
+    request._especial_contexto_operativo = contexto
+    request._especial_contexto_scope = scope
+    return contexto
 
 
 def contexto_base(request, active_menu, title=None, subtitle=None):
     """Contexto base para todas las vistas de Especial."""
-    especial_context = resolver_contexto_operativo(request)
+    scope = "visualizacion" if active_menu in {"localizaciones", "cueanexo"} else "cargables"
+    especial_context = resolver_contexto_operativo(request, scope=scope)
     metadata = metadata_menu_especial(active_menu)
     if title is not None:
         metadata["title"] = title
@@ -254,6 +275,7 @@ def contexto_base(request, active_menu, title=None, subtitle=None):
     }
 
 
+@especial_required
 def inicio(request):
     """Pantalla de acceso rápido del módulo Especial."""
     context = contexto_base(request, "inicio")
@@ -261,6 +283,12 @@ def inicio(request):
         context["especial_context"]
     )
     return render(request, "especial/inicio_especial.html", context)
+
+
+@especial_required
+def visualizacion_inicio(request):
+    """Redirige la entrada histórica hacia Localizaciones protegidas."""
+    return redirect("especial:visualizacion_localizaciones")
 
 
 def datos_establecimiento_items(establecimiento):

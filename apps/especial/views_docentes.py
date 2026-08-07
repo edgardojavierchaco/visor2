@@ -221,9 +221,16 @@ def editar_docente_seccion(request, seccion_id, docente_id):
     if request.method == "POST":
         form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Asignación actualizada correctamente.")
-            return redirect("especial:gestionar_seccion", seccion_id=seccion.pk)
+            try:
+                form.save()
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "No se pudo actualizar la asignación porque existe un conflicto de integridad.",
+                )
+            else:
+                messages.success(request, "Asignación actualizada correctamente.")
+                return redirect("especial:gestionar_seccion", seccion_id=seccion.pk)
     else:
         form = EspecialDocenteSeccionForm(instance=asignacion)
 
@@ -272,12 +279,19 @@ def docentes(request):
                 messages.error(request, "Sección no encontrada.")
                 return redirect(url_docentes)
 
+            cuil = _solo_digitos(cuil)
+            asignacion = DocenteSeccion(
+                seccion=seccion,
+                docente_cuil=cuil,
+                creado_por=request.user,
+                actualizado_por=request.user,
+            )
             form_data = request.POST.copy()
             for campo_extra in ['cuil', 'seccion_id', 'accion', 'cueanexo_contexto', 'ciclo_contexto']:
                 if campo_extra in form_data:
                     del form_data[campo_extra]
 
-            form = EspecialDocenteSeccionForm(form_data)
+            form = EspecialDocenteSeccionForm(form_data, instance=asignacion)
             
             if form.is_valid():
                 asignacion = form.save(commit=False)
@@ -292,6 +306,12 @@ def docentes(request):
                     if _is_ajax(request):
                         return JsonResponse({"error": str(e)}, status=400)
                     messages.error(request, str(e))
+                    return redirect(url_docentes)
+                except IntegrityError:
+                    message = "No se pudo asignar el docente porque ya existe una asignación compatible."
+                    if _is_ajax(request):
+                        return JsonResponse({"error": message}, status=409)
+                    messages.error(request, message)
                     return redirect(url_docentes)
                 
                 if _is_ajax(request):

@@ -30,13 +30,16 @@ def _alumno_model():
     return apps.get_model("bnhalumnos", "Alumno")
 
 
-def _seccion_segura(seccion_id, especial_context):
+def _seccion_segura(seccion_id, especial_context, for_update=False):
     """Obtiene una sección validando permisos."""
-    return get_object_or_404(
-        SeccionEspecial.objects.filter(
+    queryset = SeccionEspecial.objects.filter(
             cueanexo=especial_context["cueanexo"],
             ciclo=especial_context["ciclo"],
         )
+    if for_update:
+        queryset = queryset.select_for_update()
+    return get_object_or_404(
+        queryset
         .select_related(
             "cd_tipo_seccion",
             "turno",
@@ -61,32 +64,61 @@ def _buscar_alumno(cuil):
     return _alumno_model().objects.filter(cuil=cuil).first()
 
 
-def dar_alta_inscripcion_seccion(inscripcion, user):
-    """
-    Reactiva una inscripción de alumno que estaba en baja.
-    Lanza ValidationError si ya existe otra inscripción activa.
-    """
-    if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO:
-        raise ValidationError("La inscripción ya está activa.")
-
-    duplicado = AlumnoSeccion.objects.filter(
-        seccion=inscripcion.seccion,
-        alumno=inscripcion.alumno,
-        estado=AlumnoSeccion.Estado.ACTIVO,
-    ).exclude(pk=inscripcion.pk).exists()
-
-    if duplicado:
-        raise ValidationError(
-            "El alumno ya tiene otra inscripción activa en esta sección. "
-            "Da de baja esa inscripción antes de reinscribir."
-        )
-
+def dar_alta_inscripcion_seccion(inscripcion, user, seccion_queryset=None):
+    """Reactiva una inscripción bajo bloqueo de la sección y control de cupo."""
     with transaction.atomic():
-        inscripcion.estado = AlumnoSeccion.Estado.ACTIVO
-        inscripcion.fecha_baja = None
-        inscripcion.motivo_baja = ""
-        inscripcion.actualizado_por = user
-        inscripcion.save(update_fields=["estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"])
+        if seccion_queryset is None:
+            queryset = SeccionEspecial.objects.filter(pk=inscripcion.seccion_id)
+        else:
+            queryset = seccion_queryset
+        seccion = get_object_or_404(
+            queryset.select_for_update(),
+            pk=inscripcion.seccion_id,
+        )
+        inscripcion_bloqueada = get_object_or_404(
+            AlumnoSeccion.objects.select_for_update().select_related("alumno"),
+            pk=inscripcion.pk,
+            seccion=seccion,
+        )
+        if inscripcion_bloqueada.estado == AlumnoSeccion.Estado.ACTIVO:
+            raise ValidationError("La inscripción ya está activa.")
+
+        duplicado = AlumnoSeccion.objects.filter(
+            seccion=seccion,
+            alumno=inscripcion_bloqueada.alumno,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).exclude(pk=inscripcion_bloqueada.pk).exists()
+        if duplicado:
+            raise ValidationError(
+                "El alumno ya tiene otra inscripción activa en esta sección."
+            )
+
+        total_activos = AlumnoSeccion.objects.filter(
+            seccion=seccion,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).count()
+        if total_activos >= seccion.capacidad_total:
+            raise ValidationError(
+                "No se puede reinscribir: la sección alcanzó su capacidad máxima."
+            )
+
+        inscripcion_bloqueada.estado = AlumnoSeccion.Estado.ACTIVO
+        inscripcion_bloqueada.fecha_inscripcion = inscripcion.fecha_inscripcion
+        inscripcion_bloqueada.observaciones = inscripcion.observaciones
+        inscripcion_bloqueada.fecha_baja = None
+        inscripcion_bloqueada.motivo_baja = ""
+        inscripcion_bloqueada.actualizado_por = user
+        inscripcion_bloqueada.save(
+            update_fields=[
+                "estado",
+                "fecha_inscripcion",
+                "observaciones",
+                "fecha_baja",
+                "motivo_baja",
+                "actualizado_por",
+                "actualizado_en",
+            ]
+        )
 
 
 def dar_baja_inscripcion_seccion(inscripcion, user):
@@ -225,40 +257,53 @@ def inscripcion_seccion(request, seccion_id):
                 estado__in=ESTADOS_INSCRIPCION_ABIERTA,
             ).first()
 
-            if inscripcion_abierta:
-                pass # Ya está inscripto
-            else:
+            if not inscripcion_abierta:
                 try:
                     with transaction.atomic():
-                        # Validación de capacidad
-                        total_activos = AlumnoSeccion.objects.filter(
-                            seccion=seccion,
-                            estado=AlumnoSeccion.Estado.ACTIVO
-                        ).count()
-                        
-                        if seccion.capacidad_total and total_activos >= seccion.capacidad_total:
-                            raise ValidationError(
-                                f"No se puede inscribir. La sección alcanzó su capacidad máxima ({seccion.capacidad_total})."
-                            )
-
-                        AlumnoSeccion.objects.create(
+                        seccion = _seccion_segura(
+                            seccion_id,
+                            especial_context,
+                            for_update=True,
+                        )
+                        inscripcion_abierta = AlumnoSeccion.objects.filter(
                             seccion=seccion,
                             alumno=alumno,
                             estado=AlumnoSeccion.Estado.ACTIVO,
-                            creado_por=request.user,
-                            actualizado_por=request.user,
+                        ).first()
+                        if not inscripcion_abierta:
+                            total_activos = AlumnoSeccion.objects.filter(
+                                seccion=seccion,
+                                estado=AlumnoSeccion.Estado.ACTIVO,
+                            ).count()
+                            if total_activos >= seccion.capacidad_total:
+                                raise ValidationError(
+                                    f"No se puede inscribir. La sección alcanzó su capacidad máxima ({seccion.capacidad_total})."
+                                )
+
+                            AlumnoSeccion.objects.create(
+                                seccion=seccion,
+                                alumno=alumno,
+                                estado=AlumnoSeccion.Estado.ACTIVO,
+                                creado_por=request.user,
+                                actualizado_por=request.user,
+                            )
+                    if inscripcion_abierta:
+                        messages.info(
+                            request,
+                            "Ese alumno ya está inscripto en esta sección.",
                         )
-                    messages.success(request, "Alumno inscripto correctamente.")
-                    return redirect(
-                        redirect_con_contexto(
-                            "especial:inscripcion_seccion",
-                            especial_context,
-                            seccion_id=seccion.pk,
+                    else:
+                        messages.success(request, "Alumno inscripto correctamente.")
+                        return redirect(
+                            redirect_con_contexto(
+                                "especial:inscripcion_seccion",
+                                especial_context,
+                                seccion_id=seccion.pk,
+                            )
                         )
-                    )
                 except ValidationError as exc:
                     messages.error(request, "; ".join(exc.messages))
-                except (IntegrityError):
+                except IntegrityError:
                     messages.error(
                         request,
                         "No se pudo crear la inscripción. Verificá que no exista una inscripción activa.",
@@ -336,13 +381,36 @@ def editar_inscripcion_seccion(request, seccion_id, inscripcion_id):
     )
 
     if request.method == "POST":
+        estado_anterior = inscripcion.estado
         form = EspecialInscripcionForm(request.POST, instance=inscripcion)
         if form.is_valid():
             inscripcion = form.save(commit=False)
-            inscripcion.actualizado_por = request.user
-            inscripcion.save()
-            messages.success(request, "Inscripción actualizada correctamente.")
-            return redirect(volver_url)
+            try:
+                if (
+                    estado_anterior != AlumnoSeccion.Estado.ACTIVO
+                    and inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
+                ):
+                    dar_alta_inscripcion_seccion(
+                        inscripcion,
+                        request.user,
+                        seccion_queryset=SeccionEspecial.objects.filter(
+                            cueanexo=especial_context["cueanexo"],
+                            ciclo=especial_context["ciclo"],
+                        ),
+                    )
+                else:
+                    inscripcion.actualizado_por = request.user
+                    inscripcion.save()
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "No se pudo actualizar la inscripción por un conflicto de integridad.",
+                )
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
+            else:
+                messages.success(request, "Inscripción actualizada correctamente.")
+                return redirect(volver_url)
 
         messages.error(request, "Revisá los datos de la inscripción.")
     else:
