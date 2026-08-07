@@ -98,12 +98,12 @@ class CefCicloForm(forms.Form):
         max_length=120,
     )
     fecha_inicio = forms.DateField(
-        label="Fecha inicio",
+        label="Fecha inicio (referencia)",
         required=False,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
     )
     fecha_fin = forms.DateField(
-        label="Fecha fin",
+        label="Fecha fin (referencia)",
         required=False,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
     )
@@ -155,6 +155,66 @@ class CefCicloForm(forms.Form):
             creado_por=user,
             actualizado_por=user,
         )
+
+
+class CefCicloEdicionForm(forms.ModelForm):
+    class Meta:
+        model = CefCiclo
+        fields = ["descripcion", "fecha_fin"]
+        widgets = {
+            "fecha_fin": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
+        }
+        labels = {
+            "descripcion": "Descripción",
+            "fecha_fin": "Fecha fin (referencia)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_fecha_fin(self):
+        fecha_fin = self.cleaned_data.get("fecha_fin")
+        if (
+            self.instance.fecha_inicio
+            and fecha_fin
+            and fecha_fin < self.instance.fecha_inicio
+        ):
+            raise forms.ValidationError(
+                "La fecha de fin no puede ser anterior a la fecha de inicio."
+            )
+        return fecha_fin
+
+    def save(self, user=None):
+        ciclo = super().save(commit=False)
+        ciclo.actualizado_por = user
+        ciclo.save(
+            update_fields=[
+                "descripcion",
+                "fecha_fin",
+                "actualizado_por",
+                "actualizado_en",
+            ]
+        )
+        return ciclo
+
+
+class CefAsistenciaFechaForm(forms.Form):
+    fecha = forms.DateField(
+        label="Fecha de la jornada",
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.fields["fecha"].initial = timezone.localdate
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
 
 
 class CefDatosRelevamientoForm(forms.ModelForm):
@@ -271,7 +331,6 @@ class CefGrupoForm(forms.ModelForm):
             "hora_inicio",
             "hora_fin",
             "cupo_maximo",
-            "estado",
             "observaciones",
         ]
         widgets = {
@@ -287,7 +346,6 @@ class CefGrupoForm(forms.ModelForm):
             "hora_inicio": "Hora inicio",
             "hora_fin": "Hora fin",
             "cupo_maximo": "Cupo máximo",
-            "estado": "Estado",
         }
 
     def __init__(self, *args, ciclo=None, **kwargs):
@@ -476,14 +534,31 @@ class CefBusquedaAlumnoForm(forms.Form):
         return cuil
 
 
+class CefBajaMotivoForm(forms.Form):
+    motivo_baja = forms.CharField(
+        label="Motivo de baja",
+        max_length=255,
+        required=True,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_motivo_baja(self):
+        motivo = (self.cleaned_data.get("motivo_baja") or "").strip()
+        if not motivo:
+            raise forms.ValidationError("Debe indicar el motivo de la baja.")
+        return motivo
+
+
 class CefInscripcionForm(forms.ModelForm):
     class Meta:
         model = CefInscripcion
         fields = [
-            "estado",
             "fecha_inscripcion",
-            "fecha_baja",
-            "motivo_baja",
             "observaciones",
         ]
         widgets = {
@@ -491,17 +566,10 @@ class CefInscripcionForm(forms.ModelForm):
                 format="%Y-%m-%d",
                 attrs={"type": "date"},
             ),
-            "fecha_baja": forms.DateInput(
-                format="%Y-%m-%d",
-                attrs={"type": "date"},
-            ),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
-            "estado": "Estado",
             "fecha_inscripcion": "Fecha de inscripción",
-            "fecha_baja": "Fecha de baja",
-            "motivo_baja": "Motivo de baja",
             "observaciones": "Observaciones",
         }
 
@@ -540,9 +608,7 @@ class CefDocenteGrupoForm(forms.ModelForm):
         model = CefDocenteGrupo
         fields = [
             "rol",
-            "estado",
             "fecha_desde",
-            "fecha_hasta",
             "observaciones",
         ]
         widgets = {
@@ -550,22 +616,17 @@ class CefDocenteGrupoForm(forms.ModelForm):
                 format="%Y-%m-%d",
                 attrs={"type": "date"},
             ),
-            "fecha_hasta": forms.DateInput(
-                format="%Y-%m-%d",
-                attrs={"type": "date"},
-            ),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
             "rol": "Rol en el grupo",
-            "estado": "Estado en este grupo",
             "fecha_desde": "Fecha de asignación",
-            "fecha_hasta": "Fecha de finalización",
             "observaciones": "Observaciones",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["fecha_desde"].required = True
         if not self.is_bound and not getattr(self.instance, "pk", None):
             self.fields["fecha_desde"].initial = timezone.localdate
         for field in self.fields.values():

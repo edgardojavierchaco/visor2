@@ -23,10 +23,11 @@ SELECTOR_CEF_CACHE_VERSION = "v1"
 SELECTOR_CEF_CACHE_TTL = 300
 ESTABLECIMIENTO_CEF_CACHE_VERSION = "v1"
 ESTABLECIMIENTO_CEF_CACHE_TTL = 900
-CICLOS_CEF_CACHE_KEY = "cef:ciclos:activos:v1"
+CICLOS_CEF_CACHE_KEY = "cef:ciclos:activos:v2"
 CICLOS_CEF_CACHE_TTL = 3600
 SESSION_CEF_CUEANEXO_KEY = "cef_cueanexo_actual"
 ORIGENES_GESTION_GRUPO = {"grupos", "alumnos", "profesores"}
+VISTAS_CEF = {"actuales", "historial"}
 
 ESTABLECIMIENTO_CEF_FIELDS = (
     "cueanexo",
@@ -50,6 +51,7 @@ CICLO_CEF_CACHE_FIELDS = (
     "descripcion",
     "activo",
     "actual",
+    "cerrado",
 )
 
 
@@ -59,6 +61,10 @@ def _clean(valor):
 
 def resolver_origen_gestion_grupo(valor):
     return valor if valor in ORIGENES_GESTION_GRUPO else "grupos"
+
+
+def normalizar_vista_cef(valor):
+    return valor if valor in VISTAS_CEF else "actuales"
 
 
 def _selector_cef_cache_key(user):
@@ -320,6 +326,11 @@ def resolver_contexto_operativo(request):
     cueanexo = _resolver_cueanexo(request, cueanexo_options)
     ciclo, ciclos = _resolver_ciclo(request)
     establecimiento = _obtener_establecimiento_cef(request, cueanexo)
+    vista = normalizar_vista_cef(
+        request.GET.get("vista") or request.POST.get("vista")
+    )
+    puede_consultar = bool(cueanexo and ciclo)
+    ciclo_cerrado = bool(ciclo and ciclo.cerrado)
 
     contexto = {
         "cueanexo": cueanexo,
@@ -331,7 +342,10 @@ def resolver_contexto_operativo(request):
         "alumnos_url": _alumnos_url(),
         "profesores_url": _profesores_url(),
         "es_admin_cef": permisos["es_admin"],
-        "puede_operar": bool(cueanexo and ciclo),
+        "puede_consultar": puede_consultar,
+        "ciclo_cerrado": ciclo_cerrado,
+        "puede_operar": puede_consultar and not ciclo_cerrado,
+        "vista": vista,
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),
     }

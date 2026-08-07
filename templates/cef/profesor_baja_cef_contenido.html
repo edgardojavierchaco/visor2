@@ -1,3 +1,10 @@
+<div class="border rounded p-3 mb-3">
+    <div><strong>Profesor:</strong> {{ baja_modal_docente.docente_nombre_snapshot|default:baja_modal_docente.docente_cuil }}</div>
+    <div><strong>CUIL:</strong> {{ baja_modal_docente.docente_cuil }}</div>
+    <div><strong>CEF / CUE-Anexo:</strong> {% if cef_context.establecimiento %}{{ cef_context.establecimiento.nom_est|default:"CEF" }} · {% endif %}{{ baja_modal_docente.cueanexo }}</div>
+    <div><strong>Ciclo:</strong> {{ baja_modal_docente.ciclo }}</div>
+    <div><strong>Estado actual:</strong> {{ baja_modal_docente.get_estado_display }}</div>
+</div>
 {% if baja_modal_docente.estado != 'activo' %}
     <div class="alert alert-warning mb-3">
         El profesor ya no se encuentra activo en este CEF y ciclo.
@@ -36,17 +43,23 @@
         </button>
     </div>
 {% else %}
-    <form method="post" action="{{ baja_action_url }}" data-cef-baja-form>
+    <form method="post" action="{{ baja_action_url }}" data-cef-baja-form data-cef-baja-modal-id="modalBajaProfesorCef">
         {% csrf_token %}
         <input type="hidden" name="accion" value="baja_cef">
         <input type="hidden" name="docente_banco_id" value="{{ baja_modal_docente.pk }}">
 
-        <p>¿Confirmás que querés dar de baja del CEF a:</p>
-        <p><strong>{{ baja_modal_docente.docente_nombre_snapshot|default:baja_modal_docente.docente_cuil }}</strong>?</p>
+        <p>¿Confirmás que querés dar de baja del CEF a este profesor?</p>
         <p class="text-muted">
             Esta acción lo dejará en estado "Baja" dentro del CEF
             {{ cef_context.cueanexo }} para el ciclo {{ cef_context.ciclo }}.
         </p>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">Motivo de baja *</label>
+            {{ baja_form.motivo_baja }}
+            <div class="form-text">Obligatorio. Indicá brevemente el motivo de la baja.</div>
+            {% for error in baja_form.motivo_baja.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
 
         <div class="cef-form-actions mt-4">
             <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>

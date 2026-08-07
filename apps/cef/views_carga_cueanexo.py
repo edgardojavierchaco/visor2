@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.shortcuts import redirect, render
 
 from .forms import CefDatosRelevamientoForm
 from .models import CefDatosRelevamiento
 from .permisos import cef_required
+from .services import validar_ciclo_escribible
 from .views_contexto import (
     contexto_base,
     datos_establecimiento_items,
@@ -14,7 +17,7 @@ from .views_contexto import (
 
 
 def _datos_relevamiento(cef_context):
-    if not cef_context["puede_operar"]:
+    if not cef_context["puede_consultar"]:
         return None
 
     return (
@@ -56,6 +59,12 @@ def editar_datos_cueanexo(request):
     cef_context = context["cef_context"]
     datos = _datos_relevamiento(cef_context)
 
+    if cef_context["ciclo_cerrado"]:
+        messages.warning(
+            request,
+            "El ciclo está cerrado. Los datos del CUE-Anexo son de sólo lectura.",
+        )
+        return redirect(redirect_con_contexto("cef:carga_cueanexo", cef_context))
     if not cef_context["puede_operar"]:
         form = None
         catalogos_faltantes = []
@@ -70,9 +79,16 @@ def editar_datos_cueanexo(request):
             if not obj.pk:
                 obj.creado_por = request.user
             obj.actualizado_por = request.user
-            obj.save()
-            messages.success(request, "Datos del CUE-Anexo guardados correctamente.")
-            return redirect(redirect_con_contexto("cef:carga_cueanexo", cef_context))
+            try:
+                with transaction.atomic():
+                    validar_ciclo_escribible(obj.ciclo_id)
+                    obj.save()
+            except ValidationError as exc:
+                form.add_error(None, "; ".join(exc.messages))
+                messages.error(request, "; ".join(exc.messages))
+            else:
+                messages.success(request, "Datos del CUE-Anexo guardados correctamente.")
+                return redirect(redirect_con_contexto("cef:carga_cueanexo", cef_context))
 
         if catalogos_faltantes:
             messages.error(request, "Faltan catálogos para completar esta carga.")

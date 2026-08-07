@@ -7,6 +7,7 @@ from .permisos import especial_required
 from .views_contexto import (
     contexto_base,
     datos_establecimiento_items,
+    render_especial,
 )
 
 
@@ -23,4 +24,9 @@ def carga_cueanexo(request):
             ),
         }
     )
-    return render(request, "especial/carga_cueanexo_especial.html", context)
+    return render_especial(
+        request,
+        "especial/carga_cueanexo_especial.html",
+        context,
+        "especial/partials/datos_cueanexo_fragmento_especial.html",
+    )

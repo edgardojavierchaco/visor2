@@ -24,7 +24,7 @@ from .models import (
     PADRON_DB_ALIAS,
 )
 from .permisos import especial_required
-from .views_contexto import contexto_base
+from .views_contexto import contexto_base, render_especial
 
 URL_CARGA_DOCENTE = "/bnh/carga-personal/"
 MSG_BANCO_DOCENTES_PENDIENTE = (
@@ -475,4 +475,9 @@ def docentes(request):
             "docente_grupo_form": docente_grupo_form,
         }
     )
-    return render(request, "especial/docentes_especial.html", context)
+    return render_especial(
+        request,
+        "especial/docentes_especial.html",
+        context,
+        "especial/partials/docentes_fragmento_especial.html",
+    )

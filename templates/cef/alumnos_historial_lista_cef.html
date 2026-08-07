@@ -1,0 +1,60 @@
+<div class="cef-table-section" data-cef-table-root>
+    <div class="cef-tools">
+        <div class="cef-tools-left"><span class="cef-tools-label">Mostrar</span><select data-cef-page-size><option value="10">10</option><option value="25">25</option><option value="50">50</option></select><span class="cef-tools-label">registros</span></div>
+        <div class="cef-tools-right"><div class="cef-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="search" placeholder="Buscar…" data-cef-table-search><button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda"><i class="fa-solid fa-xmark"></i></button></div></div>
+    </div>
+    {% if alumnos_historial %}
+        <div class="cef-table-wrap"><table class="cef-dt" data-cef-table>
+            <thead><tr><th>Alumno</th><th>Documento</th><th>CUIL</th><th>Ciclo</th><th>Fecha de alta</th><th>Estado</th><th>Fecha de baja</th><th>Motivo</th><th>Acción actual</th></tr></thead>
+            <tbody>{% for periodo in alumnos_historial %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                <td><strong>{{ periodo.alumno_nombre_snapshot|default:"-" }}</strong></td><td>{{ periodo.alumno_documento_snapshot|default:"-" }}</td><td>{{ periodo.alumno_cuil_snapshot|default:"-" }}</td><td>{{ periodo.ciclo.anio }}</td><td>{{ periodo.fecha_alta|date:"d/m/Y" }}</td>
+                <td>{% if periodo.ciclo.cerrado and periodo.estado == 'activo' %}<span class="badge text-bg-secondary">Activo al cierre</span>{% else %}<span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{{ periodo.get_estado_display }}</span>{% endif %}</td>
+                <td>{{ periodo.fecha_baja|date:"d/m/Y"|default:"-" }}</td><td>{{ periodo.motivo_baja|default:"-" }}</td>
+                <td class="cef-act-cell">
+                    {% if cef_context.puede_operar %}
+                        {% if periodo.activo_banco_actual %}
+                            {% if grupos_disponibles %}
+                                <div class="dropdown" data-cef-alumno-dropdown>
+                                    <button class="btn {% if periodo.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
+                                        <i class="fa-solid fa-user-plus"></i> {% if periodo.grupos_asignables %}Inscribir en curso actual{% elif periodo.grupos_bloqueados %}Ya inscripto{% else %}Sin grupos disponibles{% endif %}
+                                    </button>
+                                    <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
+                                        {% for grupo in periodo.grupos_asignables %}
+                                            <li>
+                                                <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}vista=historial" class="m-0">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="accion" value="inscribir_grupo_historial">
+                                                    <input type="hidden" name="periodo_historico_id" value="{{ periodo.pk }}">
+                                                    <input type="hidden" name="grupo_id" value="{{ grupo.pk }}">
+                                                    <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                                                    <button class="dropdown-item" type="submit">
+                                                        <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
+                                                        <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        {% endfor %}
+                                        {% if periodo.grupos_asignables and periodo.grupos_bloqueados %}<li><hr class="dropdown-divider"></li>{% endif %}
+                                        {% for inscripcion in periodo.grupos_bloqueados %}
+                                            <li><span class="dropdown-item disabled" aria-disabled="true"><span>Grupo {{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}</span><small>Ya inscripto{% if inscripcion.fecha_inscripcion %} desde {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}{% endif %}</small></span></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <span class="text-muted small">Sin grupos actuales disponibles</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted small">Debe reincorporarse primero al CEF</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted small">Solo lectura</span>
+                    {% endif %}
+                </td>
+            </tr>{% endfor %}</tbody>
+        </table></div>
+    {% elif alumnos_banco_tabla_pendiente %}<div class="cef-empty-state">Listado pendiente hasta crear la tabla correspondiente.</div>
+    {% elif cef_context.puede_consultar %}<div class="cef-empty-state">No hay períodos históricos de alumnos para este CEF.</div>
+    {% else %}<div class="cef-empty-state">Seleccioná un CUE-Anexo para consultar historial.</div>{% endif %}
+    <div class="cef-tfoot"><span class="cef-tfoot-count" data-cef-table-count>{{ alumnos_historial|length }} registros</span><div class="cef-tfoot-pagination" data-cef-table-pagination></div></div>
+</div>

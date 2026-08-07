@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import EspecialCicloForm
 from .models import EspecialCiclo
 from .permisos import especial_required, get_permisos_especial_request
-from .views_contexto import contexto_base, redirect_con_contexto
+from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 
 
 def _query_ciclo(especial_context, ciclo):
@@ -78,4 +78,9 @@ def administrar_ciclos(request):
             "ciclos_admin": EspecialCiclo.objects.all().order_by("-anio"),
         }
     )
-    return render(request, "especial/ciclos_especial.html", context)
+    return render_especial(
+        request,
+        "especial/ciclos_especial.html",
+        context,
+        "especial/partials/ciclos_fragmento_especial.html",
+    )

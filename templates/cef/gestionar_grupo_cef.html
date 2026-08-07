@@ -8,40 +8,63 @@
         <div class="cef-course-heading">
             <span class="cef-section-kicker">Gestionar curso</span>
             <div class="cef-course-title-line">
-                <h2 class="cef-panel-title">{{ grupo.actividad }} <span>· Grupo Nro. {{ grupo.numero }}</span></h2>
-                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% elif grupo.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
-                    {{ grupo.get_estado_display }}
+                <h2 class="cef-panel-title">{% if modo_historial %}{{ grupo.actividad_nombre_snapshot|default:grupo.actividad }}{% else %}{{ grupo.actividad }}{% endif %} <span>· Grupo Nro. {{ grupo.numero }}</span></h2>
+                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% else %}secondary{% endif %}">
+                    {% if grupo.ciclo.cerrado and grupo.estado == 'activo' %}Activo al cierre{% else %}{{ grupo.get_estado_display }}{% endif %}
                 </span>
             </div>
             <div class="cef-course-meta">
                 <span><strong>Nombre</strong> {{ grupo.nombre|default:"Sin nombre" }}</span>
                 <span><strong>CEF</strong> {% if cef_context.establecimiento %}{{ cef_context.establecimiento.nom_est|default:"CEF" }}{% else %}CEF{% endif %}</span>
                 <span><strong>CUE-Anexo</strong> {{ cef_context.cueanexo|default:"-" }}</span>
-                <span><strong>Ciclo</strong> {{ cef_context.ciclo|default:"-" }}</span>
+                <span><strong>Ciclo</strong> {{ grupo.ciclo|default:"-" }}</span>
             </div>
         </div>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{{ volver_url }}">
                 <i class="fa-solid fa-arrow-left"></i> {{ volver_label }}
             </a>
-            <a class="btn btn-outline-primary" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-pen"></i> Editar curso
+            <a class="btn btn-outline-primary" href="{% url 'cef:asistencia_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if modo_historial %}{% if cef_context.querystring %}&{% else %}?{% endif %}modo=historial{% endif %}">
+                <i class="fa-solid fa-user-check"></i> Asistencia
             </a>
+            {% if not gestionar_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}<a class="btn btn-outline-primary" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-pen"></i> Editar curso
+            </a>{% endif %}
         </div>
     </div>
 
     <div class="cef-panel-body cef-course-body">
+        {% if modo_historial %}
+            <div class="alert alert-info">Consulta histórica · Ciclo {{ grupo.ciclo.anio }}. Los registros se muestran en modo de sólo lectura.</div>
+        {% elif grupo.estado != 'activo' %}
+            <div class="alert alert-warning">Este grupo está dado de baja. La información histórica se muestra en modo de solo lectura.</div>
+        {% endif %}
         <div data-cef-fragment="gestion-resumen">
             {% include "cef/gestionar_grupo_resumen_cef.html" %}
         </div>
 
+        {% if modo_historial %}
+            <section class="cef-course-section">
+                <div class="cef-course-section-head"><h3>Trazabilidad del estado</h3></div>
+                <div class="alert alert-light mb-2">Alta inicial · {{ grupo.creado_en|date:"d/m/Y" }}</div>
+                {% for movimiento in movimientos_estado %}
+                    <div class="alert alert-light mb-2">
+                        <strong>{% if movimiento.estado_resultante == 'activo' %}Reactivado{% else %}Baja{% endif %}</strong>
+                        · {{ movimiento.fecha|date:"d/m/Y" }}{% if movimiento.motivo %} — {{ movimiento.motivo }}{% endif %}
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No existen movimientos posteriores registrados.</div>
+                {% endfor %}
+            </section>
+        {% endif %}
+
         <section id="profesores-curso" class="cef-course-section cef-course-section-teachers">
             <div class="cef-course-section-head">
                 <h3 class="mb-0">Profesores del curso</h3>
-                <span class="cef-section-count" data-cef-section-count>{{ docentes_activos_count|default:0 }} activos / {{ docentes|length }} total</span>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-open-docentes-modal>
+                <span class="cef-section-count" data-cef-section-count>{{ docentes|length }} registros</span>
+                {% if not gestionar_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}<button class="btn btn-outline-primary btn-sm" type="button" data-open-docentes-modal>
                     <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
-                </button>
+                </button>{% endif %}
             </div>
             <div data-cef-fragment="docentes-grupo">
                 {% include "cef/docentes_grupo_lista_cef.html" %}
@@ -60,9 +83,9 @@
             <div class="cef-course-section-head">
                 <h3 class="mb-0">Alumnos del curso</h3>
                 <span class="cef-section-count" data-cef-section-count>{{ inscripciones|length }} registros</span>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-open-personas-modal>
+                {% if not gestionar_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}<button class="btn btn-outline-primary btn-sm" type="button" data-open-personas-modal>
                     <i class="fa-solid fa-user-plus"></i> Inscribir alumno
-                </button>
+                </button>{% endif %}
             </div>
             <div data-cef-fragment="inscripciones-grupo">
                 {% include "cef/inscripciones_grupo_lista_cef.html" %}
@@ -71,6 +94,8 @@
 
     </div>
 </div>
-{% include "cef/modal_busqueda_alumno_cef.html" with modal_action_url=modal_alumno_action_url %}
-{% include "cef/modal_busqueda_docente_cef.html" with modal_action_url=modal_docente_action_url %}
+{% if not gestionar_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}
+    {% include "cef/modal_busqueda_alumno_cef.html" with modal_action_url=modal_alumno_action_url %}
+    {% include "cef/modal_busqueda_docente_cef.html" with modal_action_url=modal_docente_action_url %}
+{% endif %}
 {% endblock %}

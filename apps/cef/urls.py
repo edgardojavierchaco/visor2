@@ -3,6 +3,7 @@ from django.views.generic import RedirectView
 
 from . import (
     views_alumnos,
+    views_asistencia,
     views_carga_cueanexo,
     views_carga_grupo,
     views_ciclo,
@@ -96,6 +97,11 @@ urlpatterns = [
         name="gestionar_grupo",
     ),
     path(
+        "carga/grupos/<int:grupo_id>/asistencia/",
+        views_asistencia.asistencia_grupo,
+        name="asistencia_grupo",
+    ),
+    path(
         "carga/grupos/<int:grupo_id>/inscripciones/",
         views_inscripcion_grupo.inscripcion_grupo,
         name="inscripcion_grupo",
@@ -134,5 +140,15 @@ urlpatterns = [
         "carga/ciclos/",
         views_ciclo.administrar_ciclos,
         name="administrar_ciclos",
+    ),
+    path(
+        "carga/ciclos/prevalidacion/<int:ciclo_id>/",
+        views_ciclo.prevalidar_ciclo_anual,
+        name="prevalidar_ciclo_anual",
+    ),
+    path(
+        "carga/ciclos/generar/<int:ciclo_id>/",
+        views_ciclo.generar_ciclo_anual,
+        name="generar_ciclo_anual",
     ),
 ]

@@ -1,0 +1,33 @@
+{% if reactivar_error %}
+    <div class="alert alert-danger mb-3">{{ reactivar_error }}</div>
+{% endif %}
+
+{% if reactivar_modal_grupo.estado != 'baja' %}
+    <div class="alert alert-warning mb-3">El curso ya se encuentra activo.</div>
+    <div class="cef-form-actions mt-4">
+        <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>Cerrar</button>
+    </div>
+{% elif reactivar_modal_grupo.alumnos_activos or reactivar_modal_grupo.docentes_activos %}
+    <div class="alert alert-danger mb-3">
+        El curso conserva relaciones activas de forma inconsistente y no puede reactivarse.
+    </div>
+    <div class="cef-form-actions mt-4">
+        <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>Cerrar</button>
+    </div>
+{% else %}
+    <form method="post" action="{{ baja_action_url }}" data-cef-baja-form data-cef-baja-modal-id="modalBajaGrupoCef">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="reactivar_grupo">
+        <input type="hidden" name="grupo_id" value="{{ reactivar_modal_grupo.pk }}">
+
+        <p>¿Confirmás que querés reactivar <strong>{{ reactivar_modal_grupo.actividad }} Nro. {{ reactivar_modal_grupo.numero }}</strong>?</p>
+        <p class="text-muted">
+            El curso volverá a estar activo. Los alumnos y profesores dados de baja NO serán reactivados automáticamente.
+        </p>
+
+        <div class="cef-form-actions mt-4">
+            <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>Cancelar</button>
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-rotate-left"></i> Reactivar curso</button>
+        </div>
+    </form>
+{% endif %}

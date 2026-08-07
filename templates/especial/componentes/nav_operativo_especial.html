@@ -21,20 +21,20 @@
                     <a class="nav-link{% if active_menu == 'localizaciones' %} active{% endif %}" href="{{ especial_localizaciones_url }}">Localizaciones</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ especial_alumnos_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Alumnos</a>
+                    <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ especial_alumnos_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="alumnos"{% if active_menu == 'alumnos' %} aria-current="page"{% endif %}>Alumnos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'docentes' %} active{% endif %}" href="{{ especial_docentes_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Docentes</a>
+                    <a class="nav-link{% if active_menu == 'docentes' %} active{% endif %}" href="{{ especial_docentes_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="docentes"{% if active_menu == 'docentes' %} aria-current="page"{% endif %}>Docentes</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'cueanexo' %} active{% endif %}" href="{{ especial_cueanexo_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Datos CUE-Anexo</a>
+                    <a class="nav-link{% if active_menu == 'cueanexo' %} active{% endif %}" href="{{ especial_cueanexo_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="cueanexo"{% if active_menu == 'cueanexo' %} aria-current="page"{% endif %}>Datos CUE-Anexo</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'secciones' %} active{% endif %}" href="{{ especial_secciones_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Secciones</a>
+                    <a class="nav-link{% if active_menu == 'secciones' %} active{% endif %}" href="{{ especial_secciones_url }}{% if especial_context and especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="secciones"{% if active_menu == 'secciones' %} aria-current="page"{% endif %}>Secciones</a>
                 </li>
                 {% if especial_context and especial_context.es_admin_especial %}
                     <li class="nav-item">
-                        <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ especial_ciclos_url }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Ciclos</a>
+                        <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ especial_ciclos_url }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="ciclos"{% if active_menu == 'ciclos' %} aria-current="page"{% endif %}>Ciclos</a>
                     </li>
                 {% endif %}
             </ul>

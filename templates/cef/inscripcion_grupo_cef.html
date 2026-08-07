@@ -10,9 +10,9 @@
             <a class="btn btn-outline-secondary" href="{{ volver_url }}">
                 <i class="fa-solid fa-arrow-left"></i> {{ volver_label }}
             </a>
-            <button class="btn btn-primary" type="button" data-open-personas-modal>
+            {% if grupo.estado == 'activo' and cef_context.puede_operar %}<button class="btn btn-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Agregar alumno
-            </button>
+            </button>{% endif %}
         </div>
     </div>
 
@@ -26,11 +26,15 @@
             </div>
         {% endif %}
 
+        {% if grupo.estado != 'activo' %}
+            <div class="alert alert-warning">Este grupo está dado de baja. La información se muestra en modo de solo lectura.</div>
+        {% endif %}
+
         <div data-cef-fragment="inscripciones-grupo">
             {% include "cef/inscripciones_grupo_lista_cef.html" %}
         </div>
     </div>
 </div>
 
-{% include "cef/modal_busqueda_alumno_cef.html" %}
+{% if grupo.estado == 'activo' and cef_context.puede_operar %}{% include "cef/modal_busqueda_alumno_cef.html" %}{% endif %}
 {% endblock %}

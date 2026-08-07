@@ -50,9 +50,13 @@
                             <td>{{ grupo.hora_inicio|time:"H:i" }} – {{ grupo.hora_fin|time:"H:i" }}</td>
                             <td>{{ grupo.dias_texto|default:"—" }}</td>
                             <td>
-                                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% elif grupo.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
+                                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% else %}secondary{% endif %}">
                                     {{ grupo.get_estado_display }}
                                 </span>
+                                {% if grupo.estado == 'baja' %}
+                                    <div class="small text-muted mt-1">{{ grupo.fecha_baja|date:"d/m/Y"|default:"-" }}</div>
+                                    <div class="small text-muted">{{ grupo.motivo_baja|default:"Sin motivo" }}</div>
+                                {% endif %}
                             </td>
                             <td><span class="badge text-bg-primary">{{ grupo.alumnos_activos }}</span></td>
                             <td><span class="badge text-bg-primary">{{ grupo.docentes_activos }}</span></td>
@@ -68,11 +72,31 @@
                                                 <i class="fa-solid fa-clipboard-list"></i> Gestionar curso
                                             </a>
                                         </li>
-                                        <li>
+                                        {% if cef_context.puede_operar %}
+                                        {% if grupo.estado == 'activo' %}<li>
                                             <a class="dropdown-item" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
                                                 <i class="fa-solid fa-pen"></i> Editar grupo
                                             </a>
                                         </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Baja del curso" data-template-id="cef-baja-grupo-{{ grupo.pk }}">
+                                                <i class="fa-solid fa-layer-group"></i> Dar de baja curso
+                                            </a>
+                                            <template id="cef-baja-grupo-{{ grupo.pk }}">
+                                                {% include "cef/grupo_baja_cef_contenido.html" with baja_modal_grupo=grupo baja_form=baja_form_vacio %}
+                                            </template>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_reactivar=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Reactivar curso" data-template-id="cef-reactivar-grupo-{{ grupo.pk }}">
+                                                <i class="fa-solid fa-rotate-left"></i> Reactivar curso
+                                            </a>
+                                            <template id="cef-reactivar-grupo-{{ grupo.pk }}">
+                                                {% include "cef/grupo_reactivar_cef_contenido.html" with reactivar_modal_grupo=grupo %}
+                                            </template>
+                                        </li>
+                                        {% endif %}
+                                        {% endif %}
                                     </ul>
                                 </div>
                             </td>
@@ -81,7 +105,7 @@
                 </tbody>
             </table>
         </div>
-    {% elif cef_context.puede_operar %}
+    {% elif cef_context.puede_consultar %}
         <div class="cef-empty-state">
             <i class="fa-solid fa-layer-group" style="font-size:1.5rem;color:var(--text-faint)"></i>
             Todavía no hay grupos cargados para este CEF y ciclo.

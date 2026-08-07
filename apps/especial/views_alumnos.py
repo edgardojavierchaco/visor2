@@ -12,7 +12,7 @@ from django.shortcuts import redirect, render
 from .forms import EspecialBusquedaAlumnoForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
-from .views_contexto import contexto_base
+from .views_contexto import contexto_base, render_especial
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
     "El banco de alumnos de Educación Especial está pendiente de creación en base de datos."
@@ -286,4 +286,9 @@ def alumnos(request):
             "modal_volver_url": url_alumnos,
         }
     )
-    return render(request, "especial/alumnos_especial.html", context)
+    return render_especial(
+        request,
+        "especial/alumnos_especial.html",
+        context,
+        "especial/partials/alumnos_fragmento_especial.html",
+    )

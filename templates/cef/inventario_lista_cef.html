@@ -52,7 +52,7 @@
                                     data-inventario-panel-toggle="{{ item.pk }}"
                                 >
                                     <i class="fa-solid {% if detalle_item and detalle_item.pk == item.pk %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" aria-hidden="true"></i>
-                                    Gestionar
+                                    {% if cef_context.puede_operar %}Gestionar{% else %}Ver detalle{% endif %}
                                 </button>
                             </td>
                         </tr>
@@ -69,6 +69,7 @@
                                         </h3>
                                     </div>
 
+                                    {% if cef_context.puede_operar %}
                                     <form method="post" action="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
                                         {% csrf_token %}
                                         <input type="hidden" name="accion" value="guardar_observaciones">
@@ -93,10 +94,11 @@
                                             </div>
                                         </div>
                                     </form>
+                                    {% endif %}
 
                                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
                                         <h4 class="h6 mb-0">Distribución por estado</h4>
-                                        {% if catalogo_estados_disponible and not item.todos_estados_cargados %}
+                                        {% if cef_context.puede_operar and catalogo_estados_disponible and not item.todos_estados_cargados %}
                                             <a
                                                 class="btn btn-primary btn-sm"
                                                 href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}detalle={{ item.pk }}&estado_accion=agregar"
@@ -127,6 +129,7 @@
                                                         <td>{{ estado.estado.nombre }}</td>
                                                         <td><span class="badge text-bg-primary">{{ estado.cantidad }}</span></td>
                                                         <td class="cef-act-cell">
+                                                            {% if cef_context.puede_operar %}
                                                             <a
                                                                 class="btn btn-outline-secondary btn-sm"
                                                                 title="Editar estado"
@@ -152,6 +155,9 @@
                                                                     <i class="fa-solid fa-trash"></i> Eliminar
                                                                 </button>
                                                             </form>
+                                                            {% else %}
+                                                                <span class="text-muted small">Solo lectura</span>
+                                                            {% endif %}
                                                         </td>
                                                     </tr>
                                                 {% empty %}
@@ -191,6 +197,7 @@
                                         </form>
                                     {% endif %}
 
+                                    {% if cef_context.puede_operar %}
                                     <hr>
                                     <form
                                         method="post"
@@ -207,6 +214,7 @@
                                             <i class="fa-solid fa-trash"></i> Eliminar material
                                         </button>
                                     </form>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -214,7 +222,7 @@
                 </tbody>
             </table>
         </div>
-    {% elif cef_context.puede_operar %}
+    {% elif cef_context.puede_consultar %}
         <div class="cef-empty-state">
             <i class="fa-solid fa-box-open"></i>
             Todavía no hay materiales cargados para este CEF y ciclo.

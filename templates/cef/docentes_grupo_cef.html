@@ -10,9 +10,9 @@
             <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a grupos
             </a>
-            <button class="btn btn-primary" type="button" data-open-docentes-modal>
+            {% if grupo.estado == 'activo' and cef_context.puede_operar %}<button class="btn btn-primary" type="button" data-open-docentes-modal>
                 <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
-            </button>
+            </button>{% endif %}
         </div>
     </div>
 
@@ -29,6 +29,10 @@
             </div>
         {% endif %}
 
+        {% if grupo.estado != 'activo' %}
+            <div class="alert alert-warning">Este grupo está dado de baja. La información se muestra en modo de solo lectura.</div>
+        {% endif %}
+
         <p class="small text-muted mb-3">
             Desde esta pantalla podés agregar, editar o dar de baja profesores asignados a este grupo.
         </p>
@@ -39,5 +43,5 @@
     </div>
 </div>
 
-{% include "cef/modal_busqueda_docente_cef.html" %}
+{% if grupo.estado == 'activo' and cef_context.puede_operar %}{% include "cef/modal_busqueda_docente_cef.html" %}{% endif %}
 {% endblock %}
