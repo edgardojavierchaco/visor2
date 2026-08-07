@@ -4,5 +4,8 @@
 
 {% block cef_content %}
 {% include "cef/alumnos_seccion_cef.html" %}
-{% include "cef/modal_busqueda_alumno_cef.html" %}
+{% if vista == 'actuales' and cef_context.puede_operar %}
+    {% include "cef/modal_busqueda_alumno_cef.html" %}
+    {% include "cef/alumno_baja_cef_modal.html" %}
+{% endif %}
 {% endblock %}

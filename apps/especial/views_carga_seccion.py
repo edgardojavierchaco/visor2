@@ -13,7 +13,7 @@ from django.template.loader import render_to_string
 from .forms import EspecialSeccionForm, EspecialDocenteSeccionForm
 from .models import SeccionEspecial, AlumnoSeccion, DocenteSeccion
 from .permisos import especial_required
-from .views_contexto import contexto_base, redirect_con_contexto
+from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 from .views_docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
 from .views_inscripcion_seccion import dar_alta_inscripcion_seccion, dar_baja_inscripcion_seccion
 
@@ -92,7 +92,12 @@ def carga_seccion(request):
             "total_secciones": len(secciones),
         }
     )
-    return render(request, "especial/carga_seccion_especial.html", context)
+    return render_especial(
+        request,
+        "especial/carga_seccion_especial.html",
+        context,
+        "especial/partials/secciones_fragmento_especial.html",
+    )
 
 
 def _guardar_seccion(form, especial_context, user):

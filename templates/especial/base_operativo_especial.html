@@ -1,5 +1,7 @@
 ﻿{% extends 'archivos/base/layout.html' %}
 {% block content %}
+{% load static %}
+{% if not especial_partial %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1278,12 +1280,23 @@
     }
     @media (max-width: 1199.98px) and (min-width: 992px) {
         .cef-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .cef-form-grid .span-3 { grid-column: 1 / -1; }
+    .cef-form-grid .span-3 { grid-column: 1 / -1; }
+    }
+    .especial-partial-loading {
+        align-items: center;
+        color: var(--text-faint);
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        justify-content: center;
+        min-height: 180px;
     }
 </style>
-<div class="cef-wrap">
+{% endif %}
+{% if not especial_partial %}
+<div class="cef-wrap" data-especial-shell>
     {% block especial_header %}
-    <section class="especial-module-shell">
+    <section class="especial-module-shell" data-especial-shell-header>
         <header class="especial-module-hero">
             <div class="especial-module-hero-inner">
                 <div class="especial-module-hero-copy">
@@ -1315,7 +1328,7 @@
         {% block especial_context_card %}
         <!-- CONTEXT CARD (selector CUE-Anexo / Ciclo) -->
         <section class="cef-context-card">
-            <form method="get" class="cef-context-grid">
+            <form method="get" class="cef-context-grid" data-especial-context-selector>
                 <div>
                     <label class="cef-context-label" for="id_contexto_cueanexo">Escuela Especial</label>
                     <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
@@ -1341,7 +1354,7 @@
                         <i class="fa-solid fa-check"></i> Aplicar
                     </button>
                     {% if especial_context.es_admin_especial %}
-                        <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="ciclos">
                             <i class="fa-solid fa-calendar-plus"></i> Ciclos
                         </a>
                     {% endif %}
@@ -1367,7 +1380,13 @@
                 });
             </script>
         {% endif %}
-        {% block especial_content %}{% endblock %}
+    {% endif %}
+        <div id="especial-content-region" data-especial-content-region aria-busy="false" data-especial-section="{{ active_menu }}" data-especial-title="{{ especial_header.title }}" data-especial-subtitle="{{ especial_header.subtitle }}">
+            {% block especial_content %}{% endblock %}
+        </div>
+        {% if not especial_partial %}
     </main>
 </div>
+<script src="{% static 'especial/especial_partial_navigation.js' %}" defer></script>
+        {% endif %}
 {% endblock %}

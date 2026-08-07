@@ -4,6 +4,7 @@
 
 {% block cef_content %}
 {% include "cef/grupos_seccion_cef.html" %}
+{% if vista == 'actuales' and cef_context.puede_operar %}{% include "cef/grupo_baja_cef_modal.html" %}{% endif %}
 <style>
     .cef-row-actions-menu {
         border-color: var(--border-strong);

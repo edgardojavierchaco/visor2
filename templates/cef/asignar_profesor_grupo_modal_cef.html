@@ -24,7 +24,8 @@
                 {% csrf_token %}
                 <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                 {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
-                <input type="hidden" name="accion" value="asignar_grupo">
+                <input type="hidden" name="accion" value="{{ asignacion_accion|default:'asignar_grupo' }}">
+                <input type="hidden" name="periodo_historico_id" value="{{ asignacion_periodo_historico_id|default:'' }}" data-cef-asignar-periodo-id>
                 <input type="hidden" name="grupo_id" value="{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.pk }}{% endif %}" data-cef-asignar-grupo-id>
                 <input type="hidden" name="cuil" value="{{ asignacion_docente_cuil }}" data-cef-asignar-docente-cuil>
 

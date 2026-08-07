@@ -1,14 +1,24 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Cursos / grupos</h2>
-        <div class="cef-panel-actions">
-            <a class="btn btn-primary" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-plus"></i> Agregar Curso
-            </a>
-        </div>
+        {% if vista == 'actuales' and cef_context.puede_operar %}
+            <div class="cef-panel-actions">
+                <a class="btn btn-primary" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-plus"></i> Agregar Curso
+                </a>
+            </div>
+        {% endif %}
     </div>
 
     <div class="cef-panel-body">
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales">Ciclo seleccionado</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial">Historial <span class="badge text-bg-secondary">Sólo lectura</span></a>
+            </li>
+        </ul>
         {% if cef_context.establecimiento %}
             <div class="mb-3">
                 <div class="cef-context-summary">
@@ -30,6 +40,13 @@
             </div>
         {% endif %}
 
-        {% include "cef/grupos_lista_cef.html" %}
+        <div data-cef-fragment="grupos-lista">
+            {% if vista == 'historial' %}
+                {% include "cef/grupos_historial_lista_cef.html" %}
+            {% else %}
+                {% include "cef/grupos_lista_cef.html" %}
+            {% endif %}
+        </div>
     </div>
 </div>
+{% if cef_partial and vista == 'actuales' and cef_context.puede_operar %}{% include "cef/grupo_baja_cef_modal.html" %}{% endif %}

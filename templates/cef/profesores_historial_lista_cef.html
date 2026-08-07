@@ -1,0 +1,52 @@
+<div class="cef-table-section" data-cef-table-root>
+    <div class="cef-tools">
+        <div class="cef-tools-left"><span class="cef-tools-label">Mostrar</span><select data-cef-page-size><option value="10">10</option><option value="25">25</option><option value="50">50</option></select><span class="cef-tools-label">registros</span></div>
+        <div class="cef-tools-right"><div class="cef-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="search" placeholder="Buscar…" data-cef-table-search><button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda"><i class="fa-solid fa-xmark"></i></button></div></div>
+    </div>
+    {% if docentes_historial %}
+        <div class="cef-table-wrap"><table class="cef-dt" data-cef-table>
+            <thead><tr><th>Profesor</th><th>DNI</th><th>CUIL</th><th>Ciclo</th><th>Fecha de alta</th><th>Estado</th><th>Fecha de baja</th><th>Motivo</th><th>Acción actual</th></tr></thead>
+            <tbody>{% for periodo in docentes_historial %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                <td><strong>{{ periodo.docente_nombre_snapshot|default:periodo.docente_cuil }}</strong></td><td>{{ periodo.docente_dni_snapshot|default:"-" }}</td><td>{{ periodo.docente_cuil }}</td><td>{{ periodo.ciclo.anio }}</td><td>{{ periodo.fecha_alta|date:"d/m/Y" }}</td>
+                <td>{% if periodo.ciclo.cerrado and periodo.estado == 'activo' %}<span class="badge text-bg-secondary">Activo al cierre</span>{% else %}<span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{{ periodo.get_estado_display }}</span>{% endif %}</td>
+                <td>{{ periodo.fecha_baja|date:"d/m/Y"|default:"-" }}</td><td>{{ periodo.motivo_baja|default:"-" }}</td>
+                <td class="cef-act-cell">
+                    {% if cef_context.puede_operar %}
+                        {% if periodo.activo_banco_actual %}
+                            {% if grupos_disponibles %}
+                                <div class="dropdown" data-cef-profesor-dropdown>
+                                    <button class="btn {% if periodo.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-profesor-dropdown-toggle aria-expanded="false">
+                                        <i class="fa-solid fa-user-plus"></i> {% if periodo.grupos_asignables %}Asignar a curso actual{% elif periodo.grupos_bloqueados %}Ya asignado{% else %}Sin grupos disponibles{% endif %}
+                                    </button>
+                                    <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
+                                        {% for grupo in periodo.grupos_asignables %}
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'cef:profesores' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}vista=historial&abrir_modal_asignacion=1&periodo_historico_id={{ periodo.pk }}&grupo_id={{ grupo.pk }}" data-cef-asignar-grupo-open data-grupo-id="{{ grupo.pk }}" data-grupo-label="{{ grupo.actividad }} Nro. {{ grupo.numero }} - {{ grupo.turno }}" data-docente-cuil="{{ periodo.docente_cuil }}" data-docente-nombre="{{ periodo.docente_nombre_snapshot|default:periodo.docente_cuil }}" data-periodo-id="{{ periodo.pk }}">
+                                                    <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
+                                                    <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                        {% if periodo.grupos_asignables and periodo.grupos_bloqueados %}<li><hr class="dropdown-divider"></li>{% endif %}
+                                        {% for asignacion in periodo.grupos_bloqueados %}
+                                            <li><span class="dropdown-item disabled" aria-disabled="true"><span>Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }}</span><small>Ya asignado como {{ asignacion.get_rol_display }}</small></span></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <span class="text-muted small">Sin grupos actuales disponibles</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted small">Debe reincorporarse primero al CEF</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted small">Solo lectura</span>
+                    {% endif %}
+                </td>
+            </tr>{% endfor %}</tbody>
+        </table></div>
+    {% elif docentes_banco_tabla_pendiente %}<div class="cef-empty-state">Listado pendiente hasta crear la tabla correspondiente.</div>
+    {% elif cef_context.puede_consultar %}<div class="cef-empty-state">No hay períodos históricos de profesores para este CEF.</div>
+    {% else %}<div class="cef-empty-state">Seleccioná un CUE-Anexo para consultar historial.</div>{% endif %}
+    <div class="cef-tfoot"><span class="cef-tfoot-count" data-cef-table-count>{{ docentes_historial|length }} registros</span><div class="cef-tfoot-pagination" data-cef-table-pagination></div></div>
+</div>

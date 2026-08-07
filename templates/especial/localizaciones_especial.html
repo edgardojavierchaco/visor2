@@ -3661,6 +3661,9 @@
                     </div>
                 </div>
 
+            {{ establecimientos_options|json_script:"cefOptionsData" }}
+            {{ filter_options|json_script:"cefFilterOptionsData" }}
+
             {% include "especial/componentes/localizaciones_resultados_especial.html" %}
         </div>
     </div>

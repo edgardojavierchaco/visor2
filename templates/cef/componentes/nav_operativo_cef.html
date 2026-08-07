@@ -101,7 +101,7 @@
                 {% if cef_context %}
                     {% if cef_context.alumnos_url %}
                         <li class="nav-item">
-                            <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ cef_context.alumnos_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-section-link data-cef-section="alumnos" data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}">Alumnos</a>
+                            <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ cef_context.alumnos_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}" data-cef-section-link data-cef-section="alumnos" data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}">Alumnos</a>
                         </li>
                     {% endif %}
                 {% elif cef_alumnos_url %}
@@ -112,7 +112,7 @@
                 {% if cef_context %}
                     {% if cef_context.profesores_url %}
                         <li class="nav-item">
-                            <a class="nav-link{% if active_menu == 'profesores' %} active{% endif %}" href="{{ cef_context.profesores_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-section-link data-cef-section="profesores" data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}">Profesores</a>
+                            <a class="nav-link{% if active_menu == 'profesores' %} active{% endif %}" href="{{ cef_context.profesores_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}" data-cef-section-link data-cef-section="profesores" data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}">Profesores</a>
                         </li>
                     {% endif %}
                 {% elif cef_profesores_url %}
@@ -124,7 +124,7 @@
                     <a class="nav-link{% if active_menu == 'cueanexo' %} active{% endif %}" href="{{ cef_cueanexo_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">Datos CUE-Anexo</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'grupos' %} active{% endif %}" href="{{ cef_grupos_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-section-link data-cef-section="grupos" data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Grupos / Cursos</a>
+                    <a class="nav-link{% if active_menu == 'grupos' %} active{% endif %}" href="{{ cef_grupos_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}" data-cef-section-link data-cef-section="grupos" data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Grupos / Cursos</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link{% if active_menu == 'inventario' %} active{% endif %}" href="{{ cef_inventario_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-section-link data-cef-section="inventario" data-cef-fragment-url="{% url 'cef:inventario_fragmento' %}">Inventario</a>

@@ -6,13 +6,13 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import timezone
 
-from .forms import CefBusquedaDocenteForm, CefDocenteGrupoForm
+from .forms import CefBajaMotivoForm, CefBusquedaDocenteForm, CefDocenteGrupoForm
 from .models import (
     CefDocenteBnh,
     CefDocenteGrupo,
@@ -22,14 +22,21 @@ from .models import (
     validar_docente_grupo_activo,
 )
 from .permisos import cef_required
+from .services import (
+    asegurar_docente_banco_activo,
+    crear_asignacion_docente_activa,
+    dar_baja_asignacion_docente,
+    reasignar_docente_grupo,
+    validar_ciclo_escribible,
+)
 from .views_contexto import (
     contexto_base,
+    normalizar_vista_cef,
     redirect_con_contexto,
     resolver_origen_gestion_grupo,
 )
 from .views_profesores import (
     MSG_BANCO_DOCENTES_PENDIENTE,
-    _asegurar_docente_banco,
     _docente_row,
     _url_carga_profesor,
 )
@@ -100,6 +107,9 @@ def _url_modal_grupo(
     cuil="",
     origen="grupos",
     destino="",
+    *,
+    vista_alumnos="actuales",
+    vista_docentes="actuales",
 ):
     params = {}
     if cef_context.get("cueanexo"):
@@ -112,6 +122,10 @@ def _url_modal_grupo(
     params["abrir_modal_docente"] = "1"
     if cuil:
         params["cuil"] = cuil
+    if normalizar_vista_cef(vista_alumnos) == "historial":
+        params["vista_alumnos"] = "historial"
+    if normalizar_vista_cef(vista_docentes) == "historial":
+        params["vista_docentes"] = "historial"
     return f"{reverse('cef:docentes_grupo', kwargs={'grupo_id': grupo.pk})}?{urlencode(params)}"
 
 
@@ -126,7 +140,15 @@ def _url_docentes_grupo(grupo, cef_context):
     return f"{url}?{querystring}" if querystring else url
 
 
-def _url_gestionar_grupo(grupo, cef_context, origen="grupos", ancla=""):
+def _url_gestionar_grupo(
+    grupo,
+    cef_context,
+    origen="grupos",
+    ancla="",
+    *,
+    vista_alumnos="actuales",
+    vista_docentes="actuales",
+):
     params = {}
     if cef_context.get("cueanexo"):
         params["cueanexo"] = cef_context["cueanexo"]
@@ -136,6 +158,10 @@ def _url_gestionar_grupo(grupo, cef_context, origen="grupos", ancla=""):
     querystring = urlencode(params)
     url = reverse("cef:gestionar_grupo", kwargs={"grupo_id": grupo.pk})
     url = f"{url}?{querystring}" if querystring else url
+    if normalizar_vista_cef(vista_alumnos) == "historial":
+        url = f"{url}&vista_alumnos=historial"
+    if normalizar_vista_cef(vista_docentes) == "historial":
+        url = f"{url}&vista_docentes=historial"
     return f"{url}#{ancla}" if ancla else url
 
 
@@ -177,48 +203,27 @@ def _ajax_docentes_grupo_response(request, context, ok, message):
     )
 
 
-def dar_baja_docente_grupo(asignacion, user):
-    if asignacion.estado != CefDocenteGrupo.Estado.ACTIVO:
-        raise ValidationError("La asignación ya se encuentra dada de baja.")
-
-    asignacion.estado = CefDocenteGrupo.Estado.BAJA
-    if not asignacion.fecha_hasta:
-        asignacion.fecha_hasta = timezone.localdate()
-    asignacion.actualizado_por = user
-    asignacion.save()
-    return asignacion
-
-
-def dar_alta_docente_grupo(asignacion, user, cef_context):
-    if asignacion.estado == CefDocenteGrupo.Estado.ACTIVO:
-        raise ValidationError("La asignación ya se encuentra activa.")
-
-    validar_docente_grupo_activo(
-        asignacion.grupo,
-        asignacion.docente_cuil,
-        asignacion.rol,
-    )
-
-    try:
-        with transaction.atomic():
-            docente = _buscar_docente(asignacion.docente_cuil)
-            if not docente:
-                raise ValidationError("El profesor seleccionado no es válido.")
-            _asegurar_docente_banco(docente, cef_context, user)
-            return CefDocenteGrupo.objects.create(
-                grupo=asignacion.grupo,
-                docente_cuil=asignacion.docente_cuil,
-                rol=asignacion.rol,
-                estado=CefDocenteGrupo.Estado.ACTIVO,
-                fecha_desde=timezone.localdate(),
-                creado_por=user,
-                actualizado_por=user,
-            )
-    except IntegrityError:
-        raise ValidationError("No se pudo reasignar el profesor. Verificá que no exista un docente o rol activo duplicado.")
-
-
 def _baja_docente(request, grupo, cef_context):
+    baja_form = CefBajaMotivoForm(request.POST)
+    if not baja_form.is_valid():
+        ok = False
+        message = _errores_form(baja_form)
+        if _is_ajax(request):
+            context = {
+                "cef_context": cef_context,
+                "grupo": grupo,
+                "docentes": _docentes_grupo(grupo),
+            }
+            return _ajax_docentes_grupo_response(request, context, ok, message)
+        messages.error(request, message)
+        return redirect(
+            redirect_con_contexto(
+                "cef:docentes_grupo",
+                cef_context,
+                grupo_id=grupo.pk,
+            )
+        )
+
     try:
         docente_grupo_id = int(request.POST.get("docente_grupo_id"))
     except (TypeError, ValueError):
@@ -236,7 +241,11 @@ def _baja_docente(request, grupo, cef_context):
         pk=docente_grupo_id,
     )
     try:
-        dar_baja_docente_grupo(asignacion, request.user)
+        dar_baja_asignacion_docente(
+            asignacion,
+            request.user,
+            baja_form.cleaned_data["motivo_baja"],
+        )
         ok = True
         message = "Profesor dado de baja del grupo correctamente."
     except ValidationError as exc:
@@ -282,7 +291,16 @@ def _alta_docente(request, grupo, cef_context):
         pk=docente_grupo_id,
     )
     try:
-        dar_alta_docente_grupo(asignacion, request.user, cef_context)
+        try:
+            asegurar_docente_banco_activo(
+                docente_cuil=asignacion.docente_cuil,
+                cueanexo=cef_context["cueanexo"],
+                ciclo=cef_context["ciclo"],
+                user=request.user,
+            )
+        except (OperationalError, ProgrammingError):
+            pass
+        reasignar_docente_grupo(asignacion, request.user)
         ok = True
         message = "Profesor reasignado al grupo correctamente."
     except ValidationError as exc:
@@ -314,8 +332,20 @@ def _alta_docente(request, grupo, cef_context):
 def docentes_grupo(request, grupo_id):
     context = contexto_base(request, "grupos", "Profesores del Grupo CEF")
     cef_context = context["cef_context"]
+    destino_gestionar = (
+        request.GET.get("destino") or request.POST.get("destino")
+    ) == "gestionar"
+    origen = resolver_origen_gestion_grupo(
+        request.GET.get("origen") or request.POST.get("origen")
+    )
+    vista_alumnos = normalizar_vista_cef(
+        request.GET.get("vista_alumnos") or request.POST.get("vista_alumnos")
+    )
+    vista_docentes = normalizar_vista_cef(
+        request.GET.get("vista_docentes") or request.POST.get("vista_docentes")
+    )
 
-    if not cef_context["puede_operar"]:
+    if not cef_context["puede_consultar"]:
         messages.warning(
             request,
             "Selecciona un CUE-Anexo y un ciclo lectivo para administrar profesores.",
@@ -323,17 +353,60 @@ def docentes_grupo(request, grupo_id):
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
     grupo = _grupo_seguro(grupo_id, cef_context)
-    destino_gestionar = (
-        request.GET.get("destino") or request.POST.get("destino")
-    ) == "gestionar"
-    origen = resolver_origen_gestion_grupo(
-        request.GET.get("origen") or request.POST.get("origen")
-    )
+    if (
+        request.method == "POST"
+        and destino_gestionar
+        and vista_docentes == "historial"
+    ):
+        mensaje = "Historial es una vista de sólo lectura."
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "message": mensaje})
+        messages.error(request, mensaje)
+        return redirect(
+            _url_gestionar_grupo(
+                grupo,
+                cef_context,
+                origen,
+                "profesores-curso",
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
+            )
+        )
+    if request.method == "POST" and not cef_context["puede_operar"]:
+        mensaje = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "message": mensaje})
+        messages.error(request, mensaje)
+        return redirect(
+            _url_gestionar_grupo(
+                grupo,
+                cef_context,
+                origen,
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
+            )
+        )
+    if request.method == "POST" and grupo.estado != CefGrupo.Estado.ACTIVO:
+        mensaje = "El grupo está dado de baja y solo puede consultarse."
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "message": mensaje})
+        messages.error(request, mensaje)
+        return redirect(
+            _url_gestionar_grupo(
+                grupo,
+                cef_context,
+                origen,
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
+            )
+        )
     gestionar_grupo_url = _url_gestionar_grupo(
         grupo,
         cef_context,
         origen,
         "profesores-curso",
+        vista_alumnos=vista_alumnos,
+        vista_docentes=vista_docentes,
     )
     docente = None
     cuil_buscado = ""
@@ -369,54 +442,52 @@ def docentes_grupo(request, grupo_id):
             docente_form.instance.docente_cuil = cuil_buscado
 
             if docente_form.is_valid():
-                estado = docente_form.cleaned_data.get("estado")
                 rol = docente_form.cleaned_data.get("rol")
-                if estado == CefDocenteGrupo.Estado.ACTIVO:
+                try:
+                    banco_pendiente = False
                     try:
-                        validar_docente_grupo_activo(grupo, cuil_buscado, rol)
-                    except ValidationError as exc:
-                        ajax_message = "; ".join(exc.messages)
-                if ajax_message:
+                        asegurar_docente_banco_activo(
+                            docente_cuil=cuil_buscado,
+                            cueanexo=cef_context["cueanexo"],
+                            ciclo=cef_context["ciclo"],
+                            user=request.user,
+                        )
+                    except (OperationalError, ProgrammingError):
+                        banco_pendiente = True
+                    asignacion = crear_asignacion_docente_activa(
+                        grupo=grupo,
+                        docente_cuil=cuil_buscado,
+                        rol=rol,
+                        user=request.user,
+                        fecha_desde=docente_form.cleaned_data.get("fecha_desde"),
+                        observaciones=(
+                            docente_form.cleaned_data.get("observaciones") or ""
+                        )
+                    )
+                    if banco_pendiente and not _is_ajax(request):
+                        messages.warning(request, MSG_BANCO_DOCENTES_PENDIENTE)
+                    if _is_ajax(request):
+                        ajax_ok = True
+                        ajax_message = f"Profesor asignado como {asignacion.get_rol_display().lower()}."
+                    else:
+                        messages.success(request, "Profesor asociado correctamente.")
+                        return redirect(
+                            gestionar_grupo_url
+                            if destino_gestionar
+                            else redirect_con_contexto(
+                                "cef:docentes_grupo",
+                                cef_context,
+                                grupo_id=grupo.pk,
+                            )
+                        )
+                except ValidationError as exc:
+                    ajax_message = "; ".join(exc.messages)
                     if not _is_ajax(request):
                         messages.error(request, ajax_message)
-                else:
-                    try:
-                        with transaction.atomic():
-                            _, _, banco_pendiente = _asegurar_docente_banco(
-                                docente,
-                                cef_context,
-                                request.user,
-                            )
-                            asignacion = docente_form.save(commit=False)
-                            asignacion.grupo = grupo
-                            asignacion.docente_cuil = cuil_buscado
-                            asignacion.creado_por = request.user
-                            asignacion.actualizado_por = request.user
-                            asignacion.save()
-                        if banco_pendiente and not _is_ajax(request):
-                            messages.warning(request, MSG_BANCO_DOCENTES_PENDIENTE)
-                        if _is_ajax(request):
-                            ajax_ok = True
-                            ajax_message = f"Profesor asignado como {asignacion.get_rol_display().lower()}."
-                        else:
-                            messages.success(request, "Profesor asociado correctamente.")
-                            return redirect(
-                                gestionar_grupo_url
-                                if destino_gestionar
-                                else redirect_con_contexto(
-                                    "cef:docentes_grupo",
-                                    cef_context,
-                                    grupo_id=grupo.pk,
-                                )
-                            )
-                    except ValidationError as exc:
-                        ajax_message = "; ".join(exc.messages)
-                        if not _is_ajax(request):
-                            messages.error(request, ajax_message)
-                    except IntegrityError:
-                        ajax_message = "No se pudo asociar el profesor. Verifica que no exista ya un titular o suplente activo para este grupo."
-                        if not _is_ajax(request):
-                            messages.error(request, ajax_message)
+                except IntegrityError:
+                    ajax_message = "No se pudo asociar el profesor. Verifica que no exista ya un titular o suplente activo para este grupo."
+                    if not _is_ajax(request):
+                        messages.error(request, ajax_message)
             else:
                 ajax_message = _errores_form(docente_form) or "Revisá los datos de la asignación al grupo."
                 if not _is_ajax(request):
@@ -439,6 +510,8 @@ def docentes_grupo(request, grupo_id):
         cuil_buscado,
         origen,
         "gestionar" if destino_gestionar else "",
+        vista_alumnos=vista_alumnos,
+        vista_docentes=vista_docentes,
     )
     context.update(
         {
@@ -473,6 +546,8 @@ def docentes_grupo(request, grupo_id):
                 cef_context,
                 origen=origen,
                 destino="gestionar" if destino_gestionar else "",
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
             ),
             "modal_tiene_grupo": True,
             "modal_volver_url": (
@@ -512,7 +587,9 @@ def editar_docente_grupo(request, grupo_id, docente_grupo_id):
     if not cef_context["puede_operar"]:
         messages.warning(
             request,
-            "Selecciona un CUE-Anexo y un ciclo lectivo para administrar profesores.",
+            "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            if cef_context["ciclo_cerrado"]
+            else "Selecciona un CUE-Anexo y un ciclo lectivo para administrar profesores.",
         )
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
@@ -524,16 +601,35 @@ def editar_docente_grupo(request, grupo_id, docente_grupo_id):
     origen = resolver_origen_gestion_grupo(
         request.GET.get("origen") or request.POST.get("origen")
     )
+    vista_alumnos = normalizar_vista_cef(
+        request.GET.get("vista_alumnos") or request.POST.get("vista_alumnos")
+    )
+    vista_docentes = normalizar_vista_cef(
+        request.GET.get("vista_docentes") or request.POST.get("vista_docentes")
+    )
     volver_url = (
-        _url_gestionar_grupo(grupo, cef_context, origen, "profesores-curso")
+        _url_gestionar_grupo(
+            grupo,
+            cef_context,
+            origen,
+            "profesores-curso",
+            vista_alumnos=vista_alumnos,
+            vista_docentes=vista_docentes,
+        )
         if volver_gestionar
         else _url_docentes_grupo(grupo, cef_context)
     )
+    if volver_gestionar and vista_docentes == "historial":
+        messages.error(request, "Historial es una vista de sólo lectura.")
+        return redirect(volver_url)
     volver_label = (
         "Volver a Gestionar curso"
         if volver_gestionar
         else "Volver a profesores"
     )
+    if grupo.estado != CefGrupo.Estado.ACTIVO:
+        messages.error(request, "El grupo está dado de baja y no puede editarse.")
+        return redirect(volver_url)
     asignacion = get_object_or_404(
         CefDocenteGrupo.objects.filter(grupo=grupo),
         pk=docente_grupo_id,
@@ -547,7 +643,7 @@ def editar_docente_grupo(request, grupo_id, docente_grupo_id):
 
         if form.is_valid():
             try:
-                if form.cleaned_data.get("estado") == CefDocenteGrupo.Estado.ACTIVO:
+                if asignacion.estado == CefDocenteGrupo.Estado.ACTIVO:
                     validar_docente_grupo_activo(
                         grupo,
                         docente_cuil,
@@ -556,19 +652,24 @@ def editar_docente_grupo(request, grupo_id, docente_grupo_id):
                     )
                 try:
                     with transaction.atomic():
-                        if form.cleaned_data.get("estado") == CefDocenteGrupo.Estado.ACTIVO:
+                        if asignacion.estado == CefDocenteGrupo.Estado.ACTIVO:
                             docente = _buscar_docente(docente_cuil)
                             if not docente:
                                 raise ValidationError("El profesor seleccionado no es válido.")
-                            _asegurar_docente_banco(
-                                docente,
-                                cef_context,
-                                request.user,
-                            )
+                            try:
+                                asegurar_docente_banco_activo(
+                                    docente_cuil=docente_cuil,
+                                    cueanexo=cef_context["cueanexo"],
+                                    ciclo=cef_context["ciclo"],
+                                    user=request.user,
+                                )
+                            except (OperationalError, ProgrammingError):
+                                pass
                         asignacion = form.save(commit=False)
                         asignacion.grupo = grupo
                         asignacion.docente_cuil = docente_cuil
                         asignacion.actualizado_por = request.user
+                        validar_ciclo_escribible(grupo.ciclo_id)
                         asignacion.save()
                     messages.success(request, "Asignación del profesor actualizada correctamente.")
                     return redirect(volver_url)

@@ -57,7 +57,7 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Profesores</h2>
-        <div class="cef-panel-actions">
+        {% if vista == 'actuales' and cef_context.puede_operar %}<div class="cef-panel-actions">
             {% if cef_partial %}
                 <a class="btn btn-primary" href="{{ modal_action_url }}">
                     <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
@@ -67,15 +67,29 @@
                     <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
                 </button>
             {% endif %}
-        </div>
+        </div>{% endif %}
     </div>
 
-    <div class="cef-panel-body" data-cef-fragment="profesores-banco">
-        {% include "cef/profesores_lista_cef.html" %}
+    <div class="cef-panel-body">
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:profesores' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales">Ciclo seleccionado</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:profesores' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial">Historial <span class="badge text-bg-secondary">Sólo lectura</span></a>
+            </li>
+        </ul>
+        <div data-cef-fragment="profesores-banco">
+            {% if vista == 'historial' %}
+                {% include "cef/profesores_historial_lista_cef.html" %}
+            {% else %}
+                {% include "cef/profesores_lista_cef.html" %}
+            {% endif %}
+        </div>
     </div>
 </div>
 
-{% if cef_partial %}
+{% if cef_partial and cef_context.puede_operar %}
     {% include "cef/asignar_profesor_grupo_modal_cef.html" %}
-    {% include "cef/profesor_baja_cef_modal.html" %}
+    {% if vista == 'actuales' %}{% include "cef/profesor_baja_cef_modal.html" %}{% endif %}
 {% endif %}

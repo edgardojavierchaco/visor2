@@ -2109,7 +2109,7 @@
                         <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
                         <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm" data-cef-select="true">
                             {% for ciclo in cef_context.ciclos %}
-                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.actual %} &middot; actual{% endif %}</option>
+                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.cerrado %} &middot; cerrado{% endif %}{% if ciclo.actual %} &middot; actual{% endif %}</option>
                             {% empty %}
                                 <option value="">Sin ciclo activo</option>
                             {% endfor %}
@@ -2136,6 +2136,9 @@
         {% if cef_context.sin_ciclo %}
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
         {% endif %}
+        {% if cef_context.ciclo_cerrado %}
+            <div class="alert alert-warning">Ciclo {{ cef_context.ciclo.anio }} cerrado. La información se encuentra en modo sólo lectura.</div>
+        {% endif %}
 
         <div id="cef-content-region" data-cef-content-region>
             {% block cef_content %}{% endblock %}
@@ -2151,6 +2154,11 @@
                     <div class="modal-body">
                         <p class="mb-1" data-cef-confirm-message>¿Confirmás esta acción?</p>
                         <p class="small text-muted mb-0" data-cef-confirm-entity></p>
+                        <div class="mt-3 d-none" data-cef-confirm-motivo-wrap>
+                            <label class="form-label" for="cefConfirmMotivoBaja">Motivo de baja</label>
+                            <textarea id="cefConfirmMotivoBaja" class="form-control" rows="3" maxlength="255" data-cef-confirm-motivo></textarea>
+                            <div class="text-danger small mt-1 d-none" data-cef-confirm-motivo-error>Debe indicar el motivo de la baja.</div>
+                        </div>
                         <div class="alert alert-danger mt-3 mb-0 d-none" data-cef-confirm-feedback></div>
                     </div>
                     <div class="modal-footer">
@@ -2317,6 +2325,38 @@
                 feedback.classList.toggle("d-none", !message);
             }
 
+            function prepareConfirmMotivo(form) {
+                var wrap = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-wrap]") : null;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo]") : null;
+                var error = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-error]") : null;
+                var required = form && form.hasAttribute("data-cef-require-motivo");
+                if (wrap) wrap.classList.toggle("d-none", !required);
+                if (input) input.value = "";
+                if (error) error.classList.add("d-none");
+            }
+
+            function applyConfirmMotivo(form) {
+                if (!form || !form.hasAttribute("data-cef-require-motivo")) return true;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo]") : null;
+                var error = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-error]") : null;
+                var motivo = input ? input.value.trim() : "";
+                if (!motivo) {
+                    if (error) error.classList.remove("d-none");
+                    if (input) input.focus();
+                    return false;
+                }
+                var hidden = form.querySelector("input[name='motivo_baja']");
+                if (!hidden) {
+                    hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "motivo_baja";
+                    form.appendChild(hidden);
+                }
+                hidden.value = motivo;
+                if (error) error.classList.add("d-none");
+                return true;
+            }
+
             function captureAjaxViewport(source) {
                 var anchor = null;
                 if (source && source.matches && source.matches(".cef-course-section")) {
@@ -2456,6 +2496,7 @@
                 setConfirmText("[data-cef-confirm-message]", form.dataset.cefConfirmMessage || "¿Confirmás esta acción?");
                 setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
                 setConfirmFeedback("");
+                prepareConfirmMotivo(form);
                 try {
                     controller.show();
                 } catch (error) {
@@ -2474,6 +2515,7 @@
 
                 if (!event.target.closest("[data-cef-confirm-accept]")) return;
                 if (!pendingConfirmForm) return;
+                if (!applyConfirmMotivo(pendingConfirmForm)) return;
                 if (pendingConfirmForm.hasAttribute("data-cef-ajax-post")) {
                     submitAjaxForm(pendingConfirmForm, event.target.closest("[data-cef-confirm-accept]"));
                     return;

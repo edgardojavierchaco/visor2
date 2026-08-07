@@ -29,7 +29,7 @@ ESPECIAL_MENU_METADATA = {
     },
     "docentes": {
         "title": "Docentes",
-        "subtitle": "Buscar, consultar y vincular docentes al módulo Especial.",
+        "subtitle": "Gestión de Docentes de Educación Especial.",
     },
     "cueanexo": {
         "title": "Datos CUE-Anexo",
@@ -46,6 +46,7 @@ ESPECIAL_MENU_METADATA = {
 }
 
 ESPECIAL_MENU_DEFAULT = "inicio"
+ESPECIAL_PARTIAL_SECTIONS = frozenset({"alumnos", "docentes", "cueanexo", "secciones", "ciclos"})
 
 ESPECIAL_ACCESOS_RAPIDOS = (
     {
@@ -191,6 +192,21 @@ def metadata_menu_especial(active_menu):
     return ESPECIAL_MENU_METADATA.get(active_menu or "", ESPECIAL_MENU_METADATA[ESPECIAL_MENU_DEFAULT]).copy()
 
 
+def es_navegacion_parcial(request, active_menu):
+    """Indica si la vista soporta la representacion parcial solicitada."""
+    return (
+        request.method == "GET"
+        and active_menu in ESPECIAL_PARTIAL_SECTIONS
+        and request.headers.get("X-Especial-Partial") == "1"
+    )
+
+
+def render_especial(request, full_template, context, partial_template):
+    """Renderiza la pagina completa o solo la region parcial autorizada."""
+    template_name = partial_template if context.get("especial_partial") else full_template
+    return render(request, template_name, context)
+
+
 def construir_accesos_rapidos_especial(especial_context):
     """Arma los accesos rápidos de Inicio reutilizando la metadata centralizada."""
     querystring = especial_context.get("querystring", "")
@@ -271,6 +287,7 @@ def contexto_base(request, active_menu, title=None, subtitle=None):
         "especial_header": metadata,
         "active_menu": active_menu or ESPECIAL_MENU_DEFAULT,
         "especial_context": especial_context,
+        "especial_partial": es_navegacion_parcial(request, active_menu),
         "request": request,
     }
 

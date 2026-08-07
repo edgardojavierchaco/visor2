@@ -1,0 +1,216 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Registro y consulta de asistencia del curso.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head cef-course-header">
+        <div class="cef-course-heading">
+            <span class="cef-section-kicker">Asistencia</span>
+            <div class="cef-course-title-line">
+                <h2 class="cef-panel-title">{{ grupo.actividad }} <span>· Grupo Nro. {{ grupo.numero }}</span></h2>
+                <span class="badge text-bg-{% if solo_lectura %}secondary{% else %}success{% endif %}">
+                    {% if solo_lectura %}Sólo lectura{% else %}Ciclo abierto{% endif %}
+                </span>
+            </div>
+            <div class="cef-course-meta">
+                <span><strong>CUE-Anexo</strong> {{ grupo.cueanexo }}</span>
+                <span><strong>Ciclo</strong> {{ grupo.ciclo.anio }}</span>
+                <span><strong>Fecha</strong> {{ fecha|date:"d/m/Y" }}</span>
+            </div>
+        </div>
+        <div class="cef-panel-actions">
+            <a class="btn btn-outline-secondary" href="{{ gestionar_url }}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a Gestionar curso
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body cef-course-body">
+        {% if solo_lectura %}
+            <div class="alert alert-info">La jornada y sus estados pueden consultarse, pero el ciclo o el curso no admiten escrituras.</div>
+        {% endif %}
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-calendar-day me-2"></i>Seleccionar jornada</h3>
+                {% if jornada %}<span class="badge text-bg-primary">Jornada abierta</span>{% else %}<span class="badge text-bg-secondary">Sin jornada creada</span>{% endif %}
+            </div>
+            <div class="cef-card-body">
+                <form method="get" action="{{ asistencia_url }}">
+                    <input type="hidden" name="cueanexo" value="{{ cef_context.cueanexo }}">
+                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                    {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
+                    <div class="d-flex flex-wrap gap-2 align-items-end">
+                        <div class="cef-field">
+                            <label for="{{ fecha_form.fecha.id_for_label }}">{{ fecha_form.fecha.label }}</label>
+                            {{ fecha_form.fecha }}
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-magnifying-glass me-1"></i>Abrir fecha
+                        </button>
+                    </div>
+                </form>
+                {% if not fecha_habitual %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        La fecha seleccionada no corresponde a un día habitual de funcionamiento del curso. Podés continuar igualmente.
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-user-check me-2"></i>Alumnos de la jornada</h3>
+                <span class="badge text-bg-primary">{{ inscripciones|length }} inscripciones vigentes</span>
+            </div>
+            <div class="cef-card-body">
+                {% if jornada %}
+                    <div class="cef-context-summary mb-3">
+                        <div class="cef-context-summary-item"><span>Presentes</span><strong>{{ presentes }}</strong></div>
+                        <div class="cef-context-summary-item"><span>Ausentes</span><strong>{{ ausentes }}</strong></div>
+                        <div class="cef-context-summary-item"><span>Justificadas</span><strong>{{ justificadas }}</strong></div>
+                        <div class="cef-context-summary-item"><span>Porcentaje</span><strong>{% if porcentaje_disponible %}{{ porcentaje }}%{% else %}—{% endif %}</strong></div>
+                    </div>
+                {% endif %}
+
+                {% if inscripciones %}
+                    <form method="post" action="{{ asistencia_url }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}">
+                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                        {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
+                        <div class="cef-table-wrap">
+                            <table class="cef-dt">
+                                <thead>
+                                    <tr>
+                                        <th>Apellido y nombre</th>
+                                        <th>Documento</th>
+                                        <th>Período incluido</th>
+                                        <th>Asistencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for inscripcion in inscripciones %}
+                                        <tr>
+                                            <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
+                                            <td>{{ inscripcion.alumno.nro_doc|default:"—" }}</td>
+                                            <td>
+                                                {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}
+                                                {% if inscripcion.fecha_baja %} a {{ inscripcion.fecha_baja|date:"d/m/Y" }}{% else %} en adelante{% endif %}
+                                            </td>
+                                            <td>
+                                                {% if solo_lectura %}
+                                                    {% if inscripcion.asistencia_actual %}
+                                                        <span class="badge text-bg-{% if inscripcion.asistencia_actual.estado == 'presente' %}success{% elif inscripcion.asistencia_actual.estado == 'ausente' %}danger{% else %}warning{% endif %}">{{ inscripcion.asistencia_actual.get_estado_display }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">Sin registrar</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <select class="form-select" name="asistencia_{{ inscripcion.pk }}">
+                                                        {% if not inscripcion.asistencia_actual %}<option value="">Sin registrar</option>{% endif %}
+                                                        {% for valor, etiqueta in estado_choices %}
+                                                            <option value="{{ valor }}"{% if inscripcion.asistencia_actual.estado == valor %} selected{% endif %}>{{ etiqueta }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if not solo_lectura %}
+                            <div class="cef-form-actions mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-floppy-disk me-1"></i>{% if jornada %}Guardar cambios{% else %}Crear jornada y guardar{% endif %}
+                                </button>
+                            </div>
+                        {% endif %}
+                    </form>
+                {% elif jornada %}
+                    <div class="cef-empty-state">No había inscripciones vigentes para esta fecha.</div>
+                {% else %}
+                    <div class="cef-empty-state">No hay inscripciones vigentes para crear una jornada en esta fecha.</div>
+                    {% if not solo_lectura %}
+                        <form method="post" action="{{ asistencia_url }}" class="mt-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}">
+                            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                            {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                            {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-calendar-plus me-1"></i>Crear jornada
+                            </button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-clock-rotate-left me-2"></i>Jornadas anteriores</h3>
+            </div>
+            <div class="cef-card-body">
+                {% if jornadas_anteriores %}
+                    <div class="cef-table-wrap">
+                        <table class="cef-dt">
+                            <thead><tr><th>Fecha</th><th>Presentes</th><th>Ausentes</th><th>Justificadas</th><th>Acción</th></tr></thead>
+                            <tbody>
+                                {% for item in jornadas_anteriores %}
+                                    <tr>
+                                        <td><strong>{{ item.fecha|date:"d/m/Y" }}</strong></td>
+                                        <td>{{ item.presentes }}</td>
+                                        <td>{{ item.ausentes }}</td>
+                                        <td>{{ item.justificadas }}</td>
+                                        <td><a class="btn btn-outline-primary btn-sm" href="{{ item.url_asistencia }}">Abrir</a></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="cef-empty-state">Todavía no existen jornadas para este curso.</div>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if jornada %}
+            <section class="cef-card">
+                <div class="cef-card-header">
+                    <h3><i class="fa-solid fa-clock-rotate-left me-2"></i>Trazabilidad</h3>
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#historialCambiosAsistencia" aria-expanded="false" aria-controls="historialCambiosAsistencia">
+                        Historial de cambios
+                    </button>
+                </div>
+                <div id="historialCambiosAsistencia" class="collapse">
+                    <div class="cef-card-body">
+                        {% if movimientos %}
+                            <div class="cef-table-wrap">
+                                <table class="cef-dt">
+                                    <thead><tr><th>Fecha y hora</th><th>Alumno</th><th>Usuario</th><th>Anterior</th><th>Nuevo</th></tr></thead>
+                                    <tbody>
+                                        {% for movimiento in movimientos %}
+                                            <tr>
+                                                <td>{{ movimiento.creado_en|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ movimiento.asistencia.inscripcion.alumno.apellidos }}, {{ movimiento.asistencia.inscripcion.alumno.nombres }}</td>
+                                                <td>{{ movimiento.creado_por.get_full_name|default:movimiento.creado_por.username|default:"Usuario no disponible" }}</td>
+                                                <td>{% if movimiento.estado_anterior %}{{ movimiento.get_estado_anterior_display }}{% else %}Sin estado{% endif %}</td>
+                                                <td>{{ movimiento.get_estado_nuevo_display }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="cef-empty-state">La jornada todavía no tiene cambios de asistencia registrados.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

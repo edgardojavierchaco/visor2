@@ -21,6 +21,7 @@ from .models import (
 )
 from .permisos import cef_required
 from .performance import perf_render, perf_start_view
+from .services import validar_ciclo_escribible
 from .views_contexto import (
     contexto_base,
     redirect_con_contexto,
@@ -207,7 +208,7 @@ def _inventario_listado_context(
             estados_catalogo,
             observaciones_form,
         )
-        if cef_context["puede_operar"]
+        if cef_context["puede_consultar"]
         else []
     )
     return {
@@ -229,11 +230,13 @@ def _inventario_detalle_get_context(request, cef_context, estados_catalogo):
         "mostrar_form_estado": False,
         "inventario_mensaje": "",
     }
-    if not cef_context["puede_operar"] or not request.GET.get("detalle"):
+    if not cef_context["puede_consultar"] or not request.GET.get("detalle"):
         return context
 
     detalle_item = _item_seguro(request.GET.get("detalle"), cef_context)
     context["detalle_item"] = detalle_item
+    if not cef_context["puede_operar"]:
+        return context
     estado_accion = request.GET.get("estado_accion")
     if estado_accion not in {"agregar", "editar"}:
         return context
@@ -312,7 +315,18 @@ def carga_inventario(request, item_id=None):
 
     if request.method == "POST":
         if not puede_operar:
-            raise Http404("No hay un contexto operativo habilitado.")
+            messages.error(
+                request,
+                "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+                if cef_context["ciclo_cerrado"]
+                else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar inventario.",
+            )
+            return redirect(redirect_con_contexto("cef:carga_inventario", cef_context))
+        try:
+            validar_ciclo_escribible(cef_context["ciclo"])
+        except ValidationError as error:
+            messages.error(request, "; ".join(error.messages))
+            return redirect(redirect_con_contexto("cef:carga_inventario", cef_context))
 
         accion = request.POST.get("accion")
 
@@ -345,6 +359,7 @@ def carga_inventario(request, item_id=None):
                     formulario_error = form
                     try:
                         with transaction.atomic():
+                            validar_ciclo_escribible(cef_context["ciclo"])
                             item = form.save(commit=False)
                             item.cueanexo = cef_context["cueanexo"]
                             item.ciclo = cef_context["ciclo"]
@@ -391,6 +406,7 @@ def carga_inventario(request, item_id=None):
             guardado = False
             try:
                 with transaction.atomic():
+                    validar_ciclo_escribible(cef_context["ciclo"])
                     item_bloqueado = _item_seguro(
                         detalle_item_id,
                         cef_context,
@@ -451,6 +467,7 @@ def carga_inventario(request, item_id=None):
             else:
                 try:
                     with transaction.atomic():
+                        validar_ciclo_escribible(cef_context["ciclo"])
                         item_bloqueado = _item_seguro(
                             detalle_item_id,
                             cef_context,
@@ -515,6 +532,7 @@ def carga_inventario(request, item_id=None):
             detalle_item_id = _id_entero(request.POST.get("item_id"))
             estado_id = request.POST.get("estado_id")
             with transaction.atomic():
+                validar_ciclo_escribible(cef_context["ciclo"])
                 item_bloqueado = _item_seguro(
                     detalle_item_id,
                     cef_context,
@@ -536,6 +554,7 @@ def carga_inventario(request, item_id=None):
         elif accion == "eliminar_material":
             detalle_item = _item_seguro(request.POST.get("item_id"), cef_context)
             with transaction.atomic():
+                validar_ciclo_escribible(cef_context["ciclo"])
                 item_bloqueado = _item_seguro(
                     detalle_item.pk,
                     cef_context,
@@ -558,8 +577,8 @@ def carga_inventario(request, item_id=None):
         else:
             raise Http404("Acción de inventario no válida.")
 
-    elif puede_operar:
-        mostrar_form = request.GET.get("accion") == "agregar"
+    elif cef_context["puede_consultar"]:
+        mostrar_form = puede_operar and request.GET.get("accion") == "agregar"
         if mostrar_form:
             form = CefInventarioMaterialForm()
             estado_inicial_form = CefInventarioMaterialEstadoForm(prefix="estado")
@@ -577,7 +596,7 @@ def carga_inventario(request, item_id=None):
 
     inventario_mensaje = (
         detalle_context["inventario_mensaje"]
-        if request.method == "GET" and puede_operar
+        if request.method == "GET" and cef_context["puede_consultar"]
         else ""
     )
     context.update(

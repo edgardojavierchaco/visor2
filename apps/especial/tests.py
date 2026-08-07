@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -25,7 +26,16 @@ from .views_carga_seccion import _alta_docente_nuevo_gestionar
 from .views_ciclo import _exigir_admin
 from .views_docentes_seccion import dar_alta_docente_seccion
 from .views_inscripcion_seccion import dar_alta_inscripcion_seccion
-from .views_localizaciones import _get_items_base_authorized
+from .views_localizaciones import (
+    CACHE_TTL_LOCALIZACIONES_ESPECIAL,
+    _CACHE_MISS,
+    _apply_filters_items,
+    _apply_order_items,
+    _cache_key_localizaciones_especial,
+    _get_items_base_cached,
+    _get_items_base_authorized,
+    visualizacion_localizaciones,
+)
 
 from apps.bnhalumnos.models import Alumno, CatalogoSinoTipo
 from apps.bnhpersonas.models import DocumentoTipo, EstadosCiviles, Localidades, Pais, Provincias, Sexo, validar_cuil
@@ -475,6 +485,420 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
 
         self.assertIs(queryset, permisos["escuelas_visualizacion"])
         self.assertIn("cueanexo", queryset.only_fields)
+
+    def test_fragmento_no_construye_opciones_ni_contexto_completo(self):
+        request = RequestFactory().get(
+            "/especial/visualizacion/localizaciones/",
+            {
+                "fragmento": "resultados",
+                "establecimientos": ["123456700", "987654300"],
+            },
+        )
+        request.user = SimpleNamespace(is_authenticated=True, pk=7)
+        base_items = [
+            {"cueanexo": "123456700", "nom_est": "Escuela 123456700"},
+            {"cueanexo": "987654300", "nom_est": "Escuela 987654300"},
+        ]
+        permisos = {
+            "puede_ver": True,
+            "escuelas_visualizacion": MagicMock(),
+            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "rol": "Administrador",
+        }
+        page_obj = SimpleNamespace(
+            number=1,
+            object_list=[{"cueanexo": "123456700"}],
+        )
+        paginator = MagicMock()
+        paginator.count = 1
+        paginator.page.return_value = page_obj
+        filtrado = [{"cueanexo": "123456700"}]
+        ordenado = [{"cueanexo": "123456700"}]
+
+        with patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_localizaciones.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_localizaciones._get_items_base_cached",
+            return_value=base_items,
+        ) as get_items_base_cached, patch(
+            "apps.especial.views_localizaciones._resolver_establecimientos_autorizados",
+            return_value=["123456700"],
+        ), patch(
+            "apps.especial.views_localizaciones._get_filter_options"
+        ) as get_filter_options, patch(
+            "apps.especial.views_localizaciones._get_establecimientos_options"
+        ) as get_establecimientos_options, patch(
+            "apps.especial.views_localizaciones.contexto_base"
+        ) as contexto_base, patch(
+            "apps.especial.views_localizaciones._apply_filters_items",
+            return_value=filtrado,
+        ) as apply_filters, patch(
+            "apps.especial.views_localizaciones._apply_order_items",
+            return_value=(ordenado, ""),
+        ), patch(
+            "apps.especial.views_localizaciones.Paginator",
+            return_value=paginator,
+        ), patch(
+            "apps.especial.views_localizaciones.render",
+            return_value=HttpResponse("fragmento"),
+        ) as render:
+            response = visualizacion_localizaciones(request)
+
+        self.assertEqual(response.status_code, 200)
+        get_items_base_cached.assert_called_once_with(request, permisos)
+        get_filter_options.assert_not_called()
+        get_establecimientos_options.assert_not_called()
+        contexto_base.assert_not_called()
+        apply_filters.assert_called_once_with(
+            base_items,
+            request,
+            establecimientos=["123456700"],
+        )
+        render.assert_called_once()
+        self.assertEqual(
+            render.call_args.args[1],
+            "especial/componentes/localizaciones_resultados_especial.html",
+        )
+        self.assertEqual(
+            render.call_args.args[2]["lista_items"],
+            [{"cueanexo": "123456700"}],
+        )
+        fragment_context = render.call_args.args[2]
+        self.assertIs(fragment_context["page_obj"], page_obj)
+        self.assertIs(fragment_context["paginator"], paginator)
+        self.assertIs(fragment_context["request"], request)
+        self.assertNotIn("filter_options", fragment_context)
+        self.assertNotIn("establecimientos_options", fragment_context)
+
+    def test_cache_key_depende_de_usuario_rol_alcance_y_version(self):
+        request = RequestFactory().get("/")
+        request.user = SimpleNamespace(pk=7)
+        permisos = {
+            "rol": "Administrador",
+            "cueanexos_visualizacion": frozenset({"987654300", "123456700"}),
+        }
+
+        same_scope = {
+            "rol": "Administrador",
+            "cueanexos_visualizacion": ["123456700", "987654300"],
+        }
+        changed_scope = {
+            "rol": "Administrador",
+            "cueanexos_visualizacion": ["123456700"],
+        }
+        changed_role = {
+            "rol": "Supervisor",
+            "cueanexos_visualizacion": ["123456700", "987654300"],
+        }
+
+        self.assertEqual(
+            _cache_key_localizaciones_especial(request, permisos),
+            _cache_key_localizaciones_especial(request, same_scope),
+        )
+        self.assertNotEqual(
+            _cache_key_localizaciones_especial(request, permisos),
+            _cache_key_localizaciones_especial(request, changed_scope),
+        )
+        base_key = _cache_key_localizaciones_especial(request, permisos)
+        self.assertNotEqual(base_key, _cache_key_localizaciones_especial(request, changed_role))
+        with patch(
+            "apps.especial.views_localizaciones.CACHE_VERSION_LOCALIZACIONES_ESPECIAL",
+            "v1_cache_20991231",
+        ):
+            self.assertNotEqual(
+                base_key,
+                _cache_key_localizaciones_especial(request, permisos),
+            )
+        request.user = SimpleNamespace(pk=8)
+        self.assertNotEqual(
+            _cache_key_localizaciones_especial(request, permisos),
+            _cache_key_localizaciones_especial(
+                SimpleNamespace(user=SimpleNamespace(pk=7)), permisos
+            ),
+        )
+        request.user = SimpleNamespace(pk=None)
+        self.assertIsNone(_cache_key_localizaciones_especial(request, permisos))
+
+    def test_cache_miss_hit_y_lista_vacia_no_se_confunden(self):
+        request = RequestFactory().get("/")
+        request.user = SimpleNamespace(pk=7)
+        permisos = {
+            "rol": "Administrador",
+            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "escuelas_visualizacion": MagicMock(),
+        }
+        source = [SimpleNamespace(cueanexo="123456700", nom_est="Escuela")]
+
+        with patch("apps.especial.views_localizaciones.cache") as cache_mock, patch(
+            "apps.especial.views_localizaciones._get_items_base_authorized",
+            return_value=source,
+        ) as base_authorized:
+            cache_mock.get.return_value = _CACHE_MISS
+            miss_items = _get_items_base_cached(request, permisos)
+            cache_mock.set.assert_called_once_with(
+                _cache_key_localizaciones_especial(request, permisos),
+                miss_items,
+                CACHE_TTL_LOCALIZACIONES_ESPECIAL,
+            )
+            base_authorized.assert_called_once_with(permisos)
+
+        cached_items = [{"cueanexo": "123456700"}]
+        cached_before = [dict(item) for item in cached_items]
+        with patch("apps.especial.views_localizaciones.cache") as cache_mock, patch(
+            "apps.especial.views_localizaciones._get_items_base_authorized"
+        ) as base_authorized:
+            cache_mock.get.return_value = cached_items
+            returned_items = _get_items_base_cached(request, permisos)
+            self.assertIs(returned_items, cached_items)
+            _apply_filters_items(returned_items, RequestFactory().get("/"))
+            _apply_order_items(returned_items, RequestFactory().get("/"))
+            self.assertEqual(cached_items, cached_before)
+            base_authorized.assert_not_called()
+
+            cache_mock.get.return_value = []
+            self.assertEqual(_get_items_base_cached(request, permisos), [])
+            base_authorized.assert_not_called()
+
+    def test_user_sin_pk_materializa_sin_cache(self):
+        request = RequestFactory().get("/")
+        request.user = SimpleNamespace(pk=None)
+        permisos = {
+            "rol": "Administrador",
+            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "escuelas_visualizacion": MagicMock(),
+        }
+        source = [SimpleNamespace(cueanexo="123456700")]
+        with patch("apps.especial.views_localizaciones.cache") as cache_mock, patch(
+            "apps.especial.views_localizaciones._get_items_base_authorized",
+            return_value=source,
+        ) as base_authorized:
+            items = _get_items_base_cached(request, permisos)
+
+        self.assertEqual(items[0]["cueanexo"], "123456700")
+        cache_mock.get.assert_not_called()
+        cache_mock.set.assert_not_called()
+        base_authorized.assert_called_once_with(permisos)
+
+    def test_filtros_lista_conservan_operadores_y_normalizacion(self):
+        items = [
+            {
+                "cueanexo": "12-3456700",
+                "nom_est": "Escuela \u00c1lvaro",
+                "region_loc": "Norte",
+                "oferta": "10",
+            },
+            {
+                "cueanexo": "987654300",
+                "nom_est": "Otra escuela",
+                "region_loc": "Sur",
+                "oferta": "20",
+            },
+        ]
+        factory = RequestFactory()
+
+        self.assertEqual(
+            len(_apply_filters_items(items, factory.get("/?q=alvaro"))), 1
+        )
+        self.assertEqual(
+            len(
+                _apply_filters_items(
+                    items, factory.get("/?smart_ui_col=region_loc&smart_ui_val=sur")
+                )
+            ),
+            1,
+        )
+        self.assertEqual(
+            len(_apply_filters_items(items, factory.get("/?region_loc=norte"))), 1
+        )
+        self.assertEqual(
+            len(_apply_filters_items(items, factory.get("/"), ["12.3456700"])), 1
+        )
+
+        expected_by_operator = {
+            "0": "12-3456700",
+            "1": "987654300",
+            "2": "12-3456700",
+            "3": "987654300",
+            "4": "987654300",
+            "5": "12-3456700",
+            "6": "12-3456700",
+            "7": "987654300",
+        }
+        for operator, expected_cue in expected_by_operator.items():
+            request = factory.get(
+                f"/?campo_filtro=oferta&operador_filtro={operator}&valor_filtro=15"
+            )
+            if operator == "0":
+                request = factory.get(
+                    "/?campo_filtro=oferta&operador_filtro=0&valor_filtro=1"
+                )
+            elif operator in {"1", "2", "7"}:
+                request = factory.get(
+                    f"/?campo_filtro=oferta&operador_filtro={operator}&valor_filtro=10"
+                )
+            result = _apply_filters_items(items, request)
+            self.assertEqual([item["cueanexo"] for item in result], [expected_cue])
+
+    def test_filtros_avanzados_multivalor_hacen_or_por_grupo_y_and_entre_grupos(
+        self,
+    ):
+        items = [
+            {
+                "cueanexo": "1",
+                "region_loc": "I",
+                "departamento": "San Martin",
+                "nom_est": "Uno",
+            },
+            {
+                "cueanexo": "2",
+                "region_loc": "II",
+                "departamento": "San Justo",
+                "nom_est": "Dos",
+            },
+            {
+                "cueanexo": "3",
+                "region_loc": "I",
+                "departamento": "Belgrano",
+                "nom_est": "Tres",
+            },
+            {
+                "cueanexo": "4",
+                "region_loc": "III",
+                "departamento": "San Martin",
+                "nom_est": "Cuatro",
+            },
+        ]
+        request = RequestFactory().get(
+            "/",
+            {
+                "campo_filtro": ["region_loc", "region_loc", "departamento"],
+                "operador_filtro": ["2", "2", "0"],
+                "valor_filtro": ["I", "II", "San"],
+            },
+        )
+
+        result = _apply_filters_items(items, request)
+
+        self.assertEqual([item["cueanexo"] for item in result], ["1", "2"])
+
+    def test_orden_descendente_conserva_desempates_predeterminados(self):
+        items = [
+            {"cueanexo": "1", "nom_est": "Z", "region_loc": "B"},
+            {"cueanexo": "2", "nom_est": "Z", "region_loc": "A"},
+            {"cueanexo": "3", "nom_est": "A", "region_loc": "A"},
+        ]
+        ordered, orden = _apply_order_items(
+            items, RequestFactory().get("/?orden=-nom_est")
+        )
+
+        self.assertEqual(orden, "-nom_est")
+        self.assertEqual([item["cueanexo"] for item in ordered], ["2", "1", "3"])
+        self.assertEqual(items[0]["cueanexo"], "1")
+
+    def test_excel_todo_usa_el_snapshot_autorizado_sin_reconsultar(self):
+        request = RequestFactory().get(
+            "/especial/visualizacion/localizaciones/?formato=excel_todo"
+        )
+        request.user = SimpleNamespace(is_authenticated=True, pk=7)
+        permisos = {
+            "puede_ver": True,
+            "rol": "Administrador",
+            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "escuelas_visualizacion": MagicMock(),
+        }
+        base_items = [{"cueanexo": "123456700"}]
+        response = HttpResponse("xlsx")
+
+        with patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_localizaciones.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_localizaciones._get_items_base_cached",
+            return_value=base_items,
+        ) as get_items_base_cached, patch(
+            "apps.especial.views_localizaciones._exportar_excel_especial",
+            return_value=response,
+        ) as exportar:
+            self.assertIs(visualizacion_localizaciones(request), response)
+
+        get_items_base_cached.assert_called_once_with(request, permisos)
+        exportar.assert_called_once_with(base_items, request, "excel_todo")
+
+    def test_excel_pagina_filtra_y_ordena_el_snapshot_en_memoria(self):
+        request = RequestFactory().get(
+            "/especial/visualizacion/localizaciones/?formato=excel_pagina"
+        )
+        request.user = SimpleNamespace(is_authenticated=True, pk=7)
+        permisos = {
+            "puede_ver": True,
+            "rol": "Administrador",
+            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "escuelas_visualizacion": MagicMock(),
+        }
+        base_items = [{"cueanexo": "123456700"}]
+        filtered = [{"cueanexo": "123456700", "nom_est": "Escuela"}]
+        ordered = [{"cueanexo": "123456700", "nom_est": "Escuela"}]
+        response = HttpResponse("xlsx")
+
+        with patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_localizaciones.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_localizaciones._get_items_base_cached",
+            return_value=base_items,
+        ), patch(
+            "apps.especial.views_localizaciones._resolver_establecimientos_autorizados",
+            return_value=["123456700"],
+        ), patch(
+            "apps.especial.views_localizaciones._apply_filters_items",
+            return_value=filtered,
+        ) as apply_filters, patch(
+            "apps.especial.views_localizaciones._apply_order_items",
+            return_value=(ordered, ""),
+        ) as apply_order, patch(
+            "apps.especial.views_localizaciones._exportar_excel_especial",
+            return_value=response,
+        ) as exportar:
+            self.assertIs(visualizacion_localizaciones(request), response)
+
+        apply_filters.assert_called_once_with(
+            base_items, request, establecimientos=["123456700"]
+        )
+        apply_order.assert_called_once_with(filtered, request)
+        exportar.assert_called_once_with(ordered, request, "excel_pagina")
+
+    def test_json_options_son_persistentes_y_no_se_repite_en_el_partial(self):
+        project_root = Path(__file__).resolve().parents[2]
+        full_template = (
+            project_root / "templates" / "especial" / "localizaciones_especial.html"
+        ).read_text(encoding="utf-8-sig")
+        partial_template = (
+            project_root
+            / "templates"
+            / "especial"
+            / "componentes"
+            / "localizaciones_resultados_especial.html"
+        ).read_text(encoding="utf-8-sig")
+
+        options_tag = 'json_script:"cefOptionsData"'
+        filter_options_tag = 'json_script:"cefFilterOptionsData"'
+        include_tag = '{% include "especial/componentes/localizaciones_resultados_especial.html" %}'
+
+        self.assertEqual(full_template.count(options_tag), 1)
+        self.assertEqual(full_template.count(filter_options_tag), 1)
+        self.assertLess(full_template.index(options_tag), full_template.index(include_tag))
+        self.assertNotIn(options_tag, partial_template)
+        self.assertNotIn(filter_options_tag, partial_template)
 
 
 class ValidacionDocenteEspecialTests(SimpleTestCase):

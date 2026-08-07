@@ -1,9 +1,6 @@
 {% load mis_filtros %}
 
 <div id="localizacionesResultsFragment" data-fragment="resultados">
-    {{ establecimientos_options|json_script:"cefOptionsData" }}
-    {{ filter_options|json_script:"cefFilterOptionsData" }}
-
     <div class="d-flex align-items-center justify-content-between results-bar" style="margin-bottom: 0 !important;">
         <span>
             <i class="fa-solid fa-table me-1 text-muted"></i>
