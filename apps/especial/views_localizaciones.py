@@ -109,7 +109,7 @@ DEFAULT_ORDER_LOCALIZACIONES_ESPECIAL = (
     "cueanexo",
 )
 CACHE_TTL_LOCALIZACIONES_ESPECIAL = 60 * 5
-CACHE_VERSION_LOCALIZACIONES_ESPECIAL = "v1_cache_20260807"
+CACHE_VERSION_LOCALIZACIONES_ESPECIAL = "v2_cache_admin_all_20260810"
 _CACHE_MISS = object()
 
 def _log_perf(label, started):
@@ -231,18 +231,21 @@ def _cache_key_localizaciones_especial(request, permisos):
     if user_id is None or not str(user_id).strip():
         return None
 
-    cueanexos = sorted(
-        {
-            normalizar_cueanexo(value)
-            for value in permisos.get("cueanexos_visualizacion", [])
-            if normalizar_cueanexo(value)
-        }
-    )
+    if permisos.get("es_admin"):
+        authorized_scope = "ALL"
+    else:
+        authorized_scope = sorted(
+            {
+                normalizar_cueanexo(value)
+                for value in permisos.get("cueanexos_visualizacion", [])
+                if normalizar_cueanexo(value)
+            }
+        )
     payload = json.dumps(
         {
             "user_id": str(user_id),
             "rol": str(permisos.get("rol") or ""),
-            "cueanexos": cueanexos,
+            "authorized_scope": authorized_scope,
             "version": CACHE_VERSION_LOCALIZACIONES_ESPECIAL,
         },
         ensure_ascii=True,

@@ -8,8 +8,8 @@
         return document.getElementById("modalAsignarProfesorGrupo");
     }
 
-    function bajaModal() {
-        return document.getElementById("modalBajaProfesorCef");
+    function bajaModal(modalId) {
+        return document.getElementById(modalId || "modalBajaProfesorCef");
     }
 
     function setText(modal, selector, value) {
@@ -25,6 +25,7 @@
     function openAsignarModal(modal, trigger) {
         setValue(modal, "[data-cef-asignar-grupo-id]", trigger.dataset.grupoId);
         setValue(modal, "[data-cef-asignar-docente-cuil]", trigger.dataset.docenteCuil);
+        setValue(modal, "[data-cef-asignar-periodo-id]", trigger.dataset.periodoId);
         setText(modal, "[data-cef-asignar-grupo-label]", "Grupo: " + trigger.dataset.grupoLabel);
         setText(
             modal,
@@ -44,8 +45,12 @@
     function openBajaModal(modal, trigger) {
         var template = document.getElementById(trigger.dataset.templateId);
         var content = modal.querySelector("[data-cef-baja-content]");
+        var title = modal.querySelector("[data-cef-baja-modal-title]");
         if (!template || !content) return false;
         content.innerHTML = template.innerHTML;
+        if (title && trigger.dataset.cefBajaModalTitle) {
+            title.textContent = trigger.dataset.cefBajaModalTitle;
+        }
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         return true;
@@ -84,10 +89,10 @@
         return true;
     }
 
-    function replaceBajaModal(html) {
-        var modal = bajaModal();
+    function replaceBajaModal(html, modalId) {
+        var modal = bajaModal(modalId);
         var doc = new DOMParser().parseFromString(html, "text/html");
-        var incomingModal = doc.getElementById("modalBajaProfesorCef");
+        var incomingModal = doc.getElementById(modalId || "modalBajaProfesorCef");
         var currentDialog = modal ? modal.querySelector(".cef-docente-modal") : null;
         var incomingDialog = incomingModal ? incomingModal.querySelector(".cef-docente-modal") : null;
         if (!modal || !currentDialog || !incomingDialog) return false;
@@ -115,7 +120,7 @@
 
         var bajaTrigger = event.target.closest("[data-cef-baja-open]");
         if (bajaTrigger) {
-            var modalBaja = bajaModal();
+            var modalBaja = bajaModal(bajaTrigger.dataset.cefBajaModalId);
             if (!modalBaja) return;
             if (openBajaModal(modalBaja, bajaTrigger)) {
                 event.preventDefault();
@@ -132,7 +137,7 @@
         }
 
 
-        var currentBajaModal = bajaModal();
+        var currentBajaModal = event.target.closest(".cef-docente-overlay");
         if (currentBajaModal && (event.target === currentBajaModal || event.target.closest("[data-cef-baja-close]"))) {
             event.preventDefault();
             closeBajaModal(currentBajaModal);
@@ -200,6 +205,8 @@
         if (!form) return;
 
         event.preventDefault();
+        var currentBajaModal = form.closest(".cef-docente-overlay");
+        var modalId = form.dataset.cefBajaModalId || (currentBajaModal ? currentBajaModal.id : "modalBajaProfesorCef");
         var submitBtn = form.querySelector("button[type='submit']");
         if (submitBtn) submitBtn.disabled = true;
 
@@ -215,17 +222,17 @@
             })
             .then(function (data) {
                 if (!replaceProfesorFragment(data.fragment_selector, data.fragment_html)) {
-                    form.submit();
+                    window.location.reload();
                     return;
                 }
                 if (data.close_modal) {
-                    closeBajaModal(bajaModal());
+                    closeBajaModal(bajaModal(modalId));
                 } else if (data.modal_html) {
-                    replaceBajaModal(data.modal_html);
+                    replaceBajaModal(data.modal_html, modalId);
                 }
             })
             .catch(function () {
-                form.submit();
+                window.location.reload();
             })
             .finally(function () {
                 if (submitBtn) submitBtn.disabled = false;

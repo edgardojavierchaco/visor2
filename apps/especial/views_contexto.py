@@ -1,9 +1,13 @@
 # apps/especial/views_contexto.py
 # -*- coding: utf-8 -*-
 
+import json
+from hashlib import sha256
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
+from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.urls import NoReverseMatch, reverse
 
@@ -11,7 +15,33 @@ from .models import (
     EspecialCiclo,
     normalizar_cueanexo,
 )
-from .permisos import especial_required, get_permisos_especial_request
+from .permisos import (
+    cueanexo_autorizado_especial,
+    especial_required,
+    get_permisos_especial_request,
+)
+from .performance import perf_phase
+
+
+CACHE_TTL_CONTEXTO_ESPECIAL = 60 * 5
+CACHE_VERSION_CONTEXTO_ESPECIAL = "v2_contexto_admin_all_20260810"
+_CACHE_MISS_CONTEXTO = object()
+
+ESTABLECIMIENTO_CACHE_FIELDS = (
+    "cueanexo",
+    "nom_est",
+    "oferta",
+    "region_loc",
+    "localidad",
+    "departamento",
+    "apellido_resp",
+    "nombre_resp",
+    "sup_tecnico",
+    "resploc_telefono",
+    "resploc_email",
+    "tel_suptecnico",
+    "email_suptecnico",
+)
 
 
 ESPECIAL_MENU_METADATA = {
@@ -124,6 +154,138 @@ def _especial_options_usuario(permisos, scope="cargables"):
     return options
 
 
+def _cache_scope_fingerprint(permisos, scope):
+    if scope not in {"visualizacion", "cargables"}:
+        raise ValueError(f"Scope de CUE-Anexo no soportado: {scope!r}")
+    if permisos.get("es_admin"):
+        return "ALL"
+    return sorted(
+        {
+            cueanexo
+            for cueanexo in (
+                normalizar_cueanexo(value)
+                for value in permisos[f"cueanexos_{scope}"]
+            )
+            if cueanexo
+        }
+    )
+
+
+def _cache_key_especial_options(request, permisos, scope):
+    user_id = getattr(getattr(request, "user", None), "pk", None)
+    if user_id is None or not str(user_id).strip():
+        return None
+
+    payload = json.dumps(
+        {
+            "user_id": str(user_id),
+            "rol": str(permisos.get("rol") or ""),
+            "scope": scope,
+            "authorized_scope": _cache_scope_fingerprint(permisos, scope),
+            "version": CACHE_VERSION_CONTEXTO_ESPECIAL,
+        },
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
+    fingerprint = sha256(payload.encode("utf-8")).hexdigest()
+    return f"especial:contexto:options:{CACHE_VERSION_CONTEXTO_ESPECIAL}:{fingerprint}"
+
+
+def _validar_options_cache(value):
+    if not isinstance(value, list):
+        return _CACHE_MISS_CONTEXTO
+
+    options = []
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"cueanexo", "nombre"}:
+            return _CACHE_MISS_CONTEXTO
+        cueanexo = item["cueanexo"]
+        nombre = item["nombre"]
+        cueanexo_normalizado = normalizar_cueanexo(cueanexo)
+        if not isinstance(cueanexo, str) or not cueanexo_normalizado:
+            return _CACHE_MISS_CONTEXTO
+        if not isinstance(nombre, str):
+            return _CACHE_MISS_CONTEXTO
+        options.append(
+            {
+                "cueanexo": cueanexo_normalizado,
+                "nombre": nombre,
+            }
+        )
+    return options
+
+
+def _get_especial_options_cached(request, permisos, scope):
+    key = _cache_key_especial_options(request, permisos, scope)
+    if key is None:
+        return _especial_options_usuario(permisos, scope=scope)
+
+    cached = cache.get(key, _CACHE_MISS_CONTEXTO)
+    options = _validar_options_cache(cached)
+    if options is not _CACHE_MISS_CONTEXTO:
+        return options
+
+    options = _especial_options_usuario(permisos, scope=scope)
+    cache.set(key, options, CACHE_TTL_CONTEXTO_ESPECIAL)
+    return options
+
+
+def _establecimiento_cache_payload(establecimiento):
+    if establecimiento is None:
+        return None
+    payload = {}
+    for field in ESTABLECIMIENTO_CACHE_FIELDS:
+        value = getattr(establecimiento, field, None)
+        payload[field] = None if value is None else str(value)
+    return payload
+
+
+def _establecimiento_desde_cache(value, cueanexo):
+    if value is None:
+        return None
+    if not isinstance(value, dict) or set(value) != set(ESTABLECIMIENTO_CACHE_FIELDS):
+        return _CACHE_MISS_CONTEXTO
+    if any(
+        value[field] is not None and not isinstance(value[field], str)
+        for field in ESTABLECIMIENTO_CACHE_FIELDS
+    ):
+        return _CACHE_MISS_CONTEXTO
+    if normalizar_cueanexo(value["cueanexo"]) != cueanexo:
+        return _CACHE_MISS_CONTEXTO
+
+    payload = dict(value)
+    payload["cueanexo"] = cueanexo
+    return SimpleNamespace(**payload)
+
+
+def _get_establecimiento_cached(permisos, cueanexo, scope):
+    cueanexo_original = cueanexo
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        if cueanexo_original is None or cueanexo_original == "":
+            return None
+        raise PermissionDenied("No podés operar sobre el CUE-Anexo solicitado.")
+
+    if not cueanexo_autorizado_especial(permisos, cueanexo, scope):
+        raise PermissionDenied("No podés operar sobre el CUE-Anexo solicitado.")
+
+    key = f"especial:contexto:establishment:{CACHE_VERSION_CONTEXTO_ESPECIAL}:{cueanexo}"
+    cached = cache.get(key, _CACHE_MISS_CONTEXTO)
+    establecimiento = _establecimiento_desde_cache(cached, cueanexo)
+    if establecimiento is not _CACHE_MISS_CONTEXTO:
+        return establecimiento
+
+    establecimiento = (
+        permisos["escuelas_visualizacion"]
+        .filter(cueanexo=cueanexo)
+        .order_by("cueanexo", "nom_est")
+        .first()
+    )
+    payload = _establecimiento_cache_payload(establecimiento)
+    cache.set(key, payload, CACHE_TTL_CONTEXTO_ESPECIAL)
+    return _establecimiento_desde_cache(payload, cueanexo)
+
+
 def _resolver_cueanexo(request, options):
     """Resuelve el CUE-Anexo desde GET/POST y valida permisos."""
     if "cueanexo" in request.GET:
@@ -204,7 +366,8 @@ def es_navegacion_parcial(request, active_menu):
 def render_especial(request, full_template, context, partial_template):
     """Renderiza la pagina completa o solo la region parcial autorizada."""
     template_name = partial_template if context.get("especial_partial") else full_template
-    return render(request, template_name, context)
+    with perf_phase(request, "template"):
+        return render(request, template_name, context)
 
 
 def construir_accesos_rapidos_especial(especial_context):
@@ -242,17 +405,21 @@ def resolver_contexto_operativo(request, scope="cargables"):
         return contexto_cacheado
 
     permisos = get_permisos_especial_request(request)
-    cueanexo_options = _especial_options_usuario(permisos, scope=scope)
+    with perf_phase(request, "context.options"):
+        cueanexo_options = _get_especial_options_cached(
+            request,
+            permisos,
+            scope=scope,
+        )
     cueanexo = _resolver_cueanexo(request, cueanexo_options)
-    ciclo, ciclos = _resolver_ciclo(request)
-    establecimiento = (
-        permisos["escuelas_visualizacion"]
-        .filter(cueanexo=cueanexo)
-        .order_by("cueanexo", "nom_est")
-        .first()
-        if cueanexo
-        else None
-    )
+    with perf_phase(request, "context.cycle"):
+        ciclo, ciclos = _resolver_ciclo(request)
+    with perf_phase(request, "context.establishment"):
+        establecimiento = _get_establecimiento_cached(
+            permisos,
+            cueanexo,
+            scope=scope,
+        )
 
     contexto = {
         "cueanexo": cueanexo,
@@ -274,22 +441,23 @@ def resolver_contexto_operativo(request, scope="cargables"):
 
 def contexto_base(request, active_menu, title=None, subtitle=None):
     """Contexto base para todas las vistas de Especial."""
-    scope = "visualizacion" if active_menu in {"localizaciones", "cueanexo"} else "cargables"
-    especial_context = resolver_contexto_operativo(request, scope=scope)
-    metadata = metadata_menu_especial(active_menu)
-    if title is not None:
-        metadata["title"] = title
-    if subtitle is not None:
-        metadata["subtitle"] = subtitle
-    return {
-        "title": metadata["title"],
-        "subtitle": metadata["subtitle"],
-        "especial_header": metadata,
-        "active_menu": active_menu or ESPECIAL_MENU_DEFAULT,
-        "especial_context": especial_context,
-        "especial_partial": es_navegacion_parcial(request, active_menu),
-        "request": request,
-    }
+    with perf_phase(request, "context"):
+        scope = "visualizacion" if active_menu in {"localizaciones", "cueanexo"} else "cargables"
+        especial_context = resolver_contexto_operativo(request, scope=scope)
+        metadata = metadata_menu_especial(active_menu)
+        if title is not None:
+            metadata["title"] = title
+        if subtitle is not None:
+            metadata["subtitle"] = subtitle
+        return {
+            "title": metadata["title"],
+            "subtitle": metadata["subtitle"],
+            "especial_header": metadata,
+            "active_menu": active_menu or ESPECIAL_MENU_DEFAULT,
+            "especial_context": especial_context,
+            "especial_partial": es_navegacion_parcial(request, active_menu),
+            "request": request,
+        }
 
 
 @especial_required

@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 
 from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
-from .models import SeccionEspecial, AlumnoSeccion
+from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto
 
@@ -62,6 +62,84 @@ def _inscripciones_seccion(seccion):
 
 def _buscar_alumno(cuil):
     return _alumno_model().objects.filter(cuil=cuil).first()
+
+
+def crear_inscripcion_activa(
+    *,
+    seccion,
+    alumno,
+    user,
+    seccion_queryset,
+):
+    """Crea o reactiva una inscripción validando contexto, banco y cupo."""
+    with transaction.atomic():
+        seccion_bloqueada = get_object_or_404(
+            seccion_queryset.select_for_update(),
+            pk=seccion.pk,
+        )
+        if seccion_bloqueada.estado != SeccionEspecial.Estado.ACTIVO:
+            raise ValidationError("La sección no está activa.")
+
+        alumno_en_banco = EspecialAlumnoBanco.objects.filter(
+            cueanexo=seccion_bloqueada.cueanexo,
+            ciclo=seccion_bloqueada.ciclo,
+            alumno=alumno,
+            estado=EspecialAlumnoBanco.Estado.ACTIVO,
+        ).exists()
+        if not alumno_en_banco:
+            raise ValidationError(
+                "El alumno no está activo en el banco de este establecimiento y ciclo."
+            )
+
+        inscripcion_activa = (
+            AlumnoSeccion.objects.select_for_update()
+            .filter(
+                seccion=seccion_bloqueada,
+                alumno=alumno,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            )
+            .first()
+        )
+        if inscripcion_activa:
+            raise ValidationError("El alumno ya está inscripto en esta sección.")
+
+        inscripcion_baja = (
+            AlumnoSeccion.objects.select_for_update()
+            .filter(
+                seccion=seccion_bloqueada,
+                alumno=alumno,
+                estado=AlumnoSeccion.Estado.BAJA,
+            )
+            .order_by("-pk")
+            .first()
+        )
+        if inscripcion_baja:
+            dar_alta_inscripcion_seccion(
+                inscripcion_baja,
+                user,
+                seccion_queryset=seccion_queryset,
+            )
+            return inscripcion_baja, False
+
+        total_activos = AlumnoSeccion.objects.filter(
+            seccion=seccion_bloqueada,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).count()
+        if total_activos >= seccion_bloqueada.capacidad_total:
+            raise ValidationError(
+                "No se puede inscribir: la sección alcanzó su capacidad máxima."
+            )
+
+        return (
+            AlumnoSeccion.objects.create(
+                seccion=seccion_bloqueada,
+                alumno=alumno,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+                creado_por=user,
+                actualizado_por=user,
+            ),
+            True,
+        )
 
 
 def dar_alta_inscripcion_seccion(inscripcion, user, seccion_queryset=None):
@@ -259,41 +337,34 @@ def inscripcion_seccion(request, seccion_id):
 
             if not inscripcion_abierta:
                 try:
-                    with transaction.atomic():
-                        seccion = _seccion_segura(
-                            seccion_id,
-                            especial_context,
-                            for_update=True,
-                        )
-                        inscripcion_abierta = AlumnoSeccion.objects.filter(
-                            seccion=seccion,
-                            alumno=alumno,
-                            estado=AlumnoSeccion.Estado.ACTIVO,
-                        ).first()
-                        if not inscripcion_abierta:
-                            total_activos = AlumnoSeccion.objects.filter(
-                                seccion=seccion,
-                                estado=AlumnoSeccion.Estado.ACTIVO,
-                            ).count()
-                            if total_activos >= seccion.capacidad_total:
-                                raise ValidationError(
-                                    f"No se puede inscribir. La sección alcanzó su capacidad máxima ({seccion.capacidad_total})."
-                                )
-
-                            AlumnoSeccion.objects.create(
-                                seccion=seccion,
-                                alumno=alumno,
-                                estado=AlumnoSeccion.Estado.ACTIVO,
-                                creado_por=request.user,
-                                actualizado_por=request.user,
-                            )
+                    _, creada = crear_inscripcion_activa(
+                        seccion=seccion,
+                        alumno=alumno,
+                        user=request.user,
+                        seccion_queryset=SeccionEspecial.objects.filter(
+                            cueanexo=especial_context["cueanexo"],
+                            ciclo=especial_context["ciclo"],
+                        ),
+                    )
                     if inscripcion_abierta:
                         messages.info(
                             request,
                             "Ese alumno ya está inscripto en esta sección.",
                         )
-                    else:
+                    elif creada:
                         messages.success(request, "Alumno inscripto correctamente.")
+                        return redirect(
+                            redirect_con_contexto(
+                                "especial:inscripcion_seccion",
+                                especial_context,
+                                seccion_id=seccion.pk,
+                            )
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            "La inscripción del alumno fue reactivada correctamente.",
+                        )
                         return redirect(
                             redirect_con_contexto(
                                 "especial:inscripcion_seccion",

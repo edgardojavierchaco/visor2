@@ -7,12 +7,14 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
+from django.db.models import Count, Q
 from django.urls import NoReverseMatch, reverse
 from django.shortcuts import redirect, render
 from .forms import EspecialBusquedaAlumnoForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, render_especial
+from .views_inscripcion_seccion import crear_inscripcion_activa
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
     "El banco de alumnos de Educación Especial está pendiente de creación en base de datos."
@@ -88,6 +90,85 @@ def _url_alumnos(especial_context):
 def _errores_form(form):
     return " ".join(error for errors in form.errors.values() for error in errors)
 
+
+def _pk_post(valor):
+    try:
+        return int(valor or "")
+    except (TypeError, ValueError):
+        return None
+
+
+def _inscribir_alumno_desde_banco(request, especial_context):
+    """Inscribe un alumno activo del banco en una seccion del contexto."""
+    if not especial_context["puede_operar"]:
+        messages.error(
+            request,
+            "Seleccioná un CUE-Anexo y un ciclo lectivo para inscribir alumnos.",
+        )
+        return
+
+    alumno_banco_id = _pk_post(request.POST.get("alumno_banco_id"))
+    seccion_id = _pk_post(request.POST.get("seccion_id"))
+    if not alumno_banco_id or not seccion_id:
+        messages.error(request, "No se pudo identificar el alumno o la sección.")
+        return
+
+    alumno_banco = (
+        EspecialAlumnoBanco.objects.filter(
+            pk=alumno_banco_id,
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            estado=EspecialAlumnoBanco.Estado.ACTIVO,
+        )
+        .select_related("alumno")
+        .first()
+    )
+    if not alumno_banco:
+        messages.error(
+            request,
+            "El alumno no está activo en el banco de este establecimiento y ciclo.",
+        )
+        return
+
+    seccion = SeccionEspecial.objects.filter(
+        pk=seccion_id,
+        cueanexo=especial_context["cueanexo"],
+        ciclo=especial_context["ciclo"],
+        estado=SeccionEspecial.Estado.ACTIVO,
+    ).first()
+    if not seccion:
+        messages.error(
+            request,
+            "La sección no corresponde al establecimiento y ciclo seleccionados.",
+        )
+        return
+
+    try:
+        _, creada = crear_inscripcion_activa(
+            seccion=seccion,
+            alumno=alumno_banco.alumno,
+            user=request.user,
+            seccion_queryset=SeccionEspecial.objects.filter(
+                cueanexo=especial_context["cueanexo"],
+                ciclo=especial_context["ciclo"],
+            ),
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    except IntegrityError:
+        messages.error(
+            request,
+            "No se pudo crear la inscripción. Verificá que no exista una inscripción activa.",
+        )
+    else:
+        messages.success(
+            request,
+            "Alumno inscripto correctamente."
+            if creada
+            else "La inscripción del alumno fue reactivada correctamente.",
+        )
+
+
 def _alumnos_banco(especial_context):
     if not especial_context["puede_operar"]:
         return EspecialAlumnoBanco.objects.none()
@@ -109,6 +190,7 @@ def _inscripciones_por_alumno(especial_context, alumnos_banco):
             seccion__cueanexo=especial_context["cueanexo"],
             seccion__ciclo=especial_context["ciclo"],
             alumno_id__in=alumnos_ids,
+            estado=AlumnoSeccion.Estado.ACTIVO,
         )
         .select_related("seccion", "seccion__cd_tipo_seccion")
         .order_by("seccion__nombre_seccion")
@@ -128,6 +210,12 @@ def _secciones_disponibles(especial_context):
             estado=SeccionEspecial.Estado.ACTIVO,
         )
         .select_related("cd_tipo_seccion", "turno")
+        .annotate(
+            alumnos_activos=Count(
+                "alumnos",
+                filter=Q(alumnos__estado=AlumnoSeccion.Estado.ACTIVO),
+            )
+        )
         .order_by("nombre_seccion")
     )
 
@@ -178,6 +266,10 @@ def alumnos(request):
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
 
     if request.method == "POST":
+        if request.POST.get("accion") == "inscribir_seccion":
+            _inscribir_alumno_desde_banco(request, especial_context)
+            return redirect(_url_alumnos(especial_context))
+
         busqueda_form = EspecialBusquedaAlumnoForm(request.POST)
         abrir_modal = True
         if busqueda_form.is_valid():
@@ -253,16 +345,16 @@ def alumnos(request):
     # Preparar datos para el template
     for item in alumnos_banco:
         item.inscripciones_seccion = inscripciones_por_alumno.get(item.alumno_id, [])
-        inscripciones_activas = [
-            inscripcion
-            for inscripcion in item.inscripciones_seccion
-            if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
-        ]
-        secciones_activas_ids = {inscripcion.seccion_id for inscripcion in inscripciones_activas}
+        secciones_activas_ids = {
+            inscripcion.seccion_id for inscripcion in item.inscripciones_seccion
+        }
         item.secciones_asignables = [
-            sec for sec in secciones_disponibles if sec.pk not in secciones_activas_ids
+            sec
+            for sec in secciones_disponibles
+            if sec.pk not in secciones_activas_ids
+            and sec.alumnos_activos < sec.capacidad_total
         ]
-        item.secciones_bloqueadas = inscripciones_activas
+        item.secciones_bloqueadas = item.inscripciones_seccion
         item.url_editar_alumno = _url_carga_alumno(
             item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
             url_alumnos,
