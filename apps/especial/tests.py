@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
+import json
 from pathlib import Path
 import threading
 from types import SimpleNamespace
@@ -10,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, close_old_connections
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
@@ -18,16 +19,31 @@ from .forms import EspecialDocenteSeccionForm
 from .models import AlumnoSeccion, DocenteSeccion, EspecialAlumnoBanco, EspecialDocenteBanco, SeccionEspecial
 from .permisos import (
     _resolver_permisos_especial,
+    cueanexo_autorizado_especial,
     especial_required,
     get_permisos_especial_request,
 )
-from .views_contexto import _resolver_ciclo
+from .performance import PERF_SESSION_KEY, perf_begin, perf_capture_queries, perf_finish, perf_phase
+from .views_contexto import (
+    CACHE_TTL_CONTEXTO_ESPECIAL,
+    CACHE_VERSION_CONTEXTO_ESPECIAL,
+    ESTABLECIMIENTO_CACHE_FIELDS,
+    _CACHE_MISS_CONTEXTO,
+    _cache_key_especial_options,
+    _get_establecimiento_cached,
+    _get_especial_options_cached,
+    _resolver_ciclo,
+    _resolver_cueanexo,
+    contexto_base,
+    datos_establecimiento_items,
+)
 from .views_carga_seccion import _alta_docente_nuevo_gestionar
 from .views_ciclo import _exigir_admin
 from .views_docentes_seccion import dar_alta_docente_seccion
 from .views_inscripcion_seccion import dar_alta_inscripcion_seccion
 from .views_localizaciones import (
     CACHE_TTL_LOCALIZACIONES_ESPECIAL,
+    CACHE_VERSION_LOCALIZACIONES_ESPECIAL,
     _CACHE_MISS,
     _apply_filters_items,
     _apply_order_items,
@@ -364,7 +380,7 @@ def _permisos_especial_patched(rol, escuelas):
 class PermisosEspecialTests(SimpleTestCase):
     def test_roles_autorizados_y_alcance_por_cuil(self):
         expected = {
-            "Administrador": (True, ("111111111", "222222222")),
+            "Administrador": (True, ()),
             "Director": (False, ("111111111",)),
             "Director de Modalidad Especial": (False, ("111111111",)),
         }
@@ -388,6 +404,59 @@ class PermisosEspecialTests(SimpleTestCase):
             self.assertEqual(permisos["es_admin"], is_admin)
             self.assertEqual(permisos["cueanexos_visualizacion"], frozenset(cueanexos))
             self.assertEqual(permisos["cueanexos_cargables"], frozenset(cueanexos))
+
+    def test_administrador_no_materializa_cueanexos_autorizados(self):
+        user = SimpleNamespace(is_authenticated=True, username="20-12345678-9")
+        queryset = MagicMock()
+
+        with patch(
+            "apps.especial.permisos.obtener_rol_usuario_especial",
+            return_value="Administrador",
+        ), patch(
+            "apps.especial.permisos.get_escuelas_especiales_visualizacion_usuario",
+            return_value=queryset,
+        ), patch(
+            "apps.especial.permisos.get_escuelas_especiales_cargables_usuario",
+            return_value=queryset,
+        ):
+            permisos = _resolver_permisos_especial(user)
+
+        self.assertTrue(permisos["puede_ver"])
+        self.assertTrue(permisos["es_admin"])
+        self.assertEqual(permisos["cueanexos_visualizacion"], frozenset())
+        self.assertEqual(permisos["cueanexos_cargables"], frozenset())
+        queryset.values_list.assert_not_called()
+        queryset.distinct.assert_not_called()
+        queryset.__iter__.assert_not_called()
+
+    def test_director_materializa_su_alcance_explicito(self):
+        user = SimpleNamespace(is_authenticated=True, username="20-12345678-9")
+        queryset = MagicMock()
+        queryset.values_list.return_value.distinct.return_value = [
+            "111111111",
+            "222222222",
+        ]
+
+        with patch(
+            "apps.especial.permisos.obtener_rol_usuario_especial",
+            return_value="Director",
+        ), patch(
+            "apps.especial.permisos.get_escuelas_especiales_visualizacion_usuario",
+            return_value=queryset,
+        ), patch(
+            "apps.especial.permisos.get_escuelas_especiales_cargables_usuario",
+            return_value=queryset,
+        ):
+            permisos = _resolver_permisos_especial(user)
+
+        self.assertFalse(permisos["es_admin"])
+        self.assertEqual(
+            permisos["cueanexos_visualizacion"],
+            frozenset({"111111111", "222222222"}),
+        )
+        self.assertEqual(permisos["cueanexos_cargables"], permisos["cueanexos_visualizacion"])
+        queryset.values_list.assert_called_once_with("cueanexo", flat=True)
+        queryset.values_list.return_value.distinct.assert_called_once_with()
 
     def test_permisos_se_resuelven_una_vez_por_request(self):
         request = RequestFactory().get("/")
@@ -422,6 +491,29 @@ class PermisosEspecialTests(SimpleTestCase):
         self.assertFalse(permisos["puede_ver"])
         self.assertFalse(permisos["es_admin"])
         self.assertEqual(permisos["cueanexos_visualizacion"], frozenset())
+        self.assertEqual(permisos["cueanexos_cargables"], frozenset())
+
+    def test_cueanexo_autorizado_especial_centraliza_alcance_por_rol(self):
+        admin = {
+            "puede_ver": True,
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
+            "cueanexos_cargables": frozenset(),
+        }
+        director = {
+            "puede_ver": True,
+            "es_admin": False,
+            "cueanexos_visualizacion": frozenset({"123456789"}),
+            "cueanexos_cargables": frozenset({"123456789"}),
+        }
+
+        self.assertTrue(cueanexo_autorizado_especial(admin, "12-3456789", "visualizacion"))
+        self.assertTrue(cueanexo_autorizado_especial(director, "12-3456789", "cargables"))
+        self.assertFalse(cueanexo_autorizado_especial(director, "987654321", "cargables"))
+        self.assertFalse(cueanexo_autorizado_especial(admin, "", "visualizacion"))
+        self.assertFalse(cueanexo_autorizado_especial({"puede_ver": False, "es_admin": True}, "123456789", "visualizacion"))
+        with self.assertRaises(ValueError):
+            cueanexo_autorizado_especial(admin, "123456789", "desconocido")
 
 
 class AccesoEspecialTests(SimpleTestCase):
@@ -476,6 +568,45 @@ class ContextoEspecialTests(SimpleTestCase):
                 with self.assertRaises(PermissionDenied):
                     _resolver_ciclo(request)
 
+    def test_resolver_cueanexo_rechaza_un_cue_fuera_de_las_opciones(self):
+        request = self.factory.get("/?cueanexo=987654321")
+
+        with self.assertRaises(PermissionDenied):
+            _resolver_cueanexo(request, [{"cueanexo": "123456789", "nombre": "Escuela"}])
+
+    def test_cache_key_contexto_administrador_usa_alcance_all(self):
+        request = self.factory.get("/")
+        request.user = SimpleNamespace(pk=7)
+        admin = {
+            "rol": "Administrador",
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
+            "cueanexos_cargables": frozenset(),
+            "escuelas_visualizacion": MagicMock(),
+            "escuelas_cargables": MagicMock(),
+        }
+        accidental_scope = dict(
+            admin,
+            cueanexos_visualizacion={"123456789"},
+            cueanexos_cargables={"987654321"},
+        )
+
+        base_key = _cache_key_especial_options(request, admin, "cargables")
+        self.assertEqual(
+            base_key,
+            _cache_key_especial_options(request, accidental_scope, "cargables"),
+        )
+        self.assertNotEqual(
+            base_key,
+            _cache_key_especial_options(request, dict(admin, rol="Director", es_admin=False), "cargables"),
+        )
+        self.assertNotEqual(
+            base_key,
+            _cache_key_especial_options(request, admin, "visualizacion"),
+        )
+        admin["escuelas_visualizacion"].values_list.assert_not_called()
+        admin["escuelas_visualizacion"].__iter__.assert_not_called()
+
 
 class AlcanceLocalizacionesTests(SimpleTestCase):
     def test_conserva_el_queryset_autorizado_sin_serializar_el_padron(self):
@@ -502,8 +633,9 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
         permisos = {
             "puede_ver": True,
             "escuelas_visualizacion": MagicMock(),
-            "cueanexos_visualizacion": frozenset({"123456700"}),
             "rol": "Administrador",
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
         }
         page_obj = SimpleNamespace(
             number=1,
@@ -578,20 +710,24 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
         request = RequestFactory().get("/")
         request.user = SimpleNamespace(pk=7)
         permisos = {
-            "rol": "Administrador",
+            "rol": "Director",
+            "es_admin": False,
             "cueanexos_visualizacion": frozenset({"987654300", "123456700"}),
         }
 
         same_scope = {
-            "rol": "Administrador",
+            "rol": "Director",
+            "es_admin": False,
             "cueanexos_visualizacion": ["123456700", "987654300"],
         }
         changed_scope = {
-            "rol": "Administrador",
+            "rol": "Director",
+            "es_admin": False,
             "cueanexos_visualizacion": ["123456700"],
         }
         changed_role = {
             "rol": "Supervisor",
+            "es_admin": False,
             "cueanexos_visualizacion": ["123456700", "987654300"],
         }
 
@@ -623,12 +759,36 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
         request.user = SimpleNamespace(pk=None)
         self.assertIsNone(_cache_key_localizaciones_especial(request, permisos))
 
+    def test_cache_key_localizaciones_administrador_usa_alcance_all(self):
+        request = RequestFactory().get("/")
+        request.user = SimpleNamespace(pk=7)
+        admin = {
+            "rol": "Administrador",
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
+            "escuelas_visualizacion": MagicMock(),
+        }
+        accidental_scope = dict(admin, cueanexos_visualizacion={"123456789", "987654321"})
+
+        self.assertEqual(
+            _cache_key_localizaciones_especial(request, admin),
+            _cache_key_localizaciones_especial(request, accidental_scope),
+        )
+        self.assertNotEqual(
+            _cache_key_localizaciones_especial(request, admin),
+            _cache_key_localizaciones_especial(
+                request,
+                dict(admin, rol="Director", es_admin=False, cueanexos_visualizacion={"123456789"}),
+            ),
+        )
+
     def test_cache_miss_hit_y_lista_vacia_no_se_confunden(self):
         request = RequestFactory().get("/")
         request.user = SimpleNamespace(pk=7)
         permisos = {
             "rol": "Administrador",
-            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
             "escuelas_visualizacion": MagicMock(),
         }
         source = [SimpleNamespace(cueanexo="123456700", nom_est="Escuela")]
@@ -668,7 +828,8 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
         request.user = SimpleNamespace(pk=None)
         permisos = {
             "rol": "Administrador",
-            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
             "escuelas_visualizacion": MagicMock(),
         }
         source = [SimpleNamespace(cueanexo="123456700")]
@@ -807,7 +968,8 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
         permisos = {
             "puede_ver": True,
             "rol": "Administrador",
-            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
             "escuelas_visualizacion": MagicMock(),
         }
         base_items = [{"cueanexo": "123456700"}]
@@ -839,7 +1001,8 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
         permisos = {
             "puede_ver": True,
             "rol": "Administrador",
-            "cueanexos_visualizacion": frozenset({"123456700"}),
+            "es_admin": True,
+            "cueanexos_visualizacion": frozenset(),
             "escuelas_visualizacion": MagicMock(),
         }
         base_items = [{"cueanexo": "123456700"}]
@@ -1162,6 +1325,25 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
             _crear_alumno_banco_db(self.ctx, alumno, seccion)
         return alumno
 
+    def _banco_de_alumno(self, alumno, seccion):
+        return EspecialAlumnoBanco.objects.get(
+            alumno=alumno,
+            cueanexo=seccion.cueanexo,
+            ciclo=seccion.ciclo,
+        )
+
+    def _post_inscribir_desde_alumnos(self, alumno_banco_id, seccion_id):
+        url = reverse("especial:alumnos")
+        with self._forzar_director():
+            return self.client.post(
+                f"{url}?cueanexo={self.ctx.cueanexo_permitido}&ciclo={self.ctx.ciclo_activo.pk}",
+                {
+                    "accion": "inscribir_seccion",
+                    "alumno_banco_id": alumno_banco_id,
+                    "seccion_id": seccion_id,
+                },
+            )
+
     def _crear_inscripcion_baja(self, alumno, seccion):
         return _crear_inscripcion_db(self.ctx, alumno, seccion, estado=AlumnoSeccion.Estado.BAJA)
 
@@ -1349,6 +1531,133 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
             ).exists()
         )
 
+    def test_alumnos_post_inscribir_seccion_valida_crea_registro(self):
+        alumno = self._crear_alumno_y_banco(10, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).count(),
+            1,
+        )
+
+    def test_alumnos_post_rechaza_seccion_de_otro_cue(self):
+        alumno = self._crear_alumno_y_banco(11, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion_ajena.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AlumnoSeccion.objects.filter(alumno=alumno).exists())
+
+    def test_alumnos_post_rechaza_seccion_de_otro_ciclo(self):
+        seccion_otro_ciclo = _crear_seccion_db(
+            self.ctx,
+            self.ctx.cueanexo_permitido,
+            "Seccion otro ciclo",
+            ciclo=self.ctx.ciclo_inactivo,
+        )
+        alumno = self._crear_alumno_y_banco(12, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, seccion_otro_ciclo.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AlumnoSeccion.objects.filter(alumno=alumno).exists())
+
+    def test_alumnos_post_rechaza_banco_de_otro_contexto(self):
+        alumno = _crear_alumno_db(self.ctx, 13)
+        banco_ajeno = _crear_alumno_banco_db(self.ctx, alumno, self.seccion_ajena)
+
+        response = self._post_inscribir_desde_alumnos(banco_ajeno.pk, self.seccion.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AlumnoSeccion.objects.filter(alumno=alumno).exists())
+
+    def test_alumnos_post_rechaza_banco_inactivo(self):
+        alumno = self._crear_alumno_y_banco(14, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        EspecialAlumnoBanco.objects.filter(pk=banco.pk).update(
+            estado=EspecialAlumnoBanco.Estado.INACTIVO,
+        )
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AlumnoSeccion.objects.filter(alumno=alumno).exists())
+
+    def test_alumnos_post_no_duplica_inscripcion_activa(self):
+        alumno = self._crear_alumno_y_banco(15, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        _crear_inscripcion_db(self.ctx, alumno, self.seccion, estado=AlumnoSeccion.Estado.ACTIVO)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).count(),
+            1,
+        )
+
+    def test_alumnos_post_rechaza_seccion_sin_cupo(self):
+        alumno_ocupa = self._crear_alumno_y_banco(16, self.seccion)
+        alumno_objetivo = self._crear_alumno_y_banco(17, self.seccion)
+        banco_objetivo = self._banco_de_alumno(alumno_objetivo, self.seccion)
+        _crear_inscripcion_db(
+            self.ctx,
+            alumno_ocupa,
+            self.seccion,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        )
+
+        response = self._post_inscribir_desde_alumnos(
+            banco_objetivo.pk,
+            self.seccion.pk,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno_objetivo,
+                seccion=self.seccion,
+            ).exists()
+        )
+        self.assertEqual(
+            AlumnoSeccion.objects.filter(
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).count(),
+            1,
+        )
+
+    def test_alumnos_post_reactiva_inscripcion_en_baja_sin_duplicar(self):
+        alumno = self._crear_alumno_y_banco(18, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        inscripcion = self._crear_inscripcion_baja(alumno, self.seccion)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion.pk)
+
+        inscripcion.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(inscripcion.estado, AlumnoSeccion.Estado.ACTIVO)
+        self.assertEqual(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+            ).count(),
+            1,
+        )
+
     def test_alta_docente_nuevo_valida_y_persiste(self):
         cuil = _cuil_valido("2098765000")
         _crear_banco_docente_db(self.ctx, cuil, self.seccion)
@@ -1489,3 +1798,725 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
             ).count(),
             1,
         )
+
+
+class EspecialPerformanceTests(SimpleTestCase):
+    def _request(self, query=None, **headers):
+        request = RequestFactory().get("/especial/alumnos/", query or {}, **headers)
+        request.session = {}
+        return request
+
+    def _logged_payload(self, logger_mock):
+        self.assertEqual(logger_mock.warning.call_count, 1)
+        self.assertEqual(logger_mock.info.call_count, 0)
+        return json.loads(logger_mock.warning.call_args.args[1])
+
+    def test_perf_begin_disabled_with_debug_false_does_not_touch_session(self):
+        request = self._request({"especial_perf": "1"})
+        request.session = MagicMock()
+
+        with override_settings(DEBUG=False):
+            self.assertFalse(perf_begin(request))
+
+        request.session.get.assert_not_called()
+        self.assertFalse(hasattr(request, "_especial_perf_after"))
+
+    def test_perf_begin_activation_and_deactivation_use_especial_session_key(self):
+        session = {}
+        request = RequestFactory().get("/especial/alumnos/", {"especial_perf": "1"})
+        request.session = session
+
+        with override_settings(DEBUG=True), patch("apps.especial.performance.logger"):
+            self.assertTrue(perf_begin(request))
+            self.assertTrue(session[PERF_SESSION_KEY])
+            self.assertEqual(len(request._especial_perf_after["id"]), 12)
+            perf_finish(request)
+
+        disabled_request = RequestFactory().get("/especial/alumnos/", {"especial_perf": "0"})
+        disabled_request.session = session
+        with override_settings(DEBUG=True):
+            self.assertFalse(perf_begin(disabled_request))
+        self.assertFalse(session[PERF_SESSION_KEY])
+
+    def test_perf_phase_is_noop_when_disabled_and_measures_when_enabled(self):
+        disabled = self._request()
+        with override_settings(DEBUG=True):
+            self.assertFalse(perf_begin(disabled))
+            with perf_phase(disabled, "view"):
+                result = "ok"
+        self.assertEqual(result, "ok")
+
+        enabled = self._request({"especial_perf": "1"})
+        with override_settings(DEBUG=True), patch("apps.especial.performance.logger") as logger_mock:
+            self.assertTrue(perf_begin(enabled))
+            with perf_phase(enabled, "view"):
+                with perf_phase(enabled, "context"):
+                    nested_result = "ok"
+            perf_finish(enabled, response=HttpResponse("html"))
+
+        self.assertEqual(nested_result, "ok")
+        payload = self._logged_payload(logger_mock)
+        self.assertIn("view", payload["durations_ms"])
+        self.assertIn("context", payload["durations_ms"])
+
+    def test_perf_capture_groups_queries_by_alias_and_phase_without_logging_sql(self):
+        request = self._request(
+            {"especial_perf": "1", "dni": "20123456789", "q": "privado"},
+            HTTP_X_ESPECIAL_PARTIAL="1",
+        )
+        connections_mock = MagicMock()
+        installed = {}
+
+        def fake_connection(alias):
+            connection = SimpleNamespace(alias=alias)
+
+            @contextmanager
+            def install(wrapper):
+                installed[alias] = wrapper
+                yield
+
+            connection.execute_wrapper = install
+            return connection
+
+        connections_mock.all.return_value = [fake_connection("default"), fake_connection("padron")]
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.connections", connections_mock
+        ), patch("apps.especial.performance.logger") as logger_mock:
+            self.assertTrue(perf_begin(request))
+            perf_capture_queries(request)
+
+            def execute(_sql, _params, _many, _context):
+                return "ok"
+
+            with perf_phase(request, "view"):
+                self.assertEqual(
+                    installed["default"](execute, "SELECT CUIL", ("DNI",), False, {}),
+                    "ok",
+                )
+                with perf_phase(request, "context"):
+                    installed["padron"](execute, "SELECT email", ("privado",), False, {})
+                installed["default"](execute, "SELECT telefono", ("secreto",), False, {})
+
+            perf_finish(request, response=HttpResponse("html"))
+
+        payload = self._logged_payload(logger_mock)
+        self.assertEqual(payload["partial"], True)
+        self.assertEqual(payload["status_code"], 200)
+        self.assertEqual(payload["response_bytes"], 4)
+        self.assertEqual(payload["sql"]["count"], 3)
+        self.assertEqual(payload["sql"]["by_alias"]["default"]["count"], 2)
+        self.assertEqual(payload["sql"]["by_alias"]["padron"]["count"], 1)
+        self.assertEqual(payload["sql"]["by_phase"]["view"]["count"], 2)
+        self.assertEqual(payload["sql"]["by_phase"]["context"]["count"], 1)
+        self.assertNotIn("SELECT", json.dumps(payload))
+        self.assertNotIn("20123456789", json.dumps(payload))
+        self.assertNotIn("privado", json.dumps(payload))
+
+    def test_disabled_capture_does_not_install_sql_wrappers(self):
+        request = self._request()
+        with override_settings(DEBUG=True), patch("apps.especial.performance.connections") as connections_mock:
+            self.assertFalse(perf_begin(request))
+            perf_capture_queries(request)
+        connections_mock.all.assert_not_called()
+
+    def test_partial_and_full_classification_uses_only_partial_header(self):
+        for header_value, expected in (("1", True), ("0", False), (None, False)):
+            with self.subTest(header_value=header_value):
+                headers = {}
+                if header_value is not None:
+                    headers["HTTP_X_ESPECIAL_PARTIAL"] = header_value
+                request = self._request({"especial_perf": "1"}, **headers)
+                with override_settings(DEBUG=True), patch("apps.especial.performance.logger"):
+                    self.assertTrue(perf_begin(request))
+                    self.assertEqual(request._especial_perf_after["partial"], expected)
+                    perf_finish(request)
+
+    def test_especial_required_preserves_permission_denied(self):
+        request = self._request({"especial_perf": "1"})
+        request.user = SimpleNamespace(is_authenticated=True)
+
+        @especial_required
+        def protected(_request):
+            self.fail("la vista no debe ejecutarse sin permisos")
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value={"puede_ver": False},
+        ), patch("apps.especial.permisos.perf_capture_queries"), patch(
+            "apps.especial.performance.logger"
+        ) as logger_mock:
+            with self.assertRaises(PermissionDenied):
+                protected(request)
+
+        payload = self._logged_payload(logger_mock)
+        self.assertEqual(payload["error_type"], "PermissionDenied")
+
+    def test_especial_required_reraises_original_view_exception(self):
+        request = self._request({"especial_perf": "1"})
+        request.user = SimpleNamespace(is_authenticated=True)
+        expected = ValueError("interno")
+
+        @especial_required
+        def protected(_request):
+            raise expected
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value={"puede_ver": True},
+        ), patch("apps.especial.permisos.perf_capture_queries"), patch(
+            "apps.especial.performance.logger"
+        ) as logger_mock:
+            with self.assertRaises(ValueError) as caught:
+                protected(request)
+
+        self.assertIs(caught.exception, expected)
+        payload = self._logged_payload(logger_mock)
+        self.assertEqual(payload["error_type"], "ValueError")
+        self.assertNotIn("interno", json.dumps(payload))
+
+    def test_final_log_uses_warning_once_and_not_info(self):
+        request = self._request({"especial_perf": "1"})
+
+        with override_settings(DEBUG=True), patch("apps.especial.performance.logger") as logger_mock:
+            self.assertTrue(perf_begin(request))
+            perf_finish(request, response=HttpResponse("ok"))
+            perf_finish(request, response=HttpResponse("duplicado"))
+
+        self.assertEqual(logger_mock.warning.call_count, 1)
+        self.assertEqual(logger_mock.info.call_count, 0)
+
+    def test_wrapper_installation_failure_closes_partial_stack_and_reraises(self):
+        request = self._request({"especial_perf": "1"})
+        request.user = SimpleNamespace(is_authenticated=True)
+        expected = RuntimeError("fallo de wrapper")
+        state = {"closed": False}
+
+        @contextmanager
+        def install_first(_wrapper):
+            try:
+                yield
+            finally:
+                state["closed"] = True
+
+        first = SimpleNamespace(alias="default", execute_wrapper=install_first)
+
+        def install_failing(_wrapper):
+            raise expected
+
+        failing = SimpleNamespace(alias="padron", execute_wrapper=install_failing)
+        connections_mock = MagicMock()
+        connections_mock.all.return_value = [first, failing]
+        view_called = []
+
+        @especial_required
+        def protected(_request):
+            view_called.append(True)
+            return HttpResponse("no debe ejecutarse")
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.connections", connections_mock
+        ), patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value={"puede_ver": True},
+        ), patch("apps.especial.performance.logger") as logger_mock:
+            with self.assertRaises(RuntimeError) as caught:
+                protected(request)
+
+        self.assertIs(caught.exception, expected)
+        self.assertTrue(state["closed"])
+        self.assertEqual(view_called, [])
+        payload = self._logged_payload(logger_mock)
+        self.assertEqual(payload["error_type"], "RuntimeError")
+
+    def test_especial_required_success_returns_same_response(self):
+        request = self._request({"especial_perf": "1"})
+        request.user = SimpleNamespace(is_authenticated=True)
+        expected = HttpResponse("respuesta")
+
+        @especial_required
+        def protected(_request):
+            return expected
+
+        connections_mock = MagicMock()
+        connections_mock.all.return_value = []
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.connections", connections_mock
+        ), patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value={"puede_ver": True},
+        ), patch("apps.especial.performance.logger") as logger_mock:
+            response = protected(request)
+
+        self.assertIs(response, expected)
+        self._logged_payload(logger_mock)
+
+    def test_especial_required_disabled_does_not_capture(self):
+        request = self._request()
+        request.user = SimpleNamespace(is_authenticated=True)
+        expected = HttpResponse("respuesta")
+
+        @especial_required
+        def protected(_request):
+            return expected
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value={"puede_ver": True},
+        ), patch("apps.especial.permisos.perf_capture_queries") as capture_mock:
+            response = protected(request)
+
+        self.assertIs(response, expected)
+        capture_mock.assert_not_called()
+
+    def test_context_subphases_are_present_with_non_negative_durations(self):
+        request = self._request({"especial_perf": "1"})
+        ciclo = SimpleNamespace(pk=2026)
+        establecimiento = SimpleNamespace(cueanexo="123456789")
+        escuelas = MagicMock()
+        escuelas.filter.return_value.order_by.return_value.first.return_value = establecimiento
+        permisos = {
+            "es_admin": False,
+            "escuelas_visualizacion": escuelas,
+            "cueanexos_cargables": ["123456789"],
+            "cueanexos_visualizacion": ["123456789"],
+        }
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.logger"
+        ) as logger_mock, patch(
+            "apps.especial.views_contexto.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            return_value=[{"cueanexo": "123456789"}],
+        ), patch(
+            "apps.especial.views_contexto._resolver_cueanexo",
+            return_value="123456789",
+        ), patch(
+            "apps.especial.views_contexto._resolver_ciclo",
+            return_value=(ciclo, [ciclo]),
+        ), patch("apps.especial.views_contexto._alumnos_url", return_value=""), patch(
+            "apps.especial.views_contexto.cache"
+        ) as cache_mock:
+            cache_mock.get.return_value = _CACHE_MISS_CONTEXTO
+            self.assertTrue(perf_begin(request))
+            contexto = contexto_base(request, "alumnos")["especial_context"]
+            perf_finish(request)
+
+        self.assertEqual(
+            contexto["establecimiento"].cueanexo,
+            establecimiento.cueanexo,
+        )
+        payload = self._logged_payload(logger_mock)
+        for phase in ("context.options", "context.cycle", "context.establishment"):
+            self.assertIn(phase, payload["durations_ms"])
+            self.assertGreaterEqual(payload["durations_ms"][phase], 0)
+
+    def test_context_operations_keep_order_and_execute_once(self):
+        request = self._request({"especial_perf": "1"})
+        ciclo = SimpleNamespace(pk=2026)
+        events = []
+        establecimiento = SimpleNamespace(cueanexo="123456789")
+        escuelas = MagicMock()
+        filtered = MagicMock()
+        ordered = MagicMock()
+        escuelas.filter.side_effect = lambda **kwargs: (events.append("establishment.filter") or filtered)
+        filtered.order_by.side_effect = lambda *args: (events.append("establishment.order_by") or ordered)
+        ordered.first.side_effect = lambda: (events.append("establishment.first") or establecimiento)
+        permisos = {
+            "es_admin": False,
+            "escuelas_visualizacion": escuelas,
+            "cueanexos_cargables": ["123456789"],
+            "cueanexos_visualizacion": ["123456789"],
+        }
+
+        def options(_permisos, scope):
+            events.append(("options", scope))
+            return [{"cueanexo": "123456789"}]
+
+        def cueanexo(_request, options_result):
+            events.append(("cueanexo", options_result))
+            return "123456789"
+
+        def cycle(_request):
+            events.append("cycle")
+            return ciclo, [ciclo]
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.logger"
+        ), patch(
+            "apps.especial.views_contexto.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            side_effect=options,
+        ), patch(
+            "apps.especial.views_contexto._resolver_cueanexo",
+            side_effect=cueanexo,
+        ), patch(
+            "apps.especial.views_contexto._resolver_ciclo",
+            side_effect=cycle,
+        ), patch("apps.especial.views_contexto._alumnos_url", return_value=""), patch(
+            "apps.especial.views_contexto.cache"
+        ) as cache_mock:
+            cache_mock.get.return_value = _CACHE_MISS_CONTEXTO
+            self.assertTrue(perf_begin(request))
+            contexto = contexto_base(request, "cueanexo")["especial_context"]
+            perf_finish(request)
+
+        self.assertEqual(
+            contexto["establecimiento"].cueanexo,
+            establecimiento.cueanexo,
+        )
+        self.assertEqual(
+            events,
+            [
+                ("options", "visualizacion"),
+                ("cueanexo", [{"cueanexo": "123456789"}]),
+                "cycle",
+                "establishment.filter",
+                "establishment.order_by",
+                "establishment.first",
+            ],
+        )
+
+    def test_context_establishment_is_not_queried_without_cueanexo(self):
+        request = self._request({"especial_perf": "1"})
+        ciclo = SimpleNamespace(pk=2026)
+        escuelas = MagicMock()
+        permisos = {
+            "es_admin": False,
+            "escuelas_visualizacion": escuelas,
+            "cueanexos_cargables": [],
+            "cueanexos_visualizacion": [],
+        }
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.logger"
+        ) as logger_mock, patch(
+            "apps.especial.views_contexto.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            return_value=[],
+        ), patch(
+            "apps.especial.views_contexto._resolver_cueanexo",
+            return_value="",
+        ), patch(
+            "apps.especial.views_contexto._resolver_ciclo",
+            return_value=(ciclo, [ciclo]),
+        ), patch("apps.especial.views_contexto._alumnos_url", return_value=""):
+            self.assertTrue(perf_begin(request))
+            contexto = contexto_base(request, "alumnos")["especial_context"]
+            perf_finish(request)
+
+        self.assertIsNone(contexto["establecimiento"])
+        escuelas.filter.assert_not_called()
+        payload = self._logged_payload(logger_mock)
+        self.assertIn("context.establishment", payload["durations_ms"])
+
+    def test_context_subphase_sql_is_attributed_by_phase(self):
+        request = self._request({"especial_perf": "1"})
+        ciclo = SimpleNamespace(pk=2026)
+        establecimiento = SimpleNamespace(cueanexo="123456789")
+        escuelas = MagicMock()
+        filtered = MagicMock()
+        ordered = MagicMock()
+        escuelas.filter.return_value = filtered
+        filtered.order_by.return_value = ordered
+        ordered.first.side_effect = lambda: (sql_call() or establecimiento)
+        permisos = {
+            "es_admin": False,
+            "escuelas_visualizacion": escuelas,
+            "cueanexos_cargables": ["123456789"],
+            "cueanexos_visualizacion": ["123456789"],
+        }
+        installed = {}
+
+        @contextmanager
+        def install(wrapper):
+            installed["wrapper"] = wrapper
+            yield
+
+        connection = SimpleNamespace(alias="default", execute_wrapper=install)
+        connections_mock = MagicMock()
+        connections_mock.all.return_value = [connection]
+
+        def sql_call():
+            installed["wrapper"](
+                lambda _sql, _params, _many, _context: None,
+                "SELECT 1",
+                (),
+                False,
+                {},
+            )
+
+        def options(_permisos, scope):
+            sql_call()
+            return [{"cueanexo": "123456789"}]
+
+        def cycle(_request):
+            sql_call()
+            return ciclo, [ciclo]
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.connections", connections_mock
+        ), patch("apps.especial.performance.logger") as logger_mock, patch(
+            "apps.especial.views_contexto.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            side_effect=options,
+        ), patch(
+            "apps.especial.views_contexto._resolver_cueanexo",
+            return_value="123456789",
+        ), patch(
+            "apps.especial.views_contexto._resolver_ciclo",
+            side_effect=cycle,
+        ), patch("apps.especial.views_contexto._alumnos_url", return_value=""), patch(
+            "apps.especial.views_contexto.cache"
+        ) as cache_mock:
+            self.assertTrue(perf_begin(request))
+            perf_capture_queries(request)
+            cache_mock.get.return_value = _CACHE_MISS_CONTEXTO
+            contexto_base(request, "alumnos")
+            perf_finish(request)
+
+        payload = self._logged_payload(logger_mock)
+        for phase in ("context.options", "context.cycle", "context.establishment"):
+            self.assertEqual(payload["sql"]["by_phase"][phase]["count"], 1)
+
+    def _cache_request(self, pk=7):
+        request = self._request()
+        request.user = SimpleNamespace(pk=pk)
+        return request
+
+    def _cache_permissions(self, cueanexos=("123456789",), role="Director"):
+        escuelas = MagicMock()
+        return {
+            "rol": role,
+            "puede_ver": role in {"Administrador", "Director", "Director de Modalidad Especial"},
+            "es_admin": role == "Administrador",
+            "cueanexos_cargables": list(cueanexos),
+            "cueanexos_visualizacion": list(cueanexos),
+            "escuelas_cargables": escuelas,
+            "escuelas_visualizacion": escuelas,
+        }
+
+    def _establishment_payload(self, cueanexo="123456789"):
+        payload = {field: f"valor-{field}" for field in ESTABLECIMIENTO_CACHE_FIELDS}
+        payload["cueanexo"] = cueanexo
+        return payload
+
+    def test_context_cache_ttl_is_exactly_five_minutes(self):
+        self.assertEqual(CACHE_TTL_CONTEXTO_ESPECIAL, 300)
+        self.assertEqual(CACHE_TTL_LOCALIZACIONES_ESPECIAL, 300)
+        self.assertTrue(CACHE_VERSION_CONTEXTO_ESPECIAL.startswith("v2_"))
+        self.assertTrue(CACHE_VERSION_LOCALIZACIONES_ESPECIAL.startswith("v2_"))
+
+    def test_options_cache_key_depends_on_identity_scope_role_and_authorized_set(self):
+        request = self._cache_request(pk=7)
+        permisos = self._cache_permissions(("123456789", "987654321"))
+        base_key = _cache_key_especial_options(request, permisos, "cargables")
+        self.assertIn(CACHE_VERSION_CONTEXTO_ESPECIAL, base_key)
+
+        same_set_different_order = self._cache_permissions(("987654321", "123456789"))
+        self.assertEqual(
+            base_key,
+            _cache_key_especial_options(request, same_set_different_order, "cargables"),
+        )
+
+        changed_user = self._cache_request(pk=8)
+        changed_role = self._cache_permissions(("123456789", "987654321"), role="Administrador")
+        changed_authorized_set = self._cache_permissions(("123456789", "987654321"))
+        changed_authorized_set["cueanexos_cargables"] = ["123456789"]
+
+        self.assertNotEqual(base_key, _cache_key_especial_options(changed_user, permisos, "cargables"))
+        self.assertNotEqual(base_key, _cache_key_especial_options(request, changed_role, "cargables"))
+        self.assertNotEqual(base_key, _cache_key_especial_options(request, permisos, "visualizacion"))
+        self.assertNotEqual(
+            base_key,
+            _cache_key_especial_options(request, changed_authorized_set, "cargables"),
+        )
+        with patch(
+            "apps.especial.views_contexto.CACHE_VERSION_CONTEXTO_ESPECIAL",
+            "v2_contexto_test",
+        ):
+            self.assertNotEqual(base_key, _cache_key_especial_options(request, permisos, "cargables"))
+
+    def test_options_cache_bypasses_cache_for_user_without_pk(self):
+        request = self._cache_request(pk=None)
+        permisos = self._cache_permissions()
+        expected = [{"cueanexo": "123456789", "nombre": "Escuela"}]
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock, patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            return_value=expected,
+        ) as build_options:
+            result = _get_especial_options_cached(request, permisos, "cargables")
+
+        self.assertEqual(result, expected)
+        build_options.assert_called_once_with(permisos, scope="cargables")
+        cache_mock.get.assert_not_called()
+        cache_mock.set.assert_not_called()
+
+    def test_options_cache_miss_builds_once_and_uses_ttl(self):
+        request = self._cache_request()
+        permisos = self._cache_permissions()
+        expected = [{"cueanexo": "123456789", "nombre": "Escuela"}]
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock, patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            return_value=expected,
+        ) as build_options:
+            cache_mock.get.return_value = _CACHE_MISS_CONTEXTO
+            result = _get_especial_options_cached(request, permisos, "cargables")
+
+        self.assertEqual(result, expected)
+        build_options.assert_called_once_with(permisos, scope="cargables")
+        cache_mock.set.assert_called_once()
+        self.assertEqual(cache_mock.set.call_args.args[1], expected)
+        self.assertEqual(cache_mock.set.call_args.args[2], 300)
+
+    def test_options_cache_hit_and_empty_list_do_not_rebuild(self):
+        request = self._cache_request()
+        permisos = self._cache_permissions()
+        for cached in (
+            [{"cueanexo": "123456789", "nombre": "Escuela"}],
+            [],
+        ):
+            with self.subTest(cached=cached), patch(
+                "apps.especial.views_contexto.cache"
+            ) as cache_mock, patch(
+                "apps.especial.views_contexto._especial_options_usuario"
+            ) as build_options:
+                cache_mock.get.return_value = cached
+                result = _get_especial_options_cached(request, permisos, "cargables")
+
+            self.assertEqual(result, cached)
+            build_options.assert_not_called()
+            cache_mock.set.assert_not_called()
+
+    def test_invalid_options_cache_rebuilds_and_replaces_payload(self):
+        request = self._cache_request()
+        permisos = self._cache_permissions()
+        expected = [{"cueanexo": "123456789", "nombre": "Escuela"}]
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock, patch(
+            "apps.especial.views_contexto._especial_options_usuario",
+            return_value=expected,
+        ) as build_options:
+            cache_mock.get.return_value = {"cueanexo": "123456789"}
+            result = _get_especial_options_cached(request, permisos, "cargables")
+
+        self.assertEqual(result, expected)
+        build_options.assert_called_once()
+        self.assertEqual(cache_mock.set.call_args.args[1], expected)
+        self.assertEqual(cache_mock.set.call_args.args[2], 300)
+
+    def test_establishment_rejects_unauthorized_cue_before_cache_get(self):
+        permisos = self._cache_permissions(("123456789",))
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock:
+            with self.assertRaises(PermissionDenied):
+                _get_establecimiento_cached(permisos, "987654321", "cargables")
+
+        cache_mock.get.assert_not_called()
+        permisos["escuelas_visualizacion"].filter.assert_not_called()
+
+    def test_establishment_hit_returns_attribute_compatible_object(self):
+        permisos = self._cache_permissions()
+        payload = self._establishment_payload()
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock:
+            cache_mock.get.return_value = payload
+            result = _get_establecimiento_cached(permisos, "123456789", "cargables")
+
+        self.assertEqual(result.nom_est, payload["nom_est"])
+        self.assertTrue(datos_establecimiento_items(result))
+        permisos["escuelas_visualizacion"].filter.assert_not_called()
+
+    def test_establishment_admin_hit_uses_total_scope_without_cue_set(self):
+        permisos = self._cache_permissions((), role="Administrador")
+        payload = self._establishment_payload()
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock:
+            cache_mock.get.return_value = payload
+            result = _get_establecimiento_cached(permisos, "123456789", "visualizacion")
+
+        self.assertEqual(result.cueanexo, "123456789")
+        cache_mock.get.assert_called_once()
+        permisos["escuelas_visualizacion"].filter.assert_not_called()
+
+    def test_establishment_miss_queries_authorized_queryset_and_serializes_fields(self):
+        permisos = self._cache_permissions()
+        model = SimpleNamespace(**self._establishment_payload())
+        queryset = permisos["escuelas_visualizacion"]
+        queryset.filter.return_value.order_by.return_value.first.return_value = model
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock:
+            cache_mock.get.return_value = _CACHE_MISS_CONTEXTO
+            result = _get_establecimiento_cached(permisos, "123456789", "cargables")
+
+        queryset.filter.assert_called_once_with(cueanexo="123456789")
+        queryset.filter.return_value.order_by.assert_called_once_with("cueanexo", "nom_est")
+        queryset.filter.return_value.order_by.return_value.first.assert_called_once_with()
+        self.assertEqual(result.nom_est, model.nom_est)
+        cached_payload = cache_mock.set.call_args.args[1]
+        self.assertEqual(set(cached_payload), set(ESTABLECIMIENTO_CACHE_FIELDS))
+        self.assertNotIn(model, cached_payload.values())
+        self.assertEqual(cache_mock.set.call_args.args[2], 300)
+
+    def test_establishment_none_is_cached_as_valid_result(self):
+        permisos = self._cache_permissions()
+        queryset = permisos["escuelas_visualizacion"]
+        queryset.filter.return_value.order_by.return_value.first.return_value = None
+
+        with patch("apps.especial.views_contexto.cache") as cache_mock:
+            cache_mock.get.side_effect = [_CACHE_MISS_CONTEXTO, None]
+            first = _get_establecimiento_cached(permisos, "123456789", "cargables")
+            second = _get_establecimiento_cached(permisos, "123456789", "cargables")
+
+        self.assertIsNone(first)
+        self.assertIsNone(second)
+        queryset.filter.return_value.order_by.return_value.first.assert_called_once_with()
+        self.assertIsNone(cache_mock.set.call_args.args[1])
+
+    def test_warm_options_and_establishment_hits_generate_no_sql(self):
+        request = self._cache_request()
+        permisos = self._cache_permissions()
+        options = [{"cueanexo": "123456789", "nombre": "Escuela"}]
+        establishment = self._establishment_payload()
+        installed = {}
+
+        @contextmanager
+        def install(wrapper):
+            installed["wrapper"] = wrapper
+            yield
+
+        connection = SimpleNamespace(alias="default", execute_wrapper=install)
+        connections_mock = MagicMock()
+        connections_mock.all.return_value = [connection]
+
+        with override_settings(DEBUG=True), patch(
+            "apps.especial.performance.connections", connections_mock
+        ), patch("apps.especial.performance.logger") as logger_mock, patch(
+            "apps.especial.views_contexto.cache"
+        ) as cache_mock:
+            cache_mock.get.side_effect = [options, establishment]
+            self.assertTrue(perf_begin(request))
+            perf_capture_queries(request)
+            with perf_phase(request, "context"):
+                with perf_phase(request, "context.options"):
+                    self.assertEqual(_get_especial_options_cached(request, permisos, "cargables"), options)
+                with perf_phase(request, "context.establishment"):
+                    self.assertEqual(
+                        _get_establecimiento_cached(permisos, "123456789", "cargables").nom_est,
+                        establishment["nom_est"],
+                    )
+            perf_finish(request)
+
+        self.assertTrue(installed)
+        self.assertEqual(permisos["escuelas_visualizacion"].filter.call_count, 0)
+        self.assertEqual(self._logged_payload(logger_mock)["sql"]["count"], 0)

@@ -32,7 +32,7 @@
 
         {% if alumnos_banco_tabla_pendiente %}
             <div class="alert alert-warning mb-3">
-                El banco de alumnos CEF está pendiente de creación en base de datos.
+                El banco de alumnos de Educación Especial está pendiente de creación en base de datos.
             </div>
         {% endif %}
 
@@ -44,9 +44,9 @@
                             <th>Alumno</th>
                             <th>CUIL</th>
                             <th>Documento</th>
-                            <th>Estado en CEF</th>
+                            <th>Estado en Especial</th>
                             <th>Fecha alta</th>
-                            <th>Grupos / inscripciones</th>
+                            <th>Secciones / inscripciones</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -66,21 +66,59 @@
                                     {% if item.inscripciones_seccion %}
                                         {% for inscripcion in item.inscripciones_seccion %}
                                             <span class="btn btn-outline-primary btn-sm mb-1 disabled" aria-disabled="true">
-                                                Grupo {{ inscripcion.seccion.actividad }} Nro. {{ inscripcion.seccion.numero }}
+                                                Secci&oacute;n {{ inscripcion.seccion.nombre_seccion }}
+                                                {% if inscripcion.seccion.cd_tipo_seccion %} · {{ inscripcion.seccion.cd_tipo_seccion }}{% endif %}
                                             </span>
                                         {% endfor %}
                                     {% else %}
-                                        <span class="text-muted small">Sin seccion asignado</span>
+                                        <span class="text-muted small">Sin secci&oacute;n asignada</span>
                                     {% endif %}
                                 </td>
                                 <td class="cef-act-cell">
                                     <div class="d-flex flex-wrap gap-1 align-items-center">
                                         {# En el listado/tabla NO se agrega al banco, eso se hace en el modal de búsqueda #}
                                         
-                                        {# Botón para inscribir a sección (si hay secciones disponibles) #}
-                                        {% if seccions_disponibles and item.seccions_asignables %}
-                                            {# ... tu lógica existente de dropdown de inscripciones ... #}
-                                            {# Mantén el bloque de dropdowns que ya tenías aquí #}
+                                        {# Inscripción a una sección del establecimiento y ciclo activos #}
+                                        {% if especial_context.puede_operar and item.estado == 'activo' %}
+                                            {% if item.secciones_asignables or item.secciones_bloqueadas %}
+                                                <div class="dropdown" data-cef-alumno-dropdown>
+                                                    <button class="btn {% if item.secciones_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
+                                                        <i class="fa-solid fa-user-plus"></i>
+                                                        {% if item.secciones_asignables %}Inscribir a secci&oacute;n{% elif item.secciones_bloqueadas %}Ya inscripto en secci&oacute;n{% else %}Sin secciones disponibles{% endif %}
+                                                    </button>
+                                                    <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
+                                                        {% for seccion in item.secciones_asignables %}
+                                                            <li>
+                                                                <form method="post" action="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0">
+                                                                    {% csrf_token %}
+                                                                    <input type="hidden" name="accion" value="inscribir_seccion">
+                                                                    <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
+                                                                    <input type="hidden" name="seccion_id" value="{{ seccion.pk }}">
+                                                                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                                                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                                                    <button class="dropdown-item" type="submit">
+                                                                        <span>Secci&oacute;n {{ seccion.nombre_seccion }}</span>
+                                                                        <small>{{ seccion.cd_tipo_seccion }}{% if seccion.turno %} · {{ seccion.turno }}{% endif %} · Cupo {{ seccion.capacidad_total }}</small>
+                                                                    </button>
+                                                                </form>
+                                                            </li>
+                                                        {% endfor %}
+                                                        {% if item.secciones_asignables and item.secciones_bloqueadas %}
+                                                            <li><hr class="dropdown-divider"></li>
+                                                        {% endif %}
+                                                        {% for inscripcion in item.secciones_bloqueadas %}
+                                                            <li>
+                                                                <span class="dropdown-item disabled" aria-disabled="true">
+                                                                    <span>Secci&oacute;n {{ inscripcion.seccion.nombre_seccion }}</span>
+                                                                    <small>Ya inscripto{% if inscripcion.fecha_inscripcion %} desde {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}{% endif %}{% if inscripcion.seccion.cd_tipo_seccion %} · {{ inscripcion.seccion.cd_tipo_seccion }}{% endif %}</small>
+                                                                </span>
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted small">No hay secciones activas disponibles.</span>
+                                            {% endif %}
                                         {% endif %}
 
                                         {# Botón Editar Datos #}
@@ -99,12 +137,12 @@
         {% elif alumnos_banco_tabla_pendiente %}
             <div class="cef-empty-state">
                 <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
-                Listado pendiente hasta crear la tabla cef.alumnos_cef.
+                Listado pendiente hasta crear la tabla de alumnos de Especial.
             </div>
         {% elif especial_context.puede_operar %}
             <div class="cef-empty-state">
                 <i class="fa-solid fa-user-magnifying-glass" style="font-size:1.5rem;color:var(--text-faint)"></i>
-                Todavía no hay alumnos en el banco de este CEF y ciclo.
+                Todavía no hay alumnos en el banco de este establecimiento y ciclo.
             </div>
         {% else %}
             <div class="cef-empty-state">
