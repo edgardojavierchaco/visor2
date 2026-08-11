@@ -159,6 +159,15 @@
                         <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
                     </ul>
                 </li>
+                <li class="nav-item">
+    <a
+        class="nav-link"
+        href="{% url 'padroninterno:totales_escuelas' %}"
+    >
+        <i class="fa-solid fa-chart-column me-1"></i>
+        Visualizador de Establecimientos
+    </a>
+</li>
                 <li class="nav-item d-flex align-items-center padron-fecha-nav-item">
                     <span class="fecha-badge fecha-badge-nav">
                         <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}

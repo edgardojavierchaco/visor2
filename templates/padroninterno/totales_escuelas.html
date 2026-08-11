@@ -1,3 +1,5 @@
+
+
 {% extends 'archivos/base/layout.html' %}
 {% load static %}
 {% block head %}
@@ -38,6 +40,546 @@
     .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands { display: inline-block; width: 1.25em; min-width: 1.25em; text-align: center; line-height: 1; }
     .fw-700{font-weight:700!important}.fw-800{font-weight:800!important}
     @media (max-width: 991.98px) { html.padron-sidebar-initial-collapsed .content-wrapper, html.padron-sidebar-initial-collapsed .main-header, html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; } html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; } }
+</style>
+<style id="totales-escuelas-styles">
+    .tabla-totales-escuelas {
+        table-layout: fixed;
+        min-width: 560px;
+    }
+
+    .totales-encabezado {
+        background: #205994 !important;
+        color: #ffffff !important;
+        padding: 1rem 0.7rem !important;
+        font-size: 0.88rem;
+        font-weight: 800;
+        vertical-align: middle;
+    }
+
+    .totales-celda {
+        padding: 0.7rem !important;
+        background: #ffffff;
+    }
+
+    .totales-boton {
+        width: 100%;
+        min-height: 136px;
+        padding: 1rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        background: #ffffff;
+        color: #0f172a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        transition:
+            background-color 0.15s,
+            border-color 0.15s,
+            box-shadow 0.15s,
+            transform 0.15s;
+    }
+
+    .totales-boton:hover,
+    .totales-boton:focus-visible {
+        background: #eff6ff;
+        border-color: #93c5fd;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.13);
+        transform: translateY(-1px);
+        outline: none;
+    }
+
+    .totales-boton[aria-expanded="true"] {
+        background: #dbeafe;
+        border-color: #2563eb;
+        box-shadow: inset 0 0 0 1px #2563eb;
+    }
+
+    .totales-boton.is-no-aplica,
+    .totales-boton:disabled {
+        cursor: default;
+        background: #f8fafc;
+        color: #64748b;
+        opacity: 1;
+    }
+
+    .totales-boton.is-no-aplica:hover,
+    .totales-boton.is-no-aplica:focus-visible,
+    .totales-boton:disabled:hover,
+    .totales-boton:disabled:focus-visible {
+        border-color: transparent;
+        box-shadow: none;
+        transform: none;
+        outline: none;
+    }
+
+    .totales-numero {
+        display: block;
+        color: #0d6efd;
+        font-size: 2.45rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .totales-accion {
+        color: #1d4ed8;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .totales-accion .fa-chevron-down {
+        margin-right: 0.25rem;
+        transition: transform 0.15s;
+    }
+
+    .totales-boton[aria-expanded="true"]
+    .totales-accion .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+
+    .totales-valor-estatico {
+        min-height: 116px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .desglose-comunes {
+        border-left: 4px solid #2563eb !important;
+    }
+
+    .arbol-scroll {
+        overflow-x: auto;
+        padding: 0.25rem 0.25rem 0.75rem;
+    }
+
+    .arbol-comunes {
+        --color-rama: #93c5fd;
+        min-width: max(
+            520px,
+            calc(var(--cantidad-nodos) * 160px)
+        );
+    }
+
+    .arbol-raiz {
+        width: min(280px, 90%);
+        margin: 0 auto;
+        padding: 0.9rem 1.2rem;
+        border: 2px solid #2563eb;
+        border-radius: 0.85rem;
+        background: #dbeafe;
+        color: #1e3a8a;
+        text-align: center;
+        font-weight: 800;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+    }
+
+    .arbol-raiz--departamento {
+    display: block;
+    width: min(210px, 82%);
+    padding: 0.55rem 0.9rem;
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.arbol-raiz--departamento .arbol-raiz-numero {
+    margin-top: 0.15rem;
+    font-size: 2rem;
+}
+
+.arbol-raiz--departamento:hover:not(:disabled) {
+    background: #bfdbfe;
+    transform: translateY(-2px);
+}
+
+.arbol-raiz--departamento:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 3px;
+}
+
+.arbol-raiz--departamento:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+    .arbol-raiz-numero {
+        display: block;
+        margin-top: 0.35rem;
+        color: #0d6efd;
+        font-size: 2.45rem;
+        line-height: 1;
+    }
+
+    .arbol-raiz-subtitulo {
+        display: block;
+        margin-top: 0.25rem;
+        color: #1d4ed8;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .arbol-conector-central {
+        width: 2px;
+        height: 28px;
+        margin: 0 auto;
+        background: var(--color-rama);
+    }
+
+    .arbol-grid {
+        position: relative;
+        display: grid;
+        grid-template-columns:
+            repeat(var(--cantidad-nodos), minmax(145px, 1fr));
+        gap: 1rem;
+        padding-top: 28px;
+    }
+
+    .arbol-grid::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: calc(50% / var(--cantidad-nodos));
+        right: calc(50% / var(--cantidad-nodos));
+        border-top: 2px solid var(--color-rama);
+    }
+
+    .arbol-nodo {
+        position: relative;
+        min-height: 124px;
+        padding: 1rem 0.75rem;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.8rem;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        text-align: center;
+        box-shadow: 0 6px 15px rgba(15, 23, 42, 0.07);
+    }
+
+    .arbol-nodo::before {
+        content: '';
+        position: absolute;
+        width: 2px;
+        height: 28px;
+        left: 50%;
+        top: -28px;
+        background: var(--color-rama);
+        transform: translateX(-50%);
+    }
+
+    .arbol-nodo-titulo {
+        color: #334155;
+        font-size: 0.86rem;
+        font-weight: 800;
+    }
+
+    .arbol-nodo-numero {
+        color: #0d6efd;
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .criterios-modalidad {
+        border-left: 4px solid #2563eb !important;
+    }
+
+    .criterio-activo .card-header {
+        background: #f8fafc;
+    }
+
+    .criterios-grupo {
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.85rem;
+        background: #f8fafc;
+    }
+
+    .criterios-grupo-titulo {
+        margin-bottom: 0.65rem;
+        color: #1e3a8a;
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .js-criterio[aria-pressed="true"] {
+        color: #ffffff;
+        border-color: #0d6efd;
+        background: #0d6efd;
+        box-shadow: 0 5px 12px rgba(13, 110, 253, 0.2);
+    }
+
+    .criterio-activo--arbol .card,
+    .criterio-activo--selector .card {
+        border-color: #bfdbfe !important;
+    }
+
+    .criterio-cargando {
+        padding: 2.5rem 1rem;
+        color: #64748b;
+        text-align: center;
+    }
+
+    .arbol-sin-nodos {
+        padding: 1rem;
+        border-radius: 0.7rem;
+        color: #475569;
+        background: #f8fafc;
+        text-align: center;
+    }
+
+    .arbol-grid--un-nodo {
+        padding-top: 0;
+    }
+
+    .arbol-grid--un-nodo::before,
+    .arbol-grid--un-nodo .arbol-nodo::before,
+    .arbol-conector-central--oculto {
+        display: none;
+    }
+
+    .resultado-seleccion {
+        margin-top: 1.25rem;
+        padding: 1.25rem;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.85rem;
+        background: #eff6ff;
+        text-align: center;
+    }
+
+    .resultado-seleccion-titulo {
+        display: block;
+        color: #0d6efd;
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+
+    .resultado-seleccion-numero {
+        display: block;
+        margin-top: 0.4rem;
+        color: #0d6efd;
+        font-size: 3rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .resultado-seleccion-ayuda {
+        display: block;
+        margin-top: 0.35rem;
+        color: #475569;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .filtro-ofertas-card {
+        border-left: 4px solid #2563eb !important;
+    }
+
+    .filtro-ofertas-estado {
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 800;
+    }
+
+    .filtro-ofertas-panel {
+        padding-top: 1.25rem;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .filtro-ofertas-ayuda {
+        padding: 0.8rem 1rem;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.7rem;
+        background: #eff6ff;
+        color: #1e3a8a;
+        font-size: 0.86rem;
+        font-weight: 600;
+    }
+
+    .filtro-ofertas-grupo {
+        min-width: 0;
+        padding: 0.85rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.85rem;
+        background: #f8fafc;
+    }
+
+    .filtro-ofertas-grupo-disparador {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.65rem;
+        background: #ffffff;
+        color: #1e3a8a;
+        text-align: left;
+        font-size: 0.9rem;
+        font-weight: 800;
+        transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .filtro-ofertas-grupo-disparador:hover,
+    .filtro-ofertas-grupo-disparador:focus-visible {
+        border-color: #60a5fa;
+        background: #eff6ff;
+        box-shadow: 0 5px 12px rgba(37, 99, 235, 0.12);
+        outline: none;
+    }
+
+    .filtro-ofertas-grupo-disparador[aria-expanded="true"] {
+        border-color: #2563eb;
+        background: #dbeafe;
+    }
+
+    .filtro-ofertas-grupo-disparador .fa-chevron-down {
+        transition: transform 0.15s;
+    }
+
+    .filtro-ofertas-grupo-disparador[aria-expanded="true"] .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+
+    .filtro-ofertas-grupo-contenido {
+        padding-top: 0.85rem;
+    }
+
+    .filtro-ofertas-grupo-contador {
+        color: #1d4ed8;
+        font-size: 0.76rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .filtro-ofertas-preferencia {
+        color: #1e3a8a;
+        font-size: 0.84rem;
+        font-weight: 800;
+    }
+
+    .filtro-ofertas-preferencia .form-check-input,
+    .filtro-ofertas-preferencia .form-check-label {
+        cursor: pointer;
+    }
+
+    .filtro-ofertas-opciones {
+        display: grid;
+        gap: 0.55rem;
+    }
+
+    .filtro-ofertas-opcion {
+        min-height: 2.25rem;
+        margin: 0;
+        padding: 0.45rem 0.65rem 0.45rem 2.1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.55rem;
+        background: #ffffff;
+    }
+
+    .filtro-ofertas-opcion:has(.form-check-input:checked) {
+        border-color: #93c5fd;
+        background: #eff6ff;
+    }
+
+    .filtro-ofertas-opcion .form-check-input {
+        margin-top: 0.2rem;
+    }
+
+    .filtro-ofertas-opcion .form-check-label {
+        cursor: pointer;
+        color: #334155;
+        font-size: 0.86rem;
+        font-weight: 650;
+        line-height: 1.25;
+    }
+
+    .totales-resumen-card {
+        min-height: 136px;
+        padding: 1rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        color: #0f172a;
+        text-align: center;
+    }
+
+    .totales-resumen-icono {
+        display: block;
+        font-size: 1.15rem;
+        line-height: 1;
+    }
+
+    .totales-resumen-texto {
+        color: #0d6efd;
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+
+    .totales-resumen-card--grupo {
+        justify-content: flex-start;
+    }
+
+    .totales-resumen-acciones {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem;
+        margin-top: 0.25rem;
+    }
+
+    .totales-mini-accion {
+        min-height: 2.7rem;
+        padding: 0.35rem 0.25rem;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.55rem;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 0.74rem;
+        font-weight: 700;
+        line-height: 1.1;
+        transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+
+    .totales-mini-accion strong {
+        display: block;
+        font-size: 1.1rem;
+    }
+
+    .totales-mini-accion:hover,
+    .totales-mini-accion:focus-visible,
+    .totales-mini-accion[aria-pressed="true"] {
+        border-color: #2563eb;
+        background: #dbeafe;
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 767.98px) {
+        .tabla-totales-escuelas {
+            min-width: 500px;
+        }
+
+        .arbol-comunes {
+            min-width: calc(var(--cantidad-nodos) * 150px);
+        }
+    }
 </style>
 {% endblock %}
 {% block content %}
@@ -250,6 +792,32 @@
 })();
 </script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+
+.criterio-activo .card-header {
+    background: #f8fafc;
+}
+
+.criterio-activo {
+    scroll-margin-top: 6rem;
+}
+
+.arbol-grid--un-nodo {
+    width: min(210px, 100%);
+    grid-template-columns: minmax(0, 1fr);
+    margin: 1.85rem auto 0.5rem;
+    padding-top: 0;
+}
+
+.arbol-grid--un-nodo .arbol-nodo {
+    min-height: 78px;
+    padding: 0.65rem 0.8rem;
+}
+
+.arbol-grid--un-nodo::before,
+.arbol-grid--un-nodo .arbol-nodo::before,
+.arbol-conector-central--oculto {
+    display: none;
+}
 
             @media (max-width: 991.98px) {
         .padron-module-nav > .container-fluid {
@@ -532,9 +1100,6 @@ html {
         <a class="navbar-brand" href="/padron/">
             <i class="fa-solid fa-school me-2"></i>Padrón Educativo · Chaco
         </a>
-        <a class="nav-link padron-nav-guide-top d-none d-lg-inline-flex" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#guiaUsoModal">
-            <i class="fa-solid fa-circle-question me-1"></i>Gu&iacute;a de Uso
-        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#inicioModuleNav" aria-controls="inicioModuleNav" aria-expanded="false" aria-label="Alternar navegacion del modulo">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -587,9 +1152,14 @@ html {
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'padroninterno:totales_escuelas' %}">
-                        <i class="fa-solid fa-chart-column me-1"></i> Visualizador de Establecimientos </a>
-                </li>
+    <a
+        class="nav-link"
+        href="{% url 'padroninterno:totales_escuelas' %}"
+    >
+        <i class="fa-solid fa-chart-column me-1"></i>
+        Visualizador de Establecimientos
+    </a>
+</li>
                 <li class="nav-item d-flex align-items-center padron-fecha-nav-item">
                     <span class="fecha-badge fecha-badge-nav">
                         <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}
@@ -675,98 +1245,1002 @@ html {
 <section class="page-banner">
     <div>
         <h1 class="h2 fw-800 mb-2">
-            <i class="fa-solid fa-school me-2"></i>Padr&oacute;n de Establecimientos Educativos
+            <i class="fa-solid fa-chart-column me-2"></i>
+            Visualizador de Establecimientos Activos
         </h1>
+
         <p class="mb-0">
-            Provincia del Chaco &middot; Sistema de Gesti&oacute;n y Consulta
+            Consulta totales y desgloses por tipo de oferta educativa
         </p>
     </div>
 </section>
 
-<div class="d-flex align-items-center quick-access-heading">
-    <i class="fa-solid fa-bolt"></i>
-    <span>ACCESO R&Aacute;PIDO</span>
-</div>
+<section class="card border-0 shadow-sm mb-4 filtro-ofertas-card">
+    <div class="card-body p-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg">
+                <h2 class="h5 fw-bold mb-2">
+                    <i class="fa-solid fa-filter text-primary me-2"></i>
+                    Filtro por tipo de oferta
+                </h2>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-4">
-        <a class="quick-card card h-100" href="/padron/establecimiento/">
-            <div class="card-body">
-                <div class="icon-wrap quick-icon-blue">
-                    <i class="fa-solid fa-building-columns"></i>
-                </div>
-                <h3 class="card-title">Establecimientos</h3>
-                <p class="card-text mb-0">Listado completo de establecimientos educativos registrados.</p>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <a class="quick-card card h-100" href="/padron/localizacion/">
-            <div class="card-body">
-                <div class="icon-wrap quick-icon-green">
-                    <i class="fa-solid fa-map-location-dot"></i>
-                </div>
-                <h3 class="card-title">Localizaciones</h3>
-                <p class="card-text mb-0">Localizaciones f&iacute;sicas asociadas a establecimientos.</p>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <a class="quick-card card h-100" href="/padron/ofertalocal/">
-            <div class="card-body">
-                <div class="icon-wrap quick-icon-yellow">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                </div>
-                <h3 class="card-title">Ofertas Locales</h3>
-                <p class="card-text mb-0">Oferta educativa disponible por localizaci&oacute;n.</p>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <a class="quick-card card h-100" href="/padron/responsable/">
-            <div class="card-body">
-                <div class="icon-wrap quick-icon-cyan">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <h3 class="card-title">Responsables</h3>
-                <p class="card-text mb-0">Directivos y responsables registrados en el sistema.</p>
-            </div>
-        </a>
-    </div>
-        <div class="col-md-6 col-xl-4">
-        <a
-            class="quick-card card h-100"
-            href="{% url 'padroninterno:totales_escuelas' %}"
-        >
-            <div class="card-body">
-                <div
-                    class="icon-wrap"
-                    style="
-                        background: rgba(124, 58, 237, 0.12);
-                        color: #7c3aed;
-                    "
-                >
-                    <i class="fa-solid fa-chart-column"></i>
-                </div>
-
-                <h3 class="card-title">
-                    Visualizador de Establecimientos
-                </h3>
-
-                <p class="card-text mb-0">
-                    Consulta de establecimientos activos por nivel,
-                    ámbito y modalidad.
+                <p class="text-muted mb-0">
+                    Marcá una o varias ofertas de Común, Especial o Adultos.
+                    Todos los totales y árboles se recalculan con esa selección.
                 </p>
             </div>
-        </a>
+
+            <div class="col-lg-auto d-flex align-items-center gap-2">
+                <span class="badge rounded-pill px-3 py-2 filtro-ofertas-estado">
+                    <i class="fa-solid fa-filter-circle-xmark me-1"></i>
+                    {% if hay_filtro_ofertas %}
+                        {{ cantidad_ofertas_seleccionadas }} seleccionada{% if cantidad_ofertas_seleccionadas != 1 %}s{% endif %}
+                    {% else %}
+                        Todas las ofertas
+                    {% endif %}
+                </span>
+
+                <button
+                    id="alternarFiltroOfertas"
+                    type="button"
+                    class="btn btn-primary"
+                    aria-controls="panelFiltroOfertas"
+                    aria-expanded="false"
+                >
+                    <i class="fa-solid fa-sliders me-1"></i>
+                    Elegir ofertas
+                </button>
+            </div>
+        </div>
+
+        <form
+            id="panelFiltroOfertas"
+            method="get"
+            action="{% url 'padroninterno:totales_escuelas' %}"
+            class="filtro-ofertas-panel mt-4"
+            hidden
+        >
+            <div class="filtro-ofertas-ayuda mb-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <span class="badge text-bg-primary me-1">Operador: igual a</span>
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Si no marcás ninguna, se toman todas las ofertas activas.
+                        El filtro usa coincidencia exacta con los tipos de oferta del
+                        Padrón.
+                    </div>
+
+                    <div class="form-check form-switch mb-0 filtro-ofertas-preferencia">
+                        <input
+                            id="abrirTodosLosGrupos"
+                            class="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                        >
+                        <label class="form-check-label" for="abrirTodosLosGrupos">
+                            Abrir los tres automáticamente
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                {% for grupo in grupos_ofertas %}
+                    <div class="col-lg-4" data-grupo-ofertas>
+                        <fieldset class="filtro-ofertas-grupo h-100">
+                            <legend class="visually-hidden">{{ grupo.titulo }}</legend>
+
+                            <button
+                                type="button"
+                                class="filtro-ofertas-grupo-disparador js-alternar-grupo"
+                                aria-controls="grupoOfertas_{{ forloop.counter }}"
+                                aria-expanded="false"
+                            >
+                                <span class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid {{ grupo.icono }}"></i>
+                                    <span>{{ grupo.titulo }}</span>
+                                </span>
+                                <span class="d-flex align-items-center gap-2">
+                                    <span
+                                        class="filtro-ofertas-grupo-contador"
+                                        data-cantidad-seleccionadas
+                                        aria-live="polite"
+                                    >
+                                        0 seleccionadas
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </span>
+                            </button>
+
+                            <div
+                                id="grupoOfertas_{{ forloop.counter }}"
+                                class="filtro-ofertas-grupo-contenido"
+                                hidden
+                            >
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-primary js-marcar-grupo"
+                                    >
+                                        Marcar todas
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-secondary js-limpiar-grupo"
+                                    >
+                                        Limpiar grupo
+                                    </button>
+                                </div>
+
+                                <div class="filtro-ofertas-opciones">
+                                    {% for opcion in grupo.opciones %}
+                                        <div class="form-check filtro-ofertas-opcion">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                name="oferta"
+                                                value="{{ opcion.token }}"
+                                                id="oferta_{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+                                                {% if opcion.seleccionada %}checked{% endif %}
+                                            >
+                                            <label
+                                                class="form-check-label"
+                                                for="oferta_{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+                                            >
+                                                {{ opcion.titulo }}
+                                            </label>
+                                        </div>
+                                    {% empty %}
+                                        <p class="text-muted small mb-0">
+                                            No hay ofertas activas en este grupo.
+                                        </p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-check me-1"></i>
+                    Aplicar filtros
+                </button>
+                <a
+                    href="{% url 'padroninterno:totales_escuelas' %}"
+                    class="btn btn-outline-danger"
+                >
+                    <i class="fa-solid fa-eraser me-1"></i>
+                    Limpiar filtros
+                </a>
+                <small class="text-muted ms-sm-2">
+                    Filtro actual: {{ descripcion_filtro_ofertas }}
+                </small>
+            </div>
+        </form>
     </div>
-</div>
+</section>
 
-<!-- Footer -->
+{% if mensaje_error %}
 
+    <div class="alert alert-danger shadow-sm">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        {{ mensaje_error }}
+    </div>
+
+{% elif sin_datos %}
+
+    <div class="alert alert-warning shadow-sm">
+        <i class="fa-solid fa-circle-info me-2"></i>
+        No se encontraron establecimientos activos para el filtro de oferta
+        seleccionado.
+    </div>
+
+{% else %}
+
+    <section class="card border-0 shadow-sm overflow-hidden mb-4">
+        <div
+            class="card-header border-0 d-flex flex-wrap
+                align-items-center gap-3"
+            style="background: #f8fafc; padding: 1.2rem 1.5rem;"
+        >
+            <div>
+                <h2 class="h5 fw-bold mb-1">
+                    Resumen de establecimientos
+                </h2>
+
+                <small class="text-muted">
+                    Filtro aplicado: {{ descripcion_filtro_ofertas }}.
+                    Los conteos corresponden solamente a registros activos.
+                </small>
+            </div>
+
+            <span
+                class="badge rounded-pill px-3 py-2"
+                style="background: #dcfce7; color: #166534;"
+            >
+                <i class="fa-solid fa-circle-check me-1"></i>
+                Solamente activos
+            </span>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3">
+                <div class="col d-flex">
+                    <article class="totales-resumen-card h-100 w-100">
+                        <span class="totales-resumen-icono text-primary">
+                            <i class="fa-solid fa-school"></i>
+                        </span>
+                        <span class="small text-uppercase fw-bold text-secondary">
+                            Total CUE
+                        </span>
+                        <span class="totales-numero">
+                            {{ resumen_totales.totales.cue }}
+                        </span>
+                        <span class="totales-accion text-secondary">
+                            Establecimientos únicos
+                        </span>
+                    </article>
+                </div>
+
+                <div class="col d-flex">
+                    <article class="totales-resumen-card h-100 w-100">
+                        <span class="totales-resumen-icono text-success">
+                            <i class="fa-solid fa-code-branch"></i>
+                        </span>
+                        <span class="small text-uppercase fw-bold text-secondary">
+                            Total Anexo
+                        </span>
+                        <span class="totales-numero">
+                            {{ resumen_totales.totales.anexo }}
+                        </span>
+                        <span class="totales-accion text-secondary">
+                            Anexos únicos
+                        </span>
+                    </article>
+                </div>
+
+                <div class="col d-flex">
+                    <button
+                        type="button"
+                        class="totales-boton js-criterio-principal h-100"
+                        data-criterio="ambito"
+                        aria-controls="panelCriterios"
+                        aria-expanded="false"
+                    >
+                        <span class="totales-resumen-icono text-info">
+                            <i class="fa-solid fa-tree-city"></i>
+                        </span>
+                        <span class="small text-uppercase fw-bold text-secondary">
+                            Total Ámbito
+                        </span>
+                        <span class="totales-resumen-texto">
+                            Rural / Urbano
+                        </span>
+                        <span class="totales-accion">
+                            <i class="fa-solid fa-sitemap"></i>
+                            Ver árbol
+                        </span>
+                    </button>
+                </div>
+
+                <div class="col d-flex">
+                    <button
+                        type="button"
+                        class="totales-boton js-criterio-principal h-100"
+                        data-criterio="sector"
+                        aria-controls="panelCriterios"
+                        aria-expanded="false"
+                    >
+                        <span class="totales-resumen-icono text-warning">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </span>
+                        <span class="small text-uppercase fw-bold text-secondary">
+                            Total Sector
+                        </span>
+                        <span class="totales-numero">
+                            {{ resumen_totales.totales.sectores }}
+                        </span>
+                        <span class="totales-accion">
+                            <i class="fa-solid fa-sitemap"></i>
+                            Ver árbol
+                        </span>
+                    </button>
+                </div>
+
+                <div class="col d-flex">
+                    <button
+                        type="button"
+                        class="totales-boton js-criterio-principal h-100"
+                        data-criterio="acronimo"
+                        aria-controls="panelCriterios"
+                        aria-expanded="false"
+                    >
+                        <span class="totales-resumen-icono text-danger">
+                            <i class="fa-solid fa-signature"></i>
+                        </span>
+                        <span class="small text-uppercase fw-bold text-secondary">
+                            Total Acrónimo
+                        </span>
+                        <span class="totales-numero">
+                            {{ resumen_totales.totales.acronimos }}
+                        </span>
+                        <span class="totales-accion">
+                            <i class="fa-solid fa-sitemap"></i>
+                            Ver cantidades
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="card-footer border-0 text-muted"
+            style="background: white; padding: 1rem 1.5rem;"
+        >
+            <i class="fa-solid fa-circle-info text-primary me-1"></i>
+            Al elegir Regional o Departamento se despliegan sus localidades.
+            En Ámbito, Regional, Departamento y Localidad, un mismo CUE puede
+            aparecer en más de una rama si tiene localizaciones activas que
+            correspondan a ellas.
+        </div>
+    </section>
+
+    <section
+        id="panelCriterios"
+        class="card shadow-sm mb-4 criterios-modalidad d-none"
+        aria-labelledby="panelCriteriosTitulo"
+    >
+        <div
+            class="card-header border-0 d-flex flex-wrap
+                   align-items-center gap-3"
+            style="background: #f8fafc; padding: 1.2rem 1.5rem;"
+        >
+            <div>
+                <h2 id="panelCriteriosTitulo" class="h5 fw-bold mb-1">
+                    Desgloses del filtro aplicado
+                </h2>
+
+                <small class="text-muted">
+                    Ámbito, Sector y Acrónimo se muestran completos en árbol.
+                    Al elegir una Regional se despliegan sus localidades con
+                    cantidad; Departamento conserva sus localidades y
+                    Localidad muestra su total.
+                </small>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div id="botonesCriterios" class="row g-3 mb-4">
+                <div class="col-lg-7">
+                    <div class="criterios-grupo h-100">
+                        <div class="criterios-grupo-titulo">
+                            <i class="fa-solid fa-diagram-project me-1"></i>
+                            Desglose automático en árbol
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary js-criterio" data-criterio="ambito" aria-pressed="false">Ámbito</button>
+                            <button type="button" class="btn btn-outline-primary js-criterio" data-criterio="sector" aria-pressed="false">Sector</button>
+                            <button type="button" class="btn btn-outline-primary js-criterio" data-criterio="acronimo" aria-pressed="false">Acrónimo</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="criterios-grupo h-100">
+                        <div class="criterios-grupo-titulo">
+                            <i class="fa-solid fa-magnifying-glass me-1"></i>
+                            Elegir un valor
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary js-criterio" data-criterio="regional" aria-pressed="false">Regional</button>
+                            <button type="button" class="btn btn-outline-primary js-criterio" data-criterio="departamento" aria-pressed="false">Departamento</button>
+                            <button type="button" class="btn btn-outline-primary js-criterio" data-criterio="localidad" aria-pressed="false">Localidad</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="criteriosActivos" class="row g-3"></div>
+        </div>
+    </section>
+
+{% endif %}
+
+{{ resumen_totales|json_script:"resumenTotalesData" }}
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script id="totales-escuelas-resumen-script">
+document.addEventListener('DOMContentLoaded', function () {
+    const fuenteResumen = document.getElementById('resumenTotalesData');
+    const panel = document.getElementById('panelCriterios');
+    const criteriosActivos = document.getElementById('criteriosActivos');
+    const alternarFiltro = document.getElementById('alternarFiltroOfertas');
+    const panelFiltro = document.getElementById('panelFiltroOfertas');
+    const gruposOfertas = Array.from(
+        document.querySelectorAll('[data-grupo-ofertas]')
+    );
+    const abrirTodosLosGrupos = document.getElementById(
+        'abrirTodosLosGrupos'
+    );
+    const claveGruposAbiertos = 'padron_totales_abrir_todos_los_grupos';
+    const formatoNumeros = new Intl.NumberFormat('es-AR');
+    let resumen = null;
+
+    function cambiarAperturaGrupo(grupo, abierto) {
+        const boton = grupo.querySelector('.js-alternar-grupo');
+        const contenido = grupo.querySelector(
+            '.filtro-ofertas-grupo-contenido'
+        );
+
+        if (!boton || !contenido) {
+            return;
+        }
+
+        contenido.hidden = !abierto;
+        boton.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    }
+
+    function actualizarCantidadGrupo(grupo) {
+        const contador = grupo.querySelector('[data-cantidad-seleccionadas]');
+        const cantidad = grupo.querySelectorAll(
+            'input[type="checkbox"][name="oferta"]:checked'
+        ).length;
+
+        if (contador) {
+            contador.textContent = cantidad + ' seleccionada'
+                + (cantidad === 1 ? '' : 's');
+        }
+    }
+
+    function aplicarPreferenciaGrupos() {
+        const abrirTodos = Boolean(
+            abrirTodosLosGrupos && abrirTodosLosGrupos.checked
+        );
+
+        gruposOfertas.forEach(function (grupo) {
+            cambiarAperturaGrupo(grupo, abrirTodos);
+        });
+    }
+
+    if (abrirTodosLosGrupos) {
+        try {
+            abrirTodosLosGrupos.checked = window.localStorage.getItem(
+                claveGruposAbiertos
+            ) === '1';
+        } catch (error) {
+            abrirTodosLosGrupos.checked = false;
+        }
+
+        abrirTodosLosGrupos.addEventListener('change', function () {
+            try {
+                window.localStorage.setItem(
+                    claveGruposAbiertos,
+                    this.checked ? '1' : '0'
+                );
+            } catch (error) {
+                // Si el navegador bloquea el almacenamiento, la preferencia
+                // sigue funcionando durante esta visita.
+            }
+
+            aplicarPreferenciaGrupos();
+        });
+    }
+
+    gruposOfertas.forEach(function (grupo) {
+        const boton = grupo.querySelector('.js-alternar-grupo');
+        const checks = grupo.querySelectorAll(
+            'input[type="checkbox"][name="oferta"]'
+        );
+        const marcar = grupo.querySelector('.js-marcar-grupo');
+        const limpiar = grupo.querySelector('.js-limpiar-grupo');
+
+        actualizarCantidadGrupo(grupo);
+
+        if (boton) {
+            boton.addEventListener('click', function () {
+                const abierto = boton.getAttribute('aria-expanded') !== 'true';
+                cambiarAperturaGrupo(grupo, abierto);
+            });
+        }
+
+        checks.forEach(function (check) {
+            check.addEventListener('change', function () {
+                actualizarCantidadGrupo(grupo);
+            });
+        });
+
+        if (marcar) {
+            marcar.addEventListener('click', function () {
+                checks.forEach(function (check) {
+                    check.checked = true;
+                });
+                actualizarCantidadGrupo(grupo);
+            });
+        }
+
+        if (limpiar) {
+            limpiar.addEventListener('click', function () {
+                checks.forEach(function (check) {
+                    check.checked = false;
+                });
+                actualizarCantidadGrupo(grupo);
+            });
+        }
+    });
+
+    if (alternarFiltro && panelFiltro) {
+        alternarFiltro.addEventListener('click', function () {
+            const seOculta = !panelFiltro.hidden;
+
+            panelFiltro.hidden = seOculta;
+            alternarFiltro.setAttribute(
+                'aria-expanded',
+                seOculta ? 'false' : 'true'
+            );
+
+            if (!seOculta) {
+                aplicarPreferenciaGrupos();
+
+                window.requestAnimationFrame(function () {
+                    panelFiltro.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    });
+                });
+            }
+        });
+    }
+
+    if (!fuenteResumen || !panel || !criteriosActivos) {
+        return;
+    }
+
+    try {
+        resumen = JSON.parse(fuenteResumen.textContent);
+    } catch (error) {
+        return;
+    }
+
+    if (!resumen || !resumen.totales || !resumen.criterios) {
+        return;
+    }
+
+    function formatearNumero(valor) {
+        return formatoNumeros.format(Number(valor || 0));
+    }
+
+    function desplazarseA(elemento) {
+        window.requestAnimationFrame(function () {
+            if (!elemento || !elemento.isConnected) {
+                return;
+            }
+
+            const reducirMovimiento = window.matchMedia
+                && window.matchMedia(
+                    '(prefers-reduced-motion: reduce)'
+                ).matches;
+
+            elemento.scrollIntoView({
+                behavior: reducirMovimiento ? 'auto' : 'smooth',
+                block: 'start'
+            });
+        });
+    }
+
+    function cambiarEstadoCriterio(criterio, activo) {
+        document.querySelectorAll(
+            '[data-criterio="' + criterio + '"]'
+        ).forEach(function (boton) {
+            if (boton.classList.contains('js-criterio')) {
+                boton.setAttribute(
+                    'aria-pressed',
+                    activo ? 'true' : 'false'
+                );
+            }
+
+            if (boton.classList.contains('js-criterio-principal')) {
+                boton.setAttribute(
+                    'aria-expanded',
+                    activo ? 'true' : 'false'
+                );
+            }
+        });
+    }
+
+    function cerrarTarjetaCriterio(tarjeta) {
+        cambiarEstadoCriterio(tarjeta.dataset.criterioActivo, false);
+        tarjeta.remove();
+    }
+
+    function crearTarjetaCriterio(criterio) {
+        const tarjeta = document.createElement('div');
+        const card = document.createElement('div');
+        const cabecera = document.createElement('div');
+        const titulo = document.createElement('h3');
+        const botonCerrar = document.createElement('button');
+        const cuerpo = document.createElement('div');
+
+        tarjeta.className = 'col-12 criterio-activo';
+        tarjeta.dataset.criterioActivo = criterio;
+        card.className = 'card h-100 border shadow-sm';
+        cabecera.className =
+            'card-header d-flex flex-wrap align-items-center '
+            + 'justify-content-start gap-4';
+        titulo.className = 'h6 fw-bold mb-0 text-primary';
+
+        botonCerrar.type = 'button';
+        botonCerrar.className =
+            'btn btn-sm btn-outline-danger bg-transparent';
+        botonCerrar.innerHTML =
+            '<i class="fa-solid fa-xmark me-1" aria-hidden="true"></i>'
+            + 'Cerrar';
+        botonCerrar.setAttribute('aria-label', 'Cerrar criterio');
+
+        cuerpo.className = 'card-body p-4';
+        cabecera.append(titulo, botonCerrar);
+        card.append(cabecera, cuerpo);
+        tarjeta.appendChild(card);
+
+        botonCerrar.addEventListener('click', function () {
+            cerrarTarjetaCriterio(tarjeta);
+        });
+
+        return {
+            tarjeta: tarjeta,
+            titulo: titulo,
+            cuerpo: cuerpo
+        };
+    }
+
+    function crearNodoArbol(nodo) {
+        const nodoArbol = document.createElement('div');
+        const tituloNodo = document.createElement('span');
+        const numeroNodo = document.createElement('span');
+
+        nodoArbol.className = 'arbol-nodo';
+        tituloNodo.className = 'arbol-nodo-titulo';
+        tituloNodo.textContent = nodo.titulo;
+        numeroNodo.className = 'arbol-nodo-numero';
+        numeroNodo.textContent = formatearNumero(nodo.total);
+        nodoArbol.append(tituloNodo, numeroNodo);
+
+        return nodoArbol;
+    }
+
+    function crearRamasArbol(nodos) {
+        const fragmento = document.createDocumentFragment();
+
+        if (!nodos.length) {
+            const sinNodos = document.createElement('div');
+
+            sinNodos.className = 'arbol-sin-nodos mt-3';
+            sinNodos.textContent =
+                'No hay valores disponibles para este criterio.';
+            fragmento.appendChild(sinNodos);
+            return fragmento;
+        }
+
+        const conector = document.createElement('div');
+        const grid = document.createElement('div');
+
+        conector.className = 'arbol-conector-central';
+        grid.className = 'arbol-grid';
+
+        if (nodos.length === 1) {
+            conector.classList.add('arbol-conector-central--oculto');
+            grid.classList.add('arbol-grid--un-nodo');
+        }
+
+        nodos.forEach(function (nodo) {
+            grid.appendChild(crearNodoArbol(nodo));
+        });
+
+        fragmento.append(conector, grid);
+        return fragmento;
+    }
+
+    function ayudaArbol(criterio) {
+        if (criterio === 'acronimo') {
+            return 'Se muestran todos los acrónimos presentes y la cantidad '
+                + 'de CUE activos de cada uno. Los valores repetidos como '
+                + 'EES-EES se agrupan como EES.';
+        }
+
+        if (criterio === 'ambito') {
+            return 'Un mismo CUE puede aparecer en Rural y Urbano si tiene '
+                + 'localizaciones activas en ambos ámbitos.';
+        }
+
+        return 'Cada nodo muestra la cantidad de CUE activos dentro del '
+            + 'filtro de oferta aplicado.';
+    }
+
+    function mostrarArbol(tarjetaDatos, criterio, datos) {
+        const nodos = Array.isArray(datos.nodos) ? datos.nodos : [];
+        const ayuda = document.createElement('p');
+        const scroll = document.createElement('div');
+        const arbol = document.createElement('div');
+        const raiz = document.createElement('div');
+        const tituloRaiz = document.createElement('span');
+        const subtituloRaiz = document.createElement('span');
+        const numeroRaiz = document.createElement('span');
+
+        tarjetaDatos.tarjeta.classList.add('criterio-activo--arbol');
+        tarjetaDatos.titulo.textContent = 'Desglose por ' + datos.titulo;
+        tarjetaDatos.cuerpo.replaceChildren();
+
+        ayuda.className = 'text-muted small text-center mb-4';
+        ayuda.textContent = ayudaArbol(criterio);
+
+        scroll.className = 'arbol-scroll';
+        arbol.className = 'arbol-comunes';
+        arbol.style.setProperty(
+            '--cantidad-nodos',
+            String(Math.max(nodos.length, 1))
+        );
+
+        raiz.className = 'arbol-raiz';
+        tituloRaiz.textContent = datos.titulo;
+        subtituloRaiz.className = 'arbol-raiz-subtitulo';
+        subtituloRaiz.textContent = 'Total CUE del filtro aplicado';
+        numeroRaiz.className = 'arbol-raiz-numero';
+        numeroRaiz.textContent = formatearNumero(resumen.totales.cue);
+        raiz.append(tituloRaiz, subtituloRaiz, numeroRaiz);
+
+        arbol.append(raiz, crearRamasArbol(nodos));
+        scroll.appendChild(arbol);
+        tarjetaDatos.cuerpo.append(ayuda, scroll);
+    }
+
+    function mostrarRamasLocalidades(contenedor, nodos, contexto) {
+        contenedor.replaceChildren();
+        contenedor.appendChild(crearRamasArbol(nodos));
+
+        const nota = document.createElement('p');
+        nota.className = 'text-muted small text-center mt-3 mb-0';
+        nota.textContent =
+            'Cada rama muestra los CUE activos de esa localidad dentro del '
+            + contexto + '.';
+        contenedor.appendChild(nota);
+    }
+
+    function mostrarArbolUbicacion(
+        contenedor,
+        tituloGrupo,
+        total,
+        localidades,
+        criterio,
+        expandidoInicialmente
+    ) {
+        const scroll = document.createElement('div');
+        const arbol = document.createElement('div');
+        const raiz = document.createElement('button');
+        const tituloRaiz = document.createElement('span');
+        const subtituloRaiz = document.createElement('span');
+        const numeroRaiz = document.createElement('span');
+        const ramaLocalidades = document.createElement('div');
+
+        contenedor.replaceChildren();
+        scroll.className = 'arbol-scroll';
+        arbol.className = 'arbol-comunes';
+        arbol.style.setProperty(
+            '--cantidad-nodos',
+            String(Math.max(localidades.length, 1))
+        );
+
+        raiz.type = 'button';
+        raiz.className = 'arbol-raiz arbol-raiz--departamento';
+        tituloRaiz.textContent = tituloGrupo;
+        subtituloRaiz.className = 'arbol-raiz-subtitulo';
+        numeroRaiz.className = 'arbol-raiz-numero';
+        numeroRaiz.textContent = formatearNumero(total);
+
+        ramaLocalidades.className = 'mt-3';
+        ramaLocalidades.hidden = true;
+
+        function actualizarEstadoLocalidades(expandido, desplazar) {
+            if (expandido && !ramaLocalidades.childElementCount) {
+                mostrarRamasLocalidades(
+                    ramaLocalidades,
+                    localidades,
+                    criterio === 'regional'
+                        ? 'la Regional elegida'
+                        : 'el Departamento elegido'
+                );
+            }
+
+            ramaLocalidades.hidden = !expandido;
+            raiz.setAttribute(
+                'aria-expanded',
+                expandido ? 'true' : 'false'
+            );
+            raiz.setAttribute(
+                'aria-label',
+                (expandido ? 'Ocultar' : 'Mostrar')
+                + ' localidades de ' + tituloGrupo
+            );
+            subtituloRaiz.textContent = expandido
+                ? 'Hacé clic para ocultar localidades'
+                : 'Hacé clic para ver localidades';
+            raiz.title = expandido
+                ? 'Hacé clic para ocultar las localidades'
+                : 'Hacé clic para ver las localidades';
+
+            if (expandido && desplazar) {
+                desplazarseA(ramaLocalidades);
+            }
+        }
+
+        raiz.addEventListener('click', function () {
+            actualizarEstadoLocalidades(
+                ramaLocalidades.hidden,
+                true
+            );
+        });
+
+        raiz.append(tituloRaiz, subtituloRaiz, numeroRaiz);
+        arbol.append(raiz, ramaLocalidades);
+        scroll.appendChild(arbol);
+        contenedor.appendChild(scroll);
+        actualizarEstadoLocalidades(
+            Boolean(expandidoInicialmente),
+            false
+        );
+    }
+
+    function mostrarSelector(tarjetaDatos, criterio, datos) {
+        const muestraLocalidades = (
+            criterio === 'regional' || criterio === 'departamento'
+        );
+        const etiqueta = document.createElement('label');
+        const select = document.createElement('select');
+        const ayuda = document.createElement('p');
+        const resultado = document.createElement('div');
+        const tituloResultado = document.createElement('span');
+        const numeroResultado = document.createElement('span');
+        const ayudaResultado = document.createElement('span');
+        const contenedorArbol = document.createElement('div');
+
+        if (!muestraLocalidades) {
+            tarjetaDatos.tarjeta.classList.add('col-lg-6');
+        }
+
+        tarjetaDatos.tarjeta.classList.add('criterio-activo--selector');
+        tarjetaDatos.titulo.textContent = datos.titulo;
+        tarjetaDatos.cuerpo.replaceChildren();
+
+        etiqueta.className = 'form-label fw-bold';
+        etiqueta.htmlFor = 'selector-' + criterio;
+        etiqueta.textContent = 'Elegí una opción';
+
+        select.id = etiqueta.htmlFor;
+        select.className = 'form-select';
+        select.appendChild(
+            new Option('Seleccionar ' + datos.titulo, '')
+        );
+
+        (datos.opciones || []).forEach(function (opcion) {
+            select.appendChild(
+                new Option(opcion.titulo, opcion.valor)
+            );
+        });
+
+        ayuda.className = 'text-muted small mb-0';
+        ayuda.textContent = criterio === 'regional'
+            ? 'Seleccioná una Regional para ver sus localidades y cantidades.'
+            : criterio === 'departamento'
+                ? 'Seleccioná un Departamento para ver sus localidades y cantidades.'
+                : 'Seleccioná un valor para ver su cantidad de CUE activos.';
+
+        resultado.className = 'resultado-seleccion';
+        resultado.hidden = true;
+        resultado.setAttribute('aria-live', 'polite');
+        tituloResultado.className = 'resultado-seleccion-titulo';
+        numeroResultado.className = 'resultado-seleccion-numero';
+        ayudaResultado.className = 'resultado-seleccion-ayuda';
+        ayudaResultado.textContent = 'CUE activos';
+        resultado.append(tituloResultado, numeroResultado, ayudaResultado);
+
+        contenedorArbol.className = 'mt-4';
+        contenedorArbol.hidden = true;
+        contenedorArbol.setAttribute('aria-live', 'polite');
+
+        tarjetaDatos.cuerpo.append(etiqueta, select, ayuda);
+        tarjetaDatos.cuerpo.append(
+            muestraLocalidades ? contenedorArbol : resultado
+        );
+
+        select.addEventListener('change', function () {
+            const opcion = (datos.opciones || []).find(function (item) {
+                return item.valor === select.value;
+            });
+
+            resultado.hidden = true;
+            contenedorArbol.hidden = true;
+            contenedorArbol.replaceChildren();
+
+            if (!opcion) {
+                ayuda.textContent = criterio === 'regional'
+                    ? 'Seleccioná una Regional para ver sus localidades y cantidades.'
+                    : criterio === 'departamento'
+                        ? 'Seleccioná un Departamento para ver sus localidades y cantidades.'
+                        : 'Seleccioná un valor para ver su cantidad de CUE activos.';
+                return;
+            }
+
+            if (muestraLocalidades) {
+                mostrarArbolUbicacion(
+                    contenedorArbol,
+                    opcion.titulo,
+                    opcion.total,
+                    opcion.localidades || [],
+                    criterio,
+                    criterio === 'regional'
+                );
+                contenedorArbol.hidden = false;
+                ayuda.textContent = criterio === 'regional'
+                    ? 'Se desplegaron las localidades de la Regional elegida.'
+                    : 'El número del Departamento es el botón para desplegar '
+                        + 'sus localidades.';
+                desplazarseA(contenedorArbol);
+                return;
+            }
+
+            tituloResultado.textContent = opcion.titulo;
+            numeroResultado.textContent = formatearNumero(opcion.total);
+            ayuda.textContent =
+                'Cantidad dentro de ' + datos.titulo + '.';
+            resultado.hidden = false;
+            desplazarseA(resultado);
+        });
+    }
+
+    function abrirCriterio(criterio) {
+        const datos = resumen.criterios[criterio];
+
+        if (!datos) {
+            return;
+        }
+
+        const existente = criteriosActivos.querySelector(
+            '[data-criterio-activo="' + criterio + '"]'
+        );
+
+        if (existente) {
+            cerrarTarjetaCriterio(existente);
+            return;
+        }
+
+        panel.classList.remove('d-none');
+
+        const tarjetaDatos = crearTarjetaCriterio(criterio);
+        criteriosActivos.appendChild(tarjetaDatos.tarjeta);
+        cambiarEstadoCriterio(criterio, true);
+
+        if (datos.tipo === 'arbol') {
+            mostrarArbol(tarjetaDatos, criterio, datos);
+        } else {
+            mostrarSelector(tarjetaDatos, criterio, datos);
+        }
+
+        desplazarseA(tarjetaDatos.tarjeta);
+    }
+
+    document.querySelectorAll(
+        '.js-criterio, .js-criterio-principal'
+    ).forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            abrirCriterio(boton.dataset.criterio);
+        });
+    });
+});
+</script>
+
 {% if padron_is_admin %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -1756,7 +3230,7 @@ $(document).ready(function() {
             $('#liveSearchClear').show();
         }
     }
-
+    // Separador del bloque de paginación.
     // ============================================
     // PAGINACION COMPACTA Y SELECTOR PAGE_SIZE
     // ============================================
@@ -1818,3 +3292,6 @@ $(document).ready(function() {
 </script>
 </div>
 {% endblock %}
+
+
+
