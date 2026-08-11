@@ -1,7 +1,7 @@
 <h3>{{ titulo }}</h3>
 {% if docente_activo %}
     <div class="cef-info-grid">
-        <div class="cef-info-item span-all"><span>Profesor</span><strong>{{ docente_activo.docente_nombre_snapshot|default:docente_activo.docente_cuil }}</strong></div>
+        <div class="cef-info-item span-all"><span>Docente</span><strong>{{ docente_activo.docente_nombre_snapshot|default:docente_activo.docente_cuil }}</strong></div>
         <div class="cef-info-item"><span>CUIL</span><strong>{{ docente_activo.docente_cuil }}</strong></div>
         <div class="cef-info-item"><span>DNI</span><strong>{{ docente_activo.docente_dni_snapshot|default:"-" }}</strong></div>
         <div class="cef-info-item"><span>Estado BNH</span><strong>{{ docente_activo.docente_estado_bnh_snapshot|default:"-" }}</strong></div>

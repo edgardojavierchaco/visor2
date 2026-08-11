@@ -8,7 +8,7 @@
         <h2 class="cef-panel-title">Gestionar sección <span>» Sección {{ seccion.nombre_seccion }}</span></h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a Grupos / Cursos
+                <i class="fa-solid fa-arrow-left"></i> Volver a Secciones
             </a>
             <a class="btn btn-outline-primary" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-pen"></i> Editar sección
@@ -17,7 +17,7 @@
                 <i class="fa-solid fa-user-plus"></i> Inscribir alumno
             </a>
             <a class="btn btn-primary" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
-                <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
+                <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
             </a>
         </div>
     </div>
@@ -50,9 +50,9 @@
 
         <div class="cef-edit-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <h3 class="mb-0">Profesores de la sección</h3>
+                <h3 class="mb-0">Docentes de la sección</h3>
                 <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
-                    <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
+                    <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
                 </a>
             </div>
             <div data-cef-fragment="docentes-seccion">
@@ -61,16 +61,16 @@
         </div>
 
         <div class="cef-edit-panel" data-cef-fragment="docente-titular-activo">
-            {% include "especial/gestionar_seccion_docente_activo_especial.html" with titulo="Profesor titular activo" docente_activo=docente_titular rol_texto="profesor titular" %}
+            {% include "especial/gestionar_seccion_docente_activo_especial.html" with titulo="Docente titular activo" docente_activo=docente_titular rol_texto="docente titular" %}
         </div>
 
         <div class="cef-edit-panel" data-cef-fragment="docente-suplente-activo">
-            {% include "especial/gestionar_seccion_docente_activo_especial.html" with titulo="Profesor suplente activo" docente_activo=docente_suplente rol_texto="profesor suplente" %}
+            {% include "especial/gestionar_seccion_docente_activo_especial.html" with titulo="Docente suplente activo" docente_activo=docente_suplente rol_texto="docente suplente" %}
         </div>
 
     </div>
 </div>
-
+<!--
 {% include "especial/asignar_docente_seccion_modal_especial.html" %}
-
+-->
 {% endblock %}

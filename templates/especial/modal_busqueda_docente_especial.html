@@ -204,7 +204,7 @@
     <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="docenteBusquedaTitulo">
         <div class="cef-docente-modal-head">
             <h2 id="docenteBusquedaTitulo" class="cef-docente-modal-title">
-                <i class="fa-solid fa-magnifying-glass me-2"></i>Profesores <span>» Búsqueda</span>
+                <i class="fa-solid fa-magnifying-glass me-2"></i>Docentes <span>» Búsqueda</span>
             </h2>
             <a class="cef-docente-close" href="{{ modal_volver_url }}" aria-label="Cerrar" data-docente-modal-close>
                 <i class="fa-solid fa-xmark"></i>
@@ -293,18 +293,18 @@
                                     {% elif not cuil_buscado %}
                                         <div class="cef-docente-msg">
                                             <i class="fa-solid fa-id-card" style="color:#bfdbfe"></i>
-                                            Ingresá el CUIL del profesor para buscar.
+                                            Ingresá el CUIL del docente para buscar.
                                         </div>
                                     {% else %}
                                         <div class="cef-docente-msg">
                                             <i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i>
-                                            No se encontró ningún profesor con ese CUIL. Podés cargar los datos del profesor desde el módulo correspondiente. Se abrirá una nueva pestaña para completar el formulario. Cuando termines de cargar y guardar al profesor, regresá a esta pantalla de CEF y buscá nuevamente el CUIL para poder asociarlo.
+                                            No se encontró ningún docente con ese CUIL. Podés cargar los datos del docente desde el módulo correspondiente. Se abrirá una nueva pestaña para completar el formulario. Cuando termines de cargar y guardar al docente, regresá a esta pantalla de CEF y buscá nuevamente el CUIL para poder asociarlo.
                                             {% if url_carga_profesor %}
                                                 <a class="btn btn-outline-primary btn-sm" href="{{ url_carga_profesor }}" target="_blank" rel="noopener">
                                                     <i class="fa-solid fa-plus-circle"></i> Cargar datos del profesor
                                                 </a>
                                             {% else %}
-                                                <span class="alert alert-warning mb-0">No está configurada la URL de carga externa de profesor.</span>
+                                                <span class="alert alert-warning mb-0">No está configurada la URL de carga externa de docente.</span>
                                             {% endif %}
                                         </div>
                                     {% endif %}
@@ -317,11 +317,11 @@
 
             {% if docente_row and modal_tiene_grupo and docente_asignacion_activa %}
                 <div class="alert alert-info mb-3">
-                    Este profesor ya está asignado a esta sección como {{ docente_asignacion_activa.get_rol_display }}.
+                    Este docente ya está asignado a esta sección como {{ docente_asignacion_activa.get_rol_display }}.
                 </div>
             {% elif docente_row and modal_tiene_grupo %}
                 <div class="cef-edit-panel">
-                    <h3><i class="fa-solid fa-user-check"></i> Asociar profesor al grupo</h3>
+                    <h3><i class="fa-solid fa-user-check"></i> Asociar docente a la sección</h3>
                     <form method="post" action="{{ modal_action_url }}" novalidate data-docente-modal-post-form>
                         {% csrf_token %}
                         <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
@@ -346,20 +346,20 @@
 
                         <div class="cef-form-actions mt-3">
                             <button class="btn btn-primary" type="submit">
-                                <i class="fa-solid fa-user-check"></i> Asociar profesor
+                                <i class="fa-solid fa-user-check"></i> Asociar docente
                             </button>
                         </div>
                     </form>
                 </div>
             {% elif docente_row %}
                 <p class="small text-muted mb-0">
-                    La asignación a grupos se realiza desde la pantalla de grupos.
+                    La asignación a secciones se realiza desde la pantalla de secciones.
                 </p>
             {% endif %}
 
             {% if url_carga_profesor %}
                 <p class="small text-muted mt-3 mb-0">
-                    Se abrirá una nueva pestaña. Cuando termines de cargar y guardar al profesor, regresá a esta pantalla de CEF y buscá nuevamente el CUIL.
+                    Se abrirá una nueva pestaña. Cuando termines de cargar y guardar al docente, regresá a esta pantalla de Especial y buscá nuevamente el CUIL.
                 </p>
             {% endif %}
 
