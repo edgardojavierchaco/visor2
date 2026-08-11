@@ -1,14 +1,14 @@
 {% extends "especial/base_operativo_especial.html" %}
 
-{% block especial_subtitle %}Edición de rol, estado, fechas y observaciones del profesor en el grupo.{% endblock %}
+{% block especial_subtitle %}Edición de rol, estado, fechas y observaciones del docente en la sección.{% endblock %}
 
 {% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Editar profesor de la sección</h2>
+        <h2 class="cef-panel-title">Editar docente de la sección</h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{{ volver_url }}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a profesores
+                <i class="fa-solid fa-arrow-left"></i> Volver a Docentes
             </a>
         </div>
     </div>
@@ -28,7 +28,7 @@
 
         <div class="cef-context-summary mb-3">
             <div class="cef-context-summary-item is-wide">
-                <span>Profesor</span>
+                <span>Docente</span>
                 <strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong>
             </div>
             <div class="cef-context-summary-item">
@@ -65,7 +65,7 @@
 
             <div class="cef-form-actions mt-4">
                 <a class="btn btn-outline-secondary" href="{{ volver_url }}">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a profesores
+                    <i class="fa-solid fa-arrow-left"></i> Volver a Docentes
                 </a>
                 <button type="submit" class="btn btn-primary">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar

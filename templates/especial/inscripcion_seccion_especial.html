@@ -5,10 +5,10 @@
 {% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Grupos <span>» Inscripción de Alumnos</span></h2>
+        <h2 class="cef-panel-title">Secciones <span>» Inscripción de Alumnos</span></h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+                <i class="fa-solid fa-arrow-left"></i> Volver a Secciones
             </a>
             <button class="btn btn-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Agregar alumno
@@ -21,7 +21,7 @@
             <div class="mb-3">
                 <span class="cef-context-pill">
                     <i class="fa-solid fa-users"></i>
-                    {{ grupo.actividad }} — Grupo {{ grupo.nombre|default:"" }} N° {{ grupo.numero }} — {{ grupo.turno }}
+                    {{ grupo.actividad }} — Sección {{ grupo.nombre|default:"" }} N° {{ grupo.numero }} — {{ grupo.turno }}
                 </span>
             </div>
         {% endif %}
