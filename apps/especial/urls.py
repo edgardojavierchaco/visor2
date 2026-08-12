@@ -82,6 +82,11 @@ urlpatterns = [
         name="administrar_ciclos",
     ),
     path(
+        "carga/ciclos/previsualizacion/<int:ciclo_id>/",
+        views_ciclo.prevalidar_ciclo_anual,
+        name="prevalidar_ciclo_anual",
+    ),
+    path(
     "carga/secciones/<int:seccion_id>/docentes/<int:docente_id>/editar/",
     views_docentes.editar_docente_seccion, # Asegúrate de importar la función
     name="editar_docente_seccion",

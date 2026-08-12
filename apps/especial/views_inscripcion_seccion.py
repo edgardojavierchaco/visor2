@@ -300,8 +300,14 @@ def inscripcion_seccion(request, seccion_id):
     """Vista de inscripción de alumnos a una sección."""
     context = contexto_base(request, "secciones", "Inscripción de alumnos Educación Especial")
     especial_context = context["especial_context"]
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
+            request,
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
+        )
+        return redirect(request.get_full_path())
 
-    if not especial_context["puede_operar"]:
+    if not especial_context["puede_consultar"]:
         messages.warning(
             request,
             "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
@@ -424,6 +430,12 @@ def editar_inscripcion_seccion(request, seccion_id, inscripcion_id):
     """Vista para editar una inscripción de alumno a sección."""
     context = contexto_base(request, "secciones", "Editar inscripción Educación Especial")
     especial_context = context["especial_context"]
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
+            request,
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
+        )
+        return redirect(request.get_full_path())
 
     if not especial_context["puede_operar"]:
         messages.warning(
