@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, close_old_connections, connection
+from django.db.utils import OperationalError
 from django.http import Http404, HttpResponse
 from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
@@ -49,7 +50,12 @@ from .views_ciclo import _exigir_admin
 from .views_docentes_seccion import dar_alta_docente_seccion
 from .services_alumnos import dar_baja_alumno_banco
 from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
-from .views_alumnos import _actualizar_matricula_compartida, _asegurar_alumno_banco
+from .views_alumnos import (
+    _actualizar_matricula_compartida,
+    _asegurar_alumno_banco,
+    _matricula_compartida_habilitada,
+    alumnos,
+)
 from .views_localizaciones import (
     CACHE_TTL_LOCALIZACIONES_ESPECIAL,
     CACHE_VERSION_LOCALIZACIONES_ESPECIAL,
@@ -1093,6 +1099,39 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         def exists(self):
             return self.existe
 
+    class PadronOfertaManager:
+        def __init__(self, rows):
+            self.rows = list(rows)
+            self.alias = None
+            self.oferta_normalizada_anotada = False
+
+        def using(self, alias):
+            self.alias = alias
+            return self
+
+        def filter(self, **kwargs):
+            if "cueanexo" in kwargs:
+                self.rows = [
+                    row for row in self.rows if row["cueanexo"] == kwargs["cueanexo"]
+                ]
+            if "oferta_normalizada" in kwargs:
+                if not self.oferta_normalizada_anotada:
+                    raise AssertionError("La oferta debe normalizarse antes de filtrarla.")
+                self.rows = [
+                    row
+                    for row in self.rows
+                    if (row.get("oferta") or "").strip()
+                    == kwargs["oferta_normalizada"]
+                ]
+            return self
+
+        def annotate(self, **kwargs):
+            self.oferta_normalizada_anotada = "oferta_normalizada" in kwargs
+            return self
+
+        def exists(self):
+            return bool(self.rows)
+
     def _form(self, data, habilitada=True, existe=True, actual="123456700"):
         return EspecialMatriculaCompartidaForm(
             data,
@@ -1101,20 +1140,116 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
             padron_queryset=self.PadronQuerySet(existe),
         )
 
-    def test_habilitacion_usa_la_oferta_exacta_del_padron(self):
-        manager = MagicMock()
-        manager.using.return_value.filter.return_value.exists.return_value = True
-
+    def _habilitada_para(self, rows, cueanexo="220015500"):
+        manager = self.PadronOfertaManager(rows)
         with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
-            self.assertTrue(
-                cueanexo_tiene_oferta_matricula_compartida("12-345-670-0")
-            )
+            habilitada = cueanexo_tiene_oferta_matricula_compartida(cueanexo)
+        self.assertEqual(manager.alias, "default")
+        return habilitada
 
-        manager.using.assert_called_once_with("default")
-        manager.using.return_value.filter.assert_called_once_with(
-            cueanexo="123456700",
-            oferta="Especial - Integración",
+    def test_cue_con_una_oferta_integracion_normalizada_es_true(self):
+        self.assertTrue(
+            self._habilitada_para(
+                [
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - Integración ",
+                    }
+                ]
+            )
         )
+
+    def test_cue_con_varias_ofertas_y_una_integracion_es_true(self):
+        self.assertTrue(
+            self._habilitada_para(
+                [
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - Primaria de 7 años ",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - Integración ",
+                    },
+                    {
+                        "cueanexo": "987654300",
+                        "oferta": "Especial - Integración ",
+                    },
+                ]
+            )
+        )
+
+    def test_cue_sin_oferta_integracion_es_false(self):
+        self.assertFalse(
+            self._habilitada_para(
+                [
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - Primaria de 7 años ",
+                    }
+                ]
+            )
+        )
+
+    def test_oferta_normalizada_mantiene_comparacion_exacta(self):
+        self.assertFalse(
+            self._habilitada_para(
+                [
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - integración ",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - Integración ampliada",
+                    },
+                ]
+            )
+        )
+
+    def test_error_de_padron_se_registra_y_no_es_false_funcional(self):
+        context = {"puede_operar": True, "cueanexo": "220015500"}
+        with patch(
+            "apps.especial.views_alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=OperationalError("vista no disponible"),
+        ), patch("apps.especial.views_alumnos.logger.exception") as log_exception:
+            habilitada = _matricula_compartida_habilitada(context)
+
+        self.assertIsNone(habilitada)
+        log_exception.assert_called_once()
+
+    def test_contexto_del_template_recibe_habilitada_true(self):
+        request = RequestFactory().get("/especial/alumnos/")
+        especial_context = {
+            "puede_operar": True,
+            "cueanexo": "220015500",
+            "ciclo": None,
+        }
+        render_mock = MagicMock(return_value=HttpResponse("ok"))
+        vista_sin_decoradores = alumnos
+        while hasattr(vista_sin_decoradores, "__wrapped__"):
+            vista_sin_decoradores = vista_sin_decoradores.__wrapped__
+
+        with patch(
+            "apps.especial.views_alumnos.contexto_base",
+            return_value={"especial_context": especial_context},
+        ), patch(
+            "apps.especial.views_alumnos._matricula_compartida_habilitada",
+            return_value=True,
+        ), patch(
+            "apps.especial.views_alumnos._alumnos_banco",
+            return_value=[],
+        ), patch(
+            "apps.especial.views_alumnos._secciones_disponibles",
+            return_value=[],
+        ), patch(
+            "apps.especial.views_alumnos.render_especial",
+            render_mock,
+        ):
+            vista_sin_decoradores(request)
+
+        template_context = render_mock.call_args.args[2]
+        self.assertIs(template_context["matricula_compartida_habilitada"], True)
 
     def test_cue_sin_oferta_integracion_rechaza_si_manipulado(self):
         form = self._form(
