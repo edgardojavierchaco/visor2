@@ -27,30 +27,43 @@
                 <tr>
                     <th>Apellido y Nombre</th>
                     <th>Documento</th>
+                    <th>Edad</th>
                     <th>CUIL</th>
                     <th>Sexo</th>
-                    <th>Fecha inscripción</th>
-                    <th>Estado</th>
+                    {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}
+                        <th>Estado actual en este grupo</th>
+                    {% else %}
+                        <th>Fecha inscripción</th>
+                        <th>Estado</th>
+                    {% endif %}
                     {% if not inscripciones_solo_lectura %}<th>Acciones</th>{% endif %}
+                    {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}<th class="text-end">Historial</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for inscripcion in inscripciones %}
-                    <tr class="{% if inscripcion.estado != 'activo' %}cef-row-inactive{% endif %}">
+                    <tr class="{% if inscripcion.estado != 'activo' %}cef-row-inactive{% endif %}"{% if gestionar_grupo_modo and vista_alumnos == 'historial' %} data-cef-history-owner="alumno-curso-{{ inscripcion.alumno_id }}"{% endif %}>
                         <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
                         <td>{{ inscripcion.alumno.nro_doc }}</td>
+                        <td>{{ inscripcion.edad|default_if_none:"-" }}</td>
                         <td>{{ inscripcion.alumno.cuil|default:"—" }}</td>
                         <td>{{ inscripcion.alumno.sexo|default:"—" }}</td>
-                        <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
-                        <td>
-                            <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}secondary{% else %}primary{% endif %}">
-                                {% if grupo.ciclo.cerrado and inscripcion.estado == 'activo' %}Activo al cierre{% else %}{{ inscripcion.get_estado_display }}{% endif %}
-                            </span>
-                            {% if inscripcion.estado == 'baja' %}
-                                <div class="small text-muted mt-1">{{ inscripcion.fecha_baja|date:"d/m/Y"|default:"-" }}</div>
-                                <div class="small text-muted">{{ inscripcion.motivo_baja|default:"Sin motivo" }}</div>
-                            {% endif %}
-                        </td>
+                        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}
+                            <td>
+                                <span class="badge text-bg-{% if inscripcion.estado_actual_curso == 'activo' %}success{% else %}secondary{% endif %}">{{ inscripcion.estado_actual_curso_label }}</span>
+                            </td>
+                        {% else %}
+                            <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}secondary{% else %}primary{% endif %}">
+                                    {% if grupo.ciclo.cerrado and inscripcion.estado == 'activo' %}Activo al cierre{% else %}{{ inscripcion.get_estado_display }}{% endif %}
+                                </span>
+                                {% if inscripcion.estado == 'baja' %}
+                                    <div class="small text-muted mt-1">{{ inscripcion.fecha_baja|date:"d/m/Y"|default:"-" }}</div>
+                                    <div class="small text-muted">{{ inscripcion.motivo_baja|default:"Sin motivo" }}</div>
+                                {% endif %}
+                            </td>
+                        {% endif %}
                         {% if not inscripciones_solo_lectura %}<td class="cef-act-cell">
                             {% if not inscripciones_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}
                             <div class="d-flex flex-wrap gap-1 align-items-center">
@@ -59,31 +72,57 @@
                                     <a class="btn btn-outline-secondary btn-sm" href="{% url 'cef:editar_inscripcion_grupo' grupo.pk inscripcion.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}{% if gestionar_grupo_modo %}volver=gestionar&origen={{ origen }}&vista_alumnos={{ vista_alumnos }}&vista_docentes={{ vista_docentes }}{% else %}origen={{ origen }}{% endif %}" title="Editar inscripción">
                                         <i class="fa-solid fa-pen-to-square"></i> Editar
                                     </a>
-                                    <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ inscripcion_grupo_url }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-require-motivo data-cef-confirm-title="Dar de baja alumno" data-cef-confirm-message="La inscripción quedará registrada como baja, no se eliminará. Indicá el motivo para continuar." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }} · {{ grupo.actividad }} Nro. {{ grupo.numero }}">
+                                    <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ inscripcion_grupo_url }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-require-motivo data-cef-confirm-title="Dar de baja alumno" data-cef-confirm-message="La inscripción quedará registrada como baja y se conservará en el Historial; no se eliminará. Podés indicar un motivo si querés." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }} · {{ grupo.actividad }} Nro. {{ grupo.numero }}">
                                         {% csrf_token %}
                                         <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                         {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                         <input type="hidden" name="accion" value="baja_alumno">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
-                                        <button class="btn btn-outline-danger btn-sm" type="submit"><i class="fa-solid fa-user-minus"></i> Dar de baja</button>
+                                        <input type="hidden" name="motivo_baja" value="">
+                                        <button class="btn btn-outline-danger btn-sm" type="button" data-cef-confirm-open><i class="fa-solid fa-user-minus"></i> Dar de baja</button>
                                     </form>
+                                  {% elif gestionar_grupo_modo and inscripciones_permite_retorno %}
+                                    <span class="text-muted">—</span>
                                   {% endif %}
                                 {% elif inscripcion.estado == 'baja' %}
-                                  {% if not gestionar_grupo_modo or inscripciones_permite_retorno %}
+                                  {% if not gestionar_grupo_modo or inscripciones_permite_retorno and inscripcion.puede_reinscribir %}
                                     <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ inscripcion_grupo_url }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Se creará una inscripción activa nueva para este alumno si no existe otra activa." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
                                         {% csrf_token %}
                                         <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                         {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                         <input type="hidden" name="accion" value="alta_alumno">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
-                                        <button class="btn btn-outline-success btn-sm" type="submit"><i class="fa-solid fa-user-check"></i> Reinscribir</button>
+                                        <button class="btn btn-outline-success btn-sm" type="button" data-cef-confirm-open><i class="fa-solid fa-user-check"></i> Reinscribir</button>
                                     </form>
+                                  {% elif gestionar_grupo_modo and inscripciones_permite_retorno %}
+                                    <span class="text-muted">—</span>
                                   {% endif %}
                                 {% endif %}
                              </div>
                             {% endif %}
                          </td>{% endif %}
+                        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}<td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="alumnoCursoHistorial{{ inscripcion.alumno_id }}" aria-expanded="false" data-cef-history-toggle="alumno-curso-{{ inscripcion.alumno_id }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial ({{ inscripcion.historial_inscripciones|length }})</button></td>{% endif %}
                     </tr>
+                    {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}
+                        <tr id="alumnoCursoHistorial{{ inscripcion.alumno_id }}" class="cef-history-detail-row" data-cef-history-detail="alumno-curso-{{ inscripcion.alumno_id }}" hidden>
+                            <td colspan="{% if not inscripciones_solo_lectura %}8{% else %}7{% endif %}" class="p-0">
+                                <div class="cef-history-detail-panel">
+                                    <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de inscripciones</strong><span>Movimientos registrados: {{ inscripcion.historial_inscripciones|length }}</span></div>
+                                    <div class="cef-table-wrap cef-history-detail-table-wrap"><table class="cef-dt cef-history-detail-table">
+                                    <thead><tr><th>Ciclo</th><th>Estado</th><th>Fecha de inscripción</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th></tr></thead>
+                                    <tbody>{% for periodo in inscripcion.historial_inscripciones %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                                        <td><strong>{{ grupo.ciclo.anio }}</strong></td>
+                                        <td><span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{% if grupo.ciclo.cerrado and periodo.estado == 'activo' %}Activo al cierre{% else %}{{ periodo.get_estado_display }}{% endif %}</span></td>
+                                        <td>{{ periodo.fecha_inscripcion|date:"d/m/Y" }}</td>
+                                        <td>{{ periodo.fecha_baja|date:"d/m/Y"|default:"-" }}</td>
+                                        <td>{{ periodo.motivo_baja|default:"Sin motivo" }}</td>
+                                        <td>{{ periodo.observaciones|default:"-" }}</td>
+                                    </tr>{% endfor %}</tbody>
+                                    </table></div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
             </tbody>
         </table>
@@ -91,7 +130,7 @@
 {% else %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-        Todavía no hay alumnos inscriptos en este grupo.
+        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}No hay bajas registradas en este grupo.{% else %}Todavía no hay alumnos activos inscriptos en este grupo.{% endif %}
     </div>
 {% endif %}
 

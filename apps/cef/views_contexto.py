@@ -19,7 +19,7 @@ from .permisos import get_permisos_cef_request
 from .performance import perf_phase
 
 
-SELECTOR_CEF_CACHE_VERSION = "v1"
+SELECTOR_CEF_CACHE_VERSION = "v2"
 SELECTOR_CEF_CACHE_TTL = 300
 ESTABLECIMIENTO_CEF_CACHE_VERSION = "v1"
 ESTABLECIMIENTO_CEF_CACHE_TTL = 900
@@ -342,6 +342,10 @@ def resolver_contexto_operativo(request):
         "alumnos_url": _alumnos_url(),
         "profesores_url": _profesores_url(),
         "es_admin_cef": permisos["es_admin"],
+        "es_profesor_cef": permisos.get("es_profesor_cef", False),
+        "solo_asistencia": permisos.get("solo_asistencia", False),
+        "puede_metricas": permisos.get("puede_metricas", False),
+        "rol_usuario": permisos.get("rol"),
         "puede_consultar": puede_consultar,
         "ciclo_cerrado": ciclo_cerrado,
         "puede_operar": puede_consultar and not ciclo_cerrado,
@@ -360,6 +364,7 @@ def contexto_base(request, active_menu, titulo):
             "title": titulo,
             "active_menu": active_menu,
             "cef_context": cef_context,
+            "puede_metricas": cef_context["puede_metricas"],
             "request": request,
         }
 

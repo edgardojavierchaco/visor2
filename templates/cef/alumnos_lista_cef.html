@@ -34,9 +34,10 @@
                         <th>Alumno</th>
                         <th>CUIL</th>
                         <th>Documento</th>
+                        <th>Edad</th>
                         <th>Estado en CEF</th>
                         <th>Fecha alta</th>
-                        <th>Grupos / inscripciones</th>
+                        <th>Inscripciones activas</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -46,6 +47,7 @@
                             <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
                             <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
                             <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
+                            <td>{{ item.edad|default_if_none:"-" }}</td>
                             <td>
                                 <span class="badge text-bg-{% if item.estado == 'activo' %}success{% elif item.estado == 'baja' %}secondary{% else %}primary{% endif %}">
                                     {{ item.get_estado_display }}
@@ -56,14 +58,14 @@
                             </td>
                             <td>{{ item.fecha_alta|date:"d/m/Y" }}</td>
                             <td>
-                                {% if item.inscripciones_grupo %}
-                                    {% for inscripcion in item.inscripciones_grupo %}
-                                        <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'cef:gestionar_grupo' inscripcion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=alumnos#alumnos-curso">
+                                {% if item.inscripciones_activas %}
+                                    {% for inscripcion in item.inscripciones_activas %}
+                                        <a class="btn btn-outline-success btn-sm mb-1" href="{% url 'cef:gestionar_grupo' inscripcion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=alumnos#alumnos-curso">
                                             Grupo {{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}
                                         </a>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="text-muted small">Sin grupo asignado</span>
+                                    <span class="text-muted small">Sin inscripciones activas</span>
                                 {% endif %}
                             </td>
                             <td class="cef-act-cell">
@@ -86,7 +88,7 @@
                                                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                                     <button class="dropdown-item" type="submit">
                                                         <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
-                                                        <small>{{ grupo.turno }} - {{ grupo.get_estado_display }}</small>
+                                                        <small>{{ grupo.turno }} · Rango: {{ grupo.rango_etario|default:"-" }} · {{ grupo.get_estado_display }}</small>
                                                     </button>
                                                 </form>
                                                 </li>
@@ -119,6 +121,15 @@
                                         <template id="cef-baja-alumno-{{ item.pk }}">
                                             {% include "cef/alumno_baja_cef_contenido.html" with baja_modal_alumno=item baja_form=baja_form_vacio %}
                                         </template>
+                                    {% elif item.puede_reincorporar %}
+                                        <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="reincorporar_cef">
+                                            <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
+                                            <button class="btn btn-outline-success btn-sm" type="submit" title="Reincorporar al alumno al CEF">
+                                                <i class="fa-solid fa-user-check"></i> Reincorporar al CEF
+                                            </button>
+                                        </form>
                                     {% endif %}
                                 </div>
                                 {% else %}
@@ -138,7 +149,7 @@
     {% elif cef_context.puede_consultar %}
         <div class="cef-empty-state">
             <i class="fa-solid fa-user-magnifying-glass" style="font-size:1.5rem;color:var(--text-faint)"></i>
-            Todavía no hay alumnos en el banco de este CEF y ciclo.
+            No hay alumnos activos en el ciclo seleccionado.
         </div>
     {% else %}
         <div class="cef-empty-state">

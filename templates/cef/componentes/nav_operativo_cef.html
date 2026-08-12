@@ -1,9 +1,11 @@
 {% url 'cef:inicio' as cef_inicio_url %}
 {% url 'cef:visualizacion_localizaciones' as cef_localizaciones_url %}
+{% url 'cef:metricas' as cef_metricas_url %}
 {% url 'cef:alumnos' as cef_alumnos_url %}
 {% url 'cef:profesores' as cef_profesores_url %}
 {% url 'cef:carga_cueanexo' as cef_cueanexo_url %}
 {% url 'cef:carga_grupo' as cef_grupos_url %}
+{% url 'cef:asistencia' as cef_asistencia_url %}
 {% url 'cef:carga_inventario' as cef_inventario_url %}
 {% url 'cef:administrar_ciclos' as cef_ciclos_url %}
 
@@ -12,8 +14,11 @@
         background: linear-gradient(135deg, var(--blue-900, #0d2748) 0%, var(--blue-950, #071a33) 100%) !important;
         border: 1px solid rgba(147,197,253,.18);
         border-bottom: 2px solid var(--blue-600, #2366c4);
-        border-radius: var(--r-md, 10px);
+        border-radius: 10px;
         box-shadow: var(--shadow-sm, 0 1px 4px rgba(15,23,42,.13), 0 1px 2px rgba(15,23,42,.08));
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: .95rem;
+        line-height: 1.5;
         margin-bottom: .95rem;
         min-height: 48px;
         padding: .12rem .85rem;
@@ -24,6 +29,10 @@
         max-width: none;
     }
 
+    .padron-page-wrapper > .cef-module-nav {
+        margin-bottom: 1rem;
+    }
+
     .cef-module-nav .container-fluid {
         min-width: 0;
         padding: 0;
@@ -31,7 +40,7 @@
 
     .cef-module-nav .navbar-brand {
         color: #fff !important;
-        font-size: var(--fs-md, .9375rem);
+        font-size: 1rem;
         font-weight: 800;
         letter-spacing: .04em;
         margin-right: 0;
@@ -46,7 +55,7 @@
     }
 
     .cef-module-nav .nav-link {
-        border-radius: var(--r-sm, 6px);
+        border-radius: 6px;
         color: rgba(255,255,255,.72) !important;
         font-size: var(--fs-sm, .8125rem);
         font-weight: 700;
@@ -58,7 +67,7 @@
     .cef-module-nav .nav-link.active {
         background: rgba(255,255,255,.16);
         color: #fff !important;
-        font-weight: 800;
+        font-weight: 700;
     }
 
     .cef-module-nav .nav-link:hover {
@@ -72,7 +81,7 @@
         outline: none;
     }
 
-    @media (max-width: 991.98px) {
+    @media (max-width: 1199.98px) {
         .cef-module-nav {
             padding: .12rem .7rem;
         }
@@ -81,53 +90,77 @@
             margin-left: 0;
             margin-right: 0;
         }
+
+        .padron-page-wrapper > .cef-module-nav {
+            margin-left: calc(0px - var(--cef-local-page-gutter, 0px));
+            margin-right: calc(0px - var(--cef-local-page-gutter, 0px));
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .padron-page-wrapper > .cef-module-nav {
+            margin-bottom: .9rem;
+        }
     }
 </style>
 
-<nav class="navbar navbar-expand-lg navbar-dark cef-module-nav" aria-label="Navegación interna CEF">
+<nav class="navbar navbar-expand-xl navbar-dark cef-module-nav" aria-label="Navegación interna CEF">
     <div class="container-fluid">
-        <a class="navbar-brand" href="{{ cef_inicio_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">CEF</a>
+        <a class="navbar-brand" href="{% if cef_context and cef_context.solo_asistencia %}{{ cef_asistencia_url }}{% else %}{{ cef_inicio_url }}{% endif %}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">CEF</a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#cefDirectorNav" aria-controls="cefDirectorNav" aria-expanded="false" aria-label="Alternar navegación">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="cefDirectorNav">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav me-auto mb-2 mb-xl-0">
+                {% if cef_context and cef_context.solo_asistencia %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if active_menu == 'asistencia' %} active{% endif %}" href="{{ cef_asistencia_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">Asistencia</a>
+                    </li>
+                {% else %}
                 <li class="nav-item">
                     <a class="nav-link{% if active_menu == 'inicio' %} active{% endif %}" href="{{ cef_inicio_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">Inicio</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'localizaciones' %} active{% endif %}" href="{{ cef_localizaciones_url }}">Localizaciones</a>
+                    <a class="nav-link{% if active_menu == 'localizaciones' %} active{% endif %}" href="{{ cef_localizaciones_url }}" data-cef-page-loading-link>Localizaciones</a>
                 </li>
+                {% if cef_context.puede_metricas or puede_metricas %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if active_menu == 'metricas' %} active{% endif %}" href="{{ cef_metricas_url }}" data-cef-page-loading-link>Métricas</a>
+                    </li>
+                {% endif %}
                 {% if cef_context %}
                     {% if cef_context.alumnos_url %}
                         <li class="nav-item">
-                            <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ cef_context.alumnos_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}" data-cef-section-link data-cef-section="alumnos" data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}">Alumnos</a>
+                            <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ cef_context.alumnos_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}"{% if active_menu == 'metricas' %} data-cef-page-loading-link{% else %} data-cef-section-link data-cef-section="alumnos" data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}"{% endif %}>Alumnos</a>
                         </li>
                     {% endif %}
                 {% elif cef_alumnos_url %}
                     <li class="nav-item">
-                        <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ cef_alumnos_url }}" data-cef-section-link data-cef-section="alumnos" data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}">Alumnos</a>
+                        <a class="nav-link{% if active_menu == 'alumnos' %} active{% endif %}" href="{{ cef_alumnos_url }}"{% if active_menu == 'metricas' %} data-cef-page-loading-link{% else %} data-cef-section-link data-cef-section="alumnos" data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}"{% endif %}>Alumnos</a>
                     </li>
                 {% endif %}
                 {% if cef_context %}
                     {% if cef_context.profesores_url %}
                         <li class="nav-item">
-                            <a class="nav-link{% if active_menu == 'profesores' %} active{% endif %}" href="{{ cef_context.profesores_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}" data-cef-section-link data-cef-section="profesores" data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}">Profesores</a>
+                            <a class="nav-link{% if active_menu == 'profesores' %} active{% endif %}" href="{{ cef_context.profesores_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}"{% if active_menu == 'metricas' %} data-cef-page-loading-link{% else %} data-cef-section-link data-cef-section="profesores" data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}"{% endif %}>Profesores</a>
                         </li>
                     {% endif %}
                 {% elif cef_profesores_url %}
                     <li class="nav-item">
-                        <a class="nav-link{% if active_menu == 'profesores' %} active{% endif %}" href="{{ cef_profesores_url }}" data-cef-section-link data-cef-section="profesores" data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}">Profesores</a>
+                        <a class="nav-link{% if active_menu == 'profesores' %} active{% endif %}" href="{{ cef_profesores_url }}"{% if active_menu == 'metricas' %} data-cef-page-loading-link{% else %} data-cef-section-link data-cef-section="profesores" data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}"{% endif %}>Profesores</a>
                     </li>
                 {% endif %}
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'cueanexo' %} active{% endif %}" href="{{ cef_cueanexo_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">Datos CUE-Anexo</a>
+                    <a class="nav-link{% if active_menu == 'cueanexo' %} active{% endif %}" href="{{ cef_cueanexo_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-page-loading-link>Datos CUE-Anexo</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'grupos' %} active{% endif %}" href="{{ cef_grupos_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}" data-cef-section-link data-cef-section="grupos" data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Grupos / Cursos</a>
+                    <a class="nav-link{% if active_menu == 'grupos' %} active{% endif %}" href="{{ cef_grupos_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if cef_context.vista == 'historial' %}{% if cef_context.querystring %}&{% else %}?{% endif %}vista=historial{% endif %}"{% if active_menu == 'metricas' %} data-cef-page-loading-link{% else %} data-cef-section-link data-cef-section="grupos" data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}"{% endif %}>Grupos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if active_menu == 'inventario' %} active{% endif %}" href="{{ cef_inventario_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-section-link data-cef-section="inventario" data-cef-fragment-url="{% url 'cef:inventario_fragmento' %}">Inventario</a>
+                    <a class="nav-link{% if active_menu == 'asistencia' %} active{% endif %}" href="{{ cef_asistencia_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">Asistencia</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'inventario' %} active{% endif %}" href="{{ cef_inventario_url }}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"{% if active_menu == 'metricas' %} data-cef-page-loading-link{% else %} data-cef-section-link data-cef-section="inventario" data-cef-fragment-url="{% url 'cef:inventario_fragmento' %}"{% endif %}>Inventario</a>
                 </li>
                 {% if cef_context %}
                     {% if cef_context.es_admin_cef %}
@@ -139,6 +172,7 @@
                     <li class="nav-item">
                         <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ cef_ciclos_url }}">Ciclos</a>
                     </li>
+                {% endif %}
                 {% endif %}
             </ul>
         </div>

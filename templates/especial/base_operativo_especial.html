@@ -3,6 +3,7 @@
 {% load static %}
 {% if not especial_partial %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>
@@ -527,6 +528,96 @@
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.15);
         outline: none;
+    }
+
+    /* Select2 de contexto: búsqueda visible y lectura rápida de establecimientos. */
+    .cef-context-cueanexo .select2-container {
+        width: 100% !important;
+    }
+    .cef-context-cueanexo .select2-container--default .select2-selection--single {
+        align-items: center;
+        background: var(--surface);
+        border: 1.5px solid #82b8f2;
+        border-radius: 10px;
+        color: var(--slate-900);
+        display: flex;
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        height: 36px;
+        min-height: 36px;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .cef-context-cueanexo .select2-container--default.select2-container--open .select2-selection--single,
+    .cef-context-cueanexo .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.16);
+        outline: none;
+    }
+    .cef-context-cueanexo .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: var(--slate-900);
+        line-height: 1.5;
+        overflow: hidden;
+        padding: .3rem 2.25rem .3rem .75rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+    }
+    .cef-context-cueanexo .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: .85rem;
+        top: 0;
+        width: 1.25rem;
+    }
+    .cef-context-cueanexo .select2-container--default .select2-selection--single .select2-selection__arrow b {
+        border-color: #8b8f94 transparent transparent transparent;
+        border-width: 6px 5px 0 5px;
+        margin-left: -5px;
+        margin-top: -2px;
+    }
+    .cef-context-cueanexo .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+        border-color: transparent transparent var(--primary) transparent;
+        border-width: 0 5px 6px 5px;
+        margin-top: -8px;
+    }
+    .cef-context-select2-dropdown {
+        border: 1px solid #b8c7da !important;
+        border-radius: 10px !important;
+        box-shadow: 0 16px 34px rgba(15,23,42,.14) !important;
+        overflow: hidden;
+    }
+    .cef-context-select2-dropdown .select2-search--dropdown {
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 8px;
+    }
+    .cef-context-select2-dropdown .select2-search__field {
+        border: 1px solid #80b7f4 !important;
+        border-radius: 8px !important;
+        color: var(--slate-900);
+        font-size: var(--fs-md);
+        min-height: 40px;
+        padding: .45rem .7rem !important;
+    }
+    .cef-context-select2-dropdown .select2-results__options {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .cef-context-select2-dropdown .select2-results__option {
+        color: var(--slate-800);
+        cursor: pointer;
+        font-size: var(--fs-md);
+        line-height: 1.3;
+        padding: .7rem .85rem;
+    }
+    .cef-context-select2-dropdown .select2-results__option--highlighted[aria-selected],
+    .cef-context-select2-dropdown .select2-results__option--highlighted {
+        background: #dbeafe;
+        color: #183b68;
+    }
+    .cef-context-select2-dropdown .select2-results__option[aria-selected="true"] {
+        background: #dbeafe;
+        color: #183b68;
+        font-weight: 700;
     }
     .cef-context-actions {
         align-items: center;
@@ -1329,7 +1420,7 @@
         <!-- CONTEXT CARD (selector CUE-Anexo / Ciclo) -->
         <section class="cef-context-card">
             <form method="get" class="cef-context-grid" data-especial-context-selector>
-                <div>
+                <div class="cef-context-cueanexo">
                     <label class="cef-context-label" for="id_contexto_cueanexo">Escuela Especial</label>
                     <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
                         {% for option in especial_context.cueanexo_options %}
@@ -1388,5 +1479,67 @@
     </main>
 </div>
 <script src="{% static 'especial/especial_partial_navigation.js' %}" defer></script>
+<script>
+(function () {
+    "use strict";
+
+    function loadScript(src, callback) {
+        var existing = document.querySelector('script[src="' + src + '"]');
+        if (existing) {
+            if (existing.dataset.loaded === "1") callback();
+            else existing.addEventListener("load", callback, { once: true });
+            return;
+        }
+        var script = document.createElement("script");
+        script.src = src;
+        script.onload = function () {
+            script.dataset.loaded = "1";
+            callback();
+        };
+        document.head.appendChild(script);
+    }
+
+    function initEspecialContextSelect() {
+        var select = document.getElementById("id_contexto_cueanexo");
+        if (!select || !window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
+
+        var $select = window.jQuery(select);
+        if ($select.data("select2")) return;
+
+        $select.select2({
+            width: "100%",
+            minimumResultsForSearch: 0,
+            dropdownCssClass: "cef-context-select2-dropdown",
+            language: {
+                noResults: function () { return "No se encontraron establecimientos"; },
+                searching: function () { return "Buscando..."; }
+            }
+        });
+
+        $select.on("select2:open", function () {
+            window.setTimeout(function () {
+                var search = document.querySelector(".cef-context-select2-dropdown .select2-search__field");
+                if (search) search.focus();
+            }, 0);
+        });
+    }
+
+    function ensureEspecialContextSelect() {
+        if (!document.getElementById("id_contexto_cueanexo")) return;
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+            initEspecialContextSelect();
+            return;
+        }
+
+        var startSelect2 = function () {
+            loadScript("https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js", initEspecialContextSelect);
+        };
+        if (window.jQuery) startSelect2();
+        else loadScript("https://code.jquery.com/jquery-3.6.0.min.js", startSelect2);
+    }
+
+    document.addEventListener("DOMContentLoaded", ensureEspecialContextSelect);
+})();
+</script>
         {% endif %}
 {% endblock %}

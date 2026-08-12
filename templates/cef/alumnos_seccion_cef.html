@@ -73,17 +73,19 @@
     <div class="cef-panel-body" data-cef-fragment="alumnos-banco">
         <ul class="nav nav-tabs mb-3">
             <li class="nav-item">
-                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:alumnos' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales">Ciclo seleccionado</a>
+                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:alumnos' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales" data-cef-view-link data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}">Actuales</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:alumnos' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial">Historial <span class="badge text-bg-secondary">Sólo lectura</span></a>
+                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:alumnos' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial" data-cef-view-link data-cef-fragment-url="{% url 'cef:alumnos_fragmento' %}">Historial</a>
             </li>
         </ul>
-        {% if vista == 'historial' %}
-            {% include "cef/alumnos_historial_lista_cef.html" %}
-        {% else %}
-            {% include "cef/alumnos_lista_cef.html" %}
-        {% endif %}
+        <div data-cef-view-content>
+            {% if vista == 'historial' %}
+                {% include "cef/alumnos_historial_lista_cef.html" %}
+            {% else %}
+                {% include "cef/alumnos_lista_cef.html" %}
+            {% endif %}
+        </div>
     </div>
 </div>
 {% if cef_partial and vista == 'actuales' and cef_context.puede_operar %}{% include "cef/alumno_baja_cef_modal.html" %}{% endif %}

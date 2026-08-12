@@ -181,7 +181,6 @@
                             <th>Nombre</th>
                             <th>CUIL</th>
                             <th>DNI</th>
-                            <th>Estado BNH</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -192,7 +191,6 @@
                                 <td>{{ docente_row.nombre|default:"-" }}</td>
                                 <td>{{ docente_row.cuil|default:"-" }}</td>
                                 <td>{{ docente_row.dni|default:"-" }}</td>
-                                <td>{{ docente_row.estado|default:"-" }}</td>
                                 <td>
                                     {% if not modal_tiene_grupo %}
                                         {% if docente_en_banco %}
@@ -222,7 +220,7 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="6">
+                                <td colspan="5">
                                     {% if cuil_error %}
                                         <div class="cef-docente-msg is-error">
                                             <i class="fa-solid fa-triangle-exclamation"></i>
