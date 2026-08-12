@@ -1112,6 +1112,10 @@ def visualizacion_localizaciones(request):
         "title": "Localizaciones CEF",
         "active_menu": "localizaciones",
         "es_admin_cef": get_permisos_cef_request(request)["es_admin"],
+        "puede_metricas": get_permisos_cef_request(request).get(
+            "puede_metricas",
+            False,
+        ),
         "cefs_visualizacion": [],
         "cef_selector_options": cef_selector_options,
         "cueanexos_seleccionados": cueanexos_selector,

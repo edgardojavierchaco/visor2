@@ -36,6 +36,11 @@ urlpatterns = [
         views_alumnos.alumnos,
         name="alumnos",
     ),
+    path(
+        "alumnos/matricula-compartida/cueanexos/",
+        views_alumnos.buscar_cueanexos_matricula_compartida,
+        name="buscar_cueanexos_matricula_compartida",
+    ),
     # Docentes (Nuevo)
     path(
         "docentes/",

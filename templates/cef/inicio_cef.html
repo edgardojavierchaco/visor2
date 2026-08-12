@@ -188,8 +188,14 @@
 
         <a class="cef-home-card" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
             <span class="cef-home-icon"><i class="fa-solid fa-people-group"></i></span>
-            <h2>Grupos / Cursos</h2>
-            <p>Administrar cursos, actividades, turnos, cupos e inscripciones.</p>
+            <h2>Grupos</h2>
+            <p>Administrar grupos, actividades, turnos, cupos e inscripciones.</p>
+        </a>
+
+        <a class="cef-home-card" href="{% url 'cef:asistencia' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+            <span class="cef-home-icon"><i class="fa-solid fa-user-check"></i></span>
+            <h2>Asistencia</h2>
+            <p>Seleccionar un grupo y registrar o consultar asistencia para la fecha necesaria.</p>
         </a>
 
         <a class="cef-home-card" href="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">

@@ -69,9 +69,16 @@
                                     <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
                                         <li>
                                             <a class="dropdown-item" href="{% url 'cef:gestionar_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=grupos">
-                                                <i class="fa-solid fa-clipboard-list"></i> Gestionar curso
+                                                <i class="fa-solid fa-clipboard-list"></i> Gestionar grupo
                                             </a>
                                         </li>
+                                        {% if grupo.estado == 'activo' %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'cef:asistencia_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                <i class="fa-solid fa-user-check"></i> Ver asistencias
+                                            </a>
+                                        </li>
+                                        {% endif %}
                                         {% if cef_context.puede_operar %}
                                         {% if grupo.estado == 'activo' %}<li>
                                             <a class="dropdown-item" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
@@ -79,8 +86,8 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item text-danger" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Baja del curso" data-template-id="cef-baja-grupo-{{ grupo.pk }}">
-                                                <i class="fa-solid fa-layer-group"></i> Dar de baja curso
+                                            <a class="dropdown-item text-danger" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Baja del grupo" data-template-id="cef-baja-grupo-{{ grupo.pk }}">
+                                                <i class="fa-solid fa-layer-group"></i> Dar de baja grupo
                                             </a>
                                             <template id="cef-baja-grupo-{{ grupo.pk }}">
                                                 {% include "cef/grupo_baja_cef_contenido.html" with baja_modal_grupo=grupo baja_form=baja_form_vacio %}
@@ -88,8 +95,8 @@
                                         </li>
                                         {% else %}
                                         <li>
-                                            <a class="dropdown-item" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_reactivar=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Reactivar curso" data-template-id="cef-reactivar-grupo-{{ grupo.pk }}">
-                                                <i class="fa-solid fa-rotate-left"></i> Reactivar curso
+                                            <a class="dropdown-item" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_reactivar=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Reactivar grupo" data-template-id="cef-reactivar-grupo-{{ grupo.pk }}">
+                                                <i class="fa-solid fa-rotate-left"></i> Reactivar grupo
                                             </a>
                                             <template id="cef-reactivar-grupo-{{ grupo.pk }}">
                                                 {% include "cef/grupo_reactivar_cef_contenido.html" with reactivar_modal_grupo=grupo %}
@@ -108,7 +115,7 @@
     {% elif cef_context.puede_consultar %}
         <div class="cef-empty-state">
             <i class="fa-solid fa-layer-group" style="font-size:1.5rem;color:var(--text-faint)"></i>
-            Todavía no hay grupos cargados para este CEF y ciclo.
+            No hay grupos activos en el ciclo seleccionado.
         </div>
     {% else %}
         <div class="cef-empty-state">

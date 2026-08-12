@@ -80,12 +80,27 @@ def _docentes_cef(cef_context):
         CefDocenteCef.objects.filter(
             cueanexo=cef_context["cueanexo"],
             ciclo=cef_context["ciclo"],
+            estado=CefDocenteCef.Estado.ACTIVO,
         )
         .order_by(
             "docente_nombre_snapshot",
             "docente_cuil",
             "estado",
         )
+    )
+
+
+def _docentes_bajas_ciclo(cef_context):
+    if not cef_context["puede_consultar"]:
+        return CefDocenteCef.objects.none()
+    return (
+        CefDocenteCef.objects.filter(
+            cueanexo=cef_context["cueanexo"],
+            ciclo=cef_context["ciclo"],
+            estado=CefDocenteCef.Estado.BAJA,
+        )
+        .select_related("ciclo")
+        .order_by("docente_nombre_snapshot", "docente_cuil", "-fecha_alta", "-pk")
     )
 
 
@@ -142,6 +157,97 @@ def _asignaciones_activas_docente(cef_context, docente_cuil):
     )
 
 
+def _asignaciones_historicas_docentes(cef_context):
+    if not cef_context["puede_consultar"]:
+        return CefDocenteGrupo.objects.none()
+
+    return (
+        CefDocenteGrupo.objects.filter(
+            grupo__cueanexo=cef_context["cueanexo"],
+            grupo__ciclo__anio__lte=cef_context["ciclo"].anio,
+        )
+        .exclude(
+            grupo__ciclo=cef_context["ciclo"],
+            estado=CefDocenteGrupo.Estado.ACTIVO,
+        )
+        .select_related("grupo", "grupo__ciclo", "grupo__actividad", "grupo__turno")
+        .order_by(
+            "docente_cuil",
+            "-grupo__ciclo__anio",
+            "-fecha_desde",
+            "-pk",
+        )
+    )
+
+
+def _asignaciones_periodos_docentes(cef_context, cuiles):
+    if not cuiles:
+        return []
+
+    return list(
+        CefDocenteGrupo.objects.filter(
+            grupo__cueanexo=cef_context["cueanexo"],
+            grupo__ciclo__anio__lte=cef_context["ciclo"].anio,
+            docente_cuil__in=cuiles,
+        )
+        .select_related("grupo", "grupo__ciclo", "grupo__actividad", "grupo__turno")
+        .order_by(
+            "docente_cuil",
+            "-grupo__ciclo__anio",
+            "-fecha_desde",
+            "-pk",
+        )
+    )
+
+
+def _vincular_asignaciones_a_periodos(periodos, asignaciones):
+    periodos_por_ciclo = {}
+    for periodo in periodos:
+        periodo.asignaciones_grupo = []
+        periodos_por_ciclo.setdefault(periodo.ciclo_id, []).append(periodo)
+
+    for asignacion in asignaciones:
+        candidatos_ciclo = periodos_por_ciclo.get(asignacion.grupo.ciclo_id, [])
+        if not candidatos_ciclo:
+            continue
+        candidatos_fecha = [
+            periodo
+            for periodo in candidatos_ciclo
+            if periodo.fecha_alta <= asignacion.fecha_desde
+            and (
+                periodo.fecha_baja is None
+                or asignacion.fecha_desde <= periodo.fecha_baja
+            )
+        ]
+        candidatos_base = candidatos_fecha or candidatos_ciclo
+        candidatos_creados = [
+            periodo
+            for periodo in candidatos_base
+            if periodo.creado_en <= asignacion.creado_en
+        ]
+        if candidatos_creados:
+            periodo_destino = max(
+                candidatos_creados,
+                key=lambda periodo: (periodo.creado_en, periodo.pk),
+            )
+        else:
+            estado_periodo_preferido = (
+                CefDocenteCef.Estado.ACTIVO
+                if asignacion.estado == CefDocenteGrupo.Estado.ACTIVO
+                else CefDocenteCef.Estado.BAJA
+            )
+            candidatos_estado = [
+                periodo
+                for periodo in candidatos_base
+                if periodo.estado == estado_periodo_preferido
+            ]
+            periodo_destino = max(
+                candidatos_estado or candidatos_base,
+                key=lambda periodo: (periodo.fecha_alta, periodo.pk),
+            )
+        periodo_destino.asignaciones_grupo.append(asignacion)
+
+
 def _grupos_disponibles(cef_context):
     if not cef_context["puede_operar"]:
         return CefGrupo.objects.none()
@@ -162,59 +268,151 @@ def _profesores_listado_context(cef_context, vista="actuales"):
     docentes_banco_tabla_pendiente = False
     if vista == "historial":
         try:
+            docentes_bajas_ciclo = list(_docentes_bajas_ciclo(cef_context))
             docentes_historial = list(_docentes_historial(cef_context))
+            asignaciones_historicas = list(
+                _asignaciones_historicas_docentes(cef_context)
+            )
         except (OperationalError, ProgrammingError):
+            docentes_bajas_ciclo = []
             docentes_historial = []
+            asignaciones_historicas = []
             docentes_banco_tabla_pendiente = True
-        cuiles = {periodo.docente_cuil for periodo in docentes_historial}
-        docentes_activos_actuales = set()
+        cuiles_historicos = {
+            periodo.docente_cuil for periodo in docentes_historial
+        } | {
+            asignacion.docente_cuil for asignacion in asignaciones_historicas
+        }
+        cuiles = cuiles_historicos | {
+            periodo.docente_cuil for periodo in docentes_bajas_ciclo
+        }
+        docentes_activos_actuales = {}
         asignaciones_activas_por_docente = {}
+        asignaciones_periodos_por_docente = {}
         grupos_disponibles = []
-        if cef_context["puede_operar"] and cuiles:
-            docentes_activos_actuales = set(
-                CefDocenteCef.objects.filter(
+        if cuiles:
+            docentes_activos_actuales = {
+                periodo.docente_cuil: periodo
+                for periodo in CefDocenteCef.objects.filter(
                     cueanexo=cef_context["cueanexo"],
                     ciclo=cef_context["ciclo"],
                     docente_cuil__in=cuiles,
                     estado=CefDocenteCef.Estado.ACTIVO,
-                ).values_list("docente_cuil", flat=True)
-            )
-            asignaciones_activas = (
-                CefDocenteGrupo.objects.filter(
-                    grupo__cueanexo=cef_context["cueanexo"],
-                    grupo__ciclo=cef_context["ciclo"],
-                    docente_cuil__in=cuiles,
-                    estado=CefDocenteGrupo.Estado.ACTIVO,
+                ).select_related("ciclo")
+            }
+            try:
+                asignaciones_periodos = _asignaciones_periodos_docentes(
+                    cef_context,
+                    cuiles,
                 )
-                .select_related("grupo", "grupo__actividad", "grupo__turno")
-                .order_by("grupo__actividad__nombre", "grupo__numero", "rol")
-            )
-            for asignacion in asignaciones_activas:
-                asignaciones_activas_por_docente.setdefault(
+            except (OperationalError, ProgrammingError):
+                asignaciones_periodos = []
+                docentes_banco_tabla_pendiente = True
+            for asignacion in asignaciones_periodos:
+                asignaciones_periodos_por_docente.setdefault(
                     asignacion.docente_cuil,
                     [],
                 ).append(asignacion)
-            grupos_disponibles = list(_grupos_disponibles(cef_context))
+                if (
+                    asignacion.grupo.ciclo_id == cef_context["ciclo"].pk
+                    and asignacion.estado == CefDocenteGrupo.Estado.ACTIVO
+                ):
+                    asignaciones_activas_por_docente.setdefault(
+                        asignacion.docente_cuil,
+                        [],
+                    ).append(asignacion)
+            if cef_context["puede_operar"]:
+                grupos_disponibles = list(_grupos_disponibles(cef_context))
 
-        for periodo in docentes_historial:
-            periodo.activo_banco_actual = (
-                periodo.docente_cuil in docentes_activos_actuales
+        ultimo_periodo_baja_por_docente = {}
+        for periodo in docentes_bajas_ciclo:
+            periodo_actual = ultimo_periodo_baja_por_docente.get(
+                periodo.docente_cuil
             )
-            periodo.grupos_bloqueados = asignaciones_activas_por_docente.get(
-                periodo.docente_cuil,
+            if periodo_actual is None or periodo.pk > periodo_actual.pk:
+                ultimo_periodo_baja_por_docente[periodo.docente_cuil] = periodo
+        for periodo in docentes_bajas_ciclo:
+            periodo.puede_reincorporar = (
+                cef_context["puede_operar"]
+                and periodo.docente_cuil not in docentes_activos_actuales
+                and ultimo_periodo_baja_por_docente.get(periodo.docente_cuil)
+                is periodo
+            )
+
+        periodos_por_docente = {}
+        for periodo in docentes_bajas_ciclo + docentes_historial:
+            periodos_por_docente.setdefault(periodo.docente_cuil, []).append(periodo)
+        for docente_cuil, periodo_activo in docentes_activos_actuales.items():
+            periodos_por_docente.setdefault(docente_cuil, []).append(periodo_activo)
+
+        docentes_historial_resumen = []
+        for docente_cuil, periodos in periodos_por_docente.items():
+            periodo_activo = docentes_activos_actuales.get(docente_cuil)
+            periodo_resumen = periodo_activo or max(
+                periodos,
+                key=lambda periodo: (
+                    periodo.ciclo.anio,
+                    periodo.fecha_alta,
+                    periodo.pk,
+                ),
+            )
+            periodo_resumen.historial_periodos = sorted(
+                periodos,
+                key=lambda periodo: (
+                    periodo.ciclo.anio,
+                    periodo.fecha_alta,
+                    periodo.pk,
+                ),
+                reverse=True,
+            )
+            _vincular_asignaciones_a_periodos(
+                periodo_resumen.historial_periodos,
+                asignaciones_periodos_por_docente.get(docente_cuil, []),
+            )
+            periodo_resumen.periodo_baja_actual = (
+                ultimo_periodo_baja_por_docente.get(docente_cuil)
+            )
+            if periodo_activo:
+                periodo_resumen.estado_actual_cef = "Activo"
+            elif periodo_resumen.periodo_baja_actual:
+                periodo_resumen.estado_actual_cef = "Baja"
+            else:
+                periodo_resumen.estado_actual_cef = "No activo"
+            periodo_resumen.periodo_historico_accion = next(
+                (
+                    periodo
+                    for periodo in periodo_resumen.historial_periodos
+                    if periodo.ciclo.anio < cef_context["ciclo"].anio
+                ),
+                None,
+            )
+            periodo_resumen.activo_banco_actual = periodo_activo is not None
+            periodo_resumen.grupos_bloqueados = asignaciones_activas_por_docente.get(
+                docente_cuil,
                 [],
             )
             grupos_bloqueados_ids = {
-                asignacion.grupo_id for asignacion in periodo.grupos_bloqueados
+                asignacion.grupo_id
+                for asignacion in periodo_resumen.grupos_bloqueados
             }
-            periodo.grupos_asignables = [
+            periodo_resumen.grupos_asignables = [
                 grupo
                 for grupo in grupos_disponibles
                 if grupo.pk not in grupos_bloqueados_ids
             ]
+            docentes_historial_resumen.append(periodo_resumen)
+        docentes_historial_resumen.sort(
+            key=lambda periodo: (
+                periodo.docente_nombre_snapshot,
+                periodo.docente_cuil,
+            )
+        )
         return {
             "vista": vista,
+            "docentes_bajas_ciclo": docentes_bajas_ciclo,
             "docentes_historial": docentes_historial,
+            "docentes_historial_resumen": docentes_historial_resumen,
+            "total_docentes_historial": len(docentes_historial_resumen),
             "grupos_disponibles": grupos_disponibles,
             "docentes_banco_tabla_pendiente": docentes_banco_tabla_pendiente,
         }
@@ -235,7 +433,6 @@ def _profesores_listado_context(cef_context, vista="actuales"):
 
     grupos_disponibles = list(_grupos_disponibles(cef_context))
     url_profesores = _url_profesores(cef_context, vista)
-
     for item in docentes:
         item.asignaciones_grupo = asignaciones_por_docente.get(
             item.docente_cuil,
@@ -313,6 +510,37 @@ def _docente_baja_modal(cef_context, docente_banco_id):
         _docente_cef_seguro(docente_banco_id, cef_context),
         cef_context,
     )
+
+
+def _reincorporar_docente_cef(request, cef_context):
+    if not cef_context["puede_operar"]:
+        return None, "El ciclo está cerrado o no está listo para operar."
+
+    periodo = _docente_cef_seguro(
+        request.POST.get("docente_banco_id"),
+        cef_context,
+    )
+    if periodo.estado != CefDocenteCef.Estado.BAJA:
+        return None, "El período seleccionado no se encuentra dado de baja."
+
+    try:
+        _, creado = asegurar_docente_banco_activo(
+            docente_cuil=periodo.docente_cuil,
+            cueanexo=cef_context["cueanexo"],
+            ciclo=cef_context["ciclo"],
+            user=request.user,
+        )
+    except ValidationError as exc:
+        return None, "; ".join(exc.messages)
+    except IntegrityError:
+        return (
+            None,
+            "No se pudo reincorporar al profesor. Verificá que no exista ya un período activo.",
+        )
+
+    if creado:
+        return True, "Profesor reincorporado al CEF correctamente."
+    return False, "El profesor ya se encuentra activo en este CEF y ciclo."
 
 
 def _dar_baja_docente_cef(request, cef_context):
@@ -498,6 +726,7 @@ def _asignar_docente_grupo_desde_historial(request, cef_context):
         CefDocenteCef.objects.filter(
             pk=periodo_id,
             cueanexo=cef_context["cueanexo"],
+            ciclo__anio__lt=cef_context["ciclo"].anio,
         ).first()
         if periodo_id
         else None
@@ -590,9 +819,9 @@ def profesores(request):
     if (
         request.method == "POST"
         and vista == "historial"
-        and accion != "asignar_grupo_historial"
+        and accion not in {"asignar_grupo_historial", "reincorporar_cef"}
     ):
-        message = "Historial es una vista de sólo lectura."
+        message = "La acción solicitada no está habilitada en Historial."
         if _is_ajax(request):
             return JsonResponse({"ok": False, "message": message})
         messages.error(request, message)
@@ -604,7 +833,7 @@ def profesores(request):
         and accion == "asignar_grupo_historial"
     ):
         messages.error(request, "La acción histórica solicitada no es válida.")
-        return redirect(_url_profesores(cef_context))
+        return redirect(_url_profesores(cef_context, vista))
 
     if request.method == "POST" and not cef_context["puede_operar"]:
         message = (
@@ -653,6 +882,19 @@ def profesores(request):
         else:
             messages.error(request, baja_message)
         return redirect(_url_profesores(cef_context))
+
+    if request.method == "POST" and accion == "reincorporar_cef":
+        reincorporacion_ok, reincorporacion_message = _reincorporar_docente_cef(
+            request,
+            cef_context,
+        )
+        if reincorporacion_ok:
+            messages.success(request, reincorporacion_message)
+        elif reincorporacion_ok is False:
+            messages.info(request, reincorporacion_message)
+        else:
+            messages.error(request, reincorporacion_message)
+        return redirect(_url_profesores(cef_context, vista))
 
     if request.method == "POST" and accion in {
         "asignar_grupo",
@@ -760,6 +1002,7 @@ def profesores(request):
                     periodo_historico = CefDocenteCef.objects.filter(
                         pk=asignacion_periodo_historico_id,
                         cueanexo=cef_context["cueanexo"],
+                        ciclo__anio__lt=cef_context["ciclo"].anio,
                     ).first()
                 asignacion_docente_cuil = (
                     periodo_historico.docente_cuil if periodo_historico else ""

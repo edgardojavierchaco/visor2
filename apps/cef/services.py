@@ -40,8 +40,6 @@ def validar_ciclo_escribible(ciclo):
 
 def _normalizar_motivo_baja(motivo_baja):
     motivo = str(motivo_baja or "").strip()
-    if not motivo:
-        raise ValidationError("Debe indicar el motivo de la baja.")
     if len(motivo) > 255:
         raise ValidationError("El motivo de la baja no puede superar 255 caracteres.")
     return motivo
@@ -105,7 +103,7 @@ def _mensaje_conflicto_horario(conflicto, *, edicion=False):
     hora_inicio = conflicto["grupo__hora_inicio"].strftime("%H:%M")
     hora_fin = conflicto["grupo__hora_fin"].strftime("%H:%M")
     prefijo = (
-        "No se puede modificar el curso porque generaría un conflicto horario"
+        "No se puede modificar el grupo porque generaría un conflicto horario"
         if edicion
         else "No se puede inscribir al alumno porque existe un conflicto horario"
     )
@@ -443,6 +441,7 @@ def reasignar_docente_grupo(
     asignacion_origen,
     user,
     fecha_desde=None,
+    rol=None,
 ):
     """Crea una asignacion activa nueva desde una fila historica en baja."""
 
@@ -452,7 +451,7 @@ def reasignar_docente_grupo(
     return crear_asignacion_docente_activa(
         grupo=asignacion_origen.grupo,
         docente_cuil=asignacion_origen.docente_cuil,
-        rol=asignacion_origen.rol,
+        rol=rol or asignacion_origen.rol,
         user=user,
         fecha_desde=fecha_desde or timezone.localdate(),
     )
@@ -478,7 +477,7 @@ def dar_baja_alumno_banco(alumno_cef, user, motivo_baja, fecha_baja=None):
             raise ValidationError(
                 "No se puede dar de baja al alumno del banco mientras tenga "
                 "inscripciones activas en este CEF y ciclo. Primero debe dar "
-                "de baja esas inscripciones desde la gestión de los cursos."
+                "de baja esas inscripciones desde la gestión de los grupos."
             )
 
         alumno_cef.estado = CefAlumnoCef.Estado.BAJA
@@ -509,7 +508,7 @@ def dar_baja_docente_banco(docente_cef, user, motivo_baja, fecha_baja=None):
             raise ValidationError(
                 "No se puede dar de baja al profesor del banco mientras tenga "
                 "asignaciones activas en este CEF y ciclo. Primero debe dar de "
-                "baja esas asignaciones desde la gestión de los cursos."
+                "baja esas asignaciones desde la gestión de los grupos."
             )
 
         docente_cef.estado = CefDocenteCef.Estado.BAJA
@@ -542,7 +541,7 @@ def dar_baja_grupo(grupo, user, motivo_baja, fecha_baja=None):
             raise ValidationError(
                 "No se puede dar de baja el grupo mientras tenga alumnos o "
                 "profesores activos. Primero debe dar de baja esas relaciones "
-                "desde Gestionar curso."
+                "desde Gestionar grupo."
             )
 
         fecha_baja = fecha_baja or timezone.localdate()
@@ -600,11 +599,6 @@ def reactivar_grupo(grupo, user, fecha_reactivacion=None):
             and ultimo_movimiento.motivo == motivo_baja_actual
         )
         if not baja_actual_registrada:
-            if not motivo_baja_actual:
-                raise ValidationError(
-                    "No se puede reactivar el grupo porque su baja actual no "
-                    "posee un motivo que permita conservar la trazabilidad."
-                )
             CefGrupoEstadoMovimiento.objects.create(
                 grupo=grupo,
                 estado_resultante=CefGrupo.Estado.BAJA,

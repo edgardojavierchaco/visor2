@@ -8,7 +8,7 @@
         <div class="cef-card-header">
             <h3><i class="fa-solid fa-school me-2"></i>Datos del establecimiento</h3>
             {% if cef_context.puede_operar %}
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-page-loading-link>
                     <i class="fa-solid fa-pen-to-square me-1"></i>Modificar datos adicionales
                 </a>
             {% endif %}
@@ -47,7 +47,7 @@
             {% elif cef_context.puede_consultar %}
                 <div class="cef-empty-state mb-3">Todavía no hay datos adicionales cargados para este CEF y ciclo.</div>
                 {% if cef_context.puede_operar %}
-                    <a class="btn btn-primary" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <a class="btn btn-primary" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-page-loading-link>
                         <i class="fa-solid fa-plus me-1"></i>Cargar datos adicionales
                     </a>
                 {% endif %}

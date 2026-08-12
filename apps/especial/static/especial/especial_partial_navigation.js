@@ -179,10 +179,11 @@
         document.addEventListener("submit", function (event) {
             var form = event.target.closest(
                 "[data-modal-search-form], [data-docente-modal-search-form], "
-                + "[data-modal-post-form], [data-docente-modal-post-form]"
+                + "[data-modal-post-form], [data-docente-modal-post-form], "
+                + "[data-especial-baja-form]"
             );
             if (!form) return;
-            var modal = form.closest("#modalBusquedaAlumno, #modalBusquedaDocente");
+            var modal = form.closest("#modalBusquedaAlumno, #modalBusquedaDocente, #modalBajaAlumnoEspecial");
             if (!modal) return;
 
             event.preventDefault();
@@ -307,6 +308,45 @@
     function installModalTriggers() {
         if (window.especialModalTriggersReady) return;
         window.especialModalTriggersReady = true;
+        var bajaOpeningRequest = null;
+
+        function clearBajaLoading(modal) {
+            if (!modal) return;
+            modal.removeAttribute("aria-busy");
+            var body = modal.querySelector(".cef-modal-body");
+            if (body) body.replaceChildren();
+        }
+
+        function showBajaLoading(modal) {
+            var body = modal ? modal.querySelector(".cef-modal-body") : null;
+            if (!body) return false;
+
+            body.replaceChildren();
+            var status = document.createElement("div");
+            status.className = "especial-partial-loading";
+            status.setAttribute("role", "status");
+            status.setAttribute("aria-live", "polite");
+
+            var spinner = document.createElement("span");
+            spinner.className = "spinner-border spinner-border-sm";
+            spinner.setAttribute("aria-hidden", "true");
+            status.appendChild(spinner);
+            status.appendChild(document.createTextNode("Cargando..."));
+            body.appendChild(status);
+            modal.classList.add("is-open");
+            modal.setAttribute("aria-hidden", "false");
+            modal.setAttribute("aria-busy", "true");
+            return true;
+        }
+
+        function cancelBajaOpening(modal) {
+            if (!bajaOpeningRequest || bajaOpeningRequest.modal !== modal) return;
+            var operation = bajaOpeningRequest;
+            operation.cancelled = true;
+            operation.controller.abort();
+            bajaOpeningRequest = null;
+            clearBajaLoading(modal);
+        }
 
         document.addEventListener("click", function (event) {
             var openTrigger = event.target.closest("[data-open-personas-modal], [data-open-docentes-modal]");
@@ -325,11 +365,74 @@
                 return;
             }
 
+            var bajaTrigger = event.target.closest("[data-especial-baja-open]");
+            if (bajaTrigger) {
+                event.preventDefault();
+                if (bajaOpeningRequest) return;
+
+                var bajaModal = document.getElementById("modalBajaAlumnoEspecial");
+                var bajaUrl = new URL(bajaTrigger.href, window.location.href);
+                if (!bajaModal || bajaUrl.origin !== window.location.origin) {
+                    window.location.href = bajaUrl.toString();
+                    return;
+                }
+
+                if (!showBajaLoading(bajaModal)) {
+                    window.location.href = bajaUrl.toString();
+                    return;
+                }
+
+                var operation = {
+                    cancelled: false,
+                    controller: new AbortController(),
+                    historyUrl: bajaModal.dataset.volverUrl || window.location.href,
+                    modal: bajaModal,
+                    url: bajaUrl.toString()
+                };
+                bajaOpeningRequest = operation;
+                fetch(operation.url, {
+                    credentials: "same-origin",
+                    signal: operation.controller.signal,
+                    headers: {
+                        "Accept": "text/html",
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                })
+                    .then(function (response) {
+                        if (!response.ok) throw new Error("No se pudo cargar la baja del alumno.");
+                        return response.text();
+                    })
+                    .then(function (html) {
+                        if (operation.cancelled || bajaOpeningRequest !== operation) return;
+                        if (!replaceModalDialog(bajaModal, html, operation.historyUrl)) {
+                            throw new Error("La respuesta no contiene el modal de baja.");
+                        }
+                    })
+                    .catch(function (error) {
+                        if (operation.cancelled || bajaOpeningRequest !== operation) return;
+                        if (error && error.name === "AbortError") {
+                            bajaOpeningRequest = null;
+                            clearBajaLoading(bajaModal);
+                            return;
+                        }
+                        bajaOpeningRequest = null;
+                        clearBajaLoading(bajaModal);
+                        window.location.href = operation.url;
+                    })
+                    .finally(function () {
+                        if (bajaOpeningRequest !== operation) return;
+                        bajaOpeningRequest = null;
+                        bajaModal.removeAttribute("aria-busy");
+                    });
+                return;
+            }
+
             var closeTrigger = event.target.closest("[data-modal-close], [data-docente-modal-close]");
             if (!closeTrigger) return;
             var currentModal = closeTrigger.closest(".cef-overlay, .cef-docente-overlay");
             if (!currentModal) return;
             event.preventDefault();
+            if (currentModal.id === "modalBajaAlumnoEspecial") cancelBajaOpening(currentModal);
             currentModal.classList.remove("is-open");
             currentModal.setAttribute("aria-hidden", "true");
             if (currentModal.dataset.volverUrl) window.history.replaceState({}, "", currentModal.dataset.volverUrl);
@@ -338,6 +441,7 @@
         document.addEventListener("click", function (event) {
             var modal = event.target.closest(".cef-overlay, .cef-docente-overlay");
             if (modal && event.target === modal) {
+                if (modal.id === "modalBajaAlumnoEspecial") cancelBajaOpening(modal);
                 modal.classList.remove("is-open");
                 modal.setAttribute("aria-hidden", "true");
                 if (modal.dataset.volverUrl) window.history.replaceState({}, "", modal.dataset.volverUrl);
@@ -478,7 +582,126 @@
         }
     }
 
+    function installAlumnoSeccionesExpansion() {
+        if (window.cefAlumnoSeccionesExpansionReady) return;
+        window.cefAlumnoSeccionesExpansionReady = true;
+
+        document.addEventListener("click", function (event) {
+            var toggle = event.target.closest("[data-cef-alumno-secciones-toggle]");
+            if (!toggle) return;
+
+            var secciones = toggle.closest(".cef-alumno-secciones");
+            if (!secciones) return;
+
+            event.preventDefault();
+            var expanded = toggle.getAttribute("aria-expanded") === "true";
+            var adicionales = secciones.querySelectorAll("[data-cef-alumno-seccion-adicional]");
+            adicionales.forEach(function (seccion) {
+                seccion.hidden = expanded;
+            });
+
+            toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+            if (expanded) {
+                var restantes = toggle.getAttribute("data-cef-alumno-secciones-restantes");
+                toggle.textContent = restantes === "1"
+                    ? "+ 1 sección más"
+                    : "+ " + restantes + " secciones más";
+            } else {
+                toggle.textContent = "Mostrar menos";
+            }
+        });
+    }
+
+    function matriculaCompartidaEditors(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        var editors = [];
+        if (root && root.matches && root.matches("[data-especial-matricula-editor]")) {
+            editors.push(root);
+        }
+        Array.prototype.push.apply(
+            editors,
+            scope.querySelectorAll("[data-especial-matricula-editor]")
+        );
+        return editors;
+    }
+
+    function syncMatriculaCompartidaEditor(editor) {
+        if (!editor) return;
+        var selected = editor.querySelector("input[name='matricula_compartida_opcion']:checked");
+        var cueWrap = editor.querySelector("[data-especial-matricula-cue-wrap]");
+        var cueSelect = editor.querySelector("[data-especial-matricula-cue-select]");
+        var showCue = Boolean(selected && selected.value === "si");
+        if (cueWrap) cueWrap.hidden = !showCue;
+        if (!showCue && cueSelect) {
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                var $cueSelect = window.jQuery(cueSelect);
+                if ($cueSelect.data("select2")) $cueSelect.val(null).trigger("change");
+                else cueSelect.value = "";
+            } else {
+                cueSelect.value = "";
+            }
+        }
+    }
+
+    function initMatriculaCompartidaSelects(root) {
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
+        matriculaCompartidaEditors(root).forEach(function (editor) {
+            syncMatriculaCompartidaEditor(editor);
+            var cueSelect = editor.querySelector("[data-especial-matricula-cue-select]");
+            if (!cueSelect) return;
+            var $cueSelect = window.jQuery(cueSelect);
+            if ($cueSelect.data("select2")) return;
+            var dropdownParent = cueSelect.closest(".cef-modal");
+            $cueSelect.select2({
+                width: "100%",
+                allowClear: true,
+                minimumInputLength: 2,
+                placeholder: "Buscar CUE-Anexo o establecimiento",
+                dropdownParent: dropdownParent ? window.jQuery(dropdownParent) : undefined,
+                ajax: {
+                    url: cueSelect.dataset.autocompleteUrl,
+                    dataType: "json",
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || "",
+                            cueanexo: cueSelect.dataset.currentCue || ""
+                        };
+                    },
+                    processResults: function (data) {
+                        return { results: Array.isArray(data.results) ? data.results : [] };
+                    }
+                },
+                language: {
+                    inputTooShort: function () { return "Ingresá al menos 2 caracteres."; },
+                    noResults: function () { return "No se encontraron CUE-Anexos."; },
+                    searching: function () { return "Buscando..."; }
+                }
+            });
+        });
+    }
+
+    function installMatriculaCompartida() {
+        if (window.especialMatriculaCompartidaReady) return;
+        window.especialMatriculaCompartidaReady = true;
+
+        document.addEventListener("change", function (event) {
+            if (!event.target.matches("[data-especial-matricula-editor] input[name='matricula_compartida_opcion']")) return;
+            syncMatriculaCompartidaEditor(event.target.closest("[data-especial-matricula-editor]"));
+        });
+        document.addEventListener("focusin", function (event) {
+            if (!event.target.matches("[data-especial-matricula-cue-select]")) return;
+            initMatriculaCompartidaSelects(event.target.closest("[data-especial-matricula-editor]"));
+        });
+        window.addEventListener("load", function () {
+            initMatriculaCompartidaSelects(document);
+        });
+    }
+
     function initEspecialAlumnos(root) {
+        installMatriculaCompartida();
+        initMatriculaCompartidaSelects(root);
+        installAlumnoSeccionesExpansion();
         installDropdown({
             readyFlag: "cefAlumnoDropdownReady",
             dropdownSelector: "[data-cef-alumno-dropdown]",
@@ -516,6 +739,28 @@
         installModalTriggers();
         installModalForms();
         invokeTableInitializers(root);
+    }
+
+    function closeBajaModalAfterReload() {
+        var modal = document.getElementById("modalBajaAlumnoEspecial");
+        if (!modal || !modal.classList.contains("is-open")) return;
+
+        var navigationEntries = window.performance && window.performance.getEntriesByType
+            ? window.performance.getEntriesByType("navigation")
+            : [];
+        var isReload = navigationEntries.length && navigationEntries[0].type === "reload";
+        if (!isReload) return;
+
+        var url = new URL(window.location.href);
+        if (!url.searchParams.has("abrir_modal_baja")) return;
+        url.searchParams.delete("abrir_modal_baja");
+        url.searchParams.delete("alumno_banco_id");
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        modal.removeAttribute("aria-busy");
+        var body = modal.querySelector(".cef-modal-body");
+        if (body) body.replaceChildren();
+        window.history.replaceState({}, "", url.toString());
     }
 
     function replaceRegion(region, incomingRegion) {
@@ -618,6 +863,9 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         var region = findRegion(document);
-        if (region) invokeTableInitializers(region);
+        if (region) {
+            initializeView(region);
+            closeBajaModalAfterReload();
+        }
     });
 })();

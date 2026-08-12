@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 
 from .forms import EspecialSeccionForm, EspecialDocenteSeccionForm
-from .models import SeccionEspecial, AlumnoSeccion, DocenteSeccion
+from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion, DocenteSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 from .views_docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
@@ -319,6 +319,10 @@ def _alta_alumno_gestionar(request, seccion):
             inscripcion,
             request.user,
             seccion_queryset=SeccionEspecial.objects.filter(
+                cueanexo=seccion.cueanexo,
+                ciclo=seccion.ciclo,
+            ),
+            alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
                 cueanexo=seccion.cueanexo,
                 ciclo=seccion.ciclo,
             ),

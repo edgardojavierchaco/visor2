@@ -1,9 +1,10 @@
 {% extends 'archivos/base/layout.html' %}
-{% load mis_filtros %}
+{% load static mis_filtros %}
 {% block head %}
 {{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}?v=20260811-4">
 <script>
 (function() {
     var sidebarState = sessionStorage.getItem('padron_sidebar_state');
@@ -115,10 +116,11 @@
     }
 
     .padron-page-wrapper {
+        --cef-local-page-gutter: clamp(.75rem, 2vw, 1.5rem);
         max-width: 100%;
         min-width: 0;
         margin: 0 auto;
-        padding: 1rem clamp(.75rem, 2vw, 1.5rem) 2.5rem;
+        padding: .9rem var(--cef-local-page-gutter) 2.5rem;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
         font-size: .95rem;
     }
@@ -2172,7 +2174,8 @@
 
     @media (max-width: 768px) {
         .padron-page-wrapper {
-            padding: .8rem .5rem 2rem;
+            --cef-local-page-gutter: .5rem;
+            padding-bottom: 2rem;
         }
 
         .search-slot,
@@ -6421,5 +6424,7 @@
     }, true);
 })();
 </script>
+
+<script src="{% static 'cef/cef_loading.js' %}?v=20260811-4"></script>
 
 {% endblock %}
