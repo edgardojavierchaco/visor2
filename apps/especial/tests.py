@@ -10,13 +10,20 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError, close_old_connections
+from django.db import IntegrityError, close_old_connections, connection
 from django.http import Http404, HttpResponse
 from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
-from .forms import EspecialDocenteSeccionForm
-from .models import AlumnoSeccion, DocenteSeccion, EspecialAlumnoBanco, EspecialDocenteBanco, SeccionEspecial
+from .forms import EspecialDocenteSeccionForm, EspecialMatriculaCompartidaForm
+from .models import (
+    AlumnoSeccion,
+    DocenteSeccion,
+    EspecialAlumnoBanco,
+    EspecialDocenteBanco,
+    SeccionEspecial,
+    cueanexo_tiene_oferta_matricula_compartida,
+)
 from .permisos import (
     _resolver_permisos_especial,
     cueanexo_autorizado_especial,
@@ -40,7 +47,9 @@ from .views_contexto import (
 from .views_carga_seccion import _alta_docente_nuevo_gestionar
 from .views_ciclo import _exigir_admin
 from .views_docentes_seccion import dar_alta_docente_seccion
-from .views_inscripcion_seccion import dar_alta_inscripcion_seccion
+from .services_alumnos import dar_baja_alumno_banco
+from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
+from .views_alumnos import _actualizar_matricula_compartida, _asegurar_alumno_banco
 from .views_localizaciones import (
     CACHE_TTL_LOCALIZACIONES_ESPECIAL,
     CACHE_VERSION_LOCALIZACIONES_ESPECIAL,
@@ -1073,13 +1082,234 @@ class ValidacionDocenteEspecialTests(SimpleTestCase):
         self.assertEqual(instance.full_clean.__func__, DocenteSeccion.full_clean)
 
 
+class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
+    class PadronQuerySet:
+        def __init__(self, existe):
+            self.existe = existe
+
+        def filter(self, **kwargs):
+            return self
+
+        def exists(self):
+            return self.existe
+
+    def _form(self, data, habilitada=True, existe=True, actual="123456700"):
+        return EspecialMatriculaCompartidaForm(
+            data,
+            cueanexo_actual=actual,
+            matricula_compartida_habilitada=habilitada,
+            padron_queryset=self.PadronQuerySet(existe),
+        )
+
+    def test_habilitacion_usa_la_oferta_exacta_del_padron(self):
+        manager = MagicMock()
+        manager.using.return_value.filter.return_value.exists.return_value = True
+
+        with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
+            self.assertTrue(
+                cueanexo_tiene_oferta_matricula_compartida("12-345-670-0")
+            )
+
+        manager.using.assert_called_once_with("default")
+        manager.using.return_value.filter.assert_called_once_with(
+            cueanexo="123456700",
+            oferta="Especial - Integración",
+        )
+
+    def test_cue_sin_oferta_integracion_rechaza_si_manipulado(self):
+        form = self._form(
+            {
+                "matricula_compartida_opcion": "si",
+                "cueanexo_matricula_compartida": "987654300",
+            },
+            habilitada=False,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("no está habilitada", str(form.errors))
+
+    def test_no_ignora_cue_asociado_manipulado(self):
+        form = self._form(
+            {
+                "matricula_compartida_opcion": "no",
+                "cueanexo_matricula_compartida": "texto-invalido",
+            }
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertIsNone(form.cleaned_data["matricula_compartida"])
+
+    def test_si_sin_cue_asociado_rechaza(self):
+        form = self._form({"matricula_compartida_opcion": "si"})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Debe seleccionar un CUE-Anexo asociado", str(form.errors))
+
+    def test_si_con_cue_inexistente_rechaza(self):
+        form = self._form(
+            {
+                "matricula_compartida_opcion": "si",
+                "cueanexo_matricula_compartida": "000000000",
+            },
+            existe=False,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("no existe en el padrón general", str(form.errors))
+
+    def test_si_con_mismo_cue_actual_rechaza(self):
+        form = self._form(
+            {
+                "matricula_compartida_opcion": "si",
+                "cueanexo_matricula_compartida": "12-345-670-0",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("no puede ser igual", str(form.errors))
+
+    def test_si_con_cue_valido_normaliza_a_nueve_digitos(self):
+        form = self._form(
+            {
+                "matricula_compartida_opcion": "si",
+                "cueanexo_matricula_compartida": "98-765-430-0",
+            }
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["matricula_compartida"], "987654300")
+
+    def test_alta_pasa_matricula_normalizada_al_banco(self):
+        manager = MagicMock()
+        manager.filter.return_value.first.return_value = None
+        banco = SimpleNamespace()
+        manager.create.return_value = banco
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        with patch("apps.especial.views_alumnos.EspecialAlumnoBanco.objects", manager), patch(
+            "apps.especial.views_alumnos.transaction.atomic"
+        ):
+            resultado = _asegurar_alumno_banco(
+                SimpleNamespace(pk=5),
+                context,
+                SimpleNamespace(pk=7),
+                matricula_compartida="987654300",
+            )
+
+        self.assertEqual(resultado, (banco, True, False))
+        self.assertEqual(manager.create.call_args.kwargs["matricula_compartida"], "987654300")
+
+    def test_actualizacion_no_limpia_el_valor_y_no_muta_otro_banco(self):
+        banco = SimpleNamespace(
+            pk=9,
+            matricula_compartida="987654300",
+            actualizado_por=None,
+            save=MagicMock(),
+        )
+        request = SimpleNamespace(
+            POST={
+                "alumno_banco_id": "9",
+                "matricula_compartida_opcion": "no",
+                "cueanexo_matricula_compartida": "987654300",
+            },
+            user=SimpleNamespace(pk=7),
+        )
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        with patch(
+            "apps.especial.views_alumnos._matricula_compartida_form",
+            return_value=SimpleNamespace(
+                is_valid=lambda: True,
+                cleaned_data={"matricula_compartida": None},
+            ),
+        ), patch(
+            "apps.especial.views_alumnos._alumno_banco_seguro",
+            side_effect=[banco, banco],
+        ), patch("apps.especial.views_alumnos.transaction.atomic"):
+            ok, _message, updated = _actualizar_matricula_compartida(
+                request,
+                context,
+                True,
+            )
+
+        self.assertTrue(ok)
+        self.assertIs(updated, banco)
+        self.assertIsNone(banco.matricula_compartida)
+        banco.save.assert_called_once_with()
+
+    def test_actualizacion_no_a_si_guarda_el_cue_validado(self):
+        banco = SimpleNamespace(
+            pk=9,
+            matricula_compartida=None,
+            actualizado_por=None,
+            save=MagicMock(),
+        )
+        request = SimpleNamespace(
+            POST={
+                "alumno_banco_id": "9",
+                "matricula_compartida_opcion": "si",
+                "cueanexo_matricula_compartida": "98-765-430-0",
+            },
+            user=SimpleNamespace(pk=7),
+        )
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        with patch(
+            "apps.especial.views_alumnos._matricula_compartida_form",
+            return_value=SimpleNamespace(
+                is_valid=lambda: True,
+                cleaned_data={"matricula_compartida": "987654300"},
+            ),
+        ), patch(
+            "apps.especial.views_alumnos._alumno_banco_seguro",
+            side_effect=[banco, banco],
+        ), patch("apps.especial.views_alumnos.transaction.atomic"):
+            ok, _message, updated = _actualizar_matricula_compartida(
+                request,
+                context,
+                True,
+            )
+
+        self.assertTrue(ok)
+        self.assertIs(updated, banco)
+        self.assertEqual(banco.matricula_compartida, "987654300")
+        banco.save.assert_called_once_with()
+
+    def test_actualizacion_rechaza_banco_fuera_del_contexto(self):
+        request = SimpleNamespace(POST={"alumno_banco_id": "9"}, user=SimpleNamespace())
+        context = {"puede_operar": True, "cueanexo": "123456700", "ciclo": SimpleNamespace(pk=1)}
+
+        with patch(
+            "apps.especial.views_alumnos._alumno_banco_seguro",
+            side_effect=Http404,
+        ):
+            with self.assertRaises(Http404):
+                _actualizar_matricula_compartida(request, context, True)
+
+
 class CierreIntegridadEspecialTests(SimpleTestCase):
     def test_queryset_autorizado_vacio_no_hace_fallback(self):
         queryset = MagicMock()
         queryset.model = SeccionEspecial
         queryset.select_for_update.return_value = queryset
         queryset.get.side_effect = SeccionEspecial.DoesNotExist
-        inscripcion = SimpleNamespace(pk=8, seccion_id=7)
+        banco_queryset = MagicMock()
+        banco_queryset.select_for_update.return_value.filter.return_value.order_by.return_value = [
+            SimpleNamespace(estado=EspecialAlumnoBanco.Estado.ACTIVO)
+        ]
+        inscripcion = SimpleNamespace(pk=8, seccion_id=7, alumno_id=9)
 
         with patch("apps.especial.views_inscripcion_seccion.SeccionEspecial.objects.filter") as fallback:
             with self.assertRaises(Http404):
@@ -1087,6 +1317,7 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
                     inscripcion,
                     SimpleNamespace(),
                     seccion_queryset=queryset,
+                    alumno_banco_queryset=banco_queryset,
                 )
 
         fallback.assert_not_called()
@@ -1344,6 +1575,18 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 },
             )
 
+    def _post_baja_desde_alumnos(self, alumno_banco_id, motivo="Baja solicitada"):
+        url = reverse("especial:alumnos")
+        with self._forzar_director():
+            return self.client.post(
+                f"{url}?cueanexo={self.ctx.cueanexo_permitido}&ciclo={self.ctx.ciclo_activo.pk}",
+                {
+                    "accion": "baja_especial",
+                    "alumno_banco_id": alumno_banco_id,
+                    "motivo_baja": motivo,
+                },
+            )
+
     def _crear_inscripcion_baja(self, alumno, seccion):
         return _crear_inscripcion_db(self.ctx, alumno, seccion, estado=AlumnoSeccion.Estado.BAJA)
 
@@ -1439,7 +1682,18 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
             try:
                 barrier.wait()
                 inscripcion = AlumnoSeccion.objects.get(pk=inscripcion_pk)
-                dar_alta_inscripcion_seccion(inscripcion, self.admin)
+                dar_alta_inscripcion_seccion(
+                    inscripcion,
+                    self.admin,
+                    seccion_queryset=SeccionEspecial.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                )
                 resultados.append(("ok", inscripcion_pk))
             except Exception as exc:  # noqa: BLE001
                 resultados.append(("error", inscripcion_pk, exc))
@@ -1490,6 +1744,10 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 cueanexo=self.ctx.cueanexo_permitido,
                 ciclo=self.ctx.ciclo_activo,
             ),
+            alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                cueanexo=self.ctx.cueanexo_permitido,
+                ciclo=self.ctx.ciclo_activo,
+            ),
         )
 
         with self.assertRaises(ValidationError):
@@ -1497,6 +1755,10 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 inscripcion_segunda,
                 self.admin,
                 seccion_queryset=SeccionEspecial.objects.filter(
+                    cueanexo=self.ctx.cueanexo_permitido,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+                alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
                     cueanexo=self.ctx.cueanexo_permitido,
                     ciclo=self.ctx.ciclo_activo,
                 ),
@@ -1656,6 +1918,284 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 seccion=self.seccion,
             ).count(),
             1,
+        )
+
+    def test_baja_alumno_valida_conserva_registro_y_persiste_auditoria(self):
+        alumno = self._crear_alumno_y_banco(19, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        total_antes = EspecialAlumnoBanco.objects.count()
+
+        response = self._post_baja_desde_alumnos(banco.pk, "  Cambio de trayectoria  ")
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.BAJA)
+        self.assertEqual(banco.fecha_baja, date.today())
+        self.assertEqual(banco.motivo_baja, "Cambio de trayectoria")
+        self.assertEqual(EspecialAlumnoBanco.objects.count(), total_antes)
+        self.assertFalse(AlumnoSeccion.objects.filter(alumno=alumno).exists())
+
+        with self._forzar_director():
+            lista_response = self.client.get(
+                reverse("especial:alumnos"),
+                {
+                    "cueanexo": self.ctx.cueanexo_permitido,
+                    "ciclo": self.ctx.ciclo_activo.pk,
+                },
+            )
+
+        self.assertContains(lista_response, banco.fecha_baja.strftime("%d/%m/%Y"))
+        self.assertContains(lista_response, "Cambio de trayectoria")
+
+    def test_baja_alumno_rechaza_motivo_vacio_sin_mutar(self):
+        alumno = self._crear_alumno_y_banco(20, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        response = self._post_baja_desde_alumnos(banco.pk, "   ")
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+        self.assertFalse(banco.fecha_baja)
+        self.assertFalse(banco.motivo_baja)
+        self.assertFalse(response.context["modal_alumno_abierto"])
+        self.assertEqual(response.context["baja_modal_alumno"].pk, banco.pk)
+
+    def test_baja_alumno_rechaza_inscripciones_activas_y_no_las_elimina(self):
+        seccion_dos = _crear_seccion_db(self.ctx, self.ctx.cueanexo_permitido, "Seccion 2", capacidad=2)
+        alumno = self._crear_alumno_y_banco(21, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        _crear_inscripcion_db(self.ctx, alumno, self.seccion, estado=AlumnoSeccion.Estado.ACTIVO)
+        _crear_inscripcion_db(self.ctx, alumno, seccion_dos, estado=AlumnoSeccion.Estado.ACTIVO)
+
+        response = self._post_baja_desde_alumnos(banco.pk)
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+        self.assertEqual(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).count(),
+            2,
+        )
+        self.assertFalse(response.context["modal_alumno_abierto"])
+        self.assertEqual(response.context["baja_modal_alumno"].pk, banco.pk)
+
+    def test_get_baja_abre_solo_el_modal_de_baja(self):
+        alumno = self._crear_alumno_y_banco(29, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        with self._forzar_director():
+            response = self.client.get(
+                reverse("especial:alumnos"),
+                {
+                    "cueanexo": self.ctx.cueanexo_permitido,
+                    "ciclo": self.ctx.ciclo_activo.pk,
+                    "abrir_modal_baja": "1",
+                    "alumno_banco_id": banco.pk,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["baja_modal_alumno"].pk, banco.pk)
+        self.assertFalse(response.context["modal_alumno_abierto"])
+
+    def test_baja_no_muestra_acciones_de_alta_ni_inscripcion(self):
+        alumno = self._crear_alumno_y_banco(30, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        self._post_baja_desde_alumnos(banco.pk)
+
+        with self._forzar_director():
+            response = self.client.get(
+                reverse("especial:alumnos"),
+                {
+                    "cueanexo": self.ctx.cueanexo_permitido,
+                    "ciclo": self.ctx.ciclo_activo.pk,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cef-row-inactive")
+        self.assertNotContains(response, "Dar de baja de Especial")
+        self.assertNotContains(response, "Inscribir a secci&oacute;n")
+
+    def test_baja_alumno_rechaza_banco_de_otro_contexto_sin_mutar(self):
+        alumno = _crear_alumno_db(self.ctx, 22)
+        banco_ajeno = _crear_alumno_banco_db(self.ctx, alumno, self.seccion_ajena)
+
+        response = self._post_baja_desde_alumnos(banco_ajeno.pk)
+
+        banco_ajeno.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(banco_ajeno.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+
+    def test_baja_alumno_rechaza_banco_de_otro_ciclo_sin_mutar(self):
+        seccion_otro_ciclo = _crear_seccion_db(
+            self.ctx,
+            self.ctx.cueanexo_permitido,
+            "Seccion otro ciclo",
+            ciclo=self.ctx.ciclo_inactivo,
+        )
+        alumno = _crear_alumno_db(self.ctx, 23)
+        banco_ajeno = _crear_alumno_banco_db(self.ctx, alumno, seccion_otro_ciclo)
+
+        response = self._post_baja_desde_alumnos(banco_ajeno.pk)
+
+        banco_ajeno.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(banco_ajeno.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+
+    def test_baja_alumno_ya_baja_no_repite_ni_altera(self):
+        alumno = self._crear_alumno_y_banco(24, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        fecha_previa = date(2026, 8, 1)
+        EspecialAlumnoBanco.objects.filter(pk=banco.pk).update(
+            estado=EspecialAlumnoBanco.Estado.BAJA,
+            fecha_baja=fecha_previa,
+            motivo_baja="Baja previa",
+        )
+
+        response = self._post_baja_desde_alumnos(banco.pk, "Otro motivo")
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.BAJA)
+        self.assertEqual(banco.fecha_baja, fecha_previa)
+        self.assertEqual(banco.motivo_baja, "Baja previa")
+
+    def test_despues_de_baja_no_crea_inscripcion_activa(self):
+        alumno = self._crear_alumno_y_banco(25, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        self._post_baja_desde_alumnos(banco.pk)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).exists()
+        )
+
+    def test_despues_de_baja_no_reactiva_inscripcion_en_baja(self):
+        alumno = self._crear_alumno_y_banco(26, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        inscripcion = self._crear_inscripcion_baja(alumno, self.seccion)
+        self._post_baja_desde_alumnos(banco.pk)
+
+        with self.assertRaises(ValidationError):
+            dar_alta_inscripcion_seccion(
+                inscripcion,
+                self.admin,
+                seccion_queryset=SeccionEspecial.objects.filter(
+                    cueanexo=self.ctx.cueanexo_permitido,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+                alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                    cueanexo=self.ctx.cueanexo_permitido,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+            )
+
+        inscripcion.refresh_from_db()
+        self.assertEqual(inscripcion.estado, AlumnoSeccion.Estado.BAJA)
+
+    def test_baja_con_inscripcion_activa_rechaza_ids_manipulados_sin_mutar(self):
+        alumno = self._crear_alumno_y_banco(27, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        _crear_inscripcion_db(self.ctx, alumno, self.seccion, estado=AlumnoSeccion.Estado.ACTIVO)
+
+        response = self._post_baja_desde_alumnos(
+            banco.pk,
+            "Motivo válido",
+        )
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+        self.assertTrue(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).exists()
+        )
+
+    def test_concurrencia_baja_vs_inscripcion_no_deja_estado_inconsistente(self):
+        if connection.vendor != "postgresql":
+            self.skipTest("La prueba de locks requiere PostgreSQL.")
+
+        alumno = self._crear_alumno_y_banco(28, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        barrier = threading.Barrier(2)
+        resultados = []
+
+        def trabajo_baja():
+            close_old_connections()
+            try:
+                barrier.wait()
+                banco_local = EspecialAlumnoBanco.objects.get(pk=banco.pk)
+                dar_baja_alumno_banco(
+                    alumno_banco=banco_local,
+                    user=self.admin,
+                    motivo_baja="Baja concurrente",
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                )
+                resultados.append(("baja", "ok"))
+            except Exception as exc:  # noqa: BLE001
+                resultados.append(("baja", exc))
+            finally:
+                close_old_connections()
+
+        def trabajo_inscripcion():
+            close_old_connections()
+            try:
+                barrier.wait()
+                seccion_local = SeccionEspecial.objects.get(pk=self.seccion.pk)
+                alumno_local = Alumno.objects.get(pk=alumno.pk)
+                crear_inscripcion_activa(
+                    seccion=seccion_local,
+                    alumno=alumno_local,
+                    user=self.admin,
+                    seccion_queryset=SeccionEspecial.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                )
+                resultados.append(("inscripcion", "ok"))
+            except Exception as exc:  # noqa: BLE001
+                resultados.append(("inscripcion", exc))
+            finally:
+                close_old_connections()
+
+        hilos = [
+            threading.Thread(target=trabajo_baja),
+            threading.Thread(target=trabajo_inscripcion),
+        ]
+        for hilo in hilos:
+            hilo.start()
+        for hilo in hilos:
+            hilo.join()
+
+        banco.refresh_from_db()
+        inscripcion_activa = AlumnoSeccion.objects.filter(
+            alumno=alumno,
+            seccion=self.seccion,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).exists()
+        self.assertFalse(
+            banco.estado == EspecialAlumnoBanco.Estado.BAJA and inscripcion_activa
         )
 
     def test_alta_docente_nuevo_valida_y_persiste(self):

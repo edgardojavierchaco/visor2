@@ -205,14 +205,15 @@ class CefCicloEdicionForm(forms.ModelForm):
 
 class CefAsistenciaFechaForm(forms.Form):
     fecha = forms.DateField(
-        label="Fecha de la jornada",
-        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        label="Fecha de asistencia",
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={"type": "date", "autocomplete": "off"},
+        ),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.is_bound:
-            self.fields["fecha"].initial = timezone.localdate
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
 
@@ -357,11 +358,9 @@ class CefGrupoForm(forms.ModelForm):
         )
         self.fields["nivel"].queryset = _queryset_activos(CefNivelActividad)
         self.fields["rango_etario"].queryset = _queryset_activos(CefRangoEtario)
-        self.fields["turno"].queryset = (
-            CefTurno.objects.filter(activo=True, ciclo=ciclo)
-            if ciclo
-            else CefTurno.objects.none()
-        )
+        self.fields["turno"].queryset = CefTurno.objects.filter(
+            activo=True
+        ).order_by("orden", "nombre")
         self.fields["cupo_maximo"].required = False
 
         for field in self.fields.values():
@@ -538,7 +537,7 @@ class CefBajaMotivoForm(forms.Form):
     motivo_baja = forms.CharField(
         label="Motivo de baja",
         max_length=255,
-        required=True,
+        required=False,
         widget=forms.Textarea(attrs={"rows": 3}),
     )
 
@@ -548,10 +547,7 @@ class CefBajaMotivoForm(forms.Form):
             _aplicar_clases_bootstrap(field)
 
     def clean_motivo_baja(self):
-        motivo = (self.cleaned_data.get("motivo_baja") or "").strip()
-        if not motivo:
-            raise forms.ValidationError("Debe indicar el motivo de la baja.")
-        return motivo
+        return (self.cleaned_data.get("motivo_baja") or "").strip()
 
 
 class CefInscripcionForm(forms.ModelForm):

@@ -101,12 +101,19 @@ def generar_ciclo_anual(request, ciclo_id):
 
     invalidar_cache_ciclos_cef()
     context = contexto_base(request, "ciclos", "Generación anual CEF")
+    cef_context = context["cef_context"]
+    ciclo_destino = resumen["ciclo_destino"]
+    cef_context["ciclo"] = ciclo_destino
+    cef_context["querystring"] = _query_ciclo(cef_context, ciclo_destino)
+    cef_context["ciclo_cerrado"] = False
+    cef_context["puede_consultar"] = bool(cef_context.get("cueanexo"))
+    cef_context["puede_operar"] = cef_context["puede_consultar"]
     context.update(
         {
             "resumen": resumen,
             "volver_url": redirect_con_contexto(
                 "cef:administrar_ciclos",
-                context["cef_context"],
+                cef_context,
             ),
         }
     )
@@ -238,6 +245,11 @@ def administrar_ciclos(request):
         None,
     )
     if ciclo_actual:
+        cef_context["ciclo"] = ciclo_actual
+        cef_context["querystring"] = _query_ciclo(cef_context, ciclo_actual)
+        cef_context["ciclo_cerrado"] = False
+        cef_context["puede_consultar"] = bool(cef_context.get("cueanexo"))
+        cef_context["puede_operar"] = cef_context["puede_consultar"]
         ciclo_origen_anual = ciclo_actual
     else:
         ciclo_mas_reciente = ciclos_admin[0] if ciclos_admin else None

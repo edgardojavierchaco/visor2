@@ -37,7 +37,7 @@
                     <th>Estado en CEF</th>
                     <th>Fecha alta</th>
                     <th>Fecha baja</th>
-                    <th>Grupos asignados</th>
+                    <th>Grupos activos</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -58,21 +58,21 @@
                             {% if docente_banco.estado == 'baja' %}<div class="small text-muted">{{ docente_banco.motivo_baja|default:"Sin motivo" }}</div>{% endif %}
                         </td>
                         <td>
-                            {% if docente_banco.asignaciones_grupo %}
-                                {% for asignacion in docente_banco.asignaciones_grupo %}
-                                    <a class="btn btn-outline-primary btn-sm mb-1" href="{% url 'cef:gestionar_grupo' asignacion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=profesores#profesores-curso">
-                                        Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }} - {{ asignacion.get_rol_display }}{% if asignacion.estado != 'activo' %} - {{ asignacion.get_estado_display }}{% endif %}
+                            {% if docente_banco.asignaciones_activas %}
+                                {% for asignacion in docente_banco.asignaciones_activas %}
+                                    <a class="btn btn-outline-success btn-sm mb-1" href="{% url 'cef:gestionar_grupo' asignacion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=profesores#profesores-curso">
+                                        Grupo {{ asignacion.grupo.actividad }} Nro. {{ asignacion.grupo.numero }} - {{ asignacion.get_rol_display }}
                                     </a>
                                 {% endfor %}
                             {% else %}
-                                <span class="text-muted small">Sin grupo asignado</span>
+                                <span class="text-muted small">Sin grupos activos asignados</span>
                             {% endif %}
                         </td>
                         <td class="cef-act-cell">
                             {% if cef_context.puede_operar %}
-                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                            <div class="d-flex flex-column align-items-start">
                                 {% if docente_banco.estado == 'activo' and grupos_disponibles %}
-                                    <div class="dropdown" data-cef-profesor-dropdown>
+                                    <div class="dropdown mb-2" data-cef-profesor-dropdown>
                                         <button class="btn {% if docente_banco.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-profesor-dropdown-toggle aria-expanded="false">
                                             <i class="fa-solid fa-user-plus"></i> {% if docente_banco.grupos_asignables %}Asignar a grupo{% elif docente_banco.grupos_bloqueados %}Ya asignado a grupo{% else %}Sin grupos disponibles{% endif %}
                                         </button>
@@ -99,12 +99,14 @@
                                         </ul>
                                     </div>
                                 {% elif docente_banco.estado == 'activo' %}
-                                    <span class="text-muted small">Sin grupos cargados</span>
-                                    <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                                        <i class="fa-solid fa-plus"></i> Crear grupo
-                                    </a>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="text-muted small mr-2">Sin grupos cargados</span>
+                                        <a class="btn btn-outline-primary btn-sm" title="Crear grupo" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                            <i class="fa-solid fa-plus"></i> Crear grupo
+                                        </a>
+                                    </div>
                                 {% endif %}
-                                <a class="btn btn-outline-primary btn-sm" title="Editar datos del profesor" href="{{ docente_banco.url_editar_profesor }}" target="_blank" rel="noopener">
+                                <a class="btn btn-outline-primary btn-sm mb-2" title="Editar datos del profesor" href="{{ docente_banco.url_editar_profesor }}" target="_blank" rel="noopener">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                 </a>
                                 {% if docente_banco.estado == 'activo' %}
@@ -114,6 +116,15 @@
                                     <template id="cef-baja-profesor-{{ docente_banco.pk }}">
                                         {% include "cef/profesor_baja_cef_contenido.html" with baja_modal_docente=docente_banco baja_form=baja_form_vacio %}
                                     </template>
+                                {% elif docente_banco.puede_reincorporar %}
+                                    <form method="post" action="{% url 'cef:profesores' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="accion" value="reincorporar_cef">
+                                        <input type="hidden" name="docente_banco_id" value="{{ docente_banco.pk }}">
+                                        <button class="btn btn-outline-success btn-sm" type="submit" title="Reincorporar al profesor al CEF">
+                                            <i class="fa-solid fa-user-check"></i> Reincorporar al CEF
+                                        </button>
+                                    </form>
                                 {% endif %}
                             </div>
                             {% else %}
@@ -133,7 +144,7 @@
 {% elif cef_context.puede_consultar %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-chalkboard-user" style="font-size:1.5rem;color:var(--text-faint)"></i>
-        Todavía no hay profesores en el banco de este CEF y ciclo.
+        No hay profesores activos en el ciclo seleccionado.
     </div>
 {% else %}
     <div class="cef-empty-state">

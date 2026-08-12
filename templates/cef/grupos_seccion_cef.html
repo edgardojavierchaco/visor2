@@ -1,10 +1,10 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Cursos / grupos</h2>
+        <h2 class="cef-panel-title">Grupos</h2>
         {% if vista == 'actuales' and cef_context.puede_operar %}
             <div class="cef-panel-actions">
                 <a class="btn btn-primary" href="{% url 'cef:carga_grupo_nuevo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                    <i class="fa-solid fa-plus"></i> Agregar Curso
+                    <i class="fa-solid fa-plus"></i> Agregar grupo
                 </a>
             </div>
         {% endif %}
@@ -13,10 +13,10 @@
     <div class="cef-panel-body">
         <ul class="nav nav-tabs mb-3">
             <li class="nav-item">
-                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales">Ciclo seleccionado</a>
+                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales" data-cef-view-link data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Actuales</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial">Historial <span class="badge text-bg-secondary">Sólo lectura</span></a>
+                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial" data-cef-view-link data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Historial</a>
             </li>
         </ul>
         {% if cef_context.establecimiento %}
@@ -40,7 +40,7 @@
             </div>
         {% endif %}
 
-        <div data-cef-fragment="grupos-lista">
+        <div data-cef-fragment="grupos-lista" data-cef-view-content>
             {% if vista == 'historial' %}
                 {% include "cef/grupos_historial_lista_cef.html" %}
             {% else %}
@@ -49,4 +49,4 @@
         </div>
     </div>
 </div>
-{% if cef_partial and vista == 'actuales' and cef_context.puede_operar %}{% include "cef/grupo_baja_cef_modal.html" %}{% endif %}
+{% if cef_partial and cef_context.puede_operar %}{% include "cef/grupo_baja_cef_modal.html" %}{% endif %}

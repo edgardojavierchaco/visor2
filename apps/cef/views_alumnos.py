@@ -12,6 +12,7 @@ from django.urls import NoReverseMatch, reverse
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from .forms import CefBajaMotivoForm, CefBusquedaAlumnoForm
@@ -56,6 +57,17 @@ def _texto(valor):
     if valor is None:
         return ""
     return str(valor)
+
+
+def _calcular_edad(fecha_nacimiento):
+    if not fecha_nacimiento:
+        return None
+
+    hoy = timezone.localdate()
+    edad = hoy.year - fecha_nacimiento.year
+    if (hoy.month, hoy.day) < (fecha_nacimiento.month, fecha_nacimiento.day):
+        edad -= 1
+    return edad if edad >= 0 else None
 
 
 def _alumno_row(alumno):
@@ -208,9 +220,10 @@ def _inscribir_alumno_grupo_desde_historial(request, cef_context):
         return
 
     periodo = get_object_or_404(
-        CefAlumnoCef.objects.filter(cueanexo=cef_context["cueanexo"]).select_related(
-            "alumno"
-        ),
+        CefAlumnoCef.objects.filter(
+            cueanexo=cef_context["cueanexo"],
+            ciclo__anio__lt=cef_context["ciclo"].anio,
+        ).select_related("alumno"),
         pk=periodo_id,
     )
     alumno_activo_actual = CefAlumnoCef.objects.filter(
@@ -257,9 +270,24 @@ def _alumnos_banco(cef_context):
         CefAlumnoCef.objects.filter(
             cueanexo=cef_context["cueanexo"],
             ciclo=cef_context["ciclo"],
+            estado=CefAlumnoCef.Estado.ACTIVO,
         )
         .select_related("alumno")
         .order_by("alumno_nombre_snapshot", "alumno_cuil_snapshot")
+    )
+
+
+def _alumnos_bajas_ciclo(cef_context):
+    if not cef_context["puede_consultar"]:
+        return CefAlumnoCef.objects.none()
+    return (
+        CefAlumnoCef.objects.filter(
+            cueanexo=cef_context["cueanexo"],
+            ciclo=cef_context["ciclo"],
+            estado=CefAlumnoCef.Estado.BAJA,
+        )
+        .select_related("alumno", "ciclo")
+        .order_by("alumno_nombre_snapshot", "-fecha_alta", "-pk")
     )
 
 
@@ -271,7 +299,7 @@ def _alumnos_historial(cef_context):
             cueanexo=cef_context["cueanexo"],
             ciclo__anio__lt=cef_context["ciclo"].anio,
         )
-        .select_related("ciclo")
+        .select_related("alumno", "ciclo")
         .order_by(
             "-ciclo__anio",
             "alumno_nombre_snapshot",
@@ -302,6 +330,97 @@ def _inscripciones_por_alumno(cef_context, alumnos_banco):
     return por_alumno
 
 
+def _inscripciones_historicas_alumnos(cef_context):
+    if not cef_context["puede_consultar"]:
+        return CefInscripcion.objects.none()
+
+    return (
+        CefInscripcion.objects.filter(
+            grupo__cueanexo=cef_context["cueanexo"],
+            grupo__ciclo__anio__lte=cef_context["ciclo"].anio,
+        )
+        .exclude(
+            grupo__ciclo=cef_context["ciclo"],
+            estado=CefInscripcion.Estado.ACTIVO,
+        )
+        .select_related("grupo", "grupo__ciclo", "grupo__actividad", "grupo__turno")
+        .order_by(
+            "alumno_id",
+            "-grupo__ciclo__anio",
+            "-fecha_inscripcion",
+            "-pk",
+        )
+    )
+
+
+def _inscripciones_periodos_alumnos(cef_context, alumnos_ids):
+    if not alumnos_ids:
+        return []
+
+    return list(
+        CefInscripcion.objects.filter(
+            grupo__cueanexo=cef_context["cueanexo"],
+            grupo__ciclo__anio__lte=cef_context["ciclo"].anio,
+            alumno_id__in=alumnos_ids,
+        )
+        .select_related("grupo", "grupo__ciclo", "grupo__actividad", "grupo__turno")
+        .order_by(
+            "alumno_id",
+            "-grupo__ciclo__anio",
+            "-fecha_inscripcion",
+            "-pk",
+        )
+    )
+
+
+def _vincular_inscripciones_a_periodos(periodos, inscripciones):
+    periodos_por_ciclo = {}
+    for periodo in periodos:
+        periodo.inscripciones_grupo = []
+        periodos_por_ciclo.setdefault(periodo.ciclo_id, []).append(periodo)
+
+    for inscripcion in inscripciones:
+        candidatos_ciclo = periodos_por_ciclo.get(inscripcion.grupo.ciclo_id, [])
+        if not candidatos_ciclo:
+            continue
+        candidatos_fecha = [
+            periodo
+            for periodo in candidatos_ciclo
+            if periodo.fecha_alta <= inscripcion.fecha_inscripcion
+            and (
+                periodo.fecha_baja is None
+                or inscripcion.fecha_inscripcion <= periodo.fecha_baja
+            )
+        ]
+        candidatos_base = candidatos_fecha or candidatos_ciclo
+        candidatos_creados = [
+            periodo
+            for periodo in candidatos_base
+            if periodo.creado_en <= inscripcion.creado_en
+        ]
+        if candidatos_creados:
+            periodo_destino = max(
+                candidatos_creados,
+                key=lambda periodo: (periodo.creado_en, periodo.pk),
+            )
+        else:
+            estado_periodo_preferido = (
+                CefAlumnoCef.Estado.ACTIVO
+                if inscripcion.estado == CefInscripcion.Estado.ACTIVO
+                else CefAlumnoCef.Estado.BAJA
+            )
+            candidatos_estado = [
+                periodo
+                for periodo in candidatos_base
+                if periodo.estado == estado_periodo_preferido
+            ]
+            periodo_destino = max(
+                candidatos_estado or candidatos_base,
+                key=lambda periodo: (periodo.fecha_alta, periodo.pk),
+            )
+        periodo_destino.inscripciones_grupo.append(inscripcion)
+
+
 def _grupos_disponibles(cef_context):
     if not cef_context["puede_operar"]:
         return CefGrupo.objects.none()
@@ -312,7 +431,7 @@ def _grupos_disponibles(cef_context):
             ciclo=cef_context["ciclo"],
             estado=CefGrupo.Estado.ACTIVO,
         )
-        .select_related("actividad", "turno")
+        .select_related("actividad", "rango_etario", "turno")
         .order_by("actividad__nombre", "numero", "nombre")
     )
 
@@ -322,57 +441,149 @@ def _alumnos_listado_context(cef_context, vista="actuales"):
     alumnos_banco_tabla_pendiente = False
     if vista == "historial":
         try:
+            alumnos_bajas_ciclo = list(_alumnos_bajas_ciclo(cef_context))
             alumnos_historial = list(_alumnos_historial(cef_context))
+            inscripciones_historicas = list(
+                _inscripciones_historicas_alumnos(cef_context)
+            )
         except (OperationalError, ProgrammingError):
+            alumnos_bajas_ciclo = []
             alumnos_historial = []
+            inscripciones_historicas = []
             alumnos_banco_tabla_pendiente = True
-        alumnos_ids = {periodo.alumno_id for periodo in alumnos_historial}
-        alumnos_activos_actuales = set()
+        alumnos_historicos_ids = {
+            periodo.alumno_id for periodo in alumnos_historial
+        } | {
+            inscripcion.alumno_id for inscripcion in inscripciones_historicas
+        }
+        alumnos_ids = alumnos_historicos_ids | {
+            periodo.alumno_id for periodo in alumnos_bajas_ciclo
+        }
+        alumnos_activos_actuales = {}
         inscripciones_activas_por_alumno = {}
+        inscripciones_periodos_por_alumno = {}
         grupos_disponibles = []
-        if cef_context["puede_operar"] and alumnos_ids:
-            alumnos_activos_actuales = set(
-                CefAlumnoCef.objects.filter(
+        if alumnos_ids:
+            alumnos_activos_actuales = {
+                periodo.alumno_id: periodo
+                for periodo in CefAlumnoCef.objects.filter(
                     cueanexo=cef_context["cueanexo"],
                     ciclo=cef_context["ciclo"],
                     alumno_id__in=alumnos_ids,
                     estado=CefAlumnoCef.Estado.ACTIVO,
-                ).values_list("alumno_id", flat=True)
-            )
-            inscripciones_activas = (
-                CefInscripcion.objects.filter(
-                    grupo__cueanexo=cef_context["cueanexo"],
-                    grupo__ciclo=cef_context["ciclo"],
-                    alumno_id__in=alumnos_ids,
-                    estado=CefInscripcion.Estado.ACTIVO,
+                ).select_related("alumno", "ciclo")
+            }
+            try:
+                inscripciones_periodos = _inscripciones_periodos_alumnos(
+                    cef_context,
+                    alumnos_ids,
                 )
-                .select_related("grupo", "grupo__actividad", "grupo__turno")
-                .order_by("grupo__actividad__nombre", "grupo__numero")
-            )
-            for inscripcion in inscripciones_activas:
-                inscripciones_activas_por_alumno.setdefault(
+            except (OperationalError, ProgrammingError):
+                inscripciones_periodos = []
+                alumnos_banco_tabla_pendiente = True
+            for inscripcion in inscripciones_periodos:
+                inscripciones_periodos_por_alumno.setdefault(
                     inscripcion.alumno_id,
                     [],
                 ).append(inscripcion)
-            grupos_disponibles = list(_grupos_disponibles(cef_context))
+                if (
+                    inscripcion.grupo.ciclo_id == cef_context["ciclo"].pk
+                    and inscripcion.estado == CefInscripcion.Estado.ACTIVO
+                ):
+                    inscripciones_activas_por_alumno.setdefault(
+                        inscripcion.alumno_id,
+                        [],
+                    ).append(inscripcion)
+            if cef_context["puede_operar"]:
+                grupos_disponibles = list(_grupos_disponibles(cef_context))
 
-        for periodo in alumnos_historial:
-            periodo.activo_banco_actual = periodo.alumno_id in alumnos_activos_actuales
-            periodo.grupos_bloqueados = inscripciones_activas_por_alumno.get(
-                periodo.alumno_id,
+        ultimo_periodo_baja_por_alumno = {}
+        for periodo in alumnos_bajas_ciclo:
+            periodo_actual = ultimo_periodo_baja_por_alumno.get(periodo.alumno_id)
+            if periodo_actual is None or periodo.pk > periodo_actual.pk:
+                ultimo_periodo_baja_por_alumno[periodo.alumno_id] = periodo
+        for periodo in alumnos_bajas_ciclo:
+            periodo.puede_reincorporar = (
+                cef_context["puede_operar"]
+                and periodo.alumno_id not in alumnos_activos_actuales
+                and ultimo_periodo_baja_por_alumno.get(periodo.alumno_id) is periodo
+            )
+
+        periodos_por_alumno = {}
+        for periodo in alumnos_bajas_ciclo + alumnos_historial:
+            periodos_por_alumno.setdefault(periodo.alumno_id, []).append(periodo)
+        for alumno_id, periodo_activo in alumnos_activos_actuales.items():
+            periodos_por_alumno.setdefault(alumno_id, []).append(periodo_activo)
+
+        alumnos_historial_resumen = []
+        for alumno_id, periodos in periodos_por_alumno.items():
+            periodo_activo = alumnos_activos_actuales.get(alumno_id)
+            periodo_resumen = periodo_activo or max(
+                periodos,
+                key=lambda periodo: (
+                    periodo.ciclo.anio,
+                    periodo.fecha_alta,
+                    periodo.pk,
+                ),
+            )
+            periodo_resumen.historial_periodos = sorted(
+                periodos,
+                key=lambda periodo: (
+                    periodo.ciclo.anio,
+                    periodo.fecha_alta,
+                    periodo.pk,
+                ),
+                reverse=True,
+            )
+            _vincular_inscripciones_a_periodos(
+                periodo_resumen.historial_periodos,
+                inscripciones_periodos_por_alumno.get(alumno_id, []),
+            )
+            periodo_resumen.periodo_baja_actual = ultimo_periodo_baja_por_alumno.get(
+                alumno_id
+            )
+            if periodo_activo:
+                periodo_resumen.estado_actual_cef = "Activo"
+            elif periodo_resumen.periodo_baja_actual:
+                periodo_resumen.estado_actual_cef = "Baja"
+            else:
+                periodo_resumen.estado_actual_cef = "No activo"
+            periodo_resumen.periodo_historico_accion = next(
+                (
+                    periodo
+                    for periodo in periodo_resumen.historial_periodos
+                    if periodo.ciclo.anio < cef_context["ciclo"].anio
+                ),
+                None,
+            )
+            periodo_resumen.activo_banco_actual = periodo_activo is not None
+            periodo_resumen.grupos_bloqueados = inscripciones_activas_por_alumno.get(
+                alumno_id,
                 [],
             )
             grupos_bloqueados_ids = {
-                inscripcion.grupo_id for inscripcion in periodo.grupos_bloqueados
+                inscripcion.grupo_id
+                for inscripcion in periodo_resumen.grupos_bloqueados
             }
-            periodo.grupos_asignables = [
+            periodo_resumen.grupos_asignables = [
                 grupo
                 for grupo in grupos_disponibles
                 if grupo.pk not in grupos_bloqueados_ids
             ]
+            alumnos_historial_resumen.append(periodo_resumen)
+        alumnos_historial_resumen.sort(
+            key=lambda periodo: (
+                periodo.alumno_nombre_snapshot,
+                periodo.alumno_documento_snapshot,
+                periodo.alumno_id,
+            )
+        )
         return {
             "vista": vista,
+            "alumnos_bajas_ciclo": alumnos_bajas_ciclo,
             "alumnos_historial": alumnos_historial,
+            "alumnos_historial_resumen": alumnos_historial_resumen,
+            "total_alumnos_historial": len(alumnos_historial_resumen),
             "grupos_disponibles": grupos_disponibles,
             "alumnos_banco_tabla_pendiente": alumnos_banco_tabla_pendiente,
         }
@@ -393,7 +604,6 @@ def _alumnos_listado_context(cef_context, vista="actuales"):
 
     grupos_disponibles = list(_grupos_disponibles(cef_context))
     url_alumnos = _url_alumnos(cef_context)
-
     for item in alumnos_banco:
         item.inscripciones_grupo = inscripciones_por_alumno.get(
             item.alumno_id,
@@ -414,6 +624,9 @@ def _alumnos_listado_context(cef_context, vista="actuales"):
             if grupo.pk not in grupos_activos_ids
         ]
         item.grupos_bloqueados = inscripciones_activas
+        item.edad = _calcular_edad(
+            getattr(item.alumno, "fecha_nacimiento", None)
+        )
         item.url_editar_alumno = _url_carga_alumno(
             item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
             url_alumnos,
@@ -464,6 +677,37 @@ def _alumno_baja_modal(cef_context, alumno_banco_id):
         _alumno_cef_seguro(alumno_banco_id, cef_context),
         cef_context,
     )
+
+
+def _reincorporar_alumno_cef(request, cef_context):
+    if not cef_context["puede_operar"]:
+        return None, "El ciclo está cerrado o no está listo para operar."
+
+    periodo = _alumno_cef_seguro(
+        request.POST.get("alumno_banco_id"),
+        cef_context,
+    )
+    if periodo.estado != CefAlumnoCef.Estado.BAJA:
+        return None, "El período seleccionado no se encuentra dado de baja."
+
+    try:
+        _, creado = asegurar_alumno_banco_activo(
+            alumno=periodo.alumno,
+            cueanexo=cef_context["cueanexo"],
+            ciclo=cef_context["ciclo"],
+            user=request.user,
+        )
+    except ValidationError as exc:
+        return None, "; ".join(exc.messages)
+    except IntegrityError:
+        return (
+            None,
+            "No se pudo reincorporar al alumno. Verificá que no exista ya un período activo.",
+        )
+
+    if creado:
+        return True, "Alumno reincorporado al CEF correctamente."
+    return False, "El alumno ya se encuentra activo en este CEF y ciclo."
 
 
 def _dar_baja_alumno_cef(request, cef_context):
@@ -529,8 +773,11 @@ def alumnos(request):
 
     if request.method == "POST":
         accion = request.POST.get("accion")
-        if vista == "historial" and accion != "inscribir_grupo_historial":
-            message = "Historial es una vista de sólo lectura."
+        if vista == "historial" and accion not in {
+            "inscribir_grupo_historial",
+            "reincorporar_cef",
+        }:
+            message = "La acción solicitada no está habilitada en Historial."
             if _is_ajax(request):
                 return JsonResponse({"ok": False, "message": message})
             messages.error(request, message)
@@ -586,7 +833,20 @@ def alumnos(request):
                 messages.success(request, baja_message)
             else:
                 messages.error(request, baja_message)
-            return redirect(_url_alumnos(cef_context))
+            return redirect(_url_alumnos(cef_context, vista))
+
+        if accion == "reincorporar_cef":
+            reincorporacion_ok, reincorporacion_message = _reincorporar_alumno_cef(
+                request,
+                cef_context,
+            )
+            if reincorporacion_ok:
+                messages.success(request, reincorporacion_message)
+            elif reincorporacion_ok is False:
+                messages.info(request, reincorporacion_message)
+            else:
+                messages.error(request, reincorporacion_message)
+            return redirect(_url_alumnos(cef_context, vista))
 
         if request.POST.get("accion") == "inscribir_grupo":
             _inscribir_alumno_grupo_desde_banco(request, cef_context)

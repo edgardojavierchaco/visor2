@@ -15,8 +15,12 @@ from .models import (
 from .performance import perf_begin, perf_capture_queries, perf_finish
 
 
-PERMISOS_CEF_CACHE_VERSION = "v1"
+PERMISOS_CEF_CACHE_VERSION = "v3"
 PERMISOS_CEF_CACHE_TTL = 60
+ROLES_METRICAS_CEF = {
+    "administrador",
+    "director de servicios complementarios",
+}
 
 
 def _permisos_cef_cache_key(user):
@@ -29,6 +33,8 @@ def _permisos_cef_cache_key(user):
 
 def _resolver_permisos_cef(user):
     permisos = obtener_permisos_usuario_cef(user)
+    rol_normalizado = (permisos.get("rol") or "").strip().casefold()
+    permisos["puede_metricas"] = rol_normalizado in ROLES_METRICAS_CEF
 
     # El rol Administrador ya es la autorizacion equivalente para todos los
     # CEF. Los demas roles autorizados conservan la lista puntual de CUE.
@@ -60,32 +66,48 @@ def get_permisos_cef_request(request):
     return permisos
 
 
-def cef_required(view_func):
-    """
-    Protege las vistas activas del módulo CEF.
+def _validar_acceso_cef(
+    request,
+    permitir_solo_asistencia=False,
+    requerir_metricas=False,
+):
+    permisos = get_permisos_cef_request(request)
+    if not permisos["puede_ver"]:
+        raise PermissionDenied("No tenés permisos para acceder al módulo CEF.")
+    if permisos.get("solo_asistencia") and not permitir_solo_asistencia:
+        raise PermissionDenied(
+            "El rol Profesor CEF sólo puede acceder a la sección Asistencia."
+        )
+    if requerir_metricas and not permisos.get("puede_metricas", False):
+        raise PermissionDenied(
+            "No tenés permisos para acceder a Métricas CEF."
+        )
 
-    - Usuario no autenticado: redirección al login.
-    - Usuario autenticado sin rol autorizado: respuesta 403.
-    - Usuario autorizado: ejecución normal de la vista.
-    """
 
+def _cef_required(
+    view_func,
+    permitir_solo_asistencia=False,
+    requerir_metricas=False,
+):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not perf_begin(request):
-            if not get_permisos_cef_request(request)["puede_ver"]:
-                raise PermissionDenied(
-                    "No tenés permisos para acceder al módulo CEF."
-                )
+            _validar_acceso_cef(
+                request,
+                permitir_solo_asistencia,
+                requerir_metricas,
+            )
             return view_func(request, *args, **kwargs)
 
         response = None
         error = None
         try:
             with perf_capture_queries(request):
-                if not get_permisos_cef_request(request)["puede_ver"]:
-                    raise PermissionDenied(
-                        "No tenés permisos para acceder al módulo CEF."
-                    )
+                _validar_acceso_cef(
+                    request,
+                    permitir_solo_asistencia,
+                    requerir_metricas,
+                )
                 response = view_func(request, *args, **kwargs)
         except Exception as exc:
             error = exc
@@ -96,3 +118,25 @@ def cef_required(view_func):
         return response
 
     return login_required(_wrapped_view)
+
+
+def cef_required(view_func):
+    """Protege las vistas generales, excluyendo al rol Profesor CEF."""
+
+    return _cef_required(view_func, permitir_solo_asistencia=False)
+
+
+def cef_asistencia_required(view_func):
+    """Protege las vistas de asistencia, accesibles también para Profesor CEF."""
+
+    return _cef_required(view_func, permitir_solo_asistencia=True)
+
+
+def cef_metricas_required(view_func):
+    """Protege Métricas para Administrador y Director de Servicios Complementarios."""
+
+    return _cef_required(
+        view_func,
+        permitir_solo_asistencia=False,
+        requerir_metricas=True,
+    )

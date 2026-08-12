@@ -23,7 +23,7 @@ from .services import (
     reinscribir_alumno,
     validar_ciclo_escribible,
 )
-from .views_alumnos import MSG_BANCO_ALUMNOS_PENDIENTE
+from .views_alumnos import MSG_BANCO_ALUMNOS_PENDIENTE, _calcular_edad
 from .views_contexto import (
     contexto_base,
     normalizar_vista_cef,
@@ -74,11 +74,16 @@ def _dias_texto(grupo):
 
 
 def _inscripciones_grupo(grupo):
-    return (
+    inscripciones = list(
         CefInscripcion.objects.filter(grupo=grupo)
         .select_related("alumno", "alumno__sexo")
         .order_by("alumno__apellidos", "alumno__nombres")
     )
+    for inscripcion in inscripciones:
+        inscripcion.edad = _calcular_edad(
+            getattr(inscripcion.alumno, "fecha_nacimiento", None)
+        )
+    return inscripciones
 
 
 def _buscar_alumno(cuil):
@@ -110,7 +115,7 @@ def _alumno_row(alumno):
     }
 
 
-def _url_carga_alumno(cuil, next_url, return_label="Volver al curso"):
+def _url_carga_alumno(cuil, next_url, return_label="Volver al grupo"):
     try:
         base = reverse("bnhalumnos:carga_alumno")
     except NoReverseMatch:
@@ -148,13 +153,11 @@ def _url_modal_grupo(
     )
     if destino == "gestionar":
         params["destino"] = "gestionar"
+        params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
+        params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     params["abrir_modal_alumno"] = "1"
     if cuil:
         params["cuil"] = cuil
-    if normalizar_vista_cef(vista_alumnos) == "historial":
-        params["vista_alumnos"] = "historial"
-    if normalizar_vista_cef(vista_docentes) == "historial":
-        params["vista_docentes"] = "historial"
     return f"{reverse('cef:inscripcion_grupo', kwargs={'grupo_id': grupo.pk})}?{urlencode(params)}"
 
 
@@ -185,13 +188,11 @@ def _url_gestionar_grupo(
     if cef_context.get("ciclo"):
         params["ciclo"] = cef_context["ciclo"].pk
     params["origen"] = resolver_origen_gestion_grupo(origen)
+    params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
+    params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     querystring = urlencode(params)
     url = reverse("cef:gestionar_grupo", kwargs={"grupo_id": grupo.pk})
     url = f"{url}?{querystring}" if querystring else url
-    if normalizar_vista_cef(vista_alumnos) == "historial":
-        url = f"{url}&vista_alumnos=historial"
-    if normalizar_vista_cef(vista_docentes) == "historial":
-        url = f"{url}&vista_docentes=historial"
     return f"{url}#{ancla}" if ancla else url
 
 
@@ -259,7 +260,7 @@ def _baja_alumno_grupo(request, grupo, cef_context):
             request.user,
             baja_form.cleaned_data["motivo_baja"],
         )
-        return True, "Alumno dado de baja del curso correctamente."
+        return True, "Alumno dado de baja del grupo correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)
 
@@ -313,25 +314,6 @@ def inscripcion_grupo(request, grupo_id):
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
     grupo = _grupo_seguro(grupo_id, cef_context)
-    if (
-        request.method == "POST"
-        and destino_gestionar
-        and vista_alumnos == "historial"
-    ):
-        mensaje = "Historial es una vista de sólo lectura."
-        if _is_ajax(request):
-            return JsonResponse({"ok": False, "message": mensaje})
-        messages.error(request, mensaje)
-        return redirect(
-            _url_gestionar_grupo(
-                grupo,
-                cef_context,
-                origen,
-                "alumnos-curso",
-                vista_alumnos=vista_alumnos,
-                vista_docentes=vista_docentes,
-            )
-        )
     if request.method == "POST" and not cef_context["puede_operar"]:
         mensaje = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
         if _is_ajax(request):
@@ -378,7 +360,7 @@ def inscripcion_grupo(request, grupo_id):
                 cef_context,
             ),
             "volver_label": (
-                "Volver a alumnos" if origen == "alumnos" else "Volver a cursos"
+                "Volver a alumnos" if origen == "alumnos" else "Volver a Grupos"
             ),
         }
     )
@@ -611,11 +593,8 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
         if volver_gestionar
         else _url_inscripcion_grupo(grupo, cef_context, origen)
     )
-    if volver_gestionar and vista_alumnos == "historial":
-        messages.error(request, "Historial es una vista de sólo lectura.")
-        return redirect(volver_url)
     volver_label = (
-        "Volver a Gestionar curso"
+        "Volver a Gestionar grupo"
         if volver_gestionar
         else "Volver a inscripción"
     )
@@ -627,6 +606,7 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
             grupo=grupo,
             grupo__cueanexo=cef_context["cueanexo"],
             grupo__ciclo=cef_context["ciclo"],
+            estado=CefInscripcion.Estado.ACTIVO,
         ).select_related("alumno", "alumno__sexo"),
         pk=inscripcion_id,
     )
@@ -660,6 +640,8 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
             "volver_label": volver_label,
             "volver_gestionar": volver_gestionar,
             "origen": origen,
+            "vista_alumnos": vista_alumnos,
+            "vista_docentes": vista_docentes,
         }
     )
     return render(request, "cef/inscripcion_grupo_form_cef.html", context)

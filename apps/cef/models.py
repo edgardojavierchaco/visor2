@@ -23,7 +23,9 @@ PADRON_DB_ALIAS = "default"
 ROLES_AUTORIZADOS_CEF = {
     "Administrador",
     "Director de Servicios Complementarios",
+    "profesorcef",
 }
+ROL_PROFESOR_CEF = "profesorcef"
 
 # ============================================================
 # MODELOS EXTERNOS / INTEGRACION
@@ -242,6 +244,15 @@ def normalizar_cuil_usuario(user):
     return cuil
 
 
+def usuario_es_profesor_cef(user, permisos=None):
+    """Indica si el usuario posee el rol restringido de asistencia CEF."""
+
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+
+    return permisos.get("es_profesor_cef", False)
+
+
 def get_cefs_base_queryset():
     """
     Query base contra Padron: filtra solo ofertas CEF de servicios complementarios.
@@ -353,10 +364,15 @@ def obtener_rol_usuario_cef(user):
 def obtener_permisos_usuario_cef(user):
     """Resuelve una sola vez el rol y sus permisos funcionales CEF."""
     rol = obtener_rol_usuario_cef(user)
+    rol_normalizado = (rol or "").strip().casefold()
+    roles_autorizados = {item.casefold() for item in ROLES_AUTORIZADOS_CEF}
+    es_profesor_cef = rol_normalizado == ROL_PROFESOR_CEF.casefold()
     return {
         "rol": rol,
-        "puede_ver": rol in ROLES_AUTORIZADOS_CEF,
-        "es_admin": rol == "Administrador",
+        "puede_ver": rol_normalizado in roles_autorizados,
+        "es_admin": rol_normalizado == "administrador".casefold(),
+        "es_profesor_cef": es_profesor_cef,
+        "solo_asistencia": es_profesor_cef,
     }
 
 
@@ -404,7 +420,8 @@ def get_cefs_cargables_usuario(user, permisos=None):
 
     Regla inicial:
     - Administrador: todos los CEF.
-    - Otros usuarios autorizados: CEF donde su CUIL figura como responsable.
+    - Profesor CEF: CEF con una asignación docente activa.
+    - Director: CEF donde su CUIL figura como responsable.
     """
 
     queryset = get_todos_los_cef()
@@ -417,6 +434,27 @@ def get_cefs_cargables_usuario(user, permisos=None):
 
     if usuario_es_admin_cef(user, permisos=permisos):
         return queryset
+
+    if usuario_es_profesor_cef(user, permisos=permisos):
+        cuil = normalizar_cuil_usuario(user)
+        if not cuil:
+            return queryset.none()
+
+        cueanexos = (
+            CefDocenteGrupo.objects.filter(
+                docente_cuil=cuil,
+                estado=CefDocenteGrupo.Estado.ACTIVO,
+                rol__in=(
+                    CefDocenteGrupo.Rol.TITULAR,
+                    CefDocenteGrupo.Rol.SUPLENTE,
+                ),
+                grupo__estado=CefGrupo.Estado.ACTIVO,
+                grupo__ciclo__activo=True,
+            )
+            .values_list("grupo__cueanexo", flat=True)
+            .distinct()
+        )
+        return queryset.filter(cueanexo__in=cueanexos)
 
     return get_cefs_por_cuil_responsable(user)
 
@@ -739,13 +777,7 @@ class CefTurno(CefAuditoriaMixin):
     - Nocturno (18:00 a 22:00)
     """
 
-    ciclo = models.ForeignKey(
-        CefCiclo,
-        on_delete=models.PROTECT,
-        related_name="turnos",
-    )
-
-    nombre = models.CharField(max_length=80)
+    nombre = models.CharField(max_length=80, unique=True)
     hora_desde_referencia = models.TimeField()
     hora_hasta_referencia = models.TimeField()
     activo = models.BooleanField(default=True)
@@ -753,15 +785,9 @@ class CefTurno(CefAuditoriaMixin):
 
     class Meta:
         db_table = '"cef"."turnos"'
-        ordering = ["-ciclo__anio", "orden", "nombre"]
+        ordering = ["orden", "nombre"]
         verbose_name = "Turno CEF"
         verbose_name_plural = "Turnos CEF"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["ciclo", "nombre"],
-                name="uq_cef_turno_cic_nom",
-            ),
-        ]
 
     def clean(self):
         if (
@@ -1199,9 +1225,6 @@ class CefGrupo(CefAuditoriaMixin):
         if self.hora_inicio and self.hora_fin and self.hora_fin <= self.hora_inicio:
             errors["hora_fin"] = "La hora de fin debe ser posterior a la hora de inicio."
 
-        if self.turno_id and self.ciclo_id and self.turno.ciclo_id != self.ciclo_id:
-            errors["turno"] = "El turno debe pertenecer al mismo ciclo del grupo."
-
         if self.turno_id and self.hora_inicio:
             if self.hora_inicio < self.turno.hora_desde_referencia:
                 errors["hora_inicio"] = "La hora de inicio debe estar dentro del turno seleccionado."
@@ -1334,14 +1357,7 @@ class CefGrupoEstadoMovimiento(CefAuditoriaMixin):
         verbose_name_plural = "Movimientos de estado de grupos CEF"
 
     def clean(self):
-        errors = {}
         self.motivo = (self.motivo or "").strip()
-
-        if self.estado_resultante == CefGrupo.Estado.BAJA and not self.motivo:
-            errors["motivo"] = "Debe indicar el motivo de la baja del grupo."
-
-        if errors:
-            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -1898,7 +1914,12 @@ def validar_docente_grupo_activo(grupo, docente_cuil, rol, excluir_pk=None):
 
     rol_activo = activos.filter(rol=rol).first()
     if rol_activo:
-        raise ValidationError(f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo.")
+        docente_nombre = rol_activo.docente_nombre_snapshot or "Profesor"
+        docente_cuil = rol_activo.docente_cuil or "-"
+        raise ValidationError(
+            f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo: "
+            f"{docente_nombre} (CUIL {docente_cuil})."
+        )
 
 
 def docentes_grupo_tiene_duplicados_activos(grupo):
