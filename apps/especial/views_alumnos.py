@@ -8,11 +8,15 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
+from django.http import Http404
 from django.urls import NoReverseMatch, reverse
-from django.shortcuts import redirect, render
-from .forms import EspecialBusquedaAlumnoForm
+from django.shortcuts import get_object_or_404, redirect, render
+from .forms import EspecialBajaMotivoForm, EspecialBusquedaAlumnoForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
+from .services_alumnos import (
+    dar_baja_alumno_banco,
+)
 from .views_contexto import contexto_base, render_especial
 from .views_inscripcion_seccion import crear_inscripcion_activa
 
@@ -98,6 +102,78 @@ def _pk_post(valor):
         return None
 
 
+def _alumno_banco_seguro(alumno_banco_id, especial_context):
+    alumno_banco_id = _pk_post(alumno_banco_id)
+    if not especial_context["puede_operar"] or not alumno_banco_id:
+        raise Http404("El alumno seleccionado no es válido.")
+    return get_object_or_404(
+        _alumnos_banco_queryset(especial_context).select_related("alumno"),
+        pk=alumno_banco_id,
+    )
+
+
+def _preparar_alumno_baja(alumno_banco, especial_context):
+    alumno_banco.inscripciones_activas = list(
+        AlumnoSeccion.objects.filter(
+            alumno_id=alumno_banco.alumno_id,
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        )
+        .select_related("seccion", "seccion__cd_tipo_seccion", "seccion__turno")
+        .order_by("seccion__nombre_seccion")
+    )
+    return alumno_banco
+
+
+def _alumno_baja_modal(especial_context, alumno_banco_id):
+    if not especial_context["puede_operar"] or not alumno_banco_id:
+        return None
+    return _preparar_alumno_baja(
+        _alumno_banco_seguro(alumno_banco_id, especial_context),
+        especial_context,
+    )
+
+
+def _dar_baja_alumno_especial(request, especial_context):
+    alumno_banco = _preparar_alumno_baja(
+        _alumno_banco_seguro(request.POST.get("alumno_banco_id"), especial_context),
+        especial_context,
+    )
+    baja_form = EspecialBajaMotivoForm(request.POST)
+    if alumno_banco.estado != EspecialAlumnoBanco.Estado.ACTIVO:
+        return (
+            False,
+            "El alumno ya no se encuentra activo en este establecimiento y ciclo.",
+            alumno_banco,
+            baja_form,
+        )
+    if alumno_banco.inscripciones_activas:
+        return (
+            False,
+            "No se puede dar de baja al alumno del banco porque posee inscripciones activas.",
+            alumno_banco,
+            baja_form,
+        )
+    if not baja_form.is_valid():
+        return False, _errores_form(baja_form), alumno_banco, baja_form
+
+    try:
+        dar_baja_alumno_banco(
+            alumno_banco=alumno_banco,
+            user=request.user,
+            motivo_baja=baja_form.cleaned_data["motivo_baja"],
+            alumno_banco_queryset=_alumnos_banco_queryset(especial_context),
+        )
+    except ValidationError as exc:
+        alumno_banco = _preparar_alumno_baja(
+            _alumno_banco_seguro(alumno_banco.pk, especial_context),
+            especial_context,
+        )
+        return False, "; ".join(exc.messages), alumno_banco, baja_form
+    return True, "Alumno dado de baja de Especial correctamente.", alumno_banco, baja_form
+
+
 def _inscribir_alumno_desde_banco(request, especial_context):
     """Inscribe un alumno activo del banco en una seccion del contexto."""
     if not especial_context["puede_operar"]:
@@ -113,11 +189,10 @@ def _inscribir_alumno_desde_banco(request, especial_context):
         messages.error(request, "No se pudo identificar el alumno o la sección.")
         return
 
+    alumno_banco_queryset = _alumnos_banco_queryset(especial_context)
     alumno_banco = (
-        EspecialAlumnoBanco.objects.filter(
+        alumno_banco_queryset.filter(
             pk=alumno_banco_id,
-            cueanexo=especial_context["cueanexo"],
-            ciclo=especial_context["ciclo"],
             estado=EspecialAlumnoBanco.Estado.ACTIVO,
         )
         .select_related("alumno")
@@ -152,6 +227,7 @@ def _inscribir_alumno_desde_banco(request, especial_context):
                 cueanexo=especial_context["cueanexo"],
                 ciclo=especial_context["ciclo"],
             ),
+            alumno_banco_queryset=alumno_banco_queryset,
         )
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
@@ -167,6 +243,15 @@ def _inscribir_alumno_desde_banco(request, especial_context):
             if creada
             else "La inscripción del alumno fue reactivada correctamente.",
         )
+
+
+def _alumnos_banco_queryset(especial_context):
+    if not especial_context["puede_operar"]:
+        return EspecialAlumnoBanco.objects.none()
+    return EspecialAlumnoBanco.objects.filter(
+        cueanexo=especial_context["cueanexo"],
+        ciclo=especial_context["ciclo"],
+    )
 
 
 def _alumnos_banco(especial_context):
@@ -264,8 +349,28 @@ def alumnos(request):
     cuil_error = ""
     alumno_en_banco = False
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
+    abrir_modal_baja = request.GET.get("abrir_modal_baja") == "1"
+    baja_modal_alumno = None
+    baja_form = EspecialBajaMotivoForm()
+    baja_error = ""
+    busqueda_form = EspecialBusquedaAlumnoForm()
 
-    if request.method == "POST":
+    if request.method == "POST" and request.POST.get("accion") == "baja_especial":
+        if not especial_context["puede_operar"]:
+            messages.error(
+                request,
+                "Seleccioná un CUE-Anexo y un ciclo lectivo para dar de baja alumnos.",
+            )
+            return redirect(_url_alumnos(especial_context))
+        baja_ok, baja_message, baja_modal_alumno, baja_form = _dar_baja_alumno_especial(
+            request,
+            especial_context,
+        )
+        if baja_ok:
+            messages.success(request, baja_message)
+            return redirect(_url_alumnos(especial_context))
+        baja_error = baja_message
+    elif request.method == "POST":
         if request.POST.get("accion") == "inscribir_seccion":
             _inscribir_alumno_desde_banco(request, especial_context)
             return redirect(_url_alumnos(especial_context))
@@ -319,6 +424,12 @@ def alumnos(request):
         elif request.GET.get("cuil"):
             cuil_buscado = _solo_digitos(request.GET.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
+
+        if abrir_modal_baja:
+            baja_modal_alumno = _alumno_baja_modal(
+                especial_context,
+                request.GET.get("alumno_banco_id"),
+            )
 
     next_url = _url_modal_alumnos(especial_context, cuil_buscado)
     url_alumnos = _url_alumnos(especial_context)
@@ -376,6 +487,10 @@ def alumnos(request):
             "modal_alumno_abierto": abrir_modal,
             "modal_action_url": _url_modal_alumnos(especial_context),
             "modal_volver_url": url_alumnos,
+            "baja_action_url": url_alumnos,
+            "baja_modal_alumno": baja_modal_alumno,
+            "baja_form": baja_form,
+            "baja_error": baja_error,
         }
     )
     return render_especial(

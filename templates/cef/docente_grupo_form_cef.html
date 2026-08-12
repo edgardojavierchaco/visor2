@@ -47,6 +47,7 @@
             {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
             {% if volver_gestionar %}<input type="hidden" name="volver" value="gestionar">{% endif %}
             {% if volver_gestionar %}<input type="hidden" name="origen" value="{{ origen }}">{% endif %}
+            {% if volver_gestionar %}<input type="hidden" name="vista_alumnos" value="{{ vista_alumnos }}"><input type="hidden" name="vista_docentes" value="{{ vista_docentes }}">{% endif %}
 
             {% if form.non_field_errors %}
                 <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>

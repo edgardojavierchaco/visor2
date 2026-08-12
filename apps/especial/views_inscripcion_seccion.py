@@ -14,6 +14,7 @@ from django.urls import NoReverseMatch, reverse
 from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
+from .services_alumnos import bloquear_alumno_banco_activo
 from .views_contexto import contexto_base, redirect_con_contexto
 
 
@@ -70,26 +71,22 @@ def crear_inscripcion_activa(
     alumno,
     user,
     seccion_queryset,
+    alumno_banco_queryset,
 ):
     """Crea o reactiva una inscripción validando contexto, banco y cupo."""
     with transaction.atomic():
+        bloquear_alumno_banco_activo(
+            alumno=alumno,
+            cueanexo=seccion.cueanexo,
+            ciclo=seccion.ciclo,
+            alumno_banco_queryset=alumno_banco_queryset,
+        )
         seccion_bloqueada = get_object_or_404(
             seccion_queryset.select_for_update(),
             pk=seccion.pk,
         )
         if seccion_bloqueada.estado != SeccionEspecial.Estado.ACTIVO:
             raise ValidationError("La sección no está activa.")
-
-        alumno_en_banco = EspecialAlumnoBanco.objects.filter(
-            cueanexo=seccion_bloqueada.cueanexo,
-            ciclo=seccion_bloqueada.ciclo,
-            alumno=alumno,
-            estado=EspecialAlumnoBanco.Estado.ACTIVO,
-        ).exists()
-        if not alumno_en_banco:
-            raise ValidationError(
-                "El alumno no está activo en el banco de este establecimiento y ciclo."
-            )
 
         inscripcion_activa = (
             AlumnoSeccion.objects.select_for_update()
@@ -114,11 +111,7 @@ def crear_inscripcion_activa(
             .first()
         )
         if inscripcion_baja:
-            dar_alta_inscripcion_seccion(
-                inscripcion_baja,
-                user,
-                seccion_queryset=seccion_queryset,
-            )
+            _reactivar_inscripcion_bloqueada(inscripcion_baja, user, seccion_bloqueada)
             return inscripcion_baja, False
 
         total_activos = AlumnoSeccion.objects.filter(
@@ -142,15 +135,62 @@ def crear_inscripcion_activa(
         )
 
 
-def dar_alta_inscripcion_seccion(inscripcion, user, seccion_queryset=None):
-    """Reactiva una inscripción bajo bloqueo de la sección y control de cupo."""
+def _reactivar_inscripcion_bloqueada(inscripcion_bloqueada, user, seccion):
+    duplicado = AlumnoSeccion.objects.filter(
+        seccion=seccion,
+        alumno_id=inscripcion_bloqueada.alumno_id,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+    ).exclude(pk=inscripcion_bloqueada.pk).exists()
+    if duplicado:
+        raise ValidationError(
+            "El alumno ya tiene otra inscripción activa en esta sección."
+        )
+
+    total_activos = AlumnoSeccion.objects.filter(
+        seccion=seccion,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+    ).count()
+    if total_activos >= seccion.capacidad_total:
+        raise ValidationError(
+            "No se puede reinscribir: la sección alcanzó su capacidad máxima."
+        )
+
+    inscripcion_bloqueada.estado = AlumnoSeccion.Estado.ACTIVO
+    inscripcion_bloqueada.fecha_baja = None
+    inscripcion_bloqueada.motivo_baja = ""
+    inscripcion_bloqueada.actualizado_por = user
+    inscripcion_bloqueada.save(
+        update_fields=[
+            "estado",
+            "fecha_baja",
+            "motivo_baja",
+            "actualizado_por",
+            "actualizado_en",
+        ]
+    )
+
+
+def dar_alta_inscripcion_seccion(
+    inscripcion,
+    user,
+    *,
+    seccion_queryset,
+    alumno_banco_queryset,
+):
+    """Reactiva una inscripción bajo el orden de locks del dominio."""
     with transaction.atomic():
-        if seccion_queryset is None:
-            queryset = SeccionEspecial.objects.filter(pk=inscripcion.seccion_id)
-        else:
-            queryset = seccion_queryset
+        seccion_sin_bloqueo = get_object_or_404(
+            seccion_queryset,
+            pk=inscripcion.seccion_id,
+        )
+        bloquear_alumno_banco_activo(
+            alumno=inscripcion.alumno_id,
+            cueanexo=seccion_sin_bloqueo.cueanexo,
+            ciclo=seccion_sin_bloqueo.ciclo_id,
+            alumno_banco_queryset=alumno_banco_queryset,
+        )
         seccion = get_object_or_404(
-            queryset.select_for_update(),
+            seccion_queryset.select_for_update(),
             pk=inscripcion.seccion_id,
         )
         inscripcion_bloqueada = get_object_or_404(
@@ -160,43 +200,9 @@ def dar_alta_inscripcion_seccion(inscripcion, user, seccion_queryset=None):
         )
         if inscripcion_bloqueada.estado == AlumnoSeccion.Estado.ACTIVO:
             raise ValidationError("La inscripción ya está activa.")
-
-        duplicado = AlumnoSeccion.objects.filter(
-            seccion=seccion,
-            alumno=inscripcion_bloqueada.alumno,
-            estado=AlumnoSeccion.Estado.ACTIVO,
-        ).exclude(pk=inscripcion_bloqueada.pk).exists()
-        if duplicado:
-            raise ValidationError(
-                "El alumno ya tiene otra inscripción activa en esta sección."
-            )
-
-        total_activos = AlumnoSeccion.objects.filter(
-            seccion=seccion,
-            estado=AlumnoSeccion.Estado.ACTIVO,
-        ).count()
-        if total_activos >= seccion.capacidad_total:
-            raise ValidationError(
-                "No se puede reinscribir: la sección alcanzó su capacidad máxima."
-            )
-
-        inscripcion_bloqueada.estado = AlumnoSeccion.Estado.ACTIVO
         inscripcion_bloqueada.fecha_inscripcion = inscripcion.fecha_inscripcion
         inscripcion_bloqueada.observaciones = inscripcion.observaciones
-        inscripcion_bloqueada.fecha_baja = None
-        inscripcion_bloqueada.motivo_baja = ""
-        inscripcion_bloqueada.actualizado_por = user
-        inscripcion_bloqueada.save(
-            update_fields=[
-                "estado",
-                "fecha_inscripcion",
-                "observaciones",
-                "fecha_baja",
-                "motivo_baja",
-                "actualizado_por",
-                "actualizado_en",
-            ]
-        )
+        _reactivar_inscripcion_bloqueada(inscripcion_bloqueada, user, seccion)
 
 
 def dar_baja_inscripcion_seccion(inscripcion, user):
@@ -345,6 +351,10 @@ def inscripcion_seccion(request, seccion_id):
                             cueanexo=especial_context["cueanexo"],
                             ciclo=especial_context["ciclo"],
                         ),
+                        alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                            cueanexo=especial_context["cueanexo"],
+                            ciclo=especial_context["ciclo"],
+                        ),
                     )
                     if inscripcion_abierta:
                         messages.info(
@@ -465,6 +475,10 @@ def editar_inscripcion_seccion(request, seccion_id, inscripcion_id):
                         inscripcion,
                         request.user,
                         seccion_queryset=SeccionEspecial.objects.filter(
+                            cueanexo=especial_context["cueanexo"],
+                            ciclo=especial_context["ciclo"],
+                        ),
+                        alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
                             cueanexo=especial_context["cueanexo"],
                             ciclo=especial_context["ciclo"],
                         ),

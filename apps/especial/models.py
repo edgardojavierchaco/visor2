@@ -765,6 +765,7 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
     fecha_inscripcion = models.DateField(default=timezone.localdate)
     fecha_baja = models.DateField(blank=True, null=True)
     motivo_baja = models.CharField(max_length=255, blank=True)
+    #Matricula_compartida = models.CharField(max_length = 9, blank = True, null = True)
     observaciones = models.TextField(blank=True)
 
     class Meta:

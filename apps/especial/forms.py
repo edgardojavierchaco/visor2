@@ -73,6 +73,29 @@ class EspecialBusquedaDocenteForm(forms.Form):
             raise ValidationError("El CUIL debe tener 11 dígitos.")
         return cuil
 
+
+class EspecialBajaMotivoForm(forms.Form):
+    """Formulario de motivo obligatorio para la baja del banco Especial."""
+
+    motivo_baja = forms.CharField(
+        label="Motivo de baja",
+        max_length=EspecialAlumnoBanco._meta.get_field("motivo_baja").max_length,
+        required=True,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_motivo_baja(self):
+        motivo = (self.cleaned_data.get("motivo_baja") or "").strip()
+        if not motivo:
+            raise forms.ValidationError("Debe indicar el motivo de la baja.")
+        return motivo
+
+
 class EspecialSeccionForm(forms.ModelForm):
     """Formulario de creación/edición de sección de Educación Especial."""
     class Meta:

@@ -30,12 +30,12 @@
                 <div class="small text-muted">Rol: {{ asignacion.get_rol_display }}</div>
             </div>
             <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:gestionar_grupo' asignacion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=profesores#profesores-curso">
-                <i class="fa-solid fa-clipboard-list"></i> Gestionar curso
+                <i class="fa-solid fa-clipboard-list"></i> Gestionar grupo
             </a>
         </div>
     {% endfor %}
     <p class="text-muted mt-3 mb-0">
-        Primero debe dar de baja estas asignaciones desde la gestión de cada curso.
+                Primero debe dar de baja estas asignaciones desde la gestión de cada grupo.
     </p>
     <div class="cef-form-actions mt-4">
         <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>
@@ -55,9 +55,8 @@
         </p>
 
         <div class="mb-3">
-            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">Motivo de baja *</label>
+            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">Motivo de baja (opcional)</label>
             {{ baja_form.motivo_baja }}
-            <div class="form-text">Obligatorio. Indicá brevemente el motivo de la baja.</div>
             {% for error in baja_form.motivo_baja.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
 

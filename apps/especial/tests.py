@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError, close_old_connections
+from django.db import IntegrityError, close_old_connections, connection
 from django.http import Http404, HttpResponse
 from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
@@ -40,7 +40,8 @@ from .views_contexto import (
 from .views_carga_seccion import _alta_docente_nuevo_gestionar
 from .views_ciclo import _exigir_admin
 from .views_docentes_seccion import dar_alta_docente_seccion
-from .views_inscripcion_seccion import dar_alta_inscripcion_seccion
+from .services_alumnos import dar_baja_alumno_banco
+from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
 from .views_localizaciones import (
     CACHE_TTL_LOCALIZACIONES_ESPECIAL,
     CACHE_VERSION_LOCALIZACIONES_ESPECIAL,
@@ -1079,7 +1080,11 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
         queryset.model = SeccionEspecial
         queryset.select_for_update.return_value = queryset
         queryset.get.side_effect = SeccionEspecial.DoesNotExist
-        inscripcion = SimpleNamespace(pk=8, seccion_id=7)
+        banco_queryset = MagicMock()
+        banco_queryset.select_for_update.return_value.filter.return_value.order_by.return_value = [
+            SimpleNamespace(estado=EspecialAlumnoBanco.Estado.ACTIVO)
+        ]
+        inscripcion = SimpleNamespace(pk=8, seccion_id=7, alumno_id=9)
 
         with patch("apps.especial.views_inscripcion_seccion.SeccionEspecial.objects.filter") as fallback:
             with self.assertRaises(Http404):
@@ -1087,6 +1092,7 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
                     inscripcion,
                     SimpleNamespace(),
                     seccion_queryset=queryset,
+                    alumno_banco_queryset=banco_queryset,
                 )
 
         fallback.assert_not_called()
@@ -1344,6 +1350,18 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 },
             )
 
+    def _post_baja_desde_alumnos(self, alumno_banco_id, motivo="Baja solicitada"):
+        url = reverse("especial:alumnos")
+        with self._forzar_director():
+            return self.client.post(
+                f"{url}?cueanexo={self.ctx.cueanexo_permitido}&ciclo={self.ctx.ciclo_activo.pk}",
+                {
+                    "accion": "baja_especial",
+                    "alumno_banco_id": alumno_banco_id,
+                    "motivo_baja": motivo,
+                },
+            )
+
     def _crear_inscripcion_baja(self, alumno, seccion):
         return _crear_inscripcion_db(self.ctx, alumno, seccion, estado=AlumnoSeccion.Estado.BAJA)
 
@@ -1439,7 +1457,18 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
             try:
                 barrier.wait()
                 inscripcion = AlumnoSeccion.objects.get(pk=inscripcion_pk)
-                dar_alta_inscripcion_seccion(inscripcion, self.admin)
+                dar_alta_inscripcion_seccion(
+                    inscripcion,
+                    self.admin,
+                    seccion_queryset=SeccionEspecial.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                )
                 resultados.append(("ok", inscripcion_pk))
             except Exception as exc:  # noqa: BLE001
                 resultados.append(("error", inscripcion_pk, exc))
@@ -1490,6 +1519,10 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 cueanexo=self.ctx.cueanexo_permitido,
                 ciclo=self.ctx.ciclo_activo,
             ),
+            alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                cueanexo=self.ctx.cueanexo_permitido,
+                ciclo=self.ctx.ciclo_activo,
+            ),
         )
 
         with self.assertRaises(ValidationError):
@@ -1497,6 +1530,10 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 inscripcion_segunda,
                 self.admin,
                 seccion_queryset=SeccionEspecial.objects.filter(
+                    cueanexo=self.ctx.cueanexo_permitido,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+                alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
                     cueanexo=self.ctx.cueanexo_permitido,
                     ciclo=self.ctx.ciclo_activo,
                 ),
@@ -1656,6 +1693,284 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 seccion=self.seccion,
             ).count(),
             1,
+        )
+
+    def test_baja_alumno_valida_conserva_registro_y_persiste_auditoria(self):
+        alumno = self._crear_alumno_y_banco(19, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        total_antes = EspecialAlumnoBanco.objects.count()
+
+        response = self._post_baja_desde_alumnos(banco.pk, "  Cambio de trayectoria  ")
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.BAJA)
+        self.assertEqual(banco.fecha_baja, date.today())
+        self.assertEqual(banco.motivo_baja, "Cambio de trayectoria")
+        self.assertEqual(EspecialAlumnoBanco.objects.count(), total_antes)
+        self.assertFalse(AlumnoSeccion.objects.filter(alumno=alumno).exists())
+
+        with self._forzar_director():
+            lista_response = self.client.get(
+                reverse("especial:alumnos"),
+                {
+                    "cueanexo": self.ctx.cueanexo_permitido,
+                    "ciclo": self.ctx.ciclo_activo.pk,
+                },
+            )
+
+        self.assertContains(lista_response, banco.fecha_baja.strftime("%d/%m/%Y"))
+        self.assertContains(lista_response, "Cambio de trayectoria")
+
+    def test_baja_alumno_rechaza_motivo_vacio_sin_mutar(self):
+        alumno = self._crear_alumno_y_banco(20, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        response = self._post_baja_desde_alumnos(banco.pk, "   ")
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+        self.assertFalse(banco.fecha_baja)
+        self.assertFalse(banco.motivo_baja)
+        self.assertFalse(response.context["modal_alumno_abierto"])
+        self.assertEqual(response.context["baja_modal_alumno"].pk, banco.pk)
+
+    def test_baja_alumno_rechaza_inscripciones_activas_y_no_las_elimina(self):
+        seccion_dos = _crear_seccion_db(self.ctx, self.ctx.cueanexo_permitido, "Seccion 2", capacidad=2)
+        alumno = self._crear_alumno_y_banco(21, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        _crear_inscripcion_db(self.ctx, alumno, self.seccion, estado=AlumnoSeccion.Estado.ACTIVO)
+        _crear_inscripcion_db(self.ctx, alumno, seccion_dos, estado=AlumnoSeccion.Estado.ACTIVO)
+
+        response = self._post_baja_desde_alumnos(banco.pk)
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+        self.assertEqual(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).count(),
+            2,
+        )
+        self.assertFalse(response.context["modal_alumno_abierto"])
+        self.assertEqual(response.context["baja_modal_alumno"].pk, banco.pk)
+
+    def test_get_baja_abre_solo_el_modal_de_baja(self):
+        alumno = self._crear_alumno_y_banco(29, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+
+        with self._forzar_director():
+            response = self.client.get(
+                reverse("especial:alumnos"),
+                {
+                    "cueanexo": self.ctx.cueanexo_permitido,
+                    "ciclo": self.ctx.ciclo_activo.pk,
+                    "abrir_modal_baja": "1",
+                    "alumno_banco_id": banco.pk,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["baja_modal_alumno"].pk, banco.pk)
+        self.assertFalse(response.context["modal_alumno_abierto"])
+
+    def test_baja_no_muestra_acciones_de_alta_ni_inscripcion(self):
+        alumno = self._crear_alumno_y_banco(30, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        self._post_baja_desde_alumnos(banco.pk)
+
+        with self._forzar_director():
+            response = self.client.get(
+                reverse("especial:alumnos"),
+                {
+                    "cueanexo": self.ctx.cueanexo_permitido,
+                    "ciclo": self.ctx.ciclo_activo.pk,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cef-row-inactive")
+        self.assertNotContains(response, "Dar de baja de Especial")
+        self.assertNotContains(response, "Inscribir a secci&oacute;n")
+
+    def test_baja_alumno_rechaza_banco_de_otro_contexto_sin_mutar(self):
+        alumno = _crear_alumno_db(self.ctx, 22)
+        banco_ajeno = _crear_alumno_banco_db(self.ctx, alumno, self.seccion_ajena)
+
+        response = self._post_baja_desde_alumnos(banco_ajeno.pk)
+
+        banco_ajeno.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(banco_ajeno.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+
+    def test_baja_alumno_rechaza_banco_de_otro_ciclo_sin_mutar(self):
+        seccion_otro_ciclo = _crear_seccion_db(
+            self.ctx,
+            self.ctx.cueanexo_permitido,
+            "Seccion otro ciclo",
+            ciclo=self.ctx.ciclo_inactivo,
+        )
+        alumno = _crear_alumno_db(self.ctx, 23)
+        banco_ajeno = _crear_alumno_banco_db(self.ctx, alumno, seccion_otro_ciclo)
+
+        response = self._post_baja_desde_alumnos(banco_ajeno.pk)
+
+        banco_ajeno.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(banco_ajeno.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+
+    def test_baja_alumno_ya_baja_no_repite_ni_altera(self):
+        alumno = self._crear_alumno_y_banco(24, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        fecha_previa = date(2026, 8, 1)
+        EspecialAlumnoBanco.objects.filter(pk=banco.pk).update(
+            estado=EspecialAlumnoBanco.Estado.BAJA,
+            fecha_baja=fecha_previa,
+            motivo_baja="Baja previa",
+        )
+
+        response = self._post_baja_desde_alumnos(banco.pk, "Otro motivo")
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.BAJA)
+        self.assertEqual(banco.fecha_baja, fecha_previa)
+        self.assertEqual(banco.motivo_baja, "Baja previa")
+
+    def test_despues_de_baja_no_crea_inscripcion_activa(self):
+        alumno = self._crear_alumno_y_banco(25, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        self._post_baja_desde_alumnos(banco.pk)
+
+        response = self._post_inscribir_desde_alumnos(banco.pk, self.seccion.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).exists()
+        )
+
+    def test_despues_de_baja_no_reactiva_inscripcion_en_baja(self):
+        alumno = self._crear_alumno_y_banco(26, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        inscripcion = self._crear_inscripcion_baja(alumno, self.seccion)
+        self._post_baja_desde_alumnos(banco.pk)
+
+        with self.assertRaises(ValidationError):
+            dar_alta_inscripcion_seccion(
+                inscripcion,
+                self.admin,
+                seccion_queryset=SeccionEspecial.objects.filter(
+                    cueanexo=self.ctx.cueanexo_permitido,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+                alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                    cueanexo=self.ctx.cueanexo_permitido,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+            )
+
+        inscripcion.refresh_from_db()
+        self.assertEqual(inscripcion.estado, AlumnoSeccion.Estado.BAJA)
+
+    def test_baja_con_inscripcion_activa_rechaza_ids_manipulados_sin_mutar(self):
+        alumno = self._crear_alumno_y_banco(27, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        _crear_inscripcion_db(self.ctx, alumno, self.seccion, estado=AlumnoSeccion.Estado.ACTIVO)
+
+        response = self._post_baja_desde_alumnos(
+            banco.pk,
+            "Motivo válido",
+        )
+
+        banco.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(banco.estado, EspecialAlumnoBanco.Estado.ACTIVO)
+        self.assertTrue(
+            AlumnoSeccion.objects.filter(
+                alumno=alumno,
+                seccion=self.seccion,
+                estado=AlumnoSeccion.Estado.ACTIVO,
+            ).exists()
+        )
+
+    def test_concurrencia_baja_vs_inscripcion_no_deja_estado_inconsistente(self):
+        if connection.vendor != "postgresql":
+            self.skipTest("La prueba de locks requiere PostgreSQL.")
+
+        alumno = self._crear_alumno_y_banco(28, self.seccion)
+        banco = self._banco_de_alumno(alumno, self.seccion)
+        barrier = threading.Barrier(2)
+        resultados = []
+
+        def trabajo_baja():
+            close_old_connections()
+            try:
+                barrier.wait()
+                banco_local = EspecialAlumnoBanco.objects.get(pk=banco.pk)
+                dar_baja_alumno_banco(
+                    alumno_banco=banco_local,
+                    user=self.admin,
+                    motivo_baja="Baja concurrente",
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                )
+                resultados.append(("baja", "ok"))
+            except Exception as exc:  # noqa: BLE001
+                resultados.append(("baja", exc))
+            finally:
+                close_old_connections()
+
+        def trabajo_inscripcion():
+            close_old_connections()
+            try:
+                barrier.wait()
+                seccion_local = SeccionEspecial.objects.get(pk=self.seccion.pk)
+                alumno_local = Alumno.objects.get(pk=alumno.pk)
+                crear_inscripcion_activa(
+                    seccion=seccion_local,
+                    alumno=alumno_local,
+                    user=self.admin,
+                    seccion_queryset=SeccionEspecial.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                )
+                resultados.append(("inscripcion", "ok"))
+            except Exception as exc:  # noqa: BLE001
+                resultados.append(("inscripcion", exc))
+            finally:
+                close_old_connections()
+
+        hilos = [
+            threading.Thread(target=trabajo_baja),
+            threading.Thread(target=trabajo_inscripcion),
+        ]
+        for hilo in hilos:
+            hilo.start()
+        for hilo in hilos:
+            hilo.join()
+
+        banco.refresh_from_db()
+        inscripcion_activa = AlumnoSeccion.objects.filter(
+            alumno=alumno,
+            seccion=self.seccion,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).exists()
+        self.assertFalse(
+            banco.estado == EspecialAlumnoBanco.Estado.BAJA and inscripcion_activa
         )
 
     def test_alta_docente_nuevo_valida_y_persiste(self):
