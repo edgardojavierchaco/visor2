@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import CharField, Func, Q, Value
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, Trim
 from django.utils import timezone
 from apps.bnhalumnos.models import Alumno
 
@@ -206,10 +206,13 @@ def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
         return False
-    return EspecialPadronOferta.objects.using(PADRON_DB_ALIAS).filter(
-        cueanexo=cueanexo,
-        oferta=OFERTA_MATRICULA_COMPARTIDA,
-    ).exists()
+    return (
+        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        .filter(cueanexo=cueanexo)
+        .annotate(oferta_normalizada=Trim("oferta"))
+        .filter(oferta_normalizada=OFERTA_MATRICULA_COMPARTIDA)
+        .exists()
+    )
 
 
 # ============================================================

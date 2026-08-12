@@ -1,5 +1,6 @@
 # apps/especial/views_alumnos.py
 # -*- coding: utf-8 -*-
+import logging
 import re
 from urllib.parse import urlencode
 from django.apps import apps
@@ -31,6 +32,8 @@ from .services_alumnos import (
 )
 from .views_contexto import contexto_base, render_especial
 from .views_inscripcion_seccion import crear_inscripcion_activa
+
+logger = logging.getLogger(__name__)
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
     "El banco de alumnos de Educación Especial está pendiente de creación en base de datos."
@@ -115,7 +118,11 @@ def _matricula_compartida_habilitada(especial_context):
             especial_context.get("cueanexo")
         )
     except (OperationalError, ProgrammingError):
-        return False
+        logger.exception(
+            "No se pudo verificar la oferta de matrícula compartida para el CUE-Anexo %s.",
+            especial_context.get("cueanexo"),
+        )
+        return None
 
 
 def _matricula_compartida_form(data, especial_context, habilitada):
@@ -237,19 +244,20 @@ def _actualizar_matricula_compartida(request, especial_context, habilitada):
 def _serializar_cueanexos_matricula_compartida(request, especial_context):
     """Busca CUE-Anexos del padrón general, limitados y sin duplicar."""
     term = (request.GET.get("q") or "").strip()[:80]
-    if len(term) < 2:
-        return []
-
-    term_digits = _solo_digitos(term)
-    query = Q(nom_est__icontains=term)
-    if term_digits:
-        query |= Q(cueanexo__icontains=term_digits)
-
     queryset = (
         EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
-        .filter(query)
         .exclude(cueanexo=especial_context["cueanexo"])
         .exclude(cueanexo__isnull=True)
+    )
+    if term:
+        term_digits = _solo_digitos(term)
+        query = Q(nom_est__icontains=term)
+        if term_digits:
+            query |= Q(cueanexo__icontains=term_digits)
+        queryset = queryset.filter(query)
+
+    queryset = (
+        queryset
         .order_by("cueanexo", "nom_est", "id")
         .distinct("cueanexo")
         .values("cueanexo", "nom_est")[:20]
@@ -281,7 +289,15 @@ def buscar_cueanexos_matricula_compartida(request):
     especial_context = context["especial_context"]
     if not especial_context["puede_operar"]:
         return JsonResponse({"results": []})
-    if not _matricula_compartida_habilitada(especial_context):
+    matricula_compartida_habilitada = _matricula_compartida_habilitada(
+        especial_context
+    )
+    if matricula_compartida_habilitada is None:
+        return JsonResponse(
+            {"detail": "No se pudo consultar el padrón en este momento."},
+            status=503,
+        )
+    if not matricula_compartida_habilitada:
         return JsonResponse(
             {"detail": "La matrícula compartida no está habilitada para este CUE-Anexo."},
             status=403,
@@ -293,7 +309,13 @@ def buscar_cueanexos_matricula_compartida(request):
             especial_context,
         )
     except (OperationalError, ProgrammingError):
-        return JsonResponse({"results": []})
+        logger.exception(
+            "No se pudo buscar CUE-Anexos de matrícula compartida en el padrón."
+        )
+        return JsonResponse(
+            {"detail": "No se pudo consultar el padrón en este momento."},
+            status=503,
+        )
     return JsonResponse({"results": resultados, "pagination": {"more": False}})
 
 
