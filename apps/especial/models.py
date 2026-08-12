@@ -307,6 +307,7 @@ class EspecialCiclo(EspecialAuditoriaMixin):
     fecha_fin = models.DateField(blank=True, null=True)
     activo = models.BooleanField(default=True)
     actual = models.BooleanField(default=False)
+    cerrado = models.BooleanField(default=False)
 
     class Meta:
         db_table = '"especial"."ciclos"'
@@ -322,14 +323,23 @@ class EspecialCiclo(EspecialAuditoriaMixin):
         ]
 
     def clean(self):
+        if self.cerrado and self.actual:
+            raise ValidationError(
+                {"cerrado": "Un ciclo cerrado no puede estar marcado como actual."}
+            )
+
         if (
             self.fecha_inicio
             and self.fecha_fin
             and self.fecha_fin < self.fecha_inicio
         ):
-            raise ValidationError({
-                "fecha_fin": "La fecha de fin no puede ser anterior a la de inicio."
-            })
+            raise ValidationError(
+                {
+                    "fecha_fin": (
+                        "La fecha de fin no puede ser anterior a la de inicio."
+                    )
+                }
+            )
 
     def __str__(self):
         return str(self.anio)
@@ -588,6 +598,7 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
 
     def clean(self):
         errors = {}
+
         cueanexo_norm = normalizar_cueanexo(self.cueanexo)
         if not cueanexo_norm:
             errors["cueanexo"] = "CUE-Anexo inválido."
@@ -595,13 +606,19 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
             self.cueanexo = cueanexo_norm
 
         if self.fecha_baja and self.fecha_baja < self.fecha_alta:
-            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de alta."
-        
+            errors["fecha_baja"] = (
+                "La fecha de baja no puede ser anterior a la de alta."
+            )
+
         if self.estado == self.Estado.BAJA and not self.fecha_baja:
-            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
-            
+            errors["fecha_baja"] = (
+                "Debe indicar fecha de baja cuando el estado es Baja."
+            )
+
         if self.estado != self.Estado.BAJA and self.motivo_baja:
-            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+            errors["motivo_baja"] = (
+                "Solo debe indicar motivo de baja cuando el estado es Baja."
+            )
 
         if errors:
             raise ValidationError(errors)

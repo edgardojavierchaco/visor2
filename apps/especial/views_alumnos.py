@@ -170,7 +170,7 @@ def _inscribir_alumno_desde_banco(request, especial_context):
 
 
 def _alumnos_banco(especial_context):
-    if not especial_context["puede_operar"]:
+    if not especial_context["puede_consultar"]:
         return EspecialAlumnoBanco.objects.none()
     return (
         EspecialAlumnoBanco.objects.filter(
@@ -258,6 +258,13 @@ def _asegurar_alumno_banco(alumno, especial_context, user):
 def alumnos(request):
     context = contexto_base(request, "alumnos")
     especial_context = context["especial_context"]
+
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
+            request,
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
+        )
+        return redirect(request.get_full_path())
     
     alumno = None
     cuil_buscado = ""

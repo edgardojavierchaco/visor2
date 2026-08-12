@@ -405,7 +405,7 @@
                                             <span style="font-size:.8rem;color:#64748b;font-style:italic">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
                                         {% endif %}
 
-                                        {% if url_editar_alumno %}
+                                        {% if especial_context.puede_operar and url_editar_alumno %}
                                             <a class="cef-modal-link" href="{{ url_editar_alumno }}">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                             </a>

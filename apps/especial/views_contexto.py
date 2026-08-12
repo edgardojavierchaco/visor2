@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
 from django.core.cache import cache
+from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.urls import NoReverseMatch, reverse
 
@@ -307,7 +308,9 @@ def _resolver_cueanexo(request, options):
 
 def _resolver_ciclo(request):
     """Resuelve el ciclo lectivo desde GET/POST."""
-    ciclos = list(EspecialCiclo.objects.filter(activo=True).order_by("-anio"))
+    ciclos = list(
+        EspecialCiclo.objects.filter(Q(activo=True) | Q(cerrado=True)).order_by("-anio")
+    )
     if "ciclo" in request.GET:
         raw = request.GET.get("ciclo")
     elif "ciclo_contexto" in request.POST:
@@ -430,7 +433,9 @@ def resolver_contexto_operativo(request, scope="cargables"):
         "querystring": _context_querystring(cueanexo, ciclo),
         "alumnos_url": _alumnos_url(),
         "es_admin_especial": permisos["es_admin"],
-        "puede_operar": bool(cueanexo and ciclo),
+        "ciclo_cerrado": bool(ciclo and ciclo.cerrado),
+        "puede_consultar": bool(cueanexo and ciclo),
+        "puede_operar": bool(cueanexo and ciclo and not ciclo.cerrado),
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),
     }

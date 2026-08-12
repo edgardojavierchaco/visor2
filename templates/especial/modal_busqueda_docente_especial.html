@@ -275,7 +275,7 @@
                                     {% endif %}
 
                                     {# Botón editar: usa url_editar_docente (enviado por views_docentes.py) #}
-                                    {% if url_editar_docente %}
+                                    {% if especial_context.puede_operar and url_editar_docente %}
                                         <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_docente }}" target="_blank" rel="noopener">
                                             <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                         </a>

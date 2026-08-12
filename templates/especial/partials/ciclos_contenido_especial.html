@@ -1,3 +1,246 @@
+<style>
+    #especial-content-region .cef-field.is-checkbox-field .cef-switch-line {
+        position: relative !important;
+        display: block !important;
+        min-height: 2.5rem !important;
+        padding: 0.6rem 0.75rem 0.6rem 2.35rem !important;
+        margin: 0 !important;
+        cursor: pointer;
+    }
+
+    #especial-content-region .cef-field.is-checkbox-field .cef-switch-line input[type="checkbox"] {
+        position: absolute !important;
+        top: 50% !important;
+        left: 0.8rem !important;
+        width: 1rem !important;
+        height: 1rem !important;
+        margin: 0 !important;
+        transform: translateY(-50%) !important;
+        accent-color: #0d6efd;
+    }
+
+    #especial-content-region .cef-field.is-checkbox-field .cef-switch-line span {
+        display: block !important;
+        margin: 0 !important;
+        line-height: 1.2rem !important;
+    }
+
+    #especial-content-region .especial-ciclo-admin-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        margin-bottom: 1.15rem;
+        border-bottom: 1px solid var(--border-color, #dee2e6);
+    }
+
+    #especial-content-region .especial-ciclo-admin-summary-item {
+        min-width: 0;
+        padding: 0.25rem 1rem 0.85rem;
+        border-left: 1px solid var(--border-color, #dee2e6);
+    }
+
+    #especial-content-region .especial-ciclo-admin-summary-item:first-child {
+        padding-left: 0;
+        border-left: 0;
+    }
+
+    #especial-content-region .especial-ciclo-admin-summary-item small {
+        display: block;
+        margin-bottom: 0.2rem;
+        color: var(--text-muted, #6c757d);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    #especial-content-region .especial-ciclo-admin-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.42fr);
+        gap: 1rem;
+    }
+
+    #especial-content-region .especial-ciclo-admin-fields label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 600;
+    }
+
+    #especial-content-region .especial-ciclo-admin-fields input {
+        width: 100%;
+    }
+
+    #especial-content-region .especial-ciclo-admin-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        margin-top: 1rem;
+    }
+
+    #especial-content-region .especial-ciclo-admin-edit-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.75rem;
+    }
+
+    #especial-content-region .especial-ciclo-admin-edit-form .especial-ciclo-admin-fields {
+        margin-right: auto;
+    }
+
+    #especial-content-region .especial-ciclo-admin-save {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    #especial-content-region .especial-ciclo-admin-secondary-actions {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.6rem;
+    }
+
+    #especial-content-region .especial-ciclo-admin-secondary-actions form {
+        margin: 0;
+    }
+
+    @media (max-width: 640px) {
+        #especial-content-region .especial-ciclo-admin-summary,
+        #especial-content-region .especial-ciclo-admin-fields {
+            grid-template-columns: 1fr;
+        }
+
+        #especial-content-region .especial-ciclo-admin-summary-item {
+            padding-left: 0;
+            border-left: 0;
+        }
+
+        #especial-content-region .especial-ciclo-admin-edit-form {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        #especial-content-region .especial-ciclo-admin-save {
+            align-self: flex-end;
+        }
+
+        #especial-content-region .especial-ciclo-admin-secondary-actions {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+    }
+
+    #especial-content-region .cef-dt thead th {
+        background: #12345b;
+        color: #fff;
+    }
+</style>
+{% if especial_context.ciclo_cerrado %}
+    <div class="alert alert-warning mb-3">
+        Ciclo {{ especial_context.ciclo.anio }} cerrado.
+        La información se encuentra en modo sólo lectura.
+    </div>
+{% endif %}
+{% if ciclo_actual_admin and not especial_context.ciclo_cerrado %}
+    <section class="cef-card mb-3">
+        <div class="cef-card-header d-flex justify-content-between align-items-start gap-2">
+            <h3>
+                <i class="fa-solid fa-calendar-check me-2"></i>
+                Gestionar ciclo actual
+            </h3>
+
+            <span class="badge text-bg-success">
+                {{ ciclo_actual_admin.anio }} · Actual · Abierto
+            </span>
+        </div>
+
+        <div class="cef-card-body">
+            <div class="especial-ciclo-admin-summary">
+                <div class="especial-ciclo-admin-summary-item">
+                    <small>Año</small>
+                    <strong>{{ ciclo_actual_admin.anio }}</strong>
+                </div>
+                <div class="especial-ciclo-admin-summary-item">
+                    <small>Fecha inicio (referencia)</small>
+                    <strong>{{ ciclo_actual_admin.fecha_inicio|date:"d/m/Y"|default:"—" }}</strong>
+                </div>
+                <div class="especial-ciclo-admin-summary-item">
+                    <small>Estado</small>
+                    <strong>Actual · Abierto</strong>
+                </div>
+            </div>
+
+            <div class="especial-ciclo-admin-actions">
+                <form method="post" class="especial-ciclo-admin-edit-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="guardar_actual">
+                    <input type="hidden" name="ciclo_id" value="{{ ciclo_actual_admin.pk }}">
+                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                    {% if especial_context.ciclo %}
+                        <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                    {% endif %}
+                    <div class="especial-ciclo-admin-fields">
+                        <div class="cef-field">
+                            <label for="especial-ciclo-descripcion">Descripción</label>
+                            <input id="especial-ciclo-descripcion" name="descripcion" type="text" class="form-control" value="{{ ciclo_actual_admin.descripcion }}">
+                        </div>
+                        <div class="cef-field">
+                            <label for="especial-ciclo-fecha-fin">Fecha fin (referencia)</label>
+                            <input id="especial-ciclo-fecha-fin" name="fecha_fin" type="date" class="form-control" value="{{ ciclo_actual_admin.fecha_fin|date:"Y-m-d" }}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm especial-ciclo-admin-save">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios
+                    </button>
+                </form>
+                <div class="especial-ciclo-admin-secondary-actions">
+                <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo_actual_admin.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo_actual_admin.pk }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Previsualizar generación {{ ciclo_actual_admin.anio|add:"1" }}
+                </a>
+                <form method="post" class="m-0" onsubmit="return confirm('¿Está seguro de querer cerrar este ciclo? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cerrar_actual">
+                    <input type="hidden" name="ciclo_id" value="{{ ciclo_actual_admin.pk }}">
+                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                    {% if especial_context.ciclo %}
+                        <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                    {% endif %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="fa-solid fa-lock me-1"></i>Cerrar ciclo {{ ciclo_actual_admin.anio }}
+                    </button>
+                </form>
+                </div>
+            </div>
+        </div>
+    </section>
+{% else %}
+    <div class="alert alert-warning mb-3">
+        No hay ciclo lectivo actual para realizar esta carga.
+    </div>
+
+    <section class="cef-card mb-3">
+        <div class="cef-card-header">
+            <h3>
+                <i class="fa-solid fa-calendar-check me-2"></i>
+                Gestionar ciclo actual
+            </h3>
+
+            <span class="badge text-bg-secondary">Sin ciclo actual</span>
+        </div>
+
+        <div class="cef-card-body">
+            <div class="alert alert-warning mb-0">
+                {% if especial_context.ciclo_cerrado %}
+                    No hay ciclo actual abierto.<br>
+                    El último ciclo fue cerrado y su información se encuentra en modo sólo lectura.
+                {% else %}
+                    {% if not especial_context.ciclo_cerrado %}
+                No hay un ciclo actual disponible. Creá uno o marcá un ciclo existente como actual.
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+{% endif %}
 <div class="cef-row-grid">
     <section class="cef-card">
         <div class="cef-card-header">
@@ -16,6 +259,7 @@
                                 <th>Fin</th>
                                 <th>Activo</th>
                                 <th>Actual</th>
+                                <th>Estado</th>
                                 <th>Acción</th>
                             </tr>
                         </thead>
@@ -40,8 +284,17 @@
                                             <span class="badge text-bg-secondary">No</span>
                                         {% endif %}
                                     </td>
+                                    <td>
+                                        {% if ciclo.cerrado %}
+                                            <span class="badge text-bg-secondary">Cerrado</span>
+                                        {% else %}
+                                            <span class="badge text-bg-success">Abierto</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="cef-act-cell">
-                                        {% if not ciclo.actual %}
+                                        {% if ciclo.cerrado %}
+                                            —
+                                        {% elif not ciclo.actual %}
                                             <form method="post" class="m-0">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="accion" value="marcar_actual">
@@ -55,7 +308,9 @@
                                                 </button>
                                             </form>
                                         {% else %}
-                                            —
+                                            <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo.pk }}" class="btn btn-outline-primary btn-sm">
+                                                <i class="fa-solid fa-magnifying-glass me-1"></i>Previsualizar generación {{ ciclo.anio|add:"1" }}
+                                            </a>
                                         {% endif %}
                                     </td>
                                 </tr>

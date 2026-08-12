@@ -10,6 +10,7 @@
             <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a Secciones
             </a>
+            {% if especial_context.puede_operar %}
             <a class="btn btn-outline-primary" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-pen"></i> Editar sección
             </a>
@@ -19,6 +20,7 @@
             <a class="btn btn-primary" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
                 <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -51,9 +53,9 @@
         <div class="cef-edit-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <h3 class="mb-0">Docentes de la sección</h3>
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
+                {% if especial_context.puede_operar %}<a class="btn btn-outline-primary btn-sm" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
                     <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
-                </a>
+                </a>{% endif %}
             </div>
             <div data-cef-fragment="docentes-seccion">
                 {% include "especial/docentes_seccion_lista_especial.html" %}

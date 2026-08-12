@@ -1,11 +1,13 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Alumnos <span>» Gestión de Alumnos</span></h2>
-        <div class="cef-panel-actions">
-            <button class="btn btn-primary" type="button" data-open-personas-modal>
-                <i class="fa-solid fa-user-plus"></i> Agregar alumno
-            </button>
-        </div>
+        {% if especial_context.puede_operar %}
+            <div class="cef-panel-actions">
+                <button class="btn btn-primary" type="button" data-open-personas-modal>
+                    <i class="fa-solid fa-user-plus"></i> Agregar alumno
+                </button>
+            </div>
+        {% endif %}
     </div>
 
     <div class="cef-panel-body">
@@ -122,7 +124,7 @@
                                         {% endif %}
 
                                         {# Botón Editar Datos #}
-                                        {% if item.url_editar_alumno %}
+                                        {% if especial_context.puede_operar and item.url_editar_alumno %}
                                             <a class="cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                             </a>

@@ -56,6 +56,7 @@
                         <td>{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</td>
                         <td>{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</td>
                         <td>{{ asignacion.observaciones|default:"-" }}</td>
+                        {% if especial_context.puede_operar %}
                         <td class="cef-act-cell">
                             <div class="d-flex flex-wrap gap-1 align-items-center">
                                 <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:editar_docente_seccion' seccion.pk asignacion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% if gestionar_seccion_modo %}&volver=gestionar{% endif %}{% elif gestionar_seccion_modo %}?volver=gestionar{% endif %}">
@@ -85,7 +86,8 @@
                                 </form>
                                  {% endif %}
                              </div>
-                         </td>
+                        </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
             </tbody>
