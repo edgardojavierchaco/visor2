@@ -15,6 +15,7 @@ from apps.bnhalumnos.models import Alumno
 ACRONIMO_ESPECIAL = "EEE"
 LONGITUD_CUEANEXO = 9
 PADRON_DB_ALIAS = "default"
+OFERTA_MATRICULA_COMPARTIDA = "Especial - Integración"
 ROLES_AUTORIZADOS_ESPECIAL = {
     "Administrador",
     "Director",
@@ -198,6 +199,17 @@ def get_datos_establecimiento_especial(cueanexo):
         .order_by("cueanexo", "nom_est")
         .first()
     )
+
+
+def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
+    """Indica si el CUE tiene exactamente la oferta que habilita la matrícula compartida."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    return EspecialPadronOferta.objects.using(PADRON_DB_ALIAS).filter(
+        cueanexo=cueanexo,
+        oferta=OFERTA_MATRICULA_COMPARTIDA,
+    ).exists()
 
 
 # ============================================================
@@ -563,6 +575,11 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
     fecha_alta = models.DateField(default=timezone.localdate)
     fecha_baja = models.DateField(blank=True, null=True)
     motivo_baja = models.CharField(max_length=255, blank=True)
+    matricula_compartida = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+    )
     
     # Snapshots
     alumno_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
@@ -602,6 +619,12 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
             
         if self.estado != self.Estado.BAJA and self.motivo_baja:
             errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+
+        matricula_compartida_norm = normalizar_cueanexo(self.matricula_compartida)
+        if self.matricula_compartida not in (None, "") and not matricula_compartida_norm:
+            errors["matricula_compartida"] = "El CUE-Anexo de matrícula compartida debe tener 9 dígitos."
+        else:
+            self.matricula_compartida = matricula_compartida_norm or None
 
         if errors:
             raise ValidationError(errors)
@@ -765,7 +788,6 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
     fecha_inscripcion = models.DateField(default=timezone.localdate)
     fecha_baja = models.DateField(blank=True, null=True)
     motivo_baja = models.CharField(max_length=255, blank=True)
-    #Matricula_compartida = models.CharField(max_length = 9, blank = True, null = True)
     observaciones = models.TextField(blank=True)
 
     class Meta:

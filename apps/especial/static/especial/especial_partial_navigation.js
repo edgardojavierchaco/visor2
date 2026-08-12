@@ -612,7 +612,95 @@
         });
     }
 
+    function matriculaCompartidaEditors(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        var editors = [];
+        if (root && root.matches && root.matches("[data-especial-matricula-editor]")) {
+            editors.push(root);
+        }
+        Array.prototype.push.apply(
+            editors,
+            scope.querySelectorAll("[data-especial-matricula-editor]")
+        );
+        return editors;
+    }
+
+    function syncMatriculaCompartidaEditor(editor) {
+        if (!editor) return;
+        var selected = editor.querySelector("input[name='matricula_compartida_opcion']:checked");
+        var cueWrap = editor.querySelector("[data-especial-matricula-cue-wrap]");
+        var cueSelect = editor.querySelector("[data-especial-matricula-cue-select]");
+        var showCue = Boolean(selected && selected.value === "si");
+        if (cueWrap) cueWrap.hidden = !showCue;
+        if (!showCue && cueSelect) {
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                var $cueSelect = window.jQuery(cueSelect);
+                if ($cueSelect.data("select2")) $cueSelect.val(null).trigger("change");
+                else cueSelect.value = "";
+            } else {
+                cueSelect.value = "";
+            }
+        }
+    }
+
+    function initMatriculaCompartidaSelects(root) {
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
+        matriculaCompartidaEditors(root).forEach(function (editor) {
+            syncMatriculaCompartidaEditor(editor);
+            var cueSelect = editor.querySelector("[data-especial-matricula-cue-select]");
+            if (!cueSelect) return;
+            var $cueSelect = window.jQuery(cueSelect);
+            if ($cueSelect.data("select2")) return;
+            var dropdownParent = cueSelect.closest(".cef-modal");
+            $cueSelect.select2({
+                width: "100%",
+                allowClear: true,
+                minimumInputLength: 2,
+                placeholder: "Buscar CUE-Anexo o establecimiento",
+                dropdownParent: dropdownParent ? window.jQuery(dropdownParent) : undefined,
+                ajax: {
+                    url: cueSelect.dataset.autocompleteUrl,
+                    dataType: "json",
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || "",
+                            cueanexo: cueSelect.dataset.currentCue || ""
+                        };
+                    },
+                    processResults: function (data) {
+                        return { results: Array.isArray(data.results) ? data.results : [] };
+                    }
+                },
+                language: {
+                    inputTooShort: function () { return "Ingresá al menos 2 caracteres."; },
+                    noResults: function () { return "No se encontraron CUE-Anexos."; },
+                    searching: function () { return "Buscando..."; }
+                }
+            });
+        });
+    }
+
+    function installMatriculaCompartida() {
+        if (window.especialMatriculaCompartidaReady) return;
+        window.especialMatriculaCompartidaReady = true;
+
+        document.addEventListener("change", function (event) {
+            if (!event.target.matches("[data-especial-matricula-editor] input[name='matricula_compartida_opcion']")) return;
+            syncMatriculaCompartidaEditor(event.target.closest("[data-especial-matricula-editor]"));
+        });
+        document.addEventListener("focusin", function (event) {
+            if (!event.target.matches("[data-especial-matricula-cue-select]")) return;
+            initMatriculaCompartidaSelects(event.target.closest("[data-especial-matricula-editor]"));
+        });
+        window.addEventListener("load", function () {
+            initMatriculaCompartidaSelects(document);
+        });
+    }
+
     function initEspecialAlumnos(root) {
+        installMatriculaCompartida();
+        initMatriculaCompartidaSelects(root);
         installAlumnoSeccionesExpansion();
         installDropdown({
             readyFlag: "cefAlumnoDropdownReady",
