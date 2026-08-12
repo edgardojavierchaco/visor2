@@ -14,6 +14,8 @@ from .models import (
     EspecialDocenteBanco,
     DocenteSeccion,
     ModalidadDictadoTipo,
+    PADRON_DB_ALIAS,
+    EspecialPadronOferta,
     SeccionEspecial,
     SeccionTipo,
     TurnoTipo,
@@ -72,6 +74,94 @@ class EspecialBusquedaDocenteForm(forms.Form):
         if len(cuil) != 11:
             raise ValidationError("El CUIL debe tener 11 dígitos.")
         return cuil
+
+
+class EspecialMatriculaCompartidaForm(forms.Form):
+    """Normaliza y valida la matrícula compartida contra el padrón general."""
+
+    OPCIONES = (
+        ("no", "No"),
+        ("si", "Sí"),
+    )
+
+    matricula_compartida_opcion = forms.ChoiceField(
+        choices=OPCIONES,
+        required=False,
+        widget=forms.RadioSelect,
+    )
+    cueanexo_matricula_compartida = forms.CharField(
+        max_length=30,
+        required=False,
+    )
+
+    def __init__(
+        self,
+        *args,
+        cueanexo_actual="",
+        matricula_compartida_habilitada=False,
+        padron_queryset=None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.cueanexo_actual = normalizar_cueanexo(cueanexo_actual)
+        self.matricula_compartida_habilitada = bool(matricula_compartida_habilitada)
+        self.padron_queryset = (
+            padron_queryset
+            if padron_queryset is not None
+            else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        )
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        opcion = cleaned_data.get("matricula_compartida_opcion") or ""
+        cueanexo = normalizar_cueanexo(
+            cleaned_data.get("cueanexo_matricula_compartida")
+        )
+
+        if not opcion:
+            if self.matricula_compartida_habilitada:
+                self.add_error(
+                    "matricula_compartida_opcion",
+                    "Debe seleccionar No o Sí en Matrícula compartida.",
+                )
+            opcion = "no"
+
+        if opcion == "no":
+            cleaned_data["matricula_compartida"] = None
+            return cleaned_data
+
+        if not self.matricula_compartida_habilitada:
+            self.add_error(
+                "matricula_compartida_opcion",
+                "La matrícula compartida no está habilitada para este CUE-Anexo.",
+            )
+            return cleaned_data
+
+        if not cueanexo:
+            self.add_error(
+                "cueanexo_matricula_compartida",
+                "Debe seleccionar un CUE-Anexo asociado o marcar No en Matrícula compartida.",
+            )
+            return cleaned_data
+
+        if cueanexo == self.cueanexo_actual:
+            self.add_error(
+                "cueanexo_matricula_compartida",
+                "El CUE-Anexo asociado no puede ser igual al CUE-Anexo actual.",
+            )
+            return cleaned_data
+
+        if not self.padron_queryset.filter(cueanexo=cueanexo).exists():
+            self.add_error(
+                "cueanexo_matricula_compartida",
+                "El CUE-Anexo asociado no existe en el padrón general.",
+            )
+            return cleaned_data
+
+        cleaned_data["matricula_compartida"] = cueanexo
+        return cleaned_data
 
 
 class EspecialBajaMotivoForm(forms.Form):

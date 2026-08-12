@@ -30,12 +30,6 @@
             </div>
         </div>
 
-        {% if alumnos_banco_tabla_pendiente %}
-            <div class="alert alert-warning mb-3">
-                El banco de alumnos de Educación Especial está pendiente de creación en base de datos.
-            </div>
-        {% endif %}
-
         {% if alumnos %}
             <div class="cef-table-wrap">
                 <table class="cef-dt" data-cef-table>
@@ -156,11 +150,6 @@
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-        {% elif alumnos_banco_tabla_pendiente %}
-            <div class="cef-empty-state">
-                <i class="fa-solid fa-database" style="font-size:1.5rem;color:var(--text-faint)"></i>
-                Listado pendiente hasta crear la tabla de alumnos de Especial.
             </div>
         {% elif especial_context.puede_operar %}
             <div class="cef-empty-state">
