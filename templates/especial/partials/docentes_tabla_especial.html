@@ -1,4 +1,4 @@
-<!-- templates/especial/partials/profesores_tabla_especial.html -->
+<!-- templates/especial/partials/docentes_tabla_especial.html -->
 <div class="cef-tools">
     <div class="cef-tools-left">
         <span class="cef-tools-label">Mostrar</span>
@@ -63,6 +63,7 @@
                             {% endif %}
                         </td>
 
+                        {% if especial_context.puede_operar %}
                         <td class="cef-act-cell">
                             <div class="d-flex flex-wrap gap-1 align-items-center">
                                 {% if secciones_disponibles %}
@@ -139,13 +140,14 @@
                                 {% endif %}
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-{% elif especial_context.puede_operar %}
+{% elif especial_context.puede_consultar %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-chalkboard-user" style="font-size:1.5rem;color:var(--text-faint)"></i>
         Todavía no hay profesores en el banco de este ciclo.

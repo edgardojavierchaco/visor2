@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import unicodedata
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -15,6 +16,7 @@ from apps.bnhalumnos.models import Alumno
 ACRONIMO_ESPECIAL = "EEE"
 LONGITUD_CUEANEXO = 9
 PADRON_DB_ALIAS = "default"
+OFERTA_MATRICULA_COMPARTIDA = "Especial - Integración"
 ROLES_AUTORIZADOS_ESPECIAL = {
     "Administrador",
     "Director",
@@ -146,6 +148,25 @@ def normalizar_cueanexo(valor):
     return cueanexo
 
 
+def _normalizar_oferta_matricula_compartida(valor):
+    """Normaliza únicamente el formato tipográfico de una oferta de Padrón."""
+    oferta = unicodedata.normalize("NFKC", str(valor or ""))
+    oferta = oferta.translate(
+        str.maketrans(
+            {
+                "‐": "-",
+                "‑": "-",
+                "‒": "-",
+                "–": "-",
+                "—": "-",
+                "−": "-",
+            }
+        )
+    )
+    oferta = re.sub(r"\s+", " ", oferta).strip()
+    return re.sub(r"\s*-\s*", " - ", oferta)
+
+
 def normalizar_cuil_usuario(user):
     if not user or not getattr(user, "is_authenticated", False):
         return ""
@@ -197,6 +218,25 @@ def get_datos_establecimiento_especial(cueanexo):
         .filter(cueanexo=cueanexo)
         .order_by("cueanexo", "nom_est")
         .first()
+    )
+
+
+def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
+    """Indica si el CUE tiene exactamente la oferta que habilita la matrícula compartida."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    ofertas = (
+        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        .filter(cueanexo=cueanexo)
+        .values_list("oferta", flat=True)
+    )
+    objetivo = _normalizar_oferta_matricula_compartida(
+        OFERTA_MATRICULA_COMPARTIDA
+    )
+    return any(
+        _normalizar_oferta_matricula_compartida(oferta) == objetivo
+        for oferta in ofertas
     )
 
 
@@ -307,6 +347,7 @@ class EspecialCiclo(EspecialAuditoriaMixin):
     fecha_fin = models.DateField(blank=True, null=True)
     activo = models.BooleanField(default=True)
     actual = models.BooleanField(default=False)
+    cerrado = models.BooleanField(default=False)
 
     class Meta:
         db_table = '"especial"."ciclos"'
@@ -322,14 +363,23 @@ class EspecialCiclo(EspecialAuditoriaMixin):
         ]
 
     def clean(self):
+        if self.cerrado and self.actual:
+            raise ValidationError(
+                {"cerrado": "Un ciclo cerrado no puede estar marcado como actual."}
+            )
+
         if (
             self.fecha_inicio
             and self.fecha_fin
             and self.fecha_fin < self.fecha_inicio
         ):
-            raise ValidationError({
-                "fecha_fin": "La fecha de fin no puede ser anterior a la de inicio."
-            })
+            raise ValidationError(
+                {
+                    "fecha_fin": (
+                        "La fecha de fin no puede ser anterior a la de inicio."
+                    )
+                }
+            )
 
     def __str__(self):
         return str(self.anio)
@@ -563,6 +613,11 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
     fecha_alta = models.DateField(default=timezone.localdate)
     fecha_baja = models.DateField(blank=True, null=True)
     motivo_baja = models.CharField(max_length=255, blank=True)
+    matricula_compartida = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+    )
     
     # Snapshots
     alumno_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
@@ -588,6 +643,7 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
 
     def clean(self):
         errors = {}
+
         cueanexo_norm = normalizar_cueanexo(self.cueanexo)
         if not cueanexo_norm:
             errors["cueanexo"] = "CUE-Anexo inválido."
@@ -595,13 +651,25 @@ class EspecialAlumnoBanco(EspecialAuditoriaMixin):
             self.cueanexo = cueanexo_norm
 
         if self.fecha_baja and self.fecha_baja < self.fecha_alta:
-            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de alta."
-        
+            errors["fecha_baja"] = (
+                "La fecha de baja no puede ser anterior a la de alta."
+            )
+
         if self.estado == self.Estado.BAJA and not self.fecha_baja:
-            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
-            
+            errors["fecha_baja"] = (
+                "Debe indicar fecha de baja cuando el estado es Baja."
+            )
+
         if self.estado != self.Estado.BAJA and self.motivo_baja:
-            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+            errors["motivo_baja"] = (
+                "Solo debe indicar motivo de baja cuando el estado es Baja."
+            )
+
+        matricula_compartida_norm = normalizar_cueanexo(self.matricula_compartida)
+        if self.matricula_compartida not in (None, "") and not matricula_compartida_norm:
+            errors["matricula_compartida"] = "El CUE-Anexo de matrícula compartida debe tener 9 dígitos."
+        else:
+            self.matricula_compartida = matricula_compartida_norm or None
 
         if errors:
             raise ValidationError(errors)

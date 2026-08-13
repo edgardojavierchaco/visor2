@@ -11,6 +11,7 @@ from . import (
     views_inscripcion_grupo,
     views_inventario,
     views_localizaciones,
+    views_metricas,
     views_docentes_grupo,
     views_profesores,
 )
@@ -42,6 +43,21 @@ urlpatterns = [
         name="visualizacion_localizaciones",
     ),
     path(
+        "metricas/",
+        views_metricas.metricas,
+        name="metricas",
+    ),
+    path(
+        "metricas/consulta/",
+        views_metricas.metricas_consulta,
+        name="metricas_consulta",
+    ),
+    path(
+        "metricas/exportar/",
+        views_metricas.metricas_exportar,
+        name="metricas_exportar",
+    ),
+    path(
         "alumnos/",
         views_alumnos.alumnos,
         name="alumnos",
@@ -60,6 +76,16 @@ urlpatterns = [
         "profesores/fragmento/lista/",
         views_profesores.profesores_fragmento,
         name="profesores_fragmento",
+    ),
+    path(
+        "asistencia/",
+        views_asistencia.asistencia,
+        name="asistencia",
+    ),
+    path(
+        "asistencia/grupos/<int:grupo_id>/",
+        views_asistencia.asistencia_grupo,
+        name="asistencia_grupo",
     ),
     path(
         "carga/cueanexo/",
@@ -99,7 +125,7 @@ urlpatterns = [
     path(
         "carga/grupos/<int:grupo_id>/asistencia/",
         views_asistencia.asistencia_grupo,
-        name="asistencia_grupo",
+        name="asistencia_grupo_legacy",
     ),
     path(
         "carga/grupos/<int:grupo_id>/inscripciones/",

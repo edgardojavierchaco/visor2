@@ -63,7 +63,7 @@ def _docente_row(docente):
 
 
 def _docentes_especial(especial_context):
-    if not especial_context["puede_operar"]:
+    if not especial_context["puede_consultar"]:
         return EspecialDocenteBanco.objects.none()
 
     return (
@@ -198,6 +198,13 @@ def editar_docente_seccion(request, seccion_id, docente_id):
     """Vista para editar la asignación de un docente a una sección."""
     context = contexto_base(request, "secciones", "Editar asignación docente")
     especial_context = context["especial_context"]
+
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
+            request,
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
+        )
+        return redirect(request.get_full_path())
     
     if not especial_context["puede_operar"]:
         messages.warning(request, "Seleccioná un CUE-Anexo y un ciclo para operar.")
@@ -246,6 +253,13 @@ def editar_docente_seccion(request, seccion_id, docente_id):
 def docentes(request):
     context = contexto_base(request, "docentes")
     especial_context = context["especial_context"]
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
+            request,
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
+        )
+        return redirect(request.get_full_path())
+
     docente = None
     cuil_buscado = ""
     cuil_error = ""
@@ -334,7 +348,7 @@ def docentes(request):
                     }
                     
                     html_tabla = render_to_string(
-                        "especial/partials/profesores_tabla_especial.html", 
+                        "especial/partials/docentes_tabla_especial.html",
                         ctx_fragmento, 
                         request=request
                     )

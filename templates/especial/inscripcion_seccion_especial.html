@@ -10,9 +10,11 @@
             <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a Secciones
             </a>
-            <button class="btn btn-primary" type="button" data-open-personas-modal>
-                <i class="fa-solid fa-user-plus"></i> Agregar alumno
-            </button>
+            {% if especial_context.puede_operar %}
+                <button class="btn btn-primary" type="button" data-open-personas-modal>
+                    <i class="fa-solid fa-user-plus"></i> Agregar alumno
+                </button>
+            {% endif %}
         </div>
     </div>
 

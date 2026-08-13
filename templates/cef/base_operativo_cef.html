@@ -4,9 +4,10 @@
 {{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
-<link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}">
+<link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}?v=20260811-4">
 <link rel="stylesheet" href="{% static 'cef/cef_async_blocks.css' %}">
 <script>
 (function () {
@@ -248,6 +249,38 @@
         overscroll-behavior: contain;
     }
 
+    .cef-row-actions-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 210px;
+        padding: .35rem;
+    }
+
+    .cef-row-actions-menu .dropdown-item {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        display: flex;
+        gap: .5rem;
+        justify-content: flex-start;
+        padding: .45rem .6rem;
+        text-align: left;
+        width: 100%;
+    }
+
+    .cef-row-actions-menu .dropdown-item:hover,
+    .cef-row-actions-menu .dropdown-item:focus {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-row-actions-menu .dropdown-item i {
+        color: var(--blue-800);
+        width: 1rem;
+    }
+
     /* ============================================================
        MAIN CONTENT AREA
        ============================================================ */
@@ -412,6 +445,7 @@
         cursor: pointer;
         font-size: var(--fs-sm);
         font-weight: 600;
+        height: 36px;
         min-height: 36px;
         padding: .3rem 2.25rem .3rem .75rem;
         transition: border-color .15s ease, box-shadow .15s ease;
@@ -447,6 +481,11 @@
         min-height: 36px;
     }
 
+    .cef-context-card [data-cef-select] + .select2-container .select2-selection--single {
+        height: 36px;
+        min-height: 36px;
+    }
+
     .cef-wrap [data-cef-select] + .select2-container .select2-selection__rendered {
         color: var(--slate-800);
         font-size: var(--fs-base);
@@ -458,6 +497,12 @@
         text-overflow: clip;
         white-space: normal;
         word-break: normal;
+    }
+
+    .cef-context-card [data-cef-select] + .select2-container .select2-selection__rendered {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .cef-wrap [data-cef-select] + .select2-container .select2-selection__arrow {
@@ -1194,7 +1239,7 @@
         background: var(--slate-50);
     }
 
-    .cef-dt tbody tr:hover {
+    .cef-dt > tbody > tr:hover {
         background: var(--blue-50);
     }
 
@@ -1220,6 +1265,107 @@
 
     .cef-dt tbody tr:last-child td {
         border-bottom: none;
+    }
+
+    .cef-dt > tbody > tr.cef-history-detail-row,
+    .cef-dt > tbody > tr.cef-history-detail-row:hover {
+        background: var(--surface-soft);
+    }
+
+    .cef-dt > tbody > tr.cef-history-detail-row > td {
+        border-bottom: 2px solid var(--blue-100);
+    }
+
+    .cef-history-detail-panel {
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-xs);
+        margin: .75rem 1rem 1rem;
+        overflow: hidden;
+    }
+
+    .cef-history-detail-head {
+        align-items: center;
+        background: var(--blue-50);
+        border-bottom: 1px solid var(--blue-200);
+        color: var(--blue-900);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: var(--fs-sm);
+        gap: .5rem;
+        justify-content: space-between;
+        padding: .55rem .75rem;
+    }
+
+    .cef-history-detail-head strong {
+        align-items: center;
+        display: inline-flex;
+        gap: .4rem;
+    }
+
+    .cef-history-detail-head span:last-child {
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+    }
+
+    .cef-history-detail-table-wrap {
+        border: 0;
+        border-radius: 0;
+    }
+
+    .cef-history-detail-table > thead > tr {
+        background: var(--blue-100);
+        border-bottom-color: var(--blue-400);
+    }
+
+    .cef-history-detail-table > thead > tr > th {
+        color: var(--blue-900);
+    }
+
+    .cef-history-detail-table > tbody > tr > td {
+        vertical-align: top;
+    }
+
+    .cef-history-assignment-list {
+        display: grid;
+        gap: .45rem;
+        min-width: 20rem;
+    }
+
+    .cef-history-assignment-item {
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-sm);
+        padding: .55rem .65rem;
+    }
+
+    .cef-history-assignment-head {
+        align-items: center;
+        color: var(--slate-800);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        justify-content: space-between;
+    }
+
+    .cef-history-assignment-meta {
+        color: var(--slate-600);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: var(--fs-xs);
+        gap: .3rem .75rem;
+        margin-top: .35rem;
+    }
+
+    .cef-history-assignment-reason {
+        border-top: 1px solid var(--slate-200);
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        margin-top: .4rem;
+        padding-top: .4rem;
     }
 
     /* ============================================================
@@ -1926,6 +2072,27 @@
     /* ============================================================
        BOOTSTRAP CONFIRMATION MODAL
        ============================================================ */
+    #cefConfirmActionModal.cef-confirm-modal {
+        align-items: center;
+        background: rgba(15, 23, 42, .48);
+        display: flex;
+        inset: 0;
+        overflow-y: auto;
+        padding: 1rem;
+        position: fixed;
+        z-index: 2000;
+    }
+
+    #cefConfirmActionModal.cef-confirm-modal[hidden] {
+        display: none !important;
+    }
+
+    #cefConfirmActionModal .modal-dialog {
+        margin: auto;
+        max-width: 32rem;
+        width: 100%;
+    }
+
     .cef-wrap .modal-content {
         border: 1px solid var(--border);
         border-radius: var(--r-lg);
@@ -1945,6 +2112,63 @@
     .cef-wrap .modal-title {
         color: var(--slate-900);
         font-weight: 800;
+    }
+
+    .cef-confirm-summary {
+        align-items: center;
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--r-md);
+        display: flex;
+        gap: .75rem;
+        margin-top: 1rem;
+        padding: .7rem .8rem;
+    }
+
+    .cef-confirm-summary[hidden] {
+        display: none !important;
+    }
+
+    .cef-confirm-summary-icon {
+        align-items: center;
+        background: var(--blue-100);
+        border-radius: 50%;
+        color: var(--blue-700);
+        display: inline-flex;
+        flex: 0 0 2.25rem;
+        height: 2.25rem;
+        justify-content: center;
+    }
+
+    .cef-confirm-summary-copy {
+        display: grid;
+        gap: .12rem;
+        min-width: 0;
+    }
+
+    .cef-confirm-summary-label {
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+
+    .cef-confirm-summary-value {
+        color: var(--blue-900);
+        font-size: var(--fs-md);
+        font-weight: 800;
+    }
+
+    .cef-ajax-feedback {
+        left: auto;
+        margin: 0;
+        max-width: min(28rem, calc(100vw - 2rem));
+        position: fixed;
+        right: 1rem;
+        top: 1rem;
+        z-index: 2010;
     }
 
     /* ============================================================
@@ -2093,7 +2317,7 @@
         {% block cef_context_selector %}
             <!-- CONTEXT CARD -->
             <section class="cef-context-card">
-                <form method="get" class="cef-context-grid">
+                <form method="get"{% if cef_context.selector_action %} action="{{ cef_context.selector_action }}"{% endif %} class="cef-context-grid">
                     <div>
                         <label class="cef-context-label" for="id_contexto_cueanexo">CEF</label>
                         <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm" data-cef-select="true" data-cef-select-search="always">
@@ -2131,7 +2355,7 @@
         {% endblock %}
 
         {% if cef_context.sin_cueanexo %}
-            <div class="alert alert-warning">No hay CUE-Anexos cargables para tu usuario.</div>
+            <div class="alert alert-warning">No hay CUE-Anexos disponibles para tu usuario.</div>
         {% endif %}
         {% if cef_context.sin_ciclo %}
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
@@ -2144,7 +2368,7 @@
             {% block cef_content %}{% endblock %}
         </div>
 
-        <div class="modal fade" id="cefConfirmActionModal" tabindex="-1" aria-hidden="true">
+        <div class="cef-confirm-modal" id="cefConfirmActionModal" tabindex="-1" aria-hidden="true" hidden>
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -2154,10 +2378,16 @@
                     <div class="modal-body">
                         <p class="mb-1" data-cef-confirm-message>¿Confirmás esta acción?</p>
                         <p class="small text-muted mb-0" data-cef-confirm-entity></p>
-                        <div class="mt-3 d-none" data-cef-confirm-motivo-wrap>
-                            <label class="form-label" for="cefConfirmMotivoBaja">Motivo de baja</label>
+                        <div class="cef-confirm-summary" data-cef-confirm-summary hidden>
+                            <span class="cef-confirm-summary-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></span>
+                            <span class="cef-confirm-summary-copy">
+                                <span class="cef-confirm-summary-label" data-cef-confirm-summary-label></span>
+                                <strong class="cef-confirm-summary-value" data-cef-confirm-summary-value></strong>
+                            </span>
+                        </div>
+                        <div class="mt-3" data-cef-confirm-motivo-wrap hidden>
+                            <label class="form-label" for="cefConfirmMotivoBaja">Motivo de baja (opcional)</label>
                             <textarea id="cefConfirmMotivoBaja" class="form-control" rows="3" maxlength="255" data-cef-confirm-motivo></textarea>
-                            <div class="text-danger small mt-1 d-none" data-cef-confirm-motivo-error>Debe indicar el motivo de la baja.</div>
                         </div>
                         <div class="alert alert-danger mt-3 mb-0 d-none" data-cef-confirm-feedback></div>
                     </div>
@@ -2182,7 +2412,16 @@
                 table.dataset.cefTableReady = "1";
 
                 var root = tableRoot(table);
-                var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
+                var body = table.tBodies.length ? table.tBodies[0] : null;
+                var bodyRows = body
+                    ? Array.prototype.slice.call(body.rows)
+                    : [];
+                var detailRows = bodyRows.filter(function(row) {
+                    return row.hasAttribute("data-cef-history-detail");
+                });
+                var rows = bodyRows.filter(function(row) {
+                    return !row.hasAttribute("data-cef-history-detail");
+                });
                 var search = root.querySelector("[data-cef-table-search]");
                 var size = root.querySelector("[data-cef-page-size]");
                 var count = root.querySelector("[data-cef-table-count]");
@@ -2203,8 +2442,18 @@
                     page = Math.min(page, pages);
 
                     rows.forEach(function(row) { row.style.display = "none"; });
+                    detailRows.forEach(function(row) { row.style.display = "none"; });
                     visible.slice((page - 1) * pageSize, page * pageSize).forEach(function(row) {
                         row.style.display = "";
+                    });
+                    detailRows.forEach(function(detailRow) {
+                        var ownerId = detailRow.dataset.cefHistoryDetail;
+                        var ownerRow = rows.find(function(row) {
+                            return row.dataset.cefHistoryOwner === ownerId;
+                        });
+                        if (ownerRow && ownerRow.style.display !== "none" && !detailRow.hidden) {
+                            detailRow.style.display = "";
+                        }
                     });
 
                     if (count) {
@@ -2236,6 +2485,24 @@
 
                 if (search) search.addEventListener("input", function() { page = 1; render(); });
                 if (size) size.addEventListener("change", function() { page = 1; render(); });
+                table.addEventListener("click", function(event) {
+                    var toggle = event.target.closest("[data-cef-history-toggle]");
+                    if (!toggle) return;
+                    var detailId = toggle.dataset.cefHistoryToggle;
+                    var detailRow = detailRows.find(function(row) {
+                        return row.dataset.cefHistoryDetail === detailId;
+                    });
+                    if (!detailRow) return;
+                    var opening = detailRow.hidden;
+                    detailRow.hidden = !opening;
+                    toggle.setAttribute("aria-expanded", opening ? "true" : "false");
+                    var icon = toggle.querySelector("i");
+                    if (icon) {
+                        icon.classList.toggle("fa-chevron-up", opening);
+                        icon.classList.toggle("fa-chevron-down", !opening);
+                    }
+                    render();
+                });
                 if (paginEl) {
                     paginEl.addEventListener("click", function(event) {
                         if (event.target.hasAttribute("data-page-prev")) page = Math.max(1, page - 1);
@@ -2254,8 +2521,6 @@
             window.initCefProfesoresTable = window.initCefTables;
             window.initCefInscripcionTable = window.initCefTables;
             window.initCefDocentesGrupoTable = window.initCefTables;
-
-            window.initCefTables();
 
             function dismissAlert(alert) {
                 if (!alert) return;
@@ -2292,23 +2557,22 @@
 
             function modalController() {
                 if (!confirmModal) return null;
-                if (window.bootstrap && window.bootstrap.Modal) {
-                    return window.bootstrap.Modal.getOrCreateInstance(confirmModal);
-                }
                 return {
                     show: function() {
-                        confirmModal.classList.add("show");
-                        confirmModal.style.display = "block";
+                        confirmModal.hidden = false;
                         confirmModal.removeAttribute("aria-hidden");
                         confirmModal.setAttribute("aria-modal", "true");
-                        document.body.classList.add("modal-open");
+                        var motivo = confirmModal.querySelector("[data-cef-confirm-motivo]");
+                        var accept = confirmModal.querySelector("[data-cef-confirm-accept]");
+                        window.requestAnimationFrame(function() {
+                            if (motivo && !motivo.closest("[hidden]")) motivo.focus();
+                            else if (accept) accept.focus();
+                        });
                     },
                     hide: function() {
-                        confirmModal.classList.remove("show");
-                        confirmModal.style.display = "none";
+                        confirmModal.hidden = true;
                         confirmModal.setAttribute("aria-hidden", "true");
                         confirmModal.removeAttribute("aria-modal");
-                        document.body.classList.remove("modal-open");
                     }
                 };
             }
@@ -2325,26 +2589,38 @@
                 feedback.classList.toggle("d-none", !message);
             }
 
+            function confirmRequiresMotivo(form) {
+                if (!form) return false;
+                var action = form.querySelector("input[name='accion']");
+                var actionValue = action ? action.value : "";
+                return form.hasAttribute("data-cef-require-motivo")
+                    || actionValue.indexOf("baja") !== -1;
+            }
+
             function prepareConfirmMotivo(form) {
                 var wrap = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-wrap]") : null;
                 var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo]") : null;
-                var error = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-error]") : null;
-                var required = form && form.hasAttribute("data-cef-require-motivo");
-                if (wrap) wrap.classList.toggle("d-none", !required);
+                var required = confirmRequiresMotivo(form);
+                if (wrap) wrap.hidden = !required;
                 if (input) input.value = "";
-                if (error) error.classList.add("d-none");
+            }
+
+            function prepareConfirmSummary(form) {
+                var summary = confirmModal ? confirmModal.querySelector("[data-cef-confirm-summary]") : null;
+                if (!summary) return;
+                var value = form ? (form.dataset.cefConfirmSummaryValue || "").trim() : "";
+                summary.hidden = !value;
+                setConfirmText(
+                    "[data-cef-confirm-summary-label]",
+                    form ? form.dataset.cefConfirmSummaryLabel || "Detalle de la acción" : ""
+                );
+                setConfirmText("[data-cef-confirm-summary-value]", value);
             }
 
             function applyConfirmMotivo(form) {
-                if (!form || !form.hasAttribute("data-cef-require-motivo")) return true;
+                if (!confirmRequiresMotivo(form)) return true;
                 var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo]") : null;
-                var error = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-error]") : null;
                 var motivo = input ? input.value.trim() : "";
-                if (!motivo) {
-                    if (error) error.classList.remove("d-none");
-                    if (input) input.focus();
-                    return false;
-                }
                 var hidden = form.querySelector("input[name='motivo_baja']");
                 if (!hidden) {
                     hidden = document.createElement("input");
@@ -2353,7 +2629,26 @@
                     form.appendChild(hidden);
                 }
                 hidden.value = motivo;
-                if (error) error.classList.add("d-none");
+                return true;
+            }
+
+            function openConfirmForm(form) {
+                if (!form) return false;
+                var controller = modalController();
+                if (!controller) return false;
+                pendingConfirmForm = form;
+                setConfirmText("[data-cef-confirm-title]", form.dataset.cefConfirmTitle || "Confirmar acción");
+                setConfirmText("[data-cef-confirm-message]", form.dataset.cefConfirmMessage || "¿Confirmás esta acción?");
+                setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
+                setConfirmFeedback("");
+                prepareConfirmSummary(form);
+                prepareConfirmMotivo(form);
+                try {
+                    controller.show();
+                } catch (error) {
+                    pendingConfirmForm = null;
+                    return false;
+                }
                 return true;
             }
 
@@ -2393,20 +2688,13 @@
 
             function showPageFeedback(message, ok, viewport) {
                 if (!message) return;
-                var panelBody = document.querySelector(".cef-panel-body") || document.querySelector(".cef-panel") || document.body;
                 var alert = document.createElement("div");
-                alert.className = "alert alert-" + (ok ? "success" : "danger") + " mb-3";
+                alert.className = "alert alert-" + (ok ? "success" : "danger") + " cef-ajax-feedback";
+                alert.setAttribute("role", "status");
                 alert.textContent = message;
-                panelBody.insertBefore(alert, panelBody.firstChild);
+                document.body.appendChild(alert);
                 window.setTimeout(function() {
-                    if (!alert.parentNode) return;
-                    var removalViewport = captureAjaxViewport(
-                        viewport && viewport.anchor && viewport.anchor.isConnected
-                            ? viewport.anchor
-                            : null
-                    );
-                    alert.parentNode.removeChild(alert);
-                    scheduleAjaxViewportRestore(removalViewport);
+                    if (alert.parentNode) alert.parentNode.removeChild(alert);
                 }, 4200);
             }
 
@@ -2465,11 +2753,6 @@
                             return;
                         }
                         if (data.ok && data.close_modal !== false && controller) {
-                            if (confirmModal && window.bootstrap && window.bootstrap.Modal) {
-                                confirmModal.addEventListener("hidden.bs.modal", function() {
-                                    scheduleAjaxViewportRestore(viewport);
-                                }, { once: true });
-                            }
                             controller.hide();
                             pendingConfirmForm = null;
                         } else if (!data.ok) {
@@ -2488,24 +2771,19 @@
             document.addEventListener("submit", function(event) {
                 var form = event.target.closest("[data-cef-confirm-submit]");
                 if (!form || form.dataset.cefConfirmed === "1") return;
-                var controller = modalController();
-                if (!controller) return;
                 event.preventDefault();
-                pendingConfirmForm = form;
-                setConfirmText("[data-cef-confirm-title]", form.dataset.cefConfirmTitle || "Confirmar acción");
-                setConfirmText("[data-cef-confirm-message]", form.dataset.cefConfirmMessage || "¿Confirmás esta acción?");
-                setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
-                setConfirmFeedback("");
-                prepareConfirmMotivo(form);
-                try {
-                    controller.show();
-                } catch (error) {
-                    pendingConfirmForm = null;
-                    submitFormFallback(form);
-                }
-            });
+                openConfirmForm(form);
+            }, true);
 
             document.addEventListener("click", function(event) {
+                var openButton = event.target.closest("[data-cef-confirm-open]");
+                if (openButton) {
+                    event.preventDefault();
+                    var openForm = openButton.closest("[data-cef-confirm-submit]");
+                    openConfirmForm(openForm);
+                    return;
+                }
+
                 if (event.target.closest("[data-cef-confirm-cancel]")) {
                     var controller = modalController();
                     if (controller) controller.hide();
@@ -2521,17 +2799,27 @@
                     return;
                 }
                 submitFormFallback(pendingConfirmForm);
-            });
+            }, true);
+
+            document.addEventListener("keydown", function(event) {
+                if (event.key !== "Escape" || !confirmModal || confirmModal.hidden) return;
+                var controller = modalController();
+                if (controller) controller.hide();
+                pendingConfirmForm = null;
+            }, true);
+
+            window.initCefTables();
         })();
         </script>
     </div>
 </div>
 
-<script src="{% static 'cef/cef_loading.js' %}"></script>
+<script src="{% static 'cef/cef_loading.js' %}?v=20260811-4"></script>
 <script src="{% static 'cef/cef_inventario.js' %}"></script>
 <script src="{% static 'cef/cef_context_selector.js' %}"></script>
 <script src="{% static 'cef/cef_dropdowns.js' %}"></script>
 <script src="{% static 'cef/cef_profesores.js' %}"></script>
 <script src="{% static 'cef/cef_partial_navigation.js' %}"></script>
+<script src="{% static 'cef/cef_asistencia.js' %}?v=20260810-3"></script>
 
 {% endblock %}

@@ -46,6 +46,7 @@
                                 {{ inscripcion.get_estado_display }}
                             </span>
                         </td>
+                        {% if especial_context.puede_operar %}
                         <td class="cef-act-cell">
                             <div class="d-flex flex-wrap gap-1 align-items-center">
                                 <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:editar_inscripcion_seccion' seccion.pk inscripcion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% if gestionar_seccion_modo %}&volver=gestionar{% endif %}{% elif gestionar_seccion_modo %}?volver=gestionar{% endif %}" title="Editar inscripción">
@@ -75,7 +76,8 @@
                                     </form>
                                  {% endif %}
                              </div>
-                         </td>
+                        </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
             </tbody>

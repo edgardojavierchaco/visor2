@@ -1,0 +1,193 @@
+{% extends "cef/base_operativo_cef.html" %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'cef/cef_metricas.css' %}?v=20260811-9">
+{% endblock %}
+
+{% block cef_context_selector %}{% endblock %}
+
+{% block cef_content %}
+<main
+    id="cefMetricasApp"
+    class="cef-metricas"
+    data-consulta-url="{% url 'cef:metricas_consulta' %}"
+    data-exportar-url="{% url 'cef:metricas_exportar' %}"
+    aria-labelledby="cefMetricasTitulo"
+>
+    <header class="cef-metricas-hero">
+        <div>
+            <span class="cef-section-kicker">Análisis global</span>
+            <h1 id="cefMetricasTitulo">Métricas</h1>
+            <p>Construí una pregunta simple sobre los datos de CEF y obtené un total, un gráfico y una tabla.</p>
+        </div>
+        <span class="cef-metricas-readonly"><i class="fa-solid fa-eye" aria-hidden="true"></i> Sólo consulta</span>
+    </header>
+
+    <section class="cef-panel cef-metricas-builder" aria-labelledby="cefMetricasAlcanceTitulo">
+        <div class="cef-panel-head">
+            <div>
+                <span class="cef-section-kicker">Paso 1</span>
+                <h2 class="cef-panel-title" id="cefMetricasAlcanceTitulo">Definí el alcance</h2>
+                <p class="text-muted mb-0">Primero elegí qué ciclos y CEF querés incluir en el cálculo.</p>
+            </div>
+        </div>
+
+        <div class="cef-panel-body">
+            <form id="cefMetricasForm" novalidate>
+                <div class="cef-metricas-grid cef-metricas-grid-scope">
+                    <div class="cef-field cef-metricas-scope-field">
+                        <div class="cef-metricas-field-label">
+                            <label for="cefMetricasCiclos">Ciclos a incluir</label>
+                            <button id="cefMetricasLimpiarCiclos" type="button" class="cef-metricas-clear-selection">Limpiar</button>
+                        </div>
+                        <select id="cefMetricasCiclos" multiple data-cef-select="true" data-cef-select-search="always" data-placeholder="Todos" required></select>
+                        <small>Elegí un ciclo, varios o Todos. También podés incluir ciclos cerrados.</small>
+                    </div>
+
+                    <div class="cef-field cef-metricas-scope-field">
+                        <div class="cef-metricas-field-label">
+                            <label for="cefMetricasCefs">CEF a incluir</label>
+                            <button id="cefMetricasLimpiarCefs" type="button" class="cef-metricas-clear-selection">Limpiar</button>
+                        </div>
+                        <select id="cefMetricasCefs" multiple data-cef-select="true" data-cef-select-search="always" data-placeholder="Todos"></select>
+                        <small>Elegí un CEF, varios o Todos.</small>
+                    </div>
+                </div>
+
+                <section class="cef-metricas-subsection cef-metricas-question" aria-labelledby="cefMetricasPreguntaTitulo">
+                    <div class="cef-metricas-subhead">
+                        <div>
+                            <span class="cef-section-kicker">Paso 2</span>
+                            <h3 id="cefMetricasPreguntaTitulo">Elegí qué querés medir</h3>
+                        </div>
+                    </div>
+                    <div class="cef-metricas-grid cef-metricas-grid-question">
+                        <div class="cef-field">
+                            <label for="cefMetricasArea">Área</label>
+                            <select id="cefMetricasArea" class="form-select"></select>
+                            <small>Elegí el tema que querés consultar: alumnos, profesores, grupos, inventario o asistencia.</small>
+                        </div>
+
+                        <div class="cef-field">
+                            <label for="cefMetricasIndicador">Indicador</label>
+                            <select id="cefMetricasIndicador" class="form-select" aria-describedby="cefMetricasIndicadorAyuda"></select>
+                            <small id="cefMetricasIndicadorAyuda">Elegí una medición para ver qué representa el número.</small>
+                        </div>
+                    </div>
+                </section>
+
+                <details id="cefMetricasFiltrosSection" class="cef-metricas-subsection cef-metricas-disclosure">
+                    <summary>
+                        <span>
+                            <span class="cef-section-kicker">Paso 3</span>
+                            <strong id="cefMetricasFiltrosTitulo">Limitar datos (opcional)</strong>
+                        </span>
+                        <span id="cefMetricasFiltrosCount" class="badge text-bg-light">0 filtros</span>
+                    </summary>
+                    <p class="cef-metricas-section-help">Estos controles limitan qué datos se cuentan. No cambian la forma de mostrar el resultado.</p>
+                    <div id="cefMetricasFiltros" class="cef-metricas-grid" data-metricas-filtros></div>
+                    <p id="cefMetricasSinFiltros" class="cef-metricas-help" hidden>Este indicador no necesita filtros adicionales.</p>
+                </details>
+
+                <section class="cef-metricas-subsection" aria-labelledby="cefMetricasResultadoConfigTitulo">
+                    <div class="cef-metricas-subhead">
+                        <div>
+                            <span class="cef-section-kicker">Paso 4</span>
+                            <h3 id="cefMetricasResultadoConfigTitulo">Elegí cómo mostrarlo</h3>
+                        </div>
+                    </div>
+                    <div class="cef-metricas-grid cef-metricas-grid-result">
+                        <div class="cef-field">
+                            <label for="cefMetricasAgrupar">Desglosar por</label>
+                            <select id="cefMetricasAgrupar" class="form-select"></select>
+                            <small>Elegí una categoría para separar el total en filas, o mostralo como un único total.</small>
+                        </div>
+                        <div class="cef-field">
+                            <label for="cefMetricasComparar">Comparar por <span class="text-muted fw-normal">(opcional)</span></label>
+                            <select id="cefMetricasComparar" class="form-select"></select>
+                            <small>Divide cada categoría en series para compararlas.</small>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="cef-metricas-actions">
+                    <button id="cefMetricasAplicar" type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+                        <span>Calcular resultado</span>
+                    </button>
+                    <button id="cefMetricasLimpiar" type="button" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                        Restablecer selección
+                    </button>
+                </div>
+                <p class="cef-metricas-actions-help">Calculá la consulta cuando termines. El total, el gráfico y la tabla usan la misma selección.</p>
+            </form>
+        </div>
+    </section>
+
+    <section id="cefMetricasEstado" class="cef-metricas-status" aria-live="polite" aria-atomic="true"></section>
+
+    <section id="cefMetricasResultado" class="cef-metricas-results" aria-labelledby="cefMetricasResultadoTitulo" hidden>
+        <div class="cef-metricas-result-head">
+            <div>
+                <span class="cef-section-kicker">Resultado</span>
+                <h2 id="cefMetricasResultadoTitulo">Resultado del análisis</h2>
+                <p id="cefMetricasResumen" class="text-muted mb-0"></p>
+            </div>
+            <a id="cefMetricasExportar" class="btn btn-success" href="#" aria-disabled="true">
+                <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                Exportar Excel
+            </a>
+        </div>
+
+        <div class="cef-metricas-kpi-grid">
+            <article class="cef-metricas-kpi" aria-label="Total del indicador">
+                <span id="cefMetricasKpiLabel">Total</span>
+                <strong id="cefMetricasKpiValue">0</strong>
+                <small id="cefMetricasKpiDetail"></small>
+            </article>
+            <article class="cef-card cef-metricas-chart-card">
+                <div class="cef-card-header">
+                    <h3><i class="fa-solid fa-chart-simple me-2" aria-hidden="true"></i>Gráfico</h3>
+                    <div class="cef-metricas-chart-tools">
+                        <label class="visually-hidden" for="cefMetricasGrafico">Cambiar tipo de gráfico</label>
+                        <select id="cefMetricasGrafico" class="form-select form-select-sm cef-metricas-chart-type">
+                            <option value="auto">Automática</option>
+                        </select>
+                        <span id="cefMetricasChartBadge" class="badge text-bg-light"></span>
+                    </div>
+                </div>
+                <div class="cef-card-body">
+                    <div id="cefMetricasChart" class="cef-metricas-chart" role="img" aria-label="Gráfico del resultado"></div>
+                </div>
+            </article>
+        </div>
+
+        <article class="cef-panel cef-metricas-table-panel">
+            <div class="cef-panel-head">
+                <div>
+                    <span class="cef-section-kicker">Valores exactos</span>
+                    <h3 class="cef-panel-title">Tabla</h3>
+                </div>
+            </div>
+            <div class="cef-panel-body">
+                <div id="cefMetricasTabla"></div>
+            </div>
+        </article>
+
+        <aside class="cef-metricas-methodology" aria-labelledby="cefMetricasDefinicionTitulo">
+            <div class="cef-metricas-methodology-icon"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></div>
+            <div>
+                <h3 id="cefMetricasDefinicionTitulo">Definición</h3>
+                <p id="cefMetricasDefinicion"></p>
+                <ul id="cefMetricasNotas"></ul>
+            </div>
+        </aside>
+    </section>
+</main>
+
+{{ metricas_config|json_script:"cef-metricas-config" }}
+<script src="{% static 'cef/cef_metricas.js' %}?v=20260811-9" defer></script>
+{% endblock %}

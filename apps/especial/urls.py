@@ -36,6 +36,11 @@ urlpatterns = [
         views_alumnos.alumnos,
         name="alumnos",
     ),
+    path(
+        "alumnos/matricula-compartida/cueanexos/",
+        views_alumnos.buscar_cueanexos_matricula_compartida,
+        name="buscar_cueanexos_matricula_compartida",
+    ),
     # Docentes (Nuevo)
     path(
         "docentes/",
@@ -80,6 +85,11 @@ urlpatterns = [
         "carga/ciclos/",
         views_ciclo.administrar_ciclos,
         name="administrar_ciclos",
+    ),
+    path(
+        "carga/ciclos/previsualizacion/<int:ciclo_id>/",
+        views_ciclo.prevalidar_ciclo_anual,
+        name="prevalidar_ciclo_anual",
     ),
     path(
     "carga/secciones/<int:seccion_id>/docentes/<int:docente_id>/editar/",

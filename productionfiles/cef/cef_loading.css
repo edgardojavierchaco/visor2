@@ -3,3 +3,39 @@
     display: inline-flex;
     justify-content: center;
 }
+
+.cef-page-loading {
+    align-items: center;
+    background: var(--surface-soft, #f3f6fa);
+    color: var(--text-muted, #475569);
+    display: flex;
+    flex-direction: column;
+    gap: .65rem;
+    justify-content: center;
+    min-height: 9rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.cef-page-loading-host {
+    position: relative;
+}
+
+.cef-page-loading-host > .cef-page-loading {
+    border-radius: inherit;
+    inset: 0;
+    justify-content: flex-start;
+    padding-top: 3rem;
+    position: absolute;
+    z-index: 20;
+}
+
+.cef-page-loading.is-fixed {
+    inset: 0;
+    position: fixed;
+    z-index: 2000;
+}
+
+.cef-page-loading .spinner-border {
+    color: var(--primary, #2d7dd2);
+}

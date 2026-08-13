@@ -3,9 +3,9 @@
         <h2 class="cef-panel-title">Gestión de Secciones</h2>
         <div class="cef-panel-actions">
             <!-- CORRECCIÓN 1: Nombre de URL correcto (nueva vs nuevo) -->
-            <a class="btn btn-primary" href="{% url 'especial:carga_seccion_nueva' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+            {% if especial_context.puede_operar %}<a class="btn btn-primary" href="{% url 'especial:carga_seccion_nueva' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-plus"></i> Agregar Sección
-            </a>
+            </a>{% endif %}
         </div>
     </div>
 
@@ -95,11 +95,13 @@
                                                     <i class="fa-solid fa-clipboard-list"></i> Gestionar sección
                                                 </a>
                                             </li>
+                                            {% if especial_context.puede_operar %}
                                             <li>
                                                 <a class="dropdown-item" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                     <i class="fa-solid fa-pen"></i> Editar sección
                                                 </a>
                                             </li>
+                                            {% endif %}
                                             <li>
                                                 <a class="dropdown-item" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                     <i class="fa-solid fa-user-plus"></i> Alumnos
@@ -121,7 +123,7 @@
                     </tbody>
                 </table>
             </div>
-        {% elif especial_context.puede_operar %}
+        {% elif especial_context.puede_consultar %}
             <div class="cef-empty-state">
                 <i class="fa-solid fa-layer-group" style="font-size:1.5rem;color:var(--text-faint)"></i>
                 Todavía no hay secciones cargadas para este establecimiento y ciclo.
