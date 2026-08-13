@@ -23,6 +23,7 @@ from .models import (
     EspecialAlumnoBanco,
     EspecialDocenteBanco,
     SeccionEspecial,
+    _normalizar_oferta_matricula_compartida,
     cueanexo_tiene_oferta_matricula_compartida,
 )
 from .permisos import (
@@ -1103,7 +1104,7 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         def __init__(self, rows):
             self.rows = list(rows)
             self.alias = None
-            self.oferta_normalizada_anotada = False
+            self.values_list_args = None
 
         def using(self, alias):
             self.alias = alias
@@ -1114,23 +1115,15 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 self.rows = [
                     row for row in self.rows if row["cueanexo"] == kwargs["cueanexo"]
                 ]
-            if "oferta_normalizada" in kwargs:
-                if not self.oferta_normalizada_anotada:
-                    raise AssertionError("La oferta debe normalizarse antes de filtrarla.")
-                self.rows = [
-                    row
-                    for row in self.rows
-                    if (row.get("oferta") or "").strip()
-                    == kwargs["oferta_normalizada"]
-                ]
             return self
 
-        def annotate(self, **kwargs):
-            self.oferta_normalizada_anotada = "oferta_normalizada" in kwargs
-            return self
-
-        def exists(self):
-            return bool(self.rows)
+        def values_list(self, *fields, flat=False):
+            self.values_list_args = (fields, flat)
+            if fields != ("oferta",) or not flat:
+                raise AssertionError(
+                    "La consulta debe traer únicamente oferta como lista plana."
+                )
+            return [row.get("oferta") for row in self.rows]
 
     def _form(self, data, habilitada=True, existe=True, actual="123456700"):
         return EspecialMatriculaCompartidaForm(
@@ -1145,7 +1138,26 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
             habilitada = cueanexo_tiene_oferta_matricula_compartida(cueanexo)
         self.assertEqual(manager.alias, "default")
+        self.assertEqual(manager.values_list_args, (("oferta",), True))
         return habilitada
+
+    def test_ofertas_equivalentes_por_formato_habilitan(self):
+        self.assertEqual(_normalizar_oferta_matricula_compartida(None), "")
+        ofertas = (
+            "Especial - Integración",
+            "  Especial - Integración  ",
+            "Especial  -  Integración",
+            "Especial\u00a0-\u00a0Integración",
+            "Especial – Integración",
+            "Especial — Integración",
+            "Especial-Integración",
+        )
+        for oferta in ofertas:
+            with self.subTest(oferta=repr(oferta)):
+                self.assertEqual(
+                    _normalizar_oferta_matricula_compartida(oferta),
+                    "Especial - Integración",
+                )
 
     def test_cue_con_una_oferta_integracion_normalizada_es_true(self):
         self.assertTrue(
@@ -1153,7 +1165,7 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 [
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - Integración ",
+                        "oferta": "Especial — Integración",
                     }
                 ]
             )
@@ -1165,11 +1177,11 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 [
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - Primaria de 7 años ",
+                        "oferta": "Especial - Primaria de 7 años",
                     },
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - Integración ",
+                        "oferta": "Especial\u00a0-\u00a0Integración",
                     },
                     {
                         "cueanexo": "987654300",
@@ -1197,11 +1209,23 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 [
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - integración ",
+                        "oferta": "Especial - integración",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - integracion",
                     },
                     {
                         "cueanexo": "220015500",
                         "oferta": "Especial - Integración ampliada",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial - Integraciones",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial Integración",
                     },
                 ]
             )
