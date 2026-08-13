@@ -1,0 +1,131 @@
+<div class="cef-asistencia-workspace" data-cef-asistencia-tabs>
+    <nav class="cef-asistencia-tabs" aria-label="Vistas de asistencia" role="tablist">
+        <button type="button" id="cef-tab-tomar" role="tab" aria-selected="true" aria-controls="cef-panel-tomar" data-cef-asistencia-tab="tomar"><i class="fa-solid fa-user-check" aria-hidden="true"></i>Tomar asistencia</button>
+        <button type="button" id="cef-tab-historial" role="tab" aria-selected="false" aria-controls="cef-panel-historial" tabindex="-1" data-cef-asistencia-tab="historial"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>Historial</button>
+    </nav>
+
+    <section id="cef-panel-tomar" class="cef-asistencia-panel" role="tabpanel" aria-labelledby="cef-tab-tomar" data-cef-asistencia-panel="tomar">
+        <div class="cef-asistencia-date">
+            <div class="cef-asistencia-date-head">
+                <div>
+                    <span class="cef-asistencia-eyebrow">Fecha seleccionada</span>
+                    <h3 class="cef-asistencia-date-title">{% if fecha %}{{ fecha|date:"l j \d\e F \d\e Y"|capfirst }}{% else %}Seleccioná una fecha{% endif %}</h3>
+                    {% if fecha %}
+                        <div class="cef-asistencia-date-status">
+                            <span class="badge text-bg-{% if asistencia_cargada %}success{% else %}warning{% endif %}">{% if asistencia_cargada %}Guardada{% else %}Pendiente{% endif %}</span>
+                            {% if asistencia_cargada %}<p class="cef-asistencia-summary"><strong>{{ presentes }} presentes</strong> · {{ ausentes }} ausente{{ ausentes|pluralize }} · {{ justificadas }} justificada{{ justificadas|pluralize }}</p>{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" aria-expanded="{% if fecha_error or not fecha %}true{% else %}false{% endif %}" aria-controls="cef-asistencia-date-edit" data-cef-asistencia-fecha-toggle><i class="fa-solid fa-calendar-days" aria-hidden="true"></i>{% if fecha %}Cambiar fecha{% else %}Elegir fecha{% endif %}</button>
+            </div>
+
+            <div id="cef-asistencia-date-edit" class="cef-asistencia-date-edit"{% if fecha and not fecha_error %} hidden{% endif %} data-cef-asistencia-fecha-edit>
+                <form method="get" action="{{ asistencia_url }}" data-cef-asistencia-fecha>
+                    <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                    {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
+                    <div>
+                        <label class="form-label fw-bold mb-1" for="{{ fecha_form.fecha.id_for_label }}">Elegí la fecha</label>
+                        {{ fecha_form.fecha }}
+                    </div>
+                    <span class="small text-muted">La asistencia se mostrará al seleccionar la fecha.</span>
+                </form>
+            </div>
+
+            {% if fecha_error %}
+                <div class="alert alert-danger cef-asistencia-notice">{{ fecha_error }}</div>
+            {% elif fecha_futura %}
+                <div class="alert alert-danger cef-asistencia-notice"><i class="fa-solid fa-triangle-exclamation me-1"></i>No se puede registrar asistencia de una fecha futura.</div>
+            {% elif not fecha %}
+                <div class="alert alert-info cef-asistencia-notice">Elegí una fecha para consultar el grupo.</div>
+            {% endif %}
+
+            {% if asistencia_cargada %}
+                <div class="cef-asistencia-audit">
+                    <button class="btn btn-link btn-sm p-0" type="button" aria-expanded="false" aria-controls="historialCambiosAsistencia" data-cef-asistencia-audit-toggle><span data-cef-asistencia-audit-label>Ver historial de modificaciones</span></button>
+                    <div id="historialCambiosAsistencia" class="cef-asistencia-audit-panel" data-cef-asistencia-audit-panel hidden>
+                        {% if movimientos %}
+                            <div class="cef-table-wrap">
+                                <table class="cef-dt">
+                                    <thead><tr><th>Fecha y hora</th><th>Alumno</th><th>Usuario</th><th>Anterior</th><th>Nuevo</th></tr></thead>
+                                    <tbody>{% for movimiento in movimientos %}<tr><td>{{ movimiento.creado_en|date:"d/m/Y H:i" }}</td><td>{{ movimiento.asistencia.inscripcion.alumno.apellidos }}, {{ movimiento.asistencia.inscripcion.alumno.nombres }}</td><td>{{ movimiento.creado_por.get_full_name|default:movimiento.creado_por.username|default:"Usuario no disponible" }}</td><td>{% if movimiento.estado_anterior %}{{ movimiento.get_estado_anterior_display }}{% else %}Sin estado{% endif %}</td><td>{{ movimiento.get_estado_nuevo_display }}</td></tr>{% endfor %}</tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="cef-empty-state">No hay modificaciones registradas.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if fecha %}
+            <section class="cef-asistencia-section">
+                <div class="cef-asistencia-section-head">
+                    <h3 class="cef-asistencia-section-title">Asistencia</h3>
+                    <span class="cef-asistencia-count">{{ inscripciones|length }} alumno{{ inscripciones|length|pluralize }} en esta fecha</span>
+                    {% if not solo_lectura and not fecha_futura and inscripciones %}<button type="button" class="btn btn-outline-success btn-sm" data-cef-marcar-presentes><i class="fa-solid fa-user-check me-1"></i>Marcar todos presentes</button>{% endif %}
+                </div>
+
+                {% if inscripciones %}
+                    <form method="post" action="{{ asistencia_url }}" data-cef-asistencia-guardado>
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="guardar_asistencia">
+                        <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}">
+                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                        {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
+                        <div class="cef-table-wrap cef-asistencia-table">
+                            <table class="cef-dt" aria-label="Asistencia de alumnos">
+                                <thead><tr><th>Apellido y nombre</th><th>Documento</th><th>Asistencia</th></tr></thead>
+                                <tbody>
+                                    {% for inscripcion in inscripciones %}
+                                        <tr>
+                                            <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
+                                            <td>{{ inscripcion.alumno.nro_doc|default:"—" }}</td>
+                                            <td>{% if solo_lectura or fecha_futura %}{% if inscripcion.asistencia_actual %}<span class="badge text-bg-{% if inscripcion.asistencia_actual.estado == 'presente' %}success{% elif inscripcion.asistencia_actual.estado == 'ausente' %}danger{% else %}warning{% endif %}">{{ inscripcion.asistencia_actual.get_estado_display }}</span>{% else %}<span class="text-muted">Sin registrar</span>{% endif %}{% else %}<select class="form-select" name="asistencia_{{ inscripcion.pk }}" required aria-label="Asistencia de {{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">{% if not inscripcion.asistencia_actual %}<option value="">Seleccionar estado</option>{% endif %}{% for valor, etiqueta in estado_choices %}<option value="{{ valor }}"{% if inscripcion.asistencia_actual.estado == valor %} selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select>{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if not solo_lectura and not fecha_futura %}
+                            <div class="cef-asistencia-savebar">
+                                <p class="cef-asistencia-progress" data-cef-asistencia-progress aria-live="polite">Completá el estado de todos los alumnos.</p>
+                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i>{% if asistencia_cargada %}Guardar cambios{% else %}Guardar asistencia{% endif %}</button>
+                            </div>
+                        {% endif %}
+                    </form>
+                {% else %}
+                    <div class="cef-empty-state">No hay alumnos vigentes para esta fecha.</div>
+                {% endif %}
+            </section>
+        {% endif %}
+    </section>
+
+    <section id="cef-panel-historial" class="cef-asistencia-panel" role="tabpanel" aria-labelledby="cef-tab-historial" data-cef-asistencia-panel="historial" hidden>
+        <div class="cef-asistencia-history-head">
+            <h3 class="cef-asistencia-history-title">Historial de asistencias</h3>
+            <span class="badge text-bg-light border">{{ cantidad_jornadas_registradas }} fecha{{ cantidad_jornadas_registradas|pluralize }}</span>
+        </div>
+        {% if jornadas_registradas %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt">
+                    <thead><tr><th>Fecha</th><th>Presentes</th><th>Ausentes</th><th>Justificadas</th><th>Acción</th></tr></thead>
+                    <tbody>
+                        {% for item in jornadas_registradas %}
+                            {% if item.total_registros %}
+                                <tr{% if item.seleccionada %} class="cef-history-detail-row"{% endif %}><td><strong>{{ item.fecha|date:"d/m/Y" }}</strong>{% if item.seleccionada %}<span class="badge text-bg-primary ms-1">Actual</span>{% endif %}</td><td>{{ item.presentes }}</td><td>{{ item.ausentes }}</td><td>{{ item.justificadas }}</td><td><a class="btn btn-outline-primary btn-sm" href="{{ item.url_asistencia }}" data-cef-asistencia-fecha-link><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver asistencia</a></td></tr>
+                            {% else %}
+                                <tr class="cef-asistencia-legacy-row"><td colspan="5">{{ item.fecha|date:"d/m/Y" }} · Jornada sin registros.</td></tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="cef-empty-state">Todavía no hay asistencias guardadas para este grupo.</div>
+        {% endif %}
+    </section>
+</div>

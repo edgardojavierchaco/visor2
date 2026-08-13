@@ -586,6 +586,10 @@ html {
                         <li><a class="dropdown-item" href="/padron/responsable/"><i class="fa-solid fa-list fa-fw me-2 text-secondary"></i>Listar Responsables</a></li>
                     </ul>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'padroninterno:totales_escuelas' %}">
+                        <i class="fa-solid fa-chart-column me-1"></i> Visualizador de Establecimientos </a>
+                </li>
                 <li class="nav-item d-flex align-items-center padron-fecha-nav-item">
                     <span class="fecha-badge fecha-badge-nav">
                         <i class="fa-solid fa-calendar-alt"></i> Datos al: {% if padron_ultima_fecha %}{{ padron_ultima_fecha|date:'d/m/Y H:i' }}{% else %}sin definir{% endif %}
@@ -726,6 +730,33 @@ html {
                 </div>
                 <h3 class="card-title">Responsables</h3>
                 <p class="card-text mb-0">Directivos y responsables registrados en el sistema.</p>
+            </div>
+        </a>
+    </div>
+        <div class="col-md-6 col-xl-4">
+        <a
+            class="quick-card card h-100"
+            href="{% url 'padroninterno:totales_escuelas' %}"
+        >
+            <div class="card-body">
+                <div
+                    class="icon-wrap"
+                    style="
+                        background: rgba(124, 58, 237, 0.12);
+                        color: #7c3aed;
+                    "
+                >
+                    <i class="fa-solid fa-chart-column"></i>
+                </div>
+
+                <h3 class="card-title">
+                    Visualizador de Establecimientos
+                </h3>
+
+                <p class="card-text mb-0">
+                    Consulta de establecimientos activos por nivel,
+                    ámbito y modalidad.
+                </p>
             </div>
         </a>
     </div>

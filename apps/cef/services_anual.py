@@ -19,14 +19,12 @@ from .models import (
     CefInscripcion,
     CefInventarioMaterial,
     CefInventarioMaterialEstado,
-    CefTurno,
     normalizar_cueanexo,
     solo_digitos,
 )
 
 
 CATEGORIAS_ANUALES = (
-    ("turnos", "Turnos"),
     ("datos_relevamiento", "Datos adicionales"),
     ("grupos", "Grupos activos"),
     ("dias", "Días de funcionamiento"),
@@ -71,9 +69,7 @@ def _resultado_base(ciclo_origen):
         "errores": [],
         "advertencias": [],
         "proyeccion": {
-            "turnos": [],
             "grupos": [],
-            "turnos_origen_ids": [],
             "datos_relevamiento_origen_ids": [],
             "grupos_origen_ids": [],
             "dias_origen_ids": [],
@@ -201,13 +197,6 @@ def prevalidar_generacion_anual(ciclo_origen):
             ),
         )
 
-    turnos = list(
-        CefTurno.objects.filter(ciclo=ciclo_origen).order_by(
-            "orden",
-            "nombre",
-            "pk",
-        )
-    )
     relevamientos = list(
         CefDatosRelevamiento.objects.filter(ciclo=ciclo_origen).order_by(
             "cueanexo",
@@ -297,49 +286,6 @@ def prevalidar_generacion_anual(ciclo_origen):
         contador["encontrados"] += encontrados
         contador["proyectables"] += proyectables
 
-    invalidos_turnos = set()
-    turnos_por_nombre = defaultdict(list)
-    for turno in turnos:
-        turnos_por_nombre[(turno.nombre or "").strip().casefold()].append(turno)
-        if (
-            not turno.hora_desde_referencia
-            or not turno.hora_hasta_referencia
-            or turno.hora_hasta_referencia <= turno.hora_desde_referencia
-        ):
-            invalidos_turnos.add(turno.pk)
-            _agregar_detalle(
-                errores,
-                f"turno_horario_invalido_{turno.pk}",
-                f'El turno "{turno.nombre}" no posee un rango horario válido.',
-            )
-    for nombre, coincidencias in turnos_por_nombre.items():
-        if nombre and len(coincidencias) > 1:
-            invalidos_turnos |= {turno.pk for turno in coincidencias}
-            _agregar_detalle(
-                errores,
-                f"turno_nombre_duplicado_{nombre}",
-                f'El nombre de turno "{coincidencias[0].nombre}" está duplicado en el ciclo origen.',
-            )
-
-    turnos_validos = [turno for turno in turnos if turno.pk not in invalidos_turnos]
-    resultado["totales"]["turnos"]["encontrados"] = len(turnos)
-    resultado["totales"]["turnos"]["proyectables"] = len(turnos_validos)
-    resultado["proyeccion"]["turnos_origen_ids"] = [
-        turno.pk for turno in turnos_validos
-    ]
-    resultado["proyeccion"]["turnos"] = [
-        {
-            "turno_origen_id": turno.pk,
-            "nombre_destino": turno.nombre,
-            "hora_desde_referencia": turno.hora_desde_referencia,
-            "hora_hasta_referencia": turno.hora_hasta_referencia,
-            "activo": turno.activo,
-            "orden": turno.orden,
-        }
-        for turno in turnos_validos
-    ]
-    turnos_validos_ids = {turno.pk for turno in turnos_validos}
-
     invalidos_relevamiento = set()
     relevamientos_por_cue = defaultdict(list)
     for relevamiento in relevamientos:
@@ -399,25 +345,34 @@ def prevalidar_generacion_anual(ciclo_origen):
         grupos_por_clave[
             (cue or str(grupo.cueanexo), grupo.actividad_id, grupo.numero)
         ].append(grupo)
-        if grupo.turno.ciclo_id != ciclo_origen.pk:
+        turno_global_valido = True
+        if not grupo.turno.activo:
             invalidos_grupos.add(grupo.pk)
+            turno_global_valido = False
             _agregar_detalle(
                 errores,
-                f"grupo_turno_otro_ciclo_{grupo.pk}",
+                f"grupo_turno_inactivo_{grupo.pk}",
                 (
                     f"El grupo {_rotulo_grupo(grupo)} del CEF {grupo.cueanexo} "
-                    "referencia un turno de otro ciclo."
+                    f'referencia el turno global inactivo "{grupo.turno.nombre}".'
                 ),
                 grupo.cueanexo,
             )
-        elif grupo.turno_id not in turnos_validos_ids:
+        elif (
+            not grupo.turno.hora_desde_referencia
+            or not grupo.turno.hora_hasta_referencia
+            or grupo.turno.hora_hasta_referencia
+            <= grupo.turno.hora_desde_referencia
+        ):
             invalidos_grupos.add(grupo.pk)
+            turno_global_valido = False
             _agregar_detalle(
                 errores,
-                f"grupo_turno_no_proyectable_{grupo.pk}",
+                f"grupo_turno_horario_invalido_{grupo.pk}",
                 (
                     f"El grupo {_rotulo_grupo(grupo)} del CEF {grupo.cueanexo} "
-                    "no puede resolver un turno válido para el ciclo proyectado."
+                    f'referencia el turno global "{grupo.turno.nombre}" con un '
+                    "rango horario inválido."
                 ),
                 grupo.cueanexo,
             )
@@ -433,7 +388,7 @@ def prevalidar_generacion_anual(ciclo_origen):
                 f"El grupo {_rotulo_grupo(grupo)} posee un horario inválido.",
                 grupo.cueanexo,
             )
-        elif grupo.turno_id in turnos_validos_ids and (
+        elif turno_global_valido and (
             grupo.hora_inicio < grupo.turno.hora_desde_referencia
             or grupo.hora_fin > grupo.turno.hora_hasta_referencia
         ):
@@ -525,7 +480,7 @@ def prevalidar_generacion_anual(ciclo_origen):
             "rotulo_origen": _rotulo_grupo(grupo),
             "anio_origen": ciclo_origen.anio,
             "anio_destino": destino_anio,
-            "turno_origen_id": grupo.turno_id,
+            "turno_id": grupo.turno_id,
         }
         for grupo in grupos_validos
     ]
@@ -1046,25 +1001,6 @@ def generar_ciclo_siguiente(ciclo_origen, user):
 
             proyeccion = resultado["proyeccion"]
 
-            turnos_origen = _objetos_proyectados(
-                CefTurno,
-                proyeccion["turnos_origen_ids"],
-            )
-            turnos_mapa = _bulk_create_con_mapa(
-                CefTurno,
-                turnos_origen,
-                lambda item: CefTurno(
-                    ciclo=destino,
-                    nombre=item.nombre,
-                    hora_desde_referencia=item.hora_desde_referencia,
-                    hora_hasta_referencia=item.hora_hasta_referencia,
-                    activo=item.activo,
-                    orden=item.orden,
-                    creado_por=user,
-                    actualizado_por=user,
-                ),
-            )
-
             relevamientos_origen = _objetos_proyectados(
                 CefDatosRelevamiento,
                 proyeccion["datos_relevamiento_origen_ids"],
@@ -1105,6 +1041,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
             grupos_origen = _objetos_proyectados(
                 CefGrupo,
                 proyeccion["grupos_origen_ids"],
+                "turno",
             )
             grupos_mapa = _bulk_create_con_mapa(
                 CefGrupo,
@@ -1117,7 +1054,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     nombre=item.nombre,
                     nivel_id=item.nivel_id,
                     rango_etario_id=item.rango_etario_id,
-                    turno=turnos_mapa[item.turno_id],
+                    turno_id=item.turno_id,
                     hora_inicio=item.hora_inicio,
                     hora_fin=item.hora_fin,
                     cupo_maximo=item.cupo_maximo,
@@ -1133,9 +1070,13 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     codigo_ra_descripcion_snapshot=(
                         item.codigo_ra_descripcion_snapshot
                     ),
-                    turno_nombre_snapshot=item.turno_nombre_snapshot,
-                    turno_hora_desde_snapshot=item.turno_hora_desde_snapshot,
-                    turno_hora_hasta_snapshot=item.turno_hora_hasta_snapshot,
+                    turno_nombre_snapshot=item.turno.nombre,
+                    turno_hora_desde_snapshot=(
+                        item.turno.hora_desde_referencia
+                    ),
+                    turno_hora_hasta_snapshot=(
+                        item.turno.hora_hasta_referencia
+                    ),
                     nivel_nombre_snapshot=item.nivel_nombre_snapshot,
                     rango_etario_nombre_snapshot=item.rango_etario_nombre_snapshot,
                     observaciones=item.observaciones,
@@ -1306,7 +1247,6 @@ def generar_ciclo_siguiente(ciclo_origen, user):
 
             conteos = {
                 "cef": resultado["cantidad_cueanexos"],
-                "turnos": len(turnos_origen),
                 "datos_relevamiento": len(relevamientos_origen),
                 "grupos": len(grupos_origen),
                 "dias": len(dias_origen),

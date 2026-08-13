@@ -49,44 +49,6 @@
 
         <section class="cef-card mb-4">
             <div class="cef-card-header">
-                <h3><i class="fa-solid fa-calendar-check me-2"></i>Generación real</h3>
-                <span class="badge text-bg-{% if resultado.bloqueado or resultado.requiere_cierre %}secondary{% else %}primary{% endif %}">
-                    {% if resultado.bloqueado %}No disponible{% elif resultado.requiere_cierre %}Requiere cierre{% else %}Acción irreversible{% endif %}
-                </span>
-            </div>
-            <div class="cef-card-body">
-                {% if resultado.bloqueado %}
-                    <div class="alert alert-warning mb-0">
-                        Corregí las inconsistencias bloqueantes y volvé a ejecutar la previsualización antes de generar el ciclo.
-                    </div>
-                {% elif resultado.requiere_cierre %}
-                    <div class="alert alert-warning">
-                        El ciclo {{ resultado.origen.anio }} aún está abierto. Cerralo antes de generar el ciclo {{ resultado.destino_anio }}.
-                    </div>
-                    <a class="btn btn-outline-primary" href="{{ volver_url }}">
-                        <i class="fa-solid fa-arrow-left me-1"></i>Volver a Ciclos para cerrarlo
-                    </a>
-                {% else %}
-                    <p>
-                        La generación volverá a validar todos los datos en el servidor. Si continúan siendo válidos, creará el ciclo {{ resultado.destino_anio }} y copiará la continuidad anual en una única operación. El ciclo {{ resultado.origen.anio }} permanecerá cerrado sin cambios.
-                    </p>
-                    <form method="post"
-                          action="{% url 'cef:generar_ciclo_anual' resultado.origen.id %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"
-                          data-cef-confirm-submit
-                          data-cef-confirm-title="Generar ciclo {{ resultado.destino_anio }}"
-                          data-cef-confirm-message="Esta acción realizará la generación anual real desde el ciclo {{ resultado.origen.anio }} ya cerrado."
-                          data-cef-confirm-entity="La operación completa será atómica y volverá a ejecutar la prevalidación.">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fa-solid fa-calendar-plus me-1"></i>Generar ciclo {{ resultado.destino_anio }}
-                        </button>
-                    </form>
-                {% endif %}
-            </div>
-        </section>
-
-        <section class="cef-card mb-4">
-            <div class="cef-card-header">
                 <h3><i class="fa-solid fa-list-check me-2"></i>Conteos de la proyección</h3>
                 <span class="badge text-bg-{% if resultado.bloqueado %}danger{% else %}success{% endif %}">
                     {{ resultado.totales.errores }} errores · {{ resultado.totales.advertencias }} advertencias
@@ -185,21 +147,21 @@
                                 {% for cef in resultado.por_cef %}
                                     <tr>
                                         <td><strong>{{ cef.cueanexo }}</strong></td>
-                                        <td>{{ cef.conteos.datos_relevamiento.proyectables }} / {{ cef.conteos.datos_relevamiento.encontrados }}</td>
-                                        <td>{{ cef.conteos.grupos.proyectables }} / {{ cef.conteos.grupos.encontrados }}</td>
-                                        <td>{{ cef.conteos.dias.proyectables }} / {{ cef.conteos.dias.encontrados }}</td>
-                                        <td>{{ cef.conteos.alumnos.proyectables }} / {{ cef.conteos.alumnos.encontrados }}</td>
-                                        <td>{{ cef.conteos.docentes.proyectables }} / {{ cef.conteos.docentes.encontrados }}</td>
-                                        <td>{{ cef.conteos.inscripciones.proyectables }} / {{ cef.conteos.inscripciones.encontrados }}</td>
-                                        <td>{{ cef.conteos.asignaciones.proyectables }} / {{ cef.conteos.asignaciones.encontrados }}</td>
-                                        <td>{{ cef.conteos.inventario_materiales.proyectables }} / {{ cef.conteos.inventario_materiales.encontrados }}</td>
-                                        <td>{{ cef.conteos.inventario_distribuciones.proyectables }} / {{ cef.conteos.inventario_distribuciones.encontrados }}</td>
+                                        <td>{{ cef.conteos.datos_relevamiento.proyectables }}</td>
+                                        <td>{{ cef.conteos.grupos.proyectables }}</td>
+                                        <td>{{ cef.conteos.dias.proyectables }}</td>
+                                        <td>{{ cef.conteos.alumnos.proyectables }}</td>
+                                        <td>{{ cef.conteos.docentes.proyectables }}</td>
+                                        <td>{{ cef.conteos.inscripciones.proyectables }}</td>
+                                        <td>{{ cef.conteos.asignaciones.proyectables }}</td>
+                                        <td>{{ cef.conteos.inventario_materiales.proyectables }}</td>
+                                        <td>{{ cef.conteos.inventario_distribuciones.proyectables }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    <p class="text-muted small mt-2 mb-0">Cada celda muestra proyectables / encontrados.</p>
+                    <p class="text-muted small mt-2 mb-0">Cantidad de registros que se copiarán al nuevo ciclo.</p>
                 {% else %}
                     <div class="cef-empty-state">No se encontraron datos asociados a CUE-Anexo en el ciclo origen.</div>
                 {% endif %}
@@ -208,18 +170,42 @@
 
         <section class="cef-card">
             <div class="cef-card-header">
-                <h3><i class="fa-solid fa-shield-halved me-2"></i>Criterios de la simulación</h3>
+                <h3><i class="fa-solid fa-calendar-check me-2"></i>Generar nuevo ciclo</h3>
+                <span class="badge text-bg-{% if resultado.bloqueado or resultado.requiere_cierre %}secondary{% else %}primary{% endif %}">
+                    {% if resultado.bloqueado %}Revisión pendiente{% elif resultado.requiere_cierre %}Requiere cierre{% else %}Listo para generar{% endif %}
+                </span>
             </div>
             <div class="cef-card-body">
-                <ul class="mb-0">
-                    <li>Los grupos proyectables conservarían trazabilidad directa hacia el grupo de {{ resultado.origen.anio }} mediante <strong>grupo_origen</strong>.</li>
-                    <li>Las fechas funcionales nuevas usarían {{ resultado.fecha_generacion_prevista|date:"d/m/Y" }}, sin heredar fechas del ciclo anterior.</li>
-                    <li>Las filas activas del ciclo origen permanecerían activas en su fotografía histórica.</li>
-                    <li>No existe validación etaria ni ninguna baja automática.</li>
-                    <li>Los conflictos horarios se validan sólo para el mismo alumno y CUE-Anexo, con actividades distintas.</li>
-                </ul>
+                {% if resultado.bloqueado %}
+                    <div class="alert alert-warning mb-0">
+                        Corregí las inconsistencias bloqueantes y volvé a ejecutar la previsualización antes de generar el ciclo.
+                    </div>
+                {% elif resultado.requiere_cierre %}
+                    <div class="alert alert-warning">
+                        El ciclo {{ resultado.origen.anio }} aún está abierto. Cerralo antes de generar el ciclo {{ resultado.destino_anio }}.
+                    </div>
+                    <a class="btn btn-outline-primary" href="{{ volver_url }}">
+                        <i class="fa-solid fa-arrow-left me-1"></i>Volver a Ciclos para cerrarlo
+                    </a>
+                {% else %}
+                    <p>
+                        Al confirmar, se creará el ciclo {{ resultado.destino_anio }} con la información detallada en esta previsualización. El ciclo {{ resultado.origen.anio }} seguirá cerrado y no se modificará.
+                    </p>
+                    <form method="post"
+                          action="{% url 'cef:generar_ciclo_anual' resultado.origen.id %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"
+                          data-cef-confirm-submit
+                          data-cef-confirm-title="Generar ciclo {{ resultado.destino_anio }}"
+                          data-cef-confirm-message="Se creará el ciclo {{ resultado.destino_anio }} con la información mostrada en esta previsualización."
+                          data-cef-confirm-entity="El ciclo {{ resultado.origen.anio }} seguirá cerrado y no se modificará.">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-calendar-plus me-1"></i>Generar ciclo {{ resultado.destino_anio }}
+                        </button>
+                    </form>
+                {% endif %}
             </div>
         </section>
+
     </div>
 </div>
 {% endblock %}

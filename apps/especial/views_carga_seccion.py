@@ -11,10 +11,10 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 
 from .forms import EspecialSeccionForm, EspecialDocenteSeccionForm
-from .models import SeccionEspecial, AlumnoSeccion, DocenteSeccion
+from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion, DocenteSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
-from .views_docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
 from .views_inscripcion_seccion import dar_alta_inscripcion_seccion, dar_baja_inscripcion_seccion
 
 def _is_ajax(request):
@@ -82,7 +82,7 @@ def carga_seccion(request):
 
     secciones = (
         list(_secciones_queryset(especial_context))
-        if especial_context["puede_operar"]
+        if especial_context["puede_consultar"]
         else []
     )
 
@@ -118,6 +118,13 @@ def carga_seccion_form(request, seccion_id=None):
     """Formulario de creación/edición de sección."""
     context = contexto_base(request, "secciones")
     especial_context = context["especial_context"]
+
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
+            request,
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
+        )
+        return redirect(request.get_full_path())
 
     if not especial_context["puede_operar"]:
         messages.error(request, "Seleccioná un CUE-Anexo y un ciclo para cargar secciones.")
@@ -315,6 +322,10 @@ def _alta_alumno_gestionar(request, seccion):
                 cueanexo=seccion.cueanexo,
                 ciclo=seccion.ciclo,
             ),
+            alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                cueanexo=seccion.cueanexo,
+                ciclo=seccion.ciclo,
+            ),
         )
         return True, "Alumno reinscripto correctamente."
     except ValidationError as exc:
@@ -388,12 +399,12 @@ def gestionar_seccion(request, seccion_id):
     context = contexto_base(request, "secciones", "Gestionar sección")
     especial_context = context["especial_context"]
 
-    if not especial_context["puede_operar"]:
-        messages.warning(
+    if request.method == "POST" and especial_context.get("ciclo_cerrado"):
+        messages.error(
             request,
-            "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar secciones.",
+            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
         )
-        return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
+        return redirect(request.get_full_path())
 
     seccion = _seccion_segura(seccion_id, especial_context)
     if request.method == "POST":

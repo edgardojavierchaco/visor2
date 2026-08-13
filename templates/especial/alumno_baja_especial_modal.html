@@ -1,0 +1,24 @@
+<div id="modalBajaAlumnoEspecial" class="cef-overlay{% if baja_modal_alumno %} is-open{% endif %}" aria-hidden="{% if baja_modal_alumno %}false{% else %}true{% endif %}" data-volver-url="{{ modal_volver_url }}">
+    <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="bajaAlumnoEspecialTitulo">
+        <div class="cef-modal-head">
+            <h2 id="bajaAlumnoEspecialTitulo" class="cef-modal-title">
+                <i class="fa-solid fa-user-slash me-2"></i>Alumnos <span>» Baja de Especial</span>
+            </h2>
+            <button class="cef-modal-close" type="button" aria-label="Cerrar" data-modal-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="cef-modal-body" data-especial-baja-content>
+            {% if baja_modal_alumno %}
+                {% include "especial/alumno_baja_especial_contenido.html" %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    #modalBajaAlumnoEspecial [data-especial-baja-form] textarea.form-control:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .16);
+    }
+</style>

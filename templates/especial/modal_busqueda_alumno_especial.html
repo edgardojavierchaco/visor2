@@ -1,326 +1,3 @@
-<style>
-    /* ============================================================
-       MODAL BÚSQUEDA DE PERSONA
-       ============================================================ */
-    .cef-overlay {
-        align-items: center;
-        background: rgba(7, 26, 51, .55);
-        backdrop-filter: blur(3px);
-        bottom: 0;
-        display: none;
-        justify-content: center;
-        left: 0;
-        overflow-y: auto;
-        padding: 24px 18px;
-        position: fixed;
-        right: 0;
-        top: 0;
-        z-index: 1080;
-        transition: opacity .2s ease;
-    }
-
-    .cef-overlay.is-open {
-        display: flex;
-    }
-
-    .cef-modal {
-        animation: cef-modal-in .22s cubic-bezier(.22,1,.36,1) both;
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 24px 60px rgba(7,26,51,.28), 0 8px 20px rgba(7,26,51,.12);
-        color: #0f172a;
-        max-width: 1100px;
-        max-height: calc(100vh - 48px);
-        min-height: 420px;
-        overflow: hidden;
-        width: min(1100px, 90vw);
-        display: flex;
-        flex-direction: column;
-    }
-
-    @keyframes cef-modal-in {
-        from { opacity: 0; transform: translateY(-18px) scale(.98); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .cef-modal-head {
-        align-items: center;
-        background: linear-gradient(135deg, #0d2748 0%, #071a33 100%);
-        display: flex;
-        justify-content: space-between;
-        padding: 1rem 1.5rem;
-    }
-
-    .cef-modal-title {
-        color: #fff;
-        font-size: 1.2rem;
-        font-weight: 800;
-        line-height: 1.2;
-        margin: 0;
-    }
-
-    .cef-modal-title span {
-        color: rgba(255,255,255,.55);
-        font-size: 1rem;
-        font-weight: 400;
-    }
-
-    .cef-modal-close {
-        align-items: center;
-        background: rgba(255,255,255,.1);
-        border: 1px solid rgba(255,255,255,.15);
-        border-radius: 8px;
-        color: rgba(255,255,255,.7);
-        cursor: pointer;
-        display: inline-flex;
-        font-size: 1.1rem;
-        height: 34px;
-        justify-content: center;
-        text-decoration: none;
-        transition: all .15s ease;
-        width: 34px;
-    }
-
-    .cef-modal-close:hover {
-        background: rgba(255,255,255,.18);
-        color: #fff;
-    }
-
-    .cef-modal-body {
-        overflow-y: auto;
-        padding: 1.25rem 1.5rem 1.5rem;
-    }
-
-    /* Search bar */
-    .cef-modal-search {
-        align-items: center;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: .6rem;
-        margin-bottom: 1.25rem;
-        padding: .85rem 1rem;
-    }
-
-    .cef-modal-search-label {
-        color: #64748b;
-        font-size: .75rem;
-        font-weight: 700;
-        letter-spacing: .07em;
-        margin-bottom: .25rem;
-        text-transform: uppercase;
-        width: 100%;
-    }
-
-    .cef-modal-search-form {
-        align-items: center;
-        display: flex;
-        gap: .65rem;
-        width: 100%;
-    }
-
-    .cef-modal-input-wrap {
-        align-items: center;
-        background: #fff;
-        border: 1.5px solid #cbd5e1;
-        border-radius: 8px;
-        display: flex;
-        flex: 1 1 auto;
-        gap: .5rem;
-        min-width: 0;
-        min-height: 40px;
-        padding: .35rem .75rem;
-        transition: border-color .15s, box-shadow .15s;
-    }
-
-    .cef-modal-input-wrap:focus-within {
-        border-color: #2d7dd2;
-        box-shadow: 0 0 0 3px rgba(45,125,210,.13);
-    }
-
-    .cef-modal-input-wrap i {
-        color: #94a3b8;
-        font-size: .9rem;
-    }
-
-    .cef-modal-input-wrap input {
-        background: transparent;
-        border: none;
-        color: #0f172a;
-        flex: 1;
-        font-size: .9375rem;
-        min-width: 0;
-        outline: none;
-        padding: .2rem 0;
-    }
-
-    .cef-modal-input-wrap input::placeholder { color: #94a3b8; }
-
-    .cef-modal-search-btn {
-        align-items: center;
-        background: linear-gradient(155deg, #2366c4 0%, #14407a 100%);
-        border: none;
-        border-radius: 8px;
-        color: #fff;
-        cursor: pointer;
-        display: inline-flex;
-        font-size: .875rem;
-        font-weight: 700;
-        gap: .4rem;
-        justify-content: center;
-        min-height: 40px;
-        white-space: nowrap;
-        padding: 0 1.1rem;
-        transition: all .18s ease;
-    }
-
-    .cef-modal-search-btn:hover {
-        background: linear-gradient(155deg, #2d7dd2 0%, #1a56a4 100%);
-        box-shadow: 0 4px 12px rgba(20,64,122,.3);
-        transform: translateY(-1px);
-    }
-
-    /* Table */
-    .cef-modal-table-wrap {
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        overflow-x: auto;
-    }
-
-    .cef-modal-table {
-        border-collapse: collapse;
-        font-size: .875rem;
-        min-width: 600px;
-        width: 100%;
-    }
-
-    .cef-modal-table thead tr {
-        border-bottom: 2px solid #bfdbfe;
-    }
-
-    .cef-modal-table thead th {
-        background: #f8fafc;
-        color: #475569;
-        font-size: .7rem;
-        font-weight: 700;
-        letter-spacing: .07em;
-        padding: .55rem .75rem;
-        text-align: left;
-        text-transform: uppercase;
-        white-space: nowrap;
-    }
-
-    .cef-modal-table tbody td {
-        border-bottom: 1px solid #e2e8f0;
-        color: #334155;
-        padding: .65rem .75rem;
-        vertical-align: middle;
-    }
-
-    .cef-modal-table tbody tr:last-child td { border-bottom: none; }
-    .cef-modal-table tbody tr:hover { background: #eff6ff; }
-
-    /* Action links inside table */
-    .cef-modal-actions {
-        align-items: center;
-        display: flex;
-        flex-wrap: wrap;
-        gap: .45rem;
-    }
-
-    .cef-modal-link,
-    .cef-modal-inline-btn {
-        align-items: center;
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 6px;
-        color: #1a56a4;
-        cursor: pointer;
-        display: inline-flex;
-        font-size: .8125rem;
-        font-weight: 600;
-        gap: .3rem;
-        padding: .25rem .6rem;
-        text-decoration: none;
-        transition: all .15s ease;
-    }
-
-    .cef-modal-link:hover,
-    .cef-modal-inline-btn:hover {
-        background: #2d7dd2;
-        border-color: #2d7dd2;
-        color: #fff;
-    }
-
-    .cef-modal-inline-btn { background: #dcfce7; border-color: #86efac; color: #15803d; }
-    .cef-modal-inline-btn:hover { background: #16a34a; border-color: #16a34a; color: #fff; }
-
-    /* Messages */
-    .cef-modal-msg {
-        align-items: center;
-        color: #64748b;
-        display: flex;
-        flex-direction: column;
-        font-size: .9rem;
-        font-weight: 500;
-        gap: .5rem;
-        justify-content: center;
-        min-height: 80px;
-        padding: 1.5rem;
-        text-align: center;
-    }
-
-    .cef-modal-msg i { font-size: 1.5rem; }
-    .cef-modal-msg.is-error { color: #b91c1c; }
-
-    .cef-modal-load-link {
-        color: #1a56a4;
-        font-size: .875rem;
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .cef-modal-load-link:hover { text-decoration: underline; }
-
-    /* Footer */
-    .cef-modal-footer {
-        border-top: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 1.25rem;
-        padding-top: .9rem;
-    }
-
-    .cef-modal-volver {
-        align-items: center;
-        border: 1.5px solid #cbd5e1;
-        border-radius: 8px;
-        color: #475569;
-        display: inline-flex;
-        font-size: .875rem;
-        font-weight: 600;
-        gap: .38rem;
-        padding: .4rem .9rem;
-        text-decoration: none;
-        transition: all .15s ease;
-    }
-
-    .cef-modal-volver:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
-        color: #1e293b;
-    }
-
-    @media (max-width: 768px) {
-        .cef-modal { width: 96vw; border-radius: 12px; }
-        .cef-modal-search-form { flex-direction: column; }
-        .cef-modal-input-wrap,
-        .cef-modal-search-btn { width: 100%; }
-    }
-</style>
-
 <div id="modalBusquedaAlumno" class="cef-overlay{% if modal_alumno_abierto %} is-open{% endif %}" aria-hidden="{% if modal_alumno_abierto %}false{% else %}true{% endif %}" data-volver-url="{{ modal_volver_url }}">
     <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="personasBusquedaTitulo">
 
@@ -338,14 +15,14 @@
         <div class="cef-modal-body">
             <!-- Search -->
             <div class="cef-modal-search">
-                <span class="cef-modal-search-label">Buscar por DNI o CUIL</span>
+                <span class="cef-modal-search-label">Buscar por CUIL</span>
                 <form method="get" action="{{ modal_action_url }}" class="cef-modal-search-form" novalidate data-modal-search-form>
                     <input type="hidden" name="cueanexo" value="{{ especial_context.cueanexo }}">
                     {% if especial_context.ciclo %}<input type="hidden" name="ciclo" value="{{ especial_context.ciclo.pk }}">{% endif %}
                     <input type="hidden" name="abrir_modal_alumno" value="1">
                     <label class="cef-modal-input-wrap" for="cefCuilInput">
                         <i class="fa-solid fa-id-card"></i>
-                        <input id="cefCuilInput" type="text" name="cuil" value="{{ cuil_buscado }}" placeholder="Ingresar DNI/CUIL" inputmode="numeric" autocomplete="off">
+                        <input id="cefCuilInput" type="text" name="cuil" value="{{ cuil_buscado }}" placeholder="Ingresar CUIL" inputmode="numeric" maxlength="11" autocomplete="off">
                     </label>
                     <button class="cef-modal-search-btn" type="submit">
                         <i class="fa-solid fa-magnifying-glass"></i> Buscar
@@ -353,26 +30,49 @@
                 </form>
             </div>
 
-            {% if modal_feedback %}
-                <div class="alert alert-{% if modal_feedback_level == 'success' %}success{% else %}danger{% endif %} mb-3" data-cef-modal-feedback>
-                    {{ modal_feedback }}
+            <div class="cef-modal-search-results" data-cef-modal-search-results>
+                <div class="cef-modal-search-loading" aria-live="polite" role="status">
+                    <div class="especial-partial-loading">
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        Cargando...
+                    </div>
                 </div>
-            {% endif %}
 
-            <!-- Table -->
-            <div class="cef-modal-table-wrap">
-                <table class="cef-modal-table">
+                {% if modal_feedback %}
+                    <div class="alert alert-{% if modal_feedback_level == 'success' %}success{% else %}danger{% endif %} mb-3" data-cef-modal-feedback>
+                        {{ modal_feedback }}
+                    </div>
+                {% endif %}
+
+                <!-- Table -->
+                <div class="cef-modal-table-wrap">
+                    <table class="cef-modal-table">
+                    <colgroup>
+                        <col class="cef-modal-col-apellidos">
+                        <col class="cef-modal-col-nombres">
+                        <col class="cef-modal-col-tipo-doc">
+                        <col class="cef-modal-col-nro-doc">
+                        <col class="cef-modal-col-cuil">
+                        <col class="cef-modal-col-fecha-nac">
+                        <col class="cef-modal-col-sexo">
+                        <col class="cef-modal-col-lugar-nac">
+                        {% if matricula_compartida_habilitada %}<col class="cef-modal-col-matricula">{% endif %}
+                        <col class="cef-modal-col-acciones">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Apellidos</th>
-                            <th>Nombres</th>
+                            <th>Apellido</th>
+                            <th>Nombre</th>
                             <th>Tipo Doc.</th>
                             <th>Nro. Doc.</th>
                             <th>CUIL</th>
                             <th>Fecha Nac.</th>
                             <th>Sexo</th>
                             <th>Lugar de Nac.</th>
-                            <th>Acciones</th>
+                            {% if matricula_compartida_habilitada %}
+                                <th class="cef-matricula-compartida-heading">Matrícula compartida</th>
+                            {% endif %}
+                            <th class="cef-modal-actions-heading">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -386,13 +86,79 @@
                                 <td>{% if alumno_row.fecha_nac %}{{ alumno_row.fecha_nac|date:"d/m/Y" }}{% else %}—{% endif %}</td>
                                 <td>{{ alumno_row.sexo|default:"—" }}</td>
                                 <td>{{ alumno_row.lugar_nac|default:"—" }}</td>
-                                <td>
+                                {% if matricula_compartida_habilitada %}
+                                    <td class="cef-matricula-compartida-cell">
+                                        <div class="cef-matricula-compartida-editor" data-especial-matricula-editor>
+                                            {% if alumno_en_banco %}
+                                                <form id="matriculaCompartidaActualizacion" method="post" action="{{ modal_action_url }}" data-modal-post-form data-especial-matricula-update-form data-initial-option="{% if alumno_banco_actual.matricula_compartida %}si{% else %}no{% endif %}" data-initial-cue="{{ alumno_banco_actual.matricula_compartida|default:'' }}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="accion" value="actualizar_matricula_compartida">
+                                                    <input type="hidden" name="alumno_banco_id" value="{{ alumno_banco_actual.pk }}">
+                                                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                                    <fieldset class="cef-matricula-compartida-options">
+                                                        <legend class="cef-matricula-compartida-legend">¿Matrícula compartida?</legend>
+                                                        <div class="cef-matricula-compartida-choice-group">
+                                                            <label>
+                                                                <input type="radio" name="matricula_compartida_opcion" value="no"{% if matricula_compartida_opcion != 'si' %} checked{% endif %}>
+                                                                <span>No</span>
+                                                            </label>
+                                                            <label>
+                                                                <input type="radio" name="matricula_compartida_opcion" value="si"{% if matricula_compartida_opcion == 'si' %} checked{% endif %}>
+                                                                <span>Sí</span>
+                                                            </label>
+                                                        </div>
+                                                    </fieldset>
+                                                    <div class="cef-matricula-compartida-select-wrap" data-especial-matricula-cue-wrap{% if matricula_compartida_opcion != 'si' %} hidden{% endif %}>
+                                                        <label for="matriculaCompartidaCueActual">CUE-Anexo asociado</label>
+                                                        <select id="matriculaCompartidaCueActual" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
+                                                            {% if matricula_compartida_cueanexo %}
+                                                                <option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>
+                                                            {% endif %}
+                                                        </select>
+                                                        <span class="cef-matricula-compartida-help">Buscar por CUE-Anexo o establecimiento.</span>
+                                                    </div>
+                                                    {% if matricula_compartida_error %}<p class="cef-matricula-compartida-error" data-cef-modal-feedback>{{ matricula_compartida_error }}</p>{% endif %}
+                                                    <button class="btn btn-outline-primary cef-matricula-compartida-save" type="submit" data-especial-matricula-save hidden>Guardar</button>
+                                                </form>
+                                            {% else %}
+                                                <fieldset class="cef-matricula-compartida-options">
+                                                    <legend class="cef-matricula-compartida-legend">¿Matrícula compartida?</legend>
+                                                    <div class="cef-matricula-compartida-choice-group">
+                                                        <label>
+                                                            <input type="radio" name="matricula_compartida_opcion" value="no" form="altaAlumnoBancoForm"{% if matricula_compartida_opcion != 'si' %} checked{% endif %}>
+                                                            <span>No</span>
+                                                        </label>
+                                                        <label>
+                                                            <input type="radio" name="matricula_compartida_opcion" value="si" form="altaAlumnoBancoForm"{% if matricula_compartida_opcion == 'si' %} checked{% endif %}>
+                                                            <span>Sí</span>
+                                                        </label>
+                                                    </div>
+                                                </fieldset>
+                                                <div class="cef-matricula-compartida-select-wrap" data-especial-matricula-cue-wrap{% if matricula_compartida_opcion != 'si' %} hidden{% endif %}>
+                                                    <label for="matriculaCompartidaCueAlta">CUE-Anexo asociado</label>
+                                                    <select id="matriculaCompartidaCueAlta" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" form="altaAlumnoBancoForm" data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
+                                                        {% if matricula_compartida_cueanexo %}
+                                                            <option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>
+                                                        {% endif %}
+                                                    </select>
+                                                    <span class="cef-matricula-compartida-help">Buscar por CUE-Anexo o establecimiento.</span>
+                                                </div>
+                                                {% if matricula_compartida_error %}<p class="cef-matricula-compartida-error" data-cef-modal-feedback>{{ matricula_compartida_error }}</p>{% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                                <td class="cef-modal-actions-cell">
                                     <div class="cef-modal-actions">
                                         {# Lógica para Especial: usa especial_context.puede_operar #}
                                         {% if alumno_en_banco %}
-                                            <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya está en el banco.</span>
+                                            <span class="cef-modal-bank-status">
+                                                <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
+                                                Ya está en el banco.
+                                            </span>
                                         {% elif especial_context.puede_operar %}
-                                            <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
+                                            <form id="altaAlumnoBancoForm" method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
                                                 {% csrf_token %}
                                                 <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                                 {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
@@ -405,8 +171,8 @@
                                             <span style="font-size:.8rem;color:#64748b;font-style:italic">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
                                         {% endif %}
 
-                                        {% if url_editar_alumno %}
-                                            <a class="cef-modal-link" href="{{ url_editar_alumno }}">
+                                        {% if especial_context.puede_operar and url_editar_alumno %}
+                                            <a class="cef-modal-link" href="{{ url_editar_alumno }}" target="_blank" rel="noopener noreferrer">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                             </a>
                                         {% endif %}
@@ -415,7 +181,7 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="9">
+                                <td colspan="{% if matricula_compartida_habilitada %}10{% else %}9{% endif %}">
                                     {% if cuil_error %}
                                         <div class="cef-modal-msg is-error">
                                             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -424,14 +190,14 @@
                                     {% elif not cuil_buscado %}
                                         <div class="cef-modal-msg">
                                             <i class="fa-solid fa-id-card" style="color:#bfdbfe"></i>
-                                            Ingrese DNI/CUIL para buscar una persona.
+                                            Ingrese CUIL para buscar una persona.
                                         </div>
                                     {% else %}
                                         <div class="cef-modal-msg">
                                             <i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i>
                                             No se encontró ninguna persona con ese documento.
                                             {% if url_carga_alumno %}
-                                                <a class="cef-modal-load-link" href="{{ url_carga_alumno }}">
+                                                <a class="cef-modal-load-link" href="{{ url_carga_alumno }}" target="_blank" rel="noopener noreferrer">
                                                     <i class="fa-solid fa-plus-circle"></i> Cargar datos del alumno
                                                 </a>
                                             {% endif %}
@@ -441,214 +207,19 @@
                             </tr>
                         {% endif %}
                     </tbody>
-                </table>
+                    </table>
+                </div>
+
+                {% if alumno_row and not cuil_error %}
+                    <p style="font-size:.8125rem;color:#64748b;margin-top:.75rem;font-style:italic" data-cef-modal-search-help>
+                        Si ninguna de las personas encontradas es la solicitada, puede realizar la carga completa de datos.
+                        {% if url_carga_alumno %}
+                            <a class="cef-modal-load-link ms-1" href="{{ url_carga_alumno }}" target="_blank" rel="noopener noreferrer">Cargar datos del alumno</a>
+                        {% endif %}
+                    </p>
+                {% endif %}
             </div>
 
-            {% if alumno_row and not cuil_error %}
-                <p style="font-size:.8125rem;color:#64748b;margin-top:.75rem;font-style:italic">
-                    Si ninguna de las personas encontradas es la solicitada, puede realizar la carga completa de datos.
-                    {% if url_carga_alumno %}
-                        <a class="cef-modal-load-link ms-1" href="{{ url_carga_alumno }}">Cargar datos del alumno</a>
-                    {% endif %}
-                </p>
-            {% endif %}
-
-            <!-- Footer -->
-            <div class="cef-modal-footer">
-                <a class="cef-modal-volver" href="{{ modal_volver_url }}" data-modal-close>
-                    <i class="fa-solid fa-arrow-left"></i> Volver
-                </a>
-            </div>
         </div>
     </div>
 </div>
-
-{% if not especial_partial %}
-<script>
-(function () {
-    var modal   = document.getElementById("modalBusquedaAlumno");
-    if (!modal) return;
-
-    function closeModal() {
-        modal.classList.remove("is-open");
-        modal.setAttribute("aria-hidden", "true");
-        if (modal.dataset.volverUrl && window.history && window.history.replaceState) {
-            window.history.replaceState({}, "", modal.dataset.volverUrl);
-        }
-    }
-
-    function focusInput() {
-        var input = modal.querySelector("input[name='cuil']");
-        if (input) input.focus();
-    }
-
-    function buildSearchUrl(form) {
-        var url = new URL(form.getAttribute("action"), window.location.href);
-        var data = new FormData(form);
-        data.forEach(function (value, key) {
-            url.searchParams.set(key, value);
-        });
-        return url.toString();
-    }
-
-    function replaceModalContent(html, url) {
-        var doc = new DOMParser().parseFromString(html, "text/html");
-        var incomingModal = doc.getElementById("modalBusquedaAlumno");
-        var currentDialog = modal.querySelector(".cef-modal");
-        var incomingDialog = incomingModal ? incomingModal.querySelector(".cef-modal") : null;
-        if (!currentDialog || !incomingDialog) {
-            window.location.href = url;
-            return;
-        }
-        currentDialog.innerHTML = incomingDialog.innerHTML;
-        modal.classList.add("is-open");
-        modal.setAttribute("aria-hidden", "false");
-        if (window.history && window.history.replaceState) {
-            window.history.replaceState({}, "", url);
-        }
-        focusInput();
-    }
-
-    function replacePagePanel(html) {
-        var doc = new DOMParser().parseFromString(html, "text/html");
-        var currentPanel = document.querySelector(".cef-panel");
-        var incomingPanel = doc.querySelector(".cef-panel");
-        if (!currentPanel || !incomingPanel) return false;
-        currentPanel.replaceWith(incomingPanel);
-        if (window.initCefInscripcionTable) {
-            window.initCefInscripcionTable();
-        }
-        if (window.initCefAlumnosTable) {
-            window.initCefAlumnosTable();
-        }
-        return true;
-    }
-
-    function replaceFragmentContent(selector, html) {
-        var current = selector ? document.querySelector(selector) : null;
-        if (!current || typeof html !== "string") return false;
-        current.innerHTML = html;
-        if (window.initCefInscripcionTable) {
-            window.initCefInscripcionTable(current);
-        }
-        if (window.initCefAlumnosTable) {
-            window.initCefAlumnosTable(current);
-        }
-        return true;
-    }
-
-    function handleJsonPost(data) {
-        if (!data || typeof data !== "object") return false;
-        var replaced = true;
-        if (data.fragment_html) {
-            replaced = replaceFragmentContent(data.fragment_selector, data.fragment_html);
-        }
-        if (data.modal_html) {
-            replaceModalContent(data.modal_html, window.location.href);
-        }
-        return replaced;
-    }
-
-    document.addEventListener("click", function(e) {
-        var opener = e.target.closest("[data-open-personas-modal]");
-        if (!opener) return;
-        modal.classList.add("is-open");
-        modal.setAttribute("aria-hidden", "false");
-        focusInput();
-    });
-
-    modal.addEventListener("click", function(e) {
-        var closeBtn = e.target.closest("[data-modal-close]");
-        if (!closeBtn) return;
-        e.preventDefault();
-        closeModal();
-    });
-
-    modal.addEventListener("click", function(e) {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-
-    modal.addEventListener("submit", function(e) {
-        var form = e.target.closest("[data-modal-search-form]");
-        if (!form || form.method.toLowerCase() !== "get") return;
-
-        e.preventDefault();
-        var url = buildSearchUrl(form);
-        var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn) submitBtn.disabled = true;
-
-        fetch(url, {
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            credentials: "same-origin"
-        })
-            .then(function (response) {
-                if (!response.ok) throw new Error("No se pudo buscar.");
-                return response.text();
-            })
-            .then(function (html) {
-                replaceModalContent(html, url);
-            })
-            .catch(function () {
-                window.location.href = url;
-            })
-            .finally(function () {
-                if (submitBtn) submitBtn.disabled = false;
-            });
-    });
-
-    modal.addEventListener("submit", function(e) {
-        var form = e.target.closest("[data-modal-post-form]");
-        if (!form || form.method.toLowerCase() !== "post") return;
-
-        e.preventDefault();
-        var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn) submitBtn.disabled = true;
-
-        fetch(form.getAttribute("action"), {
-            method: "POST",
-            body: new FormData(form),
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            credentials: "same-origin"
-        })
-            .then(function (response) {
-                if (!response.ok) throw new Error("No se pudo guardar.");
-                var contentType = response.headers.get("content-type") || "";
-                if (contentType.indexOf("application/json") !== -1) {
-                    return response.json().then(function (data) {
-                        return { json: data };
-                    });
-                }
-                return response.text().then(function (html) {
-                    return { html: html, url: response.url, redirected: response.redirected };
-                });
-            })
-            .then(function (result) {
-                if (result.json) {
-                    if (handleJsonPost(result.json)) {
-                        return;
-                    }
-                    form.submit();
-                    return;
-                }
-                if (result.redirected && replacePagePanel(result.html)) {
-                    if (window.history && window.history.replaceState && result.url) {
-                        window.history.replaceState({}, "", result.url);
-                    }
-                    closeModal();
-                    return;
-                }
-                replaceModalContent(result.html, window.location.href);
-            })
-            .catch(function () {
-                if (submitBtn) submitBtn.disabled = false;
-                form.submit();
-            })
-            .finally(function () {
-                if (submitBtn) submitBtn.disabled = false;
-            });
-    });
-})();
-</script>
-{% endif %}

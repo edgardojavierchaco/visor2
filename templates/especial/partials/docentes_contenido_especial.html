@@ -1,16 +1,18 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Docentes <span>» Gestión de Docentes</span></h2>
-        <div class="cef-panel-actions">
-            <button class="btn btn-primary" type="button" data-open-docentes-modal>
-                <i class="fa-solid fa-chalkboard-user"></i> Agregar docente
-            </button>
-        </div>
+        {% if especial_context.puede_operar %}
+            <div class="cef-panel-actions">
+                <button class="btn btn-primary" type="button" data-open-docentes-modal>
+                    <i class="fa-solid fa-chalkboard-user"></i> Agregar docente
+                </button>
+            </div>
+        {% endif %}
     </div>
 
     <div class="cef-panel-body">
         <div data-cef-fragment="profesores-banco">
-            {% include "especial/partials/profesores_tabla_especial.html" %}
+            {% include "especial/partials/docentes_tabla_especial.html" %}
         </div>
     </div>
 </div>

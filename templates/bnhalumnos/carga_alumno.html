@@ -62,8 +62,11 @@
         right: 0;
         top: calc(100% + 4px);
         z-index: 2075;
+        max-width: 100%;
         max-height: 240px;
         overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
         background: #ffffff;
         border: 1.5px solid #475569;
         border-radius: .4rem;
@@ -139,7 +142,7 @@
     }
 
     .bnh-localidad-input::placeholder {
-        color: #64748b !important; 
+        color: #64748b !important;
         opacity: 1 !important;
     }
 
@@ -157,8 +160,11 @@
         right: 0;
         top: calc(100% + 4px);
         z-index: 2075;
+        max-width: 100%;
         max-height: 260px;
         overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
         background: #ffffff;
         border: 1.5px solid #475569;
         border-radius: .4rem;
@@ -241,12 +247,31 @@
     .bnh-fixed-select-menu {
         position: fixed;
         z-index: 2065;
-        overflow-y: auto;
+        max-width: calc(100vw - 16px);
+        overflow: hidden;
         box-sizing: border-box;
         background: #ffffff;
         border: 1px solid #475569;
+        border-radius: .4rem;
         box-shadow: 0 12px 24px rgba(15,23,42,.18);
     }
+    .bnh-fixed-select-search {
+        width: 100%;
+        min-height: 2.25rem;
+        margin: 0;
+        padding: .42rem .6rem;
+        box-sizing: border-box;
+        border: 0;
+        border-bottom: 1px solid #cbd5e1;
+        border-radius: 0;
+        outline: none;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: .88rem;
+        font-weight: 600;
+    }
+    .bnh-fixed-select-search:focus { box-shadow: inset 0 0 0 2px #3b82f6; }
+    .bnh-fixed-select-options { overflow-y: auto; overflow-x: hidden; }
     .bnh-fixed-select-option {
         width: 100%;
         display: block;
@@ -259,9 +284,11 @@
         font-weight: 500;
         line-height: 1.35;
         text-align: left;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: 100%;
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
         cursor: pointer;
     }
     .bnh-fixed-select-option:hover,
@@ -273,6 +300,12 @@
     .bnh-fixed-select-option.is-selected {
         background: #2563eb;
         color: #ffffff;
+    }
+    .bnh-fixed-select-empty {
+        padding: .55rem .65rem;
+        color: #64748b;
+        font-size: .86rem;
+        font-weight: 700;
     }
     .bnh-field textarea { min-height: 80px; resize: vertical; }
     .bnh-field input:focus, .bnh-field select:focus, .bnh-field textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.18); }
@@ -499,9 +532,10 @@
     /* Backdrop manual usado por JavaScript cuando no está disponible modal(). */
     .modal-backdrop.show, .bnh-manual-backdrop { opacity: .55 !important; z-index: 2040 !important; }
     .bnh-manual-backdrop { position: fixed; inset: 0; z-index: 2040; background: #000; }
-    /* Select2 heredado del layout: se deja visible y con contraste aunque luego se restaure a select nativo. */
+    /* Select2 heredado del layout: contraste y ancho coherentes con los campos de esta pantalla. */
     .select2-container .select2-selection--single { background: #ffffff !important; border: 1.5px solid #94a3b8 !important; opacity: 1 !important; }
     .select2-container--default .select2-selection--single .select2-selection__rendered { color: #0f172a !important; font-weight: 650 !important; }
+    .bnh-field .select2-container { width: 100% !important; max-width: 100%; }
     /* Campos deshabilitados: se distinguen sin perder legibilidad. */
     .bnh-field input:disabled,
     .bnh-field select:disabled,
@@ -534,8 +568,23 @@
         cursor: not-allowed !important;
         box-shadow: none !important;
     }
-    /* El dropdown queda por encima de los modales para evitar que se oculte detrás. */
-    .select2-dropdown { z-index: 2060 !important; }
+    /* El dropdown queda por encima de los modales, contenido y con scroll para catálogos extensos. */
+    .bnh-select2-dropdown { z-index: 2060 !important; max-width: calc(100vw - 24px); min-width: 0; overflow-x: hidden; }
+    .bnh-select2-dropdown .select2-results__options {
+        max-height: min(20rem, calc(100vh - 9rem)) !important;
+        max-height: min(20rem, calc(100dvh - 9rem)) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+    }
+    .bnh-select2-dropdown .select2-results__option {
+        max-width: 100%;
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+    .bnh-select2-dropdown .select2-search__field { width: 100% !important; max-width: 100%; box-sizing: border-box; }
     /* Feedback de interacción para botones, filas y campos. */
     .bnh-btn,
     .bnh-add-btn,
@@ -646,11 +695,42 @@
         box-shadow: 0 0 0 3px rgba(220, 38, 38, .16) !important;
     }
 
+    .bnh-fixed-select-control { position: relative; width: 100%; min-width: 0; }
+    .bnh-field select.bnh-fixed-select-ready {
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        padding-right: 2.2rem !important;
+    }
+    .bnh-fixed-select-arrow {
+        position: absolute;
+        top: 50%;
+        right: .8rem;
+        width: .48rem;
+        height: .48rem;
+        border-right: 2px solid #0f172a;
+        border-bottom: 2px solid #0f172a;
+        pointer-events: none;
+        transform: translateY(-70%) rotate(45deg);
+        transform-origin: center;
+        transition: transform .16s ease;
+    }
+    .bnh-fixed-select-ready[aria-expanded="true"] + .bnh-fixed-select-arrow {
+        transform: translateY(-30%) rotate(225deg);
+    }
+    .bnh-fixed-select-ready:disabled + .bnh-fixed-select-arrow { opacity: .45; }
+    .bnh-field .select2-selection__arrow { transition: transform .16s ease; transform-origin: center; }
+    .bnh-field .select2-container--open .select2-selection__arrow { transform: rotate(180deg); }
+
     @media (prefers-reduced-motion: reduce) {
         .bnh-btn,
         .bnh-add-btn,
         .bnh-modal-close,
         .modal .close {
+            transition: none !important;
+        }
+
+        .bnh-fixed-select-arrow,
+        .bnh-field .select2-selection__arrow {
             transition: none !important;
         }
 
@@ -667,52 +747,371 @@
 
 <script>
 
-/* Inicialización temprana: conserva los selectores nativos para que los catálogos sean usables aunque Select2 esté cargado por el layout. */
+/* Select2 se aplica una sola vez a los catálogos normales. Localidad y código de
+   área conservan sus buscadores propios sobre el select real. */
 (function () {
-    function bnhRestoreNativeSelects() {
-        /* Select2 puede ocultar el select real; este bloque vuelve a dejar visible el control nativo. */
-        document.querySelectorAll("select.bnh-select").forEach(function (select) {
-            if (select.classList.contains("bnh-native-select-hidden")) {
+    var selectsInicializados = false;
+    var menuFijoActivo = null;
+    var secuenciaMenuFijo = 0;
+    var selectoresPersonalizados = [
+        "[data-field=\"loc_nacimiento\"]",
+        "[data-field=\"loc_residencia\"]",
+        "[data-field=\"codigo_area\"]",
+        "#modalTutor [data-name=\"loc_resid\"]",
+        "#modalTutor [data-name=\"codigo_area\"]"
+    ].join(", ");
+
+    function esSelectPersonalizado(select) {
+        return select.classList.contains("bnh-native-select-hidden") || select.matches(selectoresPersonalizados);
+    }
+
+    function restaurarSelectPersonalizado(select, $select) {
+        /* Solo estos controles deben quedar fuera de Select2: sus inputs visibles
+           escriben y disparan change sobre este mismo select. */
+        if ($select.data("select2")) {
+            $select.off(".bnhSelect");
+            $select.select2("destroy");
+        }
+        if (select._bnhFiltroLocalidad || select._bnhFiltroCodigoArea || select.classList.contains("bnh-native-select-hidden")) {
+            select.classList.add("bnh-native-select-hidden");
+            select.tabIndex = -1;
+            select.setAttribute("aria-hidden", "true");
+        }
+    }
+
+    function normalizarBusquedaSelect(value) {
+        var texto = String(value || "");
+        if (texto.normalize) {
+            texto = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+        return texto.toUpperCase();
+    }
+
+    function cerrarMenuFijo(devolverFoco) {
+        if (!menuFijoActivo) return;
+        var select = menuFijoActivo.select;
+        var menu = menuFijoActivo.menu;
+        menuFijoActivo = null;
+        select.setAttribute("aria-expanded", "false");
+        select.removeAttribute("aria-controls");
+        if (menu.parentNode) {
+            menu.parentNode.removeChild(menu);
+        }
+        if (devolverFoco && !select.disabled) {
+            select.focus();
+        }
+    }
+
+    function posicionarMenuFijo(estado) {
+        var rect = estado.select.getBoundingClientRect();
+        var margen = 8;
+        var separacion = 4;
+        var anchoVentana = document.documentElement.clientWidth || window.innerWidth;
+        var altoVentana = document.documentElement.clientHeight || window.innerHeight;
+        var ancho = Math.min(rect.width, Math.max(1, anchoVentana - (margen * 2)));
+        var espacioAbajo = altoVentana - rect.bottom - margen - separacion;
+        var espacioArriba = rect.top - margen - separacion;
+        var abrirArriba = espacioAbajo < 160 && espacioArriba > espacioAbajo;
+        var espacioDisponible = Math.max(90, Math.min(300, abrirArriba ? espacioArriba : espacioAbajo));
+        var altoBuscador = estado.search ? estado.search.offsetHeight : 0;
+
+        estado.menu.style.width = ancho + "px";
+        estado.options.style.maxHeight = Math.max(70, espacioDisponible - altoBuscador) + "px";
+
+        var altoMenu = Math.min(estado.menu.offsetHeight, espacioDisponible);
+        var izquierda = Math.max(margen, Math.min(rect.left, anchoVentana - ancho - margen));
+        var arriba = abrirArriba ? rect.top - separacion - altoMenu : rect.bottom + separacion;
+        arriba = Math.max(margen, Math.min(arriba, altoVentana - altoMenu - margen));
+
+        estado.menu.style.left = izquierda + "px";
+        estado.menu.style.top = arriba + "px";
+    }
+
+    function renderizarOpcionesFijas(estado, filtro) {
+        var textoFiltro = normalizarBusquedaSelect(filtro);
+        var seleccionada = null;
+        var cantidad = 0;
+        estado.options.innerHTML = "";
+
+        Array.prototype.forEach.call(estado.select.options, function (option) {
+            var texto = String(option.textContent || "").trim();
+            var buscable = normalizarBusquedaSelect(option.value + " " + texto);
+            if (option.hidden || (textoFiltro && buscable.indexOf(textoFiltro) === -1)) {
                 return;
             }
-            try {
-                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
-                    var $select = window.jQuery(select);
-                    if ($select.data("select2")) {
-                        $select.select2("destroy");
-                    }
-                }
-            } catch (e) {
-                /* si Select2 no está inicializado, seguimos con select nativo */
+
+            var boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "bnh-fixed-select-option";
+            boton.textContent = texto;
+            boton.title = texto;
+            boton.disabled = !!option.disabled;
+            boton.setAttribute("role", "option");
+            boton.setAttribute("aria-selected", String(String(option.value) === String(estado.select.value)));
+
+            if (String(option.value) === String(estado.select.value)) {
+                boton.classList.add("is-selected");
+                seleccionada = boton;
             }
 
-            select.classList.remove("select2-hidden-accessible");
-            select.removeAttribute("data-select2-id");
-            select.removeAttribute("aria-hidden");
-            select.tabIndex = 0;
-            select.style.display = "";
-            select.style.visibility = "visible";
-            select.style.opacity = "1";
-            select.style.position = "static";
-            select.style.width = "100%";
+            boton.addEventListener("mousedown", function (ev) {
+                ev.preventDefault();
+            });
+            boton.addEventListener("click", function () {
+                if (option.disabled) return;
+                estado.select.value = option.value;
+                estado.select.dispatchEvent(new Event("input", { bubbles: true }));
+                estado.select.dispatchEvent(new Event("change", { bubbles: true }));
+                cerrarMenuFijo(true);
+            });
+
+            estado.options.appendChild(boton);
+            cantidad += 1;
         });
 
-        /* Si Select2 creó contenedores visuales extra, se quitan para evitar duplicados. */
-        document.querySelectorAll(".select2-container").forEach(function (item) {
-            item.parentNode.removeChild(item);
+        if (!cantidad) {
+            var vacio = document.createElement("div");
+            vacio.className = "bnh-fixed-select-empty";
+            vacio.textContent = "Sin resultados";
+            estado.options.appendChild(vacio);
+        }
+
+        estado.selectedButton = seleccionada;
+        posicionarMenuFijo(estado);
+        if (seleccionada && !textoFiltro) {
+            seleccionada.scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function abrirMenuFijo(select, enfocarContenido) {
+        if (!select || select.disabled) return null;
+        cerrarMenuFijo(false);
+
+        var menu = document.createElement("div");
+        menu.id = "bnhFixedSelectMenu" + (++secuenciaMenuFijo);
+        menu.className = "bnh-fixed-select-menu";
+        menu.setAttribute("role", "listbox");
+
+        var estado = {
+            select: select,
+            menu: menu,
+            search: null,
+            options: document.createElement("div"),
+            selectedButton: null
+        };
+        estado.options.className = "bnh-fixed-select-options";
+
+        if (select.options.length >= 10) {
+            var search = document.createElement("input");
+            search.type = "search";
+            search.className = "bnh-fixed-select-search";
+            search.placeholder = "Buscar...";
+            search.autocomplete = "off";
+            search.setAttribute("aria-label", "Buscar opción");
+            search.addEventListener("input", function () {
+                renderizarOpcionesFijas(estado, search.value);
+            });
+            estado.search = search;
+            menu.appendChild(search);
+        }
+
+        menu.appendChild(estado.options);
+        menu.addEventListener("keydown", function (ev) {
+            if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp" && ev.key !== "Home" && ev.key !== "End") {
+                return;
+            }
+            var botones = Array.prototype.slice.call(
+                estado.options.querySelectorAll(".bnh-fixed-select-option:not(:disabled)")
+            );
+            if (!botones.length) return;
+            var actual = botones.indexOf(document.activeElement);
+            var siguiente = 0;
+            if (ev.key === "End" || (ev.key === "ArrowUp" && actual <= 0)) {
+                siguiente = botones.length - 1;
+            } else if (ev.key === "ArrowDown") {
+                siguiente = Math.min(actual + 1, botones.length - 1);
+            } else if (ev.key === "ArrowUp") {
+                siguiente = Math.max(actual - 1, 0);
+            }
+            ev.preventDefault();
+            botones[siguiente].focus();
+        });
+        document.body.appendChild(menu);
+        menuFijoActivo = estado;
+        select.setAttribute("aria-expanded", "true");
+        select.setAttribute("aria-controls", menu.id);
+        renderizarOpcionesFijas(estado, "");
+
+        if (enfocarContenido) {
+            if (estado.search) {
+                estado.search.focus();
+            } else if (estado.selectedButton) {
+                estado.selectedButton.focus();
+            }
+        }
+        return estado;
+    }
+
+    function instalarSelectFijo(select) {
+        if (!select || select._bnhSelectFijo) return;
+        select._bnhSelectFijo = true;
+        var wrapper = document.createElement("div");
+        var arrow = document.createElement("span");
+        wrapper.className = "bnh-fixed-select-control";
+        arrow.className = "bnh-fixed-select-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        select.parentNode.insertBefore(wrapper, select);
+        wrapper.appendChild(select);
+        wrapper.appendChild(arrow);
+        select.classList.add("bnh-fixed-select-ready");
+        select.setAttribute("aria-haspopup", "listbox");
+        select.setAttribute("aria-expanded", "false");
+
+        select.addEventListener(window.PointerEvent ? "pointerdown" : "mousedown", function (ev) {
+            if (select.disabled || ev.button !== 0) return;
+            ev.preventDefault();
+            select.focus();
+            if (menuFijoActivo && menuFijoActivo.select === select) {
+                cerrarMenuFijo(false);
+                return;
+            }
+            abrirMenuFijo(select, false);
+        });
+        select.addEventListener("click", function (ev) {
+            if (!select.disabled) {
+                ev.preventDefault();
+            }
+        });
+        select.addEventListener("keydown", function (ev) {
+            if (select.disabled) return;
+            if (ev.key === "Enter" || ev.key === " ") {
+                ev.preventDefault();
+                if (menuFijoActivo && menuFijoActivo.select === select) {
+                    cerrarMenuFijo(false);
+                    return;
+                }
+                abrirMenuFijo(select, true);
+            } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+                ev.preventDefault();
+                abrirMenuFijo(select, true);
+            } else if (ev.key === "Escape") {
+                cerrarMenuFijo(true);
+            }
         });
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", bnhRestoreNativeSelects);
+    function inicializarSelectsFijosBnh() {
+        document.querySelectorAll(".bnh-field select").forEach(function (select) {
+            if (!esSelectPersonalizado(select)) {
+                instalarSelectFijo(select);
+            }
+        });
+    }
+
+    document.addEventListener("mousedown", function (ev) {
+        if (!menuFijoActivo) return;
+        if (ev.target !== menuFijoActivo.select && !menuFijoActivo.menu.contains(ev.target)) {
+            cerrarMenuFijo(false);
+        }
+    });
+    document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape" && menuFijoActivo) {
+            ev.preventDefault();
+            cerrarMenuFijo(true);
+        }
+    });
+    document.addEventListener("scroll", function (ev) {
+        if (menuFijoActivo && !menuFijoActivo.menu.contains(ev.target)) {
+            cerrarMenuFijo(false);
+        }
+    }, true);
+    window.addEventListener("resize", function () {
+        cerrarMenuFijo(false);
+    });
+
+    function tamanoViewportBnh() {
+        var viewport = window.visualViewport;
+        return {
+            width: viewport ? viewport.width : (document.documentElement.clientWidth || window.innerWidth),
+            height: viewport ? viewport.height : (document.documentElement.clientHeight || window.innerHeight)
+        };
+    }
+
+    function ajustarDropdownSelect2Bnh() {
+        if (!window.jQuery) return;
+        var tamano = tamanoViewportBnh();
+        var anchoMaximo = Math.max(0, tamano.width - 24);
+        var altoMaximo = Math.max(96, Math.min(320, tamano.height - 144));
+        var $dropdown = window.jQuery(".bnh-select2-dropdown").last();
+        $dropdown.css("max-width", anchoMaximo + "px");
+        $dropdown.find(".select2-results__options").css("max-height", altoMaximo + "px");
+    }
+
+    function inicializarSelectsBnh() {
+        if (selectsInicializados) {
+            return true;
+        }
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+            inicializarSelectsFijosBnh();
+            selectsInicializados = true;
+            return true;
+        }
+
+        document.querySelectorAll(".bnh-field select").forEach(function (select) {
+            var $select = window.jQuery(select);
+
+            if (esSelectPersonalizado(select)) {
+                restaurarSelectPersonalizado(select, $select);
+                return;
+            }
+
+            if ($select.data("select2")) {
+                $select.off(".bnhSelect");
+                $select.select2("destroy");
+            }
+
+            var modal = select.closest(".modal");
+            var opciones = {
+                width: "100%",
+                dropdownCssClass: "bnh-select2-dropdown",
+                minimumResultsForSearch: 10,
+                language: {
+                    searching: function () { return "Buscando..."; },
+                    noResults: function () { return "No se encontraron resultados"; }
+                }
+            };
+            if (modal) {
+                opciones.dropdownParent = window.jQuery(modal);
+            }
+            $select.select2(opciones);
+            $select.on("select2:open.bnhSelect", function () {
+                window.setTimeout(ajustarDropdownSelect2Bnh, 0);
+            });
+        });
+        selectsInicializados = true;
+        return true;
+    }
+
+    /* Actualiza solo la representación de Select2 cuando un control personalizado
+       cambia programáticamente su provincia, sin disparar otra vez la lógica dependiente. */
+    window.bnhSyncSelect2 = function (select) {
+        if (select && window.jQuery && window.jQuery(select).data("select2")) {
+            window.jQuery(select).trigger("change.select2");
+        }
+    };
+
+    window.addEventListener("resize", ajustarDropdownSelect2Bnh);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", ajustarDropdownSelect2Bnh);
+    }
+
+    /* Se espera a load para aplicar la configuración definitiva después de los
+       scripts heredados del layout, sin reintentos ni destrucciones tardías. */
+    if (document.readyState === "complete") {
+        inicializarSelectsBnh();
     } else {
-        bnhRestoreNativeSelects();
+        window.addEventListener("load", inicializarSelectsBnh, { once: true });
     }
-
-    /* Se ejecuta varias veces porque el layout puede inicializar Select2 después del DOMContentLoaded. */
-    window.setTimeout(bnhRestoreNativeSelects, 50);
-    window.setTimeout(bnhRestoreNativeSelects, 300);
-    window.setTimeout(bnhRestoreNativeSelects, 900);
 })();
 
 function blindarAutofillBnh(input, token) {
@@ -935,6 +1334,7 @@ function blindarAutofillBnh(input, token) {
 
             if (original && provincia && provinciaOriginal && provincia.value !== provinciaOriginal) {
                 provincia.value = provinciaOriginal;
+                if (window.bnhSyncSelect2) { window.bnhSyncSelect2(provincia); }
             }
 
             if (original && provincia) {
@@ -4120,6 +4520,7 @@ function blindarAutofillBnh(input, token) {
         var provincia = option ? option.getAttribute("data-provincia") : "";
         if (!provincia || provinciaEl.value === provincia) return;
         provinciaEl.value = provincia;
+        if (window.bnhSyncSelect2) { window.bnhSyncSelect2(provinciaEl); }
         cargarLocalidades(provinciaEl, localidadEl, localidadEl.value);
     }
 

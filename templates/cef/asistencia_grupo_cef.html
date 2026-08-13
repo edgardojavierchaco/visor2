@@ -1,6 +1,260 @@
 {% extends "cef/base_operativo_cef.html" %}
 
-{% block cef_subtitle %}Registro y consulta de asistencia del curso.{% endblock %}
+{% block cef_subtitle %}Registro y consulta de asistencia del grupo.{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+    .cef-asistencia-workspace {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .cef-asistencia-tabs {
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        display: grid;
+        gap: .3rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 430px;
+        padding: .3rem;
+    }
+
+    .cef-asistencia-tabs [role="tab"] {
+        align-items: center;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--r-sm);
+        color: var(--text-muted);
+        display: inline-flex;
+        font: inherit;
+        font-size: var(--fs-sm);
+        font-weight: 800;
+        gap: .45rem;
+        justify-content: center;
+        min-height: 40px;
+        padding: .55rem .85rem;
+    }
+
+    .cef-asistencia-tabs [role="tab"]:hover,
+    .cef-asistencia-tabs [role="tab"]:focus-visible {
+        color: var(--primary-dark);
+        outline: none;
+    }
+
+    .cef-asistencia-tabs [role="tab"]:focus-visible {
+        box-shadow: 0 0 0 3px rgba(45,125,210,.16);
+    }
+
+    .cef-asistencia-tabs [role="tab"][aria-selected="true"] {
+        background: var(--surface);
+        border-color: var(--blue-200);
+        box-shadow: var(--shadow-xs);
+        color: var(--primary-dark);
+    }
+
+    .cef-asistencia-panel { min-width: 0; }
+
+    .cef-asistencia-date {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--r-md);
+        padding: 1rem 1.1rem;
+    }
+
+    .cef-asistencia-date-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .85rem 1rem;
+        justify-content: space-between;
+    }
+
+    .cef-asistencia-eyebrow {
+        color: var(--slate-600);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .06em;
+        margin-bottom: .25rem;
+        text-transform: uppercase;
+    }
+
+    .cef-asistencia-date-title {
+        color: var(--blue-950);
+        font-size: clamp(1.25rem, 2vw, 1.65rem);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .cef-asistencia-date-status {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .55rem;
+        margin-top: .7rem;
+    }
+
+    .cef-asistencia-date-status .badge {
+        align-items: center;
+        display: inline-flex;
+        line-height: 1.2;
+        padding: .35rem .75rem;
+    }
+
+    .cef-asistencia-date-edit {
+        border-top: 1px solid var(--blue-200);
+        margin-top: .85rem;
+        padding-top: .8rem;
+    }
+
+    .cef-asistencia-date-edit form {
+        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .6rem;
+    }
+
+    .cef-asistencia-date-edit .form-control { max-width: 220px; }
+
+    .cef-asistencia-notice {
+        font-size: var(--fs-sm);
+        margin: .8rem 0 0;
+        padding: .6rem .75rem;
+    }
+
+    .cef-asistencia-summary {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .cef-asistencia-summary strong { color: var(--slate-900); }
+
+    .cef-asistencia-audit { margin-top: .65rem; }
+
+    .cef-asistencia-audit-panel {
+        border-top: 1px solid var(--blue-200);
+        margin-top: .75rem;
+        padding-top: .75rem;
+    }
+
+    .cef-asistencia-section {
+        border-top: 1px solid var(--border);
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
+
+    .cef-asistencia-section-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .65rem 1rem;
+        justify-content: space-between;
+        margin-bottom: .8rem;
+    }
+
+    .cef-asistencia-section-title {
+        color: var(--slate-900);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-asistencia-count {
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin-right: auto;
+    }
+
+    .cef-asistencia-table .form-select {
+        appearance: auto;
+        background-color: var(--surface);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        height: 38px;
+        min-width: 190px;
+        padding: .4rem .65rem;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .cef-asistencia-table .form-select:hover { border-color: var(--slate-600); }
+
+    .cef-asistencia-table .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.15);
+        outline: none;
+    }
+
+    .cef-asistencia-savebar {
+        align-items: center;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem 1rem;
+        justify-content: space-between;
+        margin-top: 1rem;
+        padding: .75rem .85rem;
+    }
+
+    .cef-asistencia-progress {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .cef-asistencia-progress.is-complete { color: var(--green-700); }
+
+    .cef-asistencia-savebar .btn-primary {
+        min-height: 42px;
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+
+    .cef-asistencia-history-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .6rem;
+        margin-bottom: .85rem;
+    }
+
+    .cef-asistencia-history-title {
+        color: var(--slate-900);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-asistencia-legacy-row td {
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+    }
+
+    @media (max-width: 575.98px) {
+        .cef-asistencia-tabs { max-width: none; }
+        .cef-asistencia-date { padding: .85rem; }
+        .cef-asistencia-date-head { align-items: flex-start; }
+        .cef-asistencia-date-head > .btn { width: 100%; }
+        .cef-asistencia-date-edit .form-control { max-width: none; width: 100%; }
+        .cef-asistencia-section-head [data-cef-marcar-presentes] { width: 100%; }
+        .cef-asistencia-count { margin-right: 0; }
+        .cef-asistencia-savebar { align-items: stretch; }
+        .cef-asistencia-savebar .btn-primary { width: 100%; }
+    }
+</style>
+{% endblock %}
 
 {% block cef_content %}
 <div class="cef-panel">
@@ -8,209 +262,24 @@
         <div class="cef-course-heading">
             <span class="cef-section-kicker">Asistencia</span>
             <div class="cef-course-title-line">
-                <h2 class="cef-panel-title">{{ grupo.actividad }} <span>· Grupo Nro. {{ grupo.numero }}</span></h2>
-                <span class="badge text-bg-{% if solo_lectura %}secondary{% else %}success{% endif %}">
-                    {% if solo_lectura %}Sólo lectura{% else %}Ciclo abierto{% endif %}
-                </span>
+                <h2 class="cef-panel-title">{{ grupo.actividad }} · Grupo N.º {{ grupo.numero }}</h2>
+                {% if solo_lectura %}<span class="badge text-bg-secondary">Sólo lectura</span>{% endif %}
             </div>
             <div class="cef-course-meta">
+                <span>{% for relacion in dias_habituales %}{{ relacion.dia_semana.nombre }}{% if not forloop.last %} y {% endif %}{% empty %}Sin días configurados{% endfor %} · {{ grupo.hora_inicio|time:"H:i" }} a {{ grupo.hora_fin|time:"H:i" }}</span>
                 <span><strong>CUE-Anexo</strong> {{ grupo.cueanexo }}</span>
                 <span><strong>Ciclo</strong> {{ grupo.ciclo.anio }}</span>
-                <span><strong>Fecha</strong> {{ fecha|date:"d/m/Y" }}</span>
             </div>
         </div>
-        <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{{ gestionar_url }}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a Gestionar curso
-            </a>
-        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ asistencia_inicio_url }}">
+            <i class="fa-solid fa-arrow-left me-1"></i>Volver a Asistencia
+        </a>
     </div>
 
-    <div class="cef-panel-body cef-course-body">
-        {% if solo_lectura %}
-            <div class="alert alert-info">La jornada y sus estados pueden consultarse, pero el ciclo o el curso no admiten escrituras.</div>
-        {% endif %}
-
-        <section class="cef-card mb-4">
-            <div class="cef-card-header">
-                <h3><i class="fa-solid fa-calendar-day me-2"></i>Seleccionar jornada</h3>
-                {% if jornada %}<span class="badge text-bg-primary">Jornada abierta</span>{% else %}<span class="badge text-bg-secondary">Sin jornada creada</span>{% endif %}
-            </div>
-            <div class="cef-card-body">
-                <form method="get" action="{{ asistencia_url }}">
-                    <input type="hidden" name="cueanexo" value="{{ cef_context.cueanexo }}">
-                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo" value="{{ cef_context.ciclo.pk }}">{% endif %}
-                    {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
-                    <div class="d-flex flex-wrap gap-2 align-items-end">
-                        <div class="cef-field">
-                            <label for="{{ fecha_form.fecha.id_for_label }}">{{ fecha_form.fecha.label }}</label>
-                            {{ fecha_form.fecha }}
-                        </div>
-                        <button type="submit" class="btn btn-outline-primary">
-                            <i class="fa-solid fa-magnifying-glass me-1"></i>Abrir fecha
-                        </button>
-                    </div>
-                </form>
-                {% if not fecha_habitual %}
-                    <div class="alert alert-warning mt-3 mb-0">
-                        La fecha seleccionada no corresponde a un día habitual de funcionamiento del curso. Podés continuar igualmente.
-                    </div>
-                {% endif %}
-            </div>
-        </section>
-
-        <section class="cef-card mb-4">
-            <div class="cef-card-header">
-                <h3><i class="fa-solid fa-user-check me-2"></i>Alumnos de la jornada</h3>
-                <span class="badge text-bg-primary">{{ inscripciones|length }} inscripciones vigentes</span>
-            </div>
-            <div class="cef-card-body">
-                {% if jornada %}
-                    <div class="cef-context-summary mb-3">
-                        <div class="cef-context-summary-item"><span>Presentes</span><strong>{{ presentes }}</strong></div>
-                        <div class="cef-context-summary-item"><span>Ausentes</span><strong>{{ ausentes }}</strong></div>
-                        <div class="cef-context-summary-item"><span>Justificadas</span><strong>{{ justificadas }}</strong></div>
-                        <div class="cef-context-summary-item"><span>Porcentaje</span><strong>{% if porcentaje_disponible %}{{ porcentaje }}%{% else %}—{% endif %}</strong></div>
-                    </div>
-                {% endif %}
-
-                {% if inscripciones %}
-                    <form method="post" action="{{ asistencia_url }}">
-                        {% csrf_token %}
-                        <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}">
-                        <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                        {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
-                        {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
-                        <div class="cef-table-wrap">
-                            <table class="cef-dt">
-                                <thead>
-                                    <tr>
-                                        <th>Apellido y nombre</th>
-                                        <th>Documento</th>
-                                        <th>Período incluido</th>
-                                        <th>Asistencia</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for inscripcion in inscripciones %}
-                                        <tr>
-                                            <td><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
-                                            <td>{{ inscripcion.alumno.nro_doc|default:"—" }}</td>
-                                            <td>
-                                                {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}
-                                                {% if inscripcion.fecha_baja %} a {{ inscripcion.fecha_baja|date:"d/m/Y" }}{% else %} en adelante{% endif %}
-                                            </td>
-                                            <td>
-                                                {% if solo_lectura %}
-                                                    {% if inscripcion.asistencia_actual %}
-                                                        <span class="badge text-bg-{% if inscripcion.asistencia_actual.estado == 'presente' %}success{% elif inscripcion.asistencia_actual.estado == 'ausente' %}danger{% else %}warning{% endif %}">{{ inscripcion.asistencia_actual.get_estado_display }}</span>
-                                                    {% else %}
-                                                        <span class="text-muted">Sin registrar</span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <select class="form-select" name="asistencia_{{ inscripcion.pk }}">
-                                                        {% if not inscripcion.asistencia_actual %}<option value="">Sin registrar</option>{% endif %}
-                                                        {% for valor, etiqueta in estado_choices %}
-                                                            <option value="{{ valor }}"{% if inscripcion.asistencia_actual.estado == valor %} selected{% endif %}>{{ etiqueta }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if not solo_lectura %}
-                            <div class="cef-form-actions mt-3">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fa-solid fa-floppy-disk me-1"></i>{% if jornada %}Guardar cambios{% else %}Crear jornada y guardar{% endif %}
-                                </button>
-                            </div>
-                        {% endif %}
-                    </form>
-                {% elif jornada %}
-                    <div class="cef-empty-state">No había inscripciones vigentes para esta fecha.</div>
-                {% else %}
-                    <div class="cef-empty-state">No hay inscripciones vigentes para crear una jornada en esta fecha.</div>
-                    {% if not solo_lectura %}
-                        <form method="post" action="{{ asistencia_url }}" class="mt-3">
-                            {% csrf_token %}
-                            <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}">
-                            <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                            {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
-                            {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fa-solid fa-calendar-plus me-1"></i>Crear jornada
-                            </button>
-                        </form>
-                    {% endif %}
-                {% endif %}
-            </div>
-        </section>
-
-        <section class="cef-card mb-4">
-            <div class="cef-card-header">
-                <h3><i class="fa-solid fa-clock-rotate-left me-2"></i>Jornadas anteriores</h3>
-            </div>
-            <div class="cef-card-body">
-                {% if jornadas_anteriores %}
-                    <div class="cef-table-wrap">
-                        <table class="cef-dt">
-                            <thead><tr><th>Fecha</th><th>Presentes</th><th>Ausentes</th><th>Justificadas</th><th>Acción</th></tr></thead>
-                            <tbody>
-                                {% for item in jornadas_anteriores %}
-                                    <tr>
-                                        <td><strong>{{ item.fecha|date:"d/m/Y" }}</strong></td>
-                                        <td>{{ item.presentes }}</td>
-                                        <td>{{ item.ausentes }}</td>
-                                        <td>{{ item.justificadas }}</td>
-                                        <td><a class="btn btn-outline-primary btn-sm" href="{{ item.url_asistencia }}">Abrir</a></td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="cef-empty-state">Todavía no existen jornadas para este curso.</div>
-                {% endif %}
-            </div>
-        </section>
-
-        {% if jornada %}
-            <section class="cef-card">
-                <div class="cef-card-header">
-                    <h3><i class="fa-solid fa-clock-rotate-left me-2"></i>Trazabilidad</h3>
-                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#historialCambiosAsistencia" aria-expanded="false" aria-controls="historialCambiosAsistencia">
-                        Historial de cambios
-                    </button>
-                </div>
-                <div id="historialCambiosAsistencia" class="collapse">
-                    <div class="cef-card-body">
-                        {% if movimientos %}
-                            <div class="cef-table-wrap">
-                                <table class="cef-dt">
-                                    <thead><tr><th>Fecha y hora</th><th>Alumno</th><th>Usuario</th><th>Anterior</th><th>Nuevo</th></tr></thead>
-                                    <tbody>
-                                        {% for movimiento in movimientos %}
-                                            <tr>
-                                                <td>{{ movimiento.creado_en|date:"d/m/Y H:i" }}</td>
-                                                <td>{{ movimiento.asistencia.inscripcion.alumno.apellidos }}, {{ movimiento.asistencia.inscripcion.alumno.nombres }}</td>
-                                                <td>{{ movimiento.creado_por.get_full_name|default:movimiento.creado_por.username|default:"Usuario no disponible" }}</td>
-                                                <td>{% if movimiento.estado_anterior %}{{ movimiento.get_estado_anterior_display }}{% else %}Sin estado{% endif %}</td>
-                                                <td>{{ movimiento.get_estado_nuevo_display }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <div class="cef-empty-state">La jornada todavía no tiene cambios de asistencia registrados.</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </section>
-        {% endif %}
+    <div class="cef-panel-body">
+        <div data-cef-asistencia-workspace>
+            {% include "cef/asistencia_grupo_workspace_cef.html" %}
+        </div>
     </div>
 </div>
 {% endblock %}

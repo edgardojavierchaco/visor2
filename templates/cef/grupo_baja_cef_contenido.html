@@ -8,11 +8,10 @@
         <div>Alumnos activos: <strong>{{ baja_modal_grupo.alumnos_activos }}</strong></div>
         <div>Profesores activos: <strong>{{ baja_modal_grupo.docentes_activos }}</strong></div>
     </div>
-    <p class="text-muted">Primero debe dar de baja cada inscripción y asignación activa, indicando sus motivos.</p>
+    <p class="text-muted">Primero debe dar de baja cada inscripción y asignación activa.</p>
     <div class="cef-form-actions mt-4">
         <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>Cancelar</button>
-        {% if baja_modal_grupo.alumnos_activos %}<a class="btn btn-outline-primary" href="{% url 'cef:gestionar_grupo' baja_modal_grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=grupos#alumnos-curso"><i class="fa-solid fa-users"></i> Gestionar alumnos</a>{% endif %}
-        {% if baja_modal_grupo.docentes_activos %}<a class="btn btn-outline-primary" href="{% url 'cef:gestionar_grupo' baja_modal_grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=grupos#profesores-curso"><i class="fa-solid fa-chalkboard-user"></i> Gestionar profesores</a>{% endif %}
+                <a class="btn btn-outline-primary" href="{% url 'cef:gestionar_grupo' baja_modal_grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=grupos"><i class="fa-solid fa-clipboard-list"></i> Gestionar grupo</a>
     </div>
 {% else %}
     <form method="post" action="{{ baja_action_url }}" data-cef-baja-form data-cef-baja-modal-id="modalBajaGrupoCef">
@@ -20,15 +19,15 @@
         <input type="hidden" name="accion" value="baja_grupo">
         <input type="hidden" name="grupo_id" value="{{ baja_modal_grupo.pk }}">
         <p>¿Confirmás la baja del grupo <strong>{{ baja_modal_grupo.actividad }} Nro. {{ baja_modal_grupo.numero }}</strong>?</p>
-        <p class="text-muted">El curso quedará en estado Baja y disponible para consulta. Podrá reactivarse explícitamente dentro del mismo ciclo.</p>
+        <p class="text-muted">El grupo quedará en estado Baja y disponible para consulta. Podrá reactivarse explícitamente dentro del mismo ciclo.</p>
         <div class="mb-3">
-            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">{{ baja_form.motivo_baja.label }}</label>
+            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">Motivo de baja (opcional)</label>
             {{ baja_form.motivo_baja }}
             {% for error in baja_form.motivo_baja.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
         <div class="cef-form-actions mt-4">
             <button class="btn btn-outline-secondary" type="button" data-cef-baja-close>Cancelar</button>
-            <button class="btn btn-danger" type="submit"><i class="fa-solid fa-layer-group"></i> Dar de baja curso</button>
+            <button class="btn btn-danger" type="submit"><i class="fa-solid fa-layer-group"></i> Dar de baja grupo</button>
         </div>
     </form>
 {% endif %}

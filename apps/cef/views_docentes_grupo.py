@@ -119,13 +119,11 @@ def _url_modal_grupo(
     if destino == "gestionar":
         params["origen"] = resolver_origen_gestion_grupo(origen)
         params["destino"] = "gestionar"
+        params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
+        params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     params["abrir_modal_docente"] = "1"
     if cuil:
         params["cuil"] = cuil
-    if normalizar_vista_cef(vista_alumnos) == "historial":
-        params["vista_alumnos"] = "historial"
-    if normalizar_vista_cef(vista_docentes) == "historial":
-        params["vista_docentes"] = "historial"
     return f"{reverse('cef:docentes_grupo', kwargs={'grupo_id': grupo.pk})}?{urlencode(params)}"
 
 
@@ -155,13 +153,11 @@ def _url_gestionar_grupo(
     if cef_context.get("ciclo"):
         params["ciclo"] = cef_context["ciclo"].pk
     params["origen"] = resolver_origen_gestion_grupo(origen)
+    params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
+    params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     querystring = urlencode(params)
     url = reverse("cef:gestionar_grupo", kwargs={"grupo_id": grupo.pk})
     url = f"{url}?{querystring}" if querystring else url
-    if normalizar_vista_cef(vista_alumnos) == "historial":
-        url = f"{url}&vista_alumnos=historial"
-    if normalizar_vista_cef(vista_docentes) == "historial":
-        url = f"{url}&vista_docentes=historial"
     return f"{url}#{ancla}" if ancla else url
 
 
@@ -172,6 +168,7 @@ def _errores_form(form):
 def _ajax_docentes_grupo_response(request, context, ok, message):
     docentes = list(context.get("docentes") or [])
     context["docentes"] = docentes
+    context["roles_docente"] = CefDocenteGrupo.Rol.choices
     context["docentes_activos_count"] = len(
         [
             docente
@@ -237,7 +234,10 @@ def _baja_docente(request, grupo, cef_context):
         )
 
     asignacion = get_object_or_404(
-        CefDocenteGrupo.objects.filter(grupo=grupo),
+        CefDocenteGrupo.objects.filter(
+            grupo=grupo,
+            estado=CefDocenteGrupo.Estado.ACTIVO,
+        ),
         pk=docente_grupo_id,
     )
     try:
@@ -290,22 +290,19 @@ def _alta_docente(request, grupo, cef_context):
         CefDocenteGrupo.objects.filter(grupo=grupo),
         pk=docente_grupo_id,
     )
-    try:
-        try:
-            asegurar_docente_banco_activo(
-                docente_cuil=asignacion.docente_cuil,
-                cueanexo=cef_context["cueanexo"],
-                ciclo=cef_context["ciclo"],
-                user=request.user,
-            )
-        except (OperationalError, ProgrammingError):
-            pass
-        reasignar_docente_grupo(asignacion, request.user)
-        ok = True
-        message = "Profesor reasignado al grupo correctamente."
-    except ValidationError as exc:
+    rol = request.POST.get("rol")
+    roles_validos = {valor for valor, _ in CefDocenteGrupo.Rol.choices}
+    if rol not in roles_validos:
         ok = False
-        message = "; ".join(exc.messages)
+        message = "Seleccioná si el profesor será titular o suplente."
+    else:
+        try:
+            reasignar_docente_grupo(asignacion, request.user, rol=rol)
+            ok = True
+            message = "Profesor reasignado al grupo correctamente."
+        except ValidationError as exc:
+            ok = False
+            message = "; ".join(exc.messages)
 
     if _is_ajax(request):
         context = {
@@ -353,25 +350,6 @@ def docentes_grupo(request, grupo_id):
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
     grupo = _grupo_seguro(grupo_id, cef_context)
-    if (
-        request.method == "POST"
-        and destino_gestionar
-        and vista_docentes == "historial"
-    ):
-        mensaje = "Historial es una vista de sólo lectura."
-        if _is_ajax(request):
-            return JsonResponse({"ok": False, "message": mensaje})
-        messages.error(request, mensaje)
-        return redirect(
-            _url_gestionar_grupo(
-                grupo,
-                cef_context,
-                origen,
-                "profesores-curso",
-                vista_alumnos=vista_alumnos,
-                vista_docentes=vista_docentes,
-            )
-        )
     if request.method == "POST" and not cef_context["puede_operar"]:
         mensaje = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
         if _is_ajax(request):
@@ -527,6 +505,7 @@ def docentes_grupo(request, grupo_id):
                 ]
             ),
             "docentes_activos_duplicados": docentes_grupo_tiene_duplicados_activos(grupo),
+            "roles_docente": CefDocenteGrupo.Rol.choices,
             "busqueda_form": busqueda_form,
             "docente_form": docente_form,
             "docente": docente,
@@ -619,11 +598,8 @@ def editar_docente_grupo(request, grupo_id, docente_grupo_id):
         if volver_gestionar
         else _url_docentes_grupo(grupo, cef_context)
     )
-    if volver_gestionar and vista_docentes == "historial":
-        messages.error(request, "Historial es una vista de sólo lectura.")
-        return redirect(volver_url)
     volver_label = (
-        "Volver a Gestionar curso"
+        "Volver a Gestionar grupo"
         if volver_gestionar
         else "Volver a profesores"
     )
@@ -701,6 +677,8 @@ def editar_docente_grupo(request, grupo_id, docente_grupo_id):
             "volver_label": volver_label,
             "volver_gestionar": volver_gestionar,
             "origen": origen,
+            "vista_alumnos": vista_alumnos,
+            "vista_docentes": vista_docentes,
         }
     )
     return render(request, "cef/docente_grupo_form_cef.html", context)
