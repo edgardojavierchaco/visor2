@@ -24,6 +24,7 @@ from .models import (
     PADRON_DB_ALIAS,
 )
 from .permisos import especial_required
+from .services.docentes_seccion import dar_baja_docente_seccion
 from .views_contexto import contexto_base, render_especial
 
 URL_CARGA_DOCENTE = "/bnh/carga-personal/"
@@ -193,6 +194,53 @@ def _errores_form(form):
     return " ".join(error for errors in form.errors.values() for error in errors)
 
 
+def _docentes_fragment_context(especial_context, url_docentes):
+    """Arma el contexto mínimo para refrescar la tabla de Docentes."""
+    docentes = list(_docentes_especial(especial_context))
+    asignaciones_por_docente = _asignaciones_por_docente(especial_context, docentes)
+    secciones_disponibles = list(_secciones_disponibles(especial_context))
+
+    for item in docentes:
+        item.asignaciones_seccion = asignaciones_por_docente.get(item.docente_cuil, [])
+        asignaciones_activas = [
+            asignacion
+            for asignacion in item.asignaciones_seccion
+            if asignacion.estado == DocenteSeccion.Estado.ACTIVO
+        ]
+        secciones_activas_ids = {asignacion.seccion_id for asignacion in asignaciones_activas}
+        item.secciones_asignables = [
+            seccion
+            for seccion in secciones_disponibles
+            if seccion.pk not in secciones_activas_ids
+        ]
+        item.secciones_bloqueadas = asignaciones_activas
+        item.url_editar_docente = _url_carga_docente(
+            item.docente_cuil,
+            url_docentes,
+            "Volver a Docentes Especial",
+        )
+
+    return {
+        "docentes": docentes,
+        "especial_context": especial_context,
+        "secciones_disponibles": secciones_disponibles,
+        "docente_roles": DocenteSeccion.Rol.choices,
+    }
+
+
+def _docentes_fragment_response(request, especial_context, url_docentes):
+    fragment_context = _docentes_fragment_context(especial_context, url_docentes)
+    html_tabla = render_to_string(
+        "especial/partials/docentes_tabla_especial.html",
+        fragment_context,
+        request=request,
+    )
+    return JsonResponse({
+        "fragment_html": html_tabla,
+        "fragment_selector": "[data-cef-fragment='profesores-banco']",
+    })
+
+
 @especial_required
 def editar_docente_seccion(request, seccion_id, docente_id):
     """Vista para editar la asignación de un docente a una sección."""
@@ -237,15 +285,22 @@ def editar_docente_seccion(request, seccion_id, docente_id):
                 )
             else:
                 messages.success(request, "Asignación actualizada correctamente.")
+                if request.GET.get("volver") == "docentes" or request.POST.get("volver") == "docentes":
+                    return redirect(_url_docentes(especial_context))
                 return redirect("especial:gestionar_seccion", seccion_id=seccion.pk)
     else:
         form = EspecialDocenteSeccionForm(instance=asignacion)
 
+    volver_docentes = (
+        request.GET.get("volver") == "docentes"
+        or request.POST.get("volver") == "docentes"
+    )
     context.update({
         "form": form,
         "seccion": seccion,
         "asignacion": asignacion,
-        "volver_url": reverse("especial:gestionar_seccion", kwargs={"seccion_id": seccion.pk})
+        "volver_url": _url_docentes(especial_context) if volver_docentes else reverse("especial:gestionar_seccion", kwargs={"seccion_id": seccion.pk}),
+        "volver_docentes": volver_docentes,
     })
     return render(request, "especial/docente_seccion_form_especial.html", context)
 
@@ -269,6 +324,41 @@ def docentes(request):
 
     if request.method == "POST":
         accion = request.POST.get("accion")
+
+        if accion == "baja_docente":
+            if not especial_context["puede_operar"]:
+                messages.warning(request, "Seleccioná un CUE-Anexo y un ciclo para operar.")
+                return redirect(url_docentes)
+
+            try:
+                asignacion_id = int(request.POST.get("docente_seccion_id"))
+            except (TypeError, ValueError):
+                message = "La asignación seleccionada no es válida."
+                if _is_ajax(request):
+                    return JsonResponse({"error": message}, status=400)
+                messages.error(request, message)
+                return redirect(url_docentes)
+
+            asignacion = get_object_or_404(
+                DocenteSeccion.objects.filter(
+                    pk=asignacion_id,
+                    seccion__cueanexo=especial_context["cueanexo"],
+                    seccion__ciclo=especial_context["ciclo"],
+                )
+            )
+            try:
+                dar_baja_docente_seccion(asignacion, request.user)
+            except ValidationError as exc:
+                message = "; ".join(exc.messages)
+                if _is_ajax(request):
+                    return JsonResponse({"error": message}, status=400)
+                messages.error(request, message)
+            else:
+                message = "Asignación dada de baja correctamente."
+                if _is_ajax(request):
+                    return _docentes_fragment_response(request, especial_context, url_docentes)
+                messages.success(request, message)
+            return redirect(url_docentes)
 
         if accion == "asignar_seccion" and especial_context["puede_operar"]:
             
@@ -345,6 +435,7 @@ def docentes(request):
                         "docentes": docentes_actualizados,
                         "especial_context": especial_context,
                         "secciones_disponibles": secciones_disp,
+                        "docente_roles": DocenteSeccion.Rol.choices,
                     }
                     
                     html_tabla = render_to_string(
@@ -487,6 +578,7 @@ def docentes(request):
             "modal_action_url": _url_modal_docentes(especial_context),
             "modal_volver_url": url_docentes,
             "docente_grupo_form": docente_grupo_form,
+            "docente_roles": DocenteSeccion.Rol.choices,
         }
     )
     return render_especial(
