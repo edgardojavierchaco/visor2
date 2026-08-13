@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import re
+import unicodedata
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import CharField, Func, Q, Value
-from django.db.models.functions import Cast, Trim
+from django.db.models.functions import Cast
 from django.utils import timezone
 from apps.bnhalumnos.models import Alumno
 
@@ -147,6 +148,25 @@ def normalizar_cueanexo(valor):
     return cueanexo
 
 
+def _normalizar_oferta_matricula_compartida(valor):
+    """Normaliza únicamente el formato tipográfico de una oferta de Padrón."""
+    oferta = unicodedata.normalize("NFKC", str(valor or ""))
+    oferta = oferta.translate(
+        str.maketrans(
+            {
+                "‐": "-",
+                "‑": "-",
+                "‒": "-",
+                "–": "-",
+                "—": "-",
+                "−": "-",
+            }
+        )
+    )
+    oferta = re.sub(r"\s+", " ", oferta).strip()
+    return re.sub(r"\s*-\s*", " - ", oferta)
+
+
 def normalizar_cuil_usuario(user):
     if not user or not getattr(user, "is_authenticated", False):
         return ""
@@ -206,12 +226,17 @@ def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
         return False
-    return (
+    ofertas = (
         EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
         .filter(cueanexo=cueanexo)
-        .annotate(oferta_normalizada=Trim("oferta"))
-        .filter(oferta_normalizada=OFERTA_MATRICULA_COMPARTIDA)
-        .exists()
+        .values_list("oferta", flat=True)
+    )
+    objetivo = _normalizar_oferta_matricula_compartida(
+        OFERTA_MATRICULA_COMPARTIDA
+    )
+    return any(
+        _normalizar_oferta_matricula_compartida(oferta) == objetivo
+        for oferta in ofertas
     )
 
 
