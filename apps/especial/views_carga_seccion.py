@@ -14,7 +14,7 @@ from .forms import EspecialSeccionForm, EspecialDocenteSeccionForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion, DocenteSeccion
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
-from .views_docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
 from .views_inscripcion_seccion import dar_alta_inscripcion_seccion, dar_baja_inscripcion_seccion
 
 def _is_ajax(request):

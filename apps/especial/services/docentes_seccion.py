@@ -1,16 +1,12 @@
-# apps/especial/views_docentes_seccion.py
+# apps/especial/services/docentes_seccion.py
 # -*- coding: utf-8 -*-
-"""
-Funciones reutilizables para dar alta y baja de docentes en una sección.
-Equivalente a apps/cef/views_docentes_grupo.py.
-Son llamadas desde gestionar_seccion (vía AJAX) y desde views_docentes.py.
-"""
+"""Funciones reutilizables para gestionar altas y bajas de docentes en una sección."""
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import DocenteSeccion, SeccionEspecial
+from ..models import DocenteSeccion, SeccionEspecial
 
 
 def dar_alta_docente_seccion(asignacion, user):

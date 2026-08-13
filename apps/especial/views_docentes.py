@@ -348,7 +348,7 @@ def docentes(request):
                     }
                     
                     html_tabla = render_to_string(
-                        "especial/partials/profesores_tabla_especial.html", 
+                        "especial/partials/docentes_tabla_especial.html",
                         ctx_fragmento, 
                         request=request
                     )

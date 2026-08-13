@@ -48,8 +48,8 @@ from .views_contexto import (
 )
 from .views_carga_seccion import _alta_docente_nuevo_gestionar
 from .views_ciclo import _exigir_admin
-from .views_docentes_seccion import dar_alta_docente_seccion
-from .services_alumnos import dar_baja_alumno_banco
+from .services.docentes_seccion import dar_alta_docente_seccion
+from .services.alumnos import dar_baja_alumno_banco
 from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
 from .views_alumnos import (
     _actualizar_matricula_compartida,
@@ -1520,8 +1520,8 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
     def test_alta_docente_bloquea_recurso_y_asignacion_reales(self):
         assignment, locked_assignment, section_manager, docente_manager = self._docente_service_mocks()
 
-        with patch("apps.especial.views_docentes_seccion.SeccionEspecial.objects", section_manager), patch(
-            "apps.especial.views_docentes_seccion.DocenteSeccion.objects", docente_manager
+        with patch("apps.especial.services.docentes_seccion.SeccionEspecial.objects", section_manager), patch(
+            "apps.especial.services.docentes_seccion.DocenteSeccion.objects", docente_manager
         ):
             dar_alta_docente_seccion(assignment, SimpleNamespace())
 
@@ -1538,8 +1538,8 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
             save_side_effect=IntegrityError("constraint")
         )
 
-        with patch("apps.especial.views_docentes_seccion.SeccionEspecial.objects", section_manager), patch(
-            "apps.especial.views_docentes_seccion.DocenteSeccion.objects", docente_manager
+        with patch("apps.especial.services.docentes_seccion.SeccionEspecial.objects", section_manager), patch(
+            "apps.especial.services.docentes_seccion.DocenteSeccion.objects", docente_manager
         ):
             with self.assertRaisesRegex(ValidationError, "conflicto con otra asignación activa"):
                 dar_alta_docente_seccion(assignment, SimpleNamespace())
