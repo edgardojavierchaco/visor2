@@ -1,4 +1,4 @@
-<div class="cef-panel">
+<div class="cef-panel cef-secciones-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Gestión de Secciones</h2>
         <div class="cef-panel-actions">
@@ -55,7 +55,7 @@
         <!-- CORRECCIÓN 2: Variable 'secciones' en lugar de 'seccions' -->
         {% if secciones %}
             <div class="cef-table-wrap">
-                <table class="cef-dt" data-cef-table>
+                <table class="cef-dt secciones-table" data-cef-table>
                     <thead>
                         <tr>
                             <th>Tipo Sección</th>
@@ -66,7 +66,7 @@
                             <th>Modalidad</th>
                             <th>Alumnos</th>
                             <th>Cupo</th>
-                            <th>Acciones</th>
+                            <th>ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -80,30 +80,30 @@
                                 </td>
                                 <td>{{ seccion.rango_etario.descripcion|default:"—" }}</td>
                                 <td>{{ seccion.modalidad.descripcion|default:"—" }}</td>
-                                <td>
+                                <td class="secciones-alumnos-cell">
                                     <span class="badge text-bg-primary">{{ seccion.alumnos_activos }}</span>
                                 </td>
-                                <td>{{ seccion.capacidad_total|default:"—" }}</td>
+                                <td class="secciones-cupo-cell">{{ seccion.capacidad_total|default:"—" }}</td>
                                 <td class="cef-act-cell">
-                                    <div class="dropdown" data-cef-row-actions>
-                                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false">
-                                            Acciones
+                                    <div class="dropdown cef-secciones-row-actions" data-cef-row-actions>
+                                        <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-actions-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false" title="Acciones de la sección" aria-label="Acciones de la sección">
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
                                         </button>
                                         <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
                                             <li>
-                                                <a class="dropdown-item" href="{% url 'especial:gestionar_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                                <a class="dropdown-item cef-secciones-action is-primary" href="{% url 'especial:gestionar_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                     <i class="fa-solid fa-clipboard-list"></i> Gestionar sección
                                                 </a>
                                             </li>
                                             {% if especial_context.puede_operar %}
                                             <li>
-                                                <a class="dropdown-item" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                                <a class="dropdown-item cef-secciones-action is-outline" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                     <i class="fa-solid fa-pen"></i> Editar sección
                                                 </a>
                                             </li>
                                             {% endif %}
                                             <li>
-                                                <a class="dropdown-item" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                                                <a class="dropdown-item cef-secciones-action is-outline" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                     <i class="fa-solid fa-user-plus"></i> Alumnos
                                                 </a>
                                             </li>
@@ -144,23 +144,111 @@
 </div>
 
 <style>
-    .cef-row-actions-menu {
+    .cef-secciones-panel .secciones-table thead th {
+        text-align: center;
+    }
+
+    .cef-secciones-panel .secciones-table tbody td.secciones-alumnos-cell,
+    .cef-secciones-panel .secciones-table tbody td.secciones-cupo-cell {
+        text-align: center;
+    }
+
+    .cef-secciones-panel .secciones-table tbody td.cef-act-cell {
+        text-align: center;
+    }
+
+    .cef-secciones-panel .secciones-table .cef-secciones-row-actions {
+        margin-inline: auto;
+        width: max-content;
+    }
+
+    .cef-secciones-panel .cef-secciones-actions-toggle {
+        align-items: center;
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+        display: inline-flex;
+        height: 32px;
+        justify-content: center;
+        margin-right: 0;
+        min-width: 32px;
+        padding: 0;
+        width: 32px;
+    }
+
+    .cef-secciones-panel .cef-secciones-actions-toggle::after {
+        display: none;
+    }
+
+    .cef-secciones-panel .cef-secciones-actions-toggle:hover,
+    .cef-secciones-panel .cef-secciones-actions-toggle:focus-visible {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+    }
+
+    .cef-secciones-panel .cef-row-actions-menu {
         border-color: var(--border-strong);
         box-shadow: var(--shadow-lg);
-        min-width: 210px;
-        padding: .35rem;
+        min-width: 220px;
+        padding: .45rem;
     }
 
-    .cef-row-actions-menu .dropdown-item {
+    .cef-secciones-panel .cef-row-actions-menu li + li {
+        margin-top: .4rem;
+    }
+
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action {
         align-items: center;
+        border: 1px solid var(--primary);
         border-radius: var(--r-sm);
+        box-sizing: border-box;
         display: flex;
+        font-size: var(--fs-sm);
+        font-weight: 700;
         gap: .5rem;
-        padding: .45rem .6rem;
+        height: auto;
+        justify-content: flex-start;
+        margin: 0;
+        min-height: 34px;
+        padding: .5rem .65rem;
+        transform: none;
+        white-space: normal;
+        width: 100%;
     }
 
-    .cef-row-actions-menu .dropdown-item i {
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action.is-primary {
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+    }
+
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action.is-primary:hover,
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action.is-primary:focus {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+        transform: none;
+    }
+
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action.is-outline {
+        background: var(--surface);
+        border-color: var(--primary);
         color: var(--blue-800);
+    }
+
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action.is-outline:hover,
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action.is-outline:focus {
+        background: var(--blue-50);
+        border-color: var(--blue-800);
+        color: var(--blue-900);
+        transform: none;
+    }
+
+    .cef-secciones-panel .cef-row-actions-menu .cef-secciones-action i {
+        color: inherit;
+        flex: 0 0 1rem;
+        text-align: center;
         width: 1rem;
     }
 </style>
