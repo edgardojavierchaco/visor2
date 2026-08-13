@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import EspecialCicloForm
 from .models import EspecialCiclo
 from .permisos import especial_required, get_permisos_especial_request
-from .services_anual import origen_anual_previsualizable, prevalidar_generacion_anual
+from .services.previsualizacion_anual import origen_anual_previsualizable, prevalidar_generacion_anual
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 
 

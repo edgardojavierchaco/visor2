@@ -14,7 +14,7 @@ from django.urls import NoReverseMatch, reverse
 from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
 from .permisos import especial_required
-from .services_alumnos import bloquear_alumno_banco_activo
+from .services.alumnos import bloquear_alumno_banco_activo
 from .views_contexto import contexto_base, redirect_con_contexto
 
 

@@ -27,7 +27,7 @@ from .models import (
     normalizar_cueanexo,
 )
 from .permisos import especial_required
-from .services_alumnos import (
+from .services.alumnos import (
     dar_baja_alumno_banco,
 )
 from .views_contexto import contexto_base, render_especial

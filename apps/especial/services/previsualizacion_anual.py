@@ -5,7 +5,7 @@ Estas funciones sólo leen la base y construyen un resumen en memoria.
 
 from django.utils import timezone
 
-from .models import (
+from ..models import (
     AlumnoSeccion,
     DocenteSeccion,
     EspecialAlumnoBanco,

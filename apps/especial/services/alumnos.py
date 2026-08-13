@@ -1,11 +1,11 @@
-# apps/especial/services_alumnos.py
+# apps/especial/services/alumnos.py
 # -*- coding: utf-8 -*-
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import AlumnoSeccion, EspecialAlumnoBanco
+from ..models import AlumnoSeccion, EspecialAlumnoBanco
 
 
 def obtener_alumno_banco_autorizado(alumno_banco_queryset, alumno_banco_id, *, for_update=False):

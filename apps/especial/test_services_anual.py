@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
-from .services_anual import prevalidar_generacion_anual
+from .services.previsualizacion_anual import prevalidar_generacion_anual
 
 
 class PrevisualizacionAnualEspecialTests(SimpleTestCase):
@@ -20,20 +20,20 @@ class PrevisualizacionAnualEspecialTests(SimpleTestCase):
             manager.filter.return_value = queryset
             return manager
 
-        with patch("apps.especial.services_anual.EspecialCiclo.objects", ciclo_manager), patch(
-            "apps.especial.services_anual.SeccionEspecial.objects",
+        with patch("apps.especial.services.previsualizacion_anual.EspecialCiclo.objects", ciclo_manager), patch(
+            "apps.especial.services.previsualizacion_anual.SeccionEspecial.objects",
             manager_with_count(2),
         ), patch(
-            "apps.especial.services_anual.EspecialAlumnoBanco.objects",
+            "apps.especial.services.previsualizacion_anual.EspecialAlumnoBanco.objects",
             manager_with_count(3),
         ), patch(
-            "apps.especial.services_anual.EspecialDocenteBanco.objects",
+            "apps.especial.services.previsualizacion_anual.EspecialDocenteBanco.objects",
             manager_with_count(1),
         ), patch(
-            "apps.especial.services_anual.AlumnoSeccion.objects",
+            "apps.especial.services.previsualizacion_anual.AlumnoSeccion.objects",
             manager_with_count(4),
         ), patch(
-            "apps.especial.services_anual.DocenteSeccion.objects",
+            "apps.especial.services.previsualizacion_anual.DocenteSeccion.objects",
             manager_with_count(2),
         ):
             resultado = prevalidar_generacion_anual(ciclo, "123456789")
