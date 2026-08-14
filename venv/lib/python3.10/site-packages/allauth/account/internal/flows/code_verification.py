@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import abc
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.base_user import AbstractBaseUser
 
 from allauth.account.internal.userkit import str_to_user_id, user_id_to_str
 
@@ -13,7 +16,7 @@ class AbstractCodeVerificationProcess(abc.ABC):
         max_attempts: int,
         timeout: int,
         state: dict,
-        user=None,
+        user: AbstractBaseUser | None = None,
     ) -> None:
         self._user = user
         self.max_attempts = max_attempts
@@ -21,7 +24,7 @@ class AbstractCodeVerificationProcess(abc.ABC):
         self.state = state
 
     @property
-    def user(self):
+    def user(self) -> AbstractBaseUser | None:
         if self._user:
             return self._user
         user_id = self.state.get("user_id")
@@ -32,14 +35,17 @@ class AbstractCodeVerificationProcess(abc.ABC):
         return self._user
 
     @property
-    def code(self):
+    def code(self) -> str:
         return self.state.get("code", "")
 
     @classmethod
     def initial_state(
-        cls, user, email: Optional[str] = None, phone: Optional[str] = None
-    ):
-        state: Dict[str, Any] = {
+        cls,
+        user: AbstractBaseUser | None,
+        email: str | None = None,
+        phone: str | None = None,
+    ) -> dict[str, Any]:
+        state: dict[str, Any] = {
             "at": time.time(),
             "failed_attempts": 0,
             "resend_count": 0,
@@ -71,13 +77,13 @@ class AbstractCodeVerificationProcess(abc.ABC):
         return time.time() - self.state["at"] <= self.timeout
 
     @abc.abstractmethod
-    def persist(self): ...  # noqa: E704
+    def persist(self) -> None: ...  # noqa: E704
 
     @abc.abstractmethod
-    def send(self): ...  # noqa: E704
+    def send(self) -> None: ...  # noqa: E704
 
     @abc.abstractmethod
-    def abort(self): ...  # noqa: E704
+    def abort(self) -> None: ...  # noqa: E704
 
     def is_resend_quota_reached(self, quota: int) -> bool:
         return self.state["resend_count"] >= quota
@@ -86,7 +92,7 @@ class AbstractCodeVerificationProcess(abc.ABC):
         return self.state["change_count"] >= quota
 
     def record_change(
-        self, *, email: Optional[str] = None, phone: Optional[str] = None
+        self, *, email: str | None = None, phone: str | None = None
     ) -> None:
         self.state["change_count"] += 1
         if email:
@@ -94,7 +100,7 @@ class AbstractCodeVerificationProcess(abc.ABC):
         if phone:
             self.state["phone"] = phone
 
-    def record_resend(self):
+    def record_resend(self) -> None:
         self.state["resend_count"] += 1
 
     @property

@@ -1,353 +1,116 @@
-from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.urls import reverse
+from django.views.decorators.http import require_GET
 
-from apps.supervisor_registro.services.permission_service import (
+from .services.permission_service import (
     get_regiones_usuario,
+    puede_ver_supervisores,
 )
-
-from apps.supervisor_registro.services.supervisor_query_service import (
-    SupervisorQueryService,
-)
-
-
+from .services.supervisor_query_service import SupervisorQueryService
 
 
 @login_required
+@require_GET
 def supervisores_datatable(request):
-    
-    print(">>> ENTRO A supervisores_datatable")
+    if not puede_ver_supervisores(request.user):
+        return JsonResponse({"error": "Sin permisos"}, status=403)
 
-    # =====================================================
-    # QUERY BASE
-    # =====================================================
+    regiones_usuario = get_regiones_usuario(request.user)
 
-    queryset = SupervisorQueryService.base()
+    # Importante: el alcance también limita el prefetch para no exponer
+    # regionales que el usuario no puede ver.
+    queryset = SupervisorQueryService.base(regiones_usuario)
+    queryset = SupervisorQueryService.por_regiones(queryset, regiones_usuario)
 
-
-
-    # =====================================================
-    # ALCANCE DEL USUARIO
-    # =====================================================
-
-    regiones_usuario = get_regiones_usuario(
-        request.user
-    )
-
-
-
-    queryset = SupervisorQueryService.por_regiones(
-        queryset,
-        regiones_usuario
-    )
-
-
-    print(
-        "REGIONES USUARIO:",
-        regiones_usuario
-    )
-
-    print(
-        "TOTAL BASE:",
-        SupervisorQueryService.base().count()
-    )
-
-    print(
-        "TOTAL DESPUES REGION:",
-        queryset.count()
-    )
-    
     records_total = queryset.count()
 
-
-
-    # =====================================================
-    # FILTROS
-    # =====================================================
+    q = request.GET.get("q", "").strip()
+    if not q:
+        q = request.GET.get("search[value]", "").strip()
 
     queryset = SupervisorQueryService.filtros(
-
-
         queryset,
-
-
-        q=request.GET.get(
-            "q",
-            ""
-        ).strip(),
-
-
-
-        region=request.GET.get(
-            "region"
-        ),
-
-
-
-        situacion=request.GET.get(
-            "situacion"
-        ),
-
-
-
-        nivel=request.GET.get(
-            "nivel"
-        )
-
-
+        q=q,
+        region=request.GET.get("region") or None,
+        situacion=request.GET.get("situacion") or None,
+        nivel=request.GET.get("nivel") or None,
     )
-
-
 
     records_filtered = queryset.count()
 
+    try:
+        start = max(int(request.GET.get("start", 0)), 0)
+    except (TypeError, ValueError):
+        start = 0
 
+    try:
+        length = int(request.GET.get("length", 25))
+    except (TypeError, ValueError):
+        length = 25
 
-    # =====================================================
-    # PAGINACION DATATABLES
-    # =====================================================
+    length = 25 if length == 0 else min(max(length, 10), 100)
 
-    start = int(
+    # Orden server-side controlado por columnas conocidas.
+    order_map = {
+        "0": "usuario__username",
+        "1": "usuario__apellido",
+        "2": "usuario__nombres",
+        "6": "email",
+        "7": "telefono",
+    }
+    order_column = request.GET.get("order[0][column]", "1")
+    order_dir = request.GET.get("order[0][dir]", "asc")
+    order_field = order_map.get(order_column, "usuario__apellido")
+    if order_dir == "desc":
+        order_field = f"-{order_field}"
 
-        request.GET.get(
-            "start",
-            0
-        )
-
-    )
-
-
-
-    length = int(
-
-        request.GET.get(
-            "length",
-            25
-        )
-
-    )
-
-
-
+    queryset = queryset.order_by(order_field, "usuario__nombres", "pk")
     queryset = queryset[start:start + length]
 
-
-
-
-
-    # =====================================================
-    # SERIALIZACION
-    # =====================================================
-
-
     data = []
-
-
-
     for supervisor in queryset:
-
-
-
         regiones = []
-
-
         niveles = []
-
-
         situaciones = []
 
-
-
         for asignacion in supervisor.asignaciones_regionales.all():
-
-
-            regiones.append(
-
-                asignacion.region.nombre
-
+            regiones.append(asignacion.region.nombre)
+            niveles.extend(
+                str(nivel.nivel)
+                for nivel in asignacion.niveles.all()
+                if nivel.activo
             )
 
-
-
-            for nivel in asignacion.niveles.all():
-
-
-                if nivel.activo:
-
-                    niveles.append(
-
-                        str(
-                            nivel.nivel
-                        )
-
-                    )
-
-
-
-
-        for situacion in supervisor.situaciones.all():
-
-
-            if situacion.activo:
-
-                situaciones.append(
-
-                    str(
-                        situacion.situacion_revista
-                    )
-
-                )
-
-
-
-
+        situaciones.extend(
+            str(situacion.situacion_revista)
+            for situacion in supervisor.situaciones.all()
+            if situacion.activo
+        )
 
         data.append({
-
-
-
-            "cuil":
-
-                supervisor.usuario.username,
-
-
-
-            "apellido":
-
-                supervisor.usuario.apellido,
-
-
-
-            "nombres":
-
-                supervisor.usuario.nombres,
-
-
-
-            "regiones":
-
-                "<br>".join(
-                    regiones
-                )
-                or "-",
-
-
-
-            "niveles":
-
-                "<br>".join(
-                    niveles
-                )
-                or "-",
-
-
-
-            "situaciones":
-
-                "<br>".join(
-                    situaciones
-                )
-                or "-",
-
-
-
-            "email":
-
-                supervisor.email
-                or "-",
-
-
-
-            "telefono":
-
-                supervisor.telefono
-                or "-",
-
-
-
-            "acciones":
-
-
-
-                f"""
-
-                <a
-
-                href="{reverse(
-                    'supervisor_registro:detalle',
-                    args=[supervisor.pk]
-                )}"
-
-                class="btn btn-sm btn-primary"
-
-                title="Ver detalle">
-
-                    <i class="fas fa-eye"></i>
-
-                </a>
-
-
-
-                <a
-
-                href="{reverse(
-                    'supervisor_registro:editar',
-                    args=[supervisor.pk]
-                )}"
-
-                class="btn btn-sm btn-warning"
-
-                title="Editar">
-
-                    <i class="fas fa-edit"></i>
-
-                </a>
-
-
-                """
-
-
-
+            "id": supervisor.pk,
+            "cuil": supervisor.usuario.username,
+            "apellido": supervisor.usuario.apellido,
+            "nombres": supervisor.usuario.nombres,
+            "regiones": "<br>".join(dict.fromkeys(regiones)) or "-",
+            "niveles": "<br>".join(dict.fromkeys(niveles)) or "-",
+            "situaciones": "<br>".join(dict.fromkeys(situaciones)) or "-",
+            "email": supervisor.email or "-",
+            "telefono": supervisor.telefono or "-",
+            "acciones": (
+                f'<a href="{reverse("supervisor_registro:detalle", args=[supervisor.pk])}" '
+                'class="btn btn-sm btn-primary me-1" title="Ver detalle">'
+                '<i class="fas fa-eye"></i></a>'
+                f'<a href="{reverse("supervisor_registro:editar", args=[supervisor.pk])}" '
+                'class="btn btn-sm btn-warning" title="Editar">'
+                '<i class="fas fa-edit"></i></a>'
+            ),
         })
 
-
-
-
-
-    # =====================================================
-    # RESPUESTA DATATABLES
-    # =====================================================
-
-
     return JsonResponse({
-
-
-        "draw":
-
-            int(
-                request.GET.get(
-                    "draw",
-                    1
-                )
-            ),
-
-
-
-        "recordsTotal":
-
-            records_total,
-
-
-
-        "recordsFiltered":
-
-            records_filtered,
-
-
-
-        "data":
-
-            data
-
-
+        "draw": int(request.GET.get("draw", 1)),
+        "recordsTotal": records_total,
+        "recordsFiltered": records_filtered,
+        "data": data,
     })

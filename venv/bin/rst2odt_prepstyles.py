@@ -1,4 +1,4 @@
-#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
+#!/home/edgardo/Documentos/visor2/venv/bin/python
 
 # Copyright: This module has been placed in the public domain.
 

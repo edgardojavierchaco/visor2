@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import re
-from typing import List, Optional, Pattern, Set
+from re import Pattern
 from urllib.parse import ParseResult, parse_qsl, urlparse
 
 from django.core.exceptions import ValidationError
+from django.forms import URLField
 from django.utils.translation import gettext_lazy as _
 
+from allauth.idp.oidc import app_settings
+from allauth.idp.oidc.internal import cimd
 from allauth.idp.oidc.models import Client
 
 
@@ -32,7 +37,7 @@ def _validate_uri_wildcard_format(uri: str, allow_uri_wildcards: bool) -> None:
             parsed = urlparse(uri)
         except ValueError as e:
             # it's possible for this to happen with wildcards in ports
-            raise ValidationError(_("Invalid URI: {}".format(e)))
+            raise ValidationError(_(f"Invalid URI: {e}"))
 
         if "*" in parsed.scheme or "*" in parsed.path or "*" in parsed.query:
             raise ValidationError(
@@ -40,7 +45,7 @@ def _validate_uri_wildcard_format(uri: str, allow_uri_wildcards: bool) -> None:
             )
 
 
-def _wildcard_to_regex(wildcard: str) -> Pattern:
+def _wildcard_to_regex(wildcard: str) -> Pattern[str]:
     pattern = re.escape(wildcard).replace(r"\*", r"[^.]+")
     return re.compile(f"^{pattern}$")
 
@@ -58,7 +63,9 @@ def _is_scheme_hostname_allowed(
     ):
         allowed_hostname_pattern = _wildcard_to_regex(parsed_allowed_uri.hostname)
 
-        if not allowed_hostname_pattern.match(parsed_uri.hostname):
+        if not parsed_uri.hostname or not allowed_hostname_pattern.match(
+            parsed_uri.hostname
+        ):
             return False
     else:
         if parsed_allowed_uri.hostname != parsed_uri.hostname:
@@ -93,7 +100,7 @@ def is_parsed_redirect_uri_allowed(
 
 
 def is_redirect_uri_allowed(
-    uri: str, allowed_uris: List[str], allow_uri_wildcards: bool
+    uri: str, allowed_uris: list[str], allow_uri_wildcards: bool
 ) -> bool:
     parsed_uri = urlparse(uri)
     return any(
@@ -103,7 +110,7 @@ def is_redirect_uri_allowed(
 
 
 def is_origin_allowed(
-    origin: str, allowed_origins: List[str], allow_uri_wildcards: bool
+    origin: str, allowed_origins: list[str], allow_uri_wildcards: bool
 ) -> bool:
     parsed_origin = urlparse(origin)
 
@@ -124,9 +131,33 @@ def is_origin_allowed(
     return False
 
 
-def get_used_schemes(client: Client) -> Set[str]:
+def is_post_logout_redirect_uri_allowed(
+    client: Client, post_logout_redirect_uri: str, parsed_uri: ParseResult
+) -> bool:
+    registered_uris = client.get_post_logout_redirect_uris()
+    if registered_uris:
+        # Logout redirect URIs were explicitly set, so only accept those.
+        return is_redirect_uri_allowed(
+            post_logout_redirect_uri, registered_uris, client.allow_uri_wildcards
+        )
+    # No explicit redirect URIs configured. Let's at least check the netloc
+    # against redirect_uris. But, we can only do so for proper http(s) urls,
+    # as app uris like 'org.allauth.app://logout' don't have that.
+    if parsed_uri.scheme in ("http", "https"):
+        return is_origin_allowed(
+            post_logout_redirect_uri,
+            client.get_redirect_uris(),
+            client.allow_uri_wildcards,
+        )
+    else:
+        # Our caller did already perform scheme validation, meaning,
+        # scheme 'org.allauth.app' would pass, and 'com.evil.app' would not.
+        return True
+
+
+def get_used_schemes(client: Client) -> set[str]:
     schemes = set()
-    for uri in client.get_redirect_uris():
+    for uri in client.get_redirect_uris() + client.get_post_logout_redirect_uris():
         parsed = urlparse(uri)
         if parsed.scheme:
             schemes.add(parsed.scheme)
@@ -134,8 +165,8 @@ def get_used_schemes(client: Client) -> Set[str]:
 
 
 def clean_post_logout_redirect_uri(
-    post_logout_redirect_uri: Optional[str], client: Optional[Client]
-) -> Optional[str]:
+    post_logout_redirect_uri: str | None, client: Client | None
+) -> str | None:
     """
     This URI SHOULD use the https scheme and MAY contain port, path, and
     query parameter components; however, it MAY use the http scheme, provided
@@ -147,12 +178,39 @@ def clean_post_logout_redirect_uri(
     parameter or via another mechanism. An id_token_hint is also RECOMMENDED
     when this parameter is included.
     """
+    if not client:
+        # Without a client we have no way of validating this part:
+        # "...The value MUST have been previously registered...".
+        return None
+    if not post_logout_redirect_uri:
+        return None
     allowed_schemes = {"https"}
-    if client:
-        allowed_schemes.update(get_used_schemes(client))
-        if client.type == Client.Type.CONFIDENTIAL:
-            allowed_schemes.add("http")
+    allowed_schemes.update(get_used_schemes(client))
+    if client.type == Client.Type.CONFIDENTIAL:
+        allowed_schemes.add("http")
     parsed = urlparse(post_logout_redirect_uri)
     if not parsed.scheme or parsed.scheme not in allowed_schemes:
-        return None
+        raise ValidationError(URLField.default_error_messages["invalid"])
+    if parsed.scheme in ("http", "https"):
+        URLField().clean(post_logout_redirect_uri)
+    if not is_post_logout_redirect_uri_allowed(
+        client, post_logout_redirect_uri, parsed
+    ):
+        raise ValidationError(URLField.default_error_messages["invalid"])
     return post_logout_redirect_uri
+
+
+def lookup_client(client_id: str) -> Client | None:
+    client = Client.objects.filter(id=client_id).first()
+    if not app_settings.CIMD_ENABLED:
+        return client
+    return cimd.lookup_client(client_id, client)
+
+
+def lookup_public_client(client_id: str) -> Client | None:
+    client = lookup_client(client_id)
+    if not client:
+        return None
+    if client.type != Client.Type.PUBLIC:
+        return None
+    return client

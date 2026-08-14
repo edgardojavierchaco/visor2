@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from django.http import HttpRequest
+
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
@@ -25,20 +29,16 @@ class TikTokOAuth2Adapter(OAuth2Adapter):
             fields += ["username", "profile_deep_link"]
         return ",".join(fields)
 
-    def complete_login(self, request, app, token, **kwargs):
+    def complete_login(self, request: HttpRequest, app, token, **kwargs):
         headers = {
             "Authorization": f"Bearer {token.token}",
             "Client-ID": app.client_id,
         }
-        params = {"fields": self.get_query_fields()}
-        response = (
-            get_adapter()
-            .get_requests_session()
-            .get(self.profile_url, headers=headers, params=params)
-        )
-        response.raise_for_status()
-
-        data = response.json()
+        with get_adapter().get_requests_session() as sess:
+            params = {"fields": self.get_query_fields()}
+            response = sess.get(self.profile_url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
 
         user_info = data.get("data", {}).get("user")
         return self.get_provider().sociallogin_from_response(request, user_info)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from allauth.socialaccount.providers.twitter_oauth2.views import TwitterOAuth2Adapter
@@ -10,7 +12,7 @@ class TwitterOAuth2Account(ProviderAccount):
     def get_profile_url(self):
         username = self.get_username()
         if username:
-            return "https://x.com/" + username
+            return f"https://x.com/{username}"
         return None
 
     def get_avatar_url(self):

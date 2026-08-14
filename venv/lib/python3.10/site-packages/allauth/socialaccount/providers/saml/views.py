@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import binascii
 import logging
 from http import HTTPStatus
@@ -41,7 +43,7 @@ class SAMLViewMixin:
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(login_not_required, name="dispatch")
 class ACSView(SAMLViewMixin, View):
-    def dispatch(self, request, organization_slug):
+    def dispatch(self, request: HttpRequest, organization_slug) -> HttpResponse:
         url = reverse(
             "saml_finish_acs",
             kwargs={"organization_slug": organization_slug},
@@ -58,7 +60,7 @@ acs = ACSView.as_view()
 
 @method_decorator(login_not_required, name="dispatch")
 class FinishACSView(SAMLViewMixin, View):
-    def dispatch(self, request, organization_slug):
+    def dispatch(self, request: HttpRequest, organization_slug) -> HttpResponse:
         provider = self.get_provider(organization_slug)
         acs_session = LoginSession(request, "saml_acs_session", "saml-acs-session")
         acs_request = None
@@ -131,13 +133,13 @@ finish_acs = FinishACSView.as_view()
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(login_not_required, name="dispatch")
 class SLSView(SAMLViewMixin, View):
-    def dispatch(self, request, organization_slug):
+    def dispatch(self, request: HttpRequest, organization_slug) -> HttpResponse:
         provider = self.get_provider(organization_slug)
         auth = build_auth(self.request, provider)
         should_logout = request.user.is_authenticated
         account_adapter = get_account_adapter(request)
 
-        def force_logout():
+        def force_logout() -> None:
             account_adapter.logout(request)
 
         redirect_to = None
@@ -146,6 +148,13 @@ class SLSView(SAMLViewMixin, View):
             redirect_to = auth.process_slo(
                 delete_session_cb=force_logout, keep_local_session=not should_logout
             )
+            # We do not validate ``redirect_to``: The IdP is a trusted party,
+            # when using SAML the SP is configured to trust it. Restricting its
+            # SLO redirect URL with ``is_safe_url`` (which typically only allows
+            # same-origin URLs) could break legitimate cross-domain redirects
+            # the IdP provides, e.g. redirecting back to the IdP's own logout
+            # landing page.  The python3-saml library already validates the SAML
+            # response signature before returning the redirect URL.
         except OneLogin_Saml2_Error as e:
             error_reason = str(e)
         errors = auth.get_errors()
@@ -168,7 +177,7 @@ sls = SLSView.as_view()
 
 @method_decorator(login_not_required, name="dispatch")
 class MetadataView(SAMLViewMixin, View):
-    def dispatch(self, request, organization_slug):
+    def dispatch(self, request: HttpRequest, organization_slug) -> HttpResponse:
         provider = self.get_provider(organization_slug)
         config = build_saml_config(
             self.request, provider.app.settings, organization_slug

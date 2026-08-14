@@ -1,8 +1,11 @@
 # Default locale mapping for the Facebook JS SDK
 # The list of supported locales is at
 # https://www.facebook.com/translations/FacebookLocales.xml
+from __future__ import annotations
+
 import os
 
+from django.http import HttpRequest
 from django.utils.translation import get_language, to_locale
 
 
@@ -47,7 +50,7 @@ def get_default_locale_callable():
 
     fb_locales = _build_locale_table(xml_path)
 
-    def default_locale(request):
+    def default_locale(request: HttpRequest):
         """
         Guess an appropriate FB locale based on the active Django locale.
         If the active locale is available, it is returned. Otherwise,
@@ -63,9 +66,9 @@ def get_default_locale_callable():
             lang_map = fb_locales.get(lang)
             if lang_map is not None:
                 if reg in lang_map["regs"]:
-                    chosen = lang + "_" + reg
+                    chosen = f"{lang}_{reg}"
                 else:
-                    chosen = lang + "_" + lang_map["default"]
+                    chosen = f"{lang}_{lang_map['default']}"
         return chosen
 
     return default_locale

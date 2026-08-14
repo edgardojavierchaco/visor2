@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from django.http import HttpRequest
+
 from allauth.socialaccount import app_settings
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.oauth2.views import (
@@ -12,22 +16,20 @@ class MailcowAdapter(OAuth2Adapter):
     provider_id = "mailcow"
     settings = app_settings.PROVIDERS.get(provider_id, {})
     server = settings.get("SERVER", "https://hosted.mailcow.de")
-    access_token_url = "{0}/oauth/token".format(server)
-    authorize_url = "{0}/oauth/authorize".format(server)
-    profile_url = "{0}/oauth/profile".format(server)
+    access_token_url = f"{server}/oauth/token"
+    authorize_url = f"{server}/oauth/authorize"
+    profile_url = f"{server}/oauth/profile"
 
-    def complete_login(self, request, app, token, **kwargs):
+    def complete_login(self, request: HttpRequest, app, token, **kwargs):
         code = get_request_param(request, "code")
         extra_data = self.get_user_info(token.token, code)
         return self.get_provider().sociallogin_from_response(request, extra_data)
 
     def get_user_info(self, access_token, code):
-        resp = (
-            get_adapter()
-            .get_requests_session()
-            .get(self.profile_url, params={"access_token": access_token, "code": code})
-        )
-        resp.raise_for_status()
+        with get_adapter().get_requests_session() as sess:
+            params = {"access_token": access_token, "code": code}
+            resp = sess.get(self.profile_url, params=params)
+            resp.raise_for_status()
         return resp.json()
 
 
