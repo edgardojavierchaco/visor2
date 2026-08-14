@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth.provider import OAuthProvider
 from allauth.socialaccount.providers.openstreetmap.views import (
@@ -7,10 +9,8 @@ from allauth.socialaccount.providers.openstreetmap.views import (
 
 class OpenStreetMapAccount(ProviderAccount):
     def get_profile_url(self):
-        return (
-            "https://www.openstreetmap.org/user/"
-            + self.account.extra_data["display_name"]
-        )
+        display_name = self.account.extra_data["display_name"]
+        return f"https://www.openstreetmap.org/user/{display_name}"
 
     def get_avatar_url(self):
         ret = None

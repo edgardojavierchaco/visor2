@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView, View
 
@@ -11,7 +13,7 @@ from allauth.headless.spec.internal.schema import get_schema
 
 @method_decorator(login_not_required, name="dispatch")
 class OpenAPIYAMLView(View):
-    def get(self, request):
+    def get(self, request: HttpRequest) -> HttpResponse:
         import yaml
 
         spec = get_schema()
@@ -25,7 +27,7 @@ class OpenAPIYAMLView(View):
 
 @method_decorator(login_not_required, name="dispatch")
 class OpenAPIJSONView(View):
-    def get(self, request):
+    def get(self, request: HttpRequest) -> HttpResponse:
         spec = get_schema()
         content = json.dumps(spec)
         return HttpResponse(
@@ -37,5 +39,5 @@ class OpenAPIJSONView(View):
 
 @method_decorator(login_not_required, name="dispatch")
 class OpenAPIHTMLView(TemplateView):
-    def get_template_names(self):
+    def get_template_names(self) -> list[str]:
         return [app_settings.SPECIFICATION_TEMPLATE_NAME]

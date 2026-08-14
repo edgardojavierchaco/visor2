@@ -1,8 +1,8 @@
-"""The models for response from th GeoIP2 web service and databases.
+"""The models for response from the GeoIP web service and databases.
 
 The only difference between the City and Insights model classes is which
 fields in each record may be populated. See
-https://dev.maxmind.com/geoip/docs/web-services?lang=en for more details.
+https://dev.maxmind.com/geoip/docs/web-services/?lang=en for more details.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ class Country(Model):
         registered_country: dict[str, Any] | None = None,
         represented_country: dict[str, Any] | None = None,
         traits: dict[str, Any] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self._locales = locales
         self.continent = geoip2.records.Continent(locales, **(continent or {}))
@@ -127,7 +127,7 @@ class City(Country):
         represented_country: dict[str, Any] | None = None,
         subdivisions: list[dict[str, Any]] | None = None,
         traits: dict[str, Any] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(
             locales,
@@ -147,7 +147,7 @@ class City(Country):
 
 
 class Insights(City):
-    """Model for the GeoIP2 Insights web service."""
+    """Model for the GeoIP Insights web service."""
 
     anonymizer: geoip2.records.Anonymizer
     """Anonymizer object for the requested IP address. This object contains
@@ -171,7 +171,7 @@ class Insights(City):
         represented_country: dict[str, Any] | None = None,
         subdivisions: list[dict[str, Any]] | None = None,
         traits: dict[str, Any] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(
             locales,
@@ -192,7 +192,7 @@ class Insights(City):
 
 
 class Enterprise(City):
-    """Model for the GeoIP2 Enterprise database."""
+    """Model for the GeoIP Enterprise database."""
 
 
 class SimpleModel(Model, metaclass=ABCMeta):
@@ -259,7 +259,7 @@ class SimpleModel(Model, metaclass=ABCMeta):
 
 
 class AnonymousIP(SimpleModel):
-    """Model class for the GeoIP2 Anonymous IP."""
+    """Model class for the GeoIP Anonymous IP."""
 
     is_anonymous: bool
     """This is true if the IP address belongs to any sort of anonymous network."""
@@ -301,7 +301,7 @@ class AnonymousIP(SimpleModel):
         is_tor_exit_node: bool = False,
         network: str | None = None,
         prefix_len: int | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(ip_address, network, prefix_len)
         self.is_anonymous = is_anonymous
@@ -345,7 +345,7 @@ class AnonymousPlus(AnonymousIP):
         network_last_seen: str | None = None,
         prefix_len: int | None = None,
         provider_name: str | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(
             is_anonymous=is_anonymous,
@@ -365,7 +365,7 @@ class AnonymousPlus(AnonymousIP):
 
 
 class ASN(SimpleModel):
-    """Model class for the GeoLite2 ASN."""
+    """Model class for the GeoLite ASN."""
 
     autonomous_system_number: int | None
     """The autonomous system number associated with the IP address."""
@@ -383,7 +383,7 @@ class ASN(SimpleModel):
         autonomous_system_organization: str | None = None,
         network: str | None = None,
         prefix_len: int | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(ip_address, network, prefix_len)
         self.autonomous_system_number = autonomous_system_number
@@ -391,7 +391,7 @@ class ASN(SimpleModel):
 
 
 class ConnectionType(SimpleModel):
-    """Model class for the GeoIP2 Connection-Type."""
+    """Model class for the GeoIP Connection-Type."""
 
     connection_type: str | None
     """The connection type may take the following values:
@@ -412,14 +412,14 @@ class ConnectionType(SimpleModel):
         connection_type: str | None = None,
         network: str | None = None,
         prefix_len: int | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(ip_address, network, prefix_len)
         self.connection_type = connection_type
 
 
 class Domain(SimpleModel):
-    """Model class for the GeoIP2 Domain."""
+    """Model class for the GeoIP Domain."""
 
     domain: str | None
     """The domain associated with the IP address."""
@@ -431,14 +431,14 @@ class Domain(SimpleModel):
         domain: str | None = None,
         network: str | None = None,
         prefix_len: int | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(ip_address, network, prefix_len)
         self.domain = domain
 
 
 class ISP(ASN):
-    """Model class for the GeoIP2 ISP."""
+    """Model class for the GeoIP ISP."""
 
     isp: str | None
     """The name of the ISP associated with the IP address."""
@@ -470,7 +470,7 @@ class ISP(ASN):
         organization: str | None = None,
         network: str | None = None,
         prefix_len: int | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         super().__init__(
             autonomous_system_number=autonomous_system_number,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -18,7 +20,7 @@ class RedirectToProviderForm(forms.Form):
         ]
     )
 
-    def clean_callback_url(self):
+    def clean_callback_url(self) -> str:
         url = self.cleaned_data["callback_url"]
         if not get_account_adapter().is_safe_url(url):
             raise get_adapter().validation_error("invalid_url")

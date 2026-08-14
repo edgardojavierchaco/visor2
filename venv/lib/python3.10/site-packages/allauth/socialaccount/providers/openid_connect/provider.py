@@ -1,6 +1,8 @@
-import requests
-from typing import Dict, Optional
+from __future__ import annotations
 
+import requests
+
+from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlencode
 
@@ -26,7 +28,7 @@ def _pick_data(data: dict) -> dict:
 
 
 class OpenIDConnectProviderAccount(ProviderAccount):
-    def get_user_data(self) -> Optional[Dict]:
+    def get_user_data(self) -> dict | None:
         return _pick_data(self.account.extra_data)
 
 
@@ -37,7 +39,7 @@ class OpenIDConnectProvider(OAuth2Provider):
     oauth2_adapter_class = OpenIDConnectOAuth2Adapter
     supports_token_authentication = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.name = self.app.name
 
@@ -52,17 +54,17 @@ class OpenIDConnectProvider(OAuth2Provider):
             url += well_known_uri
         return url
 
-    def get_login_url(self, request, **kwargs):
+    def get_login_url(self, request: HttpRequest, **kwargs):
         url = reverse(
-            self.app.provider + "_login", kwargs={"provider_id": self.app.provider_id}
+            f"{self.app.provider}_login", kwargs={"provider_id": self.app.provider_id}
         )
         if kwargs:
-            url = url + "?" + urlencode(kwargs)
+            url = f"{url}?{urlencode(kwargs)}"
         return url
 
     def get_callback_url(self):
         return reverse(
-            self.app.provider + "_callback",
+            f"{self.app.provider}_callback",
             kwargs={"provider_id": self.app.provider_id},
         )
 
@@ -75,7 +77,7 @@ class OpenIDConnectProvider(OAuth2Provider):
 
     def extract_uid(self, data):
         data = _pick_data(data)
-        return str(data["sub"])
+        return str(data[self.app.settings.get("uid_field", "sub")])
 
     def extract_common_fields(self, data):
         data = _pick_data(data)
@@ -103,10 +105,10 @@ class OpenIDConnectProvider(OAuth2Provider):
             )
         return addresses
 
-    def get_oauth2_adapter(self, request):
+    def get_oauth2_adapter(self, request: HttpRequest):
         return self.oauth2_adapter_class(request, self.app.provider_id)
 
-    def verify_token(self, request, token):
+    def verify_token(self, request: HttpRequest, token):
         id_token = token.get("id_token")
         if not id_token:
             raise get_adapter().validation_error("invalid_token")

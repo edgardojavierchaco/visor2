@@ -1,4 +1,4 @@
-#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
+#!/home/edgardo/Documentos/visor2/venv/bin/python
 
 # $Id: rst2pseudoxml.py 9115 2022-07-28 17:06:24Z milde $
 # Author: David Goodger <goodger@python.org>

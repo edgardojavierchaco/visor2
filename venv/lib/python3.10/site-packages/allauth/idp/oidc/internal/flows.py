@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 from django.http import HttpRequest
 
@@ -10,9 +10,9 @@ def rp_initiated_logout(
     request: HttpRequest,
     *,
     from_op: bool,
-    post_logout_redirect_uri: Optional[str] = None,
-    client: Optional[Client] = None,
-):
+    post_logout_redirect_uri: str | None = None,
+    client: Client | None = None,
+) -> None:
     if not request.user.is_authenticated:
         return
     if client:

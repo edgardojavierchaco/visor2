@@ -1,4 +1,5 @@
-from typing import Optional
+from __future__ import annotations
+
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -23,8 +24,8 @@ def reset_password(user: AbstractBaseUser, password: str) -> None:
 def perform_password_reset_login(
     request: HttpRequest,
     user: AbstractBaseUser,
-    phone: Optional[str] = None,
-    email: Optional[str] = None,
+    phone: str | None = None,
+    email: str | None = None,
 ) -> HttpResponse:
     extra_data = {}
     if phone:
@@ -37,8 +38,8 @@ def perform_password_reset_login(
 
 
 def finalize_password_reset(
-    request: HttpRequest, user: AbstractBaseUser, email: Optional[str] = None
-) -> Optional[HttpResponse]:
+    request: HttpRequest, user: AbstractBaseUser, email: str | None = None
+) -> HttpResponse | None:
     adapter = get_adapter()
     if user:
         # User successfully reset the password, clear any
@@ -87,7 +88,9 @@ def get_reset_password_from_key_url(request: HttpRequest, key: str) -> str:
     return url
 
 
-def request_password_reset(request, email, users, token_generator):
+def request_password_reset(
+    request: HttpRequest, email: str, users, token_generator
+) -> None:
     from allauth.account.utils import user_pk_to_url_str, user_username
 
     if not users:

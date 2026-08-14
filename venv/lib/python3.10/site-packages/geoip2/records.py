@@ -74,7 +74,7 @@ class City(PlaceRecord):
         confidence: int | None = None,
         geoname_id: int | None = None,
         names: dict[str, str] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.confidence = confidence
         self.geoname_id = geoname_id
@@ -102,7 +102,7 @@ class Continent(PlaceRecord):
         code: str | None = None,
         geoname_id: int | None = None,
         names: dict[str, str] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.code = code
         self.geoname_id = geoname_id
@@ -139,7 +139,7 @@ class Country(PlaceRecord):
         is_in_european_union: bool = False,
         iso_code: str | None = None,
         names: dict[str, str] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.confidence = confidence
         self.geoname_id = geoname_id
@@ -172,7 +172,7 @@ class RepresentedCountry(Country):
         iso_code: str | None = None,
         names: dict[str, str] | None = None,
         type: str | None = None,  # noqa: A002
-        **_: Any,
+        **_: object,
     ) -> None:
         self.type = type
         super().__init__(
@@ -239,7 +239,7 @@ class Location(Record):
         metro_code: int | None = None,
         population_density: int | None = None,
         time_zone: str | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.average_income = average_income
         self.accuracy_radius = accuracy_radius
@@ -258,14 +258,62 @@ class MaxMind(Record):
     calling.
     """
 
-    def __init__(self, *, queries_remaining: int | None = None, **_: Any) -> None:
+    def __init__(self, *, queries_remaining: int | None = None, **_: object) -> None:
         self.queries_remaining = queries_remaining
+
+
+class AnonymizerFeed(Record):
+    """Contains data for one type of anonymizer detection.
+
+    This class contains data for one type of anonymizer detection,
+    currently residential proxies. Additional feeds may be added in the
+    future.
+
+    This record is returned by ``insights`` as the ``residential`` attribute
+    of :py:class:`Anonymizer`.
+    """
+
+    confidence: int | None
+    """A score ranging from 1 to 99 that represents our percent confidence
+    that the network is currently part of this anonymizer feed. This
+    attribute is only available from the Insights end point.
+    """
+
+    network_last_seen: datetime.date | None
+    """The last day that the network was sighted in our analysis of this
+    anonymizer feed. This attribute is only available from the Insights end
+    point.
+    """
+
+    provider_name: str | None
+    """The name of the provider associated with the network in this
+    anonymizer feed. This attribute is only available from the Insights end
+    point.
+    """
+
+    def __init__(
+        self,
+        *,
+        confidence: int | None = None,
+        network_last_seen: str | None = None,
+        provider_name: str | None = None,
+        **_: object,
+    ) -> None:
+        self.confidence = confidence
+        self.network_last_seen = (
+            datetime.date.fromisoformat(network_last_seen)
+            if network_last_seen
+            else None
+        )
+        self.provider_name = provider_name
 
 
 class Anonymizer(Record):
     """Contains data for the anonymizer record associated with an IP address.
 
     This class contains the anonymizer data associated with an IP address.
+
+    Note that this object may contain only the ``residential`` attribute.
 
     This record is returned by ``insights``.
     """
@@ -286,6 +334,12 @@ class Anonymizer(Record):
     """The name of the VPN provider (e.g., NordVPN, SurfShark, etc.) associated
     with the network. This attribute is only available from the Insights end
     point.
+    """
+
+    residential: AnonymizerFeed
+    """Residential proxy data for the network associated with the IP address.
+    This may be populated even when no other anonymizer attributes are set.
+    This attribute is only available from the Insights end point.
     """
 
     is_anonymous: bool
@@ -337,7 +391,8 @@ class Anonymizer(Record):
         is_tor_exit_node: bool = False,
         network_last_seen: str | None = None,
         provider_name: str | None = None,
-        **_: Any,
+        residential: dict[str, Any] | None = None,
+        **_: object,
     ) -> None:
         self.confidence = confidence
         self.is_anonymous = is_anonymous
@@ -352,6 +407,7 @@ class Anonymizer(Record):
             else None
         )
         self.provider_name = provider_name
+        self.residential = AnonymizerFeed(**(residential or {}))
 
 
 class Postal(Record):
@@ -378,7 +434,7 @@ class Postal(Record):
         *,
         code: str | None = None,
         confidence: int | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.code = code
         self.confidence = confidence
@@ -412,7 +468,7 @@ class Subdivision(PlaceRecord):
         geoname_id: int | None = None,
         iso_code: str | None = None,
         names: dict[str, str] | None = None,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.confidence = confidence
         self.geoname_id = geoname_id
@@ -527,6 +583,11 @@ class Traits(Record):
     responsive to traffic on your network. If you need realtime IP risk scoring
     based on behavioral signals on your own network, please use minFraud.
 
+    We do not provide an IP risk snapshot for low-risk networks. If this field
+    is not populated, we either do not have signals for the network or the
+    signals we have show that the network is low-risk. If you would like to get
+    signals for low-risk networks, please use the minFraud web services.
+
     This attribute is only available from the Insights end point.
     """
     _ip_address: IPAddress | None
@@ -541,8 +602,8 @@ class Traits(Record):
     """This is true if the IP is an anonymous proxy.
 
     .. deprecated:: 2.2.0
-       Use our `GeoIP2 Anonymous IP database
-       <https://www.maxmind.com/en/geoip2-anonymous-ip-database GeoIP2>`_
+       Use our `GeoIP Anonymous IP database
+       <https://www.maxmind.com/en/geoip-anonymous-ip-database>`_
        instead.
     """
     is_anonymous_vpn: bool
@@ -561,8 +622,8 @@ class Traits(Record):
     is_anycast: bool
     """This returns true if the IP address belongs to an
     `anycast network <https://en.wikipedia.org/wiki/Anycast>`_.
-    This is available for the GeoIP2 Country, City Plus, and Insights
-    web services and the GeoIP2 Country, City, and Enterprise databases.
+    This is available for the GeoIP Country, City Plus, and Insights
+    web services and the GeoIP Country, City, and Enterprise databases.
     """
     is_hosting_provider: bool
     """This is true if the IP address belongs to a hosting or VPN provider
@@ -703,7 +764,7 @@ class Traits(Record):
         mobile_country_code: str | None = None,
         mobile_network_code: str | None = None,
         is_anycast: bool = False,
-        **_: Any,
+        **_: object,
     ) -> None:
         self.autonomous_system_number = autonomous_system_number
         self.autonomous_system_organization = autonomous_system_organization
