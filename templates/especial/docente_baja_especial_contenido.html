@@ -1,0 +1,56 @@
+<div class="border rounded p-3 mb-3">
+    <div><strong>Docente:</strong> {{ baja_modal_docente.docente_nombre_snapshot|default:baja_modal_docente.docente_cuil }}</div>
+    <div><strong>CUIL:</strong> {{ baja_modal_docente.docente_cuil }}</div>
+    <div><strong>DNI:</strong> {{ baja_modal_docente.docente_dni_snapshot|default:"—" }}</div>
+    <div><strong>CUE-Anexo:</strong> {{ baja_modal_docente.cueanexo }}</div>
+    <div><strong>Ciclo:</strong> {{ baja_modal_docente.ciclo }}</div>
+    <div><strong>Estado:</strong> {{ baja_modal_docente.get_estado_display }}</div>
+</div>
+
+{% if baja_modal_docente.estado != 'activo' %}
+    <div class="alert alert-warning mb-3">El docente ya no se encuentra activo en este establecimiento y ciclo.</div>
+    <div class="cef-form-actions mt-4"><button class="btn btn-outline-secondary" type="button" data-docente-baja-modal-close><i class="fa-solid fa-xmark"></i> Cerrar</button></div>
+{% elif baja_asignaciones_activas %}
+    <div class="alert alert-danger mb-3"><strong>No se puede dar de baja al docente mientras conserve cargos o secciones activas en este establecimiento y ciclo.</strong></div>
+    <p class="mb-2"><strong>Asignaciones activas:</strong></p>
+    {% for asignacion in baja_asignaciones_activas %}
+        <div class="border rounded p-3 mb-2 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div>
+                <strong>{{ asignacion.seccion.nombre_seccion }}</strong>
+                <div class="small text-muted">{{ asignacion.get_rol_display }}{% if asignacion.seccion.turno %} · {{ asignacion.seccion.turno }}{% endif %}</div>
+            </div>
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:gestionar_seccion' asignacion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}"><i class="fa-solid fa-clipboard-list"></i> Gestionar sección</a>
+        </div>
+    {% endfor %}
+    <p class="text-muted mt-3 mb-0">Primero deben darse de baja los cargos desde la gestión de cada sección.</p>
+    <div class="cef-form-actions mt-4"><button class="btn btn-outline-secondary" type="button" data-docente-baja-modal-close><i class="fa-solid fa-xmark"></i> Cerrar</button></div>
+{% else %}
+    <form method="post" action="{{ baja_action_url }}" data-docente-baja-form>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="baja_docente_especial">
+        <input type="hidden" name="docente_banco_id" value="{{ baja_modal_docente.pk }}">
+        <p>¿Confirmás que querés dar de baja a este docente de Especial?</p>
+        <div class="mb-3">
+            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">Motivo de baja *</label>
+            {{ baja_form.motivo_baja }}
+            {% for error in baja_form.motivo_baja.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3" data-docente-traslado-fields{% if baja_form.motivo_baja.value != 'traslado' %} hidden{% endif %}>
+            <label class="form-label" for="{{ baja_form.cueanexo_destino.id_for_label }}">CUE-Anexo de destino *</label>
+            {{ baja_form.cueanexo_destino }}
+            {% for error in baja_form.cueanexo_destino.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            <label class="form-label mt-2" for="{{ baja_form.ciclo_destino.id_for_label }}">Ciclo destino *</label>
+            {{ baja_form.ciclo_destino }}
+            {% for error in baja_form.ciclo_destino.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="{{ baja_form.observaciones.id_for_label }}">Observaciones</label>
+            {{ baja_form.observaciones }}
+            {% for error in baja_form.observaciones.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="cef-form-actions mt-4">
+            <button class="btn btn-outline-secondary" type="button" data-docente-baja-modal-close><i class="fa-solid fa-xmark"></i> Cancelar</button>
+            <button class="btn btn-danger" type="submit"><i class="fa-solid fa-user-slash"></i> Dar de baja</button>
+        </div>
+    </form>
+{% endif %}

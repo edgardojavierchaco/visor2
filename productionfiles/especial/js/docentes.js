@@ -108,6 +108,24 @@
         closeModal(document.getElementById("modalAsignarProfesorGrupo"));
     }
 
+    function openAssignmentsModal(trigger) {
+        if (!trigger) return;
+        var modal = document.getElementById(trigger.getAttribute("data-cef-asignaciones-modal-open"));
+        if (!modal) return;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        var closeButton = modal.querySelector("[data-cef-asignaciones-modal-close]");
+        if (closeButton) closeButton.focus();
+    }
+
+    function closeAssignmentsModal(modal) {
+        closeModal(modal || document.querySelector(".cef-docente-overlay.is-open[data-cef-asignaciones-modal]"));
+    }
+
+    function closeOpenAssignmentsModal() {
+        closeAssignmentsModal(document.querySelector(".cef-docente-overlay.is-open[data-cef-asignaciones-modal]"));
+    }
+
     function openAssignmentModal(trigger) {
         if (
             !trigger
@@ -118,6 +136,20 @@
         var modal = document.getElementById("modalAsignarProfesorGrupo");
         if (!modal) return;
         if (window.EspecialDropdowns) window.EspecialDropdowns.closeAll();
+        var form = modal.querySelector("[data-cef-asignar-grupo-form]");
+        if (form) {
+            form.reset();
+            var roleField = form.querySelector("[name='rol']");
+            if (roleField) {
+                if (!roleField.querySelector("option[value='']")) {
+                    var emptyRole = document.createElement("option");
+                    emptyRole.value = "";
+                    emptyRole.textContent = "---------";
+                    roleField.insertBefore(emptyRole, roleField.firstChild);
+                }
+                roleField.value = "";
+            }
+        }
         setValue(modal, "[data-cef-asignar-seccion-id]", trigger.dataset.grupoId);
         setValue(modal, "[data-cef-asignar-docente-cuil]", trigger.dataset.docenteCuil);
         setText(modal, "[data-cef-asignar-grupo-label]", trigger.dataset.grupoLabel);
@@ -204,10 +236,34 @@
                 }
                 return;
             }
+            var assignmentsOpener = event.target.closest("[data-cef-asignaciones-modal-open]");
+            if (assignmentsOpener) {
+                event.preventDefault();
+                openAssignmentsModal(assignmentsOpener);
+                return;
+            }
+            var sectionsToggle = event.target.closest("[data-cef-secciones-toggle]");
+            if (sectionsToggle) {
+                event.preventDefault();
+                var sectionsWrap = sectionsToggle.closest(".docentes-secciones-wrap");
+                var sectionsList = sectionsWrap && sectionsWrap.querySelector(".docentes-secciones-list");
+                if (!sectionsList) return;
+                var collapsed = sectionsList.classList.toggle("is-collapsed");
+                sectionsToggle.textContent = collapsed
+                    ? sectionsToggle.getAttribute("data-more-label")
+                    : "Mostrar menos";
+                return;
+            }
             var assignmentTrigger = event.target.closest("[data-cef-asignar-grupo-open]");
             if (assignmentTrigger) {
                 event.preventDefault();
                 openAssignmentModal(assignmentTrigger);
+                return;
+            }
+            var closeAssignments = event.target.closest("[data-cef-asignaciones-modal-close]");
+            if (closeAssignments) {
+                event.preventDefault();
+                closeAssignmentsModal(closeAssignments.closest(".cef-docente-overlay"));
                 return;
             }
             var closeSearch = event.target.closest("[data-docente-modal-close]");
@@ -234,6 +290,11 @@
         document.addEventListener("submit", function (event) {
             if (event.target.closest("[data-cef-asignar-grupo-form]")) submitAssignment(event);
             else submitSearchModal(event);
+        });
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" || event.key === "Esc") {
+                closeOpenAssignmentsModal();
+            }
         });
     }
 

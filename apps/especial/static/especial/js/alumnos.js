@@ -245,6 +245,9 @@
 
     function openBaja(trigger) {
         if (activeBajaRequest) return;
+        if (window.EspecialDropdowns && typeof window.EspecialDropdowns.closeForElement === "function") {
+            window.EspecialDropdowns.closeForElement(trigger);
+        }
         var modal = document.getElementById("modalBajaAlumnoEspecial");
         var url = new URL(trigger.href, window.location.href);
         if (!modal || url.origin !== window.location.origin || !showBajaLoading(modal)) {

@@ -166,6 +166,85 @@ class EspecialBajaMotivoForm(forms.Form):
         return motivo
 
 
+class EspecialBajaDocenteForm(forms.Form):
+    """Formulario de baja general y traslado de un docente del banco Especial."""
+
+    MOTIVOS = (
+        ("fallecimiento", "Fallecimiento"),
+        ("finalizacion", "Finalización"),
+        ("renuncia", "Renuncia"),
+        ("jubilacion", "Jubilación"),
+        ("retiro", "Retiro"),
+        ("traslado", "Traslado"),
+    )
+
+    motivo_baja = forms.ChoiceField(label="Motivo de baja", choices=MOTIVOS)
+    observaciones = forms.CharField(
+        label="Observaciones",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    cueanexo_destino = forms.CharField(
+        label="CUE-Anexo de destino",
+        required=False,
+        max_length=9,
+        widget=forms.TextInput(attrs={
+            "class": "form-control cef-docente-cueanexo-destino",
+            "maxlength": "9",
+            "inputmode": "numeric",
+            "pattern": "[0-9]{9}",
+            "placeholder": "Ej.: 220015500",
+        }),
+    )
+    ciclo_destino = forms.ModelChoiceField(
+        label="Ciclo destino",
+        required=False,
+        queryset=EspecialCiclo.objects.filter(cerrado=False).order_by("anio"),
+    )
+
+    def __init__(self, *args, cueanexo_origen="", ciclo_origen=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cueanexo_origen = normalizar_cueanexo(cueanexo_origen)
+        self.ciclo_origen = ciclo_origen
+        siguiente = (
+            EspecialCiclo.objects.filter(anio=ciclo_origen.anio + 1).first()
+            if ciclo_origen
+            else None
+        )
+        if siguiente and not self.is_bound:
+            self.fields["ciclo_destino"].initial = siguiente.pk
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_cueanexo_destino(self):
+        destino = (self.cleaned_data.get("cueanexo_destino") or "").strip()
+        if destino and not re.fullmatch(r"[0-9]{9}", destino):
+            raise forms.ValidationError("El CUE-Anexo debe contener exactamente 9 dígitos numéricos.")
+        return destino
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("motivo_baja") != "traslado":
+            cleaned_data["cueanexo_destino"] = ""
+            cleaned_data["ciclo_destino"] = None
+            return cleaned_data
+        destino = cleaned_data.get("cueanexo_destino")
+        ciclo_destino = cleaned_data.get("ciclo_destino")
+        if not destino:
+            self.add_error("cueanexo_destino", "Indicá el CUE-Anexo de destino.")
+        elif destino == self.cueanexo_origen:
+            self.add_error("cueanexo_destino", "El destino debe ser distinto del origen.")
+        elif not EspecialPadronOferta.objects.using(PADRON_DB_ALIAS).filter(
+            cueanexo=destino
+        ).exists():
+            self.add_error("cueanexo_destino", "El CUE-Anexo ingresado no existe.")
+        if not ciclo_destino:
+            self.add_error("ciclo_destino", "Seleccioná el ciclo destino.")
+        elif self.ciclo_origen and ciclo_destino.anio <= self.ciclo_origen.anio:
+            self.add_error("ciclo_destino", "El ciclo destino debe ser posterior al de origen.")
+        return cleaned_data
+
+
 class EspecialSeccionForm(forms.ModelForm):
     """Formulario de creación/edición de sección de Educación Especial."""
     class Meta:
@@ -339,9 +418,18 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.rol_sin_cambios = False
         
         if not self.is_bound and not getattr(self.instance, "pk", None):
             self.fields["fecha_desde"].initial = timezone.localdate
             
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        rol = cleaned_data.get("rol")
+        self.rol_sin_cambios = bool(
+            self.instance.pk and rol and rol == self.instance.rol
+        )
+        return cleaned_data
