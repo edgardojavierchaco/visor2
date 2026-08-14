@@ -231,6 +231,8 @@ def _render_docente_activo_fragment(request, context, titulo, docente_activo, ro
 
 
 def _ajax_gestionar_fragment_response(request, seccion, especial_context, ok, message):
+    # Renderizar siempre con la instancia y las relaciones recién consultadas.
+    seccion.refresh_from_db()
     context = _gestionar_fragment_context(seccion, especial_context)
     return JsonResponse(
         {
@@ -338,12 +340,19 @@ def _baja_docente_gestionar(request, seccion):
     except (TypeError, ValueError):
         return False, "La asignación seleccionada no es válida."
 
-    asignacion = get_object_or_404(
-        DocenteSeccion.objects.filter(seccion=seccion),
-        pk=docente_grupo_id,
-    )
     try:
-        dar_baja_docente_seccion(asignacion, request.user)
+        with transaction.atomic():
+            asignacion = (
+                DocenteSeccion.objects
+                .select_for_update()
+                .filter(pk=docente_grupo_id, seccion_id=seccion.pk)
+                .first()
+            )
+            if asignacion is None:
+                return False, "La asignación seleccionada no pertenece a esta sección."
+            if asignacion.estado != DocenteSeccion.Estado.ACTIVO:
+                return False, "La asignación seleccionada ya no está activa."
+            dar_baja_docente_seccion(asignacion, request.user)
         return True, "Profesor dado de baja de la sección correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)

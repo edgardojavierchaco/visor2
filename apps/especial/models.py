@@ -1014,3 +1014,70 @@ class DocenteSeccion(EspecialAuditoriaMixin):
     def __str__(self):
         docente = self.docente_nombre_snapshot or self.docente_cuil
         return f"{self.seccion} - {self.get_rol_display()} - {docente}"
+
+
+class EspecialTrasladoDocente(EspecialAuditoriaMixin):
+    """Traslado de un docente entre CUE-Anexos pendiente de aplicar al ciclo destino."""
+
+    class Estado(models.TextChoices):
+        EN_TRANSITO = "en_transito", "En tránsito"
+        APLICADO = "aplicado", "Aplicado"
+        CANCELADO = "cancelado", "Cancelado"
+
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True)
+    cueanexo_origen = models.CharField(max_length=9, db_index=True)
+    cueanexo_destino = models.CharField(max_length=9, db_index=True)
+    ciclo_origen = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="traslados_docentes_origen",
+    )
+    ciclo_destino = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="traslados_docentes_destino",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.EN_TRANSITO,
+        db_index=True,
+    )
+    fecha_solicitud = models.DateField(default=timezone.localdate)
+    fecha_aplicacion = models.DateField(blank=True, null=True)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."traslado_docente"'
+        constraints = [
+            models.UniqueConstraint(
+                fields=["docente_cuil", "cueanexo_destino", "ciclo_destino"],
+                condition=Q(estado="en_transito"),
+                name="uq_esp_traslado_docente_transito",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo_destino", "ciclo_destino", "estado"], name="idx_esp_tras_doc_dest"),
+        ]
+
+    def clean(self):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.cueanexo_origen = normalizar_cueanexo(self.cueanexo_origen)
+        self.cueanexo_destino = normalizar_cueanexo(self.cueanexo_destino)
+        errors = {}
+        if len(self.docente_cuil) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        if not self.cueanexo_origen:
+            errors["cueanexo_origen"] = "El CUE-Anexo de origen es obligatorio."
+        if not self.cueanexo_destino:
+            errors["cueanexo_destino"] = "El CUE-Anexo de destino es obligatorio."
+        if self.cueanexo_origen and self.cueanexo_origen == self.cueanexo_destino:
+            errors["cueanexo_destino"] = "El CUE-Anexo de destino debe ser distinto del origen."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

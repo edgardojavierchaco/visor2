@@ -43,7 +43,7 @@
                             <th>Estado en Especial</th>
                             <th>Fecha alta</th>
                             <th>Secciones / inscripciones</th>
-                            <th>Acciones</th>
+                            <th>ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -91,14 +91,21 @@
                                     {% endwith %}
                                 </td>
                                 <td class="cef-act-cell">
-                                    <div class="cef-alumnos-actions">
+                                    {% if especial_context.puede_operar and item.estado == 'activo' %}
+                                    <div class="dropdown cef-secciones-row-actions" data-cef-row-actions>
+                                        <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-actions-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false">
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                        </button>
+                                        <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
+                                            <li>
+                                                <div class="cef-alumnos-actions">
                                         {# En el listado/tabla NO se agrega al banco, eso se hace en el modal de búsqueda #}
                                         
                                         {# Inscripción a una sección del establecimiento y ciclo activos #}
                                         {% if especial_context.puede_operar and item.estado == 'activo' %}
                                             {% if item.secciones_asignables %}
                                                 <div class="dropdown" data-cef-alumno-dropdown>
-                                                    <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
+                                                    <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-action is-primary" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
                                                         <i class="fa-solid fa-user-plus"></i>
                                                         Inscribir a secci&oacute;n
                                                     </button>
@@ -136,17 +143,25 @@
                                         {% endif %}
 
                                         {# Botón Editar Datos #}
+                                                </div>
+                                            </li>
+                                            <li>
                                         {% if especial_context.puede_operar and item.url_editar_alumno %}
-                                            <a class="cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
+                                            <a class="dropdown-item cef-secciones-action is-outline cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                             </a>
                                         {% endif %}
                                         {% if especial_context.puede_operar and item.estado == 'activo' %}
+                                            </li>
+                                            <li>
                                             <a class="btn btn-danger btn-sm" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open>
-                                                <i class="fa-solid fa-user-slash"></i> Dar de baja de Especial
+                                                <i class="fa-solid fa-user-slash"></i> Dar de baja
                                             </a>
                                         {% endif %}
+                                            </li>
+                                        </ul>
                                     </div>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -383,6 +398,146 @@
         color: var(--green-700);
         font-weight: 700;
     }
+
+    .cef-alumnos-table .cef-secciones-row-actions {
+        margin-inline: auto;
+        width: max-content;
+    }
+
+    .cef-alumnos-table .cef-secciones-actions-toggle {
+        align-items: center;
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+        display: inline-flex;
+        height: 32px;
+        justify-content: center;
+        margin-right: 0;
+        min-width: 32px;
+        padding: 0;
+        width: 32px;
+    }
+
+    .cef-alumnos-table .cef-secciones-actions-toggle::after {
+        display: none;
+    }
+
+    .cef-alumnos-table .cef-secciones-actions-toggle:hover,
+    .cef-alumnos-table .cef-secciones-actions-toggle:focus-visible {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 220px;
+        padding: .45rem;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu li + li {
+        margin-top: .4rem;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu > li {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu > li > .cef-alumnos-actions {
+        display: block;
+        margin: 0;
+        max-width: none;
+        width: 100%;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action {
+        align-items: center;
+        border: 1px solid var(--primary);
+        border-radius: var(--r-sm);
+        box-sizing: border-box;
+        display: flex;
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        gap: .5rem;
+        height: auto;
+        justify-content: flex-start;
+        margin: 0;
+        min-height: 34px;
+        padding: .5rem .65rem;
+        transform: none;
+        white-space: normal;
+        width: 100%;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action.is-primary {
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action.is-primary:hover,
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action.is-primary:focus {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+        transform: none;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action.is-outline {
+        background: var(--surface);
+        border-color: var(--primary);
+        color: var(--blue-800);
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action.is-outline:hover,
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action.is-outline:focus {
+        background: var(--blue-50);
+        border-color: var(--blue-800);
+        color: var(--blue-900);
+        transform: none;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action i {
+        color: inherit;
+        flex: 0 0 1rem;
+        text-align: center;
+        width: 1rem;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .btn-danger {
+        align-items: center;
+        background: #dc3545;
+        border-radius: var(--r-sm);
+        border-color: #dc3545;
+        box-sizing: border-box;
+        display: flex;
+        color: #fff;
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        gap: .5rem;
+        height: auto;
+        justify-content: flex-start;
+        margin: 0;
+        min-height: 34px;
+        padding: .5rem .65rem;
+        width: 100%;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .btn-danger:hover,
+    .cef-alumnos-table .cef-row-actions-menu .btn-danger:focus-visible {
+        background: #bb2d3b;
+        border-color: #b02a37;
+        color: #fff;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .btn-danger i {
+        flex: 0 0 1rem;
+        text-align: center;
+        width: 1rem;
+    }
+
 </style>
 
 {% include "especial/modal_busqueda_alumno_especial.html" %}

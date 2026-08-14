@@ -1,6 +1,7 @@
 # apps/especial/views_docentes.py
 # -*- coding: utf-8 -*-
 from multiprocessing import context
+import logging
 import re
 from urllib.parse import urlencode
 
@@ -8,12 +9,12 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.shortcuts import get_object_or_404 # Asegúrate de tener este import
-from .forms import EspecialDocenteSeccionForm
+from .forms import EspecialBajaDocenteForm, EspecialDocenteSeccionForm
 
 from .forms import EspecialBusquedaDocenteForm
 from .models import (
@@ -24,13 +25,15 @@ from .models import (
     PADRON_DB_ALIAS,
 )
 from .permisos import especial_required
-from .services.docentes_seccion import dar_baja_docente_seccion
+from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .services.baja_docentes import dar_baja_docente_banco, preparar_baja_docente
 from .views_contexto import contexto_base, render_especial
 
 URL_CARGA_DOCENTE = "/bnh/carga-personal/"
 MSG_BANCO_DOCENTES_PENDIENTE = (
     "El banco de docentes de Educación Especial está pendiente de creación en base de datos."
 )
+logger = logging.getLogger(__name__)
 
 
 def _solo_digitos(valor):
@@ -128,6 +131,43 @@ def _docente_en_banco_activo(docente, especial_context):
     ).exists()
 
 
+def _docente_banco_seguro(docente_banco_id, especial_context, for_update=False):
+    try:
+        docente_banco_id = int(docente_banco_id or "")
+    except (TypeError, ValueError):
+        raise Http404("El docente seleccionado no es válido.")
+    if not especial_context["puede_operar"]:
+        raise Http404("El docente seleccionado no es válido.")
+    queryset = EspecialDocenteBanco.objects.filter(
+        pk=docente_banco_id,
+        cueanexo=especial_context["cueanexo"],
+        ciclo=especial_context["ciclo"],
+    )
+    if for_update:
+        queryset = queryset.select_for_update()
+    return get_object_or_404(queryset)
+
+
+def _preparar_docente_baja(docente_banco, especial_context):
+    docente_banco.asignaciones_activas = preparar_baja_docente(
+        docente_banco,
+        especial_context["cueanexo"],
+        especial_context["ciclo"],
+    )
+    return docente_banco
+
+
+def _url_baja_docente(especial_context, docente_banco_id):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    params["abrir_modal_baja_docente"] = "1"
+    params["docente_banco_id"] = docente_banco_id
+    return f"{reverse('especial:docentes')}?{urlencode(params)}"
+
+
 def _asegurar_docente_banco(docente, especial_context, user):
     if not docente or not especial_context["puede_operar"]:
         return None, False, False
@@ -214,6 +254,7 @@ def _docentes_fragment_context(especial_context, url_docentes):
             if seccion.pk not in secciones_activas_ids
         ]
         item.secciones_bloqueadas = asignaciones_activas
+        item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
         item.url_editar_docente = _url_carga_docente(
             item.docente_cuil,
             url_docentes,
@@ -276,6 +317,26 @@ def editar_docente_seccion(request, seccion_id, docente_id):
     if request.method == "POST":
         form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
         if form.is_valid():
+            if form.rol_sin_cambios:
+                bancos = list(
+                    EspecialDocenteBanco.objects.filter(
+                        cueanexo=especial_context["cueanexo"],
+                        ciclo=especial_context["ciclo"],
+                        docente_cuil=asignacion.docente_cuil,
+                        estado=EspecialDocenteBanco.Estado.ACTIVO,
+                    )
+                )
+                banco = max(bancos, key=lambda item: item.pk, default=None)
+                if banco:
+                    params = {
+                        "abrir_modal_asignaciones": "1",
+                        "modal_asignaciones_docente_id": banco.pk,
+                        "asignacion_sin_cambios_id": asignacion.pk,
+                    }
+                    return redirect(
+                        f"{_url_docentes(especial_context)}&{urlencode(params)}"
+                    )
+                return redirect(_url_docentes(especial_context))
             try:
                 form.save()
             except IntegrityError:
@@ -319,11 +380,74 @@ def docentes(request):
     cuil_buscado = ""
     cuil_error = ""
     docente_en_banco = False
+    abrir_modal_asignaciones = request.GET.get("abrir_modal_asignaciones") == "1"
+    try:
+        modal_asignaciones_docente_id = int(
+            request.GET.get("modal_asignaciones_docente_id") or ""
+        )
+    except (TypeError, ValueError):
+        modal_asignaciones_docente_id = None
+    try:
+        asignacion_sin_cambios_id = int(
+            request.GET.get("asignacion_sin_cambios_id") or ""
+        )
+    except (TypeError, ValueError):
+        asignacion_sin_cambios_id = None
+    abrir_modal_baja = request.GET.get("abrir_modal_baja_docente") == "1"
     abrir_modal = request.GET.get("abrir_modal_docente") == "1"
+    if abrir_modal_baja:
+        abrir_modal = False
+    elif abrir_modal_asignaciones:
+        abrir_modal = False
+    baja_modal_docente = None
+    baja_form = EspecialBajaDocenteForm(
+        cueanexo_origen=especial_context.get("cueanexo"),
+        ciclo_origen=especial_context.get("ciclo"),
+    )
+    baja_error = ""
+    baja_asignaciones_activas = []
     url_docentes = _url_docentes(especial_context)
 
     if request.method == "POST":
         accion = request.POST.get("accion")
+
+        if accion == "baja_docente_especial":
+            abrir_modal = False
+            if not especial_context["puede_operar"]:
+                messages.warning(request, "Seleccioná un CUE-Anexo y un ciclo para operar.")
+                return redirect(url_docentes)
+            banco = _docente_banco_seguro(request.POST.get("docente_banco_id"), especial_context)
+            baja_modal_docente = _preparar_docente_baja(banco, especial_context)
+            baja_asignaciones_activas = list(baja_modal_docente.asignaciones_activas)
+            baja_form = EspecialBajaDocenteForm(
+                request.POST,
+                cueanexo_origen=especial_context.get("cueanexo"),
+                ciclo_origen=especial_context.get("ciclo"),
+            )
+            if banco.estado != EspecialDocenteBanco.Estado.ACTIVO:
+                baja_error = "El docente ya no se encuentra activo en este establecimiento y ciclo."
+            elif baja_modal_docente.asignaciones_activas:
+                baja_error = "No se puede dar de baja al docente mientras conserve cargos o secciones activas en este establecimiento y ciclo."
+            elif baja_form.is_valid():
+                try:
+                    dar_baja_docente_banco(
+                        banco_id=banco.pk,
+                        cueanexo=especial_context["cueanexo"],
+                        ciclo=especial_context["ciclo"],
+                        user=request.user,
+                        motivo_baja=baja_form.cleaned_data["motivo_baja"],
+                        observaciones=baja_form.cleaned_data.get("observaciones", ""),
+                        cueanexo_destino=baja_form.cleaned_data.get("cueanexo_destino", ""),
+                        ciclo_destino=baja_form.cleaned_data.get("ciclo_destino"),
+                    )
+                except ValidationError as exc:
+                    baja_error = "; ".join(exc.messages)
+                else:
+                    messages.success(request, "Docente dado de baja de Especial correctamente.")
+                    return redirect(url_docentes)
+            else:
+                baja_error = _errores_form(baja_form)
+            abrir_modal_baja = True
 
         if accion == "baja_docente":
             if not especial_context["puede_operar"]:
@@ -384,7 +508,23 @@ def docentes(request):
                 return redirect(url_docentes)
 
             cuil = _solo_digitos(cuil)
-            asignacion = DocenteSeccion(
+            asignaciones_historicas = list(
+                DocenteSeccion.objects.filter(
+                    seccion=seccion,
+                    docente_cuil=cuil,
+                    estado__in=[
+                        DocenteSeccion.Estado.BAJA,
+                        DocenteSeccion.Estado.INACTIVO,
+                    ],
+                )
+                .order_by("-pk")
+            )
+            asignacion_historica = max(
+                asignaciones_historicas,
+                key=lambda relacion: relacion.pk,
+                default=None,
+            )
+            asignacion = asignacion_historica or DocenteSeccion(
                 seccion=seccion,
                 docente_cuil=cuil,
                 creado_por=request.user,
@@ -398,14 +538,21 @@ def docentes(request):
             form = EspecialDocenteSeccionForm(form_data, instance=asignacion)
             
             if form.is_valid():
-                asignacion = form.save(commit=False)
-                asignacion.seccion = seccion
-                asignacion.docente_cuil = cuil
-                asignacion.creado_por = request.user
-                asignacion.actualizado_por = request.user
-                
                 try:
-                    asignacion.save()
+                    if asignacion_historica:
+                        asignacion = dar_alta_docente_seccion(
+                            asignacion,
+                            request.user,
+                            rol=form.cleaned_data.get("rol"),
+                            observaciones=form.cleaned_data.get("observaciones", ""),
+                        )
+                    else:
+                        asignacion = form.save(commit=False)
+                        asignacion.seccion = seccion
+                        asignacion.docente_cuil = cuil
+                        asignacion.creado_por = request.user
+                        asignacion.actualizado_por = request.user
+                        asignacion.save()
                 except ValidationError as e:
                     if _is_ajax(request):
                         return JsonResponse({"error": str(e)}, status=400)
@@ -429,6 +576,7 @@ def docentes(request):
                         ids_activas = {a.seccion_id for a in activas}
                         item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_activas]
                         item.secciones_bloqueadas = activas
+                        item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
                         item.url_editar_docente = _url_carga_docente(item.docente_cuil, url_docentes, "Volver a Docentes Especial")
 
                     ctx_fragmento = {
@@ -471,8 +619,12 @@ def docentes(request):
                     messages.error(request, " ".join(error))
                 return redirect(url_docentes)
 
-        busqueda_form = EspecialBusquedaDocenteForm(request.POST)
-        abrir_modal = True
+        busqueda_form = (
+            EspecialBusquedaDocenteForm()
+            if accion == "baja_docente_especial"
+            else EspecialBusquedaDocenteForm(request.POST)
+        )
+        abrir_modal = accion != "baja_docente_especial"
 
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
@@ -481,7 +633,9 @@ def docentes(request):
             cuil_buscado = _solo_digitos(request.POST.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
 
-        if not docente:
+        if accion == "baja_docente_especial":
+            pass
+        elif not docente:
             messages.error(request, "Primero buscá un docente existente por CUIL.")
         elif not especial_context["puede_operar"]:
             messages.error(
@@ -553,11 +707,28 @@ def docentes(request):
             seccion for seccion in secciones_disponibles if seccion.pk not in secciones_activas_ids
         ]
         item.secciones_bloqueadas = asignaciones_activas
+        item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
         item.url_editar_docente = _url_carga_docente(
             item.docente_cuil,
             url_docentes,
             "Volver a Docentes Especial",
         )
+
+    if abrir_modal_baja and baja_modal_docente is None:
+        try:
+            baja_modal_docente = _preparar_docente_baja(
+                _docente_banco_seguro(request.GET.get("docente_banco_id"), especial_context),
+                especial_context,
+            )
+            baja_asignaciones_activas = list(baja_modal_docente.asignaciones_activas)
+        except Exception:
+            logger.exception(
+                "Error preparando baja de docente: docente_banco_id=%s, cueanexo=%s, ciclo=%s",
+                request.GET.get("docente_banco_id"),
+                especial_context.get("cueanexo"),
+                getattr(especial_context.get("ciclo"), "pk", especial_context.get("ciclo")),
+            )
+            raise
 
     docente_grupo_form = EspecialDocenteSeccionForm()
     
@@ -575,12 +746,34 @@ def docentes(request):
             "url_carga_docente": url_carga_docente,
             "url_editar_docente": url_carga_docente,
             "modal_docente_abierto": abrir_modal,
+            "abrir_modal_asignaciones": abrir_modal_asignaciones,
+            "modal_asignaciones_docente_id": modal_asignaciones_docente_id,
+            "asignacion_sin_cambios_id": asignacion_sin_cambios_id,
             "modal_action_url": _url_modal_docentes(especial_context),
             "modal_volver_url": url_docentes,
+            "baja_modal_docente": baja_modal_docente,
+            "baja_asignaciones_activas": baja_asignaciones_activas,
+            "baja_form": baja_form,
+            "baja_error": baja_error,
+            "baja_action_url": url_docentes,
+            "modal_baja_docente_abierto": abrir_modal_baja,
             "docente_grupo_form": docente_grupo_form,
             "docente_roles": DocenteSeccion.Rol.choices,
         }
     )
+    if _is_ajax(request) and abrir_modal_baja:
+        try:
+            return render(request, "especial/docente_baja_especial_modal.html", context)
+        except Exception:
+            logger.exception(
+                "Error renderizando modal de baja de docente: docente_banco_id=%s, cuil=%s, cueanexo=%s, ciclo=%s, asignaciones=%s",
+                request.GET.get("docente_banco_id"),
+                getattr(baja_modal_docente, "docente_cuil", None),
+                especial_context.get("cueanexo"),
+                getattr(especial_context.get("ciclo"), "pk", especial_context.get("ciclo")),
+                len(baja_asignaciones_activas),
+            )
+            raise
     return render_especial(
         request,
         "especial/docentes_especial.html",
