@@ -149,22 +149,31 @@ def normalizar_cueanexo(valor):
 
 
 def _normalizar_oferta_matricula_compartida(valor):
-    """Normaliza únicamente el formato tipográfico de una oferta de Padrón."""
+    """Genera una clave canónica para comparar ofertas de Padrón."""
     oferta = unicodedata.normalize("NFKC", str(valor or ""))
-    oferta = oferta.translate(
-        str.maketrans(
-            {
-                "‐": "-",
-                "‑": "-",
-                "‒": "-",
-                "–": "-",
-                "—": "-",
-                "−": "-",
-            }
-        )
+    caracteres = []
+    for caracter in oferta:
+        categoria = unicodedata.category(caracter)
+        if categoria == "Cf":
+            continue
+        if caracter.isspace():
+            caracteres.append(" ")
+        elif categoria == "Pd" or caracter == "\N{MINUS SIGN}":
+            caracteres.append("-")
+        else:
+            caracteres.append(caracter)
+
+    oferta = unicodedata.normalize(
+        "NFKD",
+        "".join(caracteres).casefold(),
+    )
+    oferta = "".join(
+        caracter
+        for caracter in oferta
+        if unicodedata.category(caracter) != "Mn"
     )
     oferta = re.sub(r"\s+", " ", oferta).strip()
-    return re.sub(r"\s*-\s*", " - ", oferta)
+    return re.sub(r"(?:\s*-\s*)+", " ", oferta).strip()
 
 
 def normalizar_cuil_usuario(user):

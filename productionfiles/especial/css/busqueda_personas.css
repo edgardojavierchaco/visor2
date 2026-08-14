@@ -345,14 +345,6 @@
 
     .cef-modal-inline-btn { background: #dcfce7; border-color: #86efac; color: #15803d; }
     .cef-modal-inline-btn:hover { background: #16a34a; border-color: #16a34a; color: #fff; }
-    .cef-modal-inline-btn:disabled,
-    .cef-modal-inline-btn[disabled] {
-        background: #e2e8f0;
-        border-color: #cbd5e1;
-        color: #64748b;
-        cursor: not-allowed;
-        opacity: .8;
-    }
 
     /* Messages */
     .cef-modal-msg {
@@ -405,10 +397,93 @@
         width: 100%;
     }
 
+    .cef-matricula-compartida-options {
+        border: 0;
+        margin: 0;
+        min-width: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .cef-matricula-compartida-legend {
+        border: 0;
+        color: #334155;
+        display: block;
+        float: none;
+        font-size: .75rem;
+        font-weight: 700;
+        height: auto;
+        line-height: 1.25;
+        margin: 0 0 .35rem;
+        padding: 0;
+        position: static;
+        white-space: normal;
+        width: 100%;
+    }
+
+    .cef-matricula-compartida-choice-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
+    .cef-matricula-compartida-options label {
+        cursor: pointer;
+        display: block;
+        margin: 0;
+        min-width: 0;
+    }
+
+    .cef-matricula-compartida-options input[type="radio"] {
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+        width: 1px;
+    }
+
+    .cef-matricula-compartida-options label span {
+        align-items: center;
+        background: #fff;
+        border: 1px solid #dbe4ef;
+        color: #334155;
+        display: flex;
+        font-size: .75rem;
+        font-weight: 600;
+        justify-content: center;
+        min-height: 34px;
+        padding: .25rem .5rem;
+    }
+
+    .cef-matricula-compartida-options label:first-child span {
+        border-radius: 999px 0 0 999px;
+    }
+
+    .cef-matricula-compartida-options label:last-child span {
+        border-left: 0;
+        border-radius: 0 999px 999px 0;
+    }
+
+    .cef-matricula-compartida-options input[type="radio"]:checked + span {
+        background: linear-gradient(155deg, #2366c4 0%, #14407a 100%);
+        border-color: #14407a;
+        color: #fff;
+    }
+
+    .cef-matricula-compartida-options input[type="radio"]:focus-visible + span {
+        box-shadow: 0 0 0 3px rgba(45,125,210,.18);
+        position: relative;
+        z-index: 1;
+    }
+
+    .cef-matricula-compartida-select-wrap[hidden] {
+        display: none;
+    }
+
     .cef-matricula-compartida-select-wrap {
         max-width: 230px;
         min-width: 0;
-        margin-top: 0;
+        margin-top: .35rem;
         width: 100%;
     }
 
@@ -478,6 +553,32 @@
         height: 38px;
         right: 4px;
         width: 24px;
+    }
+
+    .cef-matricula-compartida-select-wrap .select2-container--default .select2-selection--single .select2-selection__clear {
+        align-items: center;
+        background: #dc3545;
+        border-radius: 50%;
+        color: #fff;
+        display: inline-flex;
+        float: none;
+        font-size: .875rem;
+        height: 18px;
+        justify-content: center;
+        line-height: 18px;
+        margin: 0;
+        padding: 0;
+        position: absolute;
+        right: 29px;
+        text-align: center;
+        top: 10px;
+        width: 18px;
+        z-index: 2;
+    }
+
+    .cef-matricula-compartida-select-wrap .select2-container--default .select2-selection--single .select2-selection__clear:hover {
+        background: #bb2d3b;
+        color: #fff;
     }
 
     .cef-matricula-compartida-dropdown,
@@ -763,3 +864,4 @@
         margin-top: 1.25rem;
         padding-top: .9rem;
     }
+

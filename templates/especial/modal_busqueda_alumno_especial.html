@@ -90,59 +90,33 @@
                                     <td class="cef-matricula-compartida-cell">
                                         <div class="cef-matricula-compartida-editor" data-especial-matricula-editor>
                                             {% if alumno_en_banco %}
-                                                <form id="matriculaCompartidaActualizacion" method="post" action="{{ modal_action_url }}" data-modal-post-form data-especial-matricula-update-form data-initial-option="{% if alumno_banco_actual.matricula_compartida %}si{% else %}no{% endif %}" data-initial-cue="{{ alumno_banco_actual.matricula_compartida|default:'' }}">
+                                                <form id="matriculaCompartidaActualizacion" method="post" action="{{ modal_action_url }}" data-modal-post-form data-especial-matricula-update-form data-initial-cue="{{ alumno_banco_actual.matricula_compartida|default:'' }}">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="accion" value="actualizar_matricula_compartida">
                                                     <input type="hidden" name="alumno_banco_id" value="{{ alumno_banco_actual.pk }}">
                                                     <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                                     {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                                                    <fieldset class="cef-matricula-compartida-options">
-                                                        <legend class="cef-matricula-compartida-legend">¿Matrícula compartida?</legend>
-                                                        <div class="cef-matricula-compartida-choice-group">
-                                                            <label>
-                                                                <input type="radio" name="matricula_compartida_opcion" value="no"{% if matricula_compartida_opcion != 'si' %} checked{% endif %}>
-                                                                <span>No</span>
-                                                            </label>
-                                                            <label>
-                                                                <input type="radio" name="matricula_compartida_opcion" value="si"{% if matricula_compartida_opcion == 'si' %} checked{% endif %}>
-                                                                <span>Sí</span>
-                                                            </label>
-                                                        </div>
-                                                    </fieldset>
-                                                    <div class="cef-matricula-compartida-select-wrap" data-especial-matricula-cue-wrap{% if matricula_compartida_opcion != 'si' %} hidden{% endif %}>
-                                                        <label for="matriculaCompartidaCueActual">CUE-Anexo asociado</label>
-                                                        <select id="matriculaCompartidaCueActual" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
+                                                    <div class="cef-matricula-compartida-select-wrap">
+                                                        <label for="matriculaCompartidaCueActual">CUE-Anexo asociado <span aria-hidden="true">*</span></label>
+                                                        <select id="matriculaCompartidaCueActual" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" required data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
                                                             {% if matricula_compartida_cueanexo %}
                                                                 <option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>
                                                             {% endif %}
                                                         </select>
-                                                        <span class="cef-matricula-compartida-help">Buscar por CUE-Anexo o establecimiento.</span>
+                                                        <span class="cef-matricula-compartida-help">Obligatorio para establecimientos con Integración. Buscar por CUE-Anexo o establecimiento.</span>
                                                     </div>
                                                     {% if matricula_compartida_error %}<p class="cef-matricula-compartida-error" data-cef-modal-feedback>{{ matricula_compartida_error }}</p>{% endif %}
                                                     <button class="btn btn-outline-primary cef-matricula-compartida-save" type="submit" data-especial-matricula-save hidden>Guardar</button>
                                                 </form>
                                             {% else %}
-                                                <fieldset class="cef-matricula-compartida-options">
-                                                    <legend class="cef-matricula-compartida-legend">¿Matrícula compartida?</legend>
-                                                    <div class="cef-matricula-compartida-choice-group">
-                                                        <label>
-                                                            <input type="radio" name="matricula_compartida_opcion" value="no" form="altaAlumnoBancoForm"{% if matricula_compartida_opcion != 'si' %} checked{% endif %}>
-                                                            <span>No</span>
-                                                        </label>
-                                                        <label>
-                                                            <input type="radio" name="matricula_compartida_opcion" value="si" form="altaAlumnoBancoForm"{% if matricula_compartida_opcion == 'si' %} checked{% endif %}>
-                                                            <span>Sí</span>
-                                                        </label>
-                                                    </div>
-                                                </fieldset>
-                                                <div class="cef-matricula-compartida-select-wrap" data-especial-matricula-cue-wrap{% if matricula_compartida_opcion != 'si' %} hidden{% endif %}>
-                                                    <label for="matriculaCompartidaCueAlta">CUE-Anexo asociado</label>
-                                                    <select id="matriculaCompartidaCueAlta" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" form="altaAlumnoBancoForm" data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
+                                                <div class="cef-matricula-compartida-select-wrap">
+                                                    <label for="matriculaCompartidaCueAlta">CUE-Anexo asociado <span aria-hidden="true">*</span></label>
+                                                    <select id="matriculaCompartidaCueAlta" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" form="altaAlumnoBancoForm" required data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
                                                         {% if matricula_compartida_cueanexo %}
                                                             <option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>
                                                         {% endif %}
                                                     </select>
-                                                    <span class="cef-matricula-compartida-help">Buscar por CUE-Anexo o establecimiento.</span>
+                                                    <span class="cef-matricula-compartida-help">Obligatorio para establecimientos con Integración. Buscar por CUE-Anexo o establecimiento.</span>
                                                 </div>
                                                 {% if matricula_compartida_error %}<p class="cef-matricula-compartida-error" data-cef-modal-feedback>{{ matricula_compartida_error }}</p>{% endif %}
                                             {% endif %}
@@ -163,7 +137,7 @@
                                                 <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                                 {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                                 <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
-                                                <button class="cef-modal-inline-btn" type="submit">
+                                                <button class="cef-modal-inline-btn" type="submit" data-especial-matricula-alta-submit{% if matricula_compartida_habilitada and not matricula_compartida_cueanexo %} disabled{% endif %}>
                                                     <i class="fa-solid fa-user-check"></i> Agregar al banco
                                                 </button>
                                             </form>

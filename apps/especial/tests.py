@@ -10,10 +10,10 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError, close_old_connections, connection
-from django.db.utils import OperationalError
+from django.db import DatabaseError, IntegrityError, close_old_connections, connection
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import Http404, HttpResponse
-from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
+from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings, skipUnless
 from django.urls import reverse
 
 from .forms import EspecialDocenteSeccionForm, EspecialMatriculaCompartidaForm
@@ -49,12 +49,17 @@ from .views_contexto import (
 from .views_carga_seccion import _alta_docente_nuevo_gestionar
 from .views_ciclo import _exigir_admin
 from .services.docentes_seccion import dar_alta_docente_seccion
-from .services.alumnos import dar_baja_alumno_banco
+from .services.alumnos import (
+    actualizar_matricula_compartida,
+    asegurar_alumno_banco,
+    dar_baja_alumno_banco,
+)
 from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
 from .views_alumnos import (
     _actualizar_matricula_compartida,
     _asegurar_alumno_banco,
     _matricula_compartida_habilitada,
+    _validar_matricula_compartida_form,
     alumnos,
 )
 from .views_localizaciones import (
@@ -138,6 +143,17 @@ class _FakeSchoolQuerySet:
 
     def __iter__(self):
         return iter(self.items)
+
+
+class _FakePadronQuerySet:
+    def __init__(self, exists=True):
+        self.exists_value = exists
+
+    def filter(self, **kwargs):
+        return self
+
+    def exists(self):
+        return self.exists_value
 
 
 class _FakeCycleManager:
@@ -1141,35 +1157,85 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         self.assertEqual(manager.values_list_args, (("oferta",), True))
         return habilitada
 
-    def test_ofertas_equivalentes_por_formato_habilitan(self):
+    def test_clave_canonica_reconoce_variantes_unicode_equivalentes(self):
         self.assertEqual(_normalizar_oferta_matricula_compartida(None), "")
+        objetivo = "especial integracion"
         ofertas = (
             "Especial - Integración",
             "  Especial - Integración  ",
             "Especial  -  Integración",
             "Especial\u00a0-\u00a0Integración",
+            "Especial\u200b - Integración",
+            "Especial\u200c-\u200dIntegración",
+            "Especial\u2060 - Integración",
+            "Especial\ufeff - Integración",
+            "Especial - Integracio\u0301n",
             "Especial – Integración",
             "Especial — Integración",
+            "ESPECIAL - INTEGRACIÓN",
+            "Especial - integracion",
             "Especial-Integración",
+            "Especial Integración",
+            "ESPECIAL INTEGRACIÓN",
+            "Especial Integracion",
         )
         for oferta in ofertas:
             with self.subTest(oferta=repr(oferta)):
                 self.assertEqual(
                     _normalizar_oferta_matricula_compartida(oferta),
-                    "Especial - Integración",
+                    objetivo,
                 )
 
-    def test_cue_con_una_oferta_integracion_normalizada_es_true(self):
-        self.assertTrue(
-            self._habilitada_para(
-                [
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Especial — Integración",
-                    }
-                ]
-            )
+    def test_clave_canonica_no_amplia_la_oferta_exacta(self):
+        objetivo = _normalizar_oferta_matricula_compartida(
+            "Especial - Integración"
         )
+        ofertas = (
+            "Especial - Integración ampliada",
+            "Especial - Integración secundaria",
+            "Especial - Integraciones",
+            "Programa Especial - Integración",
+            "Otra oferta con Integración",
+            "EspecialIntegración",
+            "EspecialIntegracion",
+            "Programa Especial Integración",
+            "Especial",
+            "Integración",
+            "",
+            None,
+        )
+        for oferta in ofertas:
+            with self.subTest(oferta=repr(oferta)):
+                self.assertNotEqual(
+                    _normalizar_oferta_matricula_compartida(oferta),
+                    objetivo,
+                )
+
+    def test_cue_con_cada_variante_integracion_normalizada_es_true(self):
+        ofertas = (
+            "Especial - Integración",
+            " Especial   -   Integración ",
+            "Especial\u00a0-\u00a0Integración",
+            "Especial\u200b - Integración",
+            "Especial\u200c-\u200dIntegración",
+            "Especial\u2060 - Integración",
+            "Especial\ufeff - Integración",
+            "Especial – Integración",
+            "Especial — Integración",
+            "ESPECIAL - INTEGRACIÓN",
+            "Especial - integracion",
+            "Especial-Integración",
+            "Especial Integración",
+            "ESPECIAL INTEGRACIÓN",
+            "Especial Integracion",
+        )
+        for oferta in ofertas:
+            with self.subTest(oferta=repr(oferta)):
+                self.assertTrue(
+                    self._habilitada_para(
+                        [{"cueanexo": "220015500", "oferta": oferta}]
+                    )
+                )
 
     def test_cue_con_varias_ofertas_y_una_integracion_es_true(self):
         self.assertTrue(
@@ -1209,14 +1275,6 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 [
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - integración",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Especial - integracion",
-                    },
-                    {
-                        "cueanexo": "220015500",
                         "oferta": "Especial - Integración ampliada",
                     },
                     {
@@ -1225,7 +1283,31 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                     },
                     {
                         "cueanexo": "220015500",
+                        "oferta": "Programa Especial - Integración",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Otra oferta con Integración",
+                    },
+                    {
+                        "cueanexo": "220015500",
                         "oferta": "Especial Integración",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Especial",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "Integración",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": "",
+                    },
+                    {
+                        "cueanexo": "220015500",
+                        "oferta": None,
                     },
                 ]
             )
@@ -1275,10 +1357,9 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         template_context = render_mock.call_args.args[2]
         self.assertIs(template_context["matricula_compartida_habilitada"], True)
 
-    def test_cue_sin_oferta_integracion_rechaza_si_manipulado(self):
+    def test_cue_sin_oferta_integracion_rechaza_cue_manipulado(self):
         form = self._form(
             {
-                "matricula_compartida_opcion": "si",
                 "cueanexo_matricula_compartida": "987654300",
             },
             habilitada=False,
@@ -1289,69 +1370,71 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
 
     def test_no_ignora_cue_asociado_manipulado(self):
         form = self._form(
-            {
-                "matricula_compartida_opcion": "no",
-                "cueanexo_matricula_compartida": "texto-invalido",
-            }
+            {"cueanexo_matricula_compartida": "texto-invalido"},
+            habilitada=False,
         )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("no está habilitada", str(form.errors))
+
+    def test_cue_sin_integracion_sin_cue_es_valido_y_deja_none(self):
+        form = self._form({}, habilitada=False)
 
         self.assertTrue(form.is_valid())
         self.assertIsNone(form.cleaned_data["matricula_compartida"])
 
-    def test_si_sin_cue_asociado_rechaza(self):
-        form = self._form({"matricula_compartida_opcion": "si"})
+    def test_cue_sin_integracion_con_cue_asociado_manipulado_rechaza(self):
+        form = self._form(
+            {"cueanexo_matricula_compartida": "987654300"},
+            habilitada=False,
+        )
 
         self.assertFalse(form.is_valid())
-        self.assertIn("Debe seleccionar un CUE-Anexo asociado", str(form.errors))
+        self.assertIn("no está habilitada", str(form.errors))
 
-    def test_si_con_cue_inexistente_rechaza(self):
+    def test_integracion_sin_cue_asociado_rechaza(self):
+        form = self._form({})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("requiere indicar", str(form.errors))
+
+    def test_integracion_con_cue_inexistente_rechaza(self):
         form = self._form(
-            {
-                "matricula_compartida_opcion": "si",
-                "cueanexo_matricula_compartida": "000000000",
-            },
+            {"cueanexo_matricula_compartida": "000000000"},
             existe=False,
         )
 
         self.assertFalse(form.is_valid())
         self.assertIn("no existe en el padrón general", str(form.errors))
 
-    def test_si_con_mismo_cue_actual_rechaza(self):
+    def test_integracion_con_mismo_cue_actual_rechaza(self):
         form = self._form(
-            {
-                "matricula_compartida_opcion": "si",
-                "cueanexo_matricula_compartida": "12-345-670-0",
-            }
+            {"cueanexo_matricula_compartida": "12-345-670-0"}
         )
 
         self.assertFalse(form.is_valid())
         self.assertIn("no puede ser igual", str(form.errors))
 
-    def test_si_con_cue_valido_normaliza_a_nueve_digitos(self):
+    def test_integracion_con_cue_valido_normaliza_a_nueve_digitos(self):
         form = self._form(
-            {
-                "matricula_compartida_opcion": "si",
-                "cueanexo_matricula_compartida": "98-765-430-0",
-            }
+            {"cueanexo_matricula_compartida": "98-765-430-0"}
         )
 
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["matricula_compartida"], "987654300")
 
     def test_alta_pasa_matricula_normalizada_al_banco(self):
-        manager = MagicMock()
-        manager.filter.return_value.first.return_value = None
         banco = SimpleNamespace()
-        manager.create.return_value = banco
         context = {
             "puede_operar": True,
             "cueanexo": "123456700",
             "ciclo": SimpleNamespace(pk=1),
         }
 
-        with patch("apps.especial.views_alumnos.EspecialAlumnoBanco.objects", manager), patch(
-            "apps.especial.views_alumnos.transaction.atomic"
-        ):
+        with patch(
+            "apps.especial.views_alumnos.asegurar_alumno_banco",
+            return_value=(banco, True),
+        ) as asegurar:
             resultado = _asegurar_alumno_banco(
                 SimpleNamespace(pk=5),
                 context,
@@ -1360,20 +1443,23 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
             )
 
         self.assertEqual(resultado, (banco, True, False))
-        self.assertEqual(manager.create.call_args.kwargs["matricula_compartida"], "987654300")
+        asegurar.assert_called_once_with(
+            alumno=SimpleNamespace(pk=5),
+            cueanexo="123456700",
+            ciclo=context["ciclo"],
+            user=SimpleNamespace(pk=7),
+            matricula_compartida="987654300",
+        )
 
-    def test_actualizacion_no_limpia_el_valor_y_no_muta_otro_banco(self):
+    def test_actualizacion_integracion_sin_cue_no_invoca_servicio(self):
         banco = SimpleNamespace(
             pk=9,
             matricula_compartida="987654300",
-            actualizado_por=None,
-            save=MagicMock(),
         )
         request = SimpleNamespace(
             POST={
                 "alumno_banco_id": "9",
-                "matricula_compartida_opcion": "no",
-                "cueanexo_matricula_compartida": "987654300",
+                "cueanexo_matricula_compartida": "",
             },
             user=SimpleNamespace(pk=7),
         )
@@ -1384,27 +1470,24 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         }
 
         with patch(
-            "apps.especial.views_alumnos._matricula_compartida_form",
-            return_value=SimpleNamespace(
-                is_valid=lambda: True,
-                cleaned_data={"matricula_compartida": None},
-            ),
-        ), patch(
             "apps.especial.views_alumnos._alumno_banco_seguro",
-            side_effect=[banco, banco],
-        ), patch("apps.especial.views_alumnos.transaction.atomic"):
+            return_value=banco,
+        ), patch(
+            "apps.especial.views_alumnos.actualizar_matricula_compartida",
+            return_value=banco,
+        ) as actualizar:
             ok, _message, updated = _actualizar_matricula_compartida(
                 request,
                 context,
                 True,
             )
 
-        self.assertTrue(ok)
+        self.assertFalse(ok)
         self.assertIs(updated, banco)
-        self.assertIsNone(banco.matricula_compartida)
-        banco.save.assert_called_once_with()
+        self.assertIn("requiere indicar", _message)
+        actualizar.assert_not_called()
 
-    def test_actualizacion_no_a_si_guarda_el_cue_validado(self):
+    def test_actualizacion_con_cue_guarda_el_valor_validado(self):
         banco = SimpleNamespace(
             pk=9,
             matricula_compartida=None,
@@ -1414,7 +1497,6 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         request = SimpleNamespace(
             POST={
                 "alumno_banco_id": "9",
-                "matricula_compartida_opcion": "si",
                 "cueanexo_matricula_compartida": "98-765-430-0",
             },
             user=SimpleNamespace(pk=7),
@@ -1430,11 +1512,15 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
             return_value=SimpleNamespace(
                 is_valid=lambda: True,
                 cleaned_data={"matricula_compartida": "987654300"},
+                padron_queryset=self.PadronQuerySet(True),
             ),
         ), patch(
             "apps.especial.views_alumnos._alumno_banco_seguro",
-            side_effect=[banco, banco],
-        ), patch("apps.especial.views_alumnos.transaction.atomic"):
+            return_value=banco,
+        ), patch(
+            "apps.especial.views_alumnos.actualizar_matricula_compartida",
+            return_value=banco,
+        ) as actualizar:
             ok, _message, updated = _actualizar_matricula_compartida(
                 request,
                 context,
@@ -1443,8 +1529,8 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
 
         self.assertTrue(ok)
         self.assertIs(updated, banco)
-        self.assertEqual(banco.matricula_compartida, "987654300")
-        banco.save.assert_called_once_with()
+        actualizar.assert_called_once()
+        self.assertEqual(actualizar.call_args.kwargs["matricula_compartida"], "987654300")
 
     def test_actualizacion_rechaza_banco_fuera_del_contexto(self):
         request = SimpleNamespace(POST={"alumno_banco_id": "9"}, user=SimpleNamespace())
@@ -1456,6 +1542,220 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         ):
             with self.assertRaises(Http404):
                 _actualizar_matricula_compartida(request, context, True)
+
+    def test_actualizacion_conserva_mensaje_de_regla_del_servicio(self):
+        banco = SimpleNamespace(pk=9)
+        request = SimpleNamespace(
+            POST={"alumno_banco_id": "9"},
+            user=SimpleNamespace(pk=7),
+        )
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        with patch(
+            "apps.especial.views_alumnos._matricula_compartida_form",
+            return_value=SimpleNamespace(
+                is_valid=lambda: True,
+                cleaned_data={"matricula_compartida": "987654300"},
+                padron_queryset=self.PadronQuerySet(True),
+            ),
+        ), patch(
+            "apps.especial.views_alumnos._alumno_banco_seguro",
+            return_value=banco,
+        ), patch(
+            "apps.especial.views_alumnos.actualizar_matricula_compartida",
+            side_effect=ValidationError("El tercer banco no está permitido."),
+        ):
+            ok, message, _updated = _actualizar_matricula_compartida(
+                request,
+                context,
+                True,
+            )
+
+        self.assertFalse(ok)
+        self.assertEqual(message, "El tercer banco no está permitido.")
+
+    def test_actualizacion_conserva_mensaje_tecnico_controlado(self):
+        banco = SimpleNamespace(pk=9)
+        request = SimpleNamespace(
+            POST={"alumno_banco_id": "9"},
+            user=SimpleNamespace(pk=7),
+        )
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        with patch(
+            "apps.especial.views_alumnos._matricula_compartida_form",
+            return_value=SimpleNamespace(
+                is_valid=lambda: True,
+                cleaned_data={"matricula_compartida": "987654300"},
+                padron_queryset=self.PadronQuerySet(True),
+            ),
+        ), patch(
+            "apps.especial.views_alumnos._alumno_banco_seguro",
+            return_value=banco,
+        ), patch(
+            "apps.especial.views_alumnos.actualizar_matricula_compartida",
+            side_effect=OperationalError("vista no disponible"),
+        ):
+            ok, message, _updated = _actualizar_matricula_compartida(
+                request,
+                context,
+                True,
+            )
+
+        self.assertFalse(ok)
+        self.assertEqual(message, "No se pudo consultar el padrón en este momento.")
+
+    def test_actualizacion_formulario_padron_fallido_no_invoca_servicio(self):
+        banco = SimpleNamespace(pk=9)
+        request = SimpleNamespace(
+            POST={"alumno_banco_id": "9"},
+            user=SimpleNamespace(pk=7),
+        )
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        for error in (OperationalError("padron"), ProgrammingError("padron")):
+            with self.subTest(error=type(error).__name__), patch(
+                "apps.especial.views_alumnos._matricula_compartida_form",
+                return_value=SimpleNamespace(is_valid=MagicMock(side_effect=error)),
+            ), patch(
+                "apps.especial.views_alumnos._alumno_banco_seguro",
+                return_value=banco,
+            ), patch(
+                "apps.especial.views_alumnos.actualizar_matricula_compartida",
+            ) as actualizar:
+                ok, message, updated = _actualizar_matricula_compartida(
+                    request,
+                    context,
+                    True,
+                )
+
+            self.assertFalse(ok)
+            self.assertEqual(message, "No se pudo consultar el padrón en este momento.")
+            self.assertIs(updated, banco)
+            actualizar.assert_not_called()
+
+    def test_actualizacion_integrity_error_devuelve_mensaje_seguro(self):
+        banco = SimpleNamespace(pk=9)
+        request = SimpleNamespace(
+            POST={"alumno_banco_id": "9"},
+            user=SimpleNamespace(pk=7),
+        )
+        context = {
+            "puede_operar": True,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+
+        with patch(
+            "apps.especial.views_alumnos._matricula_compartida_form",
+            return_value=SimpleNamespace(
+                is_valid=lambda: True,
+                cleaned_data={"matricula_compartida": "987654300"},
+                padron_queryset=self.PadronQuerySet(True),
+            ),
+        ), patch(
+            "apps.especial.views_alumnos._alumno_banco_seguro",
+            return_value=banco,
+        ), patch(
+            "apps.especial.views_alumnos.actualizar_matricula_compartida",
+            side_effect=IntegrityError("uq_secret_constraint"),
+        ), patch("apps.especial.views_alumnos.logger.exception") as log_exception:
+            ok, message, _updated = _actualizar_matricula_compartida(
+                request,
+                context,
+                True,
+            )
+
+        self.assertFalse(ok)
+        self.assertEqual(
+            message,
+            "No se pudo actualizar la matrícula compartida por un conflicto de integridad.",
+        )
+        self.assertNotIn("uq_secret_constraint", message)
+        log_exception.assert_called_once()
+
+    def test_validador_de_formulario_controla_errores_tecnicos_de_padron(self):
+        for error in (OperationalError("padron"), ProgrammingError("padron")):
+            with self.subTest(error=type(error).__name__):
+                form = SimpleNamespace(is_valid=MagicMock(side_effect=error))
+                valido, mensaje = _validar_matricula_compartida_form(form)
+
+                self.assertFalse(valido)
+                self.assertEqual(mensaje, "No se pudo consultar el padrón en este momento.")
+
+    def test_alta_con_validacion_padron_fallida_no_invoca_servicio(self):
+        request = RequestFactory().post(
+            "/especial/alumnos/",
+            {"cuil": "20123456789"},
+        )
+        request.user = SimpleNamespace(pk=7)
+        especial_context = {
+            "puede_operar": True,
+            "puede_consultar": True,
+            "ciclo_cerrado": False,
+            "cueanexo": "123456700",
+            "ciclo": SimpleNamespace(pk=1),
+        }
+        busqueda_form = MagicMock()
+        busqueda_form.is_valid.return_value = True
+        busqueda_form.cleaned_data = {"cuil": "20123456789"}
+        alumno = SimpleNamespace(pk=5, cuil="20123456789")
+        vista_sin_decoradores = alumnos
+        while hasattr(vista_sin_decoradores, "__wrapped__"):
+            vista_sin_decoradores = vista_sin_decoradores.__wrapped__
+
+        for error in (OperationalError("padron"), ProgrammingError("padron")):
+            with self.subTest(error=type(error).__name__), patch(
+                "apps.especial.views_alumnos.contexto_base",
+                return_value={"especial_context": especial_context},
+            ), patch(
+                "apps.especial.views_alumnos._matricula_compartida_habilitada",
+                return_value=True,
+            ), patch(
+                "apps.especial.views_alumnos.EspecialBusquedaAlumnoForm",
+                return_value=busqueda_form,
+            ), patch(
+                "apps.especial.views_alumnos._buscar_alumno",
+                return_value=alumno,
+            ), patch(
+                "apps.especial.views_alumnos._matricula_compartida_form",
+                return_value=SimpleNamespace(is_valid=MagicMock(side_effect=error)),
+            ), patch(
+                "apps.especial.views_alumnos.asegurar_alumno_banco",
+            ) as asegurar, patch(
+                "apps.especial.views_alumnos._alumnos_banco",
+                return_value=[],
+            ), patch(
+                "apps.especial.views_alumnos._inscripciones_por_alumno",
+                return_value={},
+            ), patch(
+                "apps.especial.views_alumnos._secciones_disponibles",
+                return_value=[],
+            ), patch(
+                "apps.especial.views_alumnos._url_modal_alumnos",
+                return_value="/especial/alumnos/",
+            ), patch(
+                "apps.especial.views_alumnos._url_alumnos",
+                return_value="/especial/alumnos/",
+            ), patch(
+                "apps.especial.views_alumnos.render_especial",
+                return_value=HttpResponse("ok"),
+            ):
+                vista_sin_decoradores(request)
+
+            asegurar.assert_not_called()
 
 
 class CierreIntegridadEspecialTests(SimpleTestCase):
@@ -1745,6 +2045,317 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                     "motivo_baja": motivo,
                 },
             )
+
+    def _servicio_banco(self, alumno, cueanexo, matricula=None):
+        return asegurar_alumno_banco(
+            alumno=alumno,
+            cueanexo=cueanexo,
+            ciclo=self.ctx.ciclo_activo,
+            user=self.admin,
+            matricula_compartida=matricula,
+            padron_queryset=_FakePadronQuerySet(),
+        )
+
+    def _oferta_integracion(self, cueanexo):
+        return cueanexo == self.ctx.cueanexo_ajeno
+
+    def test_servicio_alta_normal_sin_bancos_permite_none(self):
+        alumno = _crear_alumno_db(self.ctx, 101)
+
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            banco, creado = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_permitido,
+            )
+
+        self.assertTrue(creado)
+        self.assertEqual(banco.matricula_compartida, None)
+
+    def test_servicio_alta_integracion_sin_matricula_rechaza(self):
+        alumno = _crear_alumno_db(self.ctx, 102)
+
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ), self.assertRaises(ValidationError):
+            self._servicio_banco(alumno, self.ctx.cueanexo_ajeno)
+
+    def test_servicio_alta_integracion_con_matricula_permite(self):
+        alumno = _crear_alumno_db(self.ctx, 103)
+
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            banco, creado = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+
+        self.assertTrue(creado)
+        self.assertEqual(banco.matricula_compartida, self.ctx.cueanexo_permitido)
+
+    def test_servicio_alta_normal_rechaza_matricula_manipulada(self):
+        alumno = _crear_alumno_db(self.ctx, 115)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=False,
+        ), self.assertRaises(ValidationError):
+            self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_permitido,
+                self.ctx.cueanexo_ajeno,
+            )
+
+    def test_servicio_alta_integracion_rechaza_cue_asociado_inexistente(self):
+        alumno = _crear_alumno_db(self.ctx, 116)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ), self.assertRaises(ValidationError):
+            asegurar_alumno_banco(
+                alumno=alumno,
+                cueanexo=self.ctx.cueanexo_ajeno,
+                ciclo=self.ctx.ciclo_activo,
+                user=self.admin,
+                matricula_compartida="555555500",
+                padron_queryset=_FakePadronQuerySet(False),
+            )
+
+    def test_servicio_permite_los_dos_ordenes_de_dos_bancos_relacionados(self):
+        alumno_primero = _crear_alumno_db(self.ctx, 104)
+        alumno_segundo = _crear_alumno_db(self.ctx, 105)
+        oferta_patch = patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        )
+        with oferta_patch:
+            self._servicio_banco(alumno_primero, self.ctx.cueanexo_permitido)
+            banco_a, creado_a = self._servicio_banco(
+                alumno_primero,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            banco_b, creado_b = self._servicio_banco(
+                alumno_segundo,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            banco_b_normal, creado_b_normal = self._servicio_banco(
+                alumno_segundo,
+                self.ctx.cueanexo_permitido,
+            )
+
+        self.assertTrue(creado_a)
+        self.assertTrue(creado_b)
+        self.assertTrue(creado_b_normal)
+        self.assertEqual(banco_a.matricula_compartida, self.ctx.cueanexo_permitido)
+        self.assertEqual(banco_b.matricula_compartida, self.ctx.cueanexo_permitido)
+        self.assertIsNone(banco_b_normal.matricula_compartida)
+
+    def test_servicio_rechaza_dos_cues_normales_no_relacionados_y_tercero(self):
+        alumno = _crear_alumno_db(self.ctx, 106)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=False,
+        ):
+            self._servicio_banco(alumno, self.ctx.cueanexo_permitido)
+            with self.assertRaises(ValidationError):
+                self._servicio_banco(alumno, self.ctx.cueanexo_ajeno)
+
+        alumno_dos = _crear_alumno_db(self.ctx, 111)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            self._servicio_banco(
+                alumno_dos,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            self._servicio_banco(alumno_dos, self.ctx.cueanexo_permitido)
+            with self.assertRaises(ValidationError):
+                self._servicio_banco(alumno_dos, "555555500")
+
+    def test_servicio_alta_repetida_es_idempotente(self):
+        alumno = _crear_alumno_db(self.ctx, 107)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=False,
+        ):
+            primero, creado_primero = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_permitido,
+            )
+            segundo, creado_segundo = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_permitido,
+            )
+
+        self.assertTrue(creado_primero)
+        self.assertFalse(creado_segundo)
+        self.assertEqual(primero.pk, segundo.pk)
+        self.assertEqual(
+            EspecialAlumnoBanco.objects.filter(alumno=alumno, estado="activo").count(),
+            1,
+        )
+
+    def test_servicio_actualizacion_no_rompe_relacion_activa(self):
+        alumno = _crear_alumno_db(self.ctx, 108)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            banco_a, _ = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            self._servicio_banco(alumno, self.ctx.cueanexo_permitido)
+            with self.assertRaises(ValidationError):
+                actualizar_matricula_compartida(
+                    alumno_banco=banco_a,
+                    user=self.admin,
+                    matricula_compartida="555555500",
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_ajeno,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    padron_queryset=_FakePadronQuerySet(),
+                )
+
+    def test_servicio_actualizacion_integracion_no_permite_limpiar(self):
+        alumno = _crear_alumno_db(self.ctx, 112)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            banco, _ = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            with self.assertRaises(ValidationError):
+                actualizar_matricula_compartida(
+                    alumno_banco=banco,
+                    user=self.admin,
+                    matricula_compartida=None,
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_ajeno,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    padron_queryset=_FakePadronQuerySet(),
+                )
+
+    def test_servicio_actualizacion_normal_no_permite_agregar(self):
+        alumno = _crear_alumno_db(self.ctx, 113)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=False,
+        ):
+            banco, _ = self._servicio_banco(alumno, self.ctx.cueanexo_permitido)
+            with self.assertRaises(ValidationError):
+                actualizar_matricula_compartida(
+                    alumno_banco=banco,
+                    user=self.admin,
+                    matricula_compartida=self.ctx.cueanexo_ajeno,
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    padron_queryset=_FakePadronQuerySet(),
+                )
+
+    def test_servicio_actualizacion_fuera_del_queryset_no_es_accesible(self):
+        alumno = _crear_alumno_db(self.ctx, 114)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            banco, _ = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            with self.assertRaises(EspecialAlumnoBanco.DoesNotExist):
+                actualizar_matricula_compartida(
+                    alumno_banco=banco,
+                    user=self.admin,
+                    matricula_compartida=self.ctx.cueanexo_permitido,
+                    alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                        cueanexo=self.ctx.cueanexo_permitido,
+                        ciclo=self.ctx.ciclo_activo,
+                    ),
+                    padron_queryset=_FakePadronQuerySet(),
+                )
+
+    def test_servicio_actualizacion_unico_permite_cambiar_asociado(self):
+        alumno = _crear_alumno_db(self.ctx, 109)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ):
+            banco, _ = self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+            )
+            actualizado = actualizar_matricula_compartida(
+                alumno_banco=banco,
+                user=self.admin,
+                matricula_compartida="555555500",
+                alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                    cueanexo=self.ctx.cueanexo_ajeno,
+                    ciclo=self.ctx.ciclo_activo,
+                ),
+                padron_queryset=_FakePadronQuerySet(),
+            )
+
+        self.assertEqual(actualizado.matricula_compartida, "555555500")
+
+    @skipUnless(connection.vendor == "postgresql", "La prueba requiere locks PostgreSQL reales.")
+    def test_servicio_concurrencia_dos_normales_no_deja_dos_activos(self):
+        alumno = _crear_alumno_db(self.ctx, 110)
+        barrier = threading.Barrier(2)
+        resultados = []
+
+        def _alta(cueanexo):
+            close_old_connections()
+            try:
+                barrier.wait()
+                self._servicio_banco(alumno, cueanexo)
+                resultados.append("ok")
+            except (ValidationError, DatabaseError, threading.BrokenBarrierError) as exc:
+                resultados.append(exc)
+            finally:
+                close_old_connections()
+
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=False,
+        ):
+            hilos = [
+                threading.Thread(target=_alta, args=(self.ctx.cueanexo_permitido,)),
+                threading.Thread(target=_alta, args=(self.ctx.cueanexo_ajeno,)),
+            ]
+            for hilo in hilos:
+                hilo.start()
+            for hilo in hilos:
+                hilo.join()
+
+        self.assertEqual(sum(resultado == "ok" for resultado in resultados), 1)
+        self.assertEqual(
+            EspecialAlumnoBanco.objects.filter(
+                alumno=alumno,
+                ciclo=self.ctx.ciclo_activo,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO,
+            ).count(),
+            1,
+        )
 
     def _crear_inscripcion_baja(self, alumno, seccion):
         return _crear_inscripcion_db(self.ctx, alumno, seccion, estado=AlumnoSeccion.Estado.BAJA)
