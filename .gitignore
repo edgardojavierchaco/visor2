@@ -17,3 +17,7 @@ staticfiles/
 
 #Con esta linea se ignoran los archivos de producción que no deben subirse al repositorio
 #productionfiles/*
+
+contexto.txt
+
+AGENTS.md
