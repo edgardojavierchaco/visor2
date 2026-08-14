@@ -79,16 +79,6 @@ class EspecialBusquedaDocenteForm(forms.Form):
 class EspecialMatriculaCompartidaForm(forms.Form):
     """Normaliza y valida la matrícula compartida contra el padrón general."""
 
-    OPCIONES = (
-        ("no", "No"),
-        ("si", "Sí"),
-    )
-
-    matricula_compartida_opcion = forms.ChoiceField(
-        choices=OPCIONES,
-        required=False,
-        widget=forms.RadioSelect,
-    )
     cueanexo_matricula_compartida = forms.CharField(
         max_length=30,
         required=False,
@@ -115,34 +105,24 @@ class EspecialMatriculaCompartidaForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        opcion = cleaned_data.get("matricula_compartida_opcion") or ""
+        cueanexo_raw = cleaned_data.get("cueanexo_matricula_compartida") or ""
         cueanexo = normalizar_cueanexo(
-            cleaned_data.get("cueanexo_matricula_compartida")
+            cueanexo_raw
         )
 
-        if not opcion:
-            if self.matricula_compartida_habilitada:
-                self.add_error(
-                    "matricula_compartida_opcion",
-                    "Debe seleccionar No o Sí en Matrícula compartida.",
-                )
-            opcion = "no"
-
-        if opcion == "no":
-            cleaned_data["matricula_compartida"] = None
-            return cleaned_data
-
         if not self.matricula_compartida_habilitada:
-            self.add_error(
-                "matricula_compartida_opcion",
-                "La matrícula compartida no está habilitada para este CUE-Anexo.",
-            )
+            if str(cueanexo_raw).strip():
+                self.add_error(
+                    "cueanexo_matricula_compartida",
+                    "La matrícula compartida no está habilitada para este CUE-Anexo.",
+                )
+            cleaned_data["matricula_compartida"] = None
             return cleaned_data
 
         if not cueanexo:
             self.add_error(
                 "cueanexo_matricula_compartida",
-                "Debe seleccionar un CUE-Anexo asociado o marcar No en Matrícula compartida.",
+                "Este establecimiento tiene oferta Integración y requiere indicar el CUE-Anexo de matrícula compartida.",
             )
             return cleaned_data
 

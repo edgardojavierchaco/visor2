@@ -329,42 +329,33 @@
         return editors;
     }
 
+    function syncMatriculaEditor(editor) {
+        if (!editor) return;
+        var selected = editor.querySelector("input[name='matricula_compartida_opcion']:checked");
+        var cueWrap = editor.querySelector("[data-especial-matricula-cue-wrap]");
+        if (cueWrap) cueWrap.hidden = !(selected && selected.value === "si");
+    }
+
     function updateMatriculaSave(editor) {
         if (!editor) return;
         var form = editor.querySelector("[data-especial-matricula-update-form]");
         var saveButton = form && form.querySelector("[data-especial-matricula-save]");
         if (!form || !saveButton) return;
+        var selected = form.querySelector("input[name='matricula_compartida_opcion']:checked");
         var cueSelect = form.querySelector("[data-especial-matricula-cue-select]");
-        var currentCue = cueSelect ? String(cueSelect.value || "").trim() : "";
-        var initialCue = String(form.dataset.initialCue || "").trim();
-        saveButton.hidden = currentCue === initialCue;
-    }
-
-    function syncMatriculaAlta(root) {
-        var scope = root && root.querySelectorAll ? root : document;
-        if (root && root.closest && root.closest("tr")) scope = root.closest("tr");
-        var buttons = [];
-        if (scope.matches && scope.matches("[data-especial-matricula-alta-submit]")) buttons.push(scope);
-        if (scope.querySelectorAll) {
-            Array.prototype.push.apply(
-                buttons,
-                scope.querySelectorAll("[data-especial-matricula-alta-submit]")
-            );
-        }
-        buttons.forEach(function (button) {
-            var row = button.closest("tr");
-            var cueSelect = row && row.querySelector("[data-especial-matricula-cue-select]");
-            if (!cueSelect) return;
-            button.disabled = !String(cueSelect.value || "").trim();
-        });
+        var currentOption = selected ? selected.value : "no";
+        var currentCue = currentOption === "si" && cueSelect ? String(cueSelect.value || "").trim() : "";
+        var initialOption = form.dataset.initialOption || "no";
+        var initialCue = initialOption === "si" ? String(form.dataset.initialCue || "").trim() : "";
+        saveButton.hidden = currentOption === initialOption && currentCue === initialCue;
     }
 
     function initMatricula(root) {
         var editors = matriculaEditors(root);
         editors.forEach(function (editor) {
+            syncMatriculaEditor(editor);
             updateMatriculaSave(editor);
         });
-        syncMatriculaAlta(root);
         if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
         editors.forEach(function (editor) {
             var cueSelect = editor.querySelector("[data-especial-matricula-cue-select]");
@@ -374,7 +365,7 @@
             var dropdownParent = cueSelect.closest(".cef-modal");
             $cueSelect.select2({
                 width: "100%",
-                allowClear: false,
+                allowClear: true,
                 minimumInputLength: 0,
                 minimumResultsForSearch: 0,
                 placeholder: "Buscar CUE-Anexo o establecimiento",
@@ -396,16 +387,12 @@
                     searching: function () { return "Buscando..."; }
                 }
             });
-            $cueSelect.on("change.especialMatricula", function () {
-                updateMatriculaSave(editor);
-                syncMatriculaAlta(editor);
-            });
+            $cueSelect.on("change.especialMatricula", function () { updateMatriculaSave(editor); });
             $cueSelect.on("select2:open.especialMatricula", function () {
                 var searchField = document.querySelector(".select2-container--open .select2-search__field");
                 if (searchField) searchField.setAttribute("placeholder", "Buscar...");
             });
             updateMatriculaSave(editor);
-            syncMatriculaAlta(editor);
         });
     }
 
@@ -465,11 +452,12 @@
         });
         document.addEventListener("submit", submitModalForm);
         document.addEventListener("change", function (event) {
+            var option = event.target.matches("[data-especial-matricula-editor] input[name='matricula_compartida_opcion']");
             var cue = event.target.matches("[data-especial-matricula-cue-select]");
-            if (!cue) return;
+            if (!option && !cue) return;
             var editor = event.target.closest("[data-especial-matricula-editor]");
+            if (option) syncMatriculaEditor(editor);
             updateMatriculaSave(editor);
-            syncMatriculaAlta(editor || event.target);
         });
         document.addEventListener("focusin", function (event) {
             if (event.target.matches("[data-especial-matricula-cue-select]")) {
