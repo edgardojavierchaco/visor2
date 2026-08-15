@@ -1,15 +1,20 @@
+from __future__ import annotations
+
+import base64
+import ipaddress
 import json
-from typing import Optional
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 from django import shortcuts
-from django.core.exceptions import ImproperlyConfigured
+from django.contrib.auth.models import AbstractBaseUser
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.http import (
     HttpRequest,
     HttpResponseRedirect,
     HttpResponseServerError,
     QueryDict,
 )
+from django.http.request import split_domain_port
 from django.urls import NoReverseMatch, reverse
 
 from allauth import app_settings as allauth_settings
@@ -18,7 +23,7 @@ from allauth import app_settings as allauth_settings
 HTTP_USER_AGENT_MAX_LENGTH = 200
 
 
-def serialize_request(request):
+def serialize_request(request: HttpRequest) -> str:
     return json.dumps(
         {
             "path": request.path,
@@ -32,7 +37,7 @@ def serialize_request(request):
     )
 
 
-def deserialize_request(s, request):
+def deserialize_request(s, request: HttpRequest) -> HttpRequest:
     data = json.loads(s)
     request.GET = QueryDict(data["GET"])
     request.POST = QueryDict(data["POST"])
@@ -40,11 +45,11 @@ def deserialize_request(s, request):
     request.path = data["path"]
     request.path_info = data["path_info"]
     request.method = data["method"]
-    request._get_scheme = lambda: data["scheme"]
+    request._get_scheme = lambda: data["scheme"]  # type:ignore[attr-defined]
     return request
 
 
-def redirect(to):
+def redirect(to) -> HttpResponseRedirect:
     try:
         return shortcuts.redirect(to)
     except NoReverseMatch:
@@ -88,11 +93,11 @@ def add_query_params(url: str, params: dict) -> str:
     return new_url
 
 
-def render_url(request, url_template, **kwargs):
+def render_url(request: HttpRequest, url_template, **kwargs) -> str:
     url = url_template
     for k, v in kwargs.items():
         qi = url.find("?")
-        ki = url.find("{" + k + "}")
+        ki = url.find(f"{{{k}}}")
         if ki < 0:
             raise ImproperlyConfigured(url_template)
         is_query_param = qi >= 0 and ki > qi
@@ -100,14 +105,14 @@ def render_url(request, url_template, **kwargs):
             qv = urlencode({"k": v}).partition("k=")[2]
         else:
             qv = quote(v)
-        url = url.replace("{" + k + "}", qv)
+        url = url.replace(f"{{{k}}}", qv)
     p = urlparse(url)
     if not p.netloc:
         url = request.build_absolute_uri(url)
     return url
 
 
-def default_get_frontend_url(request, urlname, **kwargs):
+def default_get_frontend_url(request: HttpRequest, urlname, **kwargs) -> str | None:
     from allauth import app_settings as allauth_settings
 
     if allauth_settings.HEADLESS_ENABLED:
@@ -121,7 +126,7 @@ def default_get_frontend_url(request, urlname, **kwargs):
     return None
 
 
-def get_frontend_url(request, urlname, **kwargs):
+def get_frontend_url(request: HttpRequest, urlname, **kwargs) -> str | None:
     from allauth import app_settings as allauth_settings
 
     if allauth_settings.HEADLESS_ENABLED:
@@ -131,7 +136,9 @@ def get_frontend_url(request, urlname, **kwargs):
     return default_get_frontend_url(request, urlname, **kwargs)
 
 
-def headed_redirect_response(viewname, query=None):
+def headed_redirect_response(
+    viewname, query=None
+) -> HttpResponseRedirect | HttpResponseServerError:
     """
     In some cases, we're redirecting to a non-headless view. In case of
     headless-only mode, that view clearly does not exist.
@@ -148,7 +155,7 @@ def headed_redirect_response(viewname, query=None):
         raise
 
 
-def is_headless_request(request: HttpRequest) -> Optional[str]:
+def is_headless_request(request: HttpRequest) -> str | None:
     """
     Returns the headless client type (app/browser)in case of a headless
     request.
@@ -158,9 +165,7 @@ def is_headless_request(request: HttpRequest) -> Optional[str]:
     )
 
 
-def get_authorization_credential(
-    request: HttpRequest, auth_scheme: str
-) -> Optional[str]:
+def get_authorization_credential(request: HttpRequest, auth_scheme: str) -> str | None:
     auth = request.META.get("HTTP_AUTHORIZATION")
     if not auth:
         return None
@@ -168,3 +173,71 @@ def get_authorization_credential(
     if not parts or len(parts) != 2 or parts[0].lower() != auth_scheme.lower():
         return None
     return parts[1]
+
+
+def clean_client_ip(ip: str) -> str | None:
+    """
+    Try to parse the value as an IP address to make sure it's a valid one.
+    """
+    ip = ip.strip()
+    try:
+        domain, port = split_domain_port(ip)
+        if port and domain:
+            ip = domain
+            # If Django splits off the port of an IPv6 address, the domain
+            # has brackets.
+            if ip[0] == "[" and ip[-1] == "]":
+                ip = ip[1:-1]
+        ip = str(ipaddress.ip_address(ip))
+    except ValueError:
+        return None
+    else:
+        return ip
+
+
+def get_client_ip_from_xff(request: HttpRequest) -> str | None:
+    trusted_proxy_count = allauth_settings.TRUSTED_PROXY_COUNT
+    xff = request.headers.get("x-forwarded-for")
+    if trusted_proxy_count > 0 and xff:
+        ips = xff.split(",")
+        if len(ips) < trusted_proxy_count:
+            raise ImproperlyConfigured(
+                "ALLAUTH_TRUSTED_PROXY_COUNT does not match X-Forwarded-For"
+            )
+        ip = ips[-trusted_proxy_count]
+    else:
+        ip = None
+    return ip
+
+
+def get_client_ip(request: HttpRequest) -> str | None:
+    trusted_client_ip_header = allauth_settings.TRUSTED_CLIENT_IP_HEADER
+    if trusted_client_ip_header:
+        ip = request.headers.get(trusted_client_ip_header)
+    else:
+        ip = get_client_ip_from_xff(request)
+        if not ip:
+            ip = request.META.get("REMOTE_ADDR")
+    return clean_client_ip(ip) if ip else None
+
+
+def authenticated_user(request: HttpRequest) -> AbstractBaseUser:
+    user = request.user
+    if not user.is_authenticated:
+        raise PermissionDenied
+    return user
+
+
+def extract_basic_auth(headers: dict) -> tuple[str | None, str | None]:
+    auth = headers.get("Authorization", "")
+    scheme, _, credentials = auth.partition(" ")
+    if scheme.lower() != "basic" or not credentials:
+        return None, None
+    try:
+        decoded = base64.b64decode(credentials).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None, None
+    client_id, _, client_secret = decoded.partition(":")
+    if not client_id or not client_secret:
+        return None, None
+    return client_id, client_secret

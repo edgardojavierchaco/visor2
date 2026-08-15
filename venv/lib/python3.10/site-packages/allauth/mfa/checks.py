@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from django.core.checks import Critical, register
 
 
 @register()
-def settings_check(app_configs, **kwargs):
+def settings_check(app_configs, **kwargs) -> list:
     from allauth.account import app_settings as account_settings
     from allauth.mfa import app_settings
     from allauth.mfa.models import Authenticator

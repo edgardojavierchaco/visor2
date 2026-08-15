@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 
-from django.http import HttpResponseRedirect
+from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.http import urlencode
 
@@ -22,10 +24,10 @@ class DummyProvider(Provider):
     supports_redirect = True
     supports_token_authentication = True
 
-    def get_login_url(self, request, **kwargs):
+    def get_login_url(self, request: HttpRequest, **kwargs):
         url = reverse("dummy_login")
         if kwargs:
-            url = url + "?" + urlencode(kwargs)
+            url = f"{url}?{urlencode(kwargs)}"
         return url
 
     def extract_uid(self, data):
@@ -45,7 +47,9 @@ class DummyProvider(Provider):
             ret["phone_verified"] = phone_verified
         return ret
 
-    def redirect(self, request, process, next_url=None, data=None, **kwargs):
+    def redirect(
+        self, request: HttpRequest, process, next_url=None, data=None, **kwargs
+    ):
         state_id = self.stash_redirect_state(
             request,
             process,
@@ -54,7 +58,7 @@ class DummyProvider(Provider):
             **kwargs,
         )
         return HttpResponseRedirect(
-            reverse("dummy_authenticate") + "?" + urlencode({"state": state_id})
+            f"{reverse('dummy_authenticate')}?{urlencode({'state': state_id})}"
         )
 
     def extract_email_addresses(self, data):
@@ -71,7 +75,7 @@ class DummyProvider(Provider):
             )
         return addresses
 
-    def verify_token(self, request, token):
+    def verify_token(self, request: HttpRequest, token):
         # Our ID token is just a JSON payload that can be handed over
         # to the `AuthenticateForm`.
         id_token = token.get("id_token")

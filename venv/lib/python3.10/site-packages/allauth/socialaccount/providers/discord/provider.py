@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from django.http import HttpRequest
+
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers.base import AuthAction, ProviderAccount
 from allauth.socialaccount.providers.discord.views import DiscordOAuth2Adapter
@@ -29,7 +33,7 @@ class DiscordAccount(ProviderAccount):
         return None
 
     def to_str(self):
-        fallback = super(DiscordAccount, self).to_str()
+        fallback = super().to_str()
 
         # If the extra_data is malformed, exit early
         if not isinstance(self.account.extra_data, dict):
@@ -86,7 +90,7 @@ class DiscordProvider(OAuth2Provider):
             name=data.get("username"),
         )
 
-    def get_auth_params_from_request(self, request, action):
+    def get_auth_params_from_request(self, request: HttpRequest, action):
         ret = super().get_auth_params_from_request(request, action)
         if action == AuthAction.REAUTHENTICATE:
             ret["prompt"] = "consent"

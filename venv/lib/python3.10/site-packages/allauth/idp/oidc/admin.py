@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from django.contrib import admin, messages
+from django.http import HttpRequest
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
@@ -20,8 +23,9 @@ class ClientAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("secret", "created_at")
     list_filter = ("type", "skip_consent", "allow_uri_wildcards")
+    search_fields = ("id", "name")
 
-    def save_model(self, request, obj, form, change):
+    def save_model(self, request: HttpRequest, obj, form, change) -> None:
         if not change:
             adapter = get_adapter()
             secret = adapter.generate_client_secret()

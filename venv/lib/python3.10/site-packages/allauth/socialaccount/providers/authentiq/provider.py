@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from django.http import HttpRequest
+
 from allauth.account.models import EmailAddress
 from allauth.socialaccount import app_settings
 from allauth.socialaccount.providers.authentiq.views import AuthentiqOAuth2Adapter
@@ -55,7 +59,7 @@ class AuthentiqProvider(OAuth2Provider):
     account_class = AuthentiqAccount
     oauth2_adapter_class = AuthentiqOAuth2Adapter
 
-    def get_scope_from_request(self, request):
+    def get_scope_from_request(self, request: HttpRequest):
         scope = set(super().get_scope_from_request(request))
         scope.add("openid")
 
@@ -66,7 +70,7 @@ class AuthentiqProvider(OAuth2Provider):
             if app_settings.EMAIL_VERIFICATION:
                 modifiers += "s"
             if modifiers:
-                scope.add(Scope.EMAIL + "~" + modifiers)
+                scope.add(f"{Scope.EMAIL}~{modifiers}")
                 scope.remove(Scope.EMAIL)
         return list(scope)
 
@@ -76,7 +80,7 @@ class AuthentiqProvider(OAuth2Provider):
             scope.append(Scope.EMAIL)
         return scope
 
-    def get_auth_params_from_request(self, request, action):
+    def get_auth_params_from_request(self, request: HttpRequest, action):
         ret = super().get_auth_params_from_request(request, action)
         if action == AuthAction.REAUTHENTICATE:
             ret["prompt"] = "select_account"

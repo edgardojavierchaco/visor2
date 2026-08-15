@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from django.http import HttpRequest
+
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
@@ -12,17 +16,12 @@ class InstagramOAuth2Adapter(OAuth2Adapter):
     authorize_url = "https://api.instagram.com/oauth/authorize"
     profile_url = "https://graph.instagram.com/me"
 
-    def complete_login(self, request, app, token, **kwargs):
-        resp = (
-            get_adapter()
-            .get_requests_session()
-            .get(
-                self.profile_url,
-                params={"access_token": token.token, "fields": ["id", "username"]},
-            )
-        )
-        resp.raise_for_status()
-        extra_data = resp.json()
+    def complete_login(self, request: HttpRequest, app, token, **kwargs):
+        with get_adapter().get_requests_session() as sess:
+            params = {"access_token": token.token, "fields": ["id", "username"]}
+            resp = sess.get(self.profile_url, params=params)
+            resp.raise_for_status()
+            extra_data = resp.json()
         return self.get_provider().sociallogin_from_response(request, extra_data)
 
 

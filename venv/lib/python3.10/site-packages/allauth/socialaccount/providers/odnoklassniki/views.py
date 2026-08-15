@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from hashlib import md5
+
+from django.http import HttpRequest
 
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.oauth2.views import (
@@ -40,7 +44,7 @@ class OdnoklassnikiOAuth2Adapter(OAuth2Adapter):
     profile_url = "https://api.odnoklassniki.ru/fb.do"
     access_token_method = "POST"  # nosec
 
-    def complete_login(self, request, app, token, **kwargs):
+    def complete_login(self, request: HttpRequest, app, token, **kwargs):
         data = {
             "method": "users.getCurrentUser",
             "access_token": token.token,
@@ -50,19 +54,18 @@ class OdnoklassnikiOAuth2Adapter(OAuth2Adapter):
         }
         # Ondoklassniki prescribes a weak algo
         suffix = md5(
-            "{0:s}{1:s}".format(data["access_token"], app.secret).encode("utf-8")
+            f"{data['access_token']:s}{app.secret:s}".encode()
         ).hexdigest()  # nosec
         check_list = sorted(
-            ["{0:s}={1:s}".format(k, v) for k, v in data.items() if k != "access_token"]
+            [f"{k:s}={v:s}" for k, v in data.items() if k != "access_token"]
         )
         data["sig"] = md5(
             ("".join(check_list) + suffix).encode("utf-8")
         ).hexdigest()  # nosec
 
-        response = (
-            get_adapter().get_requests_session().get(self.profile_url, params=data)
-        )
-        extra_data = response.json()
+        with get_adapter().get_requests_session() as sess:
+            response = sess.get(self.profile_url, params=data)
+            extra_data = response.json()
         return self.get_provider().sociallogin_from_response(request, extra_data)
 
 

@@ -1,4 +1,6 @@
-from typing import Union
+from __future__ import annotations
+
+from django.http import HttpRequest
 
 from rest_framework.permissions import BasePermission
 
@@ -9,8 +11,8 @@ from allauth.idp.oidc.models import Token
 class TokenPermission(BasePermission):
     scope = None
 
-    def has_permission(self, request, view) -> bool:
-        access_token = request.auth
+    def has_permission(self, request: HttpRequest, view) -> bool:
+        access_token = request.auth  # type:ignore[attr-defined]
         if (
             not isinstance(access_token, Token)
             or access_token.type != Token.Type.ACCESS_TOKEN
@@ -19,7 +21,7 @@ class TokenPermission(BasePermission):
         return is_scope_granted(self.scope, access_token, request.method)
 
     @classmethod
-    def has_scope(cls, scope: Union[str, list, dict]):
+    def has_scope(cls, scope: str | list | dict):
         """
         Constructs and returns specific permission **class** (not instance)
         that checks that the request is authenticated by means of a token (see:
@@ -37,8 +39,8 @@ class TokenPermission(BasePermission):
 
         """
 
-        class TokenHasScopePermission(cls):  # type: ignore[valid-type,misc]
-            def __init__(self, *args, **kwargs):
+        class TokenHasScopePermission(cls):  # type:ignore[misc,valid-type]
+            def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
                 self.scope = scope
 

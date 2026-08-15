@@ -1,4 +1,9 @@
-from django.http import HttpResponseRedirect
+from __future__ import annotations
+
+from http import HTTPStatus
+from typing import TYPE_CHECKING
+
+from django.http import HttpRequest, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -9,11 +14,16 @@ from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount import app_settings
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.internal import flows
+
+
+if TYPE_CHECKING:
+    from allauth.socialaccount.models import SocialLogin
+
 from allauth.socialaccount.providers.base import AuthError
 
 
 def render_authentication_error(
-    request,
+    request: HttpRequest,
     provider,
     error=AuthError.UNKNOWN,
     exception=None,
@@ -54,12 +64,13 @@ def render_authentication_error(
     context.update(extra_context)
     return render(
         request,
-        "socialaccount/authentication_error." + account_settings.TEMPLATE_EXTENSION,
+        f"socialaccount/authentication_error.{account_settings.TEMPLATE_EXTENSION}",
         context,
+        status=HTTPStatus.UNAUTHORIZED,
     )
 
 
-def complete_social_login(request, sociallogin):
+def complete_social_login(request: HttpRequest, sociallogin: SocialLogin):
     if sociallogin.is_headless:
         from allauth.headless.socialaccount import internal
 
@@ -67,7 +78,7 @@ def complete_social_login(request, sociallogin):
     return flows.login.complete_login(request, sociallogin)
 
 
-def socialaccount_user_display(socialaccount):
+def socialaccount_user_display(socialaccount) -> str:
     func = app_settings.SOCIALACCOUNT_STR
     if not func:
         return user_display(socialaccount.user)

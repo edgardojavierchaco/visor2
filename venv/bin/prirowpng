@@ -1,4 +1,4 @@
-#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
+#!/home/edgardo/Documentos/visor2/venv/bin/python
 
 # http://www.python.org/doc/2.4.4/lib/module-itertools.html
 import itertools

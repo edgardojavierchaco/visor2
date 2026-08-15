@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import base64
 import pickle  # nosec
+import time
 from collections import UserDict
 
 from openid.association import Association as OIDAssociation
 from openid.extensions.ax import FetchResponse
 from openid.extensions.sreg import SRegResponse
 from openid.store.interface import OpenIDStore as OIDStore
+from openid.store.nonce import SKEW
 
 from allauth.account.internal.emailkit import valid_email_or_none
 
@@ -19,11 +23,11 @@ class JSONSafeSession(UserDict):
     hacking here...
     """
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         UserDict.__init__(self)
         self.data = session
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         data = base64.b64encode(pickle.dumps(value)).decode("ascii")
         return UserDict.__setitem__(self, key, data)
 
@@ -72,16 +76,8 @@ SRegFields = [
 
 
 class DBOpenIDStore(OIDStore):
-    max_nonce_age = 6 * 60 * 60
-
-    def storeAssociation(self, server_url, assoc=None):
-        try:
-            secret = base64.encodebytes(assoc.secret)
-        except AttributeError:
-            # Python 2.x compat
-            secret = base64.encodestring(assoc.secret)
-        else:
-            secret = secret.decode()
+    def storeAssociation(self, server_url, assoc=None) -> None:
+        secret = base64.encodebytes(assoc.secret).decode()
         OpenIDStore.objects.create(
             server_url=server_url,
             handle=assoc.handle,
@@ -125,7 +121,7 @@ class DBOpenIDStore(OIDStore):
 
         return return_val
 
-    def removeAssociation(self, server_url, handle):
+    def removeAssociation(self, server_url, handle) -> None:
         stored_assocs = OpenIDStore.objects.filter(server_url=server_url)
         if handle:
             stored_assocs = stored_assocs.filter(handle=handle)
@@ -133,6 +129,9 @@ class DBOpenIDStore(OIDStore):
         stored_assocs.delete()
 
     def useNonce(self, server_url, timestamp, salt):
+        if abs(timestamp - time.time()) > SKEW:
+            return False
+
         try:
             OpenIDNonce.objects.get(
                 server_url=server_url, timestamp=timestamp, salt=salt

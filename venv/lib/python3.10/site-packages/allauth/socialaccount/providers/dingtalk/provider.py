@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.dingtalk.views import DingTalkOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
@@ -8,9 +10,7 @@ class DingTalkAccount(ProviderAccount):
         return self.account.extra_data.get("avatarUrl")
 
     def to_str(self):
-        return self.account.extra_data.get(
-            "nick", super(DingTalkAccount, self).to_str()
-        )
+        return self.account.extra_data.get("nick", super().to_str())
 
 
 class DingTalkProvider(OAuth2Provider):

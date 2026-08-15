@@ -1,0 +1,3 @@
+[console_scripts]
+beat = beat.apps.beat:main
+beatdown = beat.apps.beatdown:main
