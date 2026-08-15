@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from importlib import import_module
-from typing import Optional
 
 from django import forms
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.core import exceptions
 from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
@@ -16,7 +18,7 @@ from allauth.utils import build_absolute_uri
 
 
 class DummyCustomSignupForm(forms.Form):
-    def signup(self, request, user):
+    def signup(self, request: HttpRequest, user: AbstractBaseUser) -> None:
         """
         Invoked at signup time to complete the signup of the user.
         """
@@ -41,19 +43,19 @@ def base_signup_form_class():
         fc_module, fc_classname = app_settings.SIGNUP_FORM_CLASS.rsplit(".", 1)
     except ValueError:
         raise exceptions.ImproperlyConfigured(
-            "%s does not point to a form class" % app_settings.SIGNUP_FORM_CLASS
+            f"{app_settings.SIGNUP_FORM_CLASS} does not point to a form class"
         )
     try:
         mod = import_module(fc_module)
     except ImportError as e:
         raise exceptions.ImproperlyConfigured(
-            "Error importing form class %s:" ' "%s"' % (fc_module, e)
+            f'Error importing form class {fc_module}: "{e}"'
         )
     try:
         fc_class = getattr(mod, fc_classname)
     except AttributeError:
         raise exceptions.ImproperlyConfigured(
-            'Module "%s" does not define a' ' "%s" class' % (fc_module, fc_classname)
+            f'Module "{fc_module}" does not define a "{fc_classname}" class'
         )
     if not hasattr(fc_class, "signup"):
         raise exceptions.ImproperlyConfigured(
@@ -64,7 +66,7 @@ def base_signup_form_class():
 
 
 def prevent_enumeration(
-    request: HttpRequest, email: Optional[str] = None, phone: Optional[str] = None
+    request: HttpRequest, email: str | None = None, phone: str | None = None
 ) -> HttpResponse:
     login = Login(user=None, email=email, phone=phone, signup=True)
     return perform_login(context.request, login)
@@ -89,14 +91,14 @@ def get_signup_url(request: HttpRequest) -> str:
 
 
 def complete_signup(
-    request,
+    request: HttpRequest,
     *,
     user,
     email_verification=None,
     redirect_url=None,
     signal_kwargs=None,
     by_passkey=False,
-):
+) -> HttpResponse:
     if signal_kwargs is None:
         signal_kwargs = {}
     signals.user_signed_up.send(

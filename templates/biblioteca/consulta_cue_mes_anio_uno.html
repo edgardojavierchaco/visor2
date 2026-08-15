@@ -30,7 +30,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="formReporte" method="POST" action="{% url 'bibliotecas:generar_pdf_cue' %}">
+                    <form id="formReporte" method="POST" action="{% url 'bibliotecas:generar_pdf' %}">
                         {% csrf_token %}
                         
                         <div class="mb-3">
@@ -45,18 +45,13 @@
                                 <label for="mes" class="form-label fw-semibold">Mes</label>
                                 <select id="mes" name="mes" class="form-select border-primary" required>
                                     <option value="" disabled selected>Seleccione un mes</option>
-                                    <option value="ENERO">Enero</option>
-                                    <option value="FEBRERO">Febrero</option>
-                                    <option value="MARZO">Marzo</option>
+                                    
                                     <option value="ABRIL">Abril</option>
-                                    <option value="MAYO">Mayo</option>
-                                    <option value="JUNIO">Junio</option>
+                                    
                                     <option value="JULIO">Julio</option>
-                                    <option value="AGOSTO">Agosto</option>
-                                    <option value="SEPTIEMBRE">Septiembre</option>
-                                    <option value="OCTUBRE">Octubre</option>
+                                    
                                     <option value="NOVIEMBRE">Noviembre</option>
-                                    <option value="DICIEMBRE">Diciembre</option>
+                                    
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">

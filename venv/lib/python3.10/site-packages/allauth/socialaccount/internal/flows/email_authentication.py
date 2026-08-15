@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+from django.contrib.auth.base_user import AbstractBaseUser
+from django.http import HttpRequest
+
 from allauth import app_settings as allauth_settings
 from allauth.account.models import EmailAddress
 
 
-def wipe_password(request, user, email: str):
+def wipe_password(request: HttpRequest, user: AbstractBaseUser, email: str) -> None:
     """
     Consider a scenario where an attacker signs up for an account using the
     email address of a victim. Obviously, the email address cannot be

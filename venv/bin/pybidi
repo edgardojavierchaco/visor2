@@ -1,4 +1,4 @@
-#!/home/edgardo/Documentos/visor2/venv/bin/python3.10
+#!/home/edgardo/Documentos/visor2/venv/bin/python
 import sys
 from bidi import main
 if __name__ == '__main__':

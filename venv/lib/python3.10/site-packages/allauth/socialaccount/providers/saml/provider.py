@@ -1,4 +1,6 @@
-from django.http import HttpResponseRedirect
+from __future__ import annotations
+
+from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.http import urlencode
 
@@ -37,14 +39,14 @@ class SAMLProvider(Provider):
         ],
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.name = self.app.name or self.app.client_id or self.name
 
-    def get_login_url(self, request, **kwargs):
+    def get_login_url(self, request: HttpRequest, **kwargs):
         url = reverse("saml_login", kwargs={"organization_slug": self.app.client_id})
         if kwargs:
-            url = url + "?" + urlencode(kwargs)
+            url = f"{url}?{urlencode(kwargs)}"
         return url
 
     def extract_extra_data(self, data):
@@ -116,7 +118,9 @@ class SAMLProvider(Provider):
 
         return attributes
 
-    def redirect(self, request, process, next_url=None, data=None, **kwargs):
+    def redirect(
+        self, request: HttpRequest, process, next_url=None, data=None, **kwargs
+    ):
         from allauth.socialaccount.providers.saml.utils import build_auth
 
         auth = build_auth(request, self)

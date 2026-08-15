@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client, OAuth2Error
 
@@ -18,15 +20,12 @@ class DingTalkOAuth2Client(OAuth2Client):
         if self.access_token_method == "GET":  # nosec
             params = data
             data = None
-        resp = (
-            get_adapter()
-            .get_requests_session()
-            .request(self.access_token_method, url, params=params, json=data)
-        )
-        resp.raise_for_status()
-        access_token = resp.json()
+        with get_adapter().get_requests_session() as sess:
+            resp = sess.request(self.access_token_method, url, params=params, json=data)
+            resp.raise_for_status()
+            access_token = resp.json()
         if not access_token or "accessToken" not in access_token:
-            raise OAuth2Error("Error retrieving access token: %s" % resp.content)
+            raise OAuth2Error(f"Error retrieving access token: {resp.content}")
 
         access_token["access_token"] = access_token.pop("accessToken")
         access_token["refresh_token"] = access_token.pop("refreshToken")

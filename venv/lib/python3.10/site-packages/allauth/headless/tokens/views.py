@@ -1,6 +1,6 @@
-from typing import Optional
+from __future__ import annotations
 
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponseBase
 
 from allauth.headless import app_settings
 from allauth.headless.base.views import APIView
@@ -13,14 +13,14 @@ from allauth.headless.tokens.strategies.base import AbstractTokenStrategy
 class RefreshTokenView(APIView):
     input_class = RefreshTokenInput
 
-    def post(self, request: HttpRequest):
+    def post(self, request: HttpRequest) -> HttpResponseBase:
         refresh_token = self.input.cleaned_data["refresh_token"]
         strategy: AbstractTokenStrategy = app_settings.TOKEN_STRATEGY
         at_rt = strategy.refresh_token(refresh_token)
         if at_rt is None:
             return ErrorResponse(request)
 
-        next_refresh_token: Optional[str]
+        next_refresh_token: str | None
         access_token, next_refresh_token = at_rt
         if next_refresh_token == refresh_token:
             next_refresh_token = None

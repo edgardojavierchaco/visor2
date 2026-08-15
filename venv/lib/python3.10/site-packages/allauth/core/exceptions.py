@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+from django.http import HttpResponse
+
+
 class ImmediateHttpResponse(Exception):
     """
     This exception is used to interrupt the flow of processing to immediately
     return a custom HttpResponse.
     """
 
-    def __init__(self, response):
+    def __init__(self, response: HttpResponse) -> None:
         self.response = response
 
 
