@@ -1216,10 +1216,15 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 	evaluaciones_con_comprension, conteos = comprension_lectora(
 		alumnos, grado_seleccionado
 	)
+	ES_INDIGENA = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena__in=["NINGUNA", "", None])
 	datos = evaluaciones.aggregate(
 		# Asistencia
 		presentes=Count("alumno_id", filter=Q(asistencia="PRESENTE")),
 		ausentes=Count("alumno_id", filter=Q(asistencia="AUSENTE")),
+		#ASISTENCIAS (CONDICIÓN)
+		presentes_comunidad_indigena=Count("alumno_id", filter=ES_INDIGENA),
+		presentes_discapacidad=Count("alumno_id", filter=Q(asistencia="PRESENTE", alumno__discapacidad="SI")),
+		presentes_ambas=Count("alumno_id", filter=ES_INDIGENA & Q(alumno__discapacidad="SI")),
 		# Desempeño
 		promedio_general=Avg(
 			"cantidad_palabras_leidas", filter=Q(asistencia="PRESENTE")
@@ -1252,6 +1257,9 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 	# print(datos['debajo_del_basico'])
 	alumnos_presentes = datos["presentes"]
 	alumnos_ausentes = datos["ausentes"]
+	alumnos_presentes_comunidad_indigena = datos["presentes_comunidad_indigena"]
+	alumnos_presentes_discapacidad = datos["presentes_discapacidad"]
+	alumnos_presentes_ambas = datos["presentes_ambas"]
 	# SOLUCIONAR LAS DIVISIONES POR 0
 	nivel_debajo_del_basico = (
 		round((datos["debajo_del_basico"] / alumnos_presentes) * 100, 1)
@@ -1305,6 +1313,16 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 			f"Presentes {alumnos_presentes}",
 			f"Ausentes {alumnos_ausentes}",
 		],
+		"asistencia_segundo_condicion": [
+			f"Com. Indígena {alumnos_presentes_comunidad_indigena}",
+            f"Discapacidad {alumnos_presentes_discapacidad}",
+            f"Ambas {alumnos_presentes_ambas}",
+        ],
+        "valores_asistencia_segundo_condicion": [
+            alumnos_presentes_comunidad_indigena,
+            alumnos_presentes_discapacidad,
+            alumnos_presentes_ambas,
+        ],
 		"valores_asistencia_segundo": [alumnos_presentes, alumnos_ausentes],
 		"etiquetas_nivel_desempeno_segundo": [
 			f"Debajo del Basico {nivel_debajo_del_basico}%",
@@ -1387,11 +1405,16 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 	evaluaciones_con_comprension, conteos = comprension_lectora(
 		alumnos, grado_seleccionado
 	)
+	ES_INDIGENA = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena__in=["NINGUNA", "", None])
 	# evaluaciones_con_comprension,conteos=comprension_lectora(evaluaciones,grado_seleccionado)
 	datos = evaluaciones.aggregate(
 		# Asistencia
 		presentes=Count("alumno_id", filter=Q(asistencia="PRESENTE")),
 		ausentes=Count("alumno_id", filter=Q(asistencia="AUSENTE")),
+		#ASISTENCIAS (CONDICIÓN)
+		presentes_comunidad_indigena=Count("alumno_id", filter=ES_INDIGENA),
+		presentes_discapacidad=Count("alumno_id", filter=Q(asistencia="PRESENTE", alumno__discapacidad="SI")),
+		presentes_ambas=Count("alumno_id", filter=ES_INDIGENA & Q(alumno__discapacidad="SI")),
 		# Desempeño
 		promedio_general=Avg(
 			"cantidad_palabras_leidas", filter=Q(asistencia="PRESENTE")
@@ -1423,6 +1446,9 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 	)
 	alumnos_presentes = datos["presentes"]
 	alumnos_ausentes = datos["ausentes"]
+	alumnos_presentes_comunidad_indigena = datos["presentes_comunidad_indigena"]
+	alumnos_presentes_discapacidad = datos["presentes_discapacidad"]
+	alumnos_presentes_ambas = datos["presentes_ambas"]
 	nivel_debajo_del_basico = (
 		round((datos["debajo_del_basico"] / alumnos_presentes) * 100, 1)
 		if alumnos_presentes
@@ -1476,6 +1502,16 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 			f"Presentes {alumnos_presentes}",
 			f"Ausentes {alumnos_ausentes}",
 		],
+		 "asistencia_tercero_condicion": [
+            f"Com. Indígena {alumnos_presentes_comunidad_indigena}",
+            f"Discapacidad {alumnos_presentes_discapacidad}",
+            f"Ambas {alumnos_presentes_ambas}",
+        ],
+        "valores_asistencia_tercero_condicion": [
+            alumnos_presentes_comunidad_indigena,
+            alumnos_presentes_discapacidad,
+            alumnos_presentes_ambas,
+        ],
 		"valores_asistencia_tercero": [alumnos_presentes, alumnos_ausentes],
 		"etiquetas_nivel_desempeno_tercero": [
 			f"Debajo del Basico {nivel_debajo_del_basico}%",

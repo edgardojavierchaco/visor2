@@ -366,6 +366,9 @@
                 <div class="chart-card">
                     <h4>Asistencia (2do)</h4><canvas id="Grafico_Participacion_segundo_Torta"></canvas>
                 </div>
+                 <div class="chart-card">
+                    <h4>Asistencia Condición (2do)</h4><canvas id="Grafico_Asistencia_Condicion_segundo_Torta"></canvas>
+                </div>
                 <div class="chart-card">
                     <h4>Niveles Fluidez (2do)</h4><canvas id="Grafico_nivel_desempeno_fluidez_segundo_Torta"></canvas>
                 </div>
@@ -391,6 +394,9 @@
             <div class="charts-grid">
                 <div class="chart-card">
                     <h4>Asistencia (3ro)</h4><canvas id="Grafico_Participacion_tercero_Torta"></canvas>
+                </div>
+                 <div class="chart-card">
+                    <h4>Asistencia Condición (3ro)</h4><canvas id="Grafico_Asistencia_Condicion_tercero_Torta"></canvas>
                 </div>
                 <div class="chart-card">
                     <h4>Niveles Fluidez (3ro)</h4><canvas id="Grafico_nivel_desempeno_fluidez_tercero_Torta"></canvas>
@@ -623,6 +629,12 @@
     options: pieOptions
             }));
 
+        charts.push(new Chart(document.getElementById('Grafico_Asistencia_Condicion_segundo_Torta'), {
+            type: 'pie',
+            data: { labels: {{ asistencia_segundo_condicion| safe }}, datasets: [{ data: {{ valores_asistencia_segundo_condicion| safe }}, backgroundColor: ['#8e44ad', '#d35400', '#16a085'] }] },
+            options: pieOptions
+        }));
+
     charts.push(new Chart(document.getElementById('Grafico_nivel_desempeno_fluidez_segundo_Torta'), {
         type: 'bar',
         data: { labels: {{ etiquetas_nivel_desempeno_segundo| safe }}, datasets: [{ data: {{ valores_desempeno_segundo| safe }}, backgroundColor: ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71'] }] },
@@ -659,6 +671,12 @@
         data: { labels: {{ asistencia_tercero| safe }}, datasets: [{ data: {{ valores_asistencia_tercero| safe }}, backgroundColor: ['#3498db', '#e74c3c'] }] },
         options: pieOptions
             }));
+
+    charts.push(new Chart(document.getElementById('Grafico_Asistencia_Condicion_tercero_Torta'), {
+        type: 'pie',
+        data: { labels: {{ asistencia_tercero_condicion| safe }}, datasets: [{ data: {{ valores_asistencia_tercero_condicion| safe }}, backgroundColor: ['#8e44ad', '#d35400', '#16a085'] }] },
+        options: pieOptions
+    }));
 
     charts.push(new Chart(document.getElementById('Grafico_nivel_desempeno_fluidez_tercero_Torta'), {
         type: 'bar',
