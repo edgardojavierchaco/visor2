@@ -34,7 +34,7 @@ def _get_referente(cuil):
 # ---------------------------------------------------------------------------
 # PASO 0: Seleccionar región
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 def seleccionar_region(request):
     """
     Paso 0: muestra las regiones disponibles para el referente y permite
@@ -80,7 +80,7 @@ def seleccionar_region(request):
 # ---------------------------------------------------------------------------
 # PASO 1: Lista de establecimientos de una región (tarjetas)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 def lista_establecimientos(request, region):
     """
     Paso 1: muestra los establecimientos de la región elegida en tarjetas.
@@ -154,7 +154,7 @@ def lista_establecimientos(request, region):
 # ---------------------------------------------------------------------------
 # PASO 1 → ACCIÓN: Marcar participación del establecimiento
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def set_participacion(request, cueanexo):
     """
@@ -205,7 +205,7 @@ def set_participacion(request, cueanexo):
 # ---------------------------------------------------------------------------
 # PASO 1 → MODAL: Asignar cabecera al establecimiento
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def set_cabecera_establecimiento(request, cueanexo):
     """
@@ -257,7 +257,7 @@ def set_cabecera_establecimiento(request, cueanexo):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Revertir establecimiento a sin validar si vuelve sin secciones
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def revertir_sin_secciones(request, cueanexo):
     """
@@ -294,7 +294,7 @@ def revertir_sin_secciones(request, cueanexo):
 # ---------------------------------------------------------------------------
 # PASO 3: Lista de secciones de un establecimiento
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 def lista_secciones(request, cueanexo):
     """
     Muestra todas las secciones de un establecimiento, con botones Validar /
@@ -344,7 +344,7 @@ def lista_secciones(request, cueanexo):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Crear sección (crea el grado si no existe)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def crear_seccion(request, cueanexo):
     """
@@ -447,7 +447,7 @@ def crear_seccion(request, cueanexo):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Validar sección → estado APROBADO
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def validar_seccion(request, seccion_public_id):
     """
@@ -485,7 +485,7 @@ def validar_seccion(request, seccion_public_id):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Deshabilitar sección
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def deshabilitar_seccion(request, seccion_public_id):
     """
@@ -537,7 +537,7 @@ def deshabilitar_seccion(request, seccion_public_id):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Marcar establecimiento como "no participa" (todas deshabilitadas)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def marcar_no_participa_all_deshabilitadas(request, cueanexo):
     """
@@ -575,7 +575,7 @@ def marcar_no_participa_all_deshabilitadas(request, cueanexo):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Aprobar sección (compatibilidad con flujo anterior)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def aprobar_seccion(request, seccion_public_id):
     """
@@ -626,7 +626,7 @@ def aprobar_seccion(request, seccion_public_id):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Modificar matrícula (1-99, solo enteros)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def modificar_seccion(request, seccion_public_id):
     """
@@ -677,7 +677,7 @@ def modificar_seccion(request, seccion_public_id):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Editar sección (reset a PENDIENTE)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def editar_seccion(request, seccion_public_id):
     """
@@ -702,7 +702,7 @@ def editar_seccion(request, seccion_public_id):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Marcar sección como sin matrícula (compatibilidad)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def marcar_sin_matricula(request, seccion_public_id):
     """
@@ -742,7 +742,7 @@ def marcar_sin_matricula(request, seccion_public_id):
 # ---------------------------------------------------------------------------
 # ACCIÓN: Validación completa del establecimiento (toggle)
 # ---------------------------------------------------------------------------
-# @login_required
+@login_required
 @require_POST
 def validar_establecimiento_completo(request, cueanexo):
     """
