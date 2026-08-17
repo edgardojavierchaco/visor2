@@ -1,0 +1,1232 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Validación Aprender 2026 — Secciones de {{ establecimiento.escuela }}</title>
+    <meta name="description" content="Validación de secciones para {{ establecimiento.escuela }} — Aprender 2026." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+      :root {
+        --primary:    #2d77e6;
+        --primary-dk: #1a5abf;
+        --primary-lt: #5899f0;
+        --green:      #22c55e;
+        --green-dk:   #16a34a;
+        --red:        #f43f5e;
+        --red-dk:     #be123c;
+        --amber:      #e9ec0f;
+        --amber-dk:   #e9ec0f;
+        --orange:     #f97316;
+        --orange-dk:  #ea580c;
+        --purple:     #6366f1;
+        --gray-50:    #f8fafc;
+        --gray-100:   #f1f5f9;
+        --gray-200:   #e2e8f0;
+        --gray-400:   #94a3b8;
+        --gray-600:   #475569;
+        --gray-800:   #1e293b;
+        --radius-lg:  16px;
+        --radius-md:  12px;
+        --shadow-card: 0 3px 16px rgba(0,0,0,0.09);
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #eef4ff 0%, #f8faff 60%, #fff 100%);
+        min-height: 100vh; margin: 0; padding: 0;
+      }
+
+      /* ── TOPBAR ── */
+      .topbar {
+        background: linear-gradient(90deg, #2d77e6, #1a5abf);
+        color: #fff; padding: 14px 28px;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 14px; flex-wrap: wrap;
+        box-shadow: 0 4px 24px rgba(10,30,64,0.28);
+        position: sticky; top: 0; z-index: 100;
+      }
+      .topbar-left { display: flex; align-items: center; gap: 14px; }
+      .topbar-logo { width: 200px; height: auto; display: flex; align-items: center; flex-shrink: 0; }
+      .topbar-logo img { width: 100%; height: auto; object-fit: contain; }
+      .topbar h1 { font-size: 1rem; font-weight: 800; margin: 0; letter-spacing: -0.2px; }
+      .topbar small { font-size: 0.72rem; opacity: 0.7; display: block; }
+      .topbar-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .badge-top {
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-size: 0.7rem; border-radius: 20px; padding: 4px 12px; font-weight: 600;
+      }
+      .btn-back {
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+        padding: 7px 13px; display: inline-flex; align-items: center; gap: 5px;
+        text-decoration: none; transition: background 0.2s; cursor: pointer;
+      }
+      .btn-back:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
+      /* ── STEPPER ── */
+      .stepper {
+        background: #fff; border-bottom: 1px solid var(--gray-200);
+        padding: 12px 28px; display: flex; align-items: center; gap: 0;
+      }
+      .step { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; font-weight: 600; color: var(--gray-400); }
+      .step.active { color: var(--primary); }
+      .step.done   { color: var(--green); }
+      .step-num {
+        width: 26px; height: 26px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.72rem; font-weight: 700;
+        background: var(--gray-200); color: var(--gray-400); flex-shrink: 0; transition: all 0.3s;
+      }
+      .step.active .step-num { background: var(--primary); color: #fff; box-shadow: 0 0 0 4px rgba(45,119,230,0.2); }
+      .step.done   .step-num { background: var(--green); color: #fff; }
+      .step-connector { flex: 1; height: 2px; background: var(--gray-200); margin: 0 8px; min-width: 24px; }
+      .step-connector.done { background: var(--green); }
+
+      /* ── CONTENIDO ── */
+      .page-content { max-width: 1300px; margin: 0 auto; padding: 24px 20px 80px; }
+
+      /* ── INFO BAR ── */
+      .info-bar {
+        background: linear-gradient(135deg, #eff6ff, #e0e7ff);
+        border: 1.5px solid #bfdbfe; border-radius: 14px; padding: 16px 22px;
+        display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+        gap: 14px; margin-bottom: 20px; box-shadow: var(--shadow-card);
+      }
+      .info-bar-left { display: flex; flex-direction: column; gap: 4px; }
+      .info-bar-escuela { font-size: 1.1rem; font-weight: 800; color: var(--gray-800); }
+      .info-bar-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+      .info-bar-item { font-size: 0.78rem; color: var(--gray-600); display: flex; align-items: center; gap: 5px; }
+      .info-bar-item i { color: var(--purple); }
+      .info-cabecera {
+        background: rgba(255,255,255,0.7); border-radius: 10px; padding: 9px 14px;
+        border-left: 3px solid var(--purple);
+      }
+      .info-cabecera .cab-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.7px; color: var(--purple); font-weight: 700; }
+      .info-cabecera .cab-nombre { font-size: 0.85rem; font-weight: 700; color: var(--gray-800); }
+
+      /* ── STATS MINI ── */
+      .stats-mini { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+      .stat-mini-item {
+        background: #fff; border-radius: 10px; padding: 10px 16px;
+        box-shadow: var(--shadow-card); display: flex; align-items: center; gap: 9px;
+        font-size: 0.84rem; font-weight: 600;
+      }
+      .stat-mini-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+      .stat-mini-dot.pendiente    { background: #ffff00; }
+      .stat-mini-dot.validado     { background: var(--green); }
+      .stat-mini-dot.deshabilitado{ background: var(--red); }
+
+      /* ── TOOLBAR ── */
+      .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+      .search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 380px; }
+      .search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); }
+      .search-input {
+        width: 100%; border: 1.5px solid var(--gray-200); border-radius: 9px;
+        padding: 9px 12px 9px 34px; font-size: 0.86rem; font-family: 'Inter', sans-serif;
+        outline: none; transition: border-color 0.2s; background: #fff;
+      }
+      .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45,119,230,0.1); }
+      .toolbar-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+      .btn-agregar {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dk));
+        color: #fff; border: none; border-radius: 9px; padding: 9px 17px;
+        font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .btn-agregar:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(45,119,230,0.35); }
+      .btn-validacion-completa {
+        border: 2px solid var(--green); color: var(--green-dk); background: #fff;
+        border-radius: 9px; padding: 8px 17px; font-size: 0.84rem; font-weight: 700;
+        cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+      }
+      .btn-validacion-completa:hover { background: #f0fdf4; transform: translateY(-1px); }
+      .btn-validacion-completa.activa {
+        background: linear-gradient(135deg, var(--green), var(--green-dk));
+        color: #fff; border-color: var(--green-dk);
+      }
+      .btn-validacion-completa:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+      /* ── TABLA ── */
+      .table-wrap { background: #fff; border-radius: 14px; box-shadow: var(--shadow-card); overflow: hidden; }
+      .table-responsive { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; }
+      thead th {
+        background: linear-gradient(90deg, #2d77e6, #1a5abf);
+        color: #fff; padding: 12px 14px; font-size: 0.72rem;
+        text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600;
+        white-space: nowrap; position: sticky; top: 0;
+      }
+      tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.15s; }
+      tbody tr:last-child { border-bottom: none; }
+      tbody tr:hover { background: #f8faff; }
+
+      /* Estados fila */
+      tbody tr.fila-validada     { background: #f0fdf4; }
+      tbody tr.fila-validada:hover { background: #dcfce7; }
+      tbody tr.fila-deshabilitada { background: #fff1f2; opacity: 0.8; }
+      tbody tr.fila-deshabilitada:hover { opacity: 1; }
+      tbody tr.fila-oculta { display: none; }
+
+      td { padding: 11px 14px; font-size: 0.82rem; color: var(--gray-800); vertical-align: middle; }
+
+      /* Badges */
+      .estado-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 0.68rem; font-weight: 700; border-radius: 20px; padding: 4px 10px;
+        letter-spacing: 0.3px; white-space: nowrap;
+      }
+      .badge-pendiente     { background: #fef3c7; color: #92400e; }
+      .badge-validado      { background: #dcfce7; color: #14532d; }
+      .badge-deshabilitado { background: #ffe4e6; color: #9f1239; }
+      .badge-modificado    { background: #e0e7ff; color: #3730a3; }
+
+      /* Botones de acción */
+      .acciones-wrap { display: flex; gap: 5px; flex-wrap: wrap; }
+      .btn-accion {
+        border: none; border-radius: 7px; padding: 5px 10px; font-size: 0.72rem;
+        font-weight: 600; cursor: pointer; transition: all 0.18s;
+        display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+      }
+      .btn-accion:hover { transform: scale(1.05); }
+      .btn-validar  { background: var(--green); color: #fff; }
+      .btn-validar:hover { background: var(--green-dk); }
+      .btn-deshab   { background: var(--red); color: #fff; }
+      .btn-deshab:hover { background: var(--red-dk); }
+      .btn-modmat   { background: var(--orange); color: #fff; }
+      .btn-modmat:hover { background: var(--orange-dk); }
+      /* Botón deshabilitado (carga completa) */
+      .btn-accion-disabled {
+        background: var(--gray-200) !important; color: var(--gray-400) !important;
+        cursor: not-allowed !important; pointer-events: none !important;
+        opacity: 0.7;
+      }
+
+      /* Matrícula */
+      .mat-valor { font-weight: 700; color: var(--primary); }
+      .mat-none { color: var(--gray-400); font-style: italic; }
+
+      /* ── MODALES ── */
+      .modal-content { border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden; }
+      .modal-header { border-bottom: none; padding: 18px 22px; color: #fff; }
+      .mh-primary  { background: linear-gradient(135deg, #0a1e40, var(--primary)); }
+      .mh-green    { background: linear-gradient(135deg, #166534, var(--green)); }
+      .mh-red      { background: linear-gradient(135deg, var(--red-dk), var(--red)); }
+      .mh-amber    { background: linear-gradient(135deg, var(--orange-dk), var(--orange)); }
+      .modal-header .btn-close { filter: invert(1); }
+      .modal-title { font-weight: 700; font-size: 1rem; }
+
+      /* Advertencia matrícula */
+      .advertencia-box {
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border: 1.5px solid var(--amber); border-radius: 10px; padding: 12px 16px;
+        margin-bottom: 16px; font-size: 0.84rem; color: #92400e;
+        display: flex; align-items: flex-start; gap: 10px;
+      }
+      .advertencia-box i { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+      /* ── BANNER COMPLETADO ── */
+      .banner-completado {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border: 1.5px solid var(--green); border-radius: 12px; padding: 14px 20px;
+        display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+        font-size: 0.86rem; font-weight: 600; color: #14532d;
+        animation: slideIn 0.4s ease;
+      }
+      .banner-completado i { font-size: 1.3rem; flex-shrink: 0; }
+
+      /* ── ALERTA TODAS DESHABILITADAS ── */
+      .alerta-deshabilitadas {
+        background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+        border: 1.5px solid var(--red); border-radius: 12px; padding: 14px 20px;
+        display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+        font-size: 0.86rem; color: #9f1239;
+      }
+      .alerta-deshabilitadas i { font-size: 1.3rem; flex-shrink: 0; }
+
+      /* ── ALERTA SIN SECCIONES ── */
+      .alerta-sin-secciones {
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border: 2px solid var(--amber); border-radius: 14px; padding: 22px;
+        text-align: center; margin-bottom: 20px;
+      }
+      .alerta-sin-secciones i { font-size: 2.5rem; color: var(--amber); display: block; margin-bottom: 10px; }
+      .alerta-sin-secciones h5 { font-weight: 800; color: #92400e; margin: 0 0 6px; }
+      .alerta-sin-secciones p { font-size: 0.86rem; color: #78350f; margin: 0; }
+
+      /* ── SPINNER ── */
+      .spinner-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(10,30,64,0.45); z-index: 9999;
+        align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+      }
+      .spinner-overlay.active { display: flex; }
+      .spinner-overlay p { color: #fff; font-weight: 600; font-size: 0.88rem; }
+
+      /* ── TOAST ── */
+      .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9998; }
+
+      @keyframes slideIn {
+        from { transform: translateY(-10px); opacity: 0; }
+        to   { transform: translateY(0);     opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    {% csrf_token %}
+
+    <!-- Spinner global -->
+    <div class="spinner-overlay" id="spinnerOverlay">
+      <div class="spinner-border text-light" style="width:3rem;height:3rem;" role="status"></div>
+      <p>Procesando...</p>
+    </div>
+
+    <!-- ── TOPBAR ── -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo">
+          <img src="{% static 'evaluaciones_educativas/img/logo_evaluaciones_educativas.png' %}" alt="Logo" />
+        </div>
+        <div>
+          <h1>Validación Aprender 2026 — Secciones</h1>
+          <small>{{ establecimiento.escuela }} &mdash; CUE: {{ establecimiento.cueanexo }}</small>
+        </div>
+      </div>
+      <div class="topbar-meta">
+        <a href="{% url 'evaluaciones_educativas:validaciones_2026:lista_establecimientos' establecimiento.region %}"
+           class="btn-back" id="btnVolver"
+           onclick="manejarVolver(event)">
+          <i class="bi bi-arrow-left"></i>Volver
+        </a>
+        <span class="badge-top"><i class="bi bi-layers me-1"></i>{{ total }} sección{{ total|pluralize:"es" }}</span>
+        {% if establecimiento.carga_completa %}
+        <span class="badge-top" style="background:rgba(34,197,94,0.2); border-color:rgba(34,197,94,0.4);">
+          <i class="bi bi-patch-check-fill me-1"></i>Carga completa
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── STEPPER ── -->
+    <div class="stepper">
+      <div class="step done">
+        <div class="step-num"><i class="bi bi-check-lg" style="font-size:0.65rem;"></i></div>
+        <span>Región</span>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step done">
+        <div class="step-num"><i class="bi bi-check-lg" style="font-size:0.65rem;"></i></div>
+        <span>Establecimientos</span>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step active">
+        <div class="step-num">2</div>
+        <span>Secciones</span>
+      </div>
+    </div>
+
+    <!-- ── CONTENIDO ── -->
+    <div class="page-content">
+
+      <!-- Info Bar -->
+      <div class="info-bar">
+        <div class="info-bar-left">
+          <div class="info-bar-escuela">{{ establecimiento.escuela }}</div>
+          <div class="info-bar-meta">
+            <div class="info-bar-item"><i class="bi bi-geo-alt-fill"></i>{{ establecimiento.localidad }}</div>
+            <div class="info-bar-item"><i class="bi bi-building"></i>{{ establecimiento.sector }} · {{ establecimiento.ambito }}</div>
+            <div class="info-bar-item"><i class="bi bi-map"></i>{{ establecimiento.departamento }}</div>
+          </div>
+        </div>
+        {% if establecimiento.cabecera %}
+        <div class="info-cabecera">
+          <div class="cab-label"><i class="bi bi-building me-1"></i>Cabecera</div>
+          <div class="cab-nombre">{{ establecimiento.cabecera.nombre_cabecera }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Stats mini -->
+      <div class="stats-mini" id="statsMini">
+        <div class="stat-mini-item">
+          <div class="stat-mini-dot pendiente"></div>
+          <span>Pendientes: <strong id="cntPendiente">{{ pendientes }}</strong></span>
+        </div>
+        <div class="stat-mini-item">
+          <div class="stat-mini-dot validado"></div>
+          <span>Validadas: <strong id="cntValidado">{{ total|add:"-1"|add:"1" }}</strong></span>
+        </div>
+        <div class="stat-mini-item">
+          <div class="stat-mini-dot deshabilitado"></div>
+          <span>Deshabilitadas: <strong id="cntDeshabilitado">{{ deshabilitadas }}</strong></span>
+        </div>
+      </div>
+
+      <!-- Alerta sin secciones -->
+      {% if sin_secciones %}
+      <div class="alerta-sin-secciones" id="alertaSinSecciones">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <h5>Este establecimiento aún no tiene secciones</h5>
+        <p>Para que el establecimiento quede validado, debés agregar <strong>al menos una sección</strong> usando el botón <em>Agregar sección</em>.<br>
+        Si volvés sin agregar ninguna, el establecimiento quedará en estado <strong>Sin validar</strong> (amarillo).</p>
+      </div>
+      {% endif %}
+
+      <!-- Alerta todas deshabilitadas (OCULTA - ahora es modal) -->
+      <div class="d-none" id="alertaTodasDeshabilitadas"></div>
+
+      <!-- Banner de carga completa -->
+      {% if todas_procesadas %}
+      <div class="banner-completado" id="bannerCompletado">
+        <i class="bi bi-patch-check-fill"></i>
+        <span>¡Todas las secciones han sido procesadas! Podés presionar <strong>Validación completa</strong> para finalizar.</span>
+      </div>
+      {% endif %}
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <i class="bi bi-search"></i>
+          <input type="text" class="search-input" id="buscadorSecciones"
+                 placeholder="Buscar sección por letra..." oninput="filtrarSecciones(this.value)" />
+        </div>
+        <div class="toolbar-right">
+          <button class="btn-agregar" onclick="abrirModalCrearSeccion()" id="btnAgregarSeccion"
+                  {% if establecimiento.carga_completa %}disabled style="opacity:0.5;cursor:not-allowed;"{% endif %}>
+            <i class="bi bi-plus-circle-fill"></i>Agregar sección
+          </button>
+          <button class="btn-validacion-completa {% if establecimiento.carga_completa %}activa{% endif %}"
+                  id="btnValidacionCompleta"
+                  {% if not todas_procesadas and not establecimiento.carga_completa %}disabled{% endif %}
+                  onclick="validacionCompleta()">
+            <i class="bi bi-{% if establecimiento.carga_completa %}patch-check-fill{% else %}patch-check{% endif %} me-1"></i>
+            {% if establecimiento.carga_completa %}Modificar carga{% else %}Validación completa{% endif %}
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de secciones -->
+      <div class="table-wrap">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Cueanexo</th>
+                <th>Grado</th>
+                <th>Sección</th>
+                <th>Turno</th>
+                <th>Matrícula</th>
+                <th>Estado</th>
+                <th>Motivo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaSecciones">
+              {% for seccion in secciones %}
+              <tr id="fila-{{ seccion.public_id }}"
+                  class="
+                    {% if seccion.estado_validacion == 'APROBADO' or seccion.estado_validacion == 'MODIFICADO' %}fila-validada
+                    {% elif seccion.estado_validacion == 'DESHABILITADO' %}fila-deshabilitada
+                    {% endif %}
+                  "
+                  data-seccion="{{ seccion.seccion|lower }}">
+
+                <td class="fw-semibold text-secondary" style="font-size:0.75rem;font-family:'Courier New',monospace;">
+                  {{ establecimiento.cueanexo }}
+                </td>
+                <td>{{ seccion.grado.nombre_grado }}</td>
+                <td class="fw-bold" style="font-size:1rem;">{{ seccion.seccion }}</td>
+                <td>
+                  <span style="font-size:0.76rem; color:var(--gray-600);">{{ seccion.get_turno_display }}</span>
+                </td>
+                <td id="td-mat-{{ seccion.public_id }}">
+                  {% if seccion.matricula is not None %}
+                    <span class="mat-valor">{{ seccion.matricula }}</span>
+                  {% else %}
+                    <span class="mat-none">—</span>
+                  {% endif %}
+                </td>
+                <td id="td-est-{{ seccion.public_id }}">
+                  {% if seccion.estado_validacion == 'APROBADO' %}
+                    <span class="estado-badge badge-validado"><i class="bi bi-check-circle-fill"></i>Validado</span>
+                  {% elif seccion.estado_validacion == 'MODIFICADO' %}
+                    <span class="estado-badge badge-modificado"><i class="bi bi-pencil-fill"></i>Modificado</span>
+                  {% elif seccion.estado_validacion == 'DESHABILITADO' %}
+                    <span class="estado-badge badge-deshabilitado"><i class="bi bi-x-circle-fill"></i>Deshabilitado</span>
+                  {% else %}
+                    <span class="estado-badge badge-pendiente"><i class="bi bi-clock"></i>Pendiente</span>
+                  {% endif %}
+                </td>
+                <td id="td-mot-{{ seccion.public_id }}" style="max-width:180px;">
+                  {% if seccion.motivo_deshabilitacion %}
+                    <small class="text-muted" style="font-size:0.72rem;">{{ seccion.motivo_deshabilitacion }}</small>
+                  {% elif seccion.seccion_creada %}
+                    <small style="color:var(--primary); font-size:0.72rem;"><i class="bi bi-plus-circle me-1"></i>Creada manualmente</small>
+                  {% elif seccion.estado_validacion == 'APROBADO' %}
+                    <small style="color:var(--success); font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Validada Correctamente</small>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                  <div class="acciones-wrap" id="acciones-{{ seccion.public_id }}">
+                    {% if establecimiento.carga_completa %}
+                      <!-- Carga completa: todos los botones deshabilitados -->
+                      <button class="btn-accion btn-accion-disabled" disabled>
+                        <i class="bi bi-lock-fill"></i>Bloqueado
+                      </button>
+                    {% elif seccion.estado_validacion == 'PENDIENTE' %}
+                      <button class="btn-accion btn-validar"
+                              onclick="accionConProteccion(this, () => validarSeccion('{{ seccion.public_id }}'))">
+                        <i class="bi bi-check-lg"></i>Validar
+                      </button>
+                      <button class="btn-accion btn-deshab"
+                              onclick="accionConProteccion(this, () => abrirModalDeshabilitar('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}'))">
+                        <i class="bi bi-slash-circle"></i>Deshabilitar
+                      </button>
+                      <button class="btn-accion btn-modmat"
+                              onclick="abrirModalModificarMat('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}', {{ seccion.matricula|default:'null' }})">
+                        <i class="bi bi-pencil"></i>Modificar Matrícula
+                      </button>
+                    {% elif seccion.estado_validacion == 'APROBADO' or seccion.estado_validacion == 'MODIFICADO' %}
+                      <button class="btn-accion btn-deshab"
+                              onclick="accionConProteccion(this, () => abrirModalDeshabilitar('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}'))">
+                        <i class="bi bi-slash-circle"></i>Deshabilitar
+                      </button>
+                      <button class="btn-accion btn-modmat"
+                              onclick="abrirModalModificarMat('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}', {{ seccion.matricula|default:'null' }})">
+                        <i class="bi bi-pencil"></i>Modificar Matrícula
+                      </button>
+                    {% elif seccion.estado_validacion == 'DESHABILITADO' %}
+                      <button class="btn-accion btn-validar"
+                              onclick="accionConProteccion(this, () => validarSeccion('{{ seccion.public_id }}'))">
+                        <i class="bi bi-check-lg"></i>Re-habilitar
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr id="filaVacia">
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  Sin secciones registradas. Usá el botón <strong>Agregar sección</strong>.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+
+
+    <!-- ================================================================
+         MODAL: Crear sección
+    ================================================================ -->
+    <div class="modal fade" id="modalCrearSeccion" tabindex="-1" aria-labelledby="modalCrearSeccionLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-primary">
+            <h5 class="modal-title" id="modalCrearSeccionLabel">
+              <i class="bi bi-plus-circle me-2"></i>Agregar sección
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold" style="font-size:0.84rem;">Grado <span class="text-danger">*</span></label>
+                <select class="form-select" id="cs-grado" style="font-size:0.86rem;">
+                  {% for val, label in opciones_grado %}
+                  <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold" style="font-size:0.84rem;">Sección <span class="text-danger">*</span></label>
+                <select class="form-select" id="cs-seccion" style="font-size:0.86rem;">
+                  <option value="">— Sección —</option>
+                  {% for val, label in opciones_seccion %}
+                  <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold" style="font-size:0.84rem;">Turno <span class="text-danger">*</span></label>
+                <select class="form-select" id="cs-turno" style="font-size:0.86rem;">
+                  <option value="">— Turno —</option>
+                  {% for val, label in opciones_turno %}
+                  <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold" style="font-size:0.84rem;">Matrícula <span class="text-danger">*</span> <small class="text-muted fw-normal">(1–99)</small></label>
+                <input type="number" class="form-control" id="cs-matricula" min="1" max="99" step="1"
+                       placeholder="Ej: 28" style="font-size:0.86rem;"
+                       oninput="this.value = this.value.replace(/[^0-9]/g,'').slice(0,2)" />
+              </div>
+
+              <div id="cs-error" class="col-12 d-none">
+                <div class="alert alert-danger py-2 mb-0" style="font-size:0.82rem;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary fw-bold" onclick="guardarSeccion()"
+                    style="background:var(--primary); border-color:var(--primary);">
+              <i class="bi bi-save me-1"></i>Guardar sección
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         MODAL: Deshabilitar sección
+    ================================================================ -->
+    <div class="modal fade" id="modalDeshabilitar" tabindex="-1" aria-labelledby="modalDeshabilitarLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-red">
+            <h5 class="modal-title" id="modalDeshabilitarLabel">
+              <i class="bi bi-slash-circle me-2"></i>Deshabilitar — <span id="dh-titulo"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">
+              Motivo de deshabilitación <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" id="dh-motivo" style="font-size:0.88rem;">
+              <option value="">— Seleccioná el motivo —</option>
+              <option value="Sin Alumno / Matrícula">Sin Alumno / Matrícula</option>
+              <option value="No existe la sección">No existe la sección</option>
+              <option value="Se cerró la sección">Se cerró la sección</option>
+            </select>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger fw-bold" onclick="confirmarDeshabilitar()">
+              <i class="bi bi-slash-circle me-1"></i>Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         MODAL: Modificar matrícula
+    ================================================================ -->
+    <div class="modal fade" id="modalModificarMat" tabindex="-1" aria-labelledby="modalModificarMatLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-amber">
+            <h5 class="modal-title" id="modalModificarMatLabel">
+              <i class="bi bi-pencil me-2"></i>Modificar matrícula — <span id="mm-titulo"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="advertencia-box">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <div>
+                <strong>Recordá que esta información ha sido cargada por la institución en SGE SINIDE.</strong><br>
+                ¿Deseás continuar con la modificación?
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="font-size:0.85rem;">
+                Nueva matrícula <span class="text-danger">*</span> <small class="text-muted fw-normal">(1–99)</small>
+              </label>
+              <input type="number" class="form-control" id="mm-matricula" min="1" max="99" step="1"
+                     style="font-size:0.88rem;"
+                     oninput="this.value = this.value.replace(/[^0-9]/g,'').slice(0,2)" />
+              <div class="form-text text-muted" id="mm-valor-actual"></div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label fw-semibold" style="font-size:0.85rem;">
+                Justificación <span class="text-danger">*</span>
+              </label>
+              <textarea class="form-control" id="mm-justificacion" rows="3"
+                        placeholder="Explicá el motivo del cambio..."
+                        style="font-size:0.86rem; resize:none;"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn fw-bold text-white" onclick="confirmarModificarMat()"
+                    style="background:var(--orange); border-color:var(--orange-dk);">
+              <i class="bi bi-check-lg me-1"></i>Confirmar cambio
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         MODAL: Todas las secciones deshabilitadas
+    ================================================================ -->
+    <div class="modal fade" id="modalTodasDeshabilitadas" tabindex="-1" aria-labelledby="modalTodasDeshabLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header" style="background:linear-gradient(135deg,#7c2d12,#dc2626);">
+            <h5 class="modal-title text-white fw-bold" id="modalTodasDeshabLabel">
+              <i class="bi bi-exclamation-octagon-fill me-2"></i>Todas las secciones deshabilitadas
+            </h5>
+          </div>
+          <div class="modal-body p-4">
+            <div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:0.86rem;color:#92400e;">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <strong>Atención:</strong> Todas las secciones de este establecimiento quedaron deshabilitadas.
+              Si continuás, el establecimiento volverá a <strong>Sin Estado</strong> (amarillo) y deberas validarla en el estado correcto.
+            </div>
+            <p style="font-size:0.88rem;color:#475569;margin-bottom:0;">
+              ¿Querés agregar una nueva sección antes de salir, o confirmás que el establecimiento debe quedar sin estado?
+            </p>
+          </div>
+          <div class="modal-footer border-0" style="gap:10px;">
+            <button type="button" class="btn btn-outline-primary fw-semibold" onclick="opcionAgregarSeccionYCerrar()" style="font-size:0.86rem;">
+              <i class="bi bi-plus-circle me-1"></i>Agregar una sección
+            </button>
+            <button type="button" class="btn fw-bold text-white" id="btnConfirmarTodasDeshab"
+                    onclick="confirmarNoParticipaAll(this)"
+                    style="background:linear-gradient(135deg,#7c2d12,#dc2626);border:none;font-size:0.86rem;">
+              <i class="bi bi-box-arrow-right me-1"></i>Confirmar y salir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TOAST CONTAINER ── -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // ── CSRF ──────────────────────────────────────────────────────────
+      function getCsrf() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+      }
+      // ── SPINNER ──────────────────────────────────────────────────────
+      const spinner = document.getElementById('spinnerOverlay');
+      const showSpinner = () => spinner.classList.add('active');
+      const hideSpinner = () => spinner.classList.remove('active');
+
+      // ── ANTI-DOBLE CLIC ───────────────────────────────────────────────
+      // Envuelve una función en protección: deshabilita el botón y lo restaura al terminar.
+      // Uso: onclick="accionConProteccion(this, () => miFunc())"
+      function accionConProteccion(btn, fn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const htmlOriginal = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>...';
+        // Ejecutamos la función; si es asíncrona esperamos que termine
+        const resultado = fn();
+        const restaurar = () => { btn.disabled = false; btn.innerHTML = htmlOriginal; };
+        if (resultado && typeof resultado.finally === 'function') {
+          resultado.finally(restaurar);
+        } else {
+          // función síncrona (abre modal): restaurar de inmediato
+          restaurar();
+        }
+      }
+
+      // Protección para botones de modal (deshabilitar al submit)
+      function protegerBtn(btn) {
+        if (btn.disabled) return false;
+        btn.dataset.originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
+        return true;
+      }
+      function restaurarBtn(btn) {
+        if (!btn) return;
+        btn.disabled = false;
+        if (btn.dataset.originalHtml) {
+          btn.innerHTML = btn.dataset.originalHtml;
+        }
+      }
+
+      // ── TOAST ────────────────────────────────────────────────────────
+      function showToast(msg, type = 'success') {
+        const id = 'toast-' + Date.now();
+        const icons = {
+          success: 'bi-check-circle-fill text-success',
+          danger:  'bi-x-circle-fill text-danger',
+          info:    'bi-info-circle-fill text-primary',
+          warning: 'bi-exclamation-triangle-fill text-warning',
+        };
+        const html = `
+          <div id="${id}" class="toast align-items-center border-0 shadow-lg" role="alert" style="min-width:280px;">
+            <div class="d-flex">
+              <div class="toast-body fw-semibold" style="font-size:0.86rem;">
+                <i class="bi ${icons[type]||icons.success} me-2"></i>${msg}
+              </div>
+              <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+          </div>`;
+        document.getElementById('toastContainer').insertAdjacentHTML('beforeend', html);
+        const toastEl = document.getElementById(id);
+        new bootstrap.Toast(toastEl, { delay: 4500 }).show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+      }
+
+      // ── CONTADORES ───────────────────────────────────────────────────
+      let cntPendiente     = {{ pendientes }};
+      let cntDeshabilitado = {{ deshabilitadas }};
+      let cntTotal         = {{ total }};
+      const cueanexo       = '{{ establecimiento.cueanexo }}';
+
+      function calcValidado() { return cntTotal - cntPendiente - cntDeshabilitado; }
+
+      function actualizarContadores() {
+        document.getElementById('cntPendiente').textContent     = cntPendiente;
+        document.getElementById('cntValidado').textContent      = Math.max(0, calcValidado());
+        document.getElementById('cntDeshabilitado').textContent = cntDeshabilitado;
+      }
+
+      function verificarTodasProcesadas() {
+        if (cntPendiente <= 0) {
+          // Habilitar botón validación completa
+          const btnVC = document.getElementById('btnValidacionCompleta');
+          btnVC.disabled = false;
+          // Mostrar banner si no existe
+          if (!document.getElementById('bannerCompletado')) {
+            const banner = document.createElement('div');
+            banner.id = 'bannerCompletado';
+            banner.className = 'banner-completado';
+            banner.innerHTML = `<i class="bi bi-patch-check-fill"></i>
+              <span>¡Todas las secciones fueron procesadas! Podés presionar <strong>Validación completa</strong> para finalizar.</span>`;
+            document.querySelector('.page-content').prepend(banner);
+          }
+        }
+        if (cntTotal > 0 && cntDeshabilitado === cntTotal) {
+          // Todas deshabilitadas
+          document.getElementById('alertaTodasDeshabilitadas').classList.remove('d-none');
+        } else {
+          document.getElementById('alertaTodasDeshabilitadas').classList.add('d-none');
+        }
+      }
+
+      // ── BUSCADOR ─────────────────────────────────────────────────────
+      function filtrarSecciones(q) {
+        q = q.toLowerCase().trim();
+        document.querySelectorAll('#tablaSecciones tr[id^="fila-"]').forEach(fila => {
+          const sec = fila.dataset.seccion || '';
+          fila.classList.toggle('fila-oculta', q !== '' && !sec.includes(q));
+        });
+      }
+
+      // ── MODAL CREAR SECCIÓN ──────────────────────────────────────────
+      const modalCrearBS = new bootstrap.Modal(document.getElementById('modalCrearSeccion'));
+      function abrirModalCrearSeccion() {
+        document.getElementById('cs-grado').selectedIndex = 0;
+        document.getElementById('cs-seccion').value = '';
+        document.getElementById('cs-turno').value = '';
+        document.getElementById('cs-matricula').value = '';
+        document.getElementById('cs-error').classList.add('d-none');
+        modalCrearBS.show();
+      }
+
+      async function guardarSeccion() {
+        const grado    = document.getElementById('cs-grado').value;
+        const seccion  = document.getElementById('cs-seccion').value;
+        const turno    = document.getElementById('cs-turno').value;
+        const mat      = document.getElementById('cs-matricula').value;
+        const errDiv   = document.getElementById('cs-error');
+        const btnGuardar = document.querySelector('#modalCrearSeccion .btn-primary');
+
+        // Validaciones locales
+        if (!seccion || !turno) { mostrarError(errDiv, 'Selecioná sección y turno.'); return; }
+        const matNum = parseInt(mat);
+        if (!mat || isNaN(matNum) || matNum < 1 || matNum > 99) { mostrarError(errDiv, 'La matrícula debe ser un número entre 1 y 99.'); return; }
+
+        errDiv.classList.add('d-none');
+        if (!protegerBtn(btnGuardar)) return;
+        showSpinner();
+        modalCrearBS.hide();
+        const btnOrigHTML = btnGuardar.innerHTML; // ya reemplazado por protegerBtn
+
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+        body.append('nombre_grado', grado);
+        body.append('seccion', seccion);
+        body.append('turno', turno);
+        body.append('matricula', matNum);
+
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:crear_seccion' '___CUE___' %}`.replace('___CUE___', cueanexo),
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            agregarFilaSeccion(data);
+            cntTotal++;
+            actualizarContadores();
+            // Quitar alerta sin secciones
+            document.getElementById('alertaSinSecciones')?.remove();
+            const filaVacia = document.getElementById('filaVacia');
+            if (filaVacia) filaVacia.remove();
+            showToast(`✅ Sección <strong>${data.seccion} (${data.turno})</strong> creada correctamente.`);
+          } else {
+            showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
+          }
+        } catch(e) {
+          showToast('Error de conexión.', 'danger');
+        } finally {
+          hideSpinner();
+          if (btnGuardar) restaurarBtn(btnGuardar);
+        }
+      }
+
+      function agregarFilaSeccion(data) {
+        const tbody = document.getElementById('tablaSecciones');
+        const tr = document.createElement('tr');
+        tr.id = 'fila-' + data.seccion_id;
+        tr.className = 'fila-validada';
+        tr.dataset.seccion = data.seccion.toLowerCase();
+        tr.innerHTML = `
+          <td class="fw-semibold text-secondary" style="font-size:0.75rem;font-family:'Courier New',monospace;">${cueanexo}</td>
+          <td>${data.grado}</td>
+          <td class="fw-bold" style="font-size:1rem;">${data.seccion}</td>
+          <td><span style="font-size:0.76rem;color:var(--gray-600);">${data.turno}</span></td>
+          <td id="td-mat-${data.seccion_id}"><span class="mat-valor">${data.matricula}</span></td>
+          <td id="td-est-${data.seccion_id}">
+            <span class="estado-badge badge-validado"><i class="bi bi-check-circle-fill"></i>Validado</span>
+          </td>
+          <td id="td-mot-${data.seccion_id}">
+            <small style="color:var(--primary);font-size:0.72rem;"><i class="bi bi-plus-circle me-1"></i>Creada manualmente</small>
+          </td>
+          <td>
+            <div class="acciones-wrap" id="acciones-${data.seccion_id}">
+              <button class="btn-accion btn-deshab" onclick="abrirModalDeshabilitar('${data.seccion_id}', '${data.seccion}-${data.turno}')">
+                <i class="bi bi-slash-circle"></i>Deshabilitar
+              </button>
+              <button class="btn-accion btn-modmat" onclick="abrirModalModificarMat('${data.seccion_id}', '${data.seccion}-${data.turno}', ${data.matricula})">
+                <i class="bi bi-pencil"></i> Modificar Matrícula
+              </button>
+            </div>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+
+      function mostrarError(div, msg) {
+        div.classList.remove('d-none');
+        div.querySelector('.alert').textContent = msg;
+      }
+
+      // ── VALIDAR SECCIÓN ──────────────────────────────────────────────
+      async function validarSeccion(pid) {
+        showSpinner();
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:validar_seccion' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', pid),
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            actualizarFilaEstado(pid, 'APROBADO', null);
+            showToast('Sección <strong>validada</strong> correctamente.', 'success');
+          } else {
+            showToast('Error: ' + (data.error||'Error.'), 'danger');
+          }
+        } catch(e) { showToast('Error de conexión.', 'danger'); }
+        finally { hideSpinner(); }
+      }
+
+      // ── MODAL DESHABILITAR ────────────────────────────────────────────
+      let dhSeccionPid = null;
+      const modalDeshabBS = new bootstrap.Modal(document.getElementById('modalDeshabilitar'));
+      function abrirModalDeshabilitar(pid, titulo) {
+        dhSeccionPid = pid;
+        document.getElementById('dh-titulo').textContent = titulo;
+        document.getElementById('dh-motivo').value = '';
+        modalDeshabBS.show();
+      }
+
+      async function confirmarDeshabilitar() {
+        const motivo = document.getElementById('dh-motivo').value;
+        if (!motivo) { showToast('Seleccioná un motivo.', 'warning'); return; }
+        const btnConf = document.querySelector('#modalDeshabilitar .btn-danger');
+        if (!protegerBtn(btnConf)) return;
+        showSpinner(); modalDeshabBS.hide();
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+        body.append('motivo', motivo);
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:deshabilitar_seccion' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', dhSeccionPid),
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            actualizarFilaEstado(dhSeccionPid, 'DESHABILITADO', motivo);
+            showToast('Sección <strong>deshabilitada</strong>.', 'info');
+            if (data.todas_deshabilitadas) {
+              // Mostrar modal de opción (crear sección o salir)
+              setTimeout(() => {
+                const m = new bootstrap.Modal(document.getElementById('modalTodasDeshabilitadas'));
+                m.show();
+              }, 400);
+            }
+          } else {
+            showToast('Error: ' + (data.error||'Error.'), 'danger');
+          }
+        } catch(e) { showToast('Error de conexión.', 'danger'); }
+        finally {
+          hideSpinner();
+          const btnConf = document.querySelector('#modalDeshabilitar .btn-danger');
+          restaurarBtn(btnConf);
+        }
+      }
+
+      // ── MODAL MODIFICAR MATRÍCULA ─────────────────────────────────────
+      let mmSeccionPid = null;
+      const modalModMatBS = new bootstrap.Modal(document.getElementById('modalModificarMat'));
+      function abrirModalModificarMat(pid, titulo, matActual) {
+        mmSeccionPid = pid;
+        document.getElementById('mm-titulo').textContent = titulo;
+        document.getElementById('mm-matricula').value = matActual || '';
+        document.getElementById('mm-justificacion').value = '';
+        document.getElementById('mm-valor-actual').textContent = matActual ? `Valor actual: ${matActual}` : '';
+        modalModMatBS.show();
+      }
+
+      async function confirmarModificarMat() {
+        const mat = parseInt(document.getElementById('mm-matricula').value);
+        const just = document.getElementById('mm-justificacion').value.trim();
+        if (isNaN(mat) || mat < 1 || mat > 99) { showToast('La matrícula debe estar entre 1 y 99.', 'warning'); return; }
+        if (!just) { showToast('La justificación es obligatoria.', 'warning'); return; }
+        const btnConf = document.querySelector('#modalModificarMat .btn');
+        if (!protegerBtn(btnConf)) return;
+        showSpinner(); modalModMatBS.hide();
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+        body.append('matricula_nueva', mat);
+        body.append('justificacion', just);
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:modificar_seccion' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', mmSeccionPid),
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            document.getElementById('td-mat-' + mmSeccionPid).innerHTML = `<span class="mat-valor">${data.matricula}</span>`;
+            actualizarFilaEstado(mmSeccionPid, 'MODIFICADO', null);
+            showToast(`Matrícula actualizada a <strong>${data.matricula}</strong>.`);
+          } else {
+            showToast('Error: ' + (data.error||'Error.'), 'danger');
+          }
+        } catch(e) { showToast('Error de conexión.', 'danger'); }
+        finally {
+          hideSpinner();
+          const btnConf = document.querySelector('#modalModificarMat .btn');
+          restaurarBtn(btnConf);
+        }
+      }
+
+      // ── ACTUALIZAR FILA ───────────────────────────────────────────────
+      function actualizarFilaEstado(pid, estado, motivo) {
+        const fila = document.getElementById('fila-' + pid);
+        if (!fila) return;
+
+        // Clases de fila
+        fila.classList.remove('fila-validada', 'fila-deshabilitada');
+        if (estado === 'APROBADO' || estado === 'MODIFICADO') fila.classList.add('fila-validada');
+        if (estado === 'DESHABILITADO') fila.classList.add('fila-deshabilitada');
+
+        // Badge estado
+        const tdEst = document.getElementById('td-est-' + pid);
+        const badgesMap = {
+          'APROBADO':      `<span class="estado-badge badge-validado"><i class="bi bi-check-circle-fill"></i>Validado</span>`,
+          'MODIFICADO':    `<span class="estado-badge badge-modificado"><i class="bi bi-pencil-fill"></i>Modificado</span>`,
+          'DESHABILITADO': `<span class="estado-badge badge-deshabilitado"><i class="bi bi-x-circle-fill"></i>Deshabilitado</span>`,
+          'PENDIENTE':     `<span class="estado-badge badge-pendiente"><i class="bi bi-clock"></i>Pendiente</span>`,
+        };
+        if (tdEst) tdEst.innerHTML = badgesMap[estado] || '';
+
+        // Motivo
+        const tdMot = document.getElementById('td-mot-' + pid);
+        if (tdMot) {
+          if (motivo) {
+            tdMot.innerHTML = `<small class="text-muted" style="font-size:0.72rem;">${motivo}</small>`;
+          } else if (estado === 'APROBADO') {
+            tdMot.innerHTML = `<small style="color:var(--success); font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Validada Correctamente</small>`;
+          } else if (estado !== 'DESHABILITADO') {
+            tdMot.innerHTML = '—';
+          }
+        }
+
+        // Botones
+        const accDiv = document.getElementById('acciones-' + pid);
+        if (!accDiv) return;
+        const secLetra = fila.dataset.seccion?.toUpperCase() || '';
+        const secTurno = fila.querySelector('td:nth-child(4) span')?.textContent || '';
+
+        if (estado === 'APROBADO' || estado === 'MODIFICADO') {
+          accDiv.innerHTML = `
+            <button class="btn-accion btn-deshab" onclick="abrirModalDeshabilitar('${pid}', '${secLetra}-${secTurno}')">
+              <i class="bi bi-slash-circle"></i>Deshabilitar
+            </button>
+            <button class="btn-accion btn-modmat" onclick="abrirModalModificarMat('${pid}', '${secLetra}-${secTurno}', null)">
+              <i class="bi bi-pencil"></i>Modificar Matrícula
+            </button>`;
+          cntPendiente = Math.max(0, cntPendiente - 1);
+          if (estado === 'MODIFICADO') {} // no cambia otros contadores
+        } else if (estado === 'DESHABILITADO') {
+          accDiv.innerHTML = `
+            <button class="btn-accion btn-validar" onclick="validarSeccion('${pid}')">
+              <i class="bi bi-check-lg"></i>Re-habilitar
+            </button>`;
+          cntPendiente     = Math.max(0, cntPendiente - 1);
+          cntDeshabilitado += 1;
+        } else if (estado === 'PENDIENTE') {
+          cntPendiente++;
+          cntDeshabilitado = Math.max(0, cntDeshabilitado - 1);
+        }
+
+        actualizarContadores();
+        verificarTodasProcesadas();
+      }
+
+      // ── VALIDACIÓN COMPLETA ───────────────────────────────────────────
+      async function validacionCompleta() {
+        const btnVC = document.getElementById('btnValidacionCompleta');
+        if (!protegerBtn(btnVC)) return;
+        const btnAgregar = document.getElementById('btnAgregarSeccion');
+        showSpinner();
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:validar_establecimiento_completo' establecimiento.cueanexo %}`,
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            if (data.carga_completa) {
+              btnVC.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>Modificar carga`;
+              btnVC.classList.add('activa');
+              btnVC.disabled = false; // el toggle lo re-habilitamos
+              // Bloquear todos los botones de acción y agregar sección
+              document.querySelectorAll('.acciones-wrap .btn-accion').forEach(b => {
+                b.disabled = true;
+                b.classList.add('btn-accion-disabled');
+              });
+              if (btnAgregar) { btnAgregar.disabled = true; btnAgregar.style.opacity = '0.5'; btnAgregar.style.cursor = 'not-allowed'; }
+              showToast('✅ <strong>Carga completa</strong> confirmada para este establecimiento.', 'success');
+            } else {
+              btnVC.innerHTML = `<i class="bi bi-patch-check me-1"></i>Validación completa`;
+              btnVC.classList.remove('activa');
+              btnVC.disabled = false;
+              // Re-habilitar los botones de acción
+              document.querySelectorAll('.acciones-wrap .btn-accion').forEach(b => {
+                b.disabled = false;
+                b.classList.remove('btn-accion-disabled');
+              });
+              if (btnAgregar) { btnAgregar.disabled = false; btnAgregar.style.opacity = ''; btnAgregar.style.cursor = ''; }
+              showToast('Carga reabierta. Podés modificar las secciones.', 'info');
+            }
+          } else {
+            if (data.todas_deshabilitadas) {
+              const modalTD = new bootstrap.Modal(document.getElementById('modalTodasDeshabilitadas'));
+              modalTD.show();
+            } else {
+              showToast('Error: ' + (data.error||'Error.'), 'danger');
+            }
+            btnVC.disabled = false;
+            btnVC.innerHTML = btnVC.classList.contains('activa') 
+              ? `<i class="bi bi-patch-check-fill me-1"></i>Modificar carga`
+              : `<i class="bi bi-patch-check me-1"></i>Validación completa`;
+          }
+        } catch(e) {
+          showToast('Error de conexión.', 'danger');
+          btnVC.disabled = false;
+        }
+        finally { hideSpinner(); }
+      }
+
+      // ── CONFIRMAR NO PARTICIPA (todas deshabilitadas) ─────────────────
+      async function confirmarNoParticipaAll(btn) {
+        if (btn && !protegerBtn(btn)) return;
+        const modalTD = bootstrap.Modal.getInstance(document.getElementById('modalTodasDeshabilitadas'));
+        if (modalTD) modalTD.hide();
+        showSpinner();
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:marcar_no_participa_all_deshabilitadas' establecimiento.cueanexo %}`,
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            showToast('El establecimiento volverá a <strong>Sin Estado</strong>. Redirigiendo...', 'info');
+            setTimeout(() => { window.location.href = data.redirect_url; }, 1800);
+          } else {
+            showToast('Error: ' + (data.error||'Error.'), 'danger');
+          }
+        } catch(e) { showToast('Error de conexión.', 'danger'); }
+        finally {
+          hideSpinner();
+          if (btn) restaurarBtn(btn);
+        }
+      }
+
+      // ── OPCIÓN: Agregar sección desde modal todas deshabilitadas ─────────
+      function opcionAgregarSeccionYCerrar() {
+        const modalTD = bootstrap.Modal.getInstance(document.getElementById('modalTodasDeshabilitadas'));
+        if (modalTD) modalTD.hide();
+        setTimeout(() => abrirModalCrearSeccion(), 350);
+      }
+
+      // ── MANEJAR VOLVER (revertir si no hay secciones) ─────────────────
+      async function manejarVolver(event) {
+        if (cntTotal === 0) {
+          event.preventDefault();
+          showSpinner();
+          const body = new FormData();
+          body.append('csrfmiddlewaretoken', getCsrf());
+          try {
+            const resp = await fetch(
+              `{% url 'evaluaciones_educativas:validaciones_2026:revertir_sin_secciones' establecimiento.cueanexo %}`,
+              { method: 'POST', body }
+            );
+            const data = await resp.json();
+            const destino = `{% url 'evaluaciones_educativas:validaciones_2026:lista_establecimientos' establecimiento.region %}?sin_secciones={{ establecimiento.cueanexo }}`;
+            window.location.href = destino;
+          } catch(e) {
+            window.location.href = `{% url 'evaluaciones_educativas:validaciones_2026:lista_establecimientos' establecimiento.region %}`;
+          } finally {
+            hideSpinner();
+          }
+        }
+        // Si hay secciones, el link navegará normalmente
+      }
+
+      // ── INICIALIZACIÓN ────────────────────────────────────────────────
+      actualizarContadores();
+      if (cntPendiente === 0 && cntTotal > 0) {
+        document.getElementById('btnValidacionCompleta').disabled = false;
+      }
+      verificarTodasProcesadas();
+      
+      // Si se recarga la página y todas las secciones están deshabilitadas, mostrar modal
+      if (cntTotal > 0 && cntDeshabilitado === cntTotal) {
+        const m = new bootstrap.Modal(document.getElementById('modalTodasDeshabilitadas'));
+        m.show();
+      }
+    </script>
+  </body>
+</html>
