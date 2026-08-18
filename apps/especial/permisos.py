@@ -3,6 +3,7 @@ Control de acceso para las vistas activas del módulo 'especial'.
 """
 
 from functools import wraps
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -16,6 +17,9 @@ from .models import (
     obtener_rol_usuario_especial,
 )
 from .performance import perf_begin, perf_capture_queries, perf_finish, perf_phase
+
+
+logger = logging.getLogger(__name__)
 
 
 def _resolver_permisos_especial(user):
@@ -88,7 +92,20 @@ def especial_required(view_func):
 
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if not _puede_ver_especial_instrumentado(request):
+        with perf_phase(request, "permissions"):
+            permisos = get_permisos_especial_request(request)
+        logger.info(
+            "Autorización Especial: url=%s metodo=%s usuario_id=%s usuario=%s "
+            "rol=%s permiso_evaluado=puede_ver:%s es_admin:%s",
+            request.get_full_path(),
+            request.method,
+            getattr(request.user, "pk", ""),
+            getattr(request.user, "username", ""),
+            permisos.get("rol", ""),
+            permisos.get("puede_ver", False),
+            permisos.get("es_admin", False),
+        )
+        if not permisos["puede_ver"]:
             raise PermissionDenied(
                 "No tenés permisos para acceder al módulo 'especial'."
             )
