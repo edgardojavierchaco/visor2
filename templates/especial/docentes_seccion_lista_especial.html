@@ -68,7 +68,7 @@
                                      <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                      {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                     <input type="hidden" name="accion" value="{% if gestionar_seccion_modo %}baja_docente{% else %}baja{% endif %}">
-                                    <input type="hidden" name="docente_seccion_id" value="{{ asignacion.pk }}">
+                                    <input type="hidden" name="{% if gestionar_seccion_modo %}docente_grupo_id{% else %}docente_seccion_id{% endif %}" value="{{ asignacion.pk }}">
                                     <button class="btn btn-outline-secondary btn-sm" type="submit">
                                          <i class="fa-solid fa-user-minus"></i> Dar de baja
                                      </button>
@@ -79,7 +79,7 @@
                                     <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                     {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                     <input type="hidden" name="accion" value="{% if gestionar_seccion_modo %}alta_docente{% else %}alta{% endif %}">
-                                    <input type="hidden" name="docente_seccion_id" value="{{ asignacion.pk }}">
+                                     <input type="hidden" name="{% if gestionar_seccion_modo %}docente_grupo_id{% else %}docente_seccion_id{% endif %}" value="{{ asignacion.pk }}">
                                     <button class="btn btn-outline-success btn-sm" type="submit">
                                         <i class="fa-solid fa-user-check"></i> Reasignar
                                     </button>

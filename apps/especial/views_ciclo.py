@@ -13,6 +13,7 @@ from .forms import EspecialCicloForm
 from .models import EspecialCiclo
 from .permisos import especial_required, get_permisos_especial_request
 from .services.previsualizacion_anual import origen_anual_previsualizable, prevalidar_generacion_anual
+from .services.baja_docentes import aplicar_traslados_docentes
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 
 
@@ -156,6 +157,7 @@ def administrar_ciclos(request):
                 if form.cleaned_data.get("actual"):
                     EspecialCiclo.objects.filter(actual=True).update(actual=False)
                 ciclo = form.save(user=request.user)
+                aplicar_traslados_docentes(ciclo, request.user)
             messages.success(request, "Ciclo creado correctamente.")
             return _redirect_admin_ciclos(
                 especial_context,

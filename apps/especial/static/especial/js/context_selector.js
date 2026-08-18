@@ -26,10 +26,52 @@
         return scope.querySelector("#id_contexto_cueanexo");
     }
 
+    function findContextForm(root) {
+        if (root && root.matches && root.matches("[data-especial-context-selector]")) return root;
+        var scope = root && root.querySelector ? root : document;
+        var form = scope.querySelector("[data-especial-context-selector]");
+        return form || (scope !== document ? document.querySelector("[data-especial-context-selector]") : null);
+    }
+
+    function selectValue(select) {
+        return select ? String(select.value || "").trim() : "";
+    }
+
+    function syncContextSubmit(form) {
+        if (!form) return;
+        var cueSelect = form.querySelector("#id_contexto_cueanexo");
+        var cicloSelect = form.querySelector("#id_contexto_ciclo");
+        var submitButton = form.querySelector("[data-especial-context-submit]");
+        if (!cueSelect || !cicloSelect || !submitButton) return;
+
+        var unchanged = selectValue(cueSelect) === String(form.dataset.appliedCueanexo || "").trim()
+            && selectValue(cicloSelect) === String(form.dataset.appliedCiclo || "").trim();
+        submitButton.disabled = unchanged;
+    }
+
+    function initContextForm(form) {
+        if (!form) return;
+        if (form.dataset.contextSubmitReady !== "1") {
+            form.dataset.contextSubmitReady = "1";
+            form.addEventListener("change", function (event) {
+                if (event.target.matches("#id_contexto_cueanexo, #id_contexto_ciclo")) {
+                    syncContextSubmit(form);
+                }
+            });
+            form.addEventListener("submit", function (event) {
+                syncContextSubmit(form);
+                var submitButton = form.querySelector("[data-especial-context-submit]");
+                if (submitButton && submitButton.disabled) event.preventDefault();
+            });
+        }
+        syncContextSubmit(form);
+    }
+
     function initSelect(select) {
         if (!select || !window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
         var $select = window.jQuery(select);
         if ($select.data("select2")) return;
+        var form = select.form || select.closest("[data-especial-context-selector]");
 
         $select.select2({
             width: "100%",
@@ -46,6 +88,9 @@
                 var search = document.querySelector(".cef-context-select2-dropdown .select2-search__field");
                 if (search) search.focus();
             }, 0);
+        });
+        $select.on("change.especialContextSelector", function () {
+            syncContextSubmit(form);
         });
     }
 
@@ -64,6 +109,7 @@
     }
 
     function init(root) {
+        initContextForm(findContextForm(root));
         ensureDependencies(findContextSelect(root));
     }
 

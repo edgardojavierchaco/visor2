@@ -1,4 +1,4 @@
-<div class="cef-panel">
+<div class="cef-panel cef-docentes-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Docentes <span>» Gestión de Docentes</span></h2>
         {% if especial_context.puede_operar %}
@@ -17,62 +17,470 @@
     </div>
 </div>
 
+{% include "especial/docente_baja_especial_modal.html" %}
+
 {% include "especial/modal_busqueda_docente_especial.html" %}
 
 <style>
-    .cef-profesor-dropdown-menu {
-        border-color: var(--border-strong);
-        box-shadow: var(--shadow-lg);
-        min-width: 260px;
-        padding: .35rem;
+    .cef-docentes-panel .docentes-table thead th,
+    .cef-docentes-panel .docentes-table tbody td {
+        text-align: center !important;
+        vertical-align: middle !important;
     }
 
-    .cef-profesor-dropdown-menu .dropdown-item {
+    .cef-docentes-panel .docentes-table thead th:has(> .cef-table-control),
+    .cef-docentes-panel .docentes-table thead th:has(> select),
+    .cef-docentes-panel .docentes-table thead th:has(> input) {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .cef-docentes-panel .docentes-table tbody td.docentes-estado-cell {
+        text-align: center;
+    }
+
+    .cef-docentes-panel .docentes-table thead th.docentes-secciones-header,
+    .cef-docentes-panel .docentes-table tbody td.docentes-secciones-cell {
+        text-align: center;
+    }
+
+    .cef-docentes-panel .docentes-table .docentes-secciones-wrap {
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        gap: .3rem;
+        width: 100%;
+    }
+
+    .cef-docentes-panel .docentes-secciones-list {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .35rem;
+        width: 100%;
+        max-width: 250px;
+    }
+
+    .cef-docentes-panel .docentes-secciones-list.is-collapsed .docente-seccion-chip:nth-child(n + 3) {
+        display: none;
+    }
+
+    .cef-docentes-panel .docente-seccion-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        min-height: 36px;
+        padding: .35rem .65rem;
+        border: 1px solid #9bc5ff;
+        border-radius: 9px;
+        background: #fff;
+        color: #075ca8;
+        font-size: .82rem;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .cef-docentes-panel .docente-seccion-chip-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #eaf3ff;
+        color: #1769b0;
+    }
+
+    .cef-docentes-panel .docentes-secciones-toggle {
+        border: 0;
+        background: transparent;
+        color: #075ca8;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .cef-docentes-panel .cef-profesor-dropdown-menu,
+    .cef-docentes-row-actions-portal .cef-profesor-dropdown-menu {
+        width: 240px;
+        min-width: 240px;
+        max-width: 250px;
+        padding: 4px 5px;
+        border: 1px solid #9bb6d5;
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: 0 6px 14px rgba(15, 45, 80, .16);
+        z-index: 1100;
+    }
+
+    .cef-docentes-panel .cef-profesor-dropdown-item,
+    .cef-docentes-row-actions-portal .cef-profesor-dropdown-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+        width: 100%;
+        min-height: 48px;
+        margin: 3px 0;
+        padding: 7px 10px;
+        border: 1px solid #8fb0d5;
+        border-radius: 7px;
+        background: #fff;
+        color: #12345b;
+        line-height: 1.2;
+        text-align: left;
+        text-decoration: none;
+    }
+
+    .cef-docentes-panel .cef-profesor-dropdown-item:hover,
+    .cef-docentes-row-actions-portal .cef-profesor-dropdown-item:hover {
+        background: #eaf3ff;
+        border-color: #1769b0;
+    }
+
+    .cef-docentes-panel .cef-profesor-dropdown-item strong,
+    .cef-docentes-row-actions-portal .cef-profesor-dropdown-item strong {
+        font-size: .88rem;
+        line-height: 1.2;
+        font-weight: 700;
+    }
+
+    .cef-docentes-panel .cef-profesor-dropdown-item small,
+    .cef-docentes-row-actions-portal .cef-profesor-dropdown-item small {
+        color: #64748b;
+        font-size: .76rem;
+        line-height: 1.2;
+    }
+
+    .cef-docentes-panel .docentes-table tbody td.cef-act-cell {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    .cef-docentes-panel .cef-secciones-row-actions {
+        margin-inline: auto;
+        position: relative;
+        width: max-content;
+    }
+
+    .cef-docentes-panel .docentes-table .cef-act-cell .cef-secciones-row-actions {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+    }
+
+    .cef-docentes-panel .cef-docente-modal {
+        position: relative;
+    }
+
+    .cef-docentes-panel .cef-role-no-change-toast {
+        align-items: center;
+        background: #eef6ff;
+        border: 1px solid #8fbbe8;
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(15, 45, 80, .18);
+        color: #174a7c;
+        display: flex;
+        gap: .55rem;
+        left: 50%;
+        max-width: calc(100% - 2rem);
+        padding: .6rem .75rem;
+        position: absolute;
+        top: 4.25rem;
+        transform: translateX(-50%);
+        width: max-content;
+        z-index: 3;
+    }
+
+    .cef-docentes-panel .cef-role-no-change-toast > i {
+        color: #1769b0;
+    }
+
+    .cef-docentes-panel .cef-role-no-change-close {
         background: transparent;
         border: 0;
-        border-radius: var(--r-sm);
-        color: var(--slate-800);
-        display: block;
-        font-size: var(--fs-sm);
-        height: auto;
-        justify-content: flex-start;
-        line-height: 1.25;
-        margin: 0;
+        color: inherit;
+        cursor: pointer;
+        line-height: 1;
+        margin-left: .25rem;
+        padding: .1rem;
+    }
+
+    .cef-docentes-panel .cef-docente-cueanexo-destino {
+        max-width: 290px;
+    }
+
+    .cef-docente-baja-error-overlay {
+        padding: 1rem;
+        z-index: 1095;
+    }
+
+    .cef-docente-baja-error-modal {
+        max-width: 360px;
         min-height: 0;
-        padding: .45rem .55rem;
-        text-align: left;
+        width: min(360px, calc(100vw - 2rem));
+    }
+
+    @media (max-width: 640px) {
+        .cef-docentes-panel .cef-docente-cueanexo-destino {
+            max-width: 100%;
+        }
+    }
+
+    .cef-docentes-panel .cef-secciones-actions-toggle {
+        align-items: center;
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+        display: inline-flex;
+        height: 32px;
+        justify-content: center;
+        margin-right: 0;
+        min-width: 32px;
+        padding: 0;
+        width: 32px;
+    }
+
+    .cef-docentes-panel .cef-secciones-actions-toggle::after {
+        display: none;
+    }
+
+    .cef-docentes-panel .cef-secciones-actions-toggle:hover,
+    .cef-docentes-panel .cef-secciones-actions-toggle:focus-visible {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu,
+    .cef-docentes-row-actions-portal {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 220px;
+        padding: .45rem;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu li + li,
+    .cef-docentes-row-actions-portal li + li {
+        margin-top: .4rem;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu > li,
+    .cef-docentes-row-actions-portal > li {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action,
+    .cef-docentes-panel .cef-row-actions-menu .docentes-action-baja,
+    .cef-docentes-row-actions-portal .cef-secciones-action,
+    .cef-docentes-row-actions-portal .docentes-action-baja {
+        align-items: center;
+        border-radius: var(--r-sm);
+        box-sizing: border-box;
+        display: flex;
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        gap: .5rem;
+        height: 34px;
+        justify-content: flex-start;
+        margin: 0;
+        min-height: 34px;
+        padding: .5rem .65rem;
+        transform: none;
         white-space: normal;
         width: 100%;
     }
 
-    .cef-profesor-dropdown-menu .dropdown-item:hover,
-    .cef-profesor-dropdown-menu .dropdown-item:focus {
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action,
+    .cef-docentes-row-actions-portal .cef-secciones-action {
+        border: 1px solid var(--primary);
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action.is-primary,
+    .cef-docentes-row-actions-portal .cef-secciones-action.is-primary {
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action.is-primary:hover,
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action.is-primary:focus,
+    .cef-docentes-row-actions-portal .cef-secciones-action.is-primary:hover,
+    .cef-docentes-row-actions-portal .cef-secciones-action.is-primary:focus {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+        transform: none;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action.is-outline,
+    .cef-docentes-row-actions-portal .cef-secciones-action.is-outline {
+        background: var(--surface);
+        border-color: var(--primary);
+        color: var(--blue-800);
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action.is-outline:hover,
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action.is-outline:focus,
+    .cef-docentes-row-actions-portal .cef-secciones-action.is-outline:hover,
+    .cef-docentes-row-actions-portal .cef-secciones-action.is-outline:focus {
         background: var(--blue-50);
+        border-color: var(--blue-800);
         color: var(--blue-900);
+        transform: none;
     }
 
-    .cef-profesor-dropdown-menu .dropdown-item.disabled {
+    .cef-docentes-panel .cef-row-actions-menu .cef-secciones-action i,
+    .cef-docentes-panel .cef-row-actions-menu .docentes-action-baja i,
+    .cef-docentes-row-actions-portal .cef-secciones-action i,
+    .cef-docentes-row-actions-portal .docentes-action-baja i {
+        color: inherit;
+        flex: 0 0 1rem;
+        text-align: center;
+        width: 1rem;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .docentes-action-baja,
+    .cef-docentes-row-actions-portal .docentes-action-baja {
+        background: #dc3545;
+        border: 1px solid #dc3545;
+        color: #fff;
+    }
+
+    .cef-docentes-panel .cef-row-actions-menu .docentes-action-baja:hover,
+    .cef-docentes-panel .cef-row-actions-menu .docentes-action-baja:focus-visible,
+    .cef-docentes-row-actions-portal .docentes-action-baja:hover,
+    .cef-docentes-row-actions-portal .docentes-action-baja:focus-visible {
+        background: #bb2d3b;
+        border-color: #b02a37;
+        color: #fff;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] {
+        overflow: hidden;
+        padding: 1rem;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal {
+        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        max-width: 900px;
+        max-height: 80vh;
+        width: min(900px, calc(100vw - 2rem));
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal,
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal-shell,
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal-head,
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal-body {
+        pointer-events: auto;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: 80vh;
+        width: 100%;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-docente-modal-head {
+        gap: .5rem;
+        width: 100%;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignaciones-modal-body {
+        min-height: 0;
+        max-height: calc(80vh - 82px);
+        overflow-y: auto;
+        width: 100%;
+    }
+
+    .cef-asignaciones-list {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card {
+        align-items: center;
         background: var(--surface-soft);
-        color: var(--slate-600);
-        cursor: default;
-        opacity: .85;
+        border: 1px solid var(--border);
+        border-radius: var(--r-sm);
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        padding: .8rem;
     }
 
-    .cef-profesor-dropdown-menu .dropdown-item span,
-    .cef-profesor-dropdown-menu .dropdown-item small {
-        display: block;
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-info {
+        display: grid;
+        gap: .15rem;
+        min-width: 0;
     }
 
-    .cef-profesor-dropdown-menu .dropdown-item small {
-        color: var(--text-faint);
-        font-size: var(--fs-xs);
-        margin-top: .15rem;
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-info strong {
+        color: var(--slate-900);
     }
 
-    .cef-profesor-dropdown-menu .dropdown-item.disabled small {
-        color: var(--green-700);
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-info span {
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-actions,
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-form {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-box {
+        align-items: center;
+        justify-content: center;
+        gap: .35rem;
+        padding: .4rem .5rem;
+        border: 1px solid #b8cbe3;
+        border-radius: 8px;
+        background: #f7fbff;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-box label {
+        margin: 0;
+        color: #12345b;
         font-weight: 700;
+        white-space: nowrap;
     }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-box select,
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-box .btn {
+        min-height: 34px;
+    }
+
+    .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-form select {
+        min-width: 140px;
+    }
+
+    @media (max-width: 640px) {
+        .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-actions,
+        .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-box,
+        .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-form,
+        .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-actions .btn,
+        .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-form select {
+            width: 100%;
+        }
+    }
+
 </style>
 
 <div id="modalAsignarProfesorGrupo" class="cef-docente-overlay{% if asignacion_modal_abierto %} is-open{% endif %}" aria-hidden="{% if asignacion_modal_abierto %}false{% else %}true{% endif %}">
