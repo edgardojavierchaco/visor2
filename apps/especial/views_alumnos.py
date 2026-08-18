@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponseNotAllowed, JsonResponse
@@ -18,16 +18,17 @@ from .forms import (
     EspecialMatriculaCompartidaForm,
 )
 from .models import (
-    PADRON_DB_ALIAS,
     AlumnoSeccion,
     EspecialAlumnoBanco,
-    EspecialPadronOferta,
     SeccionEspecial,
     cueanexo_tiene_oferta_matricula_compartida,
+    get_ofertas_comunes_queryset,
     normalizar_cueanexo,
 )
 from .permisos import especial_required
 from .services.alumnos import (
+    actualizar_matricula_compartida,
+    asegurar_alumno_banco,
     dar_baja_alumno_banco,
 )
 from .views_contexto import contexto_base, render_especial
@@ -133,6 +134,17 @@ def _matricula_compartida_form(data, especial_context, habilitada):
     )
 
 
+def _validar_matricula_compartida_form(form):
+    """Valida el formulario sin exponer fallos técnicos del padrón."""
+    try:
+        if form.is_valid():
+            return True, ""
+    except (OperationalError, ProgrammingError):
+        logger.exception("No se pudo validar la matrícula compartida contra Padrón.")
+        return False, "No se pudo consultar el padrón en este momento."
+    return False, _errores_form(form)
+
+
 def _pk_post(valor):
     try:
         return int(valor or "")
@@ -216,36 +228,45 @@ def _dar_baja_alumno_especial(request, especial_context):
 
 
 def _actualizar_matricula_compartida(request, especial_context, habilitada):
-    """Actualiza solo el banco autorizado después de validar el padrón general."""
+    """Valida el formulario y delega la actualización al servicio de dominio."""
     alumno_banco = _alumno_banco_seguro(
         request.POST.get("alumno_banco_id"),
         especial_context,
     )
     form = _matricula_compartida_form(request.POST, especial_context, habilitada)
-    if not form.is_valid():
-        return False, _errores_form(form), alumno_banco
+    formulario_valido, formulario_error = _validar_matricula_compartida_form(form)
+    if not formulario_valido:
+        return False, formulario_error, alumno_banco
 
     try:
-        with transaction.atomic():
-            alumno_banco = _alumno_banco_seguro(
-                alumno_banco.pk,
-                especial_context,
-                for_update=True,
-            )
-            alumno_banco.matricula_compartida = form.cleaned_data["matricula_compartida"]
-            alumno_banco.actualizado_por = request.user
-            alumno_banco.save()
+        alumno_banco = actualizar_matricula_compartida(
+            alumno_banco=alumno_banco,
+            user=request.user,
+            matricula_compartida=form.cleaned_data["matricula_compartida"],
+            alumno_banco_queryset=_alumnos_banco_queryset(especial_context),
+            padron_queryset=form.padron_queryset,
+        )
     except ValidationError as exc:
         return False, "; ".join(exc.messages), alumno_banco
+    except (OperationalError, ProgrammingError):
+        logger.exception("No se pudo actualizar la matrícula compartida.")
+        return False, "No se pudo consultar el padrón en este momento.", alumno_banco
+    except IntegrityError:
+        logger.exception("No se pudo actualizar la matrícula compartida por integridad.")
+        return (
+            False,
+            "No se pudo actualizar la matrícula compartida por un conflicto de integridad.",
+            alumno_banco,
+        )
 
     return True, "Matrícula compartida actualizada correctamente.", alumno_banco
 
 
 def _serializar_cueanexos_matricula_compartida(request, especial_context):
-    """Busca CUE-Anexos del padrón general, limitados y sin duplicar."""
+    """Busca CUE-Anexos comunes, limitados y sin duplicar."""
     term = (request.GET.get("q") or "").strip()[:80]
     queryset = (
-        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        get_ofertas_comunes_queryset()
         .exclude(cueanexo=especial_context["cueanexo"])
         .exclude(cueanexo__isnull=True)
     )
@@ -260,7 +281,7 @@ def _serializar_cueanexos_matricula_compartida(request, especial_context):
         queryset
         .order_by("cueanexo", "nom_est", "id")
         .distinct("cueanexo")
-        .values("cueanexo", "nom_est")[:20]
+        .values("cueanexo", "nom_est")[:5]
     )
     resultados = []
     vistos = set()
@@ -466,28 +487,18 @@ def _asegurar_alumno_banco(
     user,
     matricula_compartida=None,
 ):
+    """Compatibilidad local que delega el alta en el servicio transaccional."""
     if not alumno or not especial_context["puede_operar"]:
         return None, False, False
     try:
-        existente = EspecialAlumnoBanco.objects.filter(
+        banco, creado = asegurar_alumno_banco(
+            alumno=alumno,
             cueanexo=especial_context["cueanexo"],
             ciclo=especial_context["ciclo"],
-            alumno=alumno,
-            estado=EspecialAlumnoBanco.Estado.ACTIVO,
-        ).first()
-        if existente:
-            return existente, False, False
-        with transaction.atomic():
-            banco = EspecialAlumnoBanco.objects.create(
-                cueanexo=especial_context["cueanexo"],
-                ciclo=especial_context["ciclo"],
-                alumno=alumno,
-                estado=EspecialAlumnoBanco.Estado.ACTIVO,
-                matricula_compartida=matricula_compartida,
-                creado_por=user,
-                actualizado_por=user,
-            )
-            return banco, True, False
+            user=user,
+            matricula_compartida=matricula_compartida,
+        )
+        return banco, creado, False
     except (OperationalError, ProgrammingError):
         return None, False, True
 
@@ -510,8 +521,8 @@ def alumnos(request):
     alumno_banco_actual = None
     matricula_compartida_habilitada = _matricula_compartida_habilitada(especial_context)
     matricula_compartida_error = ""
-    matricula_compartida_opcion = ""
     matricula_compartida_cueanexo = ""
+    matricula_compartida_posted = False
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
     abrir_modal_baja = request.GET.get("abrir_modal_baja") == "1"
     baja_modal_alumno = None
@@ -544,7 +555,7 @@ def alumnos(request):
         alumno = alumno_banco_actual.alumno
         cuil_buscado = _solo_digitos(getattr(alumno, "cuil", ""))
         alumno_en_banco = True
-        matricula_compartida_opcion = request.POST.get("matricula_compartida_opcion", "")
+        matricula_compartida_posted = True
         matricula_compartida_cueanexo = request.POST.get(
             "cueanexo_matricula_compartida",
             "",
@@ -580,30 +591,30 @@ def alumnos(request):
                 especial_context,
                 matricula_compartida_habilitada,
             )
-            matricula_compartida_opcion = request.POST.get(
-                "matricula_compartida_opcion",
-                "",
-            )
+            matricula_compartida_posted = "cueanexo_matricula_compartida" in request.POST
             matricula_compartida_cueanexo = request.POST.get(
                 "cueanexo_matricula_compartida",
                 "",
             )
-            if not matricula_form.is_valid():
-                matricula_compartida_error = _errores_form(matricula_form)
+            formulario_valido, formulario_error = _validar_matricula_compartida_form(
+                matricula_form
+            )
+            if not formulario_valido:
+                matricula_compartida_error = formulario_error
             else:
                 matricula_compartida = matricula_form.cleaned_data["matricula_compartida"]
                 try:
-                    banco, creado, tabla_pendiente = _asegurar_alumno_banco(
-                        alumno,
-                        especial_context,
-                        request.user,
+                    banco, creado = asegurar_alumno_banco(
+                        alumno=alumno,
+                        cueanexo=especial_context["cueanexo"],
+                        ciclo=especial_context["ciclo"],
+                        user=request.user,
                         matricula_compartida=matricula_compartida,
+                        padron_queryset=matricula_form.padron_queryset,
                     )
                     alumno_banco_actual = banco
                     alumno_en_banco = bool(banco)
-                    if tabla_pendiente:
-                        messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
-                    elif creado:
+                    if creado:
                         messages.success(request, "Alumno agregado al banco de Educación Especial.")
                         return redirect(_url_alumnos(especial_context))
                     else:
@@ -611,7 +622,12 @@ def alumnos(request):
                             request,
                             "Ese alumno ya está activo en el banco de este establecimiento y ciclo.",
                         )
-                except (IntegrityError, ValidationError):
+                except ValidationError as exc:
+                    messages.error(request, "; ".join(exc.messages))
+                except (OperationalError, ProgrammingError):
+                    logger.exception("No se pudo crear el banco de alumnos Especial.")
+                    messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
+                except IntegrityError:
                     messages.error(
                         request,
                         "No se pudo agregar el alumno al banco. Verificá que no exista ya activo.",
@@ -654,10 +670,7 @@ def alumnos(request):
         alumnos_banco = []
         alumnos_banco_tabla_pendiente = True
 
-    if alumno_banco_actual and not matricula_compartida_opcion:
-        matricula_compartida_opcion = (
-            "si" if alumno_banco_actual.matricula_compartida else "no"
-        )
+    if alumno_banco_actual and not matricula_compartida_posted:
         matricula_compartida_cueanexo = alumno_banco_actual.matricula_compartida or ""
 
     try:
@@ -714,7 +727,6 @@ def alumnos(request):
                 "especial:buscar_cueanexos_matricula_compartida"
             ),
             "matricula_compartida_error": matricula_compartida_error,
-            "matricula_compartida_opcion": matricula_compartida_opcion,
             "matricula_compartida_cueanexo": matricula_compartida_cueanexo,
         }
     )

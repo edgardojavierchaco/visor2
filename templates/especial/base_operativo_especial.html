@@ -68,7 +68,9 @@
         {% block especial_context_card %}
         <!-- CONTEXT CARD (selector CUE-Anexo / Ciclo) -->
         <section class="cef-context-card">
-            <form method="get" class="cef-context-grid" data-especial-context-selector>
+            <form method="get" class="cef-context-grid" data-especial-context-selector
+                  data-applied-cueanexo="{{ especial_context.cueanexo|default:'' }}"
+                  data-applied-ciclo="{% if especial_context.ciclo %}{{ especial_context.ciclo.pk }}{% endif %}">
                 <div class="cef-context-cueanexo">
                     <label class="cef-context-label" for="id_contexto_cueanexo">Escuela Especial</label>
                     <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
@@ -90,7 +92,7 @@
                     </select>
                 </div>
                 <div class="cef-context-actions">
-                    <button type="submit" class="btn btn-primary btn-sm">
+                    <button type="submit" class="btn btn-primary btn-sm" data-especial-context-submit>
                         <i class="fa-solid fa-check"></i> Aplicar
                     </button>
                     {% if especial_context.es_admin_especial %}

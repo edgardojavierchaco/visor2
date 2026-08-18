@@ -1166,6 +1166,16 @@
         transform: translateY(-1px);
     }
     .btn-primary:active { transform: translateY(0); box-shadow: var(--shadow-xs); }
+    .cef-context-actions .btn-primary:disabled,
+    .cef-context-actions .btn-primary[disabled] {
+        background: var(--slate-200);
+        border-color: var(--slate-300);
+        box-shadow: none;
+        color: var(--slate-500);
+        cursor: not-allowed;
+        opacity: 1;
+        transform: none;
+    }
     .btn-outline-primary {
         border-color: var(--primary);
         border-radius: var(--r-sm);

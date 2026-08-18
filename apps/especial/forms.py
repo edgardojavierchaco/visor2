@@ -19,6 +19,7 @@ from .models import (
     SeccionEspecial,
     SeccionTipo,
     TurnoTipo,
+    cueanexo_tiene_oferta_comun,
     normalizar_cueanexo,
     solo_digitos,
 )
@@ -79,16 +80,6 @@ class EspecialBusquedaDocenteForm(forms.Form):
 class EspecialMatriculaCompartidaForm(forms.Form):
     """Normaliza y valida la matrícula compartida contra el padrón general."""
 
-    OPCIONES = (
-        ("no", "No"),
-        ("si", "Sí"),
-    )
-
-    matricula_compartida_opcion = forms.ChoiceField(
-        choices=OPCIONES,
-        required=False,
-        widget=forms.RadioSelect,
-    )
     cueanexo_matricula_compartida = forms.CharField(
         max_length=30,
         required=False,
@@ -115,34 +106,24 @@ class EspecialMatriculaCompartidaForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        opcion = cleaned_data.get("matricula_compartida_opcion") or ""
+        cueanexo_raw = cleaned_data.get("cueanexo_matricula_compartida") or ""
         cueanexo = normalizar_cueanexo(
-            cleaned_data.get("cueanexo_matricula_compartida")
+            cueanexo_raw
         )
 
-        if not opcion:
-            if self.matricula_compartida_habilitada:
-                self.add_error(
-                    "matricula_compartida_opcion",
-                    "Debe seleccionar No o Sí en Matrícula compartida.",
-                )
-            opcion = "no"
-
-        if opcion == "no":
-            cleaned_data["matricula_compartida"] = None
-            return cleaned_data
-
         if not self.matricula_compartida_habilitada:
-            self.add_error(
-                "matricula_compartida_opcion",
-                "La matrícula compartida no está habilitada para este CUE-Anexo.",
-            )
+            if str(cueanexo_raw).strip():
+                self.add_error(
+                    "cueanexo_matricula_compartida",
+                    "La matrícula compartida no está habilitada para este CUE-Anexo.",
+                )
+            cleaned_data["matricula_compartida"] = None
             return cleaned_data
 
         if not cueanexo:
             self.add_error(
                 "cueanexo_matricula_compartida",
-                "Debe seleccionar un CUE-Anexo asociado o marcar No en Matrícula compartida.",
+                "Este establecimiento tiene oferta Integración y requiere indicar el CUE-Anexo de matrícula compartida.",
             )
             return cleaned_data
 
@@ -153,10 +134,10 @@ class EspecialMatriculaCompartidaForm(forms.Form):
             )
             return cleaned_data
 
-        if not self.padron_queryset.filter(cueanexo=cueanexo).exists():
+        if not cueanexo_tiene_oferta_comun(cueanexo, self.padron_queryset):
             self.add_error(
                 "cueanexo_matricula_compartida",
-                "El CUE-Anexo asociado no existe en el padrón general.",
+                "El CUE-Anexo asociado debe existir en el padrón y tener al menos una oferta Común.",
             )
             return cleaned_data
 
@@ -184,6 +165,85 @@ class EspecialBajaMotivoForm(forms.Form):
         if not motivo:
             raise forms.ValidationError("Debe indicar el motivo de la baja.")
         return motivo
+
+
+class EspecialBajaDocenteForm(forms.Form):
+    """Formulario de baja general y traslado de un docente del banco Especial."""
+
+    MOTIVOS = (
+        ("fallecimiento", "Fallecimiento"),
+        ("finalizacion", "Finalización"),
+        ("renuncia", "Renuncia"),
+        ("jubilacion", "Jubilación"),
+        ("retiro", "Retiro"),
+        ("traslado", "Traslado"),
+    )
+
+    motivo_baja = forms.ChoiceField(label="Motivo de baja", choices=MOTIVOS)
+    observaciones = forms.CharField(
+        label="Observaciones",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    cueanexo_destino = forms.CharField(
+        label="CUE-Anexo de destino",
+        required=False,
+        max_length=9,
+        widget=forms.TextInput(attrs={
+            "class": "form-control cef-docente-cueanexo-destino",
+            "maxlength": "9",
+            "inputmode": "numeric",
+            "pattern": "[0-9]{9}",
+            "placeholder": "Ej.: 220015500",
+        }),
+    )
+    ciclo_destino = forms.ModelChoiceField(
+        label="Ciclo destino",
+        required=False,
+        queryset=EspecialCiclo.objects.filter(cerrado=False).order_by("anio"),
+    )
+
+    def __init__(self, *args, cueanexo_origen="", ciclo_origen=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cueanexo_origen = normalizar_cueanexo(cueanexo_origen)
+        self.ciclo_origen = ciclo_origen
+        siguiente = (
+            EspecialCiclo.objects.filter(anio=ciclo_origen.anio + 1).first()
+            if ciclo_origen
+            else None
+        )
+        if siguiente and not self.is_bound:
+            self.fields["ciclo_destino"].initial = siguiente.pk
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_cueanexo_destino(self):
+        destino = (self.cleaned_data.get("cueanexo_destino") or "").strip()
+        if destino and not re.fullmatch(r"[0-9]{9}", destino):
+            raise forms.ValidationError("El CUE-Anexo debe contener exactamente 9 dígitos numéricos.")
+        return destino
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("motivo_baja") != "traslado":
+            cleaned_data["cueanexo_destino"] = ""
+            cleaned_data["ciclo_destino"] = None
+            return cleaned_data
+        destino = cleaned_data.get("cueanexo_destino")
+        ciclo_destino = cleaned_data.get("ciclo_destino")
+        if not destino:
+            self.add_error("cueanexo_destino", "Indicá el CUE-Anexo de destino.")
+        elif destino == self.cueanexo_origen:
+            self.add_error("cueanexo_destino", "El destino debe ser distinto del origen.")
+        elif not EspecialPadronOferta.objects.using(PADRON_DB_ALIAS).filter(
+            cueanexo=destino
+        ).exists():
+            self.add_error("cueanexo_destino", "El CUE-Anexo ingresado no existe.")
+        if not ciclo_destino:
+            self.add_error("ciclo_destino", "Seleccioná el ciclo destino.")
+        elif self.ciclo_origen and ciclo_destino.anio <= self.ciclo_origen.anio:
+            self.add_error("ciclo_destino", "El ciclo destino debe ser posterior al de origen.")
+        return cleaned_data
 
 
 class EspecialSeccionForm(forms.ModelForm):
@@ -359,9 +419,18 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.rol_sin_cambios = False
         
         if not self.is_bound and not getattr(self.instance, "pk", None):
             self.fields["fecha_desde"].initial = timezone.localdate
             
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        rol = cleaned_data.get("rol")
+        self.rol_sin_cambios = bool(
+            self.instance.pk and rol and rol == self.instance.rol
+        )
+        return cleaned_data

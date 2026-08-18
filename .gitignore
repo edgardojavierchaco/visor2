@@ -15,6 +15,10 @@ staticfiles/
 
 .env
 
+# Entornos virtuales locales
+venv/
+venv_backup*/
+
 #Con esta linea se ignoran los archivos de producción que no deben subirse al repositorio
 #productionfiles/*
 

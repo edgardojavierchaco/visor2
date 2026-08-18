@@ -245,6 +245,9 @@
 
     function openBaja(trigger) {
         if (activeBajaRequest) return;
+        if (window.EspecialDropdowns && typeof window.EspecialDropdowns.closeForElement === "function") {
+            window.EspecialDropdowns.closeForElement(trigger);
+        }
         var modal = document.getElementById("modalBajaAlumnoEspecial");
         var url = new URL(trigger.href, window.location.href);
         if (!modal || url.origin !== window.location.origin || !showBajaLoading(modal)) {
@@ -329,54 +332,207 @@
         return editors;
     }
 
-    function syncMatriculaEditor(editor) {
-        if (!editor) return;
-        var selected = editor.querySelector("input[name='matricula_compartida_opcion']:checked");
-        var cueWrap = editor.querySelector("[data-especial-matricula-cue-wrap]");
-        if (cueWrap) cueWrap.hidden = !(selected && selected.value === "si");
-    }
-
     function updateMatriculaSave(editor) {
         if (!editor) return;
         var form = editor.querySelector("[data-especial-matricula-update-form]");
         var saveButton = form && form.querySelector("[data-especial-matricula-save]");
         if (!form || !saveButton) return;
-        var selected = form.querySelector("input[name='matricula_compartida_opcion']:checked");
         var cueSelect = form.querySelector("[data-especial-matricula-cue-select]");
-        var currentOption = selected ? selected.value : "no";
-        var currentCue = currentOption === "si" && cueSelect ? String(cueSelect.value || "").trim() : "";
-        var initialOption = form.dataset.initialOption || "no";
-        var initialCue = initialOption === "si" ? String(form.dataset.initialCue || "").trim() : "";
-        saveButton.hidden = currentOption === initialOption && currentCue === initialCue;
+        var currentCue = cueSelect ? String(cueSelect.value || "").trim() : "";
+        var initialCue = String(form.dataset.initialCue || "").trim();
+        saveButton.hidden = currentCue === initialCue;
+    }
+
+    function syncMatriculaAlta(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        if (root && root.closest && root.closest("tr")) scope = root.closest("tr");
+        var buttons = [];
+        if (scope.matches && scope.matches("[data-especial-matricula-alta-submit]")) buttons.push(scope);
+        if (scope.querySelectorAll) {
+            Array.prototype.push.apply(
+                buttons,
+                scope.querySelectorAll("[data-especial-matricula-alta-submit]")
+            );
+        }
+        buttons.forEach(function (button) {
+            var row = button.closest("tr");
+            var cueSelect = row && row.querySelector("[data-especial-matricula-cue-select]");
+            if (!cueSelect) return;
+            button.disabled = !String(cueSelect.value || "").trim();
+        });
+    }
+
+    function matriculaCueParts(data) {
+        var cueanexo = String(data && data.id || "").trim();
+        var text = String(data && data.text || "").trim();
+        var separator = " — ";
+        var separatorIndex = text.indexOf(separator);
+        var nombre = separatorIndex >= 0
+            ? text.slice(separatorIndex + separator.length).trim()
+            : "";
+        if (!nombre && text && text !== cueanexo) nombre = text;
+        return { cueanexo: cueanexo, nombre: nombre };
+    }
+
+    function renderMatriculaCue(data, selection) {
+        var parts = matriculaCueParts(data);
+        var label = document.createElement("span");
+        label.className = "cef-matricula-compartida-label" + (selection ? " is-selection" : "");
+
+        var cue = document.createElement("span");
+        cue.className = "cef-matricula-compartida-cue";
+        cue.textContent = parts.cueanexo;
+        label.appendChild(cue);
+
+        if (parts.nombre) {
+            var separator = document.createElement("span");
+            separator.className = "cef-matricula-compartida-separator";
+            separator.setAttribute("aria-hidden", "true");
+            separator.textContent = "—";
+            label.appendChild(separator);
+
+            var nombre = document.createElement("span");
+            nombre.className = "cef-matricula-compartida-name";
+            nombre.title = parts.nombre;
+            nombre.textContent = parts.nombre;
+            label.appendChild(nombre);
+        }
+        return label;
+    }
+
+    function renderMatriculaResult(data) {
+        if (data.loading) return data.text;
+        return renderMatriculaCue(data, false);
+    }
+
+    function renderMatriculaSelection(data) {
+        if (!data.id) return data.text;
+        return renderMatriculaCue(data, true);
+    }
+
+    function normalizeMatriculaSearchTerm(term) {
+        var normalized = String(term || "");
+        return /^\d+$/.test(normalized) ? normalized.slice(0, 9) : normalized;
+    }
+
+    function preventMatriculaNumericOverflow(event) {
+        var input = event && event.currentTarget;
+        var inserted = String(event && event.data || "");
+        if (!input || !/^\d$/.test(inserted) || !/^\d*$/.test(input.value)) return;
+        var start = input.selectionStart == null ? input.value.length : input.selectionStart;
+        var end = input.selectionEnd == null ? start : input.selectionEnd;
+        var nextValue = input.value.slice(0, start) + inserted + input.value.slice(end);
+        if (nextValue.length > 9) event.preventDefault();
+    }
+
+    function sanitizeMatriculaSearchInput(input) {
+        if (!input) return;
+        var value = String(input.value || "");
+        if (/^\d+$/.test(value) && value.length > 9) {
+            value = value.slice(0, 9);
+            input.value = value;
+        }
+        if (/^\d+$/.test(value)) input.setAttribute("inputmode", "numeric");
+        else input.removeAttribute("inputmode");
+    }
+
+    function centerMatriculaDropdown(select) {
+        var fieldContainer = select && select.nextElementSibling;
+        var dropdown = document.querySelector(
+            ".cef-matricula-compartida-dropdown.select2-dropdown"
+        );
+        if (!fieldContainer || !fieldContainer.classList.contains("select2") || !dropdown) return;
+
+        dropdown.style.transform = "none";
+        var fieldRect = fieldContainer.getBoundingClientRect();
+        var dropdownRect = dropdown.getBoundingClientRect();
+        var viewportPadding = 16;
+        var centeredLeft = fieldRect.left + (fieldRect.width - dropdownRect.width) / 2;
+        var maxLeft = window.innerWidth - viewportPadding - dropdownRect.width;
+        var clampedLeft = Math.min(Math.max(centeredLeft, viewportPadding), maxLeft);
+        dropdown.style.transform = "translateX(" + Math.round(clampedLeft - dropdownRect.left) + "px)";
     }
 
     function initMatricula(root) {
         var editors = matriculaEditors(root);
         editors.forEach(function (editor) {
-            syncMatriculaEditor(editor);
             updateMatriculaSave(editor);
         });
+        syncMatriculaAlta(root);
         if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
         editors.forEach(function (editor) {
             var cueSelect = editor.querySelector("[data-especial-matricula-cue-select]");
             if (!cueSelect) return;
             var $cueSelect = window.jQuery(cueSelect);
             if ($cueSelect.data("select2")) return;
-            var dropdownParent = cueSelect.closest(".cef-modal");
+            var dropdownParent = cueSelect.closest(".cef-overlay");
+            if (!dropdownParent) dropdownParent = cueSelect.closest(".cef-modal");
+            var searchState = {
+                hasResults: false,
+                lastResults: [],
+                lastTerm: "",
+                selectedId: String(cueSelect.value || "").trim(),
+                openingWithCache: false,
+                restoreLastTerm: false
+            };
+            var boundSearchField = null;
+            var suppressClearOpen = false;
+            var onSearchBeforeInput = function (event) {
+                preventMatriculaNumericOverflow(event);
+            };
+            var onSearchInput = function (event) {
+                var input = event.currentTarget;
+                sanitizeMatriculaSearchInput(input);
+                if (searchState.selectedId && String(input.value || "") !== searchState.selectedId) {
+                    searchState.selectedId = "";
+                }
+            };
             $cueSelect.select2({
                 width: "100%",
                 allowClear: true,
                 minimumInputLength: 0,
                 minimumResultsForSearch: 0,
-                placeholder: "Buscar CUE-Anexo o establecimiento",
+                placeholder: "Buscar CUE-Anexo...",
                 dropdownParent: dropdownParent ? window.jQuery(dropdownParent) : undefined,
                 dropdownCssClass: "cef-matricula-compartida-dropdown",
+                templateResult: renderMatriculaResult,
+                templateSelection: renderMatriculaSelection,
                 ajax: {
                     url: cueSelect.dataset.autocompleteUrl,
                     dataType: "json",
                     delay: 250,
                     data: function (params) {
-                        return { q: params.term || "", cueanexo: cueSelect.dataset.currentCue || "" };
+                        return {
+                            q: normalizeMatriculaSearchTerm(params.term),
+                            cueanexo: cueSelect.dataset.currentCue || ""
+                        };
+                    },
+                    transport: function (options, success, failure) {
+                        var term = normalizeMatriculaSearchTerm(options.data && options.data.q);
+                        if (searchState.openingWithCache && searchState.hasResults) {
+                            term = searchState.lastTerm;
+                        }
+                        searchState.openingWithCache = false;
+                        options.data = options.data || {};
+                        options.data.q = term;
+
+                        if (searchState.hasResults && term === searchState.lastTerm) {
+                            success({ results: searchState.lastResults.slice() });
+                            return { abort: function () {} };
+                        }
+                        searchState.hasResults = false;
+                        searchState.lastResults = [];
+
+                        var request = window.jQuery.ajax(options);
+                        request.done(function (data) {
+                            var results = data && Array.isArray(data.results) ? data.results.slice() : [];
+                            searchState.lastTerm = term;
+                            searchState.lastResults = results;
+                            searchState.hasResults = true;
+                            success({ results: results });
+                        });
+                        request.fail(failure);
+                        return request;
                     },
                     processResults: function (data) {
                         return { results: Array.isArray(data.results) ? data.results : [] };
@@ -384,15 +540,54 @@
                 },
                 language: {
                     noResults: function () { return "No se encontraron CUE-Anexos."; },
+                    removeAllItems: function () { return "Limpiar selección"; },
                     searching: function () { return "Buscando..."; }
                 }
             });
-            $cueSelect.on("change.especialMatricula", function () { updateMatriculaSave(editor); });
+            $cueSelect.on("change.especialMatricula", function () {
+                updateMatriculaSave(editor);
+                syncMatriculaAlta(editor);
+            });
+            $cueSelect.on("select2:select.especialMatricula", function (event) {
+                var data = event.params && event.params.data;
+                searchState.selectedId = data && data.id ? String(data.id).trim() : "";
+            });
+            $cueSelect.on("select2:clear.especialMatricula", function () {
+                searchState.selectedId = "";
+                var select2 = $cueSelect.data("select2");
+                suppressClearOpen = !select2 || !select2.isOpen();
+            });
+            $cueSelect.on("select2:opening.especialMatricula", function (event) {
+                if (suppressClearOpen) {
+                    suppressClearOpen = false;
+                    event.preventDefault();
+                    return;
+                }
+                searchState.openingWithCache = searchState.hasResults;
+                searchState.restoreLastTerm = searchState.hasResults || Boolean(searchState.selectedId);
+            });
             $cueSelect.on("select2:open.especialMatricula", function () {
-                var searchField = document.querySelector(".select2-container--open .select2-search__field");
-                if (searchField) searchField.setAttribute("placeholder", "Buscar...");
+                var searchField = document.querySelector(".cef-matricula-compartida-dropdown .select2-search__field");
+                if (!searchField) return;
+                if (searchState.restoreLastTerm) {
+                    searchField.value = searchState.selectedId || searchState.lastTerm;
+                }
+                searchField.setAttribute("placeholder", "Buscar...");
+                sanitizeMatriculaSearchInput(searchField);
+                if (boundSearchField !== searchField) {
+                    if (boundSearchField) {
+                        boundSearchField.removeEventListener("beforeinput", onSearchBeforeInput, true);
+                        boundSearchField.removeEventListener("input", onSearchInput, true);
+                    }
+                    boundSearchField = searchField;
+                    boundSearchField.addEventListener("beforeinput", onSearchBeforeInput, true);
+                    boundSearchField.addEventListener("input", onSearchInput, true);
+                }
+                centerMatriculaDropdown(cueSelect);
+                searchState.restoreLastTerm = false;
             });
             updateMatriculaSave(editor);
+            syncMatriculaAlta(editor);
         });
     }
 
@@ -452,12 +647,11 @@
         });
         document.addEventListener("submit", submitModalForm);
         document.addEventListener("change", function (event) {
-            var option = event.target.matches("[data-especial-matricula-editor] input[name='matricula_compartida_opcion']");
             var cue = event.target.matches("[data-especial-matricula-cue-select]");
-            if (!option && !cue) return;
+            if (!cue) return;
             var editor = event.target.closest("[data-especial-matricula-editor]");
-            if (option) syncMatriculaEditor(editor);
             updateMatriculaSave(editor);
+            syncMatriculaAlta(editor || event.target);
         });
         document.addEventListener("focusin", function (event) {
             if (event.target.matches("[data-especial-matricula-cue-select]")) {

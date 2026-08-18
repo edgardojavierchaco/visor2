@@ -16,7 +16,8 @@ from apps.bnhalumnos.models import Alumno
 ACRONIMO_ESPECIAL = "EEE"
 LONGITUD_CUEANEXO = 9
 PADRON_DB_ALIAS = "default"
-OFERTA_MATRICULA_COMPARTIDA = "Especial - Integración"
+PREFIJO_OFERTA_COMUN = "Común -"
+TERMINO_MATRICULA_COMPARTIDA = "integracion"
 ROLES_AUTORIZADOS_ESPECIAL = {
     "Administrador",
     "Director",
@@ -148,23 +149,52 @@ def normalizar_cueanexo(valor):
     return cueanexo
 
 
+def get_ofertas_comunes_queryset(padron_queryset=None):
+    """Obtiene solo filas del Padrón cuya oferta comienza con Común -."""
+    queryset = (
+        padron_queryset
+        if padron_queryset is not None
+        else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    )
+    return queryset.filter(oferta__istartswith=PREFIJO_OFERTA_COMUN)
+
+
+def cueanexo_tiene_oferta_comun(cueanexo, padron_queryset=None):
+    """Indica si el CUE-Anexo normalizado tiene alguna oferta Común."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    return get_ofertas_comunes_queryset(padron_queryset).filter(
+        cueanexo=cueanexo
+    ).exists()
+
+
 def _normalizar_oferta_matricula_compartida(valor):
-    """Normaliza únicamente el formato tipográfico de una oferta de Padrón."""
+    """Genera una clave canónica para comparar ofertas de Padrón."""
     oferta = unicodedata.normalize("NFKC", str(valor or ""))
-    oferta = oferta.translate(
-        str.maketrans(
-            {
-                "‐": "-",
-                "‑": "-",
-                "‒": "-",
-                "–": "-",
-                "—": "-",
-                "−": "-",
-            }
-        )
+    caracteres = []
+    for caracter in oferta:
+        categoria = unicodedata.category(caracter)
+        if categoria == "Cf":
+            continue
+        if caracter.isspace():
+            caracteres.append(" ")
+        elif categoria == "Pd" or caracter == "\N{MINUS SIGN}":
+            caracteres.append("-")
+        else:
+            caracteres.append(caracter)
+
+    oferta = unicodedata.normalize(
+        "NFKD",
+        "".join(caracteres).casefold(),
+    )
+    oferta = "".join(
+        caracter
+        for caracter in oferta
+        if unicodedata.category(caracter) != "Mn"
     )
     oferta = re.sub(r"\s+", " ", oferta).strip()
-    return re.sub(r"\s*-\s*", " - ", oferta)
+    return re.sub(r"(?:\s*-\s*)+", " ", oferta).strip()
 
 
 def normalizar_cuil_usuario(user):
@@ -222,21 +252,24 @@ def get_datos_establecimiento_especial(cueanexo):
 
 
 def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
-    """Indica si el CUE tiene exactamente la oferta que habilita la matrícula compartida."""
+    """Indica si un CUE EEE tiene una oferta con Integración independiente."""
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
         return False
-    ofertas = (
-        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    ofertas_eee = list(
+        get_escuelas_especiales_base_queryset()
         .filter(cueanexo=cueanexo)
         .values_list("oferta", flat=True)
     )
-    objetivo = _normalizar_oferta_matricula_compartida(
-        OFERTA_MATRICULA_COMPARTIDA
+    termino = _normalizar_oferta_matricula_compartida(
+        TERMINO_MATRICULA_COMPARTIDA
     )
     return any(
-        _normalizar_oferta_matricula_compartida(oferta) == objetivo
-        for oferta in ofertas
+        re.search(
+            r"\b" + re.escape(termino) + r"\b",
+            _normalizar_oferta_matricula_compartida(oferta),
+        )
+        for oferta in ofertas_eee
     )
 
 
@@ -1005,3 +1038,70 @@ class DocenteSeccion(EspecialAuditoriaMixin):
     def __str__(self):
         docente = self.docente_nombre_snapshot or self.docente_cuil
         return f"{self.seccion} - {self.get_rol_display()} - {docente}"
+
+
+class EspecialTrasladoDocente(EspecialAuditoriaMixin):
+    """Traslado de un docente entre CUE-Anexos pendiente de aplicar al ciclo destino."""
+
+    class Estado(models.TextChoices):
+        EN_TRANSITO = "en_transito", "En tránsito"
+        APLICADO = "aplicado", "Aplicado"
+        CANCELADO = "cancelado", "Cancelado"
+
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True)
+    cueanexo_origen = models.CharField(max_length=9, db_index=True)
+    cueanexo_destino = models.CharField(max_length=9, db_index=True)
+    ciclo_origen = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="traslados_docentes_origen",
+    )
+    ciclo_destino = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="traslados_docentes_destino",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.EN_TRANSITO,
+        db_index=True,
+    )
+    fecha_solicitud = models.DateField(default=timezone.localdate)
+    fecha_aplicacion = models.DateField(blank=True, null=True)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."traslado_docente"'
+        constraints = [
+            models.UniqueConstraint(
+                fields=["docente_cuil", "cueanexo_destino", "ciclo_destino"],
+                condition=Q(estado="en_transito"),
+                name="uq_esp_traslado_docente_transito",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo_destino", "ciclo_destino", "estado"], name="idx_esp_tras_doc_dest"),
+        ]
+
+    def clean(self):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.cueanexo_origen = normalizar_cueanexo(self.cueanexo_origen)
+        self.cueanexo_destino = normalizar_cueanexo(self.cueanexo_destino)
+        errors = {}
+        if len(self.docente_cuil) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        if not self.cueanexo_origen:
+            errors["cueanexo_origen"] = "El CUE-Anexo de origen es obligatorio."
+        if not self.cueanexo_destino:
+            errors["cueanexo_destino"] = "El CUE-Anexo de destino es obligatorio."
+        if self.cueanexo_origen and self.cueanexo_origen == self.cueanexo_destino:
+            errors["cueanexo_destino"] = "El CUE-Anexo de destino debe ser distinto del origen."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
