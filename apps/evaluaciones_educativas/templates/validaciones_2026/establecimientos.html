@@ -584,12 +584,11 @@
               Seleccioná la cabecera correspondiente. Podés buscar por nombre, localidad o dirección.
             </p>
             <input type="text" class="cabecera-search" id="cabeceraSearch"
-                   placeholder="&#xF52A;  Buscar cabecera..." oninput="filtrarCabeceras()" />
+                   placeholder="Buscar cabecera..." oninput="filtrarCabeceras()" />
             <div class="tabla-cabeceras-wrap">
               <table class="tabla-cabeceras" id="tablaCabeceras">
                 <thead>
                   <tr>
-                    <th>Cód. Depto.</th>
                     <th>Nombre</th>
                     <th>Localidad</th>
                     <th>Dirección</th>
@@ -600,7 +599,6 @@
                   <tr onclick="seleccionarCabecera({{ cab.pk }}, '{{ cab.nombre_cabecera|escapejs }}', '{{ cab.localidad|default:''|escapejs }}', '{{ cab.codigo_departamento|default:''|escapejs }}', '{{ cab.direccion|default:''|escapejs }}')"
                       data-search="{{ cab.nombre_cabecera|lower }} {{ cab.localidad|default:''|lower }} {{ cab.direccion|default:''|lower }} {{ cab.codigo_departamento|default:''|lower }}"
                       id="cabRow-{{ cab.pk }}">
-                    <td>{{ cab.codigo_departamento|default:"—" }}</td>
                     <td class="fw-semibold">{{ cab.nombre_cabecera }}</td>
                     <td>{{ cab.localidad|default:"—" }}</td>
                     <td>{{ cab.direccion|default:"—" }}</td>
