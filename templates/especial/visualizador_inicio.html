@@ -1,32 +1,156 @@
 {% extends "especial/base_operativo_especial.html" %}
 
+{% block especial_header_title %}Visualizador{% endblock %}
+{% block especial_subtitle %}Consultá globalmente alumnos, docentes y directores del módulo Especial.{% endblock %}
+
 {% block especial_context_card %}{% endblock %}
 
 {% block especial_content %}
 <style>
-    .especial-visualizador-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    @media (max-width: 767.98px) { .especial-visualizador-grid { grid-template-columns: 1fr; } }
-</style>
-<section class="mb-4">
-    <h2 class="especial-home-section-title">¿Qué desea visualizar?</h2>
-    <p class="text-muted">Seleccione el tipo de persona que desea consultar.</p>
-</section>
+    .especial-visualizador-page {
+        margin: 0 auto;
+        max-width: 1180px;
+    }
 
-<div class="especial-visualizador-grid">
-    <article class="especial-home-card">
-        <span class="especial-home-icon"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></span>
-        <h2>Alumnos</h2><p>Consultar las secciones e inscripciones de un alumno.</p>
-        <a class="btn btn-primary btn-sm mt-auto" href="{% url 'especial:visualizador_detalle_alumno' %}">Visualizar</a>
-    </article>
-    <article class="especial-home-card">
-        <span class="especial-home-icon"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></span>
-        <h2>Docentes</h2><p>Consultar las secciones y asignaciones de un docente.</p>
-        <a class="btn btn-primary btn-sm mt-auto" href="{% url 'especial:visualizador_detalle_docente' %}">Visualizar</a>
-    </article>
-    <article class="especial-home-card">
-        <span class="especial-home-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
-        <h2>Directores</h2><p>Consultar las escuelas relacionadas a un CUIL.</p>
-        <a class="btn btn-primary btn-sm mt-auto" href="{% url 'especial:visualizador_detalle_director' %}">Visualizar</a>
-    </article>
+    .especial-visualizador-intro {
+        margin-bottom: 1.25rem;
+    }
+
+    .especial-visualizador-section-title {
+        align-items: center;
+        color: var(--primary-dark);
+        display: flex;
+        font-size: 1rem;
+        font-weight: 800;
+        gap: .65rem;
+        letter-spacing: .01em;
+        margin: 0 0 .45rem;
+        text-transform: uppercase;
+    }
+
+    .especial-visualizador-section-title::after {
+        background: #d5dde7;
+        content: "";
+        flex: 1;
+        height: 1px;
+    }
+
+    .especial-visualizador-description {
+        color: var(--slate-600);
+        font-size: .95rem;
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .especial-visualizador-grid {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .especial-visualizador-card {
+        background: #fff;
+        border: 1.5px solid #d5dde7;
+        border-top: 4px solid var(--primary);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        min-height: 285px;
+        padding: 1.5rem;
+        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .especial-visualizador-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-3px);
+    }
+
+    .especial-visualizador-card:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45, 125, 210, .18), var(--shadow-md);
+    }
+
+    .especial-visualizador-icon {
+        align-items: center;
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-md);
+        color: var(--primary-dark);
+        display: inline-flex;
+        font-size: 2rem;
+        height: 64px;
+        justify-content: center;
+        margin-bottom: 1.15rem;
+        width: 64px;
+    }
+
+    .especial-visualizador-card h2 {
+        color: var(--primary-dark);
+        font-size: 1.25rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0 0 .55rem;
+    }
+
+    .especial-visualizador-card p {
+        color: var(--slate-600);
+        font-size: .95rem;
+        font-weight: 500;
+        line-height: 1.5;
+        margin: 0 0 1.35rem;
+    }
+
+    .especial-visualizador-card .btn {
+        align-self: flex-start;
+        margin-top: auto;
+        min-width: 112px;
+    }
+
+    @media (max-width: 991.98px) {
+        .especial-visualizador-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .especial-visualizador-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .especial-visualizador-card {
+            min-height: 0;
+            padding: 1.25rem;
+        }
+    }
+</style>
+
+<div class="especial-visualizador-page">
+    <section class="especial-visualizador-intro" aria-labelledby="especial-visualizador-opciones">
+        <h2 id="especial-visualizador-opciones" class="especial-visualizador-section-title">Elegí qué querés consultar</h2>
+        <p class="especial-visualizador-description">Seleccioná una opción para acceder a la información global del módulo Especial.</p>
+    </section>
+
+    <section class="especial-visualizador-grid" aria-label="Opciones de visualización">
+        <article class="especial-visualizador-card">
+            <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-user-graduate"></i></span>
+            <h2>Alumnos</h2>
+            <p>Consultar las secciones e inscripciones de un alumno.</p>
+            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_alumnos' %}">Visualizar</a>
+        </article>
+        <article class="especial-visualizador-card">
+            <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-chalkboard-user"></i></span>
+            <h2>Docentes</h2>
+            <p>Consultar las secciones y asignaciones de un docente.</p>
+            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_docentes' %}">Visualizar</a>
+        </article>
+        <article class="especial-visualizador-card">
+            <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-user-tie"></i></span>
+            <h2>Directores</h2>
+            <p>Consultar las escuelas relacionadas a un CUIL.</p>
+            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_detalle_director' %}">Visualizar</a>
+        </article>
+    </section>
 </div>
 {% endblock %}

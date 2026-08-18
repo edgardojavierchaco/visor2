@@ -32,6 +32,8 @@ urlpatterns = [
         name="visualizacion_localizaciones",
     ),
     path("visualizador/", views_visualizador.visualizador_inicio, name="visualizador_inicio"),
+    path("visualizador/alumnos/", views_visualizador.visualizador_alumnos, name="visualizador_alumnos"),
+    path("visualizador/docentes/", views_visualizador.visualizador_docentes, name="visualizador_docentes"),
     path("visualizador/detalle/alumno/", views_visualizador.visualizador_detalle_alumno, name="visualizador_detalle_alumno"),
     path("visualizador/detalle/docente/", views_visualizador.visualizador_detalle_docente, name="visualizador_detalle_docente"),
     path("visualizador/detalle/director/", views_visualizador.visualizador_detalle_director, name="visualizador_detalle_director"),

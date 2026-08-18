@@ -1,20 +1,251 @@
 {% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_header_title %}Detalle de alumno{% endblock %}
+{% block especial_subtitle %}Información personal e historial completo de Educación Especial.{% endblock %}
 {% block especial_context_card %}{% endblock %}
+
 {% block especial_content %}
-<div class="cef-panel-actions mb-3">
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:visualizador_inicio' %}"><i class="fa-solid fa-arrow-left me-1"></i>Volver</a>
+<style>
+    .especial-visualizador-detalle {
+        margin: 0 auto;
+        max-width: 1400px;
+    }
+
+    .especial-visualizador-detalle .cef-panel {
+        margin-bottom: 1rem;
+    }
+
+    .especial-visualizador-detalle .cef-panel-title {
+        align-items: center;
+        display: flex;
+        gap: .55rem;
+    }
+
+    .especial-visualizador-detalle .cef-panel-title i {
+        color: var(--primary);
+    }
+
+    .especial-visualizador-datos {
+        display: grid;
+        gap: .75rem 1.25rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .especial-visualizador-dato {
+        border-bottom: 1px solid var(--slate-200);
+        min-width: 0;
+        padding-bottom: .6rem;
+    }
+
+    .especial-visualizador-dato span {
+        color: var(--slate-500);
+        display: block;
+        font-size: .75rem;
+        font-weight: 700;
+        margin-bottom: .15rem;
+        text-transform: uppercase;
+    }
+
+    .especial-visualizador-dato strong {
+        color: var(--slate-900);
+        overflow-wrap: anywhere;
+    }
+
+    .especial-visualizador-detalle table th {
+        white-space: nowrap;
+    }
+
+    .especial-visualizador-detalle table td {
+        min-width: 120px;
+        vertical-align: top;
+    }
+
+    .especial-visualizador-docentes {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+        min-width: 170px;
+    }
+
+    .especial-visualizador-docente {
+        color: var(--slate-800);
+        font-size: .82rem;
+    }
+
+    .especial-visualizador-docente small {
+        color: var(--slate-500);
+        display: block;
+    }
+
+    .especial-visualizador-nota {
+        color: var(--slate-600);
+        font-size: .82rem;
+        margin-top: 1rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .especial-visualizador-datos {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .especial-visualizador-datos {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="especial-visualizador-detalle">
+    <div class="cef-panel-actions mb-3">
+        <a class="btn btn-outline-secondary btn-sm" href="{% if modo_prueba %}{% url 'especial:visualizador_alumnos' %}?modo=prueba{% else %}{% url 'especial:visualizador_alumnos' %}{% endif %}"><i class="fa-solid fa-arrow-left me-1"></i>Volver al listado</a>
+    </div>
+
+    <section class="cef-panel">
+        <div class="cef-panel-head">
+            <h2 class="cef-panel-title"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>Buscar alumno por CUIL</h2>
+        </div>
+        <div class="cef-panel-body">
+            <form method="get" class="row g-2" role="search">
+                {% if modo_prueba %}<input type="hidden" name="modo" value="prueba">{% endif %}
+                <div class="col-sm-9">
+                    <label class="form-label" for="id_cuil_alumno">CUIL del alumno</label>
+                    <input id="id_cuil_alumno" class="form-control" name="cuil" value="{{ cuil_buscado }}" inputmode="numeric" maxlength="13" placeholder="20-12345678-9">
+                </div>
+                <div class="col-sm-3 d-flex align-items-end">
+                    <button class="btn btn-primary btn-sm w-100" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Buscar</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    {% if consulta_error %}
+        <div class="alert alert-warning" role="alert">{{ consulta_error }}</div>
+    {% endif %}
+
+    {% if persona_datos %}
+        <section class="cef-panel">
+            <div class="cef-panel-head">
+                <h2 class="cef-panel-title"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Datos personales</h2>
+                {% if persona_datos.en_bnh_personas %}<span class="badge bg-success">Información vinculada</span>{% else %}<span class="badge bg-secondary">Información parcial</span>{% endif %}
+            </div>
+            <div class="cef-panel-body">
+                <div class="especial-visualizador-datos">
+                    <div class="especial-visualizador-dato"><span>ID</span><strong>{{ persona_datos.id|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Apellido</span><strong>{{ persona_datos.apellido|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Nombre</span><strong>{{ persona_datos.nombre|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Tipo de documento</span><strong>{{ persona_datos.tipo_documento|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Nro. de documento</span><strong>{{ persona_datos.nro_documento|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>CUIL</span><strong>{{ persona_datos.cuil|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Fecha de nacimiento</span><strong>{{ persona_datos.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Sexo</span><strong>{{ persona_datos.sexo|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Estado civil</span><strong>{{ persona_datos.est_civil|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Lugar de nacimiento</span><strong>{{ persona_datos.lugar_nacimiento|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Localidad de nacimiento</span><strong>{{ persona_datos.localidad_nacimiento|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Provincia de nacimiento</span><strong>{{ persona_datos.provincia_nacimiento|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>País de nacimiento</span><strong>{{ persona_datos.pais_nacimiento|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Email</span><strong>{{ persona_datos.email|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Teléfono</span><strong>{{ persona_datos.telefono|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Teléfono normalizado</span><strong>{{ persona_datos.telefono_normalizado|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Es celular</span><strong>{% if persona_datos.es_celular %}Sí{% else %}No{% endif %}</strong></div>
+                    <div class="especial-visualizador-dato"><span>WhatsApp</span><strong>{% if persona_datos.whatsapp %}Sí{% else %}No{% endif %}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Localidad de residencia</span><strong>{{ persona_datos.localidad_residencia|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Provincia de residencia</span><strong>{{ persona_datos.provincia_residencia|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>País de residencia</span><strong>{{ persona_datos.pais_residencia|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Fecha de registro</span><strong>{{ persona_datos.fecha_registro|date:"d/m/Y H:i"|default:"—" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Observaciones</span><strong>{{ persona_datos.observaciones|default:"—" }}</strong></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cef-panel">
+            <div class="cef-panel-head">
+                <h2 class="cef-panel-title"><i class="fa-solid fa-school" aria-hidden="true"></i>Estado operativo de Especial</h2>
+            </div>
+            <div class="cef-panel-body">
+                <div class="especial-visualizador-datos">
+                    <div class="especial-visualizador-dato"><span>CUE-Anexo</span><strong>{{ visualizador_cue_original|default:"No cargado" }}</strong></div>
+                    <div class="especial-visualizador-dato"><span>Matrícula compartida</span><strong>{% if visualizador_matricula_compartida %}Sí{% else %}No{% endif %}</strong></div>
+                    <div class="especial-visualizador-dato"><span>CUE-Anexo Matrícula</span><strong>{% if visualizador_matricula_compartida %}{{ visualizador_cue_matricula }}{% if visualizador_padron_matricula.nom_est %} · {{ visualizador_padron_matricula.nom_est }}{% endif %}{% else %}No corresponde{% endif %}</strong></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cef-panel">
+            <div class="cef-panel-head">
+                <h2 class="cef-panel-title"><i class="fa-solid fa-school" aria-hidden="true"></i>Historial del banco Especial</h2>
+            </div>
+            <div class="cef-panel-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Estado</th><th>Ciclo</th><th>CUE-Anexo</th><th>Matrícula compartida</th><th>CUE-Anexo Matrícula</th><th>Alta</th><th>Baja</th></tr></thead>
+                        <tbody>
+                            {% for banco in bancos %}
+                                <tr><td>{{ banco.get_estado_display }}</td><td>{{ banco.ciclo.anio }}</td><td>{{ banco.cueanexo }}</td><td>{% if banco.visualizador_es_cue_original and banco.visualizador_matricula_compartida %}Sí{% else %}No{% endif %}</td><td>{% if banco.visualizador_es_cue_original and banco.visualizador_matricula_compartida %}{{ banco.visualizador_cue_matricula }}{% if banco.visualizador_padron_matricula.nom_est %}<small class="d-block text-muted">{{ banco.visualizador_padron_matricula.nom_est }}</small>{% endif %}{% else %}No corresponde{% endif %}</td><td>{{ banco.fecha_alta|date:"d/m/Y" }}</td><td>{% if banco.fecha_baja %}{{ banco.fecha_baja|date:"d/m/Y" }}{% else %}—{% endif %}</td></tr>
+                            {% empty %}<tr><td colspan="7" class="text-center py-3">No registra movimientos en el banco Especial.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="cef-panel">
+            <div class="cef-panel-head">
+                <h2 class="cef-panel-title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i>Todas las secciones e inscripciones</h2>
+                <span class="especial-visualizador-muted">{{ inscripciones|length }} registro{{ inscripciones|length|pluralize:"s" }}</span>
+            </div>
+            <div class="cef-panel-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Ciclo</th>
+                                <th>CUE-Anexo</th>
+                                <th>Establecimiento / ubicación</th>
+                                <th>Modalidad</th>
+                                <th>Nivel / estructura</th>
+                                <th>Sección</th>
+                                <th>Turno</th>
+                                <th>Estado</th>
+                                <th>Docentes asignados</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inscripciones %}
+                                <tr>
+                                    <td>{{ item.seccion.ciclo.anio }}</td>
+                                    <td>{{ item.seccion.cueanexo }}</td>
+                                    <td>
+                                        <strong>{{ item.visualizador_padron.nom_est|default:"—" }}</strong>
+                                        <small class="d-block text-muted">{{ item.visualizador_padron.localidad|default:"—" }}{% if item.visualizador_padron.departamento %} · {{ item.visualizador_padron.departamento }}{% endif %}</small>
+                                    </td>
+                                    <td>{{ item.seccion.modalidad.descripcion|default:"—" }}</td>
+                                    <td>{{ item.seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
+                                    <td>
+                                        <strong>{{ item.seccion.nombre_seccion }}</strong>
+                                        <small class="d-block text-muted">{{ item.seccion.cd_tipo_seccion.descripcion|default:"—" }}</small>
+                                    </td>
+                                    <td>{{ item.seccion.turno.descripcion|default:"—" }}</td>
+                                    <td>
+                                        {{ item.get_estado_display }}
+                                        <small class="d-block text-muted">Desde {{ item.fecha_inscripcion|date:"d/m/Y" }}{% if item.fecha_baja %} · Baja {{ item.fecha_baja|date:"d/m/Y" }}{% endif %}</small>
+                                    </td>
+                                    <td>
+                                        <div class="especial-visualizador-docentes">
+                                            {% for docente in item.seccion.visualizador_docentes %}
+                                                <div class="especial-visualizador-docente">{{ docente.visualizador_docente_nombre }}<small>{{ docente.get_rol_display }}{% if docente.visualizador_docente_dni %} · DNI {{ docente.visualizador_docente_dni }}{% endif %}</small></div>
+                                            {% empty %}<span class="text-muted">Sin asignaciones</span>{% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="9" class="text-center py-4">No posee una sección asignada. No posee inscripciones ni secciones de Especial cargadas.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    {% endif %}
 </div>
-<section class="card mb-4"><div class="card-body">
-    <h2 class="h4">Visualizar alumno</h2>
-    <form method="get" class="row g-2" role="search">
-        <div class="col-sm-9"><label class="form-label" for="id_cuil_alumno">CUIL del alumno</label><input id="id_cuil_alumno" class="form-control" name="cuil" value="{{ cuil_buscado }}" inputmode="numeric" maxlength="11" required></div>
-        <div class="col-sm-3 d-flex align-items-end"><button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Buscar</button></div>
-    </form>
-</div></section>
-{% if cuil_buscado %}
-    {% if persona %}
-        <section class="card mb-4"><div class="card-body"><h3 class="h5">Datos personales</h3><dl class="row mb-0"><dt class="col-sm-3">Apellido y nombre</dt><dd class="col-sm-9">{{ persona.apellidos }}, {{ persona.nombres }}</dd><dt class="col-sm-3">DNI</dt><dd class="col-sm-9">{{ persona.nro_doc }}</dd><dt class="col-sm-3">CUIL</dt><dd class="col-sm-9">{{ persona.cuil|default:"-" }}</dd><dt class="col-sm-3">Fecha de nacimiento</dt><dd class="col-sm-9">{{ persona.fecha_nacimiento|date:"d/m/Y" }}</dd></dl></div></section>
-        <section class="card"><div class="card-body"><h3 class="h5">Secciones e inscripciones</h3><div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>Sección</th><th>CUE-Anexo</th><th>Estado</th><th>Fecha de inscripción</th><th>Fecha de baja</th></tr></thead><tbody>{% for item in inscripciones %}<tr><td>{{ item.seccion.nombre_seccion }}</td><td>{{ item.seccion.cueanexo }}</td><td>{{ item.get_estado_display }}</td><td>{{ item.fecha_inscripcion|date:"d/m/Y" }}</td><td>{% if item.fecha_baja %}{{ item.fecha_baja|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No registra inscripciones.</td></tr>{% endfor %}</tbody></table></div></div></section>
-    {% else %}<div class="alert alert-warning">No se encontró un alumno con ese CUIL.</div>{% endif %}
-{% endif %}
 {% endblock %}
