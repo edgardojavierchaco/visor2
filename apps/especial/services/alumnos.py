@@ -10,6 +10,7 @@ from ..models import (
     AlumnoSeccion,
     EspecialAlumnoBanco,
     EspecialPadronOferta,
+    cueanexo_tiene_oferta_comun,
     cueanexo_tiene_oferta_matricula_compartida,
     normalizar_cueanexo,
 )
@@ -173,9 +174,9 @@ def _validar_banco_proyectado(
             raise ValidationError(
                 "El CUE-Anexo asociado no puede ser igual al CUE-Anexo actual."
             )
-        if not padron_queryset.filter(cueanexo=matricula_compartida).exists():
+        if not cueanexo_tiene_oferta_comun(matricula_compartida, padron_queryset):
             raise ValidationError(
-                "El CUE-Anexo asociado no existe en el padrón general."
+                "El CUE-Anexo asociado debe existir en el padrón y tener al menos una oferta Común."
             )
     elif matricula_compartida is not None:
         raise ValidationError(
