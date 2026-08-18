@@ -1,14 +1,18 @@
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse, reverse_lazy, resolve
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.urls import resolve
 from datetime import timedelta
+
 from .models import DispositivoUsuario
-from .utils_dispositivo import generar_fingerprint, get_client_ip, obtener_geolocalizacion
+from .utils_dispositivo import (
+    generar_fingerprint,
+    get_client_ip,
+    obtener_geolocalizacion,
+)
 from .email_dispositivo import (
     enviar_email_dispositivo
 )
@@ -22,13 +26,21 @@ from django.contrib.sessions.models import (
 )
 
 
+# ============================================================
+# LOGIN
+# ============================================================
+
 class LoginFormView(LoginView):
+
     template_name = 'login/login.html'
 
-    # --------------------------
-    # 🎯 MAPA DE ROLES
-    # --------------------------
+    # ========================================================
+    # MAPA DE ROLES
+    # ========================================================
+
     ROLE_REDIRECTS = {
+
+        # Gestores
         'Administrador': 'archivos:portada_gestor',
         'Gestor': 'archivos:portada_gestor',
 
@@ -42,300 +54,555 @@ class LoginFormView(LoginView):
         'Director': 'directores:institucional',
         'Regional': 'archivos:portada_gestor',
         'Supervisor': 'archivos:portada_gestor',
-        #'Renpe': 'archivos:portada_gestor_renpe',
-        #'Evaluacion': 'oplectura:portada_eval',
         'Aplicador': 'directores:institucional',
-        #'Director_Privada': 'directores:institucional',
-        #'DirGral_Privada': 'privada:dashboard',
         'Infraestructura': 'archivos:portada_gestor',
         'Pof': 'archivos:portada_gestor',
-
     }
 
-    # --------------------------
-    # 🧠 MAPA DE CATEGORÍAS
-    # --------------------------
+    # ========================================================
+    # MAPA DE CATEGORÍAS
+    # ========================================================
+
     CATEGORY_REDIRECTS = {
+
         'all': 'archivos:portada_gestor',
         'regional': 'archivos:portada_gestor',
         'propio': 'directores:institucional',
         'nivel': 'archivos:portada_gestor',
-        'supervisor': 'archivos:portada_gestor',        
+        'supervisor': 'archivos:portada_gestor',
+
     }
 
+    # ========================================================
+    # CONTEXTO
+    # ========================================================
+
     def get_context_data(self, **kwargs):
+
         context = super().get_context_data(**kwargs)
+
         context['title'] = 'Iniciar Sesión'
+
         return context
 
-    # --------------------------
-    # 🚀 RESOLVER REDIRECCIÓN
-    # --------------------------
+    # ========================================================
+    # RESOLVER REDIRECCIÓN
+    # ========================================================
+
     def resolve_redirect_url(self, user):
-        if not hasattr(user, 'perfil') or not user.perfil.rol:
+
+        # ----------------------------------------------------
+        # Verificar perfil
+        # ----------------------------------------------------
+
+        perfil = getattr(
+            user,
+            'perfil',
+            None
+        )
+
+        if not perfil:
+
             return settings.LOGIN_REDIRECT_URL
 
-        rol = user.perfil.rol.nombre
-        categoria = user.perfil.rol.categoria_acceso
+        # ----------------------------------------------------
+        # Verificar rol
+        # ----------------------------------------------------
 
-        # 🎯 1. PRIORIDAD: ROL
+        rol_obj = getattr(
+            perfil,
+            'rol',
+            None
+        )
+
+        if not rol_obj:
+
+            return settings.LOGIN_REDIRECT_URL
+
+        rol = getattr(
+            rol_obj,
+            'nombre',
+            None
+        )
+
+        categoria = getattr(
+            rol_obj,
+            'categoria_acceso',
+            None
+        )
+
+        # ====================================================
+        # 1. PRIORIDAD: ROL
+        # ====================================================
+
         if rol in self.ROLE_REDIRECTS:
+
             url_name = self.ROLE_REDIRECTS[rol]
 
-            
             return reverse(url_name)
 
-        # 🧠 2. FALLBACK: CATEGORÍA
+        # ====================================================
+        # 2. FALLBACK: CATEGORÍA
+        # ====================================================
+
         if categoria in self.CATEGORY_REDIRECTS:
-            return reverse(self.CATEGORY_REDIRECTS[categoria])
+
+            return reverse(
+                self.CATEGORY_REDIRECTS[categoria]
+            )
+
+        # ====================================================
+        # 3. FALLBACK FINAL
+        # ====================================================
 
         return settings.LOGIN_REDIRECT_URL
-    
-    # =========================
-    # 🔥 LOGIN SUCCESS
-    # =========================
+
+    # ========================================================
+    # LOGIN SUCCESS
+    # ========================================================
+
     def get_success_url(self):
+
         request = self.request
         user = request.user
 
-        if not user.is_authenticated or not user.is_staff:
-            return reverse('logueo:login')       
-        
-        
-        # =========================
-        # 🔥 RESTAURAR ESTADO
-        # =========================
-        estado_obj = getattr(user, "estado", None)
+        # ----------------------------------------------------
+        # Verificación de seguridad
+        # ----------------------------------------------------
+
+        if (
+            not user.is_authenticated
+            or not user.is_staff
+        ):
+
+            return reverse(
+                'logueo:login'
+            )
+
+        # ====================================================
+        # RESTAURAR ESTADO
+        # ====================================================
+
+        estado_obj = getattr(
+            user,
+            "estado",
+            None
+        )
 
         if estado_obj:
+
             estado = estado_obj.data or {}
-            url = estado.get("url")
+
+            url = estado.get(
+                "url"
+            )
 
             if url:
-                try:
-                    resolve(url)  
-                    request.session['estado_restaurar'] = estado
-                    return url
-                except:
-                    pass  
 
-        # 🎯 fallback normal
-        return self.resolve_redirect_url(user)
-    
-    # =========================
-    # 🔥 FORM VALID
-    # =========================
+                try:
+
+                    # ----------------------------------------
+                    # Verificar que sea una URL Django válida
+                    # ----------------------------------------
+
+                    resolve(url)
+
+                    request.session[
+                        'estado_restaurar'
+                    ] = estado
+
+                    return url
+
+                except Exception:
+
+                    pass
+
+        # ====================================================
+        # REDIRECCIÓN NORMAL
+        # ====================================================
+
+        return self.resolve_redirect_url(
+            user
+        )
+
+    # ========================================================
+    # FORM VALID
+    # ========================================================
+
     def form_valid(self, form):
+
+        # ====================================================
+        # 1. AUTENTICAR CREDENCIALES
+        # ====================================================
+
         user = authenticate(
+            request=self.request,
             username=form.cleaned_data['username'],
             password=form.cleaned_data['password']
         )
 
         if not user:
-            return JsonResponse({
-                'success': False,
-                'message': 'Credenciales incorrectas.'
-            })
-        
-        login(self.request, user)   
-        # =========================
-        # DEVICE INFO
-        # =========================
-        fingerprint = generar_fingerprint(self.request)
-        ip = get_client_ip(self.request)
-        user_agent = self.request.META.get('HTTP_USER_AGENT', '')
 
-        geo = obtener_geolocalizacion(ip) or {}
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': 'Credenciales incorrectas.'
+                },
+                status=401
+            )
+
+        # ====================================================
+        # 2. OBTENER DATOS DEL DISPOSITIVO
+        # ====================================================
+
+        fingerprint = generar_fingerprint(
+            self.request
+        )
+
+        ip = get_client_ip(
+            self.request
+        )
+
+        user_agent = self.request.META.get(
+            'HTTP_USER_AGENT',
+            ''
+        )
+
+        # ====================================================
+        # 3. GEOLOCALIZACIÓN
+        # ====================================================
+
+        geo = obtener_geolocalizacion(
+            ip
+        ) or {}
 
         ubicacion = {
-            "pais": geo.get("pais", "Desconocido"),
-            "provincia": geo.get("provincia", "Desconocido"),
-            "ciudad": geo.get("ciudad", "Desconocido"),
-            "lat": float(geo.get("lat") or -27.451),
-            "lon": float(geo.get("lon") or -58.986),
+
+            "pais": geo.get(
+                "pais",
+                "Desconocido"
+            ),
+
+            "provincia": geo.get(
+                "provincia",
+                "Desconocido"
+            ),
+
+            "ciudad": geo.get(
+                "ciudad",
+                "Desconocido"
+            ),
+
+            "lat": float(
+                geo.get("lat")
+                or -27.451
+            ),
+
+            "lon": float(
+                geo.get("lon")
+                or -58.986
+            ),
         }
 
-        dispositivo = DispositivoUsuario.objects.filter(
-            usuario=user,
-            fingerprint=fingerprint,
-            confirmado=True
-        ).first()
+        # ====================================================
+        # 4. BUSCAR DISPOSITIVO
+        # ====================================================
 
-        # ---------------------
-        # NUEVO DISPOSITIVO
-        # ---------------------
-        if not dispositivo:
-            dispositivo, _ = DispositivoUsuario.objects.get_or_create(
-            usuario=user,
-            fingerprint=fingerprint,
-            defaults={
-                "ip": ip,
-                "ubicacion": ubicacion,
-                "user_agent": user_agent,
-                "confirmado": False
-                }
+        dispositivo = (
+            DispositivoUsuario.objects
+            .filter(
+                usuario=user,
+                fingerprint=fingerprint
             )
-                                
+            .first()
+        )
+
+        # ====================================================
+        # 5. CREAR DISPOSITIVO SI NO EXISTE
+        # ====================================================
+
+        if not dispositivo:
+
+            dispositivo = (
+                DispositivoUsuario.objects.create(
+
+                    usuario=user,
+
+                    fingerprint=fingerprint,
+
+                    ip=ip,
+
+                    ubicacion=ubicacion,
+
+                    user_agent=user_agent,
+
+                    confirmado=False
+                )
+            )
+
+        else:
+
+            # ------------------------------------------------
+            # Actualizar datos del dispositivo
+            # ------------------------------------------------
+
             dispositivo.ip = ip
+
             dispositivo.ubicacion = ubicacion
+
             dispositivo.user_agent = user_agent
-            dispositivo.save()
-            
-            # 🔴 SI NO ESTÁ CONFIRMADO, BLOQUEAR LOGIN
-            if not dispositivo.confirmado:
 
-                # email control
-                if not user.correo:
-                    return JsonResponse({
+            dispositivo.save(
+                update_fields=[
+                    'ip',
+                    'ubicacion',
+                    'user_agent'
+                ]
+            )
+
+        # ====================================================
+        # 6. 🔴 DISPOSITIVO NO CONFIRMADO
+        #
+        # MUY IMPORTANTE:
+        #
+        # ACÁ NO SE EJECUTA login()
+        # ====================================================
+
+        if not dispositivo.confirmado:
+
+            # ------------------------------------------------
+            # Verificar correo
+            # ------------------------------------------------
+
+            if not user.correo:
+
+                # --------------------------------------------
+                # Por seguridad, si existiera una sesión,
+                # cerrarla.
+                # --------------------------------------------
+
+                if self.request.user.is_authenticated:
+
+                    SesionUsuario.objects.filter(
+                        session_key=self.request.session.session_key
+                    ).update(
+                        activa=False
+                    )
+
+                    logout(
+                        self.request
+                    )
+
+                return JsonResponse(
+                    {
                         'success': False,
-                        'message': 'Usuario sin correo configurado'
-                    })
+                        'nuevo_dispositivo': True,
+                        'requiere_confirmacion': True,
+                        'message': (
+                            'El usuario no tiene un correo '
+                            'electrónico configurado.'
+                        )
+                    },
+                    status=403
+                )
 
-                hace_5_min = timezone.now() - timedelta(minutes=5)
+            # ------------------------------------------------
+            # Verificar último envío
+            # ------------------------------------------------
 
-                if dispositivo.fecha_envio_email and dispositivo.fecha_envio_email > hace_5_min:
-                    return JsonResponse({
+            hace_5_min = (
+                timezone.now()
+                - timedelta(
+                    minutes=5
+                )
+            )
+
+            if (
+                dispositivo.fecha_envio_email
+                and dispositivo.fecha_envio_email > hace_5_min
+            ):
+
+                # --------------------------------------------
+                # IMPORTANTE:
+                # NO llamar login()
+                # --------------------------------------------
+
+                return JsonResponse(
+                    {
                         'success': False,
-                        'message': 'Ya se envió un correo recientemente'
-                    })
+                        'nuevo_dispositivo': True,
+                        'requiere_confirmacion': True,
+                        'message': (
+                            'Ya se envió un correo de '
+                            'validación recientemente. '
+                            'Revisá tu correo.'
+                        )
+                    },
+                    status=403
+                )
 
-                enviar_email_dispositivo(self.request, user, dispositivo)
+            # =================================================
+            # ENVIAR CORREO
+            # =================================================
 
-                dispositivo.fecha_envio_email = timezone.now()
-                dispositivo.save(update_fields=['fecha_envio_email'])
+            enviar_email_dispositivo(
+                self.request,
+                user,
+                dispositivo
+            )
 
-                return JsonResponse({
+            # ------------------------------------------------
+            # Registrar fecha de envío
+            # ------------------------------------------------
+
+            dispositivo.fecha_envio_email = (
+                timezone.now()
+            )
+
+            dispositivo.save(
+                update_fields=[
+                    'fecha_envio_email'
+                ]
+            )
+
+            # =================================================
+            # 🔴 GARANTÍA DE SEGURIDAD
+            #
+            # Si por alguna razón ya existiera una sesión
+            # autenticada, cerrarla.
+            # =================================================
+
+            if self.request.user.is_authenticated:
+
+                session_key = (
+                    self.request.session.session_key
+                )
+
+                if session_key:
+
+                    SesionUsuario.objects.filter(
+                        session_key=session_key
+                    ).update(
+                        activa=False
+                    )
+
+                logout(
+                    self.request
+                )
+
+            # =================================================
+            # 🚫 NO HACER LOGIN
+            # =================================================
+
+            return JsonResponse(
+                {
                     'success': False,
                     'nuevo_dispositivo': True,
-                    'message': 'Dispositivo no autorizado, revisá tu correo'
-                })
+                    'requiere_confirmacion': True,
+                    'message': (
+                        'Dispositivo no autorizado. '
+                        'Revisá tu correo para confirmar '
+                        'este dispositivo.'
+                    )
+                },
+                status=403
+            )
 
-                
-            # =====================================================
-        # DISPOSITIVO OK → LOGIN OK
-        # =====================================================
-        session_key = self.request.session.session_key
+        # ====================================================
+        # 7. 🟢 DISPOSITIVO CONFIRMADO
+        #
+        # RECIÉN ACÁ SE AUTENTICA LA SESIÓN
+        # ====================================================
+
+        login(
+            self.request,
+            user
+        )
+
+        # ====================================================
+        # 8. OBTENER SESSION KEY
+        # ====================================================
+
+        session_key = (
+            self.request.session.session_key
+        )
+
+        # ====================================================
+        # 9. REGISTRAR SESIÓN
+        # ====================================================
 
         SesionUsuario.objects.update_or_create(
+
             session_key=session_key,
+
             defaults={
+
                 "usuario": user,
+
                 "ip": ip,
+
                 "ubicacion": ubicacion,
+
                 "user_agent": user_agent,
+
                 "activa": True
             }
         )
 
-        otras = SesionUsuario.objects.filter(
-            usuario=user,
-            activa=True
-        ).exclude(session_key=session_key)
+        # ====================================================
+        # 10. BUSCAR OTRAS SESIONES
+        # ====================================================
 
-        return JsonResponse({
-            "success": True,
-            "redirect_url": self.get_success_url(),
-            "otras_sesiones": otras.exists(),
-            "cantidad_sesiones": otras.count()
-        })
+        otras = (
+            SesionUsuario.objects
+            .filter(
+                usuario=user,
+                activa=True
+            )
+            .exclude(
+                session_key=session_key
+            )
+        )
 
-    # --------------------------
+        # ====================================================
+        # 11. LOGIN CORRECTO
+        # ====================================================
+
+        return JsonResponse(
+            {
+                "success": True,
+
+                "redirect_url": (
+                    self.get_success_url()
+                ),
+
+                "otras_sesiones": (
+                    otras.exists()
+                ),
+
+                "cantidad_sesiones": (
+                    otras.count()
+                )
+            }
+        )
+
+    # ========================================================
+    # FORM INVALID
+    # ========================================================
+
     def form_invalid(self, form):
-        return JsonResponse({
-            'success': False,
-            'message': 'Credenciales incorrectas.'
-        })
 
-    # --------------------------
-    # AJAX
-    # --------------------------
-    def post(self, request, *args, **kwargs):
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            form = self.get_form()
-            return self.form_valid(form) if form.is_valid() else self.form_invalid(form)
-        return super().post(request, *args, **kwargs)
-
-
-# ==========================
-# CONFIRMAR DISPOSITIVO
-# ==========================
-def confirmar_dispositivo(
-    request,
-    token
-):
-
-    dispositivo = (
-        get_object_or_404(
-            DispositivoUsuario,
-            token=token
-        )
-    )
-
-    if (
-        not dispositivo
-        .token_valido()
-    ):
-
-        return render(
-            request,
-            'login/token_expirado.html'
+        return JsonResponse(
+            {
+                'success': False,
+                'message': 'Credenciales incorrectas.'
+            },
+            status=401
         )
 
-    dispositivo.confirmado = True
-    dispositivo.save()
-
-    return render(
-        request,
-        'login/dispositivo_confirmado.html'
-    )
-    
-    
-# ==========================
-# CERRAR OTRAS SESIONES
-# ==========================
-def cerrar_otras_sesiones(
-    request
-):
-
-    if not request.user.is_authenticated:
-
-        return JsonResponse({
-            'success': False
-        })
-
-    actual = (
-        request.session.session_key
-    )
-
-    sesiones = (
-        SesionUsuario.objects.filter(
-            usuario=request.user,
-            activa=True
-        )
-        .exclude(
-            session_key=actual
-        )
-    )
-
-    for s in sesiones:
-
-        Session.objects.filter(
-            session_key=s.session_key
-        ).delete()
-
-        s.activa = False
-        s.save()
-
-    return JsonResponse({
-        'success': True
-    })
-
-
-class CustomLogoutView(LogoutView):
-
-    next_page = reverse_lazy(
-        'dash:portada'
-    )
+    # ========================================================
+    # POST AJAX
+    # ========================================================
 
     def post(
         self,
@@ -344,29 +611,223 @@ class CustomLogoutView(LogoutView):
         **kwargs
     ):
 
-        # marcar sesión cerrada
+        if (
+            request.headers.get(
+                'x-requested-with'
+            )
+            == 'XMLHttpRequest'
+        ):
+
+            form = self.get_form()
+
+            if form.is_valid():
+
+                return self.form_valid(
+                    form
+                )
+
+            return self.form_invalid(
+                form
+            )
+
+        return super().post(
+            request,
+            *args,
+            **kwargs
+        )
+
+
+# ============================================================
+# CONFIRMAR DISPOSITIVO
+# ============================================================
+
+def confirmar_dispositivo(
+    request,
+    token
+):
+
+    # ========================================================
+    # BUSCAR DISPOSITIVO
+    # ========================================================
+
+    dispositivo = get_object_or_404(
+        DispositivoUsuario,
+        token=token
+    )
+
+    # ========================================================
+    # VALIDAR TOKEN
+    # ========================================================
+
+    if not dispositivo.token_valido():
+
+        return render(
+            request,
+            'login/token_expirado.html'
+        )
+
+    # ========================================================
+    # CONFIRMAR DISPOSITIVO
+    # ========================================================
+
+    dispositivo.confirmado = True
+
+    dispositivo.save(
+        update_fields=[
+            'confirmado'
+        ]
+    )
+
+    # ========================================================
+    # MOSTRAR CONFIRMACIÓN
+    # ========================================================
+
+    return render(
+        request,
+        'login/dispositivo_confirmado.html'
+    )
+
+
+# ============================================================
+# CERRAR OTRAS SESIONES
+# ============================================================
+
+def cerrar_otras_sesiones(
+    request
+):
+
+    # ========================================================
+    # VERIFICAR AUTENTICACIÓN
+    # ========================================================
+
+    if not request.user.is_authenticated:
+
+        return JsonResponse(
+            {
+                'success': False,
+                'message': 'Usuario no autenticado.'
+            },
+            status=401
+        )
+
+    # ========================================================
+    # SESIÓN ACTUAL
+    # ========================================================
+
+    actual = (
+        request.session.session_key
+    )
+
+    # ========================================================
+    # OTRAS SESIONES
+    # ========================================================
+
+    sesiones = (
+        SesionUsuario.objects
+        .filter(
+            usuario=request.user,
+            activa=True
+        )
+        .exclude(
+            session_key=actual
+        )
+    )
+
+    # ========================================================
+    # ELIMINAR SESIONES
+    # ========================================================
+
+    for sesion in sesiones:
+
+        Session.objects.filter(
+            session_key=sesion.session_key
+        ).delete()
+
+        sesion.activa = False
+
+        sesion.save(
+            update_fields=[
+                'activa'
+            ]
+        )
+
+    # ========================================================
+    # RESPUESTA
+    # ========================================================
+
+    return JsonResponse(
+        {
+            'success': True
+        }
+    )
+
+
+# ============================================================
+# LOGOUT
+# ============================================================
+
+class CustomLogoutView(
+    LogoutView
+):
+
+    next_page = reverse_lazy(
+        'dash:portada'
+    )
+
+    # ========================================================
+    # POST
+    # ========================================================
+
+    def post(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+
+        # ====================================================
+        # MARCAR SESIÓN COMO INACTIVA
+        # ====================================================
+
         if request.session.session_key:
 
             SesionUsuario.objects.filter(
-                session_key=
+
+                session_key=(
                     request.session.session_key
+                )
+
             ).update(
                 activa=False
             )
 
-        logout(request)
+        # ====================================================
+        # CERRAR SESIÓN DJANGO
+        # ====================================================
+
+        logout(
+            request
+        )
+
+        # ====================================================
+        # REDIRECCIONAR
+        # ====================================================
 
         return redirect(
             self.next_page
         )
 
-    # permitir GET
+    # ========================================================
+    # PERMITIR GET
+    # ========================================================
+
     def get(
         self,
         request,
         *args,
         **kwargs
     ):
+
         return self.post(
             request,
             *args,
