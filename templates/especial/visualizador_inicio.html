@@ -1,0 +1,32 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_context_card %}{% endblock %}
+
+{% block especial_content %}
+<style>
+    .especial-visualizador-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 767.98px) { .especial-visualizador-grid { grid-template-columns: 1fr; } }
+</style>
+<section class="mb-4">
+    <h2 class="especial-home-section-title">¿Qué desea visualizar?</h2>
+    <p class="text-muted">Seleccione el tipo de persona que desea consultar.</p>
+</section>
+
+<div class="especial-visualizador-grid">
+    <article class="especial-home-card">
+        <span class="especial-home-icon"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></span>
+        <h2>Alumnos</h2><p>Consultar las secciones e inscripciones de un alumno.</p>
+        <a class="btn btn-primary btn-sm mt-auto" href="{% url 'especial:visualizador_detalle_alumno' %}">Visualizar</a>
+    </article>
+    <article class="especial-home-card">
+        <span class="especial-home-icon"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></span>
+        <h2>Docentes</h2><p>Consultar las secciones y asignaciones de un docente.</p>
+        <a class="btn btn-primary btn-sm mt-auto" href="{% url 'especial:visualizador_detalle_docente' %}">Visualizar</a>
+    </article>
+    <article class="especial-home-card">
+        <span class="especial-home-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
+        <h2>Directores</h2><p>Consultar las escuelas relacionadas a un CUIL.</p>
+        <a class="btn btn-primary btn-sm mt-auto" href="{% url 'especial:visualizador_detalle_director' %}">Visualizar</a>
+    </article>
+</div>
+{% endblock %}
