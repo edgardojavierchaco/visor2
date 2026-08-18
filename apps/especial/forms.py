@@ -19,6 +19,7 @@ from .models import (
     SeccionEspecial,
     SeccionTipo,
     TurnoTipo,
+    cueanexo_tiene_oferta_comun,
     normalizar_cueanexo,
     solo_digitos,
 )
@@ -133,10 +134,10 @@ class EspecialMatriculaCompartidaForm(forms.Form):
             )
             return cleaned_data
 
-        if not self.padron_queryset.filter(cueanexo=cueanexo).exists():
+        if not cueanexo_tiene_oferta_comun(cueanexo, self.padron_queryset):
             self.add_error(
                 "cueanexo_matricula_compartida",
-                "El CUE-Anexo asociado no existe en el padrón general.",
+                "El CUE-Anexo asociado debe existir en el padrón y tener al menos una oferta Común.",
             )
             return cleaned_data
 

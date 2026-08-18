@@ -18,12 +18,11 @@ from .forms import (
     EspecialMatriculaCompartidaForm,
 )
 from .models import (
-    PADRON_DB_ALIAS,
     AlumnoSeccion,
     EspecialAlumnoBanco,
-    EspecialPadronOferta,
     SeccionEspecial,
     cueanexo_tiene_oferta_matricula_compartida,
+    get_ofertas_comunes_queryset,
     normalizar_cueanexo,
 )
 from .permisos import especial_required
@@ -264,10 +263,10 @@ def _actualizar_matricula_compartida(request, especial_context, habilitada):
 
 
 def _serializar_cueanexos_matricula_compartida(request, especial_context):
-    """Busca CUE-Anexos del padrón general, limitados y sin duplicar."""
+    """Busca CUE-Anexos comunes, limitados y sin duplicar."""
     term = (request.GET.get("q") or "").strip()[:80]
     queryset = (
-        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        get_ofertas_comunes_queryset()
         .exclude(cueanexo=especial_context["cueanexo"])
         .exclude(cueanexo__isnull=True)
     )
@@ -282,7 +281,7 @@ def _serializar_cueanexos_matricula_compartida(request, especial_context):
         queryset
         .order_by("cueanexo", "nom_est", "id")
         .distinct("cueanexo")
-        .values("cueanexo", "nom_est")[:20]
+        .values("cueanexo", "nom_est")[:5]
     )
     resultados = []
     vistos = set()

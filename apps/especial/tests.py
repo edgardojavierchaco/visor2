@@ -22,8 +22,10 @@ from .models import (
     DocenteSeccion,
     EspecialAlumnoBanco,
     EspecialDocenteBanco,
+    PREFIJO_OFERTA_COMUN,
     SeccionEspecial,
     _normalizar_oferta_matricula_compartida,
+    cueanexo_tiene_oferta_comun,
     cueanexo_tiene_oferta_matricula_compartida,
 )
 from .permisos import (
@@ -59,6 +61,7 @@ from .views_alumnos import (
     _actualizar_matricula_compartida,
     _asegurar_alumno_banco,
     _matricula_compartida_habilitada,
+    _serializar_cueanexos_matricula_compartida,
     _validar_matricula_compartida_form,
     alumnos,
 )
@@ -146,14 +149,109 @@ class _FakeSchoolQuerySet:
 
 
 class _FakePadronQuerySet:
-    def __init__(self, exists=True):
+    def __init__(self, exists=True, oferta_comun=True):
         self.exists_value = exists
+        self.oferta_comun = oferta_comun
 
     def filter(self, **kwargs):
         return self
 
     def exists(self):
-        return self.exists_value
+        return self.exists_value and self.oferta_comun
+
+
+class _FakePadronAutocompleteQuerySet:
+    def __init__(self, rows, history=None):
+        self.rows = list(rows)
+        self.history = history if history is not None else []
+
+    def _clone(self, rows):
+        return _FakePadronAutocompleteQuerySet(rows, self.history)
+
+    @staticmethod
+    def _matches_lookup(row, lookup, value):
+        if lookup == "oferta__istartswith":
+            return str(row.get("oferta") or "").casefold().startswith(
+                str(value).casefold()
+            )
+        if lookup == "cueanexo":
+            return row.get("cueanexo") == value
+        if lookup == "cueanexo__isnull":
+            return (row.get("cueanexo") is None) == value
+        if lookup == "nom_est__icontains":
+            return str(value).casefold() in str(row.get("nom_est") or "").casefold()
+        if lookup == "cueanexo__icontains":
+            return str(value) in str(row.get("cueanexo") or "")
+        raise AssertionError(f"Lookup no contemplado en el fake de Padrón: {lookup}")
+
+    @classmethod
+    def _matches_q(cls, row, query):
+        matches = []
+        for child in query.children:
+            if isinstance(child, tuple):
+                matches.append(cls._matches_lookup(row, child[0], child[1]))
+            else:
+                matches.append(cls._matches_q(row, child))
+        result = all(matches) if query.connector == "AND" else any(matches)
+        return not result if query.negated else result
+
+    def using(self, alias):
+        self.history.append(("using", alias))
+        return self
+
+    def filter(self, *queries, **kwargs):
+        self.history.append(("filter", queries, kwargs))
+        rows = self.rows
+        for query in queries:
+            rows = [row for row in rows if self._matches_q(row, query)]
+        for lookup, value in kwargs.items():
+            rows = [
+                row for row in rows if self._matches_lookup(row, lookup, value)
+            ]
+        return self._clone(rows)
+
+    def exclude(self, **kwargs):
+        self.history.append(("exclude", kwargs))
+        rows = [
+            row
+            for row in self.rows
+            if not all(self._matches_lookup(row, lookup, value) for lookup, value in kwargs.items())
+        ]
+        return self._clone(rows)
+
+    def order_by(self, *fields):
+        self.history.append(("order_by", fields))
+        rows = list(self.rows)
+        for field in reversed(fields):
+            rows.sort(key=lambda row: row.get(field))
+        return self._clone(rows)
+
+    def distinct(self, *fields):
+        self.history.append(("distinct", fields))
+        if not fields:
+            return self._clone(self.rows)
+        rows = []
+        vistos = set()
+        for row in self.rows:
+            key = tuple(row.get(field) for field in fields)
+            if key in vistos:
+                continue
+            vistos.add(key)
+            rows.append(row)
+        return self._clone(rows)
+
+    def values(self, *fields):
+        self.history.append(("values", fields))
+        return self._clone(
+            [{field: row.get(field) for field in fields} for row in self.rows]
+        )
+
+    def __getitem__(self, item):
+        self.history.append(("slice", item))
+        return self._clone(self.rows[item])
+
+    def __iter__(self):
+        return iter(self.rows)
 
 
 class _FakeCycleManager:
@@ -1107,19 +1205,21 @@ class ValidacionDocenteEspecialTests(SimpleTestCase):
 
 class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
     class PadronQuerySet:
-        def __init__(self, existe):
+        def __init__(self, existe, oferta_comun=True):
             self.existe = existe
+            self.oferta_comun = oferta_comun
 
         def filter(self, **kwargs):
             return self
 
         def exists(self):
-            return self.existe
+            return self.existe and self.oferta_comun
 
     class PadronOfertaManager:
         def __init__(self, rows):
             self.rows = list(rows)
             self.alias = None
+            self.filter_kwargs = []
             self.values_list_args = None
 
         def using(self, alias):
@@ -1127,10 +1227,36 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
             return self
 
         def filter(self, **kwargs):
+            self.filter_kwargs.append(kwargs)
             if "cueanexo" in kwargs:
                 self.rows = [
                     row for row in self.rows if row["cueanexo"] == kwargs["cueanexo"]
                 ]
+            if "acronimo__iexact" in kwargs:
+                acronimo = kwargs["acronimo__iexact"]
+                self.rows = [
+                    row
+                    for row in self.rows
+                    if row["acronimo"].casefold() == acronimo.casefold()
+                ]
+            if "oferta__istartswith" in kwargs:
+                prefijo = kwargs["oferta__istartswith"]
+                self.rows = [
+                    row
+                    for row in self.rows
+                    if str(row.get("oferta") or "")
+                    .casefold()
+                    .startswith(str(prefijo).casefold())
+                ]
+            unexpected = set(kwargs) - {
+                "cueanexo",
+                "acronimo__iexact",
+                "oferta__istartswith",
+            }
+            if unexpected:
+                raise AssertionError(
+                    f"Filtros no contemplados en el fake de Padrón: {unexpected}"
+                )
             return self
 
         def values_list(self, *fields, flat=False):
@@ -1141,12 +1267,19 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 )
             return [row.get("oferta") for row in self.rows]
 
-    def _form(self, data, habilitada=True, existe=True, actual="123456700"):
+    def _form(
+        self,
+        data,
+        habilitada=True,
+        existe=True,
+        oferta_comun=True,
+        actual="123456700",
+    ):
         return EspecialMatriculaCompartidaForm(
             data,
             cueanexo_actual=actual,
             matricula_compartida_habilitada=habilitada,
-            padron_queryset=self.PadronQuerySet(existe),
+            padron_queryset=self.PadronQuerySet(existe, oferta_comun),
         )
 
     def _habilitada_para(self, rows, cueanexo="220015500"):
@@ -1154,8 +1287,57 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
             habilitada = cueanexo_tiene_oferta_matricula_compartida(cueanexo)
         self.assertEqual(manager.alias, "default")
+        self.assertEqual(
+            manager.filter_kwargs,
+            [{"acronimo__iexact": "EEE"}, {"cueanexo": cueanexo}],
+        )
         self.assertEqual(manager.values_list_args, (("oferta",), True))
         return habilitada
+
+    def _comun_para(self, rows, cueanexo="987654300"):
+        manager = self.PadronOfertaManager(rows)
+        with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
+            elegible = cueanexo_tiene_oferta_comun(cueanexo)
+        self.assertEqual(manager.alias, "default")
+        self.assertEqual(
+            manager.filter_kwargs,
+            [
+                {"oferta__istartswith": PREFIJO_OFERTA_COMUN},
+                {"cueanexo": cueanexo},
+            ],
+        )
+        return elegible
+
+    def test_cue_con_oferta_comun_es_elegible(self):
+        for oferta in (
+            "Común - Primaria de 7 años",
+            "Común - Jardín maternal",
+            "común - secundaria",
+        ):
+            with self.subTest(oferta=oferta):
+                self.assertTrue(
+                    self._comun_para(
+                        [{"cueanexo": "987654300", "oferta": oferta}]
+                    )
+                )
+
+    def test_cue_sin_oferta_comun_no_es_elegible(self):
+        for oferta in (
+            "Especial - Integración",
+            "Adultos - Primaria",
+        ):
+            with self.subTest(oferta=oferta):
+                self.assertFalse(
+                    self._comun_para(
+                        [{"cueanexo": "987654300", "oferta": oferta}]
+                    )
+                )
+
+    def test_cue_invalido_no_consulta_el_padron(self):
+        manager = self.PadronOfertaManager([])
+        with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
+            self.assertFalse(cueanexo_tiene_oferta_comun("texto-invalido"))
+        self.assertEqual(manager.filter_kwargs, [])
 
     def test_clave_canonica_reconoce_variantes_unicode_equivalentes(self):
         self.assertEqual(_normalizar_oferta_matricula_compartida(None), "")
@@ -1186,54 +1368,40 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                     objetivo,
                 )
 
-    def test_clave_canonica_no_amplia_la_oferta_exacta(self):
-        objetivo = _normalizar_oferta_matricula_compartida(
-            "Especial - Integración"
-        )
-        ofertas = (
-            "Especial - Integración ampliada",
-            "Especial - Integración secundaria",
-            "Especial - Integraciones",
-            "Programa Especial - Integración",
-            "Otra oferta con Integración",
-            "EspecialIntegración",
-            "EspecialIntegracion",
-            "Programa Especial Integración",
-            "Especial",
-            "Integración",
-            "",
-            None,
-        )
-        for oferta in ofertas:
-            with self.subTest(oferta=repr(oferta)):
-                self.assertNotEqual(
-                    _normalizar_oferta_matricula_compartida(oferta),
-                    objetivo,
-                )
-
     def test_cue_con_cada_variante_integracion_normalizada_es_true(self):
         ofertas = (
-            "Especial - Integración",
-            " Especial   -   Integración ",
-            "Especial\u00a0-\u00a0Integración",
-            "Especial\u200b - Integración",
-            "Especial\u200c-\u200dIntegración",
-            "Especial\u2060 - Integración",
-            "Especial\ufeff - Integración",
-            "Especial – Integración",
-            "Especial — Integración",
-            "ESPECIAL - INTEGRACIÓN",
+            "Especial - Integraci\u00f3n",
+            " Especial   -   Integraci\u00f3n ",
+            "Especial\u00a0-\u00a0Integraci\u00f3n",
+            "Especial\u200b - Integraci\u00f3n",
+            "Especial\u200c-\u200dIntegraci\u00f3n",
+            "Especial\u2060 - Integraci\u00f3n",
+            "Especial\ufeff - Integraci\u00f3n",
+            "Especial - Integracio\u0301n",
+            "Especial \u2013 Integraci\u00f3n",
+            "Especial \u2014 Integraci\u00f3n",
+            "ESPECIAL - INTEGRACI\u00d3N",
             "Especial - integracion",
-            "Especial-Integración",
-            "Especial Integración",
-            "ESPECIAL INTEGRACIÓN",
+            "Especial-Integraci\u00f3n",
+            "Especial Integraci\u00f3n",
+            "ESPECIAL INTEGRACI\u00d3N",
             "Especial Integracion",
+            "Integraci\u00f3n",
+            "Servicio de Integraci\u00f3n",
+            "Otra oferta con Integraci\u00f3n",
+            "Programa Especial - Integraci\u00f3n",
         )
         for oferta in ofertas:
             with self.subTest(oferta=repr(oferta)):
                 self.assertTrue(
                     self._habilitada_para(
-                        [{"cueanexo": "220015500", "oferta": oferta}]
+                        [
+                            {
+                                "cueanexo": "220015500",
+                                "acronimo": "EEE",
+                                "oferta": oferta,
+                            }
+                        ]
                     )
                 )
 
@@ -1243,14 +1411,17 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 [
                     {
                         "cueanexo": "220015500",
+                        "acronimo": "EEE",
                         "oferta": "Especial - Primaria de 7 años",
                     },
                     {
                         "cueanexo": "220015500",
+                        "acronimo": "EEE",
                         "oferta": "Especial\u00a0-\u00a0Integración",
                     },
                     {
                         "cueanexo": "987654300",
+                        "acronimo": "EEE",
                         "oferta": "Especial - Integración ",
                     },
                 ]
@@ -1263,51 +1434,50 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 [
                     {
                         "cueanexo": "220015500",
+                        "acronimo": "EEE",
                         "oferta": "Especial - Primaria de 7 años ",
                     }
                 ]
             )
         )
 
-    def test_oferta_normalizada_mantiene_comparacion_exacta(self):
+    def test_cue_sin_palabra_integracion_es_false(self):
+        ofertas = (
+            "Especial - Primaria",
+            "Especial - Inicial",
+            "Especial - Integraciones",
+            "Preintegracion",
+            "EspecialIntegracion",
+            None,
+            "",
+        )
+        for oferta in ofertas:
+            with self.subTest(oferta=repr(oferta)):
+                self.assertFalse(
+                    self._habilitada_para(
+                        [
+                            {
+                                "cueanexo": "220015500",
+                                "acronimo": "EEE",
+                                "oferta": oferta,
+                            }
+                        ]
+                    )
+                )
+
+    def test_cue_ignora_integracion_de_otro_acronimo(self):
         self.assertFalse(
             self._habilitada_para(
                 [
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - Integración ampliada",
+                        "acronimo": "EEE",
+                        "oferta": "Especial - Primaria",
                     },
                     {
                         "cueanexo": "220015500",
-                        "oferta": "Especial - Integraciones",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Programa Especial - Integración",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Otra oferta con Integración",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Especial Integración",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Especial",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "Integración",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": "",
-                    },
-                    {
-                        "cueanexo": "220015500",
-                        "oferta": None,
+                        "acronimo": "OTRA_MODALIDAD",
+                        "oferta": "Especial - Integración",
                     },
                 ]
             )
@@ -1405,7 +1575,16 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         )
 
         self.assertFalse(form.is_valid())
-        self.assertIn("no existe en el padrón general", str(form.errors))
+        self.assertIn("debe existir en el padrón y tener al menos una oferta Común", str(form.errors))
+
+    def test_integracion_con_cue_sin_oferta_comun_rechaza(self):
+        form = self._form(
+            {"cueanexo_matricula_compartida": "987654300"},
+            oferta_comun=False,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("debe existir en el padrón y tener al menos una oferta Común", str(form.errors))
 
     def test_integracion_con_mismo_cue_actual_rechaza(self):
         form = self._form(
@@ -1758,6 +1937,124 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
             asegurar.assert_not_called()
 
 
+class AutocompleteMatriculaCompartidaEspecialTests(SimpleTestCase):
+    @staticmethod
+    def _rows():
+        return [
+            {
+                "id": 1,
+                "cueanexo": "220015500",
+                "nom_est": "CUE actual",
+                "oferta": "Común - Primaria de 7 años",
+            },
+            {
+                "id": 2,
+                "cueanexo": "100000001",
+                "nom_est": "Escuela Alfa",
+                "oferta": "Común - Primaria de 7 años",
+            },
+            {
+                "id": 3,
+                "cueanexo": "100000001",
+                "nom_est": "Escuela Alfa",
+                "oferta": "Común - Jardín maternal",
+            },
+            {
+                "id": 4,
+                "cueanexo": "100000002",
+                "nom_est": "Escuela Beta",
+                "oferta": "Común - Secundaria SNU",
+            },
+            {
+                "id": 5,
+                "cueanexo": "100000003",
+                "nom_est": "Escuela Gamma",
+                "oferta": "Común - Servicios complementarios",
+            },
+            {
+                "id": 6,
+                "cueanexo": "100000004",
+                "nom_est": "Escuela Delta",
+                "oferta": "Común - Jardín de infantes",
+            },
+            {
+                "id": 7,
+                "cueanexo": "100000005",
+                "nom_est": "Nombre compartido",
+                "oferta": "Común - Primaria de 7 años",
+            },
+            {
+                "id": 8,
+                "cueanexo": "100000006",
+                "nom_est": "Escuela Zeta",
+                "oferta": "Común - SNU",
+            },
+            {
+                "id": 9,
+                "cueanexo": "100000007",
+                "nom_est": "Solo Especial",
+                "oferta": "Especial - Integración",
+            },
+            {
+                "id": 10,
+                "cueanexo": "100000008",
+                "nom_est": "Solo Adultos",
+                "oferta": "Adultos - Primaria",
+            },
+            {
+                "id": 11,
+                "cueanexo": "100000009",
+                "nom_est": "Nombre compartido",
+                "oferta": "Especial - Jardín de infantes",
+            },
+            {
+                "id": 12,
+                "cueanexo": None,
+                "nom_est": "Sin CUE",
+                "oferta": "Común - Primaria de 7 años",
+            },
+        ]
+
+    def _serializar(self, term=""):
+        manager = _FakePadronAutocompleteQuerySet(self._rows())
+        request = RequestFactory().get("/", {"q": term})
+        with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
+            resultados = _serializar_cueanexos_matricula_compartida(
+                request,
+                {"cueanexo": "220015500"},
+            )
+        return resultados, manager
+
+    def test_autocomplete_solo_muestra_comunes_sin_actual_sin_duplicados_y_hasta_cinco(self):
+        resultados, manager = self._serializar()
+        ids = [resultado["id"] for resultado in resultados]
+
+        self.assertEqual(len(resultados), 5)
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertNotIn("220015500", ids)
+        self.assertTrue(set(ids).issubset({
+            "100000001",
+            "100000002",
+            "100000003",
+            "100000004",
+            "100000005",
+            "100000006",
+        }))
+        self.assertIn(
+            ("filter", (), {"oferta__istartswith": PREFIJO_OFERTA_COMUN}),
+            manager.history,
+        )
+        self.assertIn(("distinct", ("cueanexo",)), manager.history)
+        self.assertIn(("slice", slice(0, 5, None)), manager.history)
+
+    def test_autocomplete_busca_por_cue_y_nombre_sin_perder_filtro_comun(self):
+        por_cue, _ = self._serializar("100000006")
+        self.assertEqual([resultado["id"] for resultado in por_cue], ["100000006"])
+
+        por_nombre, _ = self._serializar("Nombre compartido")
+        self.assertEqual([resultado["id"] for resultado in por_nombre], ["100000005"])
+
+
 class CierreIntegridadEspecialTests(SimpleTestCase):
     def test_queryset_autorizado_vacio_no_hace_fallback(self):
         queryset = MagicMock()
@@ -2046,14 +2343,14 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 },
             )
 
-    def _servicio_banco(self, alumno, cueanexo, matricula=None):
+    def _servicio_banco(self, alumno, cueanexo, matricula=None, padron_queryset=None):
         return asegurar_alumno_banco(
             alumno=alumno,
             cueanexo=cueanexo,
             ciclo=self.ctx.ciclo_activo,
             user=self.admin,
             matricula_compartida=matricula,
-            padron_queryset=_FakePadronQuerySet(),
+            padron_queryset=padron_queryset or _FakePadronQuerySet(),
         )
 
     def _oferta_integracion(self, cueanexo):
@@ -2098,6 +2395,19 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
 
         self.assertTrue(creado)
         self.assertEqual(banco.matricula_compartida, self.ctx.cueanexo_permitido)
+
+    def test_servicio_rechaza_cue_asociado_existente_sin_oferta_comun(self):
+        alumno = _crear_alumno_db(self.ctx, 117)
+        with patch(
+            "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
+            side_effect=self._oferta_integracion,
+        ), self.assertRaisesRegex(ValidationError, "oferta Común"):
+            self._servicio_banco(
+                alumno,
+                self.ctx.cueanexo_ajeno,
+                self.ctx.cueanexo_permitido,
+                padron_queryset=_FakePadronQuerySet(oferta_comun=False),
+            )
 
     def test_servicio_alta_normal_rechaza_matricula_manipulada(self):
         alumno = _crear_alumno_db(self.ctx, 115)
