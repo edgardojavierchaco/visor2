@@ -132,6 +132,14 @@
                 <p>{{ acceso.subtitle }}</p>
             </a>
         {% endfor %}
+        {% if especial_context.es_admin_especial %}
+            <a class="especial-home-card" href="{% url 'especial:visualizador_inicio' %}">
+                <span class="especial-home-icon"><i class="fa-solid fa-binoculars" aria-hidden="true"></i></span>
+                <h2>Visualizador</h2>
+                <p>Consultar globalmente alumnos, docentes y directores.</p>
+            </a>
+        {% endif %}
     </div>
+
 </section>
 {% endblock %}

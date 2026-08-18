@@ -1,0 +1,20 @@
+{% extends "especial/base_operativo_especial.html" %}
+{% block especial_context_card %}{% endblock %}
+{% block especial_content %}
+<div class="cef-panel-actions mb-3">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:visualizador_inicio' %}"><i class="fa-solid fa-arrow-left me-1"></i>Volver</a>
+</div>
+<section class="card mb-4"><div class="card-body">
+    <h2 class="h4">Visualizar alumno</h2>
+    <form method="get" class="row g-2" role="search">
+        <div class="col-sm-9"><label class="form-label" for="id_cuil_alumno">CUIL del alumno</label><input id="id_cuil_alumno" class="form-control" name="cuil" value="{{ cuil_buscado }}" inputmode="numeric" maxlength="11" required></div>
+        <div class="col-sm-3 d-flex align-items-end"><button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Buscar</button></div>
+    </form>
+</div></section>
+{% if cuil_buscado %}
+    {% if persona %}
+        <section class="card mb-4"><div class="card-body"><h3 class="h5">Datos personales</h3><dl class="row mb-0"><dt class="col-sm-3">Apellido y nombre</dt><dd class="col-sm-9">{{ persona.apellidos }}, {{ persona.nombres }}</dd><dt class="col-sm-3">DNI</dt><dd class="col-sm-9">{{ persona.nro_doc }}</dd><dt class="col-sm-3">CUIL</dt><dd class="col-sm-9">{{ persona.cuil|default:"-" }}</dd><dt class="col-sm-3">Fecha de nacimiento</dt><dd class="col-sm-9">{{ persona.fecha_nacimiento|date:"d/m/Y" }}</dd></dl></div></section>
+        <section class="card"><div class="card-body"><h3 class="h5">Secciones e inscripciones</h3><div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>Sección</th><th>CUE-Anexo</th><th>Estado</th><th>Fecha de inscripción</th><th>Fecha de baja</th></tr></thead><tbody>{% for item in inscripciones %}<tr><td>{{ item.seccion.nombre_seccion }}</td><td>{{ item.seccion.cueanexo }}</td><td>{{ item.get_estado_display }}</td><td>{{ item.fecha_inscripcion|date:"d/m/Y" }}</td><td>{% if item.fecha_baja %}{{ item.fecha_baja|date:"d/m/Y" }}{% else %}-{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No registra inscripciones.</td></tr>{% endfor %}</tbody></table></div></div></section>
+    {% else %}<div class="alert alert-warning">No se encontró un alumno con ese CUIL.</div>{% endif %}
+{% endif %}
+{% endblock %}
