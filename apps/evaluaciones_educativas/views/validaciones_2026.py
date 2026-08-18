@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.views.decorators.http import require_POST
 from django.urls import reverse
+from django.db.models import Count, Q
 
 from apps.evaluaciones_educativas.models.validaciones_2026 import (
     ValReferenteCargaTemporal,
@@ -102,7 +103,7 @@ def lista_establecimientos(request, region):
     if region not in regiones_autorizadas:
         return redirect('evaluaciones_educativas:validaciones_2026:lista')
 
-    from django.db.models import Count, Q
+
 
     establecimientos = (
         ValEstablecimiento.objects
@@ -129,8 +130,10 @@ def lista_establecimientos(request, region):
 
     sin_procesar = total_est - procesados
     porcentaje_progreso = round((procesados / total_est) * 100) if total_est else 0
-
-    cabeceras = ValCabecera.objects.all().order_by('nombre_cabecera')
+    if region == 'R.E. 10-A' or  region == 'R.E. 10-B':
+        cabeceras = ValCabecera.objects.filter(regional__in=['R.E. 10-AB', 'MECCyT']).order_by('nombre_cabecera')
+    else:
+        cabeceras = ValCabecera.objects.filter(regional=region).order_by('nombre_cabecera')
 
     # Mensaje de advertencia si viene de secciones sin agregar ninguna
     sin_secciones_cue = request.GET.get('sin_secciones')
