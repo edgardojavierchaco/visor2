@@ -130,6 +130,10 @@ def lista_establecimientos(request, region):
 
     sin_procesar = total_est - procesados
     porcentaje_progreso = round((procesados / total_est) * 100) if total_est else 0
+
+    # ---------------------------
+    # 🚨 ARREGLO PARA R.E. 10-AB
+    # ---------------------------
     if region == 'R.E. 10-A' or  region == 'R.E. 10-B':
         cabeceras = ValCabecera.objects.filter(regional__in=['R.E. 10-AB', 'MECCyT']).order_by('nombre_cabecera')
     else:
