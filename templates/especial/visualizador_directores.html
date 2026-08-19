@@ -1,0 +1,172 @@
+{% extends "especial/base_operativo_especial.html" %}
+
+{% block especial_header_title %}Visualizador de directores{% endblock %}
+{% block especial_subtitle %}Consultá directores, establecimientos y CUE-Anexos de Educación Especial.{% endblock %}
+{% block especial_context_card %}{% endblock %}
+
+{% block especial_content %}
+<style>
+    .especial-visualizador-directores { margin: 0 auto; max-width: 1600px; }
+    .especial-visualizador-directores .cef-panel { margin-bottom: 1rem; }
+    .especial-visualizador-directores-filtros {
+        display: grid;
+        gap: .8rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .especial-visualizador-directores-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+    .especial-visualizador-directores-table { min-width: 1250px; }
+    .especial-visualizador-directores-table th,
+    .especial-visualizador-directores-table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .especial-visualizador-directores-table th { white-space: nowrap; }
+    .especial-visualizador-directores-table .col-cuil { min-width: 125px; }
+    .especial-visualizador-directores-table .col-establecimiento { min-width: 210px; }
+    .especial-visualizador-directores-table .col-action { min-width: 100px; }
+    .especial-visualizador-directores-muted { color: var(--slate-500); font-size: .82rem; }
+    .especial-visualizador-directores-table .director-vinculo-item {
+        border-bottom: 1px solid #dbe3ec;
+        min-height: 3.1rem;
+        padding: .35rem .2rem;
+    }
+    .especial-visualizador-directores-table .director-vinculo-item:last-child {
+        border-bottom: 0;
+        padding-bottom: .1rem;
+    }
+    .especial-visualizador-directores-pagination {
+        align-items: center;
+        display: flex;
+        gap: .5rem;
+        justify-content: space-between;
+        margin-top: 1rem;
+    }
+    @media (max-width: 900px) {
+        .especial-visualizador-directores-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 575px) {
+        .especial-visualizador-directores-filtros { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="especial-visualizador-directores">
+    <div class="cef-panel">
+        <div class="cef-panel-head">
+            <h2 class="cef-panel-title"><i class="fa-solid fa-user-tie me-2"></i>Directores y establecimientos</h2>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:visualizador_inicio' %}">
+                <i class="fa-solid fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+        <div class="cef-panel-body">
+            <form method="get" class="especial-visualizador-directores-filtros">
+                <div class="cef-field">
+                    <label for="visualizador-directores-cuil">CUIL</label>
+                    <input id="visualizador-directores-cuil" class="form-control" name="cuil" value="{{ filtros_directores.cuil }}" inputmode="numeric" maxlength="11">
+                </div>
+                <div class="cef-field">
+                    <label for="visualizador-directores-cue">CUE-Anexo</label>
+                    <select id="visualizador-directores-cue" class="form-select" name="filtro_cueanexo">
+                        <option value="">Todos</option>
+                        {% for cue in cueanexos_directores_filtro %}
+                            <option value="{{ cue }}"{% if filtros_directores.cueanexo == cue %} selected{% endif %}>{{ cue }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cef-field">
+                    <label for="visualizador-directores-establecimiento">Establecimiento</label>
+                    <select id="visualizador-directores-establecimiento" class="form-select" name="establecimiento">
+                        <option value="">Todos</option>
+                        {% for establecimiento in establecimientos_directores_filtro %}
+                            <option value="{{ establecimiento.nom_est }}"{% if filtros_directores.establecimiento == establecimiento.nom_est %} selected{% endif %}>{{ establecimiento.nom_est }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cef-field">
+                    <label for="visualizador-directores-localidad">Localidad</label>
+                    <select id="visualizador-directores-localidad" class="form-select" name="localidad">
+                        <option value="">Todas</option>
+                        {% for localidad in localidades_directores_filtro %}
+                            <option value="{{ localidad }}"{% if filtros_directores.localidad == localidad %} selected{% endif %}>{{ localidad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cef-field">
+                    <label for="visualizador-directores-departamento">Departamento</label>
+                    <select id="visualizador-directores-departamento" class="form-select" name="departamento">
+                        <option value="">Todos</option>
+                        {% for departamento in departamentos_directores_filtro %}
+                            <option value="{{ departamento }}"{% if filtros_directores.departamento == departamento %} selected{% endif %}>{{ departamento }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="especial-visualizador-directores-acciones">
+                    <button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-filter me-1"></i>Aplicar filtros</button>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:visualizador_directores' %}">Limpiar</a>
+                </div>
+            </form>
+            {% for error in filtros_directores_errores.values %}<div class="alert alert-danger mt-3 mb-0">{{ error }}</div>{% endfor %}
+        </div>
+    </div>
+
+    {% if consulta_error %}
+        <div class="alert alert-danger">{{ consulta_error }}</div>
+    {% elif directores_visualizador %}
+        <div class="cef-panel">
+            <div class="cef-panel-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle especial-visualizador-directores-table">
+                        <thead>
+                            <tr>
+                                <th class="col-cuil">CUIL</th>
+                                <th>Director</th>
+                                <th>CUE-Anexo / oferta</th>
+                                <th class="col-establecimiento">Establecimiento / ubicación</th>
+                                <th>Estado</th>
+                                <th class="col-action">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for director in directores_visualizador %}
+                                <tr>
+                                    <td><strong>{{ director.cuil }}</strong></td>
+                                    <td>{{ director.nombre|default:"—" }}</td>
+                                    <td>
+                                        {% for vinculo in director.vinculos %}
+                                            <div class="director-vinculo-item"><strong>{{ vinculo.cueanexo|default:"—" }}</strong><small class="d-block especial-visualizador-directores-muted">{{ vinculo.oferta|default:"—" }}</small></div>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% for vinculo in director.vinculos %}
+                                            <div class="director-vinculo-item"><strong>{{ vinculo.establecimiento|default:"—" }}</strong><small class="d-block especial-visualizador-directores-muted">{{ vinculo.localidad|default:"—" }}{% if vinculo.departamento %} · {{ vinculo.departamento }}{% endif %}</small></div>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% for vinculo in director.vinculos %}<div class="director-vinculo-item">{{ vinculo.estado|default:"—" }}</div>{% endfor %}
+                                    </td>
+                                    <td><a class="btn btn-outline-primary btn-sm" href="{{ director.detalle_url }}"><i class="fa-solid fa-eye me-1"></i>Ver</a></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="especial-visualizador-directores-pagination">
+                    <span class="especial-visualizador-directores-muted">{{ total_directores }} registros</span>
+                    <div class="d-flex gap-2">
+                        {% if page_obj.has_previous %}<a class="btn btn-outline-secondary btn-sm" href="?{{ filtros_directores_querystring }}{% if filtros_directores_querystring %}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}
+                        <span class="small align-self-center">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                        {% if page_obj.has_next %}<a class="btn btn-outline-secondary btn-sm" href="?{{ filtros_directores_querystring }}{% if filtros_directores_querystring %}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% elif not filtros_directores_errores %}
+        <div class="cef-empty-state">No se encontraron directores para los filtros seleccionados.</div>
+    {% endif %}
+</div>
+{% endblock %}
