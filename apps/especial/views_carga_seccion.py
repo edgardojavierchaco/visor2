@@ -1,21 +1,43 @@
 # apps/especial/views_carga_seccion.py
 # -*- coding: utf-8 -*-
 
+import re
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 
-from .forms import EspecialSeccionForm, EspecialDocenteSeccionForm
-from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion, DocenteSeccion
+from .forms import (
+    EspecialBusquedaAlumnoForm,
+    EspecialBusquedaDocenteForm,
+    EspecialDocenteSeccionForm,
+    EspecialSeccionForm,
+)
+from .models import (
+    AlumnoSeccion,
+    DocenteSeccion,
+    EspecialAlumnoBanco,
+    EspecialDocenteBanco,
+    SeccionEspecial,
+    cueanexo_tiene_oferta_matricula_compartida,
+)
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
-from .views_inscripcion_seccion import dar_alta_inscripcion_seccion, dar_baja_inscripcion_seccion
+from .views_inscripcion_seccion import (
+    _alumno_row,
+    _buscar_alumno,
+    crear_inscripcion_activa,
+    dar_alta_inscripcion_seccion,
+    dar_baja_inscripcion_seccion,
+)
+from .views_docentes import _buscar_docente, _docente_row
 
 def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -27,6 +49,96 @@ def _errores_form(form):
         for errors in form.errors.values()
         for error in errors
     )
+
+
+def _solo_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+
+def _preparar_modales_gestionar(request, seccion, especial_context):
+    """Prepara búsqueda y formularios para los modales dentro de la sección."""
+    cuil_buscado = _solo_digitos(request.GET.get("cuil", ""))
+    cuil_alumno = cuil_buscado if request.GET.get("abrir_modal_alumno") == "1" else ""
+    alumno = _buscar_alumno(cuil_alumno) if cuil_alumno else None
+    alumno_form = EspecialBusquedaAlumnoForm(
+        {"cuil": cuil_alumno} if cuil_alumno else None
+    )
+    alumno_error = _errores_form(alumno_form) if cuil_alumno and not alumno_form.is_valid() else ""
+    alumno_en_banco = bool(
+        alumno
+        and EspecialAlumnoBanco.objects.filter(
+            alumno=alumno,
+            cueanexo=seccion.cueanexo,
+            ciclo=seccion.ciclo,
+            estado=EspecialAlumnoBanco.Estado.ACTIVO,
+        ).exists()
+    )
+    alumno_en_seccion = bool(
+        alumno
+        and AlumnoSeccion.objects.filter(
+            seccion=seccion,
+            alumno=alumno,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).exists()
+    )
+
+    cuil_docente = cuil_buscado if request.GET.get("abrir_modal_docente") == "1" else ""
+    docente = _buscar_docente(cuil_docente) if cuil_docente else None
+    docente_form = EspecialDocenteSeccionForm()
+    docente_error = ""
+    if cuil_docente:
+        busqueda_docente = EspecialBusquedaDocenteForm({"cuil": cuil_docente})
+        if not busqueda_docente.is_valid():
+            docente_error = _errores_form(busqueda_docente)
+    docente_en_banco = False
+    if docente:
+        docente_en_banco = EspecialDocenteBanco.objects.filter(
+            docente_cuil=docente.cuil,
+            cueanexo=seccion.cueanexo,
+            ciclo=seccion.ciclo,
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+        ).exists()
+
+    asignacion_activa = None
+    if docente:
+        asignacion_activa = (
+            DocenteSeccion.objects
+            .filter(
+                seccion=seccion,
+                docente_cuil=docente.cuil,
+                estado=DocenteSeccion.Estado.ACTIVO,
+            )
+            .first()
+        )
+
+    gestionar_url = redirect_con_contexto(
+        "especial:gestionar_seccion",
+        especial_context,
+        seccion_id=seccion.pk,
+    )
+    return {
+        "modal_alumno_abierto": request.GET.get("abrir_modal_alumno") == "1",
+        "modal_docente_abierto": request.GET.get("abrir_modal_docente") == "1",
+        "modal_action_url": gestionar_url,
+        "modal_volver_url": gestionar_url,
+        "cuil_buscado": cuil_buscado,
+        "cuil_error": docente_error if cuil_docente else alumno_error,
+        "alumno": alumno,
+        "alumno_row": _alumno_row(alumno),
+        "alumno_en_banco": alumno_en_banco,
+        "alumno_en_seccion": alumno_en_seccion,
+        "matricula_compartida_habilitada": False,
+        "modal_tiene_seccion": True,
+        "docente": docente,
+        "docente_row": _docente_row(docente),
+        "docente_en_banco": docente_en_banco,
+        "cuil_error_docente": docente_error,
+        "modal_tiene_grupo": True,
+        "docente_form": docente_form,
+        "docente_asignacion_activa": asignacion_activa,
+        "url_editar_docente": "",
+        "url_carga_profesor": "",
+    }
 
 
 
@@ -47,8 +159,14 @@ def _secciones_queryset(especial_context):
         .annotate(
             alumnos_activos=Count(
                 "alumnos",
-                filter=Q(alumnos__estado__in=["activo", "inactivo"]),
-            )
+                filter=Q(alumnos__estado=AlumnoSeccion.Estado.ACTIVO),
+                distinct=True,
+            ),
+            docentes_activos=Count(
+                "docentes",
+                filter=Q(docentes__estado=DocenteSeccion.Estado.ACTIVO),
+                distinct=True,
+            ),
         )
         .order_by("nombre_seccion")
     )
@@ -179,20 +297,38 @@ def _docentes_seccion(seccion):
     )
 
 
-def _docente_activo_por_rol(docentes, rol):
-    return next(
-        (
-            docente
-            for docente in docentes
-            if docente.rol == rol and docente.estado == DocenteSeccion.Estado.ACTIVO
-        ),
-        None,
-    )
-
-
 def _gestionar_fragment_context(seccion, especial_context):
     inscripciones = list(_inscripciones_seccion(seccion))
+    inscripciones_activas = [
+        inscripcion
+        for inscripcion in inscripciones
+        if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
+    ]
     docentes = list(_docentes_seccion(seccion))
+    alumnos_ids = [inscripcion.alumno_id for inscripcion in inscripciones]
+    try:
+        bancos_por_alumno = {
+            banco.alumno_id: banco
+            for banco in EspecialAlumnoBanco.objects.filter(
+                cueanexo=seccion.cueanexo,
+                ciclo=seccion.ciclo,
+                alumno_id__in=alumnos_ids,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO,
+            )
+        } if alumnos_ids else {}
+    except (OperationalError, ProgrammingError):
+        bancos_por_alumno = {}
+    for inscripcion in inscripciones:
+        banco = bancos_por_alumno.get(inscripcion.alumno_id)
+        inscripcion.cueanexo_matricula_compartida = (
+            banco.matricula_compartida if banco else ""
+        )
+    try:
+        mostrar_cueanexo_matricula = cueanexo_tiene_oferta_matricula_compartida(
+            seccion.cueanexo
+        )
+    except (OperationalError, ProgrammingError):
+        mostrar_cueanexo_matricula = False
     docentes_activos = [
         docente for docente in docentes if docente.estado == DocenteSeccion.Estado.ACTIVO
     ]
@@ -200,44 +336,39 @@ def _gestionar_fragment_context(seccion, especial_context):
         "especial_context": especial_context,
         "seccion": seccion,
         "inscripciones": inscripciones,
+        "inscripciones_activas": inscripciones_activas,
         "docentes": docentes,
         "docentes_activos": docentes_activos,
         "gestionar_seccion_modo": True,
         "gestionar_seccion_url": redirect_con_contexto("especial:gestionar_seccion", especial_context, seccion_id=seccion.pk),
-        "docente_titular": _docente_activo_por_rol(
-            docentes,
-            DocenteSeccion.Rol.TITULAR,
-        ),
-        "docente_suplente": _docente_activo_por_rol(
-            docentes,
-            DocenteSeccion.Rol.SUPLENTE,
-        ),
         "docentes_activos_count": len(docentes_activos),
+        "mostrar_cueanexo_matricula": mostrar_cueanexo_matricula,
     }
 
 
-def _render_docente_activo_fragment(request, context, titulo, docente_activo, rol_texto):
-    fragment_context = {
-        **context,
-        "titulo": titulo,
-        "docente_activo": docente_activo,
-        "rol_texto": rol_texto,
-    }
-    return render_to_string(
-        "especial/gestionar_seccion_docente_activo_especial.html",
-        fragment_context,
-        request=request,
-    )
-
-
-def _ajax_gestionar_fragment_response(request, seccion, especial_context, ok, message):
+def _ajax_gestionar_fragment_response(
+    request,
+    seccion,
+    especial_context,
+    ok,
+    message,
+    reload_page=False,
+):
     # Renderizar siempre con la instancia y las relaciones recién consultadas.
     seccion.refresh_from_db()
     context = _gestionar_fragment_context(seccion, especial_context)
+    inscripciones_html = render_to_string(
+        "especial/inscripciones_seccion_lista_especial.html",
+        context,
+        request=request,
+    )
     return JsonResponse(
         {
             "ok": ok,
             "message": message,
+            "reload_page": reload_page and ok,
+            "fragment_selector": "[data-cef-fragment='inscripciones-seccion']",
+            "fragment_html": inscripciones_html,
             "fragments": [
                 {
                     "selector": "[data-cef-fragment='gestion-resumen']",
@@ -249,11 +380,7 @@ def _ajax_gestionar_fragment_response(request, seccion, especial_context, ok, me
                 },
                 {
                     "selector": "[data-cef-fragment='inscripciones-seccion']",
-                    "html": render_to_string(
-                        "especial/inscripciones_seccion_lista_especial.html",
-                        context,
-                        request=request,
-                    ),
+                    "html": inscripciones_html,
                 },
                 {
                     "selector": "[data-cef-fragment='docentes-seccion']",
@@ -261,26 +388,6 @@ def _ajax_gestionar_fragment_response(request, seccion, especial_context, ok, me
                         "especial/docentes_seccion_lista_especial.html",
                         context,
                         request=request,
-                    ),
-                },
-                {
-                    "selector": "[data-cef-fragment='docente-titular-activo']",
-                    "html": _render_docente_activo_fragment(
-                        request,
-                        context,
-                        "Profesor titular activo",
-                        context["docente_titular"],
-                        "profesor titular",
-                    ),
-                },
-                {
-                    "selector": "[data-cef-fragment='docente-suplente-activo']",
-                    "html": _render_docente_activo_fragment(
-                        request,
-                        context,
-                        "Profesor suplente activo",
-                        context["docente_suplente"],
-                        "profesor suplente",
                     ),
                 },
             ],
@@ -473,6 +580,45 @@ def gestionar_seccion(request, seccion_id):
                     ok,
                     message,
                 )
+        elif accion == "inscribir_alumno":
+            cuil = _solo_digitos(request.POST.get("cuil"))
+            alumno = _buscar_alumno(cuil)
+            if not alumno:
+                ok, message = False, "No se encontró el alumno indicado."
+            else:
+                try:
+                    _, creada = crear_inscripcion_activa(
+                        seccion=seccion,
+                        alumno=alumno,
+                        user=request.user,
+                        seccion_queryset=SeccionEspecial.objects.filter(
+                            cueanexo=seccion.cueanexo,
+                            ciclo=seccion.ciclo,
+                        ),
+                        alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                            cueanexo=seccion.cueanexo,
+                            ciclo=seccion.ciclo,
+                        ),
+                    )
+                    ok = True
+                    message = (
+                        "Alumno inscripto correctamente."
+                        if creada
+                        else "La inscripción del alumno fue reactivada correctamente."
+                    )
+                except ValidationError as exc:
+                    ok, message = False, "; ".join(exc.messages)
+                except IntegrityError:
+                    ok, message = False, "No se pudo crear la inscripción."
+            if _is_ajax(request):
+                return _ajax_gestionar_fragment_response(
+                    request,
+                    seccion,
+                    especial_context,
+                    ok,
+                    message,
+                    reload_page=True,
+                )
         else:
             ok = False
             message = "La acción solicitada no es válida."
@@ -486,4 +632,5 @@ def gestionar_seccion(request, seccion_id):
         return redirect(redirect_con_contexto("especial:gestionar_seccion", especial_context, seccion_id=seccion.pk))
 
     context.update(_gestionar_fragment_context(seccion, especial_context))
+    context.update(_preparar_modales_gestionar(request, seccion, especial_context))
     return render(request, "especial/gestionar_seccion_especial.html", context)

@@ -41,6 +41,7 @@
                             <th>CUIL</th>
                             <th>Documento</th>
                             <th>Estado en Especial</th>
+                            {% if mostrar_cueanexo_matricula %}<th>CUE-Anexo educación común</th>{% endif %}
                             <th>Fecha alta</th>
                             <th>Secciones / inscripciones</th>
                             <th>ACCIONES</th>
@@ -62,6 +63,7 @@
                                         </div>
                                     {% endif %}
                                 </td>
+                                {% if mostrar_cueanexo_matricula %}<td>{{ item.matricula_compartida|default:"—" }}</td>{% endif %}
                                 <td>{{ item.fecha_alta|date:"d/m/Y" }}</td>
                                 <td>
                                     {% with total_secciones=item.inscripciones_seccion|length %}

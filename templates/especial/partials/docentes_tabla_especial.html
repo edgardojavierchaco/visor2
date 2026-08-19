@@ -52,18 +52,18 @@
                         <!-- COLUMNA SECCIONES ASIGNADAS CORREGIDA -->
                         <td class="docentes-secciones-cell">
                             <div class="docentes-secciones-wrap">
-                            {% if docente_banco.secciones_bloqueadas %}
-                                <div class="docentes-secciones-list{% if docente_banco.secciones_bloqueadas|length > 2 %} is-collapsed{% endif %}">
-                                    {% for asignacion in docente_banco.secciones_bloqueadas %}
-                                        <a class="docente-seccion-chip" href="{% url 'especial:gestionar_seccion' asignacion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+                            {% if docente_banco.secciones_asignadas %}
+                                <div class="docentes-secciones-list{% if docente_banco.secciones_asignadas|length > 2 %} is-collapsed{% endif %}">
+                                    {% for asignacion in docente_banco.secciones_asignadas %}
+                                        <a class="docente-seccion-chip{% if asignacion.estado == 'inactivo' %} is-inactive{% endif %}" href="{% url 'especial:gestionar_seccion' asignacion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                             <span class="docente-seccion-chip-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
                                             <span>{{ asignacion.seccion.nombre_seccion }} · {{ asignacion.get_rol_display }}</span>
                                         </a>
                                     {% endfor %}
                                 </div>
-                                {% if docente_banco.secciones_bloqueadas|length > 2 %}
-                                    <button type="button" class="docentes-secciones-toggle" data-cef-secciones-toggle data-more-label="+ {{ docente_banco.secciones_bloqueadas|length|add:"-2" }} secciones más">
-                                        + {{ docente_banco.secciones_bloqueadas|length|add:"-2" }} secciones más
+                                {% if docente_banco.secciones_asignadas|length > 2 %}
+                                    <button type="button" class="docentes-secciones-toggle" data-cef-secciones-toggle data-more-label="+ {{ docente_banco.secciones_asignadas|length|add:"-2" }} secciones más">
+                                        + {{ docente_banco.secciones_asignadas|length|add:"-2" }} secciones más
                                     </button>
                                 {% endif %}
                             {% else %}

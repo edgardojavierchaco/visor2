@@ -74,7 +74,15 @@
                             <tr>
                                 <td><strong>{{ seccion.cd_tipo_seccion.descripcion|default:"—" }}</strong></td>
                                 <td>{{ seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
-                                <td>{{ seccion.nombre_seccion|default:"—" }}</td>
+                                <td>
+                                    <strong>{{ seccion.nombre_seccion|default:"—" }}</strong>
+                                    {% if not seccion.docentes_activos %}
+                                        <span class="cef-seccion-status-badge">Sin profesores</span>
+                                    {% endif %}
+                                    {% if not seccion.alumnos_activos %}
+                                        <span class="cef-seccion-status-badge">Sin alumnos</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <span class="badge text-bg-secondary">{{ seccion.turno.descripcion|default:"—" }}</span>
                                 </td>
@@ -146,6 +154,20 @@
 <style>
     .cef-secciones-panel .secciones-table thead th {
         text-align: center;
+    }
+
+    .cef-secciones-panel .cef-seccion-status-badge {
+        background: #fee2e2 !important;
+        border: 1px solid #fca5a5 !important;
+        border-radius: 999px;
+        color: #b91c1c !important;
+        display: inline-block;
+        font-size: .75rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-left: .35rem;
+        padding: .28em .8em;
+        white-space: nowrap;
     }
 
     .cef-secciones-panel .secciones-table tbody td.secciones-alumnos-cell,

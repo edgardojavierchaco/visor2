@@ -14,12 +14,12 @@
             <a class="btn btn-outline-primary" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-pen"></i> Editar sección
             </a>
-            <a class="btn btn-outline-primary" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
+            <button class="btn btn-outline-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Inscribir alumno
-            </a>
-            <a class="btn btn-primary" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
+            </button>
+            <button class="btn btn-primary" type="button" data-open-docentes-modal>
                 <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
-            </a>
+            </button>
             {% endif %}
         </div>
     </div>
@@ -41,9 +41,6 @@
         <div class="cef-edit-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <h3 class="mb-0">Alumnos de la sección</h3>
-                <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_alumno=1">
-                    <i class="fa-solid fa-user-plus"></i> Inscribir alumno
-                </a>
             </div>
             <div data-cef-fragment="inscripciones-seccion">
                 {% include "especial/inscripciones_seccion_lista_especial.html" %}
@@ -53,26 +50,14 @@
         <div class="cef-edit-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <h3 class="mb-0">Docentes de la sección</h3>
-                {% if especial_context.puede_operar %}<a class="btn btn-outline-primary btn-sm" href="{% url 'especial:docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_docente=1&seccion_destino={{ seccion.pk }}">
-                    <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
-                </a>{% endif %}
             </div>
             <div data-cef-fragment="docentes-seccion">
                 {% include "especial/docentes_seccion_lista_especial.html" %}
             </div>
         </div>
 
-        <div class="cef-edit-panel" data-cef-fragment="docente-titular-activo">
-            {% include "especial/gestionar_seccion_docente_activo_especial.html" with titulo="Docente titular activo" docente_activo=docente_titular rol_texto="docente titular" %}
-        </div>
-
-        <div class="cef-edit-panel" data-cef-fragment="docente-suplente-activo">
-            {% include "especial/gestionar_seccion_docente_activo_especial.html" with titulo="Docente suplente activo" docente_activo=docente_suplente rol_texto="docente suplente" %}
-        </div>
-
     </div>
 </div>
-<!--
-{% include "especial/asignar_docente_seccion_modal_especial.html" %}
--->
+{% include "especial/modal_busqueda_alumno_especial.html" %}
+{% include "especial/modal_busqueda_docente_especial.html" %}
 {% endblock %}
