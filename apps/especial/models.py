@@ -929,7 +929,7 @@ class DocenteSeccion(EspecialAuditoriaMixin):
     class Rol(models.TextChoices):
         TITULAR = "titular", "Titular"
         SUPLENTE = "suplente", "Suplente"
-        APOYO = "apoyo", "Apoyo"
+        INTERINO = "interino", "Interino"
 
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"

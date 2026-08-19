@@ -520,6 +520,15 @@ def alumnos(request):
     alumno_en_banco = False
     alumno_banco_actual = None
     matricula_compartida_habilitada = _matricula_compartida_habilitada(especial_context)
+    try:
+        mostrar_cueanexo_matricula = cueanexo_tiene_oferta_matricula_compartida(
+            especial_context.get("cueanexo")
+        )
+    except (OperationalError, ProgrammingError):
+        logger.exception(
+            "No se pudo verificar la oferta de integración para mostrar el CUE-Anexo de matrícula."
+        )
+        mostrar_cueanexo_matricula = False
     matricula_compartida_error = ""
     matricula_compartida_cueanexo = ""
     matricula_compartida_posted = False
@@ -723,6 +732,7 @@ def alumnos(request):
             "baja_form": baja_form,
             "baja_error": baja_error,
             "matricula_compartida_habilitada": matricula_compartida_habilitada,
+            "mostrar_cueanexo_matricula": mostrar_cueanexo_matricula,
             "matricula_compartida_busqueda_url": reverse(
                 "especial:buscar_cueanexos_matricula_compartida"
             ),

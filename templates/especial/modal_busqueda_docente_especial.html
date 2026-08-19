@@ -54,7 +54,15 @@
                                 <td>{{ docente_row.estado|default:"-" }}</td>
                                 <td>
                                     {# Lógica corregida para Especial: usa especial_context.puede_operar #}
-                                    {% if not modal_tiene_grupo %}
+                                    {% if modal_tiene_grupo and docente_row %}
+                                        {% if docente_asignacion_activa %}
+                                            <span class="text-muted small">Ya está asignado a esta sección.</span>
+                                        {% elif docente_en_banco and docente_form %}
+                                            <span class="text-muted small">Completá los datos de asignación debajo.</span>
+                                        {% else %}
+                                            <span class="text-muted small">El docente no está en el banco de esta localización.</span>
+                                        {% endif %}
+                                    {% elif not modal_tiene_grupo %}
                                         {% if docente_en_banco %}
                                             <span class="text-muted small">Ya está en el banco.</span>
                                         {% elif especial_context.puede_operar %}
@@ -117,11 +125,12 @@
                 <div class="alert alert-info mb-3">
                     Este docente ya está asignado a esta sección como {{ docente_asignacion_activa.get_rol_display }}.
                 </div>
-            {% elif docente_row and modal_tiene_grupo %}
+            {% elif docente_row and modal_tiene_grupo and docente_en_banco %}
                 <div class="cef-edit-panel">
                     <h3><i class="fa-solid fa-user-check"></i> Asociar docente a la sección</h3>
                     <form method="post" action="{{ modal_action_url }}" novalidate data-docente-modal-post-form>
                         {% csrf_token %}
+                        {% if modal_tiene_grupo %}<input type="hidden" name="accion" value="asignar_seccion">{% endif %}
                         <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                         {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                         <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
@@ -149,6 +158,8 @@
                         </div>
                     </form>
                 </div>
+            {% elif docente_row and modal_tiene_grupo %}
+                <p class="small text-muted mb-0">El docente debe estar previamente en el banco de esta localización para ser asignado.</p>
             {% elif docente_row %}
                 <p class="small text-muted mb-0">
                     La asignación a secciones se realiza desde la pantalla de secciones.

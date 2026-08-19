@@ -1,3 +1,10 @@
+{% if not inscripciones_activas %}
+    <div class="alert alert-danger mb-3" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+        La sección no cuenta con alumnos en alta.
+    </div>
+{% endif %}
+
 <div class="cef-tools">
     <div class="cef-tools-left">
         <span class="cef-tools-label">Mostrar</span>
@@ -28,6 +35,7 @@
                     <th>Documento</th>
                     <th>CUIL</th>
                     <th>Sexo</th>
+                    {% if mostrar_cueanexo_matricula %}<th>CUE-Anexo educación común</th>{% endif %}
                     <th>Fecha inscripción</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -40,6 +48,7 @@
                         <td>{{ inscripcion.alumno.nro_doc }}</td>
                         <td>{{ inscripcion.alumno.cuil|default:"—" }}</td>
                         <td>{{ inscripcion.alumno.sexo|default:"—" }}</td>
+                        {% if mostrar_cueanexo_matricula %}<td>{{ inscripcion.cueanexo_matricula_compartida|default:"—" }}</td>{% endif %}
                         <td>{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
                         <td>
                             <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}secondary{% else %}primary{% endif %}">

@@ -431,6 +431,9 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
         cleaned_data = super().clean()
         rol = cleaned_data.get("rol")
         self.rol_sin_cambios = bool(
-            self.instance.pk and rol and rol == self.instance.rol
+            self.instance.pk
+            and rol
+            and rol == self.instance.rol
+            and cleaned_data.get("estado") == self.instance.estado
         )
         return cleaned_data

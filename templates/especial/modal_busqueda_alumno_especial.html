@@ -126,7 +126,25 @@
                                 <td class="cef-modal-actions-cell">
                                     <div class="cef-modal-actions">
                                         {# Lógica para Especial: usa especial_context.puede_operar #}
-                                        {% if alumno_en_banco %}
+                                        {% if modal_tiene_seccion %}
+                                            {% if alumno_en_seccion %}
+                                                <span class="cef-modal-bank-status">
+                                                    <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
+                                                    Ya está inscripto en esta sección.
+                                                </span>
+                                            {% elif alumno_en_banco %}
+                                                <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="accion" value="inscribir_alumno">
+                                                    <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
+                                                    <button class="cef-modal-inline-btn" type="submit">
+                                                        <i class="fa-solid fa-user-check"></i> Inscribir en la sección
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <span class="cef-modal-bank-status">El alumno no está en el banco de esta localización.</span>
+                                            {% endif %}
+                                        {% elif alumno_en_banco %}
                                             <span class="cef-modal-bank-status">
                                                 <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
                                                 Ya está en el banco.

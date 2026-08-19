@@ -80,6 +80,12 @@
     function handleSearchJson(modal, data) {
         if (!data || typeof data !== "object") return false;
         var replaced = false;
+        if (Array.isArray(data.fragments)) {
+            data.fragments.forEach(function (fragment) {
+                if (!fragment || !fragment.selector || typeof fragment.html !== "string") return;
+                replaced = Boolean(helpers().replaceFragment(fragment.selector, fragment.html)) || replaced;
+            });
+        }
         if (data.fragment_html) {
             replaced = Boolean(helpers().replaceFragment(data.fragment_selector, data.fragment_html));
         }

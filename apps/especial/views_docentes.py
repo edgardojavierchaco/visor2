@@ -27,7 +27,7 @@ from .models import (
 from .permisos import especial_required
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
 from .services.baja_docentes import dar_baja_docente_banco, preparar_baja_docente
-from .views_contexto import contexto_base, render_especial
+from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 
 URL_CARGA_DOCENTE = "/bnh/carga-personal/"
 MSG_BANCO_DOCENTES_PENDIENTE = (
@@ -247,6 +247,14 @@ def _docentes_fragment_context(especial_context, url_docentes):
             for asignacion in item.asignaciones_seccion
             if asignacion.estado == DocenteSeccion.Estado.ACTIVO
         ]
+        item.secciones_asignadas = [
+            asignacion
+            for asignacion in item.asignaciones_seccion
+            if asignacion.estado in {
+                DocenteSeccion.Estado.ACTIVO,
+                DocenteSeccion.Estado.INACTIVO,
+            }
+        ]
         secciones_activas_ids = {asignacion.seccion_id for asignacion in asignaciones_activas}
         item.secciones_asignables = [
             seccion
@@ -314,6 +322,24 @@ def editar_docente_seccion(request, seccion_id, docente_id):
         )
     )
 
+    volver_gestionar = (
+        request.GET.get("volver") == "gestionar"
+        or request.POST.get("volver") == "gestionar"
+    )
+    volver_docentes = (
+        request.GET.get("volver") == "docentes"
+        or request.POST.get("volver") == "docentes"
+    )
+    volver_url = (
+        redirect_con_contexto(
+            "especial:gestionar_seccion",
+            especial_context,
+            seccion_id=seccion.pk,
+        )
+        if volver_gestionar or not volver_docentes
+        else _url_docentes(especial_context)
+    )
+
     if request.method == "POST":
         form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
         if form.is_valid():
@@ -346,21 +372,16 @@ def editar_docente_seccion(request, seccion_id, docente_id):
                 )
             else:
                 messages.success(request, "Asignación actualizada correctamente.")
-                if request.GET.get("volver") == "docentes" or request.POST.get("volver") == "docentes":
-                    return redirect(_url_docentes(especial_context))
-                return redirect("especial:gestionar_seccion", seccion_id=seccion.pk)
+                return redirect(volver_url)
     else:
         form = EspecialDocenteSeccionForm(instance=asignacion)
 
-    volver_docentes = (
-        request.GET.get("volver") == "docentes"
-        or request.POST.get("volver") == "docentes"
-    )
     context.update({
         "form": form,
         "seccion": seccion,
         "asignacion": asignacion,
-        "volver_url": _url_docentes(especial_context) if volver_docentes else reverse("especial:gestionar_seccion", kwargs={"seccion_id": seccion.pk}),
+        "volver_url": volver_url,
+        "volver_gestionar": volver_gestionar,
         "volver_docentes": volver_docentes,
     })
     return render(request, "especial/docente_seccion_form_especial.html", context)
@@ -573,6 +594,13 @@ def docentes(request):
                     for item in docentes_actualizados:
                         item.asignaciones_seccion = asignaciones_actualizadas.get(item.docente_cuil, [])
                         activas = [a for a in item.asignaciones_seccion if a.estado == DocenteSeccion.Estado.ACTIVO]
+                        item.secciones_asignadas = [
+                            a for a in item.asignaciones_seccion
+                            if a.estado in {
+                                DocenteSeccion.Estado.ACTIVO,
+                                DocenteSeccion.Estado.INACTIVO,
+                            }
+                        ]
                         ids_activas = {a.seccion_id for a in activas}
                         item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_activas]
                         item.secciones_bloqueadas = activas
@@ -701,6 +729,14 @@ def docentes(request):
             asignacion
             for asignacion in item.asignaciones_seccion
             if asignacion.estado == DocenteSeccion.Estado.ACTIVO
+        ]
+        item.secciones_asignadas = [
+            asignacion
+            for asignacion in item.asignaciones_seccion
+            if asignacion.estado in {
+                DocenteSeccion.Estado.ACTIVO,
+                DocenteSeccion.Estado.INACTIVO,
+            }
         ]
         secciones_activas_ids = {asignacion.seccion_id for asignacion in asignaciones_activas}
         item.secciones_asignables = [

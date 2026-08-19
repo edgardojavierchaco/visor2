@@ -13,7 +13,11 @@ from django.urls import NoReverseMatch, reverse
 
 from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
 from .models import EspecialAlumnoBanco, SeccionEspecial, AlumnoSeccion
-from .permisos import especial_required
+from .permisos import (
+    cueanexo_autorizado_especial,
+    especial_required,
+    get_permisos_especial_request,
+)
 from .services.alumnos import bloquear_alumno_banco_activo
 from .views_contexto import contexto_base, redirect_con_contexto
 
@@ -50,6 +54,42 @@ def _seccion_segura(seccion_id, especial_context, for_update=False):
         ),
         pk=seccion_id,
     )
+
+
+def _completar_contexto_desde_seccion(request, seccion_id, especial_context):
+    """Recupera el CUE de la sección si el enlace perdió ese contexto."""
+    cueanexo_enviado = request.GET.get("cueanexo")
+    if (
+        not especial_context.get("ciclo")
+        or cueanexo_enviado not in (None, "")
+        and especial_context.get("cueanexo")
+    ):
+        return
+
+    seccion = (
+        SeccionEspecial.objects
+        .filter(pk=seccion_id, ciclo=especial_context["ciclo"])
+        .only("cueanexo")
+        .first()
+    )
+    if not seccion:
+        return
+
+    permisos = get_permisos_especial_request(request)
+    if not cueanexo_autorizado_especial(
+        permisos,
+        seccion.cueanexo,
+        "cargables",
+    ):
+        return
+
+    especial_context["cueanexo"] = seccion.cueanexo
+    especial_context["querystring"] = (
+        f"cueanexo={seccion.cueanexo}&ciclo={especial_context['ciclo'].pk}"
+    )
+    especial_context["puede_consultar"] = True
+    especial_context["puede_operar"] = not especial_context.get("ciclo_cerrado")
+    especial_context["sin_cueanexo"] = False
 
 
 def _inscripciones_seccion(seccion):
@@ -306,6 +346,7 @@ def inscripcion_seccion(request, seccion_id):
     """Vista de inscripción de alumnos a una sección."""
     context = contexto_base(request, "secciones", "Inscripción de alumnos Educación Especial")
     especial_context = context["especial_context"]
+    _completar_contexto_desde_seccion(request, seccion_id, especial_context)
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
         messages.error(
             request,
@@ -440,6 +481,7 @@ def editar_inscripcion_seccion(request, seccion_id, inscripcion_id):
     """Vista para editar una inscripción de alumno a sección."""
     context = contexto_base(request, "secciones", "Editar inscripción Educación Especial")
     especial_context = context["especial_context"]
+    _completar_contexto_desde_seccion(request, seccion_id, especial_context)
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
         messages.error(
             request,

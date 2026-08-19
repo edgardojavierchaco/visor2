@@ -120,9 +120,29 @@
         });
     }
 
+    function showAlumnoFeedback(modal, message, level) {
+        var results = modal && modal.querySelector("[data-cef-modal-search-results]");
+        if (!results || !message) return;
+        results.querySelectorAll("[data-cef-modal-feedback]").forEach(function (node) {
+            node.remove();
+        });
+        var feedback = document.createElement("div");
+        feedback.className = "alert alert-" + (level === "success" ? "success" : "danger") + " mb-3";
+        feedback.setAttribute("data-cef-modal-feedback", "true");
+        feedback.setAttribute("role", "alert");
+        feedback.textContent = message;
+        results.insertBefore(feedback, results.firstChild);
+    }
+
     function handleAlumnoJson(modal, data) {
         if (!data || typeof data !== "object") return false;
         var replaced = false;
+        if (Array.isArray(data.fragments)) {
+            data.fragments.forEach(function (fragment) {
+                if (!fragment || !fragment.selector || typeof fragment.html !== "string") return;
+                replaced = Boolean(helpers().replaceFragment(fragment.selector, fragment.html)) || replaced;
+            });
+        }
         if (data.fragment_html) {
             replaced = Boolean(helpers().replaceFragment(data.fragment_selector, data.fragment_html));
         }
@@ -134,7 +154,11 @@
             modal.classList.remove("is-open");
             modal.setAttribute("aria-hidden", "true");
         }
-        return replaced;
+        if (!data.ok) showAlumnoFeedback(modal, data.message, "error");
+        if (data.reload_page) {
+            window.location.reload();
+        }
+        return true;
     }
 
     function submitModalForm(event) {
@@ -174,7 +198,7 @@
             .then(function (result) {
                 if (isSearch && (operation.cancelled || activeSearchRequest !== operation)) return;
                 if (result.json) {
-                    if (!handleAlumnoJson(modal, result.json)) HTMLFormElement.prototype.submit.call(form);
+                    handleAlumnoJson(modal, result.json);
                     return;
                 }
                 if (result.redirected && helpers().replacePanel(result.html)) {
