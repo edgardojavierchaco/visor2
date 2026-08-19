@@ -16,6 +16,7 @@ from apps.bnhalumnos.models import Alumno
 ACRONIMO_ESPECIAL = "EEE"
 LONGITUD_CUEANEXO = 9
 PADRON_DB_ALIAS = "default"
+USUARIOS_DB_ALIAS = "default"
 PREFIJO_OFERTA_COMUN = "Común -"
 TERMINO_MATRICULA_COMPARTIDA = "integracion"
 ROLES_AUTORIZADOS_ESPECIAL = {
@@ -284,7 +285,7 @@ def obtener_rol_usuario_especial(user):
         return None
     try:
         perfil = (
-            EspecialUsuarioPerfil.objects.using(PADRON_DB_ALIAS)
+            EspecialUsuarioPerfil.objects.using(USUARIOS_DB_ALIAS)
             .select_related("rol")
             .get(usuario__username=username)
         )

@@ -10,7 +10,7 @@ from django.apps import apps
 from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import connections
-from django.db.models import Prefetch, Q, Subquery
+from django.db.models import CharField, F, Func, Prefetch, Q, Subquery, Value
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -442,6 +442,11 @@ def _personas_por_cuil(alumnos):
 def _padron_por_cueanexo(cueanexos, *, solo_especial=True):
     if not cueanexos:
         return {}
+    cueanexos = {
+        _solo_digitos(cueanexo)
+        for cueanexo in cueanexos
+        if _solo_digitos(cueanexo)
+    }
     padron_queryset = (
         _padron_especial_queryset()
         if solo_especial
@@ -449,13 +454,29 @@ def _padron_por_cueanexo(cueanexos, *, solo_especial=True):
     )
     filas = (
         padron_queryset
-        .filter(cueanexo__in=cueanexos)
-        .order_by("cueanexo", "nom_est", "localidad", "departamento")
-        .values("cueanexo", "nom_est", "localidad", "departamento")
+        .filter(Q(cueanexo__in=cueanexos) | Q(padron_cueanexo__in=cueanexos))
+        .order_by("cueanexo", "padron_cueanexo", "nom_est", "localidad", "departamento")
+        .values(
+            "cueanexo",
+            "padron_cueanexo",
+            "nom_est",
+            "localidad",
+            "departamento",
+        )
     )
     por_cueanexo = {}
     for fila in filas:
-        por_cueanexo.setdefault(fila["cueanexo"], fila)
+        claves = {
+            _solo_digitos(fila.get("cueanexo")),
+            _solo_digitos(fila.get("padron_cueanexo")),
+        }
+        claves.discard("")
+        for clave in claves:
+            existente = por_cueanexo.get(clave)
+            if not existente or (
+                not existente.get("nom_est") and fila.get("nom_est")
+            ):
+                por_cueanexo[clave] = fila
     return por_cueanexo
 
 
@@ -955,6 +976,157 @@ def _filtros_docentes(request):
     return filtros, errores
 
 
+def _filtros_directores(request):
+    filtros = {
+        "cuil": _solo_digitos(request.GET.get("cuil")),
+        "cueanexo": _solo_digitos(request.GET.get("filtro_cueanexo")),
+        "establecimiento": (request.GET.get("establecimiento") or "").strip(),
+        "localidad": (request.GET.get("localidad") or "").strip(),
+        "departamento": (request.GET.get("departamento") or "").strip(),
+    }
+    errores = {}
+    if request.GET.get("cuil") and len(filtros["cuil"]) != 11:
+        errores["cuil"] = "El CUIL debe contener exactamente 11 dígitos."
+    elif filtros["cuil"]:
+        try:
+            validar_cuil(filtros["cuil"])
+        except ValidationError:
+            errores["cuil"] = "El CUIL no tiene un dígito verificador válido."
+    if request.GET.get("filtro_cueanexo") and len(filtros["cueanexo"]) != 9:
+        errores["cueanexo"] = "El CUE-Anexo debe contener exactamente 9 dígitos."
+    return filtros, errores
+
+
+def _directores_queryset(filtros):
+    queryset = (
+        _padron_especial_queryset()
+        .annotate(
+            cuil_limpio=Func(
+                F("resploc_cuitcuil"),
+                Value(r"\D"),
+                Value(""),
+                Value("g"),
+                function="REGEXP_REPLACE",
+                output_field=CharField(),
+            )
+        )
+        .exclude(cuil_limpio="")
+    )
+    if filtros["cuil"]:
+        queryset = queryset.filter(cuil_limpio=filtros["cuil"])
+    if filtros["cueanexo"]:
+        queryset = queryset.filter(cueanexo=filtros["cueanexo"])
+    if filtros["establecimiento"]:
+        queryset = queryset.filter(nom_est__icontains=filtros["establecimiento"])
+    if filtros["localidad"]:
+        queryset = queryset.filter(localidad__icontains=filtros["localidad"])
+    if filtros["departamento"]:
+        queryset = queryset.filter(departamento__icontains=filtros["departamento"])
+    return queryset.order_by(
+        "cuil_limpio",
+        "cueanexo",
+        "nom_est",
+        "oferta",
+    )
+
+
+def _filtros_directores_querystring(request):
+    parametros = []
+    for key in request.GET:
+        if key == "page" or key not in {
+            "cuil",
+            "filtro_cueanexo",
+            "establecimiento",
+            "localidad",
+            "departamento",
+        }:
+            continue
+        for value in request.GET.getlist(key):
+            parametros.append((key, value))
+    return urlencode(parametros)
+
+
+def _catalogos_filtros_directores():
+    padron = _padron_especial_queryset()
+    return {
+        "cueanexos_directores_filtro": (
+            padron.exclude(cueanexo__isnull=True)
+            .values_list("cueanexo", flat=True)
+            .distinct()
+            .order_by("cueanexo")
+        ),
+        "establecimientos_directores_filtro": (
+            padron.exclude(nom_est__isnull=True)
+            .exclude(nom_est="")
+            .values("nom_est")
+            .distinct()
+            .order_by("nom_est")
+        ),
+        "localidades_directores_filtro": (
+            padron.exclude(localidad__isnull=True)
+            .exclude(localidad="")
+            .values_list("localidad", flat=True)
+            .distinct()
+            .order_by("localidad")
+        ),
+        "departamentos_directores_filtro": (
+            padron.exclude(departamento__isnull=True)
+            .exclude(departamento="")
+            .values_list("departamento", flat=True)
+            .distinct()
+            .order_by("departamento")
+        ),
+    }
+
+
+def _agrupar_directores(filas):
+    agrupados = {}
+    for fila in filas:
+        cuil = fila.cuil_limpio
+        if cuil not in agrupados:
+            agrupados[cuil] = {
+                "cuil": cuil,
+                "nombre": " ".join(
+                    parte
+                    for parte in (
+                        _texto(fila.apellido_resp),
+                        _texto(fila.nombre_resp),
+                    )
+                    if parte
+                ),
+                "vinculos": [],
+                "detalle_url": (
+                    f"{reverse('especial:visualizador_detalle_director')}?cuil={cuil}"
+                ),
+            }
+        cueanexo = fila.cueanexo or fila.padron_cueanexo or ""
+        vinculo = {
+            "cueanexo": cueanexo,
+            "oferta": fila.oferta or "",
+            "establecimiento": fila.nom_est or "",
+            "localidad": fila.localidad or "",
+            "departamento": fila.departamento or "",
+            "estado": fila.estado_est or "",
+        }
+        clave_vinculo = tuple(vinculo.values())
+        if not any(
+            tuple(existente.values()) == clave_vinculo
+            for existente in agrupados[cuil]["vinculos"]
+        ):
+            agrupados[cuil]["vinculos"].append(vinculo)
+
+    directores = list(agrupados.values())
+    for director in directores:
+        director["vinculos"].sort(
+            key=lambda vinculo: (
+                vinculo["cueanexo"],
+                vinculo["oferta"],
+                vinculo["establecimiento"],
+            )
+        )
+    return directores
+
+
 def _asignaciones_docentes_scope(filtros, *, incluir_estado=False):
     """Construye el alcance real de DocenteSeccion para filtrar CUILes."""
     padron_cues = _padron_cues_para_filtros(filtros)
@@ -1153,10 +1325,14 @@ def _enriquecer_docentes_visualizador(docentes, bancos, asignaciones, personas):
         cueanexos.add(banco.cueanexo)
 
     padron_por_cue = _padron_por_cueanexo(cueanexos)
+    padron_por_cue_todas_ofertas = _padron_por_cueanexo(
+        cueanexos,
+        solo_especial=False,
+    )
     for asignacion in asignaciones:
         asignacion.visualizador_padron = padron_por_cue.get(
             asignacion.seccion.cueanexo,
-            {},
+            padron_por_cue_todas_ofertas.get(asignacion.seccion.cueanexo, {}),
         )
 
     for docente in docentes:
@@ -1296,6 +1472,51 @@ def visualizador_docentes(request):
         )
 
     return render(request, "especial/visualizador_docentes.html", context)
+
+
+@especial_required
+def visualizador_directores(request):
+    """Listado global de directores/responsables de establecimientos Especial."""
+    _exigir_administrador(request)
+    filtros, errores = _filtros_directores(request)
+    context = _persona_context(
+        request,
+        "Visualizador de directores",
+        "Consulta global de directores, establecimientos y CUE-Anexos de Educación Especial.",
+    )
+    context.update(_catalogos_filtros_directores())
+    context.update(
+        {
+            "filtros_directores": filtros,
+            "filtros_directores_errores": errores,
+            "filtros_directores_querystring": _filtros_directores_querystring(request),
+            "directores_visualizador": [],
+            "page_obj": Paginator([], VISUALIZADOR_ALUMNOS_PAGE_SIZE).get_page(1),
+            "consulta_error": "",
+            "filtros_panel_abierto": bool(errores or request.GET),
+        }
+    )
+    if errores:
+        return render(request, "especial/visualizador_directores.html", context)
+
+    try:
+        filas = list(_directores_queryset(filtros))
+        directores_agrupados = _agrupar_directores(filas)
+        paginator = Paginator(directores_agrupados, VISUALIZADOR_ALUMNOS_PAGE_SIZE)
+        page_obj = paginator.get_page(request.GET.get("page") or 1)
+        directores = list(page_obj.object_list)
+        context.update(
+            {
+                "directores_visualizador": directores,
+                "page_obj": page_obj,
+                "total_directores": paginator.count,
+            }
+        )
+    except (OperationalError, ProgrammingError):
+        logger.exception("No se pudo consultar el Visualizador de directores Especial.")
+        context["consulta_error"] = "No se pudo consultar la fuente de datos seleccionada."
+
+    return render(request, "especial/visualizador_directores.html", context)
 
 
 @especial_required
@@ -1657,9 +1878,27 @@ def visualizador_detalle_docente(request):
         else:
             asignaciones = asignaciones.filter(estado__in=estados_validos)
 
-        context["asignaciones"] = asignaciones.order_by(
-            "seccion__cueanexo", "seccion__nombre_seccion", "-fecha_desde"
+        asignaciones = list(
+            asignaciones.order_by(
+                "seccion__cueanexo", "seccion__nombre_seccion", "-fecha_desde"
+            )
         )
+        padron_por_cue = _padron_por_cueanexo(
+            {asignacion.seccion.cueanexo for asignacion in asignaciones}
+        )
+        padron_por_cue_todas_ofertas = _padron_por_cueanexo(
+            {asignacion.seccion.cueanexo for asignacion in asignaciones},
+            solo_especial=False,
+        )
+        for asignacion in asignaciones:
+            asignacion.visualizador_padron = padron_por_cue.get(
+                asignacion.seccion.cueanexo,
+                padron_por_cue_todas_ofertas.get(
+                    asignacion.seccion.cueanexo,
+                    {},
+                ),
+            )
+        context["asignaciones"] = asignaciones
     return render(request, "especial/visualizador_detalle_docente.html", context)
 
 
