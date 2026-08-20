@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import threading
 from types import SimpleNamespace
+from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
@@ -13,7 +14,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, IntegrityError, close_old_connections, connection
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import Http404, HttpResponse
-from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings, skipUnless
+from django.template import Context, Engine
+from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
 from .forms import EspecialDocenteSeccionForm, EspecialMatriculaCompartidaForm
@@ -75,6 +77,12 @@ from .views_localizaciones import (
     _get_items_base_cached,
     _get_items_base_authorized,
     visualizacion_localizaciones,
+)
+from .views_visualizador import (
+    _agrupar_directores,
+    _directores_queryset,
+    _filtros_directores,
+    _filtros_directores_querystring,
 )
 
 from apps.bnhalumnos.models import Alumno, CatalogoSinoTipo
@@ -736,6 +744,304 @@ class ContextoEspecialTests(SimpleTestCase):
         )
         admin["escuelas_visualizacion"].values_list.assert_not_called()
         admin["escuelas_visualizacion"].__iter__.assert_not_called()
+
+
+class VisualizadorDirectoresTests(SimpleTestCase):
+    @staticmethod
+    def _fila(
+        cuil,
+        cueanexo,
+        establecimiento,
+        oferta,
+        localidad,
+        departamento,
+        estado="Activo",
+    ):
+        return SimpleNamespace(
+            cuil_limpio=cuil,
+            cueanexo=cueanexo,
+            padron_cueanexo="",
+            nom_est=establecimiento,
+            oferta=oferta,
+            localidad=localidad,
+            departamento=departamento,
+            estado_est=estado,
+            apellido_resp="Pérez",
+            nombre_resp="Ana",
+        )
+
+    def test_consolida_por_cuil_y_deduplica_solo_la_combinacion_exacta(self):
+        filas = [
+            self._fila(
+                "20123456789",
+                "220172800",
+                "U.E.G.P. N.º 100",
+                "Especial - Primaria",
+                "Presidencia Roque Sáenz Peña",
+                "Comandante Fernández",
+            ),
+            self._fila(
+                "20123456789",
+                "220172800",
+                "U.E.G.P. N.º 100",
+                "Especial - Primaria",
+                "Presidencia Roque Sáenz Peña",
+                "Comandante Fernández",
+                estado="Baja",
+            ),
+            self._fila(
+                "20123456789",
+                "220082800",
+                "E.E.E. N.º 8",
+                "Especial - Integración",
+                "Villa Ángela",
+                "Mayor Luis J. Fontana",
+            ),
+            self._fila(
+                "20123456789",
+                "220300100",
+                "E.E.E. N.º 12",
+                "Especial - Taller",
+                "Resistencia",
+                "San Fernando",
+            ),
+            self._fila(
+                "20987654321",
+                "220400100",
+                "E.E.E. N.º 20",
+                "Especial - Primaria",
+                "Charata",
+                "Chacabuco",
+            ),
+        ]
+
+        directores = _agrupar_directores(filas)
+
+        self.assertEqual(len(directores), 2)
+        director = next(item for item in directores if item["cuil"] == "20123456789")
+        self.assertEqual(len(director["vinculos"]), 3)
+        self.assertEqual(director["estados"], ["Activo", "Baja"])
+        self.assertEqual(
+            director["expand_id"],
+            "director-establecimientos-20123456789",
+        )
+
+    def test_filtros_aceptan_cue_escrito_y_oferta_exacta(self):
+        request = RequestFactory().get(
+            "/especial/visualizador/directores/",
+            {
+                "filtro_cueanexo": "22 0",
+                "oferta": "Especial - Integración",
+            },
+        )
+
+        filtros, errores = _filtros_directores(request)
+
+        self.assertEqual(errores, {})
+        self.assertEqual(filtros["cueanexo"], "220")
+        self.assertEqual(filtros["oferta"], "Especial - Integración")
+        querystring = _filtros_directores_querystring(request)
+        self.assertIn("filtro_cueanexo=22+0", querystring)
+        self.assertIn("oferta=Especial+-+Integraci%C3%B3n", querystring)
+
+        request_invalido = RequestFactory().get(
+            "/especial/visualizador/directores/",
+            {"filtro_cueanexo": "220A"},
+        )
+        _, errores_invalidos = _filtros_directores(request_invalido)
+        self.assertIn("cueanexo", errores_invalidos)
+
+    @patch("apps.especial.views_visualizador._padron_especial_queryset")
+    def test_consulta_aplica_cue_parcial_y_oferta_antes_de_agrupar(self, padron):
+        queryset = MagicMock()
+        queryset.annotate.return_value = queryset
+        queryset.exclude.return_value = queryset
+        queryset.filter.return_value = queryset
+        queryset.order_by.return_value = queryset
+        padron.return_value = queryset
+
+        _directores_queryset(
+            {
+                "cuil": "",
+                "cueanexo": "220",
+                "oferta": "Especial - Integración",
+                "establecimiento": "",
+                "localidad": "",
+                "departamento": "",
+            }
+        )
+
+        queryset.filter.assert_any_call(cueanexo__icontains="220")
+        queryset.filter.assert_any_call(oferta="Especial - Integración")
+
+    def test_template_limita_a_uno_y_genera_expansion_independiente(self):
+        filas = [
+            self._fila(
+                "20123456789",
+                "220172800",
+                "U.E.G.P. N.º 100",
+                "Especial - Primaria",
+                "Presidencia Roque Sáenz Peña",
+                "Comandante Fernández",
+            ),
+            self._fila(
+                "20123456789",
+                "220082800",
+                "E.E.E. N.º 8",
+                "Especial - Integración",
+                "Villa Ángela",
+                "Mayor Luis J. Fontana",
+            ),
+            self._fila(
+                "20123456789",
+                "220300100",
+                "E.E.E. N.º 12",
+                "Especial - Taller",
+                "Resistencia",
+                "San Fernando",
+            ),
+        ]
+        directores = _agrupar_directores(filas)
+        template = (
+            Path(__file__).resolve().parents[2]
+            / "templates"
+            / "especial"
+            / "visualizador_directores.html"
+        ).read_text(encoding="utf-8-sig")
+        context = {
+            "consulta_error": "",
+            "directores_visualizador": directores,
+            "total_directores": 1,
+            "filtros_directores": {
+                "cuil": "",
+                "cueanexo": "",
+                "oferta": "Especial - Integración",
+                "establecimiento": "",
+                "localidad": "",
+                "departamento": "",
+            },
+            "filtros_directores_errores": {},
+            "filtros_directores_querystring": "",
+            "cueanexos_directores_filtro": ["220172800"],
+            "ofertas_directores_filtro": ["Especial - Integración"],
+            "establecimientos_directores_filtro": [],
+            "localidades_directores_filtro": [],
+            "departamentos_directores_filtro": [],
+            "page_obj": SimpleNamespace(
+                has_previous=False,
+                has_next=False,
+                number=1,
+                paginator=SimpleNamespace(num_pages=1),
+            ),
+        }
+
+        rendered = Engine.get_default().from_string(template).render(Context(context))
+
+        self.assertEqual(rendered.count("+ 2 establecimientos más"), 1)
+        self.assertEqual(rendered.count("hidden data-director-vinculo-adicional"), 2)
+        self.assertIn('id="director-establecimientos-20123456789"', rendered)
+        self.assertIn('id="director-establecimientos-20123456789-toggle"', rendered)
+        self.assertIn('aria-controls="director-establecimientos-20123456789"', rendered)
+        self.assertIn('data-director-cue-autocomplete', rendered)
+        self.assertIn('data-director-cue-suggestion hidden', rendered)
+        self.assertIn('aria-controls="visualizador-directores-cue-sugerencias"', rendered)
+        self.assertIn('name="oferta"', rendered)
+        self.assertIn("Especial - Integración", rendered)
+        self.assertIn('colspan="2" class="director-asignaciones-cell"', rendered)
+        self.assertIn('class="director-asignaciones-list"', rendered)
+        self.assertIn('class="director-asignacion-row"', rendered)
+        self.assertIn('class="director-asignacion-cell director-asignacion-cue"', rendered)
+        self.assertIn(
+            'class="director-asignacion-cell director-asignacion-establecimiento"',
+            rendered,
+        )
+        self.assertIn('grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);', rendered)
+        self.assertIn('border-bottom: 1px solid #dbe3ef;', rendered)
+        self.assertIn("Mostrar menos", rendered)
+
+        context["directores_visualizador"] = _agrupar_directores(filas[:2])
+        rendered_dos = Engine.get_default().from_string(template).render(
+            Context(context)
+        )
+        self.assertIn(
+            'class="btn btn-link btn-sm director-establecimientos-toggle"',
+            rendered_dos,
+        )
+        self.assertIn("+ 1 establecimiento más", rendered_dos)
+        self.assertEqual(rendered_dos.count("hidden data-director-vinculo-adicional"), 1)
+
+        context["directores_visualizador"] = _agrupar_directores(filas[:1])
+        rendered_uno = Engine.get_default().from_string(template).render(Context(context))
+        self.assertNotIn(
+            'class="btn btn-link btn-sm director-establecimientos-toggle"',
+            rendered_uno,
+        )
+
+
+class VisualizadorCabeceraTests(SimpleTestCase):
+    def test_los_tres_visualizadores_comparten_cabecera_y_filtros_cerrados(self):
+        base = Path(__file__).resolve().parents[2] / "templates" / "especial"
+        visualizadores = {
+            "visualizador_alumnos.html": (
+                "Alumnos",
+                "fa-solid fa-user-graduate",
+                "especial-visualizador-alumnos-filtros",
+            ),
+            "visualizador_docentes.html": (
+                "Docentes",
+                "fa-solid fa-chalkboard-user",
+                "especial-visualizador-docentes-filtros",
+            ),
+            "visualizador_directores.html": (
+                "Directores y establecimientos",
+                "fa-solid fa-user-tie",
+                "especial-visualizador-directores-filtros",
+            ),
+        }
+
+        for nombre, (titulo, icono, panel_id) in visualizadores.items():
+            fuente = (base / nombre).read_text(encoding="utf-8-sig")
+            self.assertIn(
+                '{% include "especial/partials/visualizador_cabecera.html"',
+                fuente,
+            )
+            self.assertIn(f'visualizador_titulo="{titulo}"', fuente)
+            self.assertIn(f'visualizador_icono="{icono}"', fuente)
+            self.assertIn(f'visualizador_filtros_id="{panel_id}"', fuente)
+            self.assertIn(f'id="{panel_id}" hidden', fuente)
+
+            template = Engine.get_default().get_template(
+                f"especial/{nombre}"
+            )
+            self.assertIsNotNone(template)
+
+        cabecera = Engine.get_default().get_template(
+            "especial/partials/visualizador_cabecera.html"
+        )
+        rendered = cabecera.render(
+            Context(
+                {
+                    "visualizador_titulo": "Alumnos",
+                    "visualizador_icono": "fa-solid fa-user-graduate",
+                    "visualizador_filtros_id": "especial-visualizador-alumnos-filtros",
+                }
+            )
+        )
+        self.assertIn("data-filtros-toggle", rendered)
+        self.assertEqual(rendered.count("Volver"), 1)
+        self.assertIn(
+            'class="cef-panel especial-visualizador-header"',
+            rendered,
+        )
+        self.assertIn(
+            'class="especial-visualizador-header-body"',
+            rendered,
+        )
+        self.assertIn('aria-expanded="false"', rendered)
+        self.assertIn(
+            'aria-controls="especial-visualizador-alumnos-filtros"',
+            rendered,
+        )
 
 
 class AlcanceLocalizacionesTests(SimpleTestCase):

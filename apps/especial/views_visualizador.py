@@ -977,9 +977,12 @@ def _filtros_docentes(request):
 
 
 def _filtros_directores(request):
+    cueanexo_raw = (request.GET.get("filtro_cueanexo") or "").strip()
+    cueanexo_normalizado = re.sub(r"\s+", "", cueanexo_raw)
     filtros = {
         "cuil": _solo_digitos(request.GET.get("cuil")),
-        "cueanexo": _solo_digitos(request.GET.get("filtro_cueanexo")),
+        "cueanexo": _solo_digitos(cueanexo_normalizado),
+        "oferta": (request.GET.get("oferta") or "").strip(),
         "establecimiento": (request.GET.get("establecimiento") or "").strip(),
         "localidad": (request.GET.get("localidad") or "").strip(),
         "departamento": (request.GET.get("departamento") or "").strip(),
@@ -992,8 +995,10 @@ def _filtros_directores(request):
             validar_cuil(filtros["cuil"])
         except ValidationError:
             errores["cuil"] = "El CUIL no tiene un dígito verificador válido."
-    if request.GET.get("filtro_cueanexo") and len(filtros["cueanexo"]) != 9:
-        errores["cueanexo"] = "El CUE-Anexo debe contener exactamente 9 dígitos."
+    if cueanexo_raw and not cueanexo_normalizado.isdigit():
+        errores["cueanexo"] = "El CUE-Anexo solo puede contener números."
+    elif len(filtros["cueanexo"]) > 9:
+        errores["cueanexo"] = "El CUE-Anexo no puede superar los 9 dígitos."
     return filtros, errores
 
 
@@ -1010,12 +1015,15 @@ def _directores_queryset(filtros):
                 output_field=CharField(),
             )
         )
+        .exclude(cuil_limpio__isnull=True)
         .exclude(cuil_limpio="")
     )
     if filtros["cuil"]:
         queryset = queryset.filter(cuil_limpio=filtros["cuil"])
     if filtros["cueanexo"]:
-        queryset = queryset.filter(cueanexo=filtros["cueanexo"])
+        queryset = queryset.filter(cueanexo__icontains=filtros["cueanexo"])
+    if filtros["oferta"]:
+        queryset = queryset.filter(oferta=filtros["oferta"])
     if filtros["establecimiento"]:
         queryset = queryset.filter(nom_est__icontains=filtros["establecimiento"])
     if filtros["localidad"]:
@@ -1036,6 +1044,7 @@ def _filtros_directores_querystring(request):
         if key == "page" or key not in {
             "cuil",
             "filtro_cueanexo",
+            "oferta",
             "establecimiento",
             "localidad",
             "departamento",
@@ -1047,13 +1056,34 @@ def _filtros_directores_querystring(request):
 
 
 def _catalogos_filtros_directores():
-    padron = _padron_especial_queryset()
+    padron = (
+        _padron_especial_queryset()
+        .annotate(
+            cuil_limpio=Func(
+                F("resploc_cuitcuil"),
+                Value(r"\D"),
+                Value(""),
+                Value("g"),
+                function="REGEXP_REPLACE",
+                output_field=CharField(),
+            )
+        )
+        .exclude(cuil_limpio__isnull=True)
+        .exclude(cuil_limpio="")
+    )
     return {
         "cueanexos_directores_filtro": (
             padron.exclude(cueanexo__isnull=True)
             .values_list("cueanexo", flat=True)
             .distinct()
             .order_by("cueanexo")
+        ),
+        "ofertas_directores_filtro": (
+            padron.exclude(oferta__isnull=True)
+            .exclude(oferta="")
+            .values_list("oferta", flat=True)
+            .distinct()
+            .order_by("oferta")
         ),
         "establecimientos_directores_filtro": (
             padron.exclude(nom_est__isnull=True)
@@ -1095,35 +1125,64 @@ def _agrupar_directores(filas):
                     if parte
                 ),
                 "vinculos": [],
+                "estados": [],
+                "expand_id": f"director-establecimientos-{cuil}",
                 "detalle_url": (
                     f"{reverse('especial:visualizador_detalle_director')}?cuil={cuil}"
                 ),
             }
         cueanexo = fila.cueanexo or fila.padron_cueanexo or ""
+        establecimiento = fila.nom_est or ""
+        oferta = fila.oferta or ""
+        localidad = fila.localidad or ""
+        departamento = fila.departamento or ""
+        estado = fila.estado_est or ""
         vinculo = {
             "cueanexo": cueanexo,
-            "oferta": fila.oferta or "",
-            "establecimiento": fila.nom_est or "",
-            "localidad": fila.localidad or "",
-            "departamento": fila.departamento or "",
-            "estado": fila.estado_est or "",
+            "oferta": oferta,
+            "establecimiento": establecimiento,
+            "localidad": localidad,
+            "departamento": departamento,
+            "estado": estado,
         }
-        clave_vinculo = tuple(vinculo.values())
+        # El estado no forma parte de la identidad del vínculo: la consulta
+        # puede repetir la misma combinación institucional con estados
+        # distintos. Los cinco campos siguientes sí representan vínculos
+        # distintos y deben conservarse.
+        clave_vinculo = (
+            cueanexo,
+            establecimiento,
+            oferta,
+            localidad,
+            departamento,
+        )
         if not any(
-            tuple(existente.values()) == clave_vinculo
+            (
+                existente["cueanexo"],
+                existente["establecimiento"],
+                existente["oferta"],
+                existente["localidad"],
+                existente["departamento"],
+            )
+            == clave_vinculo
             for existente in agrupados[cuil]["vinculos"]
         ):
             agrupados[cuil]["vinculos"].append(vinculo)
+        if estado not in agrupados[cuil]["estados"]:
+            agrupados[cuil]["estados"].append(estado)
 
     directores = list(agrupados.values())
     for director in directores:
         director["vinculos"].sort(
             key=lambda vinculo: (
                 vinculo["cueanexo"],
-                vinculo["oferta"],
                 vinculo["establecimiento"],
+                vinculo["oferta"],
+                vinculo["localidad"],
+                vinculo["departamento"],
             )
         )
+        director["estados"].sort()
     return directores
 
 
@@ -1405,7 +1464,7 @@ def visualizador_docentes(request):
             "docentes_visualizador": [],
             "page_obj": Paginator([], VISUALIZADOR_ALUMNOS_PAGE_SIZE).get_page(1),
             "consulta_error": "",
-            "filtros_panel_abierto": bool(errores or request.GET),
+            "filtros_panel_abierto": False,
         }
     )
 
@@ -1493,7 +1552,7 @@ def visualizador_directores(request):
             "directores_visualizador": [],
             "page_obj": Paginator([], VISUALIZADOR_ALUMNOS_PAGE_SIZE).get_page(1),
             "consulta_error": "",
-            "filtros_panel_abierto": bool(errores or request.GET),
+            "filtros_panel_abierto": False,
         }
     )
     if errores:
@@ -1559,7 +1618,7 @@ def visualizador_alumnos(request):
             "consulta_error": "",
             "modo_prueba": modo_prueba,
             "cargar_alumnos_prueba": cargar_alumnos_prueba,
-            "filtros_panel_abierto": cargar_alumnos_prueba,
+            "filtros_panel_abierto": False,
         }
     )
 

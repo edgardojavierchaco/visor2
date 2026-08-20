@@ -247,14 +247,14 @@
 </style>
 
 <div class="especial-visualizador-docentes">
-    <section class="cef-panel" aria-label="Filtros del visualizador de docentes">
+    {% include "especial/partials/visualizador_cabecera.html" with visualizador_titulo="Docentes" visualizador_icono="fa-solid fa-chalkboard-user" visualizador_filtros_id="especial-visualizador-docentes-filtros" %}
+
+    <section class="cef-panel" id="especial-visualizador-docentes-filtros" hidden aria-label="Filtros del visualizador de docentes">
         <div class="cef-panel-head">
-            <h2 class="cef-panel-title"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>Consulta de docentes</h2>
-            <button class="btn btn-outline-primary" type="button" data-filtros-docentes-toggle aria-expanded="{% if filtros_panel_abierto %}true{% else %}false{% endif %}" aria-controls="especial-visualizador-docentes-filtros">
-                <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>Filtros
-            </button>
+            <h2 class="cef-panel-title"><i class="fa-solid fa-filter" aria-hidden="true"></i>Filtros</h2>
+            <span class="especial-visualizador-docentes-muted">{{ total_docentes|default:0 }} docente{{ total_docentes|pluralize:"s" }}</span>
         </div>
-        <div id="especial-visualizador-docentes-filtros" class="cef-panel-body"{% if not filtros_panel_abierto %} hidden{% endif %}>
+        <div class="cef-panel-body">
             <form method="get" action="{% url 'especial:visualizador_docentes' %}">
                 <div class="especial-visualizador-filtros-docentes">
                     <div class="cef-field">
@@ -353,10 +353,6 @@
     {% if consulta_error %}<div class="alert alert-warning" role="alert">{{ consulta_error }}</div>{% endif %}
 
     <section class="cef-panel">
-        <div class="cef-panel-head">
-            <h2 class="cef-panel-title"><i class="fa-solid fa-users" aria-hidden="true"></i>Docentes</h2>
-            <span class="especial-visualizador-docentes-muted">{{ total_docentes|default:0 }} docente{{ total_docentes|pluralize:"s" }}</span>
-        </div>
         <div class="cef-panel-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-sm mb-0 especial-visualizador-docentes-table">
@@ -504,16 +500,6 @@
 
 <script>
 (function () {
-    const toggle = document.querySelector("[data-filtros-docentes-toggle]");
-    const panel = document.getElementById("especial-visualizador-docentes-filtros");
-    if (toggle && panel) {
-        toggle.addEventListener("click", function () {
-            const mostrar = panel.hasAttribute("hidden");
-            panel.hidden = !mostrar;
-            toggle.setAttribute("aria-expanded", String(mostrar));
-        });
-    }
-
     let modalActivo = null;
     let botonOrigen = null;
 
