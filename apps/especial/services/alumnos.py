@@ -103,11 +103,17 @@ def dar_baja_alumno_banco(
         alumno_banco_bloqueado.estado = EspecialAlumnoBanco.Estado.BAJA
         alumno_banco_bloqueado.fecha_baja = timezone.localdate()
         alumno_banco_bloqueado.motivo_baja = motivo
+        alumno_banco_bloqueado.matricula_compartida = None
 
         fields = {
             field.name for field in EspecialAlumnoBanco._meta.concrete_fields
         }
-        update_fields = ["estado", "fecha_baja", "motivo_baja"]
+        update_fields = [
+            "estado",
+            "fecha_baja",
+            "motivo_baja",
+            "matricula_compartida",
+        ]
         if "actualizado_por" in fields:
             alumno_banco_bloqueado.actualizado_por = user
             update_fields.append("actualizado_por")
@@ -167,9 +173,7 @@ def _validar_banco_proyectado(
 
     if tiene_integracion:
         if not matricula_compartida:
-            raise ValidationError(
-                "El CUE-Anexo con oferta Integración requiere matrícula compartida."
-            )
+            return cueanexo, None
         if matricula_compartida == cueanexo:
             raise ValidationError(
                 "El CUE-Anexo asociado no puede ser igual al CUE-Anexo actual."
@@ -228,15 +232,34 @@ def _validar_bancos_activos(
                 "Los bancos activos del alumno deben pertenecer a CUE-Anexos distintos."
             )
         matriculas = [matricula for _, matricula in estados]
-        if not any(matriculas):
-            raise ValidationError(
-                "Dos bancos activos deben estar relacionados por matrícula compartida."
-            )
-        for cueanexo, matricula in estados:
-            if matricula is not None and matricula not in cues - {cueanexo}:
+        cues_integracion = {
+            cueanexo
+            for cueanexo, _ in estados
+            if oferta_cache.get(cueanexo, False)
+        }
+
+        if len(cues_integracion) == 2:
+            # Dos CUE-Anexos con oferta Integración pueden compartir el mismo
+            # CUE-Anexo común de matrícula. La matrícula no debe apuntar al
+            # otro CUE de Integración.
+            matriculas_presentes = [matricula for matricula in matriculas if matricula]
+            if matriculas_presentes and any(
+                matricula != matriculas_presentes[0]
+                for matricula in matriculas_presentes
+            ):
                 raise ValidationError(
-                    "La matrícula compartida debe apuntar al otro CUE-Anexo activo."
+                    "Los bancos de Integración del alumno deben compartir el mismo CUE-Anexo de educación común."
                 )
+        else:
+            if not any(matriculas):
+                raise ValidationError(
+                    "Dos bancos activos deben estar relacionados por matrícula compartida."
+                )
+            for cueanexo, matricula in estados:
+                if matricula is not None and matricula not in cues - {cueanexo}:
+                    raise ValidationError(
+                        "La matrícula compartida debe apuntar al otro CUE-Anexo activo."
+                    )
 
     return estados
 

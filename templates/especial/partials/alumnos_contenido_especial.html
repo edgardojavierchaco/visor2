@@ -121,9 +121,13 @@
                                                                     <input type="hidden" name="seccion_id" value="{{ seccion.pk }}">
                                                                     <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
                                                                     {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                                                    {% if seccion.es_oferta_integracion %}
+                                                                    <button class="dropdown-item" type="button" data-especial-inscribir-integracion data-seccion-label="{{ seccion.nombre_seccion }}">
+                                                                    {% else %}
                                                                     <button class="dropdown-item" type="submit">
+                                                                    {% endif %}
                                                                         <span>{{ seccion.nombre_seccion }}</span>
-                                                                        <small>{{ seccion.cd_tipo_seccion }}{% if seccion.turno %} · {{ seccion.turno }}{% endif %} · Cupo {{ seccion.capacidad_total }}</small>
+                                                                        <small>{{ seccion.cd_tipo_seccion }}{% if seccion.oferta %} · {{ seccion.oferta }}{% endif %}{% if seccion.turno %} · {{ seccion.turno }}{% endif %} · Cupo {{ seccion.capacidad_total }}</small>
                                                                     </button>
                                                                 </form>
                                                             </li>
@@ -544,3 +548,33 @@
 
 {% include "especial/modal_busqueda_alumno_especial.html" %}
 {% include "especial/alumno_baja_especial_modal.html" %}
+
+<div id="modalInscripcionIntegracion" class="cef-overlay" aria-hidden="true" data-especial-inscripcion-integracion-modal>
+    <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="modalInscripcionIntegracionTitulo">
+        <div class="cef-modal-head">
+            <h2 id="modalInscripcionIntegracionTitulo" class="cef-modal-title">
+                <i class="fa-solid fa-link me-2"></i>Matrícula compartida
+            </h2>
+            <button class="cef-modal-close" type="button" aria-label="Cerrar" data-especial-inscripcion-integracion-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="cef-modal-body">
+            <form data-especial-inscripcion-integracion-form>
+                <p class="mb-3">La sección <strong data-especial-inscripcion-integracion-seccion></strong> pertenece a la oferta Integración.</p>
+                <p class="text-muted small">Indicá el CUE-Anexo de Educación Común asociado para completar la inscripción.</p>
+                <div class="cef-matricula-compartida-select-wrap" data-especial-matricula-editor>
+                    <label for="matriculaCompartidaInscripcion">CUE-Anexo de matrícula compartida <span aria-hidden="true">*</span></label>
+                    <select id="matriculaCompartidaInscripcion" class="form-select cef-matricula-compartida-select" required data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
+                    </select>
+                    <span class="cef-matricula-compartida-help">Buscá por CUE-Anexo o establecimiento.</span>
+                    <p class="cef-matricula-compartida-error" hidden data-especial-inscripcion-integracion-error></p>
+                </div>
+                <div class="cef-form-actions mt-4">
+                    <button type="button" class="btn btn-outline-secondary" data-especial-inscripcion-integracion-close>Cancelar</button>
+                    <button type="submit" class="btn btn-primary" data-especial-inscripcion-integracion-confirm disabled>Continuar inscripción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

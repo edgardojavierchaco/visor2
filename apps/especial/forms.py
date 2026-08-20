@@ -4,6 +4,7 @@ import re
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField
+from django.db.models import Q
 from django.utils import timezone
 from .models import (
     AlumnoSeccion,
@@ -90,12 +91,14 @@ class EspecialMatriculaCompartidaForm(forms.Form):
         *args,
         cueanexo_actual="",
         matricula_compartida_habilitada=False,
+        matricula_compartida_requerida=True,
         padron_queryset=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.cueanexo_actual = normalizar_cueanexo(cueanexo_actual)
         self.matricula_compartida_habilitada = bool(matricula_compartida_habilitada)
+        self.matricula_compartida_requerida = bool(matricula_compartida_requerida)
         self.padron_queryset = (
             padron_queryset
             if padron_queryset is not None
@@ -121,10 +124,12 @@ class EspecialMatriculaCompartidaForm(forms.Form):
             return cleaned_data
 
         if not cueanexo:
-            self.add_error(
-                "cueanexo_matricula_compartida",
-                "Este establecimiento tiene oferta Integración y requiere indicar el CUE-Anexo de matrícula compartida.",
-            )
+            if self.matricula_compartida_requerida:
+                self.add_error(
+                    "cueanexo_matricula_compartida",
+                    "Esta sección de Integración requiere indicar el CUE-Anexo de matrícula compartida.",
+                )
+            cleaned_data["matricula_compartida"] = None
             return cleaned_data
 
         if cueanexo == self.cueanexo_actual:
@@ -254,6 +259,7 @@ class EspecialSeccionForm(forms.ModelForm):
             "cd_tipo_seccion",
             "tipo_estructura_especial",
             "nombre_seccion",
+            "oferta",
             "descripcion",
             "capacidad_total",
             "turno",
@@ -269,6 +275,7 @@ class EspecialSeccionForm(forms.ModelForm):
             "modalidad": "Modalidad de dictado",
             "turno": "Turno",
             "nombre_seccion": "Nombre de la sección",
+            "oferta": "Oferta educativa",
             "capacidad_total": "Capacidad total",
             "lugar_dictado": "Lugar de dictado",
             "estado": "Estado",
@@ -277,6 +284,7 @@ class EspecialSeccionForm(forms.ModelForm):
             "descripcion": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
             "lugar_dictado": forms.TextInput(attrs={"class": "form-control"}),
             "nombre_seccion": forms.TextInput(attrs={"class": "form-control"}),
+            "oferta": forms.Select(attrs={"class": "form-select"}),
             "capacidad_total": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "cd_tipo_seccion": forms.Select(attrs={"class": "form-select"}),
             "tipo_estructura_especial": forms.Select(attrs={"class": "form-select"}),
@@ -286,9 +294,34 @@ class EspecialSeccionForm(forms.ModelForm):
             "estado": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def __init__(self, *args, ciclo=None, **kwargs):
+    def __init__(self, *args, ciclo=None, cueanexo=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.ciclo = ciclo
+        self.cueanexo = normalizar_cueanexo(cueanexo)
+
+        oferta_actual = (self.instance.oferta or "").strip()
+        ofertas = []
+        if self.cueanexo:
+            ofertas = list(
+                EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+                .filter(
+                    Q(cueanexo=self.cueanexo)
+                    | Q(padron_cueanexo=self.cueanexo)
+                )
+                .exclude(oferta__isnull=True)
+                .exclude(oferta__exact="")
+                .values_list("oferta", flat=True)
+                .distinct()
+                .order_by("oferta")
+            )
+        ofertas = [str(oferta).strip() for oferta in ofertas if str(oferta).strip()]
+        if oferta_actual and oferta_actual not in ofertas:
+            ofertas.insert(0, oferta_actual)
+        self.fields["oferta"].choices = [
+            ("", "Seleccioná una oferta")
+        ] + [(oferta, oferta) for oferta in ofertas]
+        self.fields["oferta"].required = True
+
         # Mapeo de campos y sus querysets
         campos_catalogo = {
             "cd_tipo_seccion": SeccionTipo.objects.all(),

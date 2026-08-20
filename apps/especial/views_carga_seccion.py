@@ -9,6 +9,7 @@ from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -17,6 +18,7 @@ from .forms import (
     EspecialBusquedaAlumnoForm,
     EspecialBusquedaDocenteForm,
     EspecialDocenteSeccionForm,
+    EspecialMatriculaCompartidaForm,
     EspecialSeccionForm,
 )
 from .models import (
@@ -30,6 +32,7 @@ from .models import (
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .services.alumnos import actualizar_matricula_compartida
 from .views_inscripcion_seccion import (
     _alumno_row,
     _buscar_alumno,
@@ -128,6 +131,10 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         "alumno_en_banco": alumno_en_banco,
         "alumno_en_seccion": alumno_en_seccion,
         "matricula_compartida_habilitada": False,
+        "matricula_compartida_busqueda_url": reverse(
+            "especial:buscar_cueanexos_matricula_compartida"
+        ),
+        "seccion_es_oferta_integracion": seccion.es_oferta_integracion,
         "modal_tiene_seccion": True,
         "docente": docente,
         "docente_row": _docente_row(docente),
@@ -261,6 +268,7 @@ def carga_seccion_form(request, seccion_id=None):
             request.POST,
             instance=seccion_edicion,
             ciclo=especial_context["ciclo"],
+            cueanexo=especial_context["cueanexo"],
         )
 
         if form.is_valid():
@@ -270,7 +278,11 @@ def carga_seccion_form(request, seccion_id=None):
 
         messages.error(request, "Revisá los datos del formulario para guardar la sección.")
     else:
-        form = EspecialSeccionForm(instance=seccion_edicion, ciclo=especial_context["ciclo"])
+        form = EspecialSeccionForm(
+            instance=seccion_edicion,
+            ciclo=especial_context["ciclo"],
+            cueanexo=especial_context["cueanexo"],
+        )
 
     context.update(
         {
@@ -601,6 +613,36 @@ def gestionar_seccion(request, seccion_id):
                 ok, message = False, "No se encontró el alumno indicado."
             else:
                 try:
+                    if seccion.es_oferta_integracion:
+                        matricula_form = EspecialMatriculaCompartidaForm(
+                            request.POST,
+                            cueanexo_actual=seccion.cueanexo,
+                            matricula_compartida_habilitada=True,
+                            matricula_compartida_requerida=True,
+                        )
+                        if not matricula_form.is_valid():
+                            raise ValidationError(
+                                _errores_form(matricula_form)
+                            )
+                        alumno_banco = get_object_or_404(
+                            EspecialAlumnoBanco.objects.filter(
+                                alumno=alumno,
+                                cueanexo=seccion.cueanexo,
+                                ciclo=seccion.ciclo,
+                                estado=EspecialAlumnoBanco.Estado.ACTIVO,
+                            ),
+                        )
+                        actualizar_matricula_compartida(
+                            alumno_banco=alumno_banco,
+                            user=request.user,
+                            matricula_compartida=matricula_form.cleaned_data[
+                                "matricula_compartida"
+                            ],
+                            alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
+                                cueanexo=seccion.cueanexo,
+                                ciclo=seccion.ciclo,
+                            ),
+                        )
                     _, creada = crear_inscripcion_activa(
                         seccion=seccion,
                         alumno=alumno,
