@@ -49,9 +49,9 @@
 </style>
 
 <div class="especial-visualizador-alumnos">
-    <div class="mb-3"><button type="button" class="btn btn-outline-primary" data-filtros-toggle aria-expanded="{% if filtros_panel_abierto %}true{% else %}false{% endif %}" aria-controls="especial-visualizador-filtros-panel"><i class="fa-solid fa-filter me-1" aria-hidden="true"></i>Filtros</button></div>
+    {% include "especial/partials/visualizador_cabecera.html" with visualizador_titulo="Alumnos" visualizador_icono="fa-solid fa-user-graduate" visualizador_filtros_id="especial-visualizador-alumnos-filtros" %}
 
-    <section class="cef-panel" id="especial-visualizador-filtros-panel"{% if not filtros_panel_abierto %} hidden{% endif %}>
+    <section class="cef-panel" id="especial-visualizador-alumnos-filtros" hidden aria-label="Filtros del visualizador de alumnos">
         <div class="cef-panel-head"><h2 class="cef-panel-title"><i class="fa-solid fa-filter" aria-hidden="true"></i>Filtros</h2><span class="especial-visualizador-muted">{{ page_obj.paginator.count }} alumno{{ page_obj.paginator.count|pluralize:"s" }}</span></div>
         <div class="cef-panel-body">
             <form method="get" action="{% url 'especial:visualizador_alumnos' %}" class="especial-visualizador-filtros" role="search">
@@ -75,7 +75,6 @@
     {% if consulta_error %}<div class="alert alert-warning" role="alert">{{ consulta_error }}</div>{% endif %}
 
     <section class="cef-panel">
-        <div class="cef-panel-head"><h2 class="cef-panel-title"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>Alumnos</h2><span class="especial-visualizador-muted">Un registro por alumno</span></div>
         <div class="cef-panel-body p-0"><div class="table-responsive"><table class="table table-hover table-sm mb-0 especial-visualizador-table">
             <thead><tr><th class="col-cue">CUE-Anexo</th><th>Matrícula compartida</th><th>Apellido</th><th>Nombre</th><th>DNI</th><th>CUIL</th><th>Email</th><th class="col-action">Acción</th></tr></thead>
             <tbody>
@@ -178,16 +177,6 @@
 
 <script>
 (function () {
-    const filtrosToggle = document.querySelector("[data-filtros-toggle]");
-    const filtrosPanel = document.getElementById("especial-visualizador-filtros-panel");
-    if (filtrosToggle && filtrosPanel) {
-        filtrosToggle.addEventListener("click", function () {
-            const mostrar = filtrosPanel.hasAttribute("hidden");
-            filtrosPanel.hidden = !mostrar;
-            filtrosToggle.setAttribute("aria-expanded", String(mostrar));
-        });
-    }
-
     const agregarAlumnosPrueba = document.querySelector("[data-agregar-alumnos-prueba]");
     if (agregarAlumnosPrueba) {
         agregarAlumnosPrueba.addEventListener("click", function () {
