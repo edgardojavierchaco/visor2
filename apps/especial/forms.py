@@ -1,10 +1,10 @@
 # apps/especial/forms.py
 # -*- coding: utf-8 -*-
+import logging
 import re
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField
-from django.db.models import Q
 from django.utils import timezone
 from .models import (
     AlumnoSeccion,
@@ -21,9 +21,12 @@ from .models import (
     SeccionTipo,
     TurnoTipo,
     cueanexo_tiene_oferta_comun,
+    get_ofertas_educativas_especiales,
     normalizar_cueanexo,
     solo_digitos,
 )
+
+logger = logging.getLogger(__name__)
 
 def _aplicar_clases_bootstrap(field):
     widget = field.widget
@@ -253,6 +256,14 @@ class EspecialBajaDocenteForm(forms.Form):
 
 class EspecialSeccionForm(forms.ModelForm):
     """Formulario de creación/edición de sección de Educación Especial."""
+
+    oferta = forms.ChoiceField(
+        label="Oferta educativa",
+        choices=(),
+        required=True,
+        widget=forms.Select(),
+    )
+
     class Meta:
         model = SeccionEspecial
         fields = [
@@ -284,7 +295,6 @@ class EspecialSeccionForm(forms.ModelForm):
             "descripcion": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
             "lugar_dictado": forms.TextInput(attrs={"class": "form-control"}),
             "nombre_seccion": forms.TextInput(attrs={"class": "form-control"}),
-            "oferta": forms.Select(attrs={"class": "form-select"}),
             "capacidad_total": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "cd_tipo_seccion": forms.Select(attrs={"class": "form-select"}),
             "tipo_estructura_especial": forms.Select(attrs={"class": "form-select"}),
@@ -300,27 +310,27 @@ class EspecialSeccionForm(forms.ModelForm):
         self.cueanexo = normalizar_cueanexo(cueanexo)
 
         oferta_actual = (self.instance.oferta or "").strip()
-        ofertas = []
-        if self.cueanexo:
-            ofertas = list(
-                EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
-                .filter(
-                    Q(cueanexo=self.cueanexo)
-                    | Q(padron_cueanexo=self.cueanexo)
-                )
-                .exclude(oferta__isnull=True)
-                .exclude(oferta__exact="")
-                .values_list("oferta", flat=True)
-                .distinct()
-                .order_by("oferta")
+        ofertas = get_ofertas_educativas_especiales(self.cueanexo)
+        self.ofertas_educativas = tuple(ofertas)
+        self.oferta_educativa_sin_configurar = bool(
+            self.cueanexo and not ofertas
+        )
+        if self.oferta_educativa_sin_configurar:
+            logger.warning(
+                "No hay ofertas educativas activas para Sección Especial: "
+                "cueanexo=%s ciclo_id=%s ciclo_anio=%s",
+                self.cueanexo,
+                getattr(self.ciclo, "pk", ""),
+                getattr(self.ciclo, "anio", ""),
             )
-        ofertas = [str(oferta).strip() for oferta in ofertas if str(oferta).strip()]
-        if oferta_actual and oferta_actual not in ofertas:
-            ofertas.insert(0, oferta_actual)
+
+        if oferta_actual:
+            self.initial["oferta"] = oferta_actual
         self.fields["oferta"].choices = [
-            ("", "Seleccioná una oferta")
+            ("", "---------")
         ] + [(oferta, oferta) for oferta in ofertas]
-        self.fields["oferta"].required = True
+        self.fields["oferta"].required = not self.oferta_educativa_sin_configurar
+        self.fields["oferta"].disabled = self.oferta_educativa_sin_configurar
 
         # Mapeo de campos y sus querysets
         campos_catalogo = {
@@ -350,6 +360,16 @@ class EspecialSeccionForm(forms.ModelForm):
         if not nombre:
             raise ValidationError("El nombre de la sección es obligatorio.")
         return nombre
+
+    def clean_oferta(self):
+        oferta = (self.cleaned_data.get("oferta") or "").strip()
+        if not oferta or self.oferta_educativa_sin_configurar:
+            return oferta
+        if oferta not in self.ofertas_educativas:
+            raise ValidationError(
+                "La oferta educativa no corresponde al CUE-Anexo seleccionado."
+            )
+        return oferta
 
     def save(self, commit=True):
         seccion = super().save(commit=False)

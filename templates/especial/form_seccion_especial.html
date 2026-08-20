@@ -57,6 +57,9 @@
                     <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                        {% if field.name == 'oferta' and oferta_educativa_sin_configurar %}
+                            <div class="text-warning small mt-1">No hay ofertas educativas configuradas para este CUE-Anexo.</div>
+                        {% endif %}
                         {% if field.errors %}
                             <div class="cef-error">{{ field.errors|join:", " }}</div>
                         {% endif %}

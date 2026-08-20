@@ -18,7 +18,11 @@ from django.template import Context, Engine
 from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
-from .forms import EspecialDocenteSeccionForm, EspecialMatriculaCompartidaForm
+from .forms import (
+    EspecialDocenteSeccionForm,
+    EspecialMatriculaCompartidaForm,
+    EspecialSeccionForm,
+)
 from .models import (
     AlumnoSeccion,
     DocenteSeccion,
@@ -29,6 +33,7 @@ from .models import (
     _normalizar_oferta_matricula_compartida,
     cueanexo_tiene_oferta_comun,
     cueanexo_tiene_oferta_matricula_compartida,
+    get_ofertas_educativas_especiales,
 )
 from .permisos import (
     _resolver_permisos_especial,
@@ -50,7 +55,7 @@ from .views_contexto import (
     contexto_base,
     datos_establecimiento_items,
 )
-from .views_carga_seccion import _alta_docente_nuevo_gestionar
+from .views_carga_seccion import _alta_docente_nuevo_gestionar, carga_seccion_form
 from .views_ciclo import _exigir_admin
 from .services.docentes_seccion import dar_alta_docente_seccion
 from .services.alumnos import (
@@ -2359,6 +2364,260 @@ class AutocompleteMatriculaCompartidaEspecialTests(SimpleTestCase):
 
         por_nombre, _ = self._serializar("Nombre compartido")
         self.assertEqual([resultado["id"] for resultado in por_nombre], ["100000005"])
+
+
+class EspecialSeccionOfertaFormTests(SimpleTestCase):
+    CUEANEXO = "220015500"
+    OFERTAS = [
+        "Especial - Integración",
+        "Especial - Jardín maternal",
+    ]
+
+    def test_fuente_filtra_cue_especial_y_estados_activos(self):
+        manager = MagicMock()
+        queryset = MagicMock()
+        valores = MagicMock()
+        manager.using.return_value = queryset
+        queryset.filter.return_value = queryset
+        queryset.exclude.return_value = queryset
+        queryset.values_list.return_value = valores
+        valores.distinct.return_value = valores
+        valores.order_by.return_value = [
+            " Especial - Jardín maternal ",
+            "Especial - Integración ",
+            "Especial - Integración",
+        ]
+
+        with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
+            ofertas = get_ofertas_educativas_especiales(self.CUEANEXO)
+
+        self.assertEqual(ofertas, self.OFERTAS)
+        manager.using.assert_called_once_with("default")
+        queryset.filter.assert_called_once_with(
+            cueanexo=self.CUEANEXO,
+            oferta__istartswith="Especial -",
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+
+    def test_select_real_renderiza_name_id_placeholder_y_opciones(self):
+        ciclo = SimpleNamespace(pk=1, anio=2026)
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=self.OFERTAS,
+        ):
+            form = EspecialSeccionForm(
+                instance=SeccionEspecial(cueanexo=self.CUEANEXO),
+                cueanexo=self.CUEANEXO,
+                ciclo=ciclo,
+            )
+
+        html = str(form["oferta"])
+        self.assertEqual(form.fields["oferta"].__class__.__name__, "ChoiceField")
+        self.assertEqual(form["oferta"].name, "oferta")
+        self.assertEqual(form["oferta"].id_for_label, "id_oferta")
+        self.assertEqual(html.count("<option"), 3)
+        self.assertIn('<option value="" selected>---------</option>', html)
+        self.assertIn("Especial - Integración", html)
+
+
+class EspecialSeccionOfertaViewTests(SimpleTestCase):
+    CUEANEXO = "220015500"
+    CUEANEXO_ALTERNATIVO = "220015501"
+    OFERTA = "Especial - Integración"
+    OFERTA_ALTERNATIVA = "Especial - Jardín maternal"
+
+    def setUp(self):
+        ciclo_model = SeccionEspecial._meta.get_field("ciclo").remote_field.model
+        self.ciclo = ciclo_model(pk=7, anio=2026, activo=True, actual=True)
+        self.especial_context = {
+            "cueanexo": self.CUEANEXO,
+            "ciclo": self.ciclo,
+            "ciclo_cerrado": False,
+            "puede_operar": True,
+            "querystring": f"cueanexo={self.CUEANEXO}&ciclo={self.ciclo.pk}",
+        }
+
+    @staticmethod
+    def _vista_sin_decoradores():
+        vista = carga_seccion_form
+        while hasattr(vista, "__wrapped__"):
+            vista = vista.__wrapped__
+        return vista
+
+    def _form(self, *, cueanexo=None, data=None, oferta_guardada=""):
+        cueanexo = cueanexo or self.CUEANEXO
+        return EspecialSeccionForm(
+            data,
+            instance=SeccionEspecial(
+                cueanexo=cueanexo,
+                ciclo=self.ciclo,
+                oferta=oferta_guardada,
+            ),
+            cueanexo=cueanexo,
+            ciclo=self.ciclo,
+        )
+
+    def test_get_creacion_carga_ofertas_y_muestra_titulo_agregar(self):
+        request = RequestFactory().get(
+            reverse("especial:carga_seccion_nueva"),
+            {"cueanexo": self.CUEANEXO, "ciclo": self.ciclo.pk},
+        )
+        request.user = SimpleNamespace(is_authenticated=True)
+        context = {"especial_context": self.especial_context.copy()}
+
+        with patch(
+            "apps.especial.views_carga_seccion.contexto_base",
+            return_value=context,
+        ), patch(
+            "apps.especial.views_carga_seccion.render",
+            return_value=HttpResponse("ok"),
+        ) as render_mock, patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            response = self._vista_sin_decoradores()(request)
+
+        self.assertEqual(response.status_code, 200)
+        rendered_context = render_mock.call_args.args[2]
+        self.assertEqual(rendered_context["form_title"], "Agregar Sección")
+        self.assertIsNone(rendered_context["seccion_edicion"])
+        html = str(rendered_context["form"]["oferta"])
+        self.assertEqual(html.count("<option"), 3)
+        self.assertIn(self.OFERTA, html)
+
+    def test_post_reconstruye_opciones_antes_de_validar(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ) as obtener_ofertas:
+            form = self._form(
+                data={
+                    "oferta": self.OFERTA,
+                    "nombre_seccion": "",
+                    "capacidad_total": "15",
+                }
+            )
+            self.assertFalse(form.is_valid())
+
+        obtener_ofertas.assert_called_once_with(self.CUEANEXO)
+        self.assertEqual(form.ciclo.anio, 2026)
+
+    def test_error_en_otro_campo_conserva_oferta_visible_y_seleccionada(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            form = self._form(
+                data={
+                    "oferta": self.OFERTA,
+                    "nombre_seccion": "",
+                    "capacidad_total": "15",
+                }
+            )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("nombre_seccion", form.errors)
+        self.assertIn(
+            f'<option value="{self.OFERTA}" selected>',
+            str(form["oferta"]),
+        )
+
+    def test_oferta_de_otro_cueanexo_es_rechazada(self):
+        oferta_ajena = "Especial - Primaria de 7 años"
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA],
+        ):
+            form = self._form(
+                data={
+                    "oferta": oferta_ajena,
+                    "nombre_seccion": "Sección oferta",
+                    "capacidad_total": "15",
+                }
+            )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("oferta", form.errors)
+
+    def test_edicion_muestra_la_oferta_guardada(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            form = self._form(oferta_guardada=self.OFERTA)
+
+        self.assertIn(
+            f'<option value="{self.OFERTA}" selected>',
+            str(form["oferta"]),
+        )
+
+    def test_cambiar_escuela_elimina_ofertas_de_la_anterior(self):
+        def ofertas_por_cue(cueanexo):
+            if cueanexo == self.CUEANEXO_ALTERNATIVO:
+                return [self.OFERTA_ALTERNATIVA]
+            return [self.OFERTA]
+
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            side_effect=ofertas_por_cue,
+        ):
+            form = self._form(cueanexo=self.CUEANEXO_ALTERNATIVO)
+
+        html = str(form["oferta"])
+        self.assertIn(self.OFERTA_ALTERNATIVA, html)
+        self.assertNotIn(f'value="{self.OFERTA}"', html)
+
+    def test_sin_ofertas_deshabilita_selector_y_muestra_mensaje(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[],
+        ):
+            form = self._form()
+
+        self.assertTrue(form.fields["oferta"].disabled)
+        template = (
+            Path(__file__).resolve().parents[2]
+            / "templates"
+            / "especial"
+            / "form_seccion_especial.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "No hay ofertas educativas configuradas para este CUE-Anexo.",
+            template,
+        )
+
+    def test_post_valido_de_la_vista_envia_mismo_cue_y_ciclo_al_guardado(self):
+        request = RequestFactory().post(
+            reverse("especial:carga_seccion_nueva"),
+            {"oferta": self.OFERTA},
+        )
+        request.user = SimpleNamespace(is_authenticated=True)
+        form = MagicMock()
+        form.is_valid.return_value = True
+        form.oferta_educativa_sin_configurar = False
+        context = {"especial_context": self.especial_context.copy()}
+
+        with patch(
+            "apps.especial.views_carga_seccion.contexto_base",
+            return_value=context,
+        ), patch(
+            "apps.especial.views_carga_seccion.EspecialSeccionForm",
+            return_value=form,
+        ) as form_class, patch(
+            "apps.especial.views_carga_seccion._guardar_seccion",
+        ) as guardar, patch(
+            "apps.especial.views_carga_seccion.messages.success",
+        ), patch(
+            "apps.especial.views_carga_seccion.redirect",
+            return_value=HttpResponse(status=302),
+        ):
+            response = self._vista_sin_decoradores()(request)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(form_class.call_args.kwargs["cueanexo"], self.CUEANEXO)
+        self.assertIs(form_class.call_args.kwargs["ciclo"], self.ciclo)
+        guardar.assert_called_once_with(form, self.especial_context, request.user)
 
 
 class CierreIntegridadEspecialTests(SimpleTestCase):
