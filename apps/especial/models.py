@@ -527,6 +527,12 @@ class SeccionEspecial(EspecialAuditoriaMixin):
     )
     
     nombre_seccion = models.CharField(max_length=50)
+    oferta = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Oferta educativa seleccionada para esta sección.",
+    )
     descripcion = models.TextField(max_length=255, blank=True, null=True)
     capacidad_total = models.PositiveIntegerField()
     
@@ -576,7 +582,7 @@ class SeccionEspecial(EspecialAuditoriaMixin):
         verbose_name_plural = "Secciones de Educación Especial"
         constraints = [
             models.UniqueConstraint(
-                fields=["cueanexo", "ciclo", "nombre_seccion", "cd_tipo_seccion"],
+                fields=["cueanexo", "ciclo", "nombre_seccion", "cd_tipo_seccion", "oferta"],
                 name="uq_esp_sec_cue_cic_nom_tipo",
             ),
         ]
@@ -607,6 +613,14 @@ class SeccionEspecial(EspecialAuditoriaMixin):
             self.tipo_seccion_snapshot = str(self.cd_tipo_seccion)
         if self.tipo_estructura_especial_id:
             self.estructura_snapshot = str(self.tipo_estructura_especial)
+
+    @property
+    def es_oferta_integracion(self):
+        oferta = _normalizar_oferta_matricula_compartida(self.oferta)
+        termino = _normalizar_oferta_matricula_compartida(
+            TERMINO_MATRICULA_COMPARTIDA
+        )
+        return bool(re.search(r"\b" + re.escape(termino) + r"\b", oferta))
 
     def save(self, *args, **kwargs):
         self.actualizar_snapshots()

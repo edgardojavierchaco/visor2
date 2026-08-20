@@ -61,6 +61,8 @@
                             <th>Tipo Sección</th>
                             <th>Estructura Especial</th>
                             <th>Nombre</th>
+                            <th>Oferta</th>
+                            <th>Estado</th>
                             <th>Turno</th>
                             <th>Rango Etario</th>
                             <th>Modalidad</th>
@@ -82,6 +84,12 @@
                                     {% if not seccion.alumnos_activos %}
                                         <span class="cef-seccion-status-badge">Sin alumnos</span>
                                     {% endif %}
+                                </td>
+                                <td>{{ seccion.oferta|default:"—" }}</td>
+                                <td>
+                                    <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% elif seccion.estado == 'cerrado' %}danger{% else %}secondary{% endif %}">
+                                        {{ seccion.get_estado_display }}
+                                    </span>
                                 </td>
                                 <td>
                                     <span class="badge text-bg-secondary">{{ seccion.turno.descripcion|default:"—" }}</span>

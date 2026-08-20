@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponseNotAllowed, JsonResponse
@@ -126,11 +126,18 @@ def _matricula_compartida_habilitada(especial_context):
         return None
 
 
-def _matricula_compartida_form(data, especial_context, habilitada):
+def _matricula_compartida_form(
+    data,
+    especial_context,
+    habilitada,
+    *,
+    requerida=False,
+):
     return EspecialMatriculaCompartidaForm(
         data,
         cueanexo_actual=especial_context.get("cueanexo"),
         matricula_compartida_habilitada=habilitada,
+        matricula_compartida_requerida=requerida,
     )
 
 
@@ -385,16 +392,39 @@ def _inscribir_alumno_desde_banco(request, especial_context):
         return
 
     try:
-        _, creada = crear_inscripcion_activa(
-            seccion=seccion,
-            alumno=alumno_banco.alumno,
-            user=request.user,
-            seccion_queryset=SeccionEspecial.objects.filter(
-                cueanexo=especial_context["cueanexo"],
-                ciclo=especial_context["ciclo"],
-            ),
-            alumno_banco_queryset=alumno_banco_queryset,
-        )
+        with transaction.atomic():
+            if seccion.es_oferta_integracion:
+                matricula_form = _matricula_compartida_form(
+                    request.POST,
+                    especial_context,
+                    True,
+                    requerida=True,
+                )
+                formulario_valido, formulario_error = _validar_matricula_compartida_form(
+                    matricula_form
+                )
+                if not formulario_valido:
+                    raise ValidationError(formulario_error)
+
+                actualizar_matricula_compartida(
+                    alumno_banco=alumno_banco,
+                    user=request.user,
+                    matricula_compartida=matricula_form.cleaned_data[
+                        "matricula_compartida"
+                    ],
+                    alumno_banco_queryset=alumno_banco_queryset,
+                )
+
+            _, creada = crear_inscripcion_activa(
+                seccion=seccion,
+                alumno=alumno_banco.alumno,
+                user=request.user,
+                seccion_queryset=SeccionEspecial.objects.filter(
+                    cueanexo=especial_context["cueanexo"],
+                    ciclo=especial_context["ciclo"],
+                ),
+                alumno_banco_queryset=alumno_banco_queryset,
+            )
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     except IntegrityError:

@@ -5,6 +5,7 @@
     var reloadChecked = false;
     var activeSearchRequest = null;
     var activeBajaRequest = null;
+    var pendingIntegracionInscriptionForm = null;
 
     function helpers() {
         return window.EspecialBusquedaPersonas;
@@ -379,11 +380,87 @@
             );
         }
         buttons.forEach(function (button) {
+            if (!button.hasAttribute("data-especial-matricula-required")) return;
             var row = button.closest("tr");
             var cueSelect = row && row.querySelector("[data-especial-matricula-cue-select]");
             if (!cueSelect) return;
             button.disabled = !String(cueSelect.value || "").trim();
         });
+    }
+
+    function integrationInscriptionModal() {
+        return document.querySelector("[data-especial-inscripcion-integracion-modal]");
+    }
+
+    function closeIntegrationInscriptionModal() {
+        var modal = integrationInscriptionModal();
+        if (!modal) return;
+        pendingIntegracionInscriptionForm = null;
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    function openIntegrationInscriptionModal(trigger) {
+        var modal = integrationInscriptionModal();
+        var form = trigger && trigger.closest("form");
+        if (!modal || !form) return;
+
+        pendingIntegracionInscriptionForm = form;
+        var sectionLabel = modal.querySelector("[data-especial-inscripcion-integracion-seccion]");
+        var error = modal.querySelector("[data-especial-inscripcion-integracion-error]");
+        var confirm = modal.querySelector("[data-especial-inscripcion-integracion-confirm]");
+        var select = modal.querySelector("[data-especial-matricula-cue-select]");
+        if (sectionLabel) sectionLabel.textContent = trigger.dataset.seccionLabel || "seleccionada";
+        if (error) {
+            error.hidden = true;
+            error.textContent = "";
+        }
+        if (select) {
+            if (window.jQuery && window.jQuery.fn && window.jQuery(select).data("select2")) {
+                window.jQuery(select).val(null).trigger("change");
+            } else {
+                select.value = "";
+            }
+        }
+        if (confirm) confirm.disabled = true;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        if (select && window.jQuery && window.jQuery.fn && window.jQuery(select).data("select2")) {
+            window.jQuery(select).select2("open");
+        } else if (select) {
+            select.focus();
+        }
+    }
+
+    function submitIntegrationInscription(event) {
+        var modalForm = event.target.closest("[data-especial-inscripcion-integracion-form]");
+        if (!modalForm) return;
+        event.preventDefault();
+
+        var select = modalForm.querySelector("[data-especial-matricula-cue-select]");
+        var value = select ? String(select.value || "").trim() : "";
+        var error = modalForm.querySelector("[data-especial-inscripcion-integracion-error]");
+        if (!value || !pendingIntegracionInscriptionForm) {
+            if (error) {
+                error.textContent = "Seleccioná un CUE-Anexo de Educación Común para continuar.";
+                error.hidden = false;
+            }
+            return;
+        }
+
+        var previous = pendingIntegracionInscriptionForm.querySelector(
+            "input[name='cueanexo_matricula_compartida']"
+        );
+        if (previous) previous.remove();
+        var hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = "cueanexo_matricula_compartida";
+        hidden.value = value;
+        pendingIntegracionInscriptionForm.appendChild(hidden);
+
+        var form = pendingIntegracionInscriptionForm;
+        closeIntegrationInscriptionModal();
+        HTMLFormElement.prototype.submit.call(form);
     }
 
     function matriculaCueParts(data) {
@@ -575,9 +652,11 @@
             $cueSelect.on("select2:select.especialMatricula", function (event) {
                 var data = event.params && event.params.data;
                 searchState.selectedId = data && data.id ? String(data.id).trim() : "";
+                syncMatriculaAlta(editor);
             });
             $cueSelect.on("select2:clear.especialMatricula", function () {
                 searchState.selectedId = "";
+                syncMatriculaAlta(editor);
                 var select2 = $cueSelect.data("select2");
                 suppressClearOpen = !select2 || !select2.isOpen();
             });
@@ -670,12 +749,33 @@
             if (overlay && event.target === overlay) closeModal(overlay);
         });
         document.addEventListener("submit", submitModalForm);
+        document.addEventListener("submit", submitIntegrationInscription);
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-especial-inscribir-integracion]");
+            if (trigger) {
+                event.preventDefault();
+                openIntegrationInscriptionModal(trigger);
+                return;
+            }
+            var close = event.target.closest("[data-especial-inscripcion-integracion-close]");
+            if (close) {
+                event.preventDefault();
+                closeIntegrationInscriptionModal();
+                return;
+            }
+            var modal = event.target.closest("[data-especial-inscripcion-integracion-modal]");
+            if (modal && event.target === modal) closeIntegrationInscriptionModal();
+        });
         document.addEventListener("change", function (event) {
             var cue = event.target.matches("[data-especial-matricula-cue-select]");
             if (!cue) return;
             var editor = event.target.closest("[data-especial-matricula-editor]");
             updateMatriculaSave(editor);
             syncMatriculaAlta(editor || event.target);
+            if (event.target.closest("[data-especial-inscripcion-integracion-modal]")) {
+                var confirm = document.querySelector("[data-especial-inscripcion-integracion-confirm]");
+                if (confirm) confirm.disabled = !String(event.target.value || "").trim();
+            }
         });
         document.addEventListener("focusin", function (event) {
             if (event.target.matches("[data-especial-matricula-cue-select]")) {
