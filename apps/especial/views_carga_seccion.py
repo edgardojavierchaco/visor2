@@ -489,13 +489,27 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     cuil = request.POST.get("cuil")
     if not cuil:
         return False, "CUIL del docente no proporcionado."
-    # Create a new assignment instance
-    asignacion = DocenteSeccion(seccion=seccion, docente_cuil=cuil)
+    asignacion_existente = (
+        DocenteSeccion.objects
+        .filter(seccion=seccion, docente_cuil=cuil)
+        .order_by("-creado_en", "-id")
+        .first()
+    )
+    if asignacion_existente and asignacion_existente.estado == DocenteSeccion.Estado.ACTIVO:
+        return False, "El docente ya está asignado activamente a esta sección."
+
+    # Reutilizar la relación existente evita crear otra fila para el mismo
+    # docente y sección cuando se reactiva o cambia su estado.
+    asignacion = asignacion_existente or DocenteSeccion(
+        seccion=seccion,
+        docente_cuil=cuil,
+    )
     form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
     if form.is_valid():
         asignacion = form.save(commit=False)
         asignacion.seccion = seccion
-        asignacion.creado_por = request.user
+        if not asignacion.pk:
+            asignacion.creado_por = request.user
         asignacion.actualizado_por = request.user
         try:
             with transaction.atomic():

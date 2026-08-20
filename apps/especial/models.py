@@ -970,8 +970,7 @@ class DocenteSeccion(EspecialAuditoriaMixin):
         constraints = [
             models.UniqueConstraint(
                 fields=["seccion", "docente_cuil"],
-                condition=Q(estado="activo"),
-                name="uq_esp_doc_sec_cuil_act",
+                name="uq_esp_doc_sec_cuil",
             ),
             models.UniqueConstraint(
                 fields=["seccion", "rol"],

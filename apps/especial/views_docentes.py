@@ -104,6 +104,21 @@ def _asignaciones_por_docente(especial_context, docentes_banco):
     return por_docente
 
 
+def _secciones_ocupadas_ids(especial_context, docente_cuil):
+    """Devuelve secciones ya asignadas al docente en estados no asignables."""
+    return set(
+        DocenteSeccion.objects.filter(
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+            docente_cuil=_solo_digitos(docente_cuil),
+            estado__in=[
+                DocenteSeccion.Estado.ACTIVO,
+                DocenteSeccion.Estado.INACTIVO,
+            ],
+        ).values_list("seccion_id", flat=True)
+    )
+
+
 def _secciones_disponibles(especial_context):
     if not especial_context["puede_operar"]:
         return SeccionEspecial.objects.none()
@@ -255,11 +270,14 @@ def _docentes_fragment_context(especial_context, url_docentes):
                 DocenteSeccion.Estado.INACTIVO,
             }
         ]
-        secciones_activas_ids = {asignacion.seccion_id for asignacion in asignaciones_activas}
+        secciones_ocupadas_ids = _secciones_ocupadas_ids(
+            especial_context,
+            item.docente_cuil,
+        )
         item.secciones_asignables = [
             seccion
             for seccion in secciones_disponibles
-            if seccion.pk not in secciones_activas_ids
+            if seccion.pk not in secciones_ocupadas_ids
         ]
         item.secciones_bloqueadas = asignaciones_activas
         item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
@@ -529,6 +547,18 @@ def docentes(request):
                 return redirect(url_docentes)
 
             cuil = _solo_digitos(cuil)
+            asignacion_inactiva = DocenteSeccion.objects.filter(
+                seccion=seccion,
+                docente_cuil=cuil,
+                estado=DocenteSeccion.Estado.INACTIVO,
+            ).exists()
+            if asignacion_inactiva:
+                message = "El docente ya está asignado a esta sección con estado Inactivo."
+                if _is_ajax(request):
+                    return JsonResponse({"error": message}, status=409)
+                messages.error(request, message)
+                return redirect(url_docentes)
+
             asignaciones_historicas = list(
                 DocenteSeccion.objects.filter(
                     seccion=seccion,
@@ -601,8 +631,11 @@ def docentes(request):
                                 DocenteSeccion.Estado.INACTIVO,
                             }
                         ]
-                        ids_activas = {a.seccion_id for a in activas}
-                        item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_activas]
+                        ids_ocupadas = _secciones_ocupadas_ids(
+                            especial_context,
+                            item.docente_cuil,
+                        )
+                        item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_ocupadas]
                         item.secciones_bloqueadas = activas
                         item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
                         item.url_editar_docente = _url_carga_docente(item.docente_cuil, url_docentes, "Volver a Docentes Especial")
@@ -738,9 +771,12 @@ def docentes(request):
                 DocenteSeccion.Estado.INACTIVO,
             }
         ]
-        secciones_activas_ids = {asignacion.seccion_id for asignacion in asignaciones_activas}
+        secciones_ocupadas_ids = _secciones_ocupadas_ids(
+            especial_context,
+            item.docente_cuil,
+        )
         item.secciones_asignables = [
-            seccion for seccion in secciones_disponibles if seccion.pk not in secciones_activas_ids
+            seccion for seccion in secciones_disponibles if seccion.pk not in secciones_ocupadas_ids
         ]
         item.secciones_bloqueadas = asignaciones_activas
         item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
