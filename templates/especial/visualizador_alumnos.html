@@ -47,6 +47,7 @@
         .especial-visualizador-paginacion { align-items: stretch; flex-direction: column; }
     }
 </style>
+{% include "especial/partials/visualizador_detalle_estilos.html" %}
 
 <div class="especial-visualizador-alumnos">
     {% include "especial/partials/visualizador_cabecera.html" with visualizador_titulo="Alumnos" visualizador_icono="fa-solid fa-user-graduate" visualizador_filtros_id="especial-visualizador-alumnos-filtros" %}
@@ -97,79 +98,99 @@
     {% if page_obj.paginator.num_pages > 1 %}<nav class="especial-visualizador-paginacion" aria-label="Paginación de alumnos"><span class="especial-visualizador-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><div class="btn-group" role="group">{% if page_obj.has_previous %}<a class="btn btn-outline-primary btn-sm" href="?{% if filtros_querystring %}{{ filtros_querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-outline-primary btn-sm" href="?{% if filtros_querystring %}{{ filtros_querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>{% endif %}</div></nav>{% endif %}
 
     {% for alumno in alumnos %}
-        <div class="especial-visualizador-modal" id="visualizador-modal-{{ alumno.pk }}" hidden role="dialog" aria-modal="true" aria-labelledby="visualizador-modal-title-{{ alumno.pk }}">
-            <div class="especial-visualizador-modal-dialog">
-                <div class="especial-visualizador-modal-header"><div><h2 id="visualizador-modal-title-{{ alumno.pk }}">{{ alumno.visualizador_persona.apellido }}, {{ alumno.visualizador_persona.nombre }}</h2><span class="especial-visualizador-muted">Detalle completo del alumno</span></div><button type="button" class="btn-close" aria-label="Cerrar" data-modal-close></button></div>
-                <div class="especial-visualizador-modal-body">
-                    <section class="especial-visualizador-modal-section">
-                        <h3>Estado operativo de Especial</h3>
-                        <div class="especial-visualizador-datos">
-                            <div class="especial-visualizador-dato"><span>CUE-Anexo</span><strong>{{ alumno.visualizador_cue_original|default:"No cargado" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>En sección</span><strong>{% if alumno.visualizador_en_seccion %}Sí{% else %}No{% endif %}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Matrícula compartida</span><strong>{% if alumno.visualizador_matricula_compartida %}Sí{% else %}No{% endif %}</strong></div>
-                            <div class="especial-visualizador-dato"><span>CUE-Anexo Matrícula</span><strong>{% if alumno.visualizador_matricula_compartida %}{{ alumno.visualizador_cue_matricula }}{% if alumno.visualizador_padron_matricula.nom_est %} · {{ alumno.visualizador_padron_matricula.nom_est }}{% endif %}{% else %}No corresponde{% endif %}</strong></div>
+        <div class="especial-visualizador-modal especial-visualizador-detail-modal" id="visualizador-modal-{{ alumno.pk }}" hidden role="dialog" aria-modal="true" aria-labelledby="visualizador-modal-title-{{ alumno.pk }}">
+            <div class="especial-visualizador-modal-dialog especial-visualizador-detail-modal-dialog">
+                <div class="especial-visualizador-modal-header especial-visualizador-detail-modal-header">
+                    <div class="especial-visualizador-detail-heading">
+                        <span class="especial-visualizador-detail-heading-icon"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></span>
+                        <div class="especial-visualizador-detail-heading-text">
+                            <h2 id="visualizador-modal-title-{{ alumno.pk }}">{{ alumno.visualizador_persona.apellido|default:"—" }}, {{ alumno.visualizador_persona.nombre|default:"—" }}</h2>
+                            <span class="especial-visualizador-detail-heading-subtitle">Detalle completo del alumno</span>
+                            {% if alumno.visualizador_persona.nro_documento or alumno.visualizador_persona.cuil %}<span class="especial-visualizador-detail-heading-meta">{% if alumno.visualizador_persona.nro_documento %}DNI {{ alumno.visualizador_persona.nro_documento }}{% endif %}{% if alumno.visualizador_persona.nro_documento and alumno.visualizador_persona.cuil %} · {% endif %}{% if alumno.visualizador_persona.cuil %}CUIL {{ alumno.visualizador_persona.cuil }}{% endif %}</span>{% endif %}
+                        </div>
+                    </div>
+                    <button type="button" class="especial-visualizador-detail-close" aria-label="Cerrar detalle del alumno" data-modal-close><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                </div>
+                <div class="especial-visualizador-modal-body especial-visualizador-detail-modal-body">
+                    <section class="especial-visualizador-modal-section especial-visualizador-detail-section">
+                        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i>Resumen operativo</h3></div>
+                        <div class="especial-visualizador-detail-summary-grid">
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-school" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">CUE-Anexo</span><strong class="especial-visualizador-detail-summary-value">{{ alumno.visualizador_cue_original|default:"No cargado" }}</strong></div></div>
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">En sección</span><strong class="especial-visualizador-detail-summary-value{% if alumno.visualizador_en_seccion %} is-positive{% else %} is-muted{% endif %}">{% if alumno.visualizador_en_seccion %}Sí{% else %}No{% endif %}</strong></div></div>
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Matrícula compartida</span><strong class="especial-visualizador-detail-summary-value{% if alumno.visualizador_matricula_compartida %} is-positive{% else %} is-muted{% endif %}">{% if alumno.visualizador_matricula_compartida %}Sí{% else %}No{% endif %}</strong></div></div>
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-building-columns" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">CUE matrícula</span><strong class="especial-visualizador-detail-summary-value">{% if alumno.visualizador_matricula_compartida %}{{ alumno.visualizador_cue_matricula }}{% if alumno.visualizador_padron_matricula.nom_est %} · {{ alumno.visualizador_padron_matricula.nom_est }}{% endif %}{% else %}No corresponde{% endif %}</strong></div></div>
                         </div>
                     </section>
-                    <section class="especial-visualizador-modal-section">
-                        <h3>Datos personales completos</h3>
-                        <div class="especial-visualizador-datos">
-                            <div class="especial-visualizador-dato"><span>ID</span><strong>{{ alumno.visualizador_persona.id|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Apellido</span><strong>{{ alumno.visualizador_persona.apellido|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Nombre</span><strong>{{ alumno.visualizador_persona.nombre|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Tipo de documento</span><strong>{{ alumno.visualizador_persona.tipo_documento|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Nro. de documento</span><strong>{{ alumno.visualizador_persona.nro_documento|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>CUIL</span><strong>{{ alumno.visualizador_persona.cuil|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Fecha de nacimiento</span><strong>{{ alumno.visualizador_persona.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Sexo</span><strong>{{ alumno.visualizador_persona.sexo|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Estado civil</span><strong>{{ alumno.visualizador_persona.est_civil|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Lugar de nacimiento</span><strong>{{ alumno.visualizador_persona.lugar_nacimiento|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Localidad de nacimiento</span><strong>{{ alumno.visualizador_persona.localidad_nacimiento|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Provincia de nacimiento</span><strong>{{ alumno.visualizador_persona.provincia_nacimiento|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>País de nacimiento</span><strong>{{ alumno.visualizador_persona.pais_nacimiento|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Email</span><strong>{{ alumno.visualizador_persona.email|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Teléfono</span><strong>{{ alumno.visualizador_persona.telefono|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Teléfono normalizado</span><strong>{{ alumno.visualizador_persona.telefono_normalizado|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Es celular</span><strong>{% if alumno.visualizador_persona.es_celular %}Sí{% else %}No{% endif %}</strong></div>
-                            <div class="especial-visualizador-dato"><span>WhatsApp</span><strong>{% if alumno.visualizador_persona.whatsapp %}Sí{% else %}No{% endif %}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Localidad de residencia</span><strong>{{ alumno.visualizador_persona.localidad_residencia|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Provincia de residencia</span><strong>{{ alumno.visualizador_persona.provincia_residencia|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>País de residencia</span><strong>{{ alumno.visualizador_persona.pais_residencia|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Fecha de registro</span><strong>{{ alumno.visualizador_persona.fecha_registro|date:"d/m/Y H:i"|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-dato"><span>Observaciones</span><strong>{{ alumno.visualizador_persona.observaciones|default:"—" }}</strong></div>
+
+                    <section class="especial-visualizador-modal-section especial-visualizador-detail-section">
+                        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Datos personales</h3></div>
+                        <div class="especial-visualizador-detail-personal-groups">
+                            <div class="especial-visualizador-detail-data-group"><h4>Identificación</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>ID</span><strong>{{ alumno.visualizador_persona.id|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Apellido</span><strong>{{ alumno.visualizador_persona.apellido|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Nombre</span><strong>{{ alumno.visualizador_persona.nombre|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Tipo de documento</span><strong>{{ alumno.visualizador_persona.tipo_documento|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Nro. de documento</span><strong>{{ alumno.visualizador_persona.nro_documento|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>CUIL</span><strong>{{ alumno.visualizador_persona.cuil|default:"—" }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Nacimiento</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Fecha de nacimiento</span><strong>{{ alumno.visualizador_persona.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Sexo</span><strong>{{ alumno.visualizador_persona.sexo|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Estado civil</span><strong>{{ alumno.visualizador_persona.est_civil|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Lugar de nacimiento</span><strong>{{ alumno.visualizador_persona.lugar_nacimiento|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Localidad de nacimiento</span><strong>{{ alumno.visualizador_persona.localidad_nacimiento|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Provincia de nacimiento</span><strong>{{ alumno.visualizador_persona.provincia_nacimiento|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>País de nacimiento</span><strong>{{ alumno.visualizador_persona.pais_nacimiento|default:"—" }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Contacto</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Email</span><strong>{{ alumno.visualizador_persona.email|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Teléfono</span><strong>{{ alumno.visualizador_persona.telefono|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Teléfono normalizado</span><strong>{{ alumno.visualizador_persona.telefono_normalizado|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Es celular</span><strong>{% if alumno.visualizador_persona.es_celular %}Sí{% else %}No{% endif %}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>WhatsApp</span><strong>{% if alumno.visualizador_persona.whatsapp %}Sí{% else %}No{% endif %}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Residencia</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Localidad</span><strong>{{ alumno.visualizador_persona.localidad_residencia|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Provincia</span><strong>{{ alumno.visualizador_persona.provincia_residencia|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>País</span><strong>{{ alumno.visualizador_persona.pais_residencia|default:"—" }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Información adicional</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Fecha de registro</span><strong>{{ alumno.visualizador_persona.fecha_registro|date:"d/m/Y H:i"|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Observaciones</span><strong>{{ alumno.visualizador_persona.observaciones|default:"—" }}</strong></div>
+                            </div></div>
                         </div>
                     </section>
-                    <section class="especial-visualizador-modal-section">
-                        <h3>Secciones e inscripciones de Especial</h3>
-                        {% if not alumno.visualizador_en_seccion %}<p class="text-muted">No posee una sección asignada.</p>{% endif %}
+
+                    <section class="especial-visualizador-modal-section especial-visualizador-detail-section">
+                        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i>Secciones e inscripciones de Especial</h3><span class="especial-visualizador-detail-section-count">{{ alumno.visualizador_detalle_inscripciones|length }} {% if alumno.visualizador_detalle_inscripciones|length == 1 %}inscripción{% else %}inscripciones{% endif %}</span></div>
+                        {% if not alumno.visualizador_en_seccion %}<p class="especial-visualizador-detail-empty">No posee una sección asignada.</p>{% endif %}
                         {% if alumno.visualizador_detalle_inscripciones %}
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover align-middle mb-0">
-                                    <thead>
-                                        <tr><th>Ciclo lectivo</th><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Modalidad</th><th>Nivel / Estructura</th><th>Sección</th><th>Turno</th><th>Estado</th><th>Docentes asignados</th></tr>
-                                    </thead>
+                            <div class="especial-visualizador-detail-table-scroll">
+                                <table class="table especial-visualizador-detail-table">
+                                    <thead><tr><th>Ciclo lectivo</th><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Modalidad</th><th>Nivel / Estructura</th><th>Sección</th><th>Turno</th><th>Estado</th><th>Docentes asignados</th></tr></thead>
                                     <tbody>
                                         {% for item in alumno.visualizador_detalle_inscripciones %}
                                             <tr>
-                                                <td>{{ item.seccion.ciclo.anio }}</td>
-                                                <td>{{ item.seccion.cueanexo }}</td>
-                                                <td><strong>{{ item.visualizador_padron.nom_est|default:"—" }}</strong><small class="d-block text-muted">{{ item.visualizador_padron.localidad|default:"—" }}{% if item.visualizador_padron.departamento %} · {{ item.visualizador_padron.departamento }}{% endif %}</small></td>
-                                                <td>{{ item.seccion.modalidad.descripcion|default:"—" }}</td>
-                                                <td>{{ item.seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
-                                                <td><strong>{{ item.seccion.nombre_seccion }}</strong><small class="d-block text-muted">{{ item.seccion.cd_tipo_seccion.descripcion|default:"—" }}</small></td>
-                                                <td>{{ item.seccion.turno.descripcion|default:"—" }}</td>
-                                                <td>{{ item.get_estado_display }}<small class="d-block text-muted">Desde {{ item.fecha_inscripcion|date:"d/m/Y" }}{% if item.fecha_baja %} · Baja {{ item.fecha_baja|date:"d/m/Y" }}{% endif %}</small></td>
-                                                <td><div class="especial-visualizador-docentes">{% for docente in item.seccion.visualizador_docentes %}<div>{{ docente.visualizador_docente_nombre }}<small>{{ docente.get_rol_display }}{% if docente.visualizador_docente_dni %} · DNI {{ docente.visualizador_docente_dni }}{% endif %}</small></div>{% empty %}<span class="text-muted">Sin asignaciones</span>{% endfor %}</div></td>
+                                                <td data-label="Ciclo lectivo">{{ item.seccion.ciclo.anio }}</td>
+                                                <td data-label="CUE-Anexo"><span class="especial-visualizador-detail-chip">{{ item.seccion.cueanexo }}</span></td>
+                                                <td data-label="Establecimiento / ubicación"><strong class="detail-cell-primary">{{ item.visualizador_padron.nom_est|default:"—" }}</strong><small class="detail-cell-secondary">{{ item.visualizador_padron.localidad|default:"—" }}{% if item.visualizador_padron.departamento %} · {{ item.visualizador_padron.departamento }}{% endif %}</small></td>
+                                                <td data-label="Modalidad">{{ item.seccion.modalidad.descripcion|default:"—" }}</td>
+                                                <td data-label="Nivel / Estructura">{{ item.seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
+                                                <td data-label="Sección"><strong class="detail-cell-primary">{{ item.seccion.nombre_seccion }}</strong><small class="detail-cell-secondary">{{ item.seccion.cd_tipo_seccion.descripcion|default:"—" }}</small></td>
+                                                <td data-label="Turno">{{ item.seccion.turno.descripcion|default:"—" }}</td>
+                                                <td data-label="Estado"><span class="especial-visualizador-detail-status">{{ item.get_estado_display }}</span><small class="detail-cell-secondary">Desde {{ item.fecha_inscripcion|date:"d/m/Y" }}{% if item.fecha_baja %} · Baja {{ item.fecha_baja|date:"d/m/Y" }}{% endif %}</small></td>
+                                                <td data-label="Docentes asignados"><div class="especial-visualizador-docentes">{% for docente in item.seccion.visualizador_docentes %}<div><strong class="detail-cell-primary">{{ docente.visualizador_docente_nombre }}</strong><small class="detail-cell-secondary">{{ docente.get_rol_display }}{% if docente.visualizador_docente_dni %} · DNI {{ docente.visualizador_docente_dni }}{% endif %}</small></div>{% empty %}<span class="especial-visualizador-detail-empty">Sin asignaciones</span>{% endfor %}</div></td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
                         {% else %}
-                            <p class="mb-0">No posee inscripciones ni secciones de Especial cargadas.</p>
+                            <p class="especial-visualizador-detail-empty">No posee inscripciones ni secciones de Especial cargadas.</p>
                         {% endif %}
                     </section>
                 </div>
-                <div class="especial-visualizador-modal-footer"><button type="button" class="btn btn-secondary" data-modal-close>Cerrar</button></div>
+                <div class="especial-visualizador-modal-footer especial-visualizador-detail-modal-footer"><button type="button" class="btn btn-primary" data-modal-close>Cerrar</button></div>
             </div>
         </div>
     {% endfor %}
@@ -198,6 +219,7 @@
         if (!activeModal) return;
         activeModal.hidden = true;
         activeModal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("especial-visualizador-modal-open");
         if (opener) opener.focus();
         activeModal = null;
         opener = null;
@@ -212,6 +234,7 @@
             opener = openButton;
             modal.hidden = false;
             modal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("especial-visualizador-modal-open");
             const closeButton = modal.querySelector("[data-modal-close]");
             if (closeButton) closeButton.focus();
             return;

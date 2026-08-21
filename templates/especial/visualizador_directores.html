@@ -68,7 +68,7 @@
     .especial-visualizador-directores-table th { white-space: nowrap; }
     .especial-visualizador-directores-table .col-cuil { min-width: 125px; }
     .especial-visualizador-directores-table .col-establecimiento { min-width: 210px; }
-    .especial-visualizador-directores-table .col-action { min-width: 100px; }
+    .especial-visualizador-directores-table .col-action { min-width: 130px; }
     .especial-visualizador-directores-muted { color: var(--slate-500); font-size: .82rem; }
     .especial-visualizador-directores-table .director-asignaciones-list {
         display: flex;
@@ -122,6 +122,52 @@
     }
     @media (max-width: 575px) {
         .especial-visualizador-directores-filtros { grid-template-columns: 1fr; }
+    }
+</style>
+{% include "especial/partials/visualizador_detalle_estilos.html" %}
+<style>
+    .especial-visualizador-directores .especial-visualizador-detail-modal {
+        align-items: center;
+        background: rgba(15, 23, 42, .62);
+        display: flex;
+        inset: 0;
+        justify-content: center;
+        overflow: hidden;
+        padding: clamp(.75rem, 2vw, 1.5rem);
+        position: fixed;
+        z-index: 1050;
+    }
+    .especial-visualizador-directores .especial-visualizador-detail-modal[hidden] { display: none; }
+    .especial-visualizador-directores .especial-visualizador-detail-modal-dialog {
+        background: #fff;
+        border-radius: var(--r-lg, 1rem);
+        box-shadow: 0 1rem 3rem rgba(15, 23, 42, .25);
+        height: min(88vh, 900px);
+        overflow: hidden;
+    }
+    .especial-visualizador-directores .especial-visualizador-detail-loading {
+        align-items: center;
+        color: var(--visualizador-detail-muted, #68758a);
+        display: flex;
+        gap: .65rem;
+        justify-content: center;
+        min-height: 9rem;
+    }
+    .especial-visualizador-directores .especial-visualizador-detail-spinner {
+        animation: especial-director-detail-spin .7s linear infinite;
+        border: 2px solid #bfdbfe;
+        border-radius: 50%;
+        border-top-color: var(--primary, #2563eb);
+        display: inline-block;
+        height: 1.1rem;
+        width: 1.1rem;
+    }
+    @keyframes especial-director-detail-spin { to { transform: rotate(360deg); } }
+    @media (max-width: 767.98px) {
+        .especial-visualizador-directores .especial-visualizador-detail-modal-dialog {
+            height: 92vh;
+            width: 96vw;
+        }
     }
 </style>
 
@@ -211,7 +257,7 @@
                                 <th>CUE-Anexo / oferta</th>
                                 <th class="col-establecimiento">Establecimiento / ubicación</th>
                                 <th>Estado</th>
-                                <th class="col-action">Acciones</th>
+                                <th class="col-action">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -252,7 +298,7 @@
                                     <td>
                                         {% for estado in director.estados %}<div class="director-vinculo-item">{{ estado|default:"—" }}</div>{% endfor %}
                                     </td>
-                                    <td><a class="btn btn-outline-primary btn-sm" href="{{ director.detalle_url }}"><i class="fa-solid fa-eye me-1"></i>Ver</a></td>
+                                    <td class="col-action"><a class="btn btn-primary btn-sm" href="{{ director.detalle_url }}" data-director-detail-open data-director-cuil="{{ director.cuil }}">Ver detalle</a></td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -271,6 +317,28 @@
     {% elif not filtros_directores_errores %}
         <div class="cef-empty-state">No se encontraron directores para los filtros seleccionados.</div>
     {% endif %}
+
+    <div class="especial-visualizador-detail-modal" id="visualizador-director-detail-modal" hidden role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="visualizador-director-detail-title" data-director-detail-modal>
+        <div class="especial-visualizador-detail-modal-dialog">
+            <div class="especial-visualizador-detail-modal-header">
+                <div class="especial-visualizador-detail-heading">
+                    <span class="especial-visualizador-detail-heading-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
+                    <div class="especial-visualizador-detail-heading-text">
+                        <h2 id="visualizador-director-detail-title" data-director-detail-title>Detalle del director</h2>
+                        <span class="especial-visualizador-detail-heading-subtitle" data-director-detail-subtitle>Detalle completo del director o responsable</span>
+                        <span class="especial-visualizador-detail-heading-meta" data-director-detail-meta>CUIL/CUIT —</span>
+                    </div>
+                </div>
+                <button type="button" class="especial-visualizador-detail-close" aria-label="Cerrar detalle del director" data-director-detail-close><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <div class="especial-visualizador-detail-modal-body">
+                <div class="especial-visualizador-detail-loading" data-director-detail-loading role="status" aria-live="polite"><span class="especial-visualizador-detail-spinner" aria-hidden="true"></span><span>Cargando detalle…</span></div>
+                <div class="alert alert-warning" data-director-detail-error hidden role="alert"></div>
+                <div data-director-detail-content hidden></div>
+            </div>
+            <div class="especial-visualizador-detail-modal-footer"><button type="button" class="btn btn-primary" data-director-detail-close>Cerrar</button></div>
+        </div>
+    </div>
 </div>
 <script>
     (function () {
@@ -387,6 +455,143 @@
                     ? "+ " + restantes + (restantes === "1" ? " establecimiento más" : " establecimientos más")
                     : "Mostrar menos";
             });
+        });
+    })();
+</script>
+<script>
+    (function () {
+        var modal = document.querySelector("[data-director-detail-modal]");
+        if (!modal) return;
+
+        var cache = Object.create(null);
+        var pending = Object.create(null);
+        var activeCuil = "";
+        var opener = null;
+        var previousBodyOverflow = "";
+        var previousScrollY = 0;
+        var loading = modal.querySelector("[data-director-detail-loading]");
+        var errorBox = modal.querySelector("[data-director-detail-error]");
+        var content = modal.querySelector("[data-director-detail-content]");
+
+        function displayValue(value) {
+            var text = value === null || value === undefined ? "" : String(value).trim();
+            return text || "—";
+        }
+
+        function showLoading() {
+            loading.hidden = false;
+            errorBox.hidden = true;
+            content.hidden = true;
+        }
+
+        function showError(message) {
+            loading.hidden = true;
+            content.hidden = true;
+            errorBox.textContent = message || "No se pudo cargar el detalle del director.";
+            errorBox.hidden = false;
+        }
+
+        function setHeading(fragment) {
+            var pageHeader = fragment.querySelector("[data-director-detail-page-header]");
+            var title = pageHeader && pageHeader.querySelector("h2");
+            var subtitle = pageHeader && pageHeader.querySelector(".especial-visualizador-detail-heading-subtitle");
+            var meta = pageHeader && pageHeader.querySelector(".especial-visualizador-detail-heading-meta");
+            modal.querySelector("[data-director-detail-title]").textContent = displayValue(title && title.textContent);
+            modal.querySelector("[data-director-detail-subtitle]").textContent = displayValue(subtitle && subtitle.textContent);
+            modal.querySelector("[data-director-detail-meta]").textContent = displayValue(meta && meta.textContent);
+            if (pageHeader) pageHeader.remove();
+        }
+
+        function renderDetail(html) {
+            var template = document.createElement("template");
+            template.innerHTML = html;
+            var fragment = template.content.querySelector("[data-director-detail-fragment]");
+            if (!fragment) throw new Error("La respuesta del detalle no es válida.");
+            setHeading(fragment);
+            content.replaceChildren.apply(content, Array.prototype.slice.call(fragment.childNodes));
+            loading.hidden = true;
+            errorBox.hidden = true;
+            content.hidden = false;
+        }
+
+        function closeModal() {
+            if (modal.hidden) return;
+            modal.hidden = true;
+            modal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("especial-visualizador-modal-open");
+            document.body.style.overflow = previousBodyOverflow;
+            window.scrollTo(0, previousScrollY);
+            if (opener) opener.focus();
+            opener = null;
+            activeCuil = "";
+        }
+
+        function loadDetail(button, cuil) {
+            if (cache[cuil]) {
+                renderDetail(cache[cuil]);
+                return;
+            }
+            if (pending[cuil]) return;
+
+            var url = new URL(button.getAttribute("href"), window.location.href);
+            url.searchParams.set("format", "partial");
+            button.setAttribute("aria-busy", "true");
+            pending[cuil] = fetch(url.toString(), {
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "text/html",
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            }).then(function (response) {
+                return response.text().then(function (html) {
+                    if (!response.ok) throw new Error("No se pudo cargar el detalle del director.");
+                    var testTemplate = document.createElement("template");
+                    testTemplate.innerHTML = html;
+                    if (!testTemplate.content.querySelector("[data-director-detail-fragment]")) {
+                        throw new Error("No se pudo cargar el detalle del director.");
+                    }
+                    return html;
+                });
+            }).then(function (html) {
+                cache[cuil] = html;
+                if (activeCuil === cuil) renderDetail(html);
+            }).catch(function (requestError) {
+                if (activeCuil === cuil) showError(requestError.message);
+            }).finally(function () {
+                delete pending[cuil];
+                button.removeAttribute("aria-busy");
+            });
+        }
+
+        document.addEventListener("click", function (event) {
+            var openButton = event.target.closest("[data-director-detail-open]");
+            if (openButton) {
+                event.preventDefault();
+                var cuil = (openButton.getAttribute("data-director-cuil") || "").replace(/\D/g, "");
+                if (cuil.length !== 11) return;
+                activeCuil = cuil;
+                opener = openButton;
+                previousBodyOverflow = document.body.style.overflow;
+                previousScrollY = window.scrollY || window.pageYOffset || 0;
+                document.body.classList.add("especial-visualizador-modal-open");
+                modal.hidden = false;
+                modal.setAttribute("aria-hidden", "false");
+                showLoading();
+                var closeButton = modal.querySelector("[data-director-detail-close]");
+                if (closeButton) closeButton.focus();
+                loadDetail(openButton, cuil);
+                return;
+            }
+
+            if (event.target === modal) {
+                closeModal();
+                return;
+            }
+            if (event.target.closest("[data-director-detail-close]")) closeModal();
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && !modal.hidden) closeModal();
         });
     })();
 </script>

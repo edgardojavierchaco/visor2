@@ -865,7 +865,7 @@
     .cef-dt tbody tr {
         transition: background .1s ease;
     }
-    .cef-dt tbody tr:nth-child(even) {
+    .cef-dt:not(.cef-alumnos-table) tbody tr:nth-child(even) {
         background: var(--surface-soft);
     }
     .cef-dt tbody tr:hover {

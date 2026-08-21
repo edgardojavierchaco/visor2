@@ -1,44 +1,102 @@
-<div class="cef-context-summary mb-3">
-    <div class="cef-context-summary-item">
+<div class="gestionar-seccion-context-bar">
+    <div class="gestionar-seccion-context-item">
         <span>CUE-Anexo</span>
         <strong>{{ especial_context.cueanexo }}</strong>
     </div>
     {% if especial_context.establecimiento %}
-        <div class="cef-context-summary-item is-wide">
+        <div class="gestionar-seccion-context-item gestionar-seccion-context-item-wide">
             <span>Escuela</span>
             <strong>{{ especial_context.establecimiento.nom_est|default:"Escuela" }}</strong>
         </div>
     {% endif %}
     {% if especial_context.ciclo %}
-        <div class="cef-context-summary-item">
+        <div class="gestionar-seccion-context-item">
             <span>Ciclo</span>
             <strong>{{ especial_context.ciclo }}</strong>
         </div>
     {% endif %}
 </div>
 
-<div class="cef-edit-panel">
-    <h3>Datos de la sección</h3>
-    <div class="cef-info-grid">
-        <div class="cef-info-item"><span>Tipo de sección</span><strong>{{ seccion.cd_tipo_seccion|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Estructura especial</span><strong>{{ seccion.tipo_estructura_especial|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Nombre</span><strong>{{ seccion.nombre_seccion|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Oferta</span><strong>{{ seccion.oferta|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Modalidad</span><strong>{{ seccion.modalidad|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Rango etario</span><strong>{{ seccion.rango_etario|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Turno</span><strong>{{ seccion.turno|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Lugar de dictado</span><strong>{{ seccion.lugar_dictado|default:"-" }}</strong></div>
-        <div class="cef-info-item"><span>Cupo total</span><strong>{{ seccion.capacidad_total|default:"-" }}</strong></div>
-        <div class="cef-info-item">
-            <span>Estado</span>
-            <strong>
-                <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% else %}secondary{% endif %}">
-                    {{ seccion.get_estado_display }}
-                </span>
-            </strong>
-        </div>
-        <div class="cef-info-item"><span>Docentes activos</span><strong>{{ docentes_activos|length }}</strong></div>
-        <div class="cef-info-item"><span>Inscripciones registradas</span><strong>{{ inscripciones|length }}</strong></div>
-        <div class="cef-info-item span-all"><span>Descripción</span><strong>{{ seccion.descripcion|default:"Sin descripción" }}</strong></div>
-    </div>
+<div class="gestionar-seccion-data-grid">
+    <section class="gestionar-seccion-data-panel">
+        <h3><i class="fa-solid fa-id-card" aria-hidden="true"></i> Identificación</h3>
+        <dl class="gestionar-seccion-data-list">
+            <div>
+                <dt>Tipo de sección</dt>
+                <dd>{{ seccion.cd_tipo_seccion|default:"—" }}</dd>
+            </div>
+            <div class="gestionar-seccion-data-item-wide">
+                <dt>Estructura especial</dt>
+                <dd>{{ seccion.tipo_estructura_especial|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt>Nombre</dt>
+                <dd>{{ seccion.nombre_seccion|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt>Oferta educativa</dt>
+                <dd>{{ seccion.oferta|default:"—" }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="gestionar-seccion-data-panel">
+        <h3><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Organización</h3>
+        <dl class="gestionar-seccion-data-list">
+            <div>
+                <dt>Modalidad</dt>
+                <dd>{{ seccion.modalidad|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt>Rango etario</dt>
+                <dd>{{ seccion.rango_etario|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt>Turno</dt>
+                <dd>{{ seccion.turno|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt>Lugar de dictado</dt>
+                <dd>{{ seccion.lugar_dictado|default:"—" }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="gestionar-seccion-data-panel">
+        <h3><i class="fa-solid fa-chart-simple" aria-hidden="true"></i> Resumen</h3>
+        <dl class="gestionar-seccion-data-list">
+            <div>
+                <dt>Cupo total</dt>
+                <dd class="gestionar-seccion-data-emphasis">{{ seccion.capacidad_total|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt>Inscripciones registradas</dt>
+                <dd class="gestionar-seccion-data-emphasis">{{ inscripciones|length }}</dd>
+            </div>
+            <div>
+                <dt>Docentes activos</dt>
+                <dd class="gestionar-seccion-data-emphasis">{{ docentes_activos|length }}</dd>
+            </div>
+            <div>
+                <dt>Estado</dt>
+                <dd>
+                    <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% elif seccion.estado == 'cerrado' %}danger{% else %}secondary{% endif %}">
+                        {{ seccion.get_estado_display }}
+                    </span>
+                </dd>
+            </div>
+        </dl>
+    </section>
 </div>
+
+<section class="gestionar-seccion-description">
+    <h3><i class="fa-regular fa-file-lines" aria-hidden="true"></i> Descripción</h3>
+    <p>{{ seccion.descripcion|default:"Sin descripción" }}</p>
+</section>
+
+{% if not inscripciones_activas %}
+    <div class="alert alert-danger gestionar-seccion-summary-alert" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+        La sección no cuenta con alumnos en alta.
+    </div>
+{% endif %}

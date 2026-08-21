@@ -40,7 +40,7 @@
     }
 
     function tableScope(table) {
-        return table.closest(".cef-panel-body, .cef-panel, .cef-modal-body, .cef-modal, .cef-docente-modal") || document;
+        return table.closest(".gestionar-seccion-card, .cef-panel-body, .cef-panel, .cef-modal-body, .cef-modal, .cef-docente-modal") || document;
     }
 
     function initTable(table) {
@@ -50,9 +50,21 @@
         if (!search) return;
 
         var body = table.tBodies.length ? table.tBodies[0] : null;
-        var rows = body ? Array.prototype.slice.call(body.rows) : [];
+        var rows = body
+            ? Array.prototype.slice.call(body.rows).filter(function (row) {
+                return !row.hasAttribute("data-cef-table-group-row")
+                    && !row.hasAttribute("data-cef-table-empty-row");
+            })
+            : [];
+        var groupRows = body
+            ? Array.prototype.slice.call(body.rows).filter(function (row) {
+                return row.hasAttribute("data-cef-table-group-row");
+            })
+            : [];
         var size = root.querySelector("[data-cef-page-size]");
         var count = root.querySelector("[data-cef-table-count]");
+        var countSingular = count && count.getAttribute("data-cef-count-singular");
+        var countPlural = count && count.getAttribute("data-cef-count-plural");
         var pagination = root.querySelector("[data-cef-table-pagination]");
         var page = 1;
 
@@ -93,11 +105,26 @@
             var pages = Math.max(1, Math.ceil(visible.length / pageSize));
             page = Math.min(page, pages);
 
+            var pageRows = visible.slice((page - 1) * pageSize, page * pageSize);
             rows.forEach(function (row) { row.hidden = true; });
-            visible.slice((page - 1) * pageSize, page * pageSize).forEach(function (row) {
+            groupRows.forEach(function (row) { row.hidden = true; });
+            pageRows.forEach(function (row) {
                 row.hidden = false;
             });
-            if (count) count.textContent = visible.length + " registros";
+            var visibleGroups = Object.create(null);
+            pageRows.forEach(function (row) {
+                var group = row.getAttribute("data-cef-table-group-key");
+                if (group) visibleGroups[group] = true;
+            });
+            groupRows.forEach(function (row) {
+                var group = row.getAttribute("data-cef-table-group-key");
+                row.hidden = !visibleGroups[group];
+            });
+            if (count && countSingular && countPlural) {
+                count.textContent = visible.length + " " + (
+                    visible.length === 1 ? countSingular : countPlural
+                );
+            }
             renderPagination(pages);
             table.classList.add("is-ready");
         }

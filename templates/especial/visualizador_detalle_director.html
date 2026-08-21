@@ -1,7 +1,31 @@
 {% extends "especial/base_operativo_especial.html" %}
 {% block especial_context_card %}{% endblock %}
 {% block especial_content %}
-<div class="cef-panel-actions mb-3"><a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:visualizador_inicio' %}"><i class="fa-solid fa-arrow-left me-1"></i>Volver</a></div>
-<section class="card mb-4"><div class="card-body"><h2 class="h4">Visualizar director</h2><form method="get" class="row g-2" role="search"><div class="col-sm-9"><label class="form-label" for="id_cuil_director">CUIL/CUIT del director</label><input id="id_cuil_director" class="form-control" name="cuil" value="{{ cuil_buscado }}" inputmode="numeric" maxlength="11" required></div><div class="col-sm-3 d-flex align-items-end"><button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Buscar</button></div></form></div></section>
-{% if cuil_buscado %}{% if director %}<section class="card mb-4"><div class="card-body"><h3 class="h5">Datos del director/responsable</h3><dl class="row mb-0"><dt class="col-sm-3">Apellido y nombre</dt><dd class="col-sm-9">{{ director.apellido_resp }} {{ director.nombre_resp }}</dd><dt class="col-sm-3">CUIL/CUIT</dt><dd class="col-sm-9">{{ director.resploc_cuitcuil }}</dd><dt class="col-sm-3">Email</dt><dd class="col-sm-9">{{ director.resploc_email|default:"-" }}</dd><dt class="col-sm-3">Teléfono</dt><dd class="col-sm-9">{{ director.resploc_telefono|default:"-" }}</dd></dl></div></section><section class="card"><div class="card-body"><h3 class="h5">Escuelas relacionadas</h3><div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>CUE-Anexo</th><th>Establecimiento</th><th>Oferta educativa</th><th>Localidad</th><th>Departamento</th><th>Estado</th></tr></thead><tbody>{% for escuela in escuelas %}<tr><td>{{ escuela.cueanexo }}</td><td>{{ escuela.nom_est }}</td><td>{{ escuela.oferta }}</td><td>{{ escuela.localidad }}</td><td>{{ escuela.departamento }}</td><td>{{ escuela.estado_est|default:"-" }}</td></tr>{% endfor %}</tbody></table></div></div></section>{% else %}<div class="alert alert-warning">No se encontraron escuelas relacionadas con ese CUIL/CUIT.</div>{% endif %}{% endif %}
+{% include "especial/partials/visualizador_detalle_estilos.html" %}
+
+<div class="especial-visualizador-detail-page">
+    <div class="cef-panel-actions mb-3">
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'especial:visualizador_directores' %}"><i class="fa-solid fa-arrow-left me-1"></i>Volver</a>
+    </div>
+
+    <section class="cef-panel">
+        <div class="cef-panel-head"><h2 class="cef-panel-title"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>Visualizar director</h2></div>
+        <div class="cef-panel-body">
+            <form method="get" class="row g-2" role="search">
+                <div class="col-sm-9"><label class="form-label" for="id_cuil_director">CUIL/CUIT del director</label><input id="id_cuil_director" class="form-control" name="cuil" value="{{ cuil_buscado }}" inputmode="numeric" maxlength="11" required></div>
+                <div class="col-sm-3 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Buscar</button></div>
+            </form>
+        </div>
+    </section>
+
+    {% if consulta_error %}<div class="alert alert-warning" role="alert">{{ consulta_error }}</div>{% endif %}
+
+    {% if cuil_buscado %}
+        {% if director %}
+            {% include "especial/partials/visualizador_detalle_director_contenido.html" %}
+        {% else %}
+            <div class="alert alert-warning">No se encontraron escuelas relacionadas con ese CUIL/CUIT.</div>
+        {% endif %}
+    {% endif %}
+</div>
 {% endblock %}
