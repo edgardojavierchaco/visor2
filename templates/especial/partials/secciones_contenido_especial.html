@@ -56,51 +56,68 @@
         {% if secciones %}
             <div class="cef-table-wrap">
                 <table class="cef-dt secciones-table" data-cef-table>
+                    <colgroup>
+                        <col class="secciones-tipo-col">
+                        <col class="secciones-estructura-col">
+                        <col class="secciones-nombre-col">
+                        <col class="secciones-oferta-col">
+                        <col class="secciones-estado-col">
+                        <col class="secciones-turno-col">
+                        <col class="secciones-rango-col">
+                        <col class="secciones-modalidad-col">
+                        <col class="secciones-alumnos-col">
+                        <col class="secciones-cupo-col">
+                        <col class="secciones-acciones-col">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Tipo Sección</th>
-                            <th>Estructura Especial</th>
-                            <th>Nombre</th>
-                            <th>Oferta</th>
-                            <th>Estado</th>
-                            <th>Turno</th>
-                            <th>Rango Etario</th>
-                            <th>Modalidad</th>
-                            <th>Alumnos</th>
-                            <th>Cupo</th>
-                            <th>ACCIONES</th>
+                            <th class="secciones-tipo-col">Tipo Sección</th>
+                            <th class="secciones-estructura-col">Estructura Especial</th>
+                            <th class="secciones-nombre-col">Nombre</th>
+                            <th class="secciones-oferta-col">Oferta</th>
+                            <th class="secciones-estado-col">Estado</th>
+                            <th class="secciones-turno-col">Turno</th>
+                            <th class="secciones-rango-col">Rango Etario</th>
+                            <th class="secciones-modalidad-col">Modalidad</th>
+                            <th class="secciones-alumnos-col">Alumnos</th>
+                            <th class="secciones-cupo-col">Cupo</th>
+                            <th class="secciones-acciones-col">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for seccion in secciones %}
                             <tr>
-                                <td><strong>{{ seccion.cd_tipo_seccion.descripcion|default:"—" }}</strong></td>
-                                <td>{{ seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
-                                <td>
-                                    <strong>{{ seccion.nombre_seccion|default:"—" }}</strong>
-                                    {% if not seccion.docentes_activos %}
-                                        <span class="cef-seccion-status-badge">Sin profesores</span>
-                                    {% endif %}
-                                    {% if not seccion.alumnos_activos %}
-                                        <span class="cef-seccion-status-badge">Sin alumnos</span>
-                                    {% endif %}
+                                <td class="secciones-tipo-col"><strong>{{ seccion.cd_tipo_seccion.descripcion|default:"—" }}</strong></td>
+                                <td class="secciones-estructura-col">{{ seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
+                                <td class="secciones-nombre-col">
+                                    <div class="secciones-nombre-content">
+                                        <strong class="secciones-nombre-text">{{ seccion.nombre_seccion|default:"—" }}</strong>
+                                        <div class="cef-seccion-status-list">
+                                            {% if not seccion.docentes_activos %}
+                                                <span class="cef-seccion-status-badge">Sin profesores</span>
+                                            {% endif %}
+                                            {% if not seccion.alumnos_activos %}
+                                                <span class="cef-seccion-status-badge">Sin alumnos</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </td>
-                                <td>{{ seccion.oferta|default:"—" }}</td>
-                                <td>
+                                <td class="secciones-oferta-col">{{ seccion.oferta|default:"—" }}</td>
+                                <td class="secciones-estado-col">
                                     <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% elif seccion.estado == 'cerrado' %}danger{% else %}secondary{% endif %}">
                                         {{ seccion.get_estado_display }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="secciones-turno-col">
                                     <span class="badge text-bg-secondary">{{ seccion.turno.descripcion|default:"—" }}</span>
                                 </td>
-                                <td>{{ seccion.rango_etario.descripcion|default:"—" }}</td>
-                                <td>{{ seccion.modalidad.descripcion|default:"—" }}</td>
-                                <td class="secciones-alumnos-cell">
+                                <td class="secciones-rango-col">{{ seccion.rango_etario.descripcion|default:"—" }}</td>
+                                <td class="secciones-modalidad-col">{{ seccion.modalidad.descripcion|default:"—" }}</td>
+                                <td class="secciones-alumnos-col secciones-alumnos-cell">
                                     <span class="badge text-bg-primary">{{ seccion.alumnos_activos }}</span>
                                 </td>
-                                <td class="secciones-cupo-cell">{{ seccion.capacidad_total|default:"—" }}</td>
-                                <td class="cef-act-cell">
+                                <td class="secciones-cupo-col secciones-cupo-cell">{{ seccion.capacidad_total|default:"—" }}</td>
+                                <td class="secciones-acciones-col cef-act-cell">
                                     <div class="dropdown cef-secciones-row-actions" data-cef-row-actions>
                                         <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-actions-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false" title="Acciones de la sección" aria-label="Acciones de la sección">
                                             <i class="fa-solid fa-gear" aria-hidden="true"></i>
@@ -160,21 +177,182 @@
 </div>
 
 <style>
+    .cef-secciones-panel .cef-tools {
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .cef-secciones-panel .cef-tools-left,
+    .cef-secciones-panel .cef-tools-right {
+        min-height: 34px;
+    }
+
+    .cef-secciones-panel .cef-tools-left {
+        align-items: center;
+    }
+
+    .cef-secciones-panel .cef-tools select,
+    .cef-secciones-panel .cef-search-wrap {
+        box-sizing: border-box;
+        height: 34px;
+    }
+
+    .cef-secciones-panel .cef-search-wrap {
+        min-width: 230px;
+    }
+
+    .cef-secciones-panel .secciones-table {
+        min-width: 1240px;
+        table-layout: fixed;
+    }
+
     .cef-secciones-panel .secciones-table thead th {
         text-align: center;
     }
 
+    .cef-secciones-panel .secciones-table th,
+    .cef-secciones-panel .secciones-table td {
+        vertical-align: middle;
+    }
+
+    .cef-secciones-panel .secciones-table thead th,
+    .cef-secciones-panel .secciones-table tbody td {
+        text-align: center;
+    }
+
+    .cef-secciones-panel .secciones-table th.secciones-tipo-col,
+    .cef-secciones-panel .secciones-table td.secciones-tipo-col,
+    .cef-secciones-panel .secciones-table th.secciones-estructura-col,
+    .cef-secciones-panel .secciones-table td.secciones-estructura-col,
+    .cef-secciones-panel .secciones-table th.secciones-modalidad-col,
+    .cef-secciones-panel .secciones-table td.secciones-modalidad-col {
+        text-align: left;
+    }
+
+    .cef-secciones-panel .secciones-table thead th,
+    .cef-secciones-panel .secciones-table tbody td {
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+
+    .cef-secciones-panel .secciones-table thead th {
+        white-space: nowrap;
+    }
+
+    .cef-secciones-panel .secciones-table tbody tr {
+        background: #fff !important;
+    }
+
+    .cef-secciones-panel .secciones-table tbody tr:hover {
+        background: var(--blue-50) !important;
+    }
+
+    .cef-secciones-panel .secciones-table tbody td {
+        border-bottom: 1px solid rgba(130, 151, 173, .35);
+        padding-bottom: .7rem;
+        padding-top: .7rem;
+    }
+
+    .cef-secciones-panel .secciones-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-tipo-col {
+        width: 9%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-estructura-col {
+        width: 14%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-nombre-col {
+        width: 15%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-oferta-col {
+        width: 9%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-estado-col {
+        width: 8%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-turno-col {
+        width: 7%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-rango-col {
+        width: 9%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-modalidad-col {
+        width: 14%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-alumnos-col {
+        width: 5%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-cupo-col {
+        width: 4%;
+    }
+
+    .cef-secciones-panel .secciones-table .secciones-acciones-col {
+        width: 6%;
+    }
+
+    .cef-secciones-panel .secciones-nombre-content {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: .35rem;
+        justify-content: center;
+        text-align: center;
+        width: 100%;
+    }
+
+    .cef-secciones-panel .secciones-nombre-text {
+        font-weight: 700;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+        text-align: center;
+    }
+
+    .cef-secciones-panel .cef-seccion-status-list {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+        justify-content: center;
+    }
+
     .cef-secciones-panel .cef-seccion-status-badge {
+        align-items: center;
         background: #fee2e2 !important;
         border: 1px solid #fca5a5 !important;
         border-radius: 999px;
         color: #b91c1c !important;
-        display: inline-block;
-        font-size: .75rem;
+        display: inline-flex;
+        font-size: var(--fs-xs);
         font-weight: 700;
+        justify-content: center;
         line-height: 1.2;
-        margin-left: .35rem;
-        padding: .28em .8em;
+        margin: 0;
+        min-height: 1.65rem;
+        padding: .28rem .65rem;
+        white-space: nowrap;
+    }
+
+    .cef-secciones-panel .secciones-table .badge {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: var(--fs-xs);
+        justify-content: center;
+        line-height: 1.2;
+        min-height: 1.65rem;
+        padding: .28rem .65rem;
+        vertical-align: middle;
         white-space: nowrap;
     }
 

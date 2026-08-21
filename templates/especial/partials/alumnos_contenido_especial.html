@@ -32,6 +32,22 @@
             </div>
         </div>
 
+        <form method="get" action="{% url 'especial:alumnos' %}" class="cef-alumnos-section-filter" aria-label="Filtrar alumnos por sección">
+            {% if especial_context.cueanexo %}<input type="hidden" name="cueanexo" value="{{ especial_context.cueanexo }}">{% endif %}
+            {% if especial_context.ciclo %}<input type="hidden" name="ciclo" value="{{ especial_context.ciclo.pk }}">{% endif %}
+            <label class="cef-tools-label" for="id_filtro_seccion_alumnos">Sección</label>
+            <select id="id_filtro_seccion_alumnos" name="seccion" aria-describedby="filtro-seccion-alumnos-ayuda">
+                <option value="">Todas</option>
+                <option value="sin_seccion"{% if filtro_seccion == "sin_seccion" %} selected{% endif %}>Sin sección asignada</option>
+                {% for seccion in secciones_filtro %}
+                    <option value="{{ seccion.pk }}"{% if filtro_seccion == seccion.pk %} selected{% endif %}>{{ seccion.nombre_seccion }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-outline-primary btn-sm" type="submit">Aplicar filtros</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ alumnos_filtros_limpiar_url }}">Limpiar filtros</a>
+            {% if filtro_seccion_error %}<small id="filtro-seccion-alumnos-ayuda" class="text-danger">{{ filtro_seccion_error }}</small>{% else %}<small id="filtro-seccion-alumnos-ayuda" class="text-muted">Se muestran alumnos inscriptos en la sección seleccionada.</small>{% endif %}
+        </form>
+
         {% if alumnos %}
             <div class="cef-table-wrap">
                 <table class="cef-dt cef-alumnos-table" data-cef-table>
@@ -49,7 +65,15 @@
                     </thead>
                     <tbody>
                         {% for item in alumnos %}
-                            <tr class="{% if item.estado != 'activo' %}cef-row-inactive{% endif %}">
+                            {% if item.muestra_grupo_seccion %}
+                                <tr class="cef-alumno-seccion-grupo" data-cef-table-group-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}">
+                                    <th colspan="{% if mostrar_cueanexo_matricula %}8{% else %}7{% endif %}" scope="rowgroup">
+                                        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                                        {{ item.seccion_principal_label }}
+                                    </th>
+                                </tr>
+                            {% endif %}
+                            <tr class="{% if item.estado != 'activo' %}cef-row-inactive{% endif %}" data-cef-table-data-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}">
                                 <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
                                 <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
                                 <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
@@ -70,7 +94,7 @@
                                         {% if total_secciones %}
                                             <div class="cef-alumno-secciones">
                                                 {% for inscripcion in item.inscripciones_seccion %}
-                                                    <a class="cef-alumno-seccion-item{% if forloop.counter > 2 %} cef-alumno-seccion-item-adicional{% endif %}" href="{% url 'especial:gestionar_seccion' inscripcion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" aria-label="Gestionar sección {{ inscripcion.seccion.nombre_seccion }}"{% if forloop.counter > 2 %} data-cef-alumno-seccion-adicional="true" hidden{% endif %}>
+                                                    <a class="cef-alumno-seccion-item{% if forloop.counter > 2 %} cef-alumno-seccion-item-adicional{% endif %}" href="{% url 'especial:gestionar_seccion' inscripcion.seccion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" aria-label="Gestionar sección {{ inscripcion.seccion.nombre_seccion }}"{% if forloop.counter > 2 %} data-cef-alumno-seccion-adicional="true" hidden{% endif %}>
                                                         <span class="cef-alumno-seccion-icon" aria-hidden="true">
                                                             <i class="fa-solid fa-layer-group"></i>
                                                         </span>
@@ -114,7 +138,7 @@
                                                     <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
                                                         {% for seccion in item.secciones_asignables %}
                                                             <li>
-                                                                <form method="post" action="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0">
+                                                                <form method="post" action="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" class="m-0">
                                                                     {% csrf_token %}
                                                                     <input type="hidden" name="accion" value="inscribir_seccion">
                                                                     <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
@@ -160,7 +184,7 @@
                                         {% if especial_context.puede_operar and item.estado == 'activo' %}
                                             </li>
                                             <li>
-                                            <a class="btn btn-danger btn-sm" href="{% url 'especial:alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open>
+                                                <a class="btn btn-danger btn-sm" href="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open>
                                                 <i class="fa-solid fa-user-slash"></i> Dar de baja
                                             </a>
                                         {% endif %}
@@ -205,6 +229,14 @@
     .cef-alumnos-table tbody td {
         text-align: center;
         vertical-align: middle;
+    }
+
+    .cef-alumnos-table tbody tr[data-cef-table-data-row] {
+        background: #fff !important;
+    }
+
+    .cef-alumnos-table tbody tr[data-cef-table-data-row]:hover {
+        background: var(--blue-50) !important;
     }
 
     .cef-alumno-seccion-item {
@@ -255,6 +287,51 @@
     .cef-alumno-secciones-toggle:focus-visible {
         color: var(--blue-900);
         text-decoration: underline;
+    }
+
+    .cef-alumnos-section-filter {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        margin: 0 0 1rem;
+    }
+
+    .cef-alumnos-section-filter select {
+        appearance: auto;
+        background: var(--surface);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        min-height: 34px;
+        min-width: 220px;
+        padding: .2rem .55rem;
+    }
+
+    .cef-alumnos-section-filter select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.12);
+        outline: none;
+    }
+
+    .cef-alumnos-section-filter small {
+        flex-basis: 100%;
+    }
+
+    .cef-alumno-seccion-grupo th {
+        background: var(--blue-50);
+        border-bottom: 1px solid var(--blue-200);
+        border-top: 2px solid var(--blue-300);
+        color: var(--blue-900);
+        font-size: var(--fs-sm);
+        letter-spacing: .02em;
+        padding: .55rem .75rem;
+        text-align: left;
+    }
+
+    .cef-alumno-seccion-grupo th i {
+        color: var(--primary);
+        margin-right: .35rem;
     }
 
     .cef-alumno-seccion-icon {

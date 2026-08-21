@@ -1974,4 +1974,10 @@ def visualizador_detalle_director(request):
         except (OperationalError, ProgrammingError):
             error = "No se pudo consultar la información del Padrón."
     context.update({"director": filas[0] if filas else None, "escuelas": filas, "cuil_buscado": cuil, "consulta_error": error})
+    if request.GET.get("format") == "partial":
+        return render(
+            request,
+            "especial/partials/visualizador_detalle_director_contenido.html",
+            context,
+        )
     return render(request, "especial/visualizador_detalle_director.html", context)

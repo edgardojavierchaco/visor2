@@ -245,6 +245,7 @@
         }
     }
 </style>
+{% include "especial/partials/visualizador_detalle_estilos.html" %}
 
 <div class="especial-visualizador-docentes">
     {% include "especial/partials/visualizador_cabecera.html" with visualizador_titulo="Docentes" visualizador_icono="fa-solid fa-chalkboard-user" visualizador_filtros_id="especial-visualizador-docentes-filtros" %}
@@ -404,95 +405,99 @@
     {% endif %}
 
     {% for docente in docentes_visualizador %}
-        <div class="especial-visualizador-docentes-modal" id="visualizador-docente-modal-{{ docente.docente_cuil }}" hidden role="dialog" aria-modal="true" aria-labelledby="visualizador-docente-modal-title-{{ docente.docente_cuil }}">
-            <div class="especial-visualizador-docentes-modal-dialog">
-                <div class="especial-visualizador-docentes-modal-header">
-                    <div>
-                        <h2 id="visualizador-docente-modal-title-{{ docente.docente_cuil }}">{{ docente.visualizador_persona.apellido }}, {{ docente.visualizador_persona.nombre }}</h2>
-                        <span class="especial-visualizador-docentes-muted">Detalle completo del docente</span>
+        <div class="especial-visualizador-docentes-modal especial-visualizador-detail-modal" id="visualizador-docente-modal-{{ docente.docente_cuil }}" hidden role="dialog" aria-modal="true" aria-labelledby="visualizador-docente-modal-title-{{ docente.docente_cuil }}">
+            <div class="especial-visualizador-docentes-modal-dialog especial-visualizador-detail-modal-dialog">
+                <div class="especial-visualizador-docentes-modal-header especial-visualizador-detail-modal-header">
+                    <div class="especial-visualizador-detail-heading">
+                        <span class="especial-visualizador-detail-heading-icon"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i></span>
+                        <div class="especial-visualizador-detail-heading-text">
+                            <h2 id="visualizador-docente-modal-title-{{ docente.docente_cuil }}">{{ docente.visualizador_persona.apellido|default:"—" }}, {{ docente.visualizador_persona.nombre|default:"—" }}</h2>
+                            <span class="especial-visualizador-detail-heading-subtitle">Detalle completo del docente</span>
+                            <span class="especial-visualizador-detail-heading-meta">{% if docente.visualizador_persona.dni %}DNI {{ docente.visualizador_persona.dni }}{% endif %}{% if docente.visualizador_persona.dni and docente.visualizador_persona.cuil %} · {% endif %}CUIL {{ docente.visualizador_persona.cuil|default:docente.docente_cuil }}</span>
+                        </div>
                     </div>
-                    <button type="button" class="btn-close" aria-label="Cerrar" data-docente-modal-close></button>
+                    <button type="button" class="especial-visualizador-detail-close" aria-label="Cerrar detalle del docente" data-docente-modal-close><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                 </div>
-                <div class="especial-visualizador-docentes-modal-body">
-                    <section class="especial-visualizador-docentes-modal-section">
-                        <h3>Datos personales</h3>
-                        <div class="especial-visualizador-docentes-data">
-                            <div class="especial-visualizador-docentes-data-item"><span>Apellido</span><strong>{{ docente.visualizador_persona.apellido|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Nombre</span><strong>{{ docente.visualizador_persona.nombre|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>CUIL</span><strong>{{ docente.visualizador_persona.cuil|default:docente.docente_cuil }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>DNI</span><strong>{{ docente.visualizador_persona.dni|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Fecha de nacimiento</span><strong>{{ docente.visualizador_persona.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Sexo</span><strong>{{ docente.visualizador_persona.sexo|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Domicilio</span><strong>{{ docente.visualizador_persona.domicilio|default:"No informado" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Localidad</span><strong>{{ docente.visualizador_persona.localidad|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Provincia</span><strong>{{ docente.visualizador_persona.provincia|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Teléfono</span><strong>{{ docente.visualizador_persona.telefono|default:"—" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Email</span><strong>{{ docente.visualizador_persona.email|default:"No informado" }}</strong></div>
-                            <div class="especial-visualizador-docentes-data-item"><span>Estado en BHN</span><strong>{{ docente.visualizador_persona.estado_bnh|default:"No disponible" }}</strong></div>
+                <div class="especial-visualizador-docentes-modal-body especial-visualizador-detail-modal-body">
+                    <section class="especial-visualizador-docentes-modal-section especial-visualizador-detail-section">
+                        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i>Resumen operativo</h3></div>
+                        <div class="especial-visualizador-detail-summary-grid">
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-school" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">CUE-Anexos</span><strong class="especial-visualizador-detail-summary-value">{{ docente.visualizador_cueanexos|join:", "|default:"—" }}</strong></div></div>
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Secciones</span><strong class="especial-visualizador-detail-summary-value">{{ docente.visualizador_secciones }}</strong></div></div>
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-user-tag" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Roles</span><strong class="especial-visualizador-detail-summary-value">{% for asignacion in docente.visualizador_asignaciones %}<span class="especial-visualizador-detail-role">{{ asignacion.get_rol_display }}</span>{% empty %}—{% endfor %}</strong></div></div>
+                            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Estado</span><strong class="especial-visualizador-detail-summary-value">{{ docente.visualizador_estados|join:", "|default:"Sin registros" }}</strong></div></div>
                         </div>
                     </section>
 
-                    <section class="especial-visualizador-docentes-modal-section">
-                        <h3>Asignaciones</h3>
+                    <section class="especial-visualizador-docentes-modal-section especial-visualizador-detail-section">
+                        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Datos personales</h3></div>
+                        <div class="especial-visualizador-detail-personal-groups">
+                            <div class="especial-visualizador-detail-data-group"><h4>Identificación</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Apellido</span><strong>{{ docente.visualizador_persona.apellido|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Nombre</span><strong>{{ docente.visualizador_persona.nombre|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>DNI</span><strong>{{ docente.visualizador_persona.dni|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>CUIL</span><strong>{{ docente.visualizador_persona.cuil|default:docente.docente_cuil }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Nacimiento</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Fecha de nacimiento</span><strong>{{ docente.visualizador_persona.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Sexo</span><strong>{{ docente.visualizador_persona.sexo|default:"—" }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Contacto</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Teléfono</span><strong>{{ docente.visualizador_persona.telefono|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Email</span><strong>{{ docente.visualizador_persona.email|default:"—" }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Residencia</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Domicilio</span><strong>{{ docente.visualizador_persona.domicilio|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Localidad</span><strong>{{ docente.visualizador_persona.localidad|default:"—" }}</strong></div>
+                                <div class="especial-visualizador-detail-data-item"><span>Provincia</span><strong>{{ docente.visualizador_persona.provincia|default:"—" }}</strong></div>
+                            </div></div>
+                            <div class="especial-visualizador-detail-data-group"><h4>Información adicional</h4><div class="especial-visualizador-detail-data-grid">
+                                <div class="especial-visualizador-detail-data-item"><span>Estado en BHN</span><strong>{{ docente.visualizador_persona.estado_bnh|default:"No disponible" }}</strong></div>
+                            </div></div>
+                        </div>
+                    </section>
+
+                    <section class="especial-visualizador-docentes-modal-section especial-visualizador-detail-section">
+                        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>Asignaciones</h3><span class="especial-visualizador-detail-section-count">{{ docente.visualizador_asignaciones|length }} {% if docente.visualizador_asignaciones|length == 1 %}asignación{% else %}asignaciones{% endif %}</span></div>
                         {% if docente.visualizador_asignaciones %}
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover especial-visualizador-docentes-assignments">
-                                    <thead>
-                                        <tr>
-                                            <th>CUE-Anexo</th>
-                                            <th>Establecimiento / ubicación</th>
-                                            <th>Ciclo lectivo</th>
-                                            <th>Modalidad</th>
-                                            <th>Nivel / Estructura</th>
-                                            <th>Sección</th>
-                                            <th>Turno</th>
-                                            <th>Rol</th>
-                                            <th>Estado</th>
-                                            <th>Fechas</th>
-                                            <th>Observaciones</th>
-                                        </tr>
-                                    </thead>
+                            <div class="especial-visualizador-detail-table-scroll">
+                                <table class="table especial-visualizador-detail-table especial-visualizador-docentes-assignments">
+                                    <thead><tr><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Ciclo lectivo</th><th>Modalidad</th><th>Nivel / Estructura</th><th>Sección</th><th>Turno</th><th>Rol</th><th>Estado</th><th>Fechas</th><th>Observaciones</th></tr></thead>
                                     <tbody>
                                         {% for asignacion in docente.visualizador_asignaciones %}
                                             <tr>
-                                                <td>{{ asignacion.seccion.cueanexo }}</td>
-                                                <td><strong>{{ asignacion.visualizador_padron.nom_est|default:"—" }}</strong><small class="especial-visualizador-docentes-assignment-notes text-muted">{{ asignacion.visualizador_padron.localidad|default:"—" }}{% if asignacion.visualizador_padron.departamento %} · {{ asignacion.visualizador_padron.departamento }}{% endif %}</small></td>
-                                                <td>{{ asignacion.seccion.ciclo.anio }}</td>
-                                                <td>{{ asignacion.seccion.modalidad.descripcion|default:"—" }}</td>
-                                                <td>{{ asignacion.seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
-                                                <td>{{ asignacion.seccion.nombre_seccion }}</td>
-                                                <td>{{ asignacion.seccion.turno.descripcion|default:"—" }}</td>
-                                                <td>{{ asignacion.get_rol_display }}</td>
-                                                <td>{{ asignacion.get_estado_display }}</td>
-                                                <td>Alta: {{ asignacion.fecha_desde|date:"d/m/Y"|default:"—" }}<small class="especial-visualizador-docentes-assignment-notes text-muted">Baja: {{ asignacion.fecha_hasta|date:"d/m/Y"|default:"—" }}</small></td>
-                                                <td>{{ asignacion.observaciones|default:"—" }}</td>
+                                                <td data-label="CUE-Anexo"><span class="especial-visualizador-detail-chip">{{ asignacion.seccion.cueanexo }}</span></td>
+                                                <td data-label="Establecimiento / ubicación"><strong class="detail-cell-primary">{{ asignacion.visualizador_padron.nom_est|default:"—" }}</strong><small class="detail-cell-secondary">{{ asignacion.visualizador_padron.localidad|default:"—" }}{% if asignacion.visualizador_padron.departamento %} · {{ asignacion.visualizador_padron.departamento }}{% endif %}</small></td>
+                                                <td data-label="Ciclo lectivo">{{ asignacion.seccion.ciclo.anio }}</td>
+                                                <td data-label="Modalidad">{{ asignacion.seccion.modalidad.descripcion|default:"—" }}</td>
+                                                <td data-label="Nivel / Estructura">{{ asignacion.seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>
+                                                <td data-label="Sección"><strong class="detail-cell-primary">{{ asignacion.seccion.nombre_seccion }}</strong></td>
+                                                <td data-label="Turno">{{ asignacion.seccion.turno.descripcion|default:"—" }}</td>
+                                                <td data-label="Rol"><span class="especial-visualizador-detail-role">{{ asignacion.get_rol_display }}</span></td>
+                                                <td data-label="Estado"><span class="especial-visualizador-detail-status">{{ asignacion.get_estado_display }}</span></td>
+                                                <td data-label="Fechas">Alta: {{ asignacion.fecha_desde|date:"d/m/Y"|default:"—" }}<small class="detail-cell-secondary">Baja: {{ asignacion.fecha_hasta|date:"d/m/Y"|default:"—" }}</small></td>
+                                                <td data-label="Observaciones">{{ asignacion.observaciones|default:"—" }}</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
-                        {% else %}
-                            <p class="mb-0 text-muted">No posee asignaciones de Especial cargadas.</p>
-                        {% endif %}
+                        {% else %}<p class="especial-visualizador-detail-empty">No posee asignaciones de Especial cargadas.</p>{% endif %}
                     </section>
 
                     {% if docente.visualizador_bancos %}
-                        <section class="especial-visualizador-docentes-modal-section">
-                            <h3>Registros por establecimiento</h3>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover especial-visualizador-docentes-assignments">
+                        <section class="especial-visualizador-docentes-modal-section especial-visualizador-detail-section">
+                            <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-building-columns" aria-hidden="true"></i>Registros por establecimiento</h3><span class="especial-visualizador-detail-section-count">{{ docente.visualizador_bancos|length }} registro{{ docente.visualizador_bancos|length|pluralize:"s" }}</span></div>
+                            <div class="especial-visualizador-detail-table-scroll">
+                                <table class="table especial-visualizador-detail-table especial-visualizador-docentes-assignments">
                                     <thead><tr><th>CUE-Anexo</th><th>Ciclo lectivo</th><th>Estado</th><th>Fecha de alta</th><th>Fecha de baja</th><th>Observaciones</th></tr></thead>
-                                    <tbody>
-                                        {% for banco in docente.visualizador_bancos %}
-                                            <tr><td>{{ banco.cueanexo }}</td><td>{{ banco.ciclo.anio }}</td><td>{{ banco.get_estado_display }}</td><td>{{ banco.fecha_alta|date:"d/m/Y"|default:"—" }}</td><td>{{ banco.fecha_baja|date:"d/m/Y"|default:"—" }}</td><td>{{ banco.observaciones|default:"—" }}</td></tr>
-                                        {% endfor %}
-                                    </tbody>
+                                    <tbody>{% for banco in docente.visualizador_bancos %}<tr><td data-label="CUE-Anexo"><span class="especial-visualizador-detail-chip">{{ banco.cueanexo }}</span></td><td data-label="Ciclo lectivo">{{ banco.ciclo.anio }}</td><td data-label="Estado"><span class="especial-visualizador-detail-status">{{ banco.get_estado_display }}</span></td><td data-label="Fecha de alta">{{ banco.fecha_alta|date:"d/m/Y"|default:"—" }}</td><td data-label="Fecha de baja">{{ banco.fecha_baja|date:"d/m/Y"|default:"—" }}</td><td data-label="Observaciones">{{ banco.observaciones|default:"—" }}</td></tr>{% endfor %}</tbody>
                                 </table>
                             </div>
                         </section>
                     {% endif %}
                 </div>
-                <div class="especial-visualizador-docentes-modal-footer"><button type="button" class="btn btn-secondary" data-docente-modal-close>Cerrar</button></div>
+                <div class="especial-visualizador-docentes-modal-footer especial-visualizador-detail-modal-footer"><button type="button" class="btn btn-primary" data-docente-modal-close>Cerrar</button></div>
             </div>
         </div>
     {% endfor %}
@@ -507,6 +512,7 @@
         if (!modalActivo) return;
         modalActivo.hidden = true;
         modalActivo.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("especial-visualizador-modal-open");
         if (botonOrigen) botonOrigen.focus();
         modalActivo = null;
         botonOrigen = null;
@@ -521,6 +527,7 @@
             botonOrigen = botonAbrir;
             modal.hidden = false;
             modal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("especial-visualizador-modal-open");
             const botonCerrar = modal.querySelector("[data-docente-modal-close]");
             if (botonCerrar) botonCerrar.focus();
             return;

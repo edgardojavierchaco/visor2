@@ -66,10 +66,15 @@ from .services.alumnos import (
 from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
 from .views_alumnos import (
     _actualizar_matricula_compartida,
+    _alumnos_banco_sin_duplicados,
     _asegurar_alumno_banco,
     _matricula_compartida_habilitada,
+    _marcar_grupos_seccion,
+    _ordenar_alumnos_por_seccion,
+    _seccion_filtro_param,
     _serializar_cueanexos_matricula_compartida,
     _validar_matricula_compartida_form,
+    SECCION_SIN_ASIGNAR,
     alumnos,
 )
 from .views_localizaciones import (
@@ -1512,6 +1517,88 @@ class ValidacionDocenteEspecialTests(SimpleTestCase):
         EspecialDocenteSeccionForm(instance=instance)
 
         self.assertEqual(instance.full_clean.__func__, DocenteSeccion.full_clean)
+
+
+class OrdenAlumnosEspecialTests(SimpleTestCase):
+    @staticmethod
+    def _seccion(pk, nombre):
+        return SimpleNamespace(
+            pk=pk,
+            nombre_seccion=nombre,
+            cd_tipo_seccion=SimpleNamespace(descripcion="Tipo"),
+        )
+
+    @staticmethod
+    def _inscripcion(alumno_id, seccion):
+        return SimpleNamespace(
+            alumno_id=alumno_id,
+            seccion_id=seccion.pk,
+            seccion=seccion,
+        )
+
+    @staticmethod
+    def _banco(pk, alumno_id, apellidos, nombres, estado):
+        return SimpleNamespace(
+            pk=pk,
+            alumno_id=alumno_id,
+            alumno=SimpleNamespace(
+                apellidos=apellidos,
+                nombres=nombres,
+            ),
+            estado=estado,
+        )
+
+    def test_ordena_por_seccion_principal_y_nombre_sin_duplicar(self):
+        seccion_a = self._seccion(1, "A - Multinivel")
+        seccion_b = self._seccion(2, "B - Multiple")
+        alumnos = [
+            self._banco(1, 1, "GOMEZ", "DELFINA", EspecialAlumnoBanco.Estado.ACTIVO),
+            self._banco(2, 2, "ACOSTA", "FRANCO", EspecialAlumnoBanco.Estado.ACTIVO),
+            self._banco(3, 3, "PEREZ", "FRANCO", EspecialAlumnoBanco.Estado.ACTIVO),
+        ]
+        inscripciones = {
+            1: [self._inscripcion(1, seccion_b), self._inscripcion(1, seccion_a)],
+            2: [self._inscripcion(2, seccion_a)],
+            3: [],
+        }
+
+        ordenados = _ordenar_alumnos_por_seccion(alumnos, inscripciones)
+        _marcar_grupos_seccion(ordenados)
+
+        self.assertEqual(
+            [alumno.alumno.apellidos for alumno in ordenados],
+            ["PEREZ", "ACOSTA", "GOMEZ"],
+        )
+        self.assertEqual(
+            [inscripcion.seccion.nombre_seccion for inscripcion in ordenados[2].inscripciones_seccion],
+            ["A - Multinivel", "B - Multiple"],
+        )
+        self.assertEqual(ordenados[0].seccion_principal_label, "Sin sección asignada")
+        self.assertEqual(
+            [alumno.muestra_grupo_seccion for alumno in ordenados],
+            [True, True, False],
+        )
+
+    def test_deduplica_bancos_del_mismo_alumno_y_prioriza_activo(self):
+        baja = self._banco(4, 1, "ACOSTA", "FRANCO", EspecialAlumnoBanco.Estado.BAJA)
+        activo = self._banco(5, 1, "ACOSTA", "FRANCO", EspecialAlumnoBanco.Estado.ACTIVO)
+        otro = self._banco(6, 2, "GOMEZ", "DELFINA", EspecialAlumnoBanco.Estado.BAJA)
+
+        resultado = _alumnos_banco_sin_duplicados([baja, activo, otro])
+
+        self.assertEqual({item.alumno_id for item in resultado}, {1, 2})
+        self.assertEqual(
+            next(item for item in resultado if item.alumno_id == 1).pk,
+            activo.pk,
+        )
+
+    def test_reconoce_el_filtro_sin_seccion_asignada(self):
+        request = RequestFactory().get("/", {"seccion": SECCION_SIN_ASIGNAR})
+
+        self.assertEqual(
+            _seccion_filtro_param(request),
+            (SECCION_SIN_ASIGNAR, ""),
+        )
 
 
 class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
