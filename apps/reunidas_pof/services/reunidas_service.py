@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator
 from django.db import DatabaseError, OperationalError, ProgrammingError
 from django.db.models import Max, Prefetch, Q
+from django.db.models.functions import Substr
 from django.utils import timezone
 from .filtros_pof_service import (
     MENSAJE_FILTROS_INVALIDOS,
@@ -596,17 +597,26 @@ def _choices_options_detalle(choices):
     ]
 
 
-def _construir_opciones_filtros_detalle_reunida():
+def _construir_opciones_filtros_detalle_reunida(incluir_opciones_padron=True):
+    """
+    Construye las opciones de los filtros avanzados del Detalle.
+
+    - Mantiene las choices locales y las ofertas visuales estáticas.
+    - Carga catálogos de Padrón solo cuando el contexto los necesita.
+    - Conserva el comportamiento actual de Proyecto Especial por defecto.
+    """
     opciones = {campo["id"]: [] for campo in FILTROS_AVANZADOS_DETALLE_CAMPOS}
     opciones.update({
         "unidad_cantidad": _choices_options_detalle(CargoPof.UnidadCantidad.choices),
         "estado_pof": _choices_options_detalle(CargoPof.EstadoPof.choices),
     })
 
-    try:
-        opciones_padron = obtener_opciones_filtros_visualizacion_padron()
-    except (DatabaseError, ProgrammingError, OperationalError):
-        opciones_padron = {}
+    opciones_padron = {}
+    if incluir_opciones_padron:
+        try:
+            opciones_padron = obtener_opciones_filtros_visualizacion_padron()
+        except (DatabaseError, ProgrammingError, OperationalError):
+            opciones_padron = {}
 
     for campo_id in opciones:
         if campo_id in opciones_padron:
@@ -957,6 +967,48 @@ def _paginar_grupos_cue_detalle(grupos_cue, valor_pagina):
         "page_obj": page_obj,
         "paginator": paginator,
         "grupos": list(page_obj.object_list),
+        "total": total,
+        "showing_start": page_obj.start_index() if total else 0,
+        "showing_end": page_obj.end_index() if total else 0,
+        "page_size": CUES_POR_PAGINA_DETALLE,
+        "page_range": _obtener_page_range_detalle(paginator, page_obj),
+    }
+
+
+def _obtener_cargos_pagina_detalle_sin_filtros(cargos_queryset, valor_pagina):
+    """
+    Selecciona en base de datos la pagina de CUE del Detalle comun sin filtros.
+
+    - Deriva la clave CUE desde los primeros siete digitos de `cueanexo`.
+    - Cuenta y pagina claves CUE distintas, sin materializar todos los cargos.
+    - Restringe el queryset original a los CUE de la pagina antes de normalizar,
+      enriquecer historial y construir la grilla.
+    - Conserva el `select_related`/`prefetch_related` del queryset recibido.
+    """
+    cargos_anotados = cargos_queryset.annotate(
+        _cue_paginacion_detalle=Substr("localizacion__cueanexo", 1, 7),
+    )
+    cues_queryset = (
+        cargos_anotados
+        .order_by()
+        .values_list("_cue_paginacion_detalle", flat=True)
+        .distinct()
+        .order_by("_cue_paginacion_detalle")
+    )
+    paginator = Paginator(cues_queryset, CUES_POR_PAGINA_DETALLE)
+    page_obj = paginator.get_page(_normalizar_pagina_detalle(valor_pagina))
+    cues_pagina = list(page_obj.object_list)
+    cargos_pagina = (
+        cargos_anotados.filter(_cue_paginacion_detalle__in=cues_pagina)
+        if cues_pagina
+        else cargos_queryset.none()
+    )
+    total = paginator.count
+
+    return cargos_pagina, {
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "grupos": [],
         "total": total,
         "showing_start": page_obj.start_index() if total else 0,
         "showing_end": page_obj.end_index() if total else 0,
@@ -1707,6 +1759,13 @@ def _construir_grupos_cueanexo_desde_grilla(grilla, anio, nivel_codigo):
 
 
 def construir_contexto_detalle_reunida(request):
+    """
+    Construye el contexto del Detalle comun o de Proyecto Especial.
+
+    - Mantiene el flujo existente para filtros, busquedas y Proyecto Especial.
+    - En la carga comun sin filtros pagina primero las claves CUE en DB.
+    - Construye y enriquece la grilla solo con los cargos de la pagina visible.
+    """
     cabecera_tipo = str(request.GET.get("cabecera_tipo", "") or "").strip().upper()
     proyecto_especial_id = limpiar_texto(request.GET.get("proyecto_especial_id", ""), 20)
     es_proyecto_especial = cabecera_tipo == "PROYECTO_ESPECIAL" or bool(proyecto_especial_id)
@@ -1922,29 +1981,40 @@ def construir_contexto_detalle_reunida(request):
         "anexos": 0,
     }
     grupos_cueanexo = []
+    paginacion_grupos_detalle = None
 
     if not anio_parametro or not anio_parametro.isdigit() or len(anio_parametro) != 4 or not nivel_codigo:
         mensaje_detalle = "Debe seleccionar una Reunida válida por año y nivel."
     else:
         try:
             reunida_obj = ReunidaPof.objects.get(anio=int(anio_parametro), nivel=nivel_codigo)
-            cargos_alcance_detalle = _obtener_cargos_detalle_reunida(reunida_obj)
-            (
-                cargos_alcance_detalle,
-                mensaje_filtros_detalle,
-                errores_filtros_detalle,
-            ) = _aplicar_filtros_detalle_reunida(
-                cargos_alcance_detalle,
-                filtros_detalle,
-            )
-            cargos_alcance_detalle = _aplicar_filtros_avanzados_detalle_reunida(
-                cargos_alcance_detalle,
-                filtros_avanzados_detalle,
-            )
-            cargos_alcance_detalle = _aplicar_busquedas_columna_detalle_reunida(
-                cargos_alcance_detalle,
-                busquedas_columna_detalle,
-            )
+            cargos_queryset_detalle = _obtener_cargos_detalle_reunida(reunida_obj)
+            if filtros_detalle_activos:
+                cargos_alcance_detalle = cargos_queryset_detalle
+                (
+                    cargos_alcance_detalle,
+                    mensaje_filtros_detalle,
+                    errores_filtros_detalle,
+                ) = _aplicar_filtros_detalle_reunida(
+                    cargos_alcance_detalle,
+                    filtros_detalle,
+                )
+                cargos_alcance_detalle = _aplicar_filtros_avanzados_detalle_reunida(
+                    cargos_alcance_detalle,
+                    filtros_avanzados_detalle,
+                )
+                cargos_alcance_detalle = _aplicar_busquedas_columna_detalle_reunida(
+                    cargos_alcance_detalle,
+                    busquedas_columna_detalle,
+                )
+            else:
+                (
+                    cargos_alcance_detalle,
+                    paginacion_grupos_detalle,
+                ) = _obtener_cargos_pagina_detalle_sin_filtros(
+                    cargos_queryset_detalle,
+                    request.GET.get("page", 1),
+                )
             grilla_detalle = construir_grilla_pof_desde_cargos(
                 cargos=cargos_alcance_detalle,
                 nivel_codigo=nivel_codigo,
@@ -1954,7 +2024,13 @@ def construir_contexto_detalle_reunida(request):
             columnas_detalle = list(grilla_detalle["columnas"])
             detalle_politicas = grilla_detalle.get("detalle_politicas", {})
             grupos_operativos_detalle = grilla_detalle.get("grupos_operativos_detalle", [])
-            cantidad_grupos_operativos_detalle = grilla_detalle.get("cantidad_grupos_operativos_detalle", 0)
+            cantidad_grupos_operativos_detalle = (
+                paginacion_grupos_detalle["total"]
+                if paginacion_grupos_detalle is not None
+                else grilla_detalle.get("cantidad_grupos_operativos_detalle", 0)
+            )
+            if paginacion_grupos_detalle is not None:
+                paginacion_grupos_detalle["grupos"] = grupos_operativos_detalle
             grupos_cueanexo = _construir_grupos_cueanexo_desde_grilla(
                 grilla_detalle,
                 anio_parametro,
@@ -1989,8 +2065,10 @@ def construir_contexto_detalle_reunida(request):
                 )
         except ReunidaPof.DoesNotExist:
             mensaje_detalle = "No existe una Reunida POF para el año y nivel seleccionados."
+            paginacion_grupos_detalle = None
         except (ProgrammingError, OperationalError):
             mensaje_detalle = "No se pudieron consultar los datos reales de la Reunida."
+            paginacion_grupos_detalle = None
 
     if not columnas_detalle:
         grilla_detalle_vacia = construir_grilla_pof_desde_cargos(
@@ -2041,7 +2119,6 @@ def construir_contexto_detalle_reunida(request):
         errores_filtros_cargo_detalle,
     )
     mostrar_resumen_detalle = filtros_detalle_activos and not filtros_detalle_invalidos
-    paginacion_grupos_detalle = _paginar_grupos_cue_detalle([], 1)
 
     if not filtros_detalle_invalidos:
         if filtros_cargo_detalle_activos:
@@ -2050,12 +2127,14 @@ def construir_contexto_detalle_reunida(request):
                 request.GET.get("page", 1),
             )
             grupos_coincidentes_detalle = paginacion_grupos_detalle["grupos"]
-        else:
+        elif paginacion_grupos_detalle is None:
             paginacion_grupos_detalle = _paginar_grupos_cue_detalle(
                 grupos_operativos_detalle,
                 request.GET.get("page", 1),
             )
             grupos_operativos_detalle = paginacion_grupos_detalle["grupos"]
+    if paginacion_grupos_detalle is None:
+        paginacion_grupos_detalle = _paginar_grupos_cue_detalle([], 1)
     paginacion_grupos_detalle["query_params_base"] = _construir_query_params_paginacion_detalle(request)
 
     return {
@@ -2080,7 +2159,9 @@ def construir_contexto_detalle_reunida(request):
         "detalle_busqueda_columna_id": detalle_busqueda_columna_id,
         "detalle_busqueda_columna_valor": detalle_busqueda_columna_valor,
         "filtros_detalle_campos": FILTROS_AVANZADOS_DETALLE_CAMPOS,
-        "filtros_detalle_opciones": _construir_opciones_filtros_detalle_reunida(),
+        "filtros_detalle_opciones": _construir_opciones_filtros_detalle_reunida(
+            incluir_opciones_padron=False,
+        ),
         "filtros_cargo_detalle_activos": filtros_cargo_detalle_activos,
         "mensaje_filtros_detalle": mensaje_filtros_detalle,
         "mensaje_filtros_cargo_detalle": mensaje_filtros_cargo_detalle,

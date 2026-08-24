@@ -387,6 +387,33 @@ def _query_params_desde_dict(params):
     return query.urlencode()
 
 
+def _normalizar_query_filtros(request, query=None):
+    """
+    Serializa la URL con una única representación de los filtros de cargos.
+
+    - Conserva parámetros de contexto, columnas, orden y paginación fuera del
+      contrato de filtros.
+    - Reemplaza tripletas avanzadas y parámetros `col_*` por los filtros
+      válidos que reconoce el servicio, traduciendo legacy a operador 0.
+    - Permite que payloads, exportaciones y enlaces compartan exactamente los
+      mismos criterios sin ejecutar consultas adicionales.
+    """
+    filtros_avanzados = _obtener_filtros_avanzados(request)
+    resultado = (query if query is not None else request.GET).copy()
+
+    for columna_id in COLUMNAS_BUSCABLES_IDS:
+        resultado.pop(f"col_{columna_id}", None)
+    for clave in ("campo_filtro", "operador_filtro", "valor_filtro"):
+        resultado.pop(clave, None)
+
+    for filtro in filtros_avanzados:
+        resultado.appendlist("campo_filtro", filtro["campo"])
+        resultado.appendlist("operador_filtro", filtro["operador"])
+        resultado.appendlist("valor_filtro", filtro["valor"])
+
+    return resultado
+
+
 def _obtener_anios_disponibles_visualizacion(request):
     try:
         if usuario_tiene_alcance_restringido_pof(request.user):
@@ -478,15 +505,30 @@ def _obtener_busquedas_columna(request):
 def _operadores_validos_para_campo(campo_id):
     definicion = FILTROS_AVANZADOS_POR_ID.get(campo_id)
     if not definicion:
+        if campo_id in SNAPSHOT_COLUMNAS:
+            return OPERADORES_TEXTO
         return ()
     if definicion["operadores"] == "exact":
-        return OPERADORES_EXACTOS
-    if definicion["operadores"] == "numeric":
-        return OPERADORES_NUMERICOS
-    return OPERADORES_TEXTO
+        operadores = OPERADORES_EXACTOS
+    elif definicion["operadores"] == "numeric":
+        operadores = OPERADORES_NUMERICOS
+    else:
+        operadores = OPERADORES_TEXTO
+    if campo_id in COLUMNAS_BUSCABLES_IDS and "0" not in operadores:
+        return ("0",) + operadores
+    return operadores
 
 
 def _obtener_filtros_avanzados(request):
+    """
+    Normaliza filtros avanzados y búsquedas rápidas en una única representación.
+
+    - Conserva las tripletas avanzadas recibidas en la URL.
+    - Traduce `col_<campo>` legacy a operador `0` solo cuando no existe un
+      filtro avanzado válido del mismo campo.
+    - Mantiene múltiples valores intencionales del mismo campo para que el
+      agrupamiento OR existente siga resolviéndolos en el ORM.
+    """
     filtros = []
     campos = request.GET.getlist("campo_filtro")
     operadores = request.GET.getlist("operador_filtro")
@@ -500,7 +542,12 @@ def _obtener_filtros_avanzados(request):
             4,
         )
 
-        if not campo_id or not valor or campo_id not in FILTROS_AVANZADOS_POR_ID:
+        if (
+            not campo_id
+            or not valor
+            or campo_id not in FILTROS_AVANZADOS_POR_ID
+            and campo_id not in SNAPSHOT_COLUMNAS
+        ):
             continue
         if operador not in _operadores_validos_para_campo(campo_id):
             continue
@@ -510,16 +557,53 @@ def _obtener_filtros_avanzados(request):
             "campo": campo_id,
             "operador": operador,
             "valor": valor,
+            "origen": "avanzado",
+        })
+
+    campos_avanzados = {filtro["campo"] for filtro in filtros}
+    for columna_id in COLUMNAS_BUSCABLES_IDS:
+        if columna_id in campos_avanzados:
+            continue
+        valor = _limpiar_texto(request.GET.get(f"col_{columna_id}", ""), 240)
+        if not valor:
+            continue
+        if (
+            columna_id not in FILTROS_AVANZADOS_POR_ID
+            and columna_id not in SNAPSHOT_COLUMNAS
+        ):
+            continue
+        filtros.append({
+            "indice": None,
+            "campo": columna_id,
+            "operador": "0",
+            "valor": valor,
+            "origen": "legacy_columna",
         })
 
     return filtros
 
 
-def _obtener_busqueda_columna_activa(busquedas_columna):
+def _obtener_busqueda_columna_activa(filtros_avanzados):
+    """
+    Resuelve qué filtro canónico puede reflejarse en la barra superior.
+
+    - Solo muestra campos buscables con exactamente un valor y operador 0.
+    - Oculta criterios distintos, múltiples o contradictorios para no
+      sugerir una semántica `parecido a` que el backend no está aplicando.
+    - Recorre el orden de columnas visible para conservar la selección usual.
+    """
+    candidatas = []
     for columna_id in COLUMNAS_BUSCABLES_IDS:
-        valor = busquedas_columna.get(columna_id, "")
-        if valor:
-            return columna_id, valor
+        criterios = [
+            filtro
+            for filtro in filtros_avanzados
+            if filtro["campo"] == columna_id
+            and filtro.get("valor")
+        ]
+        if len(criterios) == 1 and criterios[0]["operador"] == "0":
+            candidatas.append((columna_id, criterios[0]["valor"]))
+    if len(candidatas) == 1:
+        return candidatas[0]
     return "cueanexo", ""
 
 
@@ -564,7 +648,7 @@ def _query_limpia(columnas_visibles, base_params=None):
 
 
 def _query_exportar_filtros(request, base_params=None):
-    query = request.GET.copy()
+    query = _normalizar_query_filtros(request)
     query.pop("page", None)
     query.pop("page_size", None)
     for clave, valor in (base_params or {}).items():
@@ -1025,6 +1109,8 @@ def _numero_lookup_q(campo, operador, valor):
 
 
 def _filtro_avanzado_q(campo_id, operador, valor):
+    if operador == "0" and campo_id in COLUMNAS_BUSCABLES_IDS:
+        return _busqueda_columna_q(campo_id, valor)
     if campo_id == "cue":
         return _cue_lookup_q(operador, valor)
     if campo_id == "anexo":
@@ -1182,48 +1268,66 @@ def _aplicar_busqueda_general(queryset, busqueda):
     return queryset
 
 
-def _aplicar_busqueda_columna(queryset, columna_id, valor):
+def _busqueda_columna_q(columna_id, valor):
+    """
+    Construye la consulta ORM de la búsqueda rápida de una columna.
+
+    - Centraliza la semántica `parecido a` que también usa el filtro avanzado
+      canónico con operador 0.
+    - Conserva búsquedas parciales, sufijos y estados según cada columna.
+    - Devuelve solo expresiones Q; no consulta ni materializa registros.
+    """
     if columna_id == "cueanexo":
-        return queryset.filter(localizacion__cueanexo__icontains=valor)
+        return Q(localizacion__cueanexo__icontains=valor)
     if columna_id == "cue":
-        return queryset.filter(localizacion__cueanexo__startswith=valor)
+        return Q(localizacion__cueanexo__icontains=valor)
     if columna_id == "anexo":
-        return queryset.filter(localizacion__cueanexo__endswith=valor)
+        return Q(localizacion__cueanexo__endswith=valor)
     if columna_id == "cuof":
-        return queryset.filter(localizacion__cuof__icontains=valor)
+        return Q(localizacion__cuof__icontains=valor)
     if columna_id == "cui":
-        return queryset.filter(localizacion__cui__icontains=valor)
+        return Q(localizacion__cui__icontains=valor)
     if columna_id in OFERTA_CARGO_COLUMNAS:
-        return queryset.filter(_oferta_cargo_lookup_q(columna_id, "0", valor))
+        return _oferta_cargo_lookup_q(columna_id, "0", valor)
     if columna_id in SNAPSHOT_COLUMNAS:
-        return queryset.filter(_snapshot_filter_q(SNAPSHOT_COLUMNAS[columna_id], valor))
+        return _snapshot_filter_q(SNAPSHOT_COLUMNAS[columna_id], valor)
     if columna_id == "ceic":
-        return queryset.filter(ceic_busqueda__icontains=valor)
+        return Q(ceic_busqueda__icontains=valor)
     if columna_id == "cargo":
-        return queryset.filter(cargo__icontains=valor)
+        return Q(cargo__icontains=valor)
     if columna_id == "cantidad":
-        return queryset.filter(cantidad_busqueda__icontains=valor)
+        return Q(cantidad_busqueda__icontains=valor)
     if columna_id == "unidad_cantidad":
-        return queryset.filter(_estado_o_unidad_q("unidad_cantidad", valor, CargoPof.UnidadCantidad.choices))
+        return _estado_o_unidad_q("unidad_cantidad", valor, CargoPof.UnidadCantidad.choices)
     if columna_id == "puntos_asignados":
-        return queryset.filter(puntos_busqueda__icontains=valor)
+        return Q(puntos_busqueda__icontains=valor)
     if columna_id == "total":
-        return queryset.filter(total_busqueda__icontains=valor)
+        return Q(total_busqueda__icontains=valor)
     if columna_id == "estado_pof":
-        return queryset.filter(
-            _estado_o_unidad_q(
-                "estado_pof",
-                valor,
-                CargoPof.EstadoPof.choices,
-                extras={CargoPof.EstadoPof.DESAFECTADO: "Baja"},
-            )
+        return _estado_o_unidad_q(
+            "estado_pof",
+            valor,
+            CargoPof.EstadoPof.choices,
+            extras={CargoPof.EstadoPof.DESAFECTADO: "Baja"},
         )
     if columna_id == "observacion":
-        return queryset.filter(observacion__icontains=valor)
+        return Q(observacion__icontains=valor)
     if columna_id == "actualizado_en":
-        return queryset.filter(actualizado_busqueda__icontains=valor)
+        return Q(actualizado_busqueda__icontains=valor)
 
-    return queryset
+    return None
+
+
+def _aplicar_busqueda_columna(queryset, columna_id, valor):
+    """
+    Aplica al queryset la expresión de búsqueda rápida de una columna.
+
+    - Reutiliza la misma expresión Q que el filtro avanzado operador 0.
+    - Mantiene la búsqueda como una operación ORM sin datasets intermedios.
+    - Deja intacto el queryset si la columna no es reconocida.
+    """
+    filtro_q = _busqueda_columna_q(columna_id, valor)
+    return queryset.filter(filtro_q) if filtro_q is not None else queryset
 
 
 def _aplicar_busquedas_columna(queryset, busquedas_columna):
@@ -1600,35 +1704,22 @@ def _valor_filtro_label(campo_id, valor):
     return valor
 
 
-def _armar_chips(
-    filtros_avanzados,
-    busqueda_columna_id="",
-    busqueda_columna_valor="",
-):
+def _armar_chips(filtros_avanzados):
     """
-    Construye los chips visibles de todos los criterios del visualizador.
+    Construye chips desde la única representación canónica de filtros.
 
-    - Representa la única búsqueda rápida activa sin cambiar su semántica de consulta.
-    - Excluye búsquedas generales y parámetros simples para evitar etiquetas redundantes.
+    - Representa búsquedas rápidas como filtros avanzados con operador 0.
+    - Conserva la agrupación OR de múltiples valores intencionales.
     - Resume el operador de igualdad con el formato `Campo: Valor`.
     """
     chips = []
 
-    if busqueda_columna_id and busqueda_columna_valor:
-        columna = COLUMNAS_POR_ID.get(busqueda_columna_id, {})
-        etiqueta = columna.get("label", busqueda_columna_id)
-        chips.append({
-            "tipo": "columna",
-            "campo": busqueda_columna_id,
-            "etiqueta": etiqueta,
-            "valor": busqueda_columna_valor,
-            "valor_label": busqueda_columna_valor,
-            "texto": f"{etiqueta}: {busqueda_columna_valor}",
-        })
-
     for filtro in filtros_avanzados:
         campo_id = filtro["campo"]
-        etiqueta = FILTROS_AVANZADOS_LABELS.get(campo_id, campo_id)
+        etiqueta = FILTROS_AVANZADOS_LABELS.get(
+            campo_id,
+            COLUMNAS_POR_ID.get(campo_id, {}).get("label", campo_id),
+        )
         operador = filtro["operador"]
         operador_label = OPERADORES_FILTRO.get(operador, OPERADORES_FILTRO["0"])
         valor_label = _valor_filtro_label(campo_id, filtro["valor"])
@@ -1639,7 +1730,8 @@ def _armar_chips(
         )
         chips.append({
             "tipo": "avanzado",
-            "indice": filtro["indice"],
+            "indice": filtro.get("indice"),
+            "origen": filtro.get("origen", "avanzado"),
             "campo": campo_id,
             "etiqueta": etiqueta,
             "operador": operador,
@@ -1672,16 +1764,14 @@ def _queryset_visualizacion(request, ignorar_filtros=False):
     filtros = {} if ignorar_filtros else _obtener_filtros(request)
     filtros_avanzados = [] if ignorar_filtros else _obtener_filtros_avanzados(request)
     busqueda = "" if ignorar_filtros else _obtener_busqueda_general(request)
-    busquedas_columna = {} if ignorar_filtros else _obtener_busquedas_columna(request)
 
-    if busqueda or busquedas_columna or filtros.get("ceic") or filtros_avanzados:
+    if busqueda or filtros.get("ceic") or filtros_avanzados:
         queryset = _agregar_anotaciones_busqueda(queryset)
 
     if not ignorar_filtros:
         queryset = _aplicar_filtros(queryset, filtros)
         queryset = _aplicar_filtros_avanzados(queryset, filtros_avanzados)
         queryset = _aplicar_busqueda_general(queryset, busqueda)
-        queryset = _aplicar_busquedas_columna(queryset, busquedas_columna)
     else:
         return queryset.distinct().order_by("localizacion__cueanexo", "localizacion__cuof", "ceic", "id")
 
@@ -1821,7 +1911,7 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
     busqueda = _obtener_busqueda_general(request)
     busquedas_columna = _obtener_busquedas_columna(request)
     busqueda_columna_id, busqueda_columna_valor = _obtener_busqueda_columna_activa(
-        busquedas_columna
+        filtros_avanzados
     )
     columnas_visibles_ids, columnas_estado = _resolver_columnas_visibles(request)
     columnas = _armar_columnas(request, columnas_visibles_ids)
@@ -1870,8 +1960,6 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
         "busqueda_columna_valor": busqueda_columna_valor,
         "filtros_activos": _armar_chips(
             filtros_avanzados,
-            busqueda_columna_id,
-            busqueda_columna_valor,
         ),
         "limpiar_filtros_querystring": _query_limpia(columnas_visibles_ids, base_params_contexto),
         "columnas": columnas,
@@ -1918,7 +2006,7 @@ def construir_payload_visualizacion_cargos_localizacion(request):
         "columnas_colspan": contexto["columnas_colspan"],
         "filas": contexto["filas"],
         "filtros_activos": contexto["filtros_activos"],
-        "querystring": request.GET.urlencode(),
+        "querystring": _normalizar_query_filtros(request).urlencode(),
         "querystring_exportar_filtros": contexto["querystring_exportar_filtros"],
         "querystring_exportar_todo": contexto["querystring_exportar_todo"],
         "total_registros": contexto["total_registros"],
@@ -1950,7 +2038,6 @@ def _texto_filtros_excel(request, exportar_todo=False):
 
     filtros = _obtener_filtros(request)
     busqueda = _obtener_busqueda_general(request)
-    busquedas_columna = _obtener_busquedas_columna(request)
     partes = list(partes_contexto)
 
     if busqueda:
@@ -1969,9 +2056,6 @@ def _texto_filtros_excel(request, exportar_todo=False):
         operador = OPERADORES_FILTRO.get(filtro["operador"], OPERADORES_FILTRO["0"])
         valor = _valor_filtro_label(filtro["campo"], filtro["valor"])
         partes.append(f"{etiqueta} {operador}: {valor}")
-
-    for columna_id, valor in busquedas_columna.items():
-        partes.append(f"{COLUMNAS_POR_ID[columna_id]['label']}: {valor}")
 
     return " | ".join(partes) if partes else "Sin filtros aplicados"
 

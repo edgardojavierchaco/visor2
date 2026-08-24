@@ -161,6 +161,22 @@
         const firstOperatorForConfig = commonFilterUI.firstOperatorForConfig;
         const fieldConfig = {};
         let filterOptions = {};
+        const opcionesFiltroUrl = form.dataset.detalleOpcionesFiltroUrl || "";
+        const apiDetalle = window.pofApi || null;
+        const REMOTE_CHECKLIST_FIELDS = new Set([
+            "region",
+            "localidad",
+            "departamento",
+            "ambito",
+            "categoria",
+            "jornada",
+            "acronimo",
+            "estado_localizacion_padron",
+            "estado_oferta_padron",
+            "estado_establecimiento_padron"
+        ]);
+        const loadedRemoteFilters = new Set();
+        const remoteFilterRequests = new Map();
         let searchInteractionDirty = false;
         let filterDialogState = null;
         let appliedColumnSearch = {
@@ -523,6 +539,65 @@
             syncFilterApplyButton();
         }
 
+        /**
+         * Carga una sola vez el catálogo remoto del campo activo del Detalle.
+         *
+         * - Usa únicamente GET contra el endpoint autenticado del Detalle común.
+         * - Reutiliza el resultado en memoria durante la vida de la página.
+         * - Valida campo, lista y formato antes de incorporarlos al control.
+         */
+        async function cargarOpcionesFiltroRemoto(campo) {
+            if (!opcionesFiltroUrl || !apiDetalle || !REMOTE_CHECKLIST_FIELDS.has(campo)) {
+                return true;
+            }
+            if (loadedRemoteFilters.has(campo)) {
+                return true;
+            }
+
+            const solicitudExistente = remoteFilterRequests.get(campo);
+            if (solicitudExistente) {
+                return solicitudExistente;
+            }
+
+            const url = new URL(opcionesFiltroUrl, window.location.href);
+            url.searchParams.set("campo", campo);
+            const solicitud = apiDetalle.requestJson(url.toString(), {method: "GET"})
+                .then(function (data) {
+                    const opciones = data && data.opciones;
+                    const opcionesValidas = Array.isArray(opciones) && opciones.every(function (opcion) {
+                        return typeof opcion === "string" || (
+                            opcion &&
+                            typeof opcion === "object" &&
+                            Object.prototype.hasOwnProperty.call(opcion, "value") &&
+                            Object.prototype.hasOwnProperty.call(opcion, "label")
+                        );
+                    });
+                    if (!data || data.ok !== true || data.campo !== campo || !opcionesValidas) {
+                        throw new Error("Respuesta inválida del catálogo de filtros.");
+                    }
+                    filterOptions[campo] = opciones;
+                    loadedRemoteFilters.add(campo);
+                    return true;
+                })
+                .catch(function () {
+                    if (filterDialogState && filterDialogState.field === campo) {
+                        valorFiltroLabel.textContent = "Opciones";
+                        valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">No se pudieron cargar las opciones. Intentá nuevamente.</div>';
+                        if (filtroAplicarBtn) {
+                            filtroAplicarBtn.disabled = true;
+                        }
+                    }
+                    return false;
+                })
+                .finally(function () {
+                    if (remoteFilterRequests.get(campo) === solicitud) {
+                        remoteFilterRequests.delete(campo);
+                    }
+                });
+            remoteFilterRequests.set(campo, solicitud);
+            return solicitud;
+        }
+
         function prepararDialogoFiltro(config, editState) {
             const initial = getFilterDialogInitialState(config, editState);
             campoFiltroActivo.value = config.field;
@@ -552,12 +627,34 @@
             dialogBackdrop.hidden = false;
         }
 
-        function openFilterDialog(config, editState) {
+        /**
+         * Abre el dialogo de un filtro y espera el catalogo remoto solo si corresponde.
+         *
+         * - Conserva la apertura inmediata de filtros locales y de Proyecto Especial.
+         * - Evita renderizar una respuesta tardía sobre otro campo o dialogo.
+         */
+        async function openFilterDialog(config, editState) {
             if (!dialog || !dialogBackdrop || !campoFiltroActivo || !operadorFiltro || !valorFiltroMount) {
                 return;
             }
             prepararDialogoFiltro(config, editState);
             if (config.mode === "checklist") {
+                if (opcionesFiltroUrl && REMOTE_CHECKLIST_FIELDS.has(config.field)) {
+                    valorFiltroLabel.textContent = "Opciones";
+                    valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">Cargando opciones...</div>';
+                    if (filtroAplicarBtn) {
+                        filtroAplicarBtn.disabled = true;
+                    }
+                    const cargadas = await cargarOpcionesFiltroRemoto(config.field);
+                    if (
+                        !cargadas ||
+                        !filterDialogState ||
+                        filterDialogState.field !== config.field ||
+                        campoFiltroActivo.value !== config.field
+                    ) {
+                        return;
+                    }
+                }
                 renderChecklistValueControl(
                     config.field,
                     filterOptions[config.field],
@@ -740,7 +837,7 @@
             button.addEventListener("click", function () {
                 const config = fieldConfig[button.dataset.filterField];
                 if (config) {
-                    openFilterDialog(config);
+                    void openFilterDialog(config);
                 }
             });
         });

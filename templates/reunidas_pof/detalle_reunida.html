@@ -378,6 +378,7 @@
                   id="detalleReunidaFiltrosForm"
                   class="pof-visual-filter-card pof-detalle-filter-card"
                   data-detalle-filtros-dinamicos="1"
+                  data-detalle-opciones-filtro-url="{% url 'reunidas_pof:detalle_reunida_opciones_filtro' %}"
                   aria-label="Filtros del detalle de reunida">
                 <input type="hidden" name="cabecera_tipo" value="REUNIDA">
                 <input type="hidden" name="anio" value="{{ reunida.anio }}">
@@ -846,5 +847,5 @@
 <script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
 <script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
 <script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260824-2"></script>
-<script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260824-4"></script>
+<script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260824-5"></script>
 {% endblock %}

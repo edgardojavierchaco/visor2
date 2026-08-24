@@ -226,6 +226,7 @@
                  data-filter-index="{{ chip.indice|default_if_none:'' }}"
                  data-filter-field="{{ chip.campo|default:'' }}"
                  data-filter-operator="{{ chip.operador|default:'' }}"
+                 data-filter-origin="{{ chip.origen|default:'avanzado' }}"
                  data-filter-value="{{ chip.valor|default:'' }}">
                 <button type="button"
                         class="pof-filter-chip-edit"
@@ -433,6 +434,19 @@
         };
     });
 
+    if (columnaSelect) {
+        Array.from(columnaSelect.options).forEach(function (option) {
+            if (!fieldConfig[option.value]) {
+                fieldConfig[option.value] = {
+                    field: option.value,
+                    label: option.textContent.trim(),
+                    mode: "text",
+                    operators: "text"
+                };
+            }
+        });
+    }
+
     function escapeHtml(value) {
         return String(value == null ? "" : value)
             .replace(/&/g, "&amp;")
@@ -475,6 +489,91 @@
     function clearColumnSearchParams(url) {
         checkboxes.forEach(function (checkbox) {
             url.searchParams.delete("col_" + checkbox.value);
+        });
+        return url;
+    }
+
+    /**
+     * Obtiene los campos que la barra superior puede buscar.
+     *
+     * - Usa las opciones renderizadas por el backend como lista permitida.
+     * - Mantiene fuera columnas no buscables aunque lleguen en una URL.
+     * - Centraliza la misma frontera que se usa para traducir parámetros legacy.
+     */
+    function searchableColumnIds() {
+        return columnaSelect
+            ? Array.from(columnaSelect.options).map(function (option) {
+                return option.value;
+            })
+            : [];
+    }
+
+    /**
+     * Indica si un campo puede usar el operador 0 como búsqueda rápida.
+     *
+     * - Reutiliza las opciones visibles del selector de columnas.
+     * - No mantiene una segunda lista manual de campos buscables.
+     * - Comparte la excepción entre validación de URL y edición de chips.
+     */
+    function supportsColumnSearchOperator(field) {
+        return searchableColumnIds().indexOf(field) !== -1;
+    }
+
+    /**
+     * Comprueba si una tripleta avanzada coincide con los operadores permitidos.
+     *
+     * - Usa la misma configuración de campos que alimenta el diálogo.
+     * - Trata un operador ausente como 0, igual que el parser backend.
+     * - Evita que una tripleta inválida bloquee la traducción de un `col_*` real.
+     */
+    function isSupportedAdvancedCriterion(field, operator, value) {
+        if (!field || !String(value || "").trim() || !fieldConfig[field]) {
+            return false;
+        }
+        const config = fieldConfig[field];
+        const normalizedOperator = String(operator || "0");
+        if (normalizedOperator === "0" && supportsColumnSearchOperator(field)) {
+            return true;
+        }
+        const operators = FILTER_OPERATOR_PRESETS[config.operators]
+            || FILTER_OPERATOR_PRESETS.text
+            || [];
+        return operators.some(function (item) {
+            return String(item.value) === normalizedOperator;
+        });
+    }
+
+    /**
+     * Convierte búsquedas `col_*` legacy en tripletas avanzadas canónicas.
+     *
+     * - Traduce cada campo legacy a operador 0 y conserva otros campos.
+     * - Descarta `col_*` cuando ya existe un criterio avanzado del mismo campo.
+     * - Opera únicamente sobre la URL en memoria y no inicia consultas.
+     */
+    function normalizeLegacyColumnSearchParams(url) {
+        const searchableIds = searchableColumnIds();
+        const advancedFields = new Set();
+        const campos = url.searchParams.getAll("campo_filtro");
+        const operadores = url.searchParams.getAll("operador_filtro");
+        const valores = url.searchParams.getAll("valor_filtro");
+
+        campos.forEach(function (field, index) {
+            if (searchableIds.indexOf(field) !== -1
+                && isSupportedAdvancedCriterion(field, operadores[index], valores[index])) {
+                advancedFields.add(field);
+            }
+        });
+
+        searchableIds.forEach(function (field) {
+            const key = "col_" + field;
+            const legacyValue = (url.searchParams.get(key) || "").trim();
+            url.searchParams.delete(key);
+            if (!legacyValue || advancedFields.has(field)) {
+                return;
+            }
+            url.searchParams.append("campo_filtro", field);
+            url.searchParams.append("operador_filtro", "0");
+            url.searchParams.append("valor_filtro", legacyValue);
         });
         return url;
     }
@@ -682,6 +781,7 @@
     function buildUrlWithCurrentColumns(rawUrl, options) {
         const opts = options || {};
         const url = new URL(rawUrl, window.location.origin);
+        normalizeLegacyColumnSearchParams(url);
         setVisibleParams(
             url,
             opts.includeEmptyState !== false,
@@ -707,6 +807,7 @@
 
         const target = new URL(excelFiltros.dataset.exportBase, window.location.origin);
         const source = new URL(window.location.href);
+        normalizeLegacyColumnSearchParams(source);
         source.searchParams.forEach(function (value, key) {
             if (key === "page" || key === "page_size" || key === "visible_col" || key === "columnas_estado") {
                 return;
@@ -815,17 +916,80 @@
     }
 
     /**
+     * Resuelve el único criterio canónico que puede reflejarse en la barra.
+     *
+     * - Muestra solo un campo buscable con exactamente un operador 0 y valor.
+     * - No reemplaza un criterio avanzado del mismo campo con un `col_*` legacy.
+     * - Oculta valores cuando hay múltiples criterios o un operador diferente.
+     */
+    function getCanonicalColumnSearchState(url) {
+        const searchableIds = searchableColumnIds();
+        const criteriaByField = new Map();
+        const advancedFields = new Set();
+        const campos = url.searchParams.getAll("campo_filtro");
+        const operadores = url.searchParams.getAll("operador_filtro");
+        const valores = url.searchParams.getAll("valor_filtro");
+
+        campos.forEach(function (field, index) {
+            const value = String(valores[index] || "").trim();
+            if (searchableIds.indexOf(field) === -1
+                || !isSupportedAdvancedCriterion(field, operadores[index], value)) {
+                return;
+            }
+            advancedFields.add(field);
+            if (!criteriaByField.has(field)) {
+                criteriaByField.set(field, []);
+            }
+            criteriaByField.get(field).push({
+                operator: operadores[index] || "0",
+                value: value
+            });
+        });
+
+        const candidates = [];
+        searchableIds.forEach(function (field) {
+            const criteria = criteriaByField.get(field) || [];
+            if (criteria.length === 1 && criteria[0].operator === "0") {
+                candidates.push({ columnId: field, value: criteria[0].value });
+            }
+        });
+        if (candidates.length === 1) {
+            return candidates[0];
+        }
+
+        for (const field of searchableIds) {
+            if (advancedFields.has(field)) {
+                continue;
+            }
+            const legacyValue = (url.searchParams.get("col_" + field) || "").trim();
+            if (legacyValue) {
+                return { columnId: field, value: legacyValue };
+            }
+        }
+
+        return {
+            columnId: columnaSelect && columnaSelect.value
+                ? columnaSelect.value
+                : (searchableIds[0] || ""),
+            value: ""
+        };
+    }
+
+    /**
      * Integra el estado editable de la barra en la URL vigente del visualizador.
      *
-     * - Reemplaza cualquier parametro `col_` por la unica busqueda seleccionada.
-     * - Reinicia la paginacion al confirmar expresamente el texto pendiente.
-     * - Conserva orden, filtros y columnas visibles ya aplicados.
+     * - Reemplaza el criterio del mismo campo por una tripleta operador 0.
+     * - Elimina la búsqueda rápida aplicada al vaciar la barra, sin tocar otros campos.
+     * - Reinicia la paginación y conserva orden, filtros y columnas visibles.
      */
     function applyPendingColumnSearchToUrl(url) {
         const nextState = getColumnSearchState();
-        clearColumnSearchParams(url);
+        normalizeLegacyColumnSearchParams(url);
         if (nextState.value && nextState.columnId) {
-            url.searchParams.set("col_" + nextState.columnId, nextState.value);
+            replaceFilterValuesForField(url, nextState.columnId, "0", [nextState.value]);
+        } else if (appliedColumnSearch && appliedColumnSearch.columnId
+            && appliedColumnSearch.value) {
+            replaceFilterValuesForField(url, appliedColumnSearch.columnId, "0", []);
         }
         url.searchParams.delete("page");
         url.searchParams.delete("page_size");
@@ -893,34 +1057,21 @@
         if (!columnaSelect || !columnaInput) {
             return;
         }
-        let activeColumn = columnaSelect.value || "cueanexo";
-        let activeValue = "";
-        const searchableIds = new Set(Array.from(columnaSelect.options).map(function (option) {
-            return option.value;
-        }));
+        const state = getCanonicalColumnSearchState(url);
+        const activeColumn = state.columnId || "cueanexo";
+        const activeValue = state.value || "";
         const inputMaxLength = columnaInput.maxLength > 0 ? columnaInput.maxLength : null;
-        checkboxes.forEach(function (checkbox) {
-            if (!searchableIds.has(checkbox.value)) {
-                return;
-            }
-            const rawValue = url.searchParams.get("col_" + checkbox.value) || "";
-            const value = inputMaxLength === null
-                ? rawValue
-                : rawValue.slice(0, inputMaxLength);
-            if (value && !activeValue) {
-                activeColumn = checkbox.value;
-                activeValue = value;
-            }
-        });
         appliedColumnSearch = {
             columnId: activeColumn,
-            value: activeValue.trim()
+            value: inputMaxLength === null
+                ? activeValue.trim()
+                : activeValue.trim().slice(0, inputMaxLength)
         };
         if (columnSearchInteractionDirty) {
             return;
         }
         columnaSelect.value = activeColumn;
-        columnaInput.value = activeValue;
+        columnaInput.value = appliedColumnSearch.value;
     }
 
     function renderRows(filas, colspan) {
@@ -976,7 +1127,8 @@
             + ' data-filter-index="' + escapeHtml(chip.indice == null ? "" : chip.indice) + '"'
             + ' data-filter-field="' + escapeHtml(chip.campo || "") + '"'
             + ' data-filter-operator="' + escapeHtml(chip.operador || "") + '"'
-            + ' data-filter-value="' + escapeHtml(chip.valor || "") + '">'
+            + ' data-filter-origin="' + escapeHtml(chip.origen || "avanzado") + '"'
+            + ' data-filter-value="' + escapeHtml(chip.valor || "") + '">' 
             + '<button type="button" class="pof-filter-chip-edit" data-filter-chip-edit'
             + ' aria-label="Editar ' + escapeHtml(texto) + '">'
             + '<span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>'
@@ -1283,6 +1435,10 @@
             return Promise.resolve(false);
         }
         const nextState = getColumnSearchState();
+        if (!nextState.value && !appliedColumnSearch.value) {
+            columnSearchInteractionDirty = false;
+            return Promise.resolve(false);
+        }
         if (sameColumnSearchState(appliedColumnSearch, nextState)
             || sameColumnSearchState(columnSearchRequestState, nextState)) {
             columnSearchInteractionDirty = false;
@@ -1436,10 +1592,14 @@
      */
     function getFilterDialogInitialState(config, editState) {
         if (editState && editState.field === config.field) {
+            const operator = editState.operator
+                || (editState.source === "columna" && supportsColumnSearchOperator(config.field)
+                    ? "0"
+                    : firstOperatorForConfig(config));
             return {
                 source: editState.source || "avanzado",
                 index: editState.index == null ? null : String(editState.index),
-                operator: editState.operator || firstOperatorForConfig(config),
+                operator: operator,
                 values: Array.isArray(editState.values) ? editState.values : [],
                 disableUntilChanged: true
             };
@@ -1449,7 +1609,7 @@
             return {
                 source: "columna",
                 index: null,
-                operator: firstOperatorForConfig(config),
+                operator: "0",
                 values: [appliedColumnSearch.value],
                 disableUntilChanged: true
             };
@@ -1620,14 +1780,44 @@
         syncFilterApplyButton();
     }
 
+    /**
+     * Obtiene los operadores del diálogo para el estado que se está editando.
+     *
+     * - Conserva intacto el preset normal al crear filtros nuevos.
+     * - Agrega solo `parecido a` cuando se edita un criterio canónico operador 0
+     *   de una columna buscable cuyo preset habitual no lo ofrece.
+     * - Reutiliza la etiqueta del preset textual sin duplicar textos de operador.
+     */
+    function getFilterDialogOperators(config, initialOperator) {
+        const operators = FILTER_OPERATOR_PRESETS[config.operators]
+            || FILTER_OPERATOR_PRESETS.text
+            || [];
+        const normalizedOperator = String(initialOperator || "");
+        if (normalizedOperator !== "0"
+            || !supportsColumnSearchOperator(config.field)
+            || operators.some(function (operator) { return String(operator.value) === "0"; })) {
+            return operators;
+        }
+
+        const searchOperator = (FILTER_OPERATOR_PRESETS.text || []).find(function (operator) {
+            return String(operator.value) === "0";
+        });
+        return searchOperator ? [searchOperator].concat(operators) : operators;
+    }
+
     function prepararDialogoFiltro(config, editState, token) {
         const initial = getFilterDialogInitialState(config, editState);
         campoFiltroActivo.value = config.field;
         dialogTitulo.textContent = config.label;
-        operadorFiltro.innerHTML = (FILTER_OPERATOR_PRESETS[config.operators] || FILTER_OPERATOR_PRESETS.text).map(function (operator) {
+        const operators = getFilterDialogOperators(config, initial.operator);
+        operadorFiltro.innerHTML = operators.map(function (operator) {
             return '<option value="' + escapeHtml(operator.value) + '">' + escapeHtml(operator.label) + '</option>';
         }).join("");
-        operadorFiltro.value = initial.operator;
+        operadorFiltro.value = operators.some(function (operator) {
+            return String(operator.value) === String(initial.operator);
+        })
+            ? initial.operator
+            : (operators[0] ? operators[0].value : "");
         filterDialogState = {
             source: initial.source,
             index: initial.index,
@@ -1646,11 +1836,21 @@
         dialogBackdrop.hidden = false;
     }
 
+    /**
+     * Abre el diálogo respetando el tipo de filtro y el origen del criterio.
+     *
+     * - Mantiene checklist y numeric para la creación normal de filtros.
+     * - Edita operador 0 buscable como texto, incluso si el preset normal es
+     *   checklist, para no perder valores que no sean opciones exactas.
+     * - Conserva el valor y el operador canónicos al guardar la edición.
+     */
     function openFilterDialog(config, editState) {
         const token = ++filterDialogToken;
         prepararDialogoFiltro(config, editState, token);
 
-        if (config.mode !== "checklist") {
+        const isColumnSearchCriterion = filterDialogState.initial.operator === "0"
+            && supportsColumnSearchOperator(config.field);
+        if (config.mode !== "checklist" || isColumnSearchCriterion) {
             renderTextValueControl(
                 config.mode,
                 config.field,
@@ -1718,7 +1918,15 @@
         return value ? [value] : [];
     }
 
+    /**
+     * Reemplaza todos los valores avanzados de un campo.
+     *
+     * - Normaliza primero cualquier `col_*` legacy para evitar doble canal.
+     * - Conserva filtros de otros campos y permite múltiples valores OR.
+     * - Reinicia la paginación sin modificar columnas, orden ni contexto.
+     */
     function replaceFilterValuesForField(url, field, operator, values) {
+        normalizeLegacyColumnSearchParams(url);
         const params = url.searchParams;
         const campos = params.getAll("campo_filtro");
         const operadores = params.getAll("operador_filtro");
@@ -1753,6 +1961,7 @@
      * - Mantiene la semántica existente de los parámetros avanzados en la URL.
      */
     function replaceAdvancedFilterByIndex(url, indexToReplace, field, operator, values) {
+        normalizeLegacyColumnSearchParams(url);
         const params = url.searchParams;
         const campos = params.getAll("campo_filtro");
         const operadores = params.getAll("operador_filtro");
@@ -1779,7 +1988,15 @@
         params.delete("page_size");
     }
 
+    /**
+     * Elimina una tripleta avanzada por su índice paralelo.
+     *
+     * - Canonicaliza legacy antes de resolver el índice recibido del backend.
+     * - Conserva el resto de filtros y su orden relativo.
+     * - No inicia navegación ni modifica el estado persistente.
+     */
     function removeAdvancedFilterByIndex(url, indexToRemove) {
+        normalizeLegacyColumnSearchParams(url);
         const params = url.searchParams;
         const campos = params.getAll("campo_filtro");
         const operadores = params.getAll("operador_filtro");
@@ -1812,10 +2029,12 @@
             return;
         }
         const type = chip.dataset.filterType;
+        const origin = chip.dataset.filterOrigin;
+        const isColumnOrigin = type === "columna" || origin === "legacy_columna";
         openFilterDialog(config, {
-            source: type === "columna" ? "columna" : "avanzado",
+            source: isColumnOrigin ? "columna" : "avanzado",
             field: field,
-            index: type === "avanzado" ? chip.dataset.filterIndex : null,
+            index: type === "avanzado" && !isColumnOrigin ? chip.dataset.filterIndex : null,
             operator: chip.dataset.filterOperator || firstOperatorForConfig(config),
             values: chip.dataset.filterValue ? [chip.dataset.filterValue] : []
         });
@@ -1835,8 +2054,11 @@
         const previousState = captureActiveFiltersState();
         const url = new URL(window.location.href);
         const type = chip.dataset.filterType;
+        const origin = chip.dataset.filterOrigin;
         const field = chip.dataset.filterField;
-        if (type === "avanzado") {
+        if (origin === "legacy_columna" && field) {
+            replaceFilterValuesForField(url, field, "0", []);
+        } else if (type === "avanzado") {
             removeAdvancedFilterByIndex(url, chip.dataset.filterIndex);
         } else if (type === "simple" && field) {
             url.searchParams.delete(field);

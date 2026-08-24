@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.paginator import Paginator
-from django.db import IntegrityError, connection, transaction
+from django.db import DatabaseError, IntegrityError, connection, transaction
 from django.db.models import Max
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse, JsonResponse
@@ -68,6 +68,7 @@ from .services.padron_materializadas_service import (
     buscar_ofertas_padron,
     construir_cueanexo_sin_guion,
     obtener_catalogos_padron_ingreso_manual_pof,
+    obtener_opciones_filtro_detalle_padron,
 )
 from .services.proyecto_especial_manual_service import (
     buscar_cuof_manual_proyecto_especial as buscar_cuof_manual_proyecto_especial_service,
@@ -992,6 +993,33 @@ def visualizacion_cargos_localizacion_exportar_todo(request):
 def detalle_reunida(request):
     contexto = construir_contexto_detalle_reunida(request)
     return render(request, "reunidas_pof/detalle_reunida.html", contexto)
+
+
+@pof_api_required
+@require_GET
+def detalle_reunida_opciones_filtro(request):
+    """
+    Devuelve por JSON un catálogo remoto del Detalle común.
+
+    - Acepta únicamente campos validados por el servicio de Padrón.
+    - Ejecuta una consulta de lectura por solicitud y no persiste resultados.
+    - Responde errores genéricos sin exponer detalles de SQL o infraestructura.
+    """
+    campo = (request.GET.get("campo") or "").strip()
+    try:
+        opciones = obtener_opciones_filtro_detalle_padron(campo)
+    except ValueError:
+        return api_error_validacion(
+            "El campo de filtro no es válido.",
+            {"campo": ["El campo solicitado no está habilitado."]},
+        )
+    except DatabaseError:
+        logger.exception("Error al cargar el catálogo remoto del Detalle: %s", campo)
+        return api_error_interno(
+            "No se pudieron cargar las opciones del filtro.",
+        )
+
+    return JsonResponse({"ok": True, "campo": campo, "opciones": opciones})
 
 
 @pof_required

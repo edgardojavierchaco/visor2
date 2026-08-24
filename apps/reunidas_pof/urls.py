@@ -28,6 +28,7 @@ urlpatterns = [
     path("exportar/", views.exportar_reunida, name = "exportar_reunida"),
     path("historial/", views.historial_movimientos, name = "historial_movimientos"),
     path("reunidas/detalle/", views.detalle_reunida, name="detalle_reunida"),
+    path("reunidas/detalle/opciones-filtro/", views.detalle_reunida_opciones_filtro, name="detalle_reunida_opciones_filtro"),
 
     # Acciones internas / futuras consultas dinámicas
     path("validar-reunida/", views.validar_reunida, name="validar_reunida"),

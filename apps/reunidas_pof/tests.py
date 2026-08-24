@@ -186,6 +186,173 @@ class DecoradoresPofTests(SimpleTestCase):
         )
 
 
+class VisualizacionFiltrosCanonicosTests(SimpleTestCase):
+    """
+    Verifica la normalizacion compartida entre busqueda rapida y filtros avanzados.
+
+    - Mantiene el CUE como busqueda parcial en la ruta canonica.
+    - Traduce URLs legacy sin duplicar criterios del mismo campo.
+    - Conserva la acumulacion y el OR de multiples valores avanzados.
+    """
+
+    def setUp(self):
+        self.request_factory = RequestFactory()
+
+    def test_filtro_cue_parecido_usa_icontains(self):
+        consulta = visualizacion_service._filtro_avanzado_q("cue", "0", "313")
+
+        self.assertEqual(
+            consulta.children,
+            [("localizacion__cueanexo__icontains", "313")],
+        )
+
+    def test_busqueda_columna_cue_usa_icontains(self):
+        queryset = Mock()
+        visualizacion_service._aplicar_busqueda_columna(queryset, "cue", "313")
+
+        filtro_q = queryset.filter.call_args.args[0]
+        self.assertEqual(
+            filtro_q.children,
+            [("localizacion__cueanexo__icontains", "313")],
+        )
+
+    def test_busqueda_rapida_numerica_usa_la_anotacion_textual_canonica(self):
+        filtro_q = visualizacion_service._filtro_avanzado_q("cantidad", "0", "2")
+
+        self.assertEqual(
+            filtro_q.children,
+            [("cantidad_busqueda__icontains", "2")],
+        )
+
+    def test_columna_legacy_se_convierte_en_un_chip_avanzado(self):
+        request = self.request_factory.get("/visualizacion/?col_cue=313")
+
+        filtros = visualizacion_service._obtener_filtros_avanzados(request)
+        chips = visualizacion_service._armar_chips(filtros)
+
+        self.assertEqual(
+            filtros,
+            [{
+                "indice": None,
+                "campo": "cue",
+                "operador": "0",
+                "valor": "313",
+                "origen": "legacy_columna",
+            }],
+        )
+        self.assertEqual(len(chips), 1)
+        self.assertEqual(chips[0]["texto"], "CUE parecido a: 313")
+        self.assertEqual(chips[0]["tipo"], "avanzado")
+        self.assertEqual(chips[0]["origen"], "legacy_columna")
+
+    def test_filtro_avanzado_gana_sobre_columna_legacy_del_mismo_campo(self):
+        request = self.request_factory.get(
+            "/visualizacion/?col_cue=313&campo_filtro=cue&operador_filtro=2&valor_filtro=522522"
+        )
+
+        filtros = visualizacion_service._obtener_filtros_avanzados(request)
+
+        self.assertEqual(
+            [(filtro["campo"], filtro["operador"], filtro["valor"]) for filtro in filtros],
+            [("cue", "2", "522522")],
+        )
+
+    def test_columna_legacy_se_conserva_si_la_tripleta_avanzada_es_invalida(self):
+        request = self.request_factory.get(
+            "/visualizacion/?col_cue=313&campo_filtro=cue&operador_filtro=99&valor_filtro=522522"
+        )
+
+        filtros = visualizacion_service._obtener_filtros_avanzados(request)
+
+        self.assertEqual(
+            [(filtro["campo"], filtro["operador"], filtro["valor"]) for filtro in filtros],
+            [("cue", "0", "313")],
+        )
+
+    def test_columnas_legacy_de_campos_distintos_se_acumulan(self):
+        request = self.request_factory.get(
+            "/visualizacion/?col_cue=313&col_cuof=ABC"
+        )
+
+        filtros = visualizacion_service._obtener_filtros_avanzados(request)
+
+        self.assertEqual(
+            [(filtro["campo"], filtro["valor"]) for filtro in filtros],
+            [("cue", "313"), ("cuof", "ABC")],
+        )
+
+    def test_multiples_valores_avanzados_del_mismo_campo_se_conservan(self):
+        request = self.request_factory.get(
+            "/visualizacion/?campo_filtro=oferta&campo_filtro=oferta"
+            "&operador_filtro=0&operador_filtro=0"
+            "&valor_filtro=Primaria&valor_filtro=Secundaria"
+        )
+
+        filtros = visualizacion_service._obtener_filtros_avanzados(request)
+
+        self.assertEqual(
+            [(filtro["campo"], filtro["valor"]) for filtro in filtros],
+            [("oferta", "Primaria"), ("oferta", "Secundaria")],
+        )
+
+    def test_chips_conservan_multiples_valores_del_mismo_campo(self):
+        filtros = [
+            {"indice": 0, "campo": "cue", "operador": "0", "valor": "313"},
+            {"indice": 1, "campo": "cue", "operador": "0", "valor": "522"},
+        ]
+
+        chips = visualizacion_service._armar_chips(filtros)
+
+        self.assertEqual(
+            [chip["valor"] for chip in chips],
+            ["313", "522"],
+        )
+
+    def test_barra_no_muestra_un_valor_si_hay_dos_campos_canonicos(self):
+        filtros = [
+            {"campo": "cue", "operador": "0", "valor": "313"},
+            {"campo": "cuof", "operador": "0", "valor": "ABC"},
+        ]
+
+        self.assertEqual(
+            visualizacion_service._obtener_busqueda_columna_activa(filtros),
+            ("cueanexo", ""),
+        )
+
+    def test_barra_no_muestra_un_operador_distinto_de_parecido(self):
+        filtros = [{"campo": "cue", "operador": "2", "valor": "313"}]
+
+        self.assertEqual(
+            visualizacion_service._obtener_busqueda_columna_activa(filtros),
+            ("cueanexo", ""),
+        )
+
+    def test_querystring_y_exportacion_reemplazan_columna_legacy(self):
+        request = self.request_factory.get(
+            "/visualizacion/?anio=2025&col_cue=313&page=2&page_size=50"
+        )
+
+        query = visualizacion_service._normalizar_query_filtros(request)
+        exportacion = visualizacion_service._query_exportar_filtros(request)
+
+        self.assertNotIn("col_cue", query)
+        self.assertIn("campo_filtro=cue", query.urlencode())
+        self.assertNotIn("page=", exportacion)
+        self.assertNotIn("page_size=", exportacion)
+        self.assertIn("operador_filtro=0", exportacion)
+        self.assertIn("valor_filtro=313", exportacion)
+
+    def test_querystring_no_duplica_legacy_cuando_gana_el_filtro_avanzado(self):
+        request = self.request_factory.get(
+            "/visualizacion/?col_cue=313&campo_filtro=cue&operador_filtro=2&valor_filtro=522522"
+        )
+
+        query = visualizacion_service._normalizar_query_filtros(request)
+
+        self.assertEqual(query.getlist("campo_filtro"), ["cue"])
+        self.assertEqual(query.getlist("operador_filtro"), ["2"])
+        self.assertEqual(query.getlist("valor_filtro"), ["522522"])
+
 class AlcanceVisualizacionPofTests(SimpleTestCase):
     def test_acceso_completo_y_consulta_general_no_reciben_filtro_de_datos(self):
         for rol in ("Pof", "Administrador", "Director de Nivel Inicial"):
