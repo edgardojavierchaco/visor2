@@ -35,26 +35,35 @@
 
         <div class="pof-visual-toolbar">
             <div class="pof-visual-live-search" id="visualizacionLiveSearch">
-                <label class="pof-visually-hidden" for="visualizacionColumnaSelect">Columna</label>
-                <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
-                <select id="visualizacionColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
-                    {% for columna in columnas %}
-                        {% if columna.buscable %}
-                            <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
-                <label class="pof-visually-hidden" for="visualizacionColumnaInput">Buscar en columna</label>
-                <input type="text"
-                       id="visualizacionColumnaInput"
-                       class="pof-visual-search-input"
-                       value="{{ busqueda_columna_valor }}"
-                       placeholder="Buscar en esta columna"
-                       autocomplete="off">
-                <span id="visualizacionBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
-                    <span class="pof-visually-hidden">Buscando</span>
-                </span>
-                <button type="button" class="pof-visual-search-clear" id="visualizacionLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                <div class="pof-visual-search-control-row">
+                    <label class="pof-visually-hidden" for="visualizacionColumnaSelect">Columna</label>
+                    <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                    <select id="visualizacionColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                        {% for columna in columnas %}
+                            {% if columna.buscable %}
+                                <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <label class="pof-visually-hidden" for="visualizacionColumnaInput">Buscar en columna</label>
+                    <div class="pof-visual-search-input-wrap">
+                        <input type="text"
+                               id="visualizacionColumnaInput"
+                               class="pof-visual-search-input"
+                               value="{{ busqueda_columna_valor }}"
+                               placeholder="Buscar..."
+                               autocomplete="off"
+                               maxlength="120">
+                        <span id="visualizacionBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                            <span class="pof-visually-hidden">Buscando resultados</span>
+                        </span>
+                    </div>
+                    <button type="button" class="pof-visual-search-clear" id="visualizacionLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                </div>
+                <div id="visualizacionBusquedaColumnaStatus" class="pof-visual-search-status pof-visual-search-status-hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+                    <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
+                    <span id="visualizacionBusquedaColumnaStatusText">Buscando resultados...</span>
+                </div>
             </div>
 
             {% if not es_proyecto_especial %}
@@ -202,37 +211,50 @@
                 </div>
             </div>
         </div>
+
     </form>
+
+    <div class="pof-filter-active-list"
+        id="visualizacionFiltrosActivos"
+        aria-label="Filtros activos"
+        {% if not filtros_activos %}hidden{% endif %}>
+
+        {% for chip in filtros_activos %}
+            <div class="pof-filter-chip"
+                 data-filter-chip
+                 data-filter-type="{{ chip.tipo }}"
+                 data-filter-index="{{ chip.indice|default_if_none:'' }}"
+                 data-filter-field="{{ chip.campo|default:'' }}"
+                 data-filter-operator="{{ chip.operador|default:'' }}"
+                 data-filter-value="{{ chip.valor|default:'' }}">
+                <button type="button"
+                        class="pof-filter-chip-edit"
+                        data-filter-chip-edit
+                        aria-label="Editar {{ chip.texto }}">
+                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                    <span class="pof-filter-chip-text">{{ chip.texto }}</span>
+                </button>
+                <button type="button"
+                        class="pof-filter-chip-remove"
+                        data-filter-chip-remove
+                        aria-label="Eliminar {{ chip.texto }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+
+        {% if filtros_activos %}
+            <a class="pof-filter-clear-all pof-visual-clear-filters-link"
+            href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">
+                <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                <span>Limpiar filtros</span>
+            </a>
+        {% endif %}
+    </div>
 
     {% if tabla_visualizacion_no_migrada %}
         <div class="pof-note">La tabla de cargos todav&iacute;a no est&aacute; disponible. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
     {% endif %}
-
-        <div class="pof-filter-active-list"
-            id="visualizacionFiltrosActivos"
-            aria-label="Filtros activos"
-            {% if not filtros_activos %}hidden{% endif %}>
-
-            {% for chip in filtros_activos %}
-                <button type="button"
-                        class="pof-filter-chip"
-                        data-filter-chip
-                        data-filter-type="{{ chip.tipo }}"
-                        data-filter-index="{{ chip.indice|default:'' }}"
-                        data-filter-field="{{ chip.campo|default:'' }}">
-                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
-                    <span class="pof-filter-chip-text">{{ chip.texto }}</span>
-                    <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
-                </button>
-            {% endfor %}
-
-            {% if filtros_activos %}
-                <a class="pof-filter-clear-all pof-visual-clear-filters-link"
-                href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">
-                    Limpiar todos
-                </a>
-            {% endif %}
-        </div>
 
     <div class="pof-visual-preview">
         <div class="pof-visual-preview-toolbar pof-filter-summary">
@@ -292,15 +314,25 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="pof-table-footer" id="visualizacionPaginacionContenedor">
+            <span class="pof-export-count"
+                  id="visualizacionPaginacionResumen"
+                  aria-live="polite"></span>
+            <nav class="pof-pagination"
+                 id="visualizacionPaginacion"
+                 aria-label="Paginaci&oacute;n del visualizador por CUE"></nav>
+        </div>
     </div>
 </div>
 
 {{ filtros_opciones|json_script:"visualizacionFiltrosOpcionesData" }}
+{{ paginacion|json_script:"visualizacionPaginacionData" }}
 
 {% endblock %}
 
 {% block scripts %}
-<script defer src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260716-2"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260824-2"></script>
 <script>
 (function () {
     const form = document.getElementById("visualizacionCargosForm");
@@ -321,7 +353,11 @@
     const columnaInput = document.getElementById("visualizacionColumnaInput");
     const limpiarBusquedaColumnaBtn = document.getElementById("visualizacionLimpiarBusquedaColumna");
     const busquedaColumnaLoading = document.getElementById("visualizacionBusquedaColumnaLoading");
+    const busquedaColumnaStatus = document.getElementById("visualizacionBusquedaColumnaStatus");
+    const busquedaColumnaStatusText = document.getElementById("visualizacionBusquedaColumnaStatusText");
     const tablaWrap = document.getElementById("visualizacionTablaWrap");
+    const paginacionNav = document.getElementById("visualizacionPaginacion");
+    const paginacionResumen = document.getElementById("visualizacionPaginacionResumen");
     const contraerBtn = document.getElementById("visualizacionContraerColumnas");
     const filtrosActivos = document.getElementById("visualizacionFiltrosActivos");
     const dialog = document.getElementById("visualizacionDialogFiltro");
@@ -331,12 +367,12 @@
     const operadorFiltro = document.getElementById("visualizacionOperadorFiltro");
     const valorFiltroLabel = document.getElementById("visualizacionValorFiltroLabel");
     const valorFiltroMount = document.getElementById("visualizacionValorFiltroMount");
+    const filtroAplicarBtn = document.querySelector("#visualizacionDialogFiltro .pof-filter-apply-btn");
     const cerrarDialogoFiltro = document.getElementById("visualizacionCerrarDialogoFiltro");
     const filterButtons = Array.from(document.querySelectorAll(".pof-visual-filter-btn"));
     const compactStorageKey = "pof_visualizacion_cargos_columnas_compactas";
     const datosUrl = form.dataset.datosUrl;
     const filtrosUrl = form.dataset.filtrosUrl;
-    const SEARCH_DEBOUNCE_MS = 500;
     const SIMPLE_FILTER_PARAMS = [
         "cueanexo", "cue", "anexo", "cuof", "cui", "ceic", "cargo",
         "nombre_establecimiento", "numero_establecimiento", "estado_pof",
@@ -344,33 +380,30 @@
         "jornada", "oferta", "acronimo", "estado_localizacion_padron",
         "estado_oferta_padron", "estado_establecimiento_padron"
     ];
-    const FILTER_OPERATOR_PRESETS = {
-        text: [
-            { value: "0", label: "parecido a" },
-            { value: "1", label: "no parecido a" },
-            { value: "2", label: "igual a" },
-            { value: "7", label: "distinto de" }
-        ],
-        exact: [
-            { value: "2", label: "igual a" },
-            { value: "7", label: "distinto de" }
-        ],
-        numeric: [
-            { value: "2", label: "igual a" },
-            { value: "7", label: "distinto de" },
-            { value: "3", label: "mayor a" },
-            { value: "4", label: "mayor o igual a" },
-            { value: "5", label: "menor a" },
-            { value: "6", label: "menor o igual a" }
-        ]
-    };
+    const commonFilterUI = window.POFCommonFilterUI;
+    const FILTER_OPERATOR_PRESETS = commonFilterUI.filterOperatorPresets;
+    const sameFilterCriterion = commonFilterUI.sameFilterCriterion;
+    const firstOperatorForConfig = commonFilterUI.firstOperatorForConfig;
     const fieldConfig = {};
     let filterOptions = null;
     let filterOptionsRequest = null;
     let activeController = null;
     let requestToken = 0;
-    let searchTimer = null;
     let columnSearchLoadingToken = 0;
+    let columnSearchErrorToken = 0;
+    let columnSearchErrorMessage = "";
+    let columnSearchInteractionDirty = false;
+    let columnSearchRequestState = null;
+    let consultaEnCurso = false;
+    let queryControlsTimer = null;
+    const queryControlStates = new Map();
+    let filterDialogState = null;
+    let filterDialogToken = 0;
+    let appliedColumnSearch = {
+        columnId: columnaSelect ? columnaSelect.value : "",
+        value: (columnaInput && columnaInput.value || "").trim()
+    };
+    let paginacionInicial = {};
 
     const opcionesIniciales = document.getElementById("visualizacionFiltrosOpcionesData");
     if (opcionesIniciales) {
@@ -379,6 +412,15 @@
             filterOptions = Object.keys(parsedOptions).length ? parsedOptions : null;
         } catch (error) {
             window.console.error("No se pudieron leer las opciones iniciales de filtros.", error);
+        }
+    }
+
+    const paginacionInicialData = document.getElementById("visualizacionPaginacionData");
+    if (paginacionInicialData) {
+        try {
+            paginacionInicial = JSON.parse(paginacionInicialData.textContent || "{}");
+        } catch (error) {
+            window.console.error("No se pudieron leer los metadatos iniciales de paginacion.", error);
         }
     }
 
@@ -406,14 +448,23 @@
             .map(function (checkbox) { return checkbox.value; });
     }
 
-    function setVisibleParams(url, includeEmptyState) {
+    /**
+     * Sincroniza las columnas visibles dentro de una URL del visualizador.
+     *
+     * - Reemplaza solamente los parametros de columnas con la seleccion actual.
+     * - Reinicia la pagina por defecto para cambios de filtros, busquedas u orden.
+     * - Puede conservar la pagina cuando cambia solo la presentacion de columnas.
+     */
+    function setVisibleParams(url, includeEmptyState, preservePage) {
         const selectedIds = selectedColumnIds();
         url.searchParams.delete("visible_col");
         url.searchParams.delete("columnas_estado");
         selectedIds.forEach(function (columnId) {
             url.searchParams.append("visible_col", columnId);
         });
-        url.searchParams.delete("page");
+        if (!preservePage) {
+            url.searchParams.delete("page");
+        }
         url.searchParams.delete("page_size");
         if (includeEmptyState && selectedIds.length === 0) {
             url.searchParams.set("columnas_estado", "none");
@@ -428,6 +479,13 @@
         return url;
     }
 
+    /**
+     * Sincroniza el spinner y el estado de accesibilidad de la búsqueda rápida.
+     *
+     * - Mantiene el indicador dentro de la barra sin cambiar sus dimensiones.
+     * - Marca la región como ocupada mientras existe una actualización AJAX.
+     * - Reinicia el mensaje de error cuando comienza una nueva búsqueda.
+     */
     function setColumnSearchLoading(active) {
         if (busquedaColumnaLoading) {
             busquedaColumnaLoading.classList.toggle("pof-hidden", !active);
@@ -437,11 +495,161 @@
             liveSearch.classList.toggle("pof-visual-search-busy", active);
             liveSearch.setAttribute("aria-busy", active ? "true" : "false");
         }
+        if (active) {
+            columnSearchErrorToken = 0;
+            columnSearchErrorMessage = "";
+            setColumnSearchStatus("Buscando resultados...", "info");
+        }
+    }
+
+    /**
+     * Activa o restaura los controles que pueden iniciar otra actualización.
+     *
+     * - Usa `disabled` en controles nativos y `aria-disabled` en enlaces.
+     * - Conserva el estado previo de cada elemento para no habilitar controles propios.
+     * - Deja fuera paneles, scroll y acciones puramente visuales.
+     */
+    function syncQueryControls(active) {
+        if (!active) {
+            Array.from(queryControlStates.entries()).forEach(function (entry) {
+                const control = entry[0];
+                const previous = entry[1];
+                if ("disabled" in control && previous.disabled !== null) {
+                    control.disabled = previous.disabled;
+                }
+                if (previous.ariaDisabled === null) {
+                    control.removeAttribute("aria-disabled");
+                } else {
+                    control.setAttribute("aria-disabled", previous.ariaDisabled);
+                }
+                control.classList.remove("pof-query-disabled");
+            });
+            queryControlStates.clear();
+            return;
+        }
+
+        const controls = document.querySelectorAll(
+            "#visualizacionAnioSelect, "
+            + ".pof-visual-sort-link, "
+            + "#visualizacionPaginacion a[data-visual-page], "
+            + "#visualizacionDialogFiltro .pof-filter-apply-btn, "
+            + ".pof-visual-filter-btn, "
+            + "[data-column-action], "
+            + ".pof-visual-column-check, "
+            + "#visualizacionFiltrosActivos [data-filter-chip], "
+            + "#visualizacionFiltrosActivos .pof-visual-clear-filters-link, "
+            + "#visualizacionLimpiarBusquedaColumna"
+        );
+
+        controls.forEach(function (control) {
+            if (!queryControlStates.has(control)) {
+                queryControlStates.set(control, {
+                    disabled: "disabled" in control ? control.disabled : null,
+                    ariaDisabled: control.getAttribute("aria-disabled")
+                });
+            }
+            if ("disabled" in control) {
+                control.disabled = true;
+            } else {
+                control.setAttribute("aria-disabled", "true");
+                control.classList.add("pof-query-disabled");
+            }
+        });
+    }
+
+    /**
+     * Centraliza el estado ocupado de las consultas reales del visualizador.
+     *
+     * - Muestra simultáneamente spinner y mensaje solo durante un fetch aceptado.
+     * - Bloquea nuevas acciones de datos sin inmovilizar la interfaz completa.
+     * - Difiere el bloqueo de controles hasta completar el primer clic aceptado.
+     */
+    function setQueryBusy(active) {
+        consultaEnCurso = active;
+        setColumnSearchLoading(active);
+
+        if (queryControlsTimer) {
+            window.clearTimeout(queryControlsTimer);
+            queryControlsTimer = null;
+        }
+        if (active) {
+            queryControlsTimer = window.setTimeout(function () {
+                queryControlsTimer = null;
+                if (consultaEnCurso) {
+                    syncQueryControls(true);
+                }
+            }, 0);
+        } else {
+            syncQueryControls(false);
+        }
+    }
+
+    /**
+     * Renderiza el estado discreto de búsqueda o error debajo de la barra.
+     *
+     * - Usa texto accesible con aria-live sin alterar los parámetros enviados.
+     * - Conserva el espacio reservado para evitar saltos de layout.
+     * - Distingue visualmente una actualización fallida de la búsqueda activa.
+     */
+    function setColumnSearchStatus(message, tone) {
+        if (!busquedaColumnaStatus) {
+            return;
+        }
+        const visible = Boolean(message);
+        if (busquedaColumnaStatusText) {
+            busquedaColumnaStatusText.textContent = message || "";
+        }
+        busquedaColumnaStatus.classList.toggle("pof-visual-search-status-hidden", !visible);
+        busquedaColumnaStatus.classList.toggle("pof-visual-search-status-error", tone === "error");
+        busquedaColumnaStatus.setAttribute("aria-hidden", visible ? "false" : "true");
     }
 
     function finishColumnSearchLoading(token) {
         if (token === columnSearchLoadingToken) {
             setColumnSearchLoading(false);
+            if (columnSearchErrorToken === token) {
+                setColumnSearchStatus(columnSearchErrorMessage, "error");
+            } else {
+                setColumnSearchStatus("", "");
+            }
+        }
+    }
+
+    /**
+     * Captura el estado visual necesario para deshacer una limpieza optimista.
+     *
+     * - Conserva chips, visibilidad, columna y valor de búsqueda actuales.
+     * - No modifica la URL ni inicia consultas por sí mismo.
+     */
+    function captureActiveFiltersState() {
+        if (!filtrosActivos) {
+            return null;
+        }
+        return {
+            html: filtrosActivos.innerHTML,
+            hidden: filtrosActivos.hidden,
+            columnValue: columnaSelect ? columnaSelect.value : "",
+            inputValue: columnaInput ? columnaInput.value : ""
+        };
+    }
+
+    /**
+     * Restaura la barra y los chips si falla la actualización posterior al clic.
+     *
+     * - Recupera el markup previo sin reconstruir la lógica de filtros.
+     * - Restablece el valor de búsqueda para mantener trazabilidad con la URL.
+     */
+    function restoreActiveFiltersState(state) {
+        if (!filtrosActivos || !state) {
+            return;
+        }
+        filtrosActivos.innerHTML = state.html;
+        filtrosActivos.hidden = state.hidden;
+        if (columnaSelect && state.columnValue) {
+            columnaSelect.value = state.columnValue;
+        }
+        if (columnaInput) {
+            columnaInput.value = state.inputValue;
         }
     }
 
@@ -464,10 +672,21 @@
         return seleccionadas;
     }
 
+    /**
+     * Construye una URL navegable con la seleccion actual de columnas.
+     *
+     * - Conserva todos los parametros ajenos a columnas y paginacion.
+     * - Reinicia `page` salvo que el flujo solicite preservarla expresamente.
+     * - Devuelve un objeto URL para reutilizarlo en enlaces e historial.
+     */
     function buildUrlWithCurrentColumns(rawUrl, options) {
         const opts = options || {};
         const url = new URL(rawUrl, window.location.origin);
-        setVisibleParams(url, opts.includeEmptyState !== false);
+        setVisibleParams(
+            url,
+            opts.includeEmptyState !== false,
+            opts.preservePage === true
+        );
         return url;
     }
 
@@ -568,6 +787,108 @@
         updateDynamicLinks();
     }
 
+    /**
+     * Obtiene el estado editable de la busqueda rapida sin iniciar consultas.
+     *
+     * - Normaliza el texto para comparar el valor enviado al backend.
+     * - Conserva la columna seleccionada aunque el texto este vacio.
+     * - Separa la interaccion pendiente del estado ya aplicado en la URL.
+     */
+    function getColumnSearchState() {
+        return {
+            columnId: columnaSelect ? columnaSelect.value : "",
+            value: (columnaInput && columnaInput.value || "").trim()
+        };
+    }
+
+    /**
+     * Compara dos estados de busqueda rapida para evitar solicitudes duplicadas.
+     *
+     * - Considera iguales solo columna y texto normalizado.
+     * - Permite que el clic externo y el boton de limpieza compartan la misma ruta.
+     * - No compara objetos ni parametros secundarios de la pagina.
+     */
+    function sameColumnSearchState(left, right) {
+        return Boolean(left && right)
+            && left.columnId === right.columnId
+            && left.value === right.value;
+    }
+
+    /**
+     * Integra el estado editable de la barra en la URL vigente del visualizador.
+     *
+     * - Reemplaza cualquier parametro `col_` por la unica busqueda seleccionada.
+     * - Reinicia la paginacion al confirmar expresamente el texto pendiente.
+     * - Conserva orden, filtros y columnas visibles ya aplicados.
+     */
+    function applyPendingColumnSearchToUrl(url) {
+        const nextState = getColumnSearchState();
+        clearColumnSearchParams(url);
+        if (nextState.value && nextState.columnId) {
+            url.searchParams.set("col_" + nextState.columnId, nextState.value);
+        }
+        url.searchParams.delete("page");
+        url.searchParams.delete("page_size");
+        return url;
+    }
+
+    /**
+     * Identifica controles interactivos que no deben confirmar la busqueda pendiente.
+     *
+     * - Cubre controles HTML y elementos con semantica de boton o enlace.
+     * - Mantiene chips y dialogos separados del clic neutral de confirmacion.
+     * - Evita clasificar individualmente cada accion de datos de la pantalla.
+     */
+    function isColumnSearchInteractiveTarget(target) {
+        if (!target || typeof target.closest !== "function") {
+            return false;
+        }
+        return Boolean(target.closest(
+            "button, a, input, select, textarea, label, " +
+            "[role='button'], [role='link'], [contenteditable='true'], " +
+            "[data-filter-chip], .pof-visual-dialog, .pof-visual-dialog-backdrop"
+        ));
+    }
+
+    /**
+     * Marca cambios locales que todavia no fueron confirmados por el usuario.
+     *
+     * - Evita que una respuesta AJAX reemplace texto que se esta editando.
+     * - No muestra carga ni ejecuta fetch.
+     * - Deja que solo un clic con puntero fuera del contenedor confirme el estado.
+     */
+    function markColumnSearchInteractionDirty() {
+        columnSearchInteractionDirty = true;
+    }
+
+    /**
+     * Confirma la busqueda al hacer pointerdown fuera del contenedor completo.
+     *
+     * - Permite detectar clics en zonas que no reciben foco.
+     * - Mantiene dentro de la barra los clics en selector, input y limpieza.
+     * - Deja que cada control interactivo ejecute solo su comportamiento propio.
+     */
+    function handleColumnSearchPointerDown(event) {
+        if (consultaEnCurso) {
+            return;
+        }
+        if (liveSearch && event.target && liveSearch.contains(event.target)) {
+            return;
+        }
+        if (isColumnSearchInteractiveTarget(event.target)) {
+            return;
+        }
+        submitColumnSearch();
+    }
+
+    /**
+     * Sincroniza el estado aplicado desde la URL sin perder una edicion pendiente.
+     *
+     * - Reconoce unicamente columnas renderizadas y permitidas por el backend.
+     * - Recorta valores directos de URL al mismo maxlength que aplica el backend.
+     * - Actualiza siempre la referencia aplicada usada para detectar cambios.
+     * - Conserva selector e input locales mientras la interaccion siga marcada como dirty.
+     */
     function updateSearchControlFromUrl(url) {
         if (!columnaSelect || !columnaInput) {
             return;
@@ -577,16 +898,27 @@
         const searchableIds = new Set(Array.from(columnaSelect.options).map(function (option) {
             return option.value;
         }));
+        const inputMaxLength = columnaInput.maxLength > 0 ? columnaInput.maxLength : null;
         checkboxes.forEach(function (checkbox) {
             if (!searchableIds.has(checkbox.value)) {
                 return;
             }
-            const value = url.searchParams.get("col_" + checkbox.value);
+            const rawValue = url.searchParams.get("col_" + checkbox.value) || "";
+            const value = inputMaxLength === null
+                ? rawValue
+                : rawValue.slice(0, inputMaxLength);
             if (value && !activeValue) {
                 activeColumn = checkbox.value;
                 activeValue = value;
             }
         });
+        appliedColumnSearch = {
+            columnId: activeColumn,
+            value: activeValue.trim()
+        };
+        if (columnSearchInteractionDirty) {
+            return;
+        }
         columnaSelect.value = activeColumn;
         columnaInput.value = activeValue;
     }
@@ -630,32 +962,230 @@
         tbody.innerHTML = html;
     }
 
+    /**
+     * Construye el markup accesible de un chip con edición y eliminación separadas.
+     *
+     * - Conserva los metadatos de URL necesarios para editar o quitar el criterio.
+     * - Mantiene el texto como contenido escapado antes de insertarlo en el DOM.
+     * - Evita botones anidados: cada acción tiene su propio control.
+     */
+    function renderFilterChipMarkup(chip) {
+        const texto = String(chip.texto || "");
+        return '<div class="pof-filter-chip" data-filter-chip'
+            + ' data-filter-type="' + escapeHtml(chip.tipo || "") + '"'
+            + ' data-filter-index="' + escapeHtml(chip.indice == null ? "" : chip.indice) + '"'
+            + ' data-filter-field="' + escapeHtml(chip.campo || "") + '"'
+            + ' data-filter-operator="' + escapeHtml(chip.operador || "") + '"'
+            + ' data-filter-value="' + escapeHtml(chip.valor || "") + '">'
+            + '<button type="button" class="pof-filter-chip-edit" data-filter-chip-edit'
+            + ' aria-label="Editar ' + escapeHtml(texto) + '">'
+            + '<span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>'
+            + '<span class="pof-filter-chip-text">' + escapeHtml(texto) + '</span>'
+            + '</button>'
+            + '<button type="button" class="pof-filter-chip-remove" data-filter-chip-remove'
+            + ' aria-label="Eliminar ' + escapeHtml(texto) + '">'
+            + '<span aria-hidden="true">&times;</span>'
+            + '</button></div>';
+    }
+
+    /**
+     * Renderiza los chips de búsqueda rápida y filtros avanzados del backend.
+     *
+     * - Conserva una única búsqueda rápida y todos los filtros avanzados activos.
+     * - Genera una acción común de limpieza cuando existe cualquier criterio.
+     * - Escapa los valores antes de insertarlos en el markup dinámico.
+     */
     function renderBadges(chips) {
         if (!filtrosActivos) {
             return;
         }
 
-        const activos = Array.isArray(chips) ? chips : [];
+        const activos = (Array.isArray(chips) ? chips : []).filter(function (chip) {
+            return chip && (chip.tipo === "avanzado" || chip.tipo === "columna");
+        });
         filtrosActivos.hidden = activos.length === 0;
 
-        const chipsHtml = activos.map(function (chip) {
-            return '<button type="button" class="pof-filter-chip" data-filter-chip'
-                + ' data-filter-type="' + escapeHtml(chip.tipo || "") + '"'
-                + ' data-filter-index="' + escapeHtml(chip.indice == null ? "" : chip.indice) + '"'
-                + ' data-filter-field="' + escapeHtml(chip.campo || "") + '">'
-                + '<span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>'
-                + '<span class="pof-filter-chip-text">' + escapeHtml(chip.texto || "") + '</span>'
-                + '<span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>'
-                + '</button>';
-        }).join("");
+        const chipsHtml = activos.map(renderFilterChipMarkup).join("");
 
         const limpiarHtml = activos.length
-            ? '<a href="#" class="pof-filter-clear-all pof-visual-clear-filters-link">Limpiar todos</a>'
+            ? '<a href="#" class="pof-filter-clear-all pof-visual-clear-filters-link">'
+                + '<span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>'
+                + '<span>Limpiar filtros</span></a>'
             : "";
 
         filtrosActivos.innerHTML = chipsHtml + limpiarHtml;
     }
 
+    /**
+     * Normaliza los metadatos de paginacion recibidos desde el endpoint POF.
+     *
+     * - Convierte valores numericos sin confiar en tipos provenientes de la respuesta.
+     * - Mantiene pagina actual y tamanos dentro de rangos validos para la interfaz.
+     * - Conserva el total informado por el backend como fuente del rango visible.
+     */
+    function normalizePagination(metadata) {
+        const data = metadata && typeof metadata === "object" ? metadata : {};
+        const totalCues = Math.max(0, Number.parseInt(data.total_cues, 10) || 0);
+        const cuesPerPage = Math.max(1, Number.parseInt(data.cues_por_pagina, 10) || 5);
+        const totalPages = Math.max(1, Number.parseInt(data.total_paginas, 10) || 1);
+        const currentPage = Math.min(
+            totalPages,
+            Math.max(1, Number.parseInt(data.pagina_actual, 10) || 1)
+        );
+        return {
+            currentPage: currentPage,
+            totalPages: totalPages,
+            cuesPerPage: cuesPerPage,
+            totalCues: totalCues
+        };
+    }
+
+    /**
+     * Construye un rango compacto de paginas con elipsis estable.
+     *
+     * - Conserva siempre primera, ultima, actual y dos paginas vecinas.
+     * - Amplia los extremos para evitar elipsis innecesarias cerca del inicio o final.
+     * - Genera una cantidad acotada de elementos aunque existan muchas paginas.
+     */
+    function buildPaginationItems(currentPage, totalPages) {
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, function (_value, index) {
+                return index + 1;
+            });
+        }
+
+        const candidates = new Set([1, totalPages]);
+        const start = currentPage <= 4 ? 2 : currentPage - 2;
+        const end = currentPage >= totalPages - 3 ? totalPages - 1 : currentPage + 2;
+        for (let page = start; page <= end; page += 1) {
+            if (page > 1 && page < totalPages) {
+                candidates.add(page);
+            }
+        }
+
+        const pages = Array.from(candidates).sort(function (left, right) {
+            return left - right;
+        });
+        const items = [];
+        pages.forEach(function (page, index) {
+            if (index > 0) {
+                const gap = page - pages[index - 1];
+                if (gap === 2) {
+                    items.push(page - 1);
+                } else if (gap > 2) {
+                    items.push(null);
+                }
+            }
+            items.push(page);
+        });
+        return items;
+    }
+
+    /**
+     * Construye una URL de pagina preservando el estado completo del visualizador.
+     *
+     * - Mantiene contexto, filtros, busquedas, columnas visibles y orden actuales.
+     * - Reemplaza unicamente `page` y elimina el `page_size` historico.
+     * - Usa la misma ruta HTML para conservar fallback navegable sin JavaScript.
+     */
+    function buildPaginationUrl(page) {
+        const url = buildUrlWithCurrentColumns(window.location.href, {
+            includeEmptyState: true,
+            preservePage: true
+        });
+        url.searchParams.set("page", String(page));
+        url.searchParams.delete("page_size");
+        return url.toString();
+    }
+
+    /**
+     * Renderiza resumen y controles accesibles de paginacion por CUE.
+     *
+     * - Reutiliza las clases POF para estados normal, activo, deshabilitado y elipsis.
+     * - Crea nodos con `textContent` para no interpretar metadatos como HTML.
+     * - Mantiene enlaces reales como fallback y delega la navegacion AJAX aparte.
+     */
+    function renderPagination(metadata) {
+        if (!paginacionNav || !paginacionResumen) {
+            return;
+        }
+
+        const pagination = normalizePagination(metadata);
+        const firstCue = pagination.totalCues
+            ? ((pagination.currentPage - 1) * pagination.cuesPerPage) + 1
+            : 0;
+        const lastCue = pagination.totalCues
+            ? Math.min(pagination.currentPage * pagination.cuesPerPage, pagination.totalCues)
+            : 0;
+        paginacionResumen.textContent = "Mostrando CUE " + firstCue + "-" + lastCue
+            + " de " + pagination.totalCues + ".";
+        paginacionNav.replaceChildren();
+        paginacionNav.hidden = pagination.totalCues === 0;
+
+        if (pagination.totalCues === 0) {
+            return;
+        }
+
+        const previous = pagination.currentPage > 1
+            ? document.createElement("a")
+            : document.createElement("span");
+        previous.className = "pof-page-btn"
+            + (pagination.currentPage > 1 ? "" : " pof-page-btn-disabled");
+        previous.textContent = "Anterior";
+        if (pagination.currentPage > 1) {
+            previous.href = buildPaginationUrl(pagination.currentPage - 1);
+            previous.dataset.visualPage = String(pagination.currentPage - 1);
+        } else {
+            previous.setAttribute("aria-disabled", "true");
+        }
+        paginacionNav.appendChild(previous);
+
+        buildPaginationItems(pagination.currentPage, pagination.totalPages).forEach(function (page) {
+            if (page === null) {
+                const ellipsis = document.createElement("span");
+                ellipsis.className = "pof-page-ellipsis";
+                ellipsis.textContent = "\u2026";
+                ellipsis.setAttribute("aria-hidden", "true");
+                paginacionNav.appendChild(ellipsis);
+                return;
+            }
+
+            const isActive = page === pagination.currentPage;
+            const item = isActive ? document.createElement("span") : document.createElement("a");
+            item.className = "pof-page-btn" + (isActive ? " pof-page-btn-active" : "");
+            item.textContent = String(page);
+            if (isActive) {
+                item.setAttribute("aria-current", "page");
+            } else {
+                item.href = buildPaginationUrl(page);
+                item.dataset.visualPage = String(page);
+                item.setAttribute("aria-label", "Ir a la pagina " + page);
+            }
+            paginacionNav.appendChild(item);
+        });
+
+        const next = pagination.currentPage < pagination.totalPages
+            ? document.createElement("a")
+            : document.createElement("span");
+        next.className = "pof-page-btn"
+            + (pagination.currentPage < pagination.totalPages ? "" : " pof-page-btn-disabled");
+        next.textContent = "Siguiente";
+        if (pagination.currentPage < pagination.totalPages) {
+            next.href = buildPaginationUrl(pagination.currentPage + 1);
+            next.dataset.visualPage = String(pagination.currentPage + 1);
+        } else {
+            next.setAttribute("aria-disabled", "true");
+        }
+        paginacionNav.appendChild(next);
+    }
+
+    /**
+     * Aplica una respuesta valida del endpoint a tabla, filtros y paginacion.
+     *
+     * - Conserva el contador total de cargos y las columnas actuales.
+     * - Actualiza los controles por CUE con los metadatos de la misma respuesta.
+     * - Reutiliza la sincronizacion existente de busquedas, enlaces y visibilidad.
+     */
     function renderPayload(payload) {
         if (!payload || !payload.ok) {
             return;
@@ -666,20 +1196,36 @@
         applyPayloadColumns(payload.columnas);
         renderRows(payload.filas, payload.columnas_colspan);
         renderBadges(payload.filtros_activos);
+        renderPagination(payload.paginacion);
         updateColumnCounters();
         updateSearchControlFromUrl(new URL(window.location.href));
         updateDynamicLinks();
         syncColumnVisibility();
+        setColumnSearchStatus("", "");
     }
 
+    /**
+     * Actualiza el visualizador por fetch preservando su historial navegable.
+     *
+     * - Reinicia pagina para filtros, busquedas y orden salvo pedido explicito.
+     * - Conserva `page` para paginacion y navegacion atras/adelante del navegador.
+     * - Mantiene AbortController, respuestas obsoletas y manejo de errores existentes.
+     */
     function refreshTableFromUrl(rawUrl, options) {
         const opts = options || {};
-        const targetUrl = buildUrlWithCurrentColumns(rawUrl, { includeEmptyState: true });
+        if (consultaEnCurso) {
+            return Promise.resolve(false);
+        }
+        const targetUrl = buildUrlWithCurrentColumns(rawUrl, {
+            includeEmptyState: true,
+            preservePage: opts.preservePage === true
+        });
         const token = ++requestToken;
         if (activeController) {
             activeController.abort();
         }
         activeController = new AbortController();
+        setQueryBusy(true);
 
         return fetch(buildDataUrl(targetUrl).toString(), {
             headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -693,7 +1239,10 @@
             })
             .then(function (payload) {
                 if (token !== requestToken) {
-                    return;
+                    return false;
+                }
+                if (!payload || !payload.ok) {
+                    throw new Error("La respuesta de visualizacion no es valida.");
                 }
                 if (opts.replace) {
                     window.history.replaceState({}, "", targetUrl.toString());
@@ -701,54 +1250,105 @@
                     window.history.pushState({}, "", targetUrl.toString());
                 }
                 renderPayload(payload);
+                return true;
             })
             .catch(function (error) {
                 if (error.name !== "AbortError") {
                     window.console.error(error);
+                    if (typeof opts.onError === "function") {
+                        opts.onError(error);
+                    } else {
+                        setColumnSearchStatus("", "");
+                    }
+                }
+                return false;
+            })
+            .finally(function () {
+                if (token === requestToken) {
+                    setQueryBusy(false);
                 }
             });
     }
 
+    /**
+     * Confirma la búsqueda rápida mediante el refresco AJAX existente.
+     *
+     * - Mantiene separado el estado solicitado del estado aplicado hasta recibir éxito.
+     * - Aplica unicamente el estado editable sobre el contexto ya vigente en la URL.
+     * - Conserva reintento, indicador de carga, cancelación y rollback de limpieza.
+     */
     function submitColumnSearch(options) {
-        window.clearTimeout(searchTimer);
-        const loadingToken = ++columnSearchLoadingToken;
-        setColumnSearchLoading(true);
-        const value = (columnaInput.value || "").trim();
-        const columnId = columnaSelect.value;
-        const url = new URL(window.location.href);
-        clearColumnSearchParams(url);
-        if (value && columnId) {
-            url.searchParams.set("col_" + columnId, value);
+        const opts = options || {};
+        if (consultaEnCurso) {
+            return Promise.resolve(false);
         }
-        setVisibleParams(url, true);
-        return refreshTableFromUrl(url.toString(), options)
+        const nextState = getColumnSearchState();
+        if (sameColumnSearchState(appliedColumnSearch, nextState)
+            || sameColumnSearchState(columnSearchRequestState, nextState)) {
+            columnSearchInteractionDirty = false;
+            return Promise.resolve(false);
+        }
+        const loadingToken = ++columnSearchLoadingToken;
+        columnSearchRequestState = nextState;
+        columnSearchInteractionDirty = false;
+        const url = applyPendingColumnSearchToUrl(new URL(window.location.href));
+        setVisibleParams(url, true, opts.preservePage === true);
+        const refreshOptions = Object.assign({}, opts, {
+            onError: function (error) {
+                columnSearchErrorToken = loadingToken;
+                columnSearchErrorMessage = "No se pudo actualizar la búsqueda.";
+                if (typeof opts.onError === "function") {
+                    opts.onError(error);
+                }
+            }
+        });
+        delete refreshOptions.onFailure;
+        return refreshTableFromUrl(url.toString(), refreshOptions)
+            .then(function (succeeded) {
+                const isCurrentRequest = sameColumnSearchState(columnSearchRequestState, nextState);
+                if (isCurrentRequest) {
+                    if (succeeded === true) {
+                        appliedColumnSearch = nextState;
+                        columnSearchInteractionDirty = false;
+                    } else {
+                        columnSearchInteractionDirty = true;
+                        if (typeof opts.onFailure === "function") {
+                            opts.onFailure();
+                        }
+                    }
+                }
+                return succeeded;
+            })
             .finally(function () {
+                if (sameColumnSearchState(columnSearchRequestState, nextState)) {
+                    columnSearchRequestState = null;
+                }
                 finishColumnSearchLoading(loadingToken);
             });
     }
 
     function clearColumnSearch() {
-        window.clearTimeout(searchTimer);
-        const loadingToken = ++columnSearchLoadingToken;
-        setColumnSearchLoading(true);
-        const url = new URL(window.location.href);
-        clearColumnSearchParams(url);
-        setVisibleParams(url, true);
+        if (consultaEnCurso) {
+            return Promise.resolve(false);
+        }
+        const previousState = getColumnSearchState();
         if (columnaInput) {
             columnaInput.value = "";
         }
-        return refreshTableFromUrl(url.toString())
-            .finally(function () {
-                finishColumnSearchLoading(loadingToken);
-            });
-    }
-
-    function scheduleColumnSearch() {
-        window.clearTimeout(searchTimer);
-        setColumnSearchLoading(true);
-        searchTimer = window.setTimeout(function () {
-            submitColumnSearch({ replace: true });
-        }, SEARCH_DEBOUNCE_MS);
+        columnSearchInteractionDirty = false;
+        return submitColumnSearch({
+            onError: function () {
+                columnSearchErrorMessage = "No se pudo limpiar la búsqueda.";
+            },
+            onFailure: function () {
+                if (columnaSelect) {
+                    columnaSelect.value = previousState.columnId;
+                }
+                if (columnaInput) {
+                    columnaInput.value = previousState.value;
+                }
+            }
+        });
     }
 
     function fetchFilterOptions() {
@@ -802,27 +1402,108 @@
         return filterOptionsRequest;
     }
 
-    function activeValuesForField(field) {
-        const url = new URL(window.location.href);
-        const campos = url.searchParams.getAll("campo_filtro");
-        const valores = url.searchParams.getAll("valor_filtro");
-        const seleccionados = [];
-        campos.forEach(function (campo, index) {
-            if (campo === field && valores[index]) {
-                seleccionados.push(valores[index]);
+    /**
+     * Obtiene el primer filtro avanzado activo de un campo desde la URL actual.
+     *
+     * - Conserva el índice paralelo de `campo_filtro`, `operador_filtro` y `valor_filtro`.
+     * - Devuelve solo criterios con valor para no convertir filas inválidas en chips.
+     * - No modifica la URL ni aplica ninguna consulta.
+     */
+    function getAdvancedFilterForField(field, url) {
+        const source = url || new URL(window.location.href);
+        const campos = source.searchParams.getAll("campo_filtro");
+        const operadores = source.searchParams.getAll("operador_filtro");
+        const valores = source.searchParams.getAll("valor_filtro");
+        for (let index = 0; index < campos.length; index += 1) {
+            const value = String(valores[index] || "").trim();
+            if (campos[index] === field && value) {
+                return {
+                    index: String(index),
+                    operator: operadores[index] || "0",
+                    value: value
+                };
             }
-        });
-        return new Set(seleccionados);
+        }
+        return null;
     }
 
-    function renderTextValueControl(mode) {
+    /**
+     * Resuelve el criterio que debe precargarse en el diálogo de filtros.
+     *
+     * - Prioriza el chip avanzado que el usuario eligió editar.
+     * - Convierte una búsqueda rápida del mismo campo en una edición avanzada pendiente.
+     * - Deja los diálogos nuevos libres para conservar la combinación de filtros existente.
+     */
+    function getFilterDialogInitialState(config, editState) {
+        if (editState && editState.field === config.field) {
+            return {
+                source: editState.source || "avanzado",
+                index: editState.index == null ? null : String(editState.index),
+                operator: editState.operator || firstOperatorForConfig(config),
+                values: Array.isArray(editState.values) ? editState.values : [],
+                disableUntilChanged: true
+            };
+        }
+
+        if (appliedColumnSearch.columnId === config.field && appliedColumnSearch.value) {
+            return {
+                source: "columna",
+                index: null,
+                operator: firstOperatorForConfig(config),
+                values: [appliedColumnSearch.value],
+                disableUntilChanged: true
+            };
+        }
+
+        const advanced = getAdvancedFilterForField(config.field);
+        if (advanced) {
+            return {
+                source: "avanzado",
+                index: advanced.index,
+                operator: advanced.operator,
+                values: [advanced.value],
+                disableUntilChanged: true
+            };
+        }
+
+        return {
+            source: "nuevo",
+            index: null,
+            operator: firstOperatorForConfig(config),
+            values: [],
+            disableUntilChanged: false
+        };
+    }
+
+    function getCurrentFilterDialogState() {
+        return {
+            operator: operadorFiltro ? operadorFiltro.value : "",
+            values: collectFilterValues()
+        };
+    }
+
+    function syncFilterApplyButton() {
+        if (!filtroAplicarBtn) {
+            return;
+        }
+        const initial = filterDialogState && filterDialogState.initial;
+        filtroAplicarBtn.disabled = Boolean(
+            filterDialogState
+            && filterDialogState.disableUntilChanged
+            && sameFilterCriterion(initial, getCurrentFilterDialogState())
+        );
+    }
+
+    function renderTextValueControl(mode, field, initialValue) {
         const type = mode === "number" ? "number" : "text";
         valorFiltroLabel.textContent = "Valor";
         valorFiltroMount.innerHTML = '<input type="' + type + '" id="visualizacionValorFiltro" class="pof-visual-dialog-input" autocomplete="off">';
         const input = document.getElementById("visualizacionValorFiltro");
         if (input) {
+            input.value = initialValue == null ? "" : initialValue;
             input.focus();
         }
+        syncFilterApplyButton();
     }
 
     function obtenerOpcionValorEtiqueta(opcion) {
@@ -845,7 +1526,7 @@
     }
 
     function renderOpcionChecklist(value, label, selectedValues) {
-        return '<label class="pof-visual-dialog-option" data-option-text="' + escapeHtml(String(label).toLowerCase()) + '">'
+        return '<label class="pof-visual-dialog-option" data-option-text="' + escapeHtml(commonFilterUI.normalizeText(label)) + '">'
             + '<input type="checkbox" value="' + escapeHtml(value) + '"' + (selectedValues.has(String(value)) ? " checked" : "") + '>'
             + '<span>' + escapeHtml(label) + '</span></label>';
     }
@@ -891,12 +1572,13 @@
         }).join("");
     }
 
-    function renderChecklistValueControl(field, options) {
-        const selectedValues = activeValuesForField(field);
+    function renderChecklistValueControl(field, options, initialValues) {
+        const selectedValues = new Set(initialValues || []);
         const opciones = Array.isArray(options) ? options : [];
         valorFiltroLabel.textContent = "Opciones";
         if (!opciones.length) {
             valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">Sin opciones disponibles.</div>';
+            syncFilterApplyButton();
             return;
         }
         let html = '<input type="text" id="visualizacionBuscarOpcionFiltro" class="pof-visual-dialog-input" autocomplete="off" placeholder="Buscar opcion">';
@@ -913,18 +1595,12 @@
         valorFiltroMount.innerHTML = html;
 
         const search = document.getElementById("visualizacionBuscarOpcionFiltro");
-        if (search) {
-            search.addEventListener("input", function () {
-                const text = search.value.trim().toLowerCase();
-                document.querySelectorAll("#visualizacionOpcionesFiltro .pof-visual-dialog-option").forEach(function (option) {
-                    option.hidden = text && option.dataset.optionText.indexOf(text) === -1;
-                });
-                document.querySelectorAll("#visualizacionOpcionesFiltro [data-option-section]").forEach(function (section) {
-                    section.hidden = text && !section.querySelector(".pof-visual-dialog-option:not([hidden])");
-                });
-            });
+        const optionsRoot = document.getElementById("visualizacionOpcionesFiltro");
+        if (search && optionsRoot) {
+            commonFilterUI.bindDialogOptionSearch(search, optionsRoot);
             search.focus();
         }
+        syncFilterApplyButton();
     }
 
     function renderLoadingValueControl() {
@@ -932,38 +1608,66 @@
         valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">Cargando opciones...</div>';
     }
 
-    function renderOptionsErrorControl() {
+    function renderOptionsErrorControl(initialValue) {
         valorFiltroLabel.textContent = "Valor";
         valorFiltroMount.innerHTML = '<div class="pof-visual-dialog-empty">No se pudieron cargar las opciones. Puede ingresar un valor manualmente.</div>'
             + '<input type="text" id="visualizacionValorFiltro" class="pof-visual-dialog-input" autocomplete="off">';
         const input = document.getElementById("visualizacionValorFiltro");
         if (input) {
+            input.value = initialValue == null ? "" : initialValue;
             input.focus();
         }
+        syncFilterApplyButton();
     }
 
-    function prepararDialogoFiltro(config) {
+    function prepararDialogoFiltro(config, editState, token) {
+        const initial = getFilterDialogInitialState(config, editState);
         campoFiltroActivo.value = config.field;
         dialogTitulo.textContent = config.label;
         operadorFiltro.innerHTML = (FILTER_OPERATOR_PRESETS[config.operators] || FILTER_OPERATOR_PRESETS.text).map(function (operator) {
             return '<option value="' + escapeHtml(operator.value) + '">' + escapeHtml(operator.label) + '</option>';
         }).join("");
+        operadorFiltro.value = initial.operator;
+        filterDialogState = {
+            source: initial.source,
+            index: initial.index,
+            field: config.field,
+            initial: {
+                operator: operadorFiltro.value || initial.operator,
+                values: initial.values.slice()
+            },
+            disableUntilChanged: initial.disableUntilChanged,
+            token: token
+        };
+        if (filtroAplicarBtn) {
+            filtroAplicarBtn.disabled = initial.disableUntilChanged;
+        }
         dialog.hidden = false;
         dialogBackdrop.hidden = false;
     }
 
-    function openFilterDialog(config) {
-        prepararDialogoFiltro(config);
+    function openFilterDialog(config, editState) {
+        const token = ++filterDialogToken;
+        prepararDialogoFiltro(config, editState, token);
 
         if (config.mode !== "checklist") {
-            renderTextValueControl(config.mode);
+            renderTextValueControl(
+                config.mode,
+                config.field,
+                filterDialogState.initial.values[0] || ""
+            );
             return;
         }
 
         renderLoadingValueControl();
         fetchFilterOptions().then(function (options) {
-            if (campoFiltroActivo.value === config.field) {
-                renderChecklistValueControl(config.field, options[config.field]);
+            if (filterDialogState && filterDialogState.token === token
+                && campoFiltroActivo.value === config.field) {
+                renderChecklistValueControl(
+                    config.field,
+                    options[config.field],
+                    filterDialogState.initial.values
+                );
             }
         }).catch(function (error) {
             window.console.error("Error al cargar opciones de filtros.", {
@@ -972,8 +1676,9 @@
                 body: error.body || "",
                 message: error.message || error,
             });
-            if (campoFiltroActivo.value === config.field) {
-                renderOptionsErrorControl();
+            if (filterDialogState && filterDialogState.token === token
+                && campoFiltroActivo.value === config.field) {
+                renderOptionsErrorControl(filterDialogState.initial.values[0] || "");
             }
         });
     }
@@ -988,6 +1693,8 @@
         if (campoFiltroActivo) {
             campoFiltroActivo.value = "";
         }
+        filterDialogToken += 1;
+        filterDialogState = null;
         if (valorFiltroMount) {
             valorFiltroMount.innerHTML = "";
         }
@@ -1038,6 +1745,40 @@
         params.delete("page_size");
     }
 
+    /**
+     * Reemplaza únicamente el filtro avanzado que originó la edición del chip.
+     *
+     * - Usa el índice paralelo actual para conservar otros filtros del mismo campo.
+     * - Permite que un cambio vacío quite el criterio editado sin crear un duplicado.
+     * - Mantiene la semántica existente de los parámetros avanzados en la URL.
+     */
+    function replaceAdvancedFilterByIndex(url, indexToReplace, field, operator, values) {
+        const params = url.searchParams;
+        const campos = params.getAll("campo_filtro");
+        const operadores = params.getAll("operador_filtro");
+        const valores = params.getAll("valor_filtro");
+        params.delete("campo_filtro");
+        params.delete("operador_filtro");
+        params.delete("valor_filtro");
+
+        campos.forEach(function (campo, index) {
+            if (String(index) === String(indexToReplace)) {
+                return;
+            }
+            params.append("campo_filtro", campo);
+            params.append("operador_filtro", operadores[index] || "0");
+            params.append("valor_filtro", valores[index] || "");
+        });
+
+        values.forEach(function (value) {
+            params.append("campo_filtro", field);
+            params.append("operador_filtro", operator);
+            params.append("valor_filtro", value);
+        });
+        params.delete("page");
+        params.delete("page_size");
+    }
+
     function removeAdvancedFilterByIndex(url, indexToRemove) {
         const params = url.searchParams;
         const campos = params.getAll("campo_filtro");
@@ -1057,7 +1798,41 @@
         });
     }
 
+    /**
+     * Abre el diálogo con el criterio representado por el chip seleccionado.
+     *
+     * - Reutiliza la configuración del campo para conservar operadores y controles.
+     * - Pasa el índice del filtro avanzado para reemplazarlo en lugar de agregar otro.
+     * - Mantiene la búsqueda rápida como origen editable cuando el chip es de columna.
+     */
+    function editFilterFromChip(chip) {
+        const field = chip.dataset.filterField;
+        const config = fieldConfig[field];
+        if (!config) {
+            return;
+        }
+        const type = chip.dataset.filterType;
+        openFilterDialog(config, {
+            source: type === "columna" ? "columna" : "avanzado",
+            field: field,
+            index: type === "avanzado" ? chip.dataset.filterIndex : null,
+            operator: chip.dataset.filterOperator || firstOperatorForConfig(config),
+            values: chip.dataset.filterValue ? [chip.dataset.filterValue] : []
+        });
+    }
+
+    /**
+     * Quita un filtro avanzado con actualización optimista y rollback seguro.
+     *
+     * - Retira el chip inmediatamente para confirmar el clic.
+     * - Mantiene la consulta AJAX y el historial existentes.
+     * - Restaura el estado previo e informa el error si la petición falla.
+     */
     function clearFilterFromChip(chip) {
+        if (consultaEnCurso) {
+            return;
+        }
+        const previousState = captureActiveFiltersState();
         const url = new URL(window.location.href);
         const type = chip.dataset.filterType;
         const field = chip.dataset.filterField;
@@ -1071,11 +1846,31 @@
             url.searchParams.delete("col_" + field);
         }
         setVisibleParams(url, true);
-        refreshTableFromUrl(url.toString());
+        chip.remove();
+        if (filtrosActivos && !filtrosActivos.querySelector("[data-filter-chip]")) {
+            filtrosActivos.hidden = true;
+            filtrosActivos.innerHTML = "";
+        }
+        refreshTableFromUrl(url.toString(), {
+            onError: function () {
+                restoreActiveFiltersState(previousState);
+                setColumnSearchStatus("No se pudieron actualizar los filtros. Se restauró el estado anterior.", "error");
+            }
+        });
     }
 
+    /**
+     * Limpia filtros y búsqueda rápida mostrando el cambio antes del refresh.
+     *
+     * - Conserva la semántica actual de parámetros y columnas visibles.
+     * - Oculta chips de inmediato mientras la tabla se actualiza.
+     * - Revierte chips y búsqueda si el endpoint no responde correctamente.
+     */
     function clearAllFilters() {
-        window.clearTimeout(searchTimer);
+        if (consultaEnCurso) {
+            return;
+        }
+        const previousState = captureActiveFiltersState();
         const url = new URL(window.location.href);
         url.searchParams.delete("q");
         url.searchParams.delete("smart_ui_col");
@@ -1091,7 +1886,14 @@
         if (columnaInput) {
             columnaInput.value = "";
         }
-        refreshTableFromUrl(url.toString());
+        columnSearchInteractionDirty = false;
+        renderBadges([]);
+        refreshTableFromUrl(url.toString(), {
+            onError: function () {
+                restoreActiveFiltersState(previousState);
+                setColumnSearchStatus("No se pudieron limpiar los filtros. Se restauró el estado anterior.", "error");
+            }
+        });
     }
 
     function togglePanel(panelName) {
@@ -1130,7 +1932,10 @@
 
     checkboxes.forEach(function (checkbox) {
         checkbox.addEventListener("change", function () {
-            const url = buildUrlWithCurrentColumns(window.location.href, { includeEmptyState: true });
+            const url = buildUrlWithCurrentColumns(window.location.href, {
+                includeEmptyState: true,
+                preservePage: true
+            });
             window.history.replaceState({}, "", url.toString());
             syncColumnVisibility();
         });
@@ -1148,7 +1953,10 @@
                     checkbox.checked = checkbox.dataset.default === "1";
                 }
             });
-            const url = buildUrlWithCurrentColumns(window.location.href, { includeEmptyState: true });
+            const url = buildUrlWithCurrentColumns(window.location.href, {
+                includeEmptyState: true,
+                preservePage: true
+            });
             window.history.replaceState({}, "", url.toString());
             syncColumnVisibility();
         });
@@ -1157,20 +1965,26 @@
     if (limpiarBusquedaColumnaBtn) {
         limpiarBusquedaColumnaBtn.addEventListener("click", clearColumnSearch);
     }
-    if (columnaInput) {
-        columnaInput.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                submitColumnSearch();
+    if (liveSearch) {
+        liveSearch.addEventListener("keydown", function (event) {
+            if (event.key !== "Enter") {
+                return;
             }
+            event.preventDefault();
         });
-        columnaInput.addEventListener("input", scheduleColumnSearch);
+        document.addEventListener("pointerdown", handleColumnSearchPointerDown, true);
+    }
+    if (columnaInput) {
+        columnaInput.addEventListener("input", markColumnSearchInteractionDirty);
     }
     if (columnaSelect) {
-        columnaSelect.addEventListener("change", scheduleColumnSearch);
+        columnaSelect.addEventListener("change", markColumnSearchInteractionDirty);
     }
     if (anioSelect) {
         anioSelect.addEventListener("change", function () {
+            if (consultaEnCurso) {
+                return;
+            }
             const url = new URL(window.location.href);
             if (anioSelect.value) {
                 url.searchParams.set("anio", anioSelect.value);
@@ -1179,7 +1993,7 @@
             }
             url.searchParams.delete("page");
             url.searchParams.delete("page_size");
-            window.location.href = url.toString();
+            refreshTableFromUrl(url.toString());
         });
     }
 
@@ -1192,15 +2006,38 @@
         });
     });
 
+    if (operadorFiltro) {
+        operadorFiltro.addEventListener("change", syncFilterApplyButton);
+    }
+    if (valorFiltroMount) {
+        valorFiltroMount.addEventListener("input", syncFilterApplyButton);
+        valorFiltroMount.addEventListener("change", syncFilterApplyButton);
+    }
+
     form.addEventListener("submit", function (event) {
         event.preventDefault();
+        if (consultaEnCurso) {
+            return;
+        }
         const field = campoFiltroActivo.value;
         if (!field) {
             return;
         }
+        if (filtroAplicarBtn && filtroAplicarBtn.disabled) {
+            return;
+        }
         const values = collectFilterValues();
         const url = new URL(window.location.href);
-        replaceFilterValuesForField(url, field, operadorFiltro.value || "0", values);
+        const operator = operadorFiltro.value || "0";
+        if (filterDialogState && filterDialogState.source === "columna") {
+            url.searchParams.delete("col_" + field);
+            replaceFilterValuesForField(url, field, operator, values);
+        } else if (filterDialogState && filterDialogState.source === "avanzado"
+            && filterDialogState.index !== null && filterDialogState.index !== "") {
+            replaceAdvancedFilterByIndex(url, filterDialogState.index, field, operator, values);
+        } else {
+            replaceFilterValuesForField(url, field, operator, values);
+        }
         setVisibleParams(url, true);
         closeFilterDialog();
         refreshTableFromUrl(url.toString());
@@ -1214,6 +2051,11 @@
     }
     if (filtrosActivos) {
         filtrosActivos.addEventListener("click", function (event) {
+            const editControl = event.target.closest("[data-filter-chip-edit]");
+            if (consultaEnCurso) {
+                event.preventDefault();
+                return;
+            }
             const limpiarTodos = event.target.closest(".pof-visual-clear-filters-link");
 
             if (limpiarTodos) {
@@ -1223,9 +2065,20 @@
             }
 
             const chip = event.target.closest("[data-filter-chip]");
+            if (!chip || !filtrosActivos.contains(chip)) {
+                return;
+            }
 
-            if (chip) {
+            const removeControl = event.target.closest("[data-filter-chip-remove]");
+            if (removeControl && chip.contains(removeControl)) {
+                event.preventDefault();
                 clearFilterFromChip(chip);
+                return;
+            }
+
+            if (editControl && chip.contains(editControl)) {
+                event.preventDefault();
+                editFilterFromChip(chip);
             }
         });
     }
@@ -1234,9 +2087,26 @@
     document.querySelectorAll(".pof-visual-sort-link").forEach(function (link) {
         link.addEventListener("click", function (event) {
             event.preventDefault();
+            if (consultaEnCurso || link.getAttribute("aria-disabled") === "true") {
+                return;
+            }
             refreshTableFromUrl(link.href);
         });
     });
+
+    if (paginacionNav) {
+        paginacionNav.addEventListener("click", function (event) {
+            const link = event.target.closest("a[data-visual-page]");
+            if (!link || !paginacionNav.contains(link)) {
+                return;
+            }
+            event.preventDefault();
+            if (consultaEnCurso || link.getAttribute("aria-disabled") === "true") {
+                return;
+            }
+            refreshTableFromUrl(link.href, { preservePage: true });
+        });
+    }
 
     if (excelFiltros) {
         excelFiltros.addEventListener("click", function (event) {
@@ -1257,9 +2127,10 @@
     }
 
     window.addEventListener("popstate", function () {
-        refreshTableFromUrl(window.location.href, { replace: true });
+        refreshTableFromUrl(window.location.href, { replace: true, preservePage: true });
     });
 
+    renderPagination(paginacionInicial);
     syncColumnVisibility();
 })();
 </script>

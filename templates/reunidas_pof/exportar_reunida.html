@@ -40,6 +40,75 @@
 
 
     <div class="pof-export-preview">
+        {% if not es_proyecto_especial %}
+            <div class="pof-visual-filter-card" data-pof-export-search>
+                <div class="pof-visual-toolbar">
+                    <div class="pof-visual-live-search" id="exportarReunidaLiveSearch">
+                        <div class="pof-visual-search-control-row">
+                            <label class="pof-visually-hidden" for="exportarReunidaColumnaSelect">Columna</label>
+                            <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                            <select id="exportarReunidaColumnaSelect"
+                                    class="pof-visual-search-select"
+                                    aria-label="Columna de b&uacute;squeda">
+                                {% for columna in columnas_busqueda %}
+                                    <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <label class="pof-visually-hidden" for="exportarReunidaColumnaInput">Buscar en columna</label>
+                            <div class="pof-visual-search-input-wrap">
+                                <input type="text"
+                                       id="exportarReunidaColumnaInput"
+                                       class="pof-visual-search-input"
+                                       value="{{ busqueda_columna_valor }}"
+                                       placeholder="Buscar en esta columna"
+                                       autocomplete="off"
+                                       maxlength="120">
+                                <span id="exportarReunidaBusquedaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                                    <span class="pof-visually-hidden">Buscando</span>
+                                </span>
+                            </div>
+                            <button type="button"
+                                    class="pof-visual-search-clear"
+                                    id="exportarReunidaLimpiarBusqueda"
+                                    title="Limpiar b&uacute;squeda por columna"
+                                    aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                        </div>
+                        <div id="exportarReunidaBusquedaStatus"
+                             class="pof-visual-search-status pof-visual-search-status-hidden"
+                             role="status"
+                             aria-live="polite"
+                             aria-atomic="true"
+                             aria-hidden="true">
+                            <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
+                            <span id="exportarReunidaBusquedaStatusText">Buscando resultados...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pof-filter-active-list"
+                 id="exportarReunidaFiltrosActivos"
+                 aria-label="Filtros activos"
+                 {% if not busqueda_columna_valor %}hidden{% endif %}>
+                {% if busqueda_columna_valor %}
+                    {% for columna in columnas_busqueda %}
+                        {% if columna.id == busqueda_columna_id %}
+                            <button type="button"
+                                    class="pof-filter-chip"
+                                    data-pof-export-search-chip>
+                                <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                                <span class="pof-filter-chip-text">{{ columna.label }}: {{ busqueda_columna_valor }}</span>
+                                <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                    <a href="#" class="pof-filter-clear-all" data-pof-export-search-clear-all>
+                        <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                        <span>Limpiar filtros</span>
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+
         <div class="pof-export-title">
 
             {% if cabecera_querystring %}
@@ -51,7 +120,7 @@
 
             <div class="pof-export-actions-mini">
                 <span class="pof-export-count" data-pof-export-count>
-                    {{ columnas|length }} columnas visibles &middot; {{ filas_exportacion|length }} filas
+                    {{ columnas|length }} columnas visibles &middot; {% if paginacion_preview %}{{ filas_preview_count }}{% else %}{{ filas_exportacion|length }}{% endif %} filas
                 </span>
 
                 {% if columnas_disponibles %}
@@ -124,7 +193,7 @@
             <div id="pofExportColumnsPanel"
                  class="pof-export-columns-panel"
                  data-pof-export-columns-panel
-                 data-row-count="{{ filas_exportacion|length }}"
+                 data-row-count="{% if paginacion_preview %}{{ filas_preview_count }}{% else %}{{ filas_exportacion|length }}{% endif %}"
                  hidden>
                 <div class="pof-export-columns-head">
                     <strong>Columnas</strong>
@@ -306,7 +375,8 @@
                         {% endfor %}
 
                     {% empty %}
-                        <tr>
+                        <tr class="{% if busqueda_sin_resultados %}pof-export-empty-search-row{% else %}pof-export-empty-reunida-row{% endif %}"
+                            data-pof-export-empty-state="{% if busqueda_sin_resultados %}search-no-results{% else %}reunida-no-cargos{% endif %}">
                             <td colspan="{{ columnas_preview_colspan }}" data-pof-preview-colspan>
                                 {% if mensaje_exportacion %}
                                     {{ mensaje_exportacion }}
@@ -320,6 +390,42 @@
 
             </table>
         </div>
+
+        {% if not es_proyecto_especial and paginacion_preview.mostrar %}
+            <div class="pof-table-footer" data-pof-export-preview-pagination>
+                <span class="pof-export-count" aria-live="polite">
+                    Mostrando CUE {{ paginacion_preview.primer_cue }}-{{ paginacion_preview.ultimo_cue }} de {{ paginacion_preview.total_cue }}
+                    &middot; P&aacute;gina {{ paginacion_preview.pagina_actual }} de {{ paginacion_preview.total_paginas }}
+                </span>
+                <nav class="pof-pagination" aria-label="Paginaci&oacute;n del preview por CUE">
+                    {% if paginacion_preview.tiene_anterior %}
+                        <a class="pof-page-btn"
+                           href="{% url 'reunidas_pof:exportar_reunida' %}?{% if paginacion_preview.querystring_base %}{{ paginacion_preview.querystring_base }}&amp;{% endif %}page={{ paginacion_preview.pagina_anterior }}">Anterior</a>
+                    {% else %}
+                        <span class="pof-page-btn pof-page-btn-disabled" aria-disabled="true">Anterior</span>
+                    {% endif %}
+
+                    {% for page_number in paginacion_preview.page_range %}
+                        {% if page_number == '…' %}
+                            <span class="pof-page-ellipsis" aria-hidden="true">…</span>
+                        {% elif page_number == paginacion_preview.pagina_actual %}
+                            <span class="pof-page-btn pof-page-btn-active" aria-current="page">{{ page_number }}</span>
+                        {% else %}
+                            <a class="pof-page-btn"
+                               href="{% url 'reunidas_pof:exportar_reunida' %}?{% if paginacion_preview.querystring_base %}{{ paginacion_preview.querystring_base }}&amp;{% endif %}page={{ page_number }}"
+                               aria-label="Ir a la p&aacute;gina {{ page_number }}">{{ page_number }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if paginacion_preview.tiene_siguiente %}
+                        <a class="pof-page-btn"
+                           href="{% url 'reunidas_pof:exportar_reunida' %}?{% if paginacion_preview.querystring_base %}{{ paginacion_preview.querystring_base }}&amp;{% endif %}page={{ paginacion_preview.pagina_siguiente }}">Siguiente</a>
+                    {% else %}
+                        <span class="pof-page-btn pof-page-btn-disabled" aria-disabled="true">Siguiente</span>
+                    {% endif %}
+                </nav>
+            </div>
+        {% endif %}
     </div>
 
     {% include "reunidas_pof/historial_cantidad_modal.html" %}
@@ -339,11 +445,14 @@
 <script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
 <script>
     (function () {
+        const preview = document.querySelector(".pof-export-preview");
         const panel = document.querySelector("[data-pof-export-columns-panel]");
         const table = document.querySelector("[data-pof-export-table]");
         const tableWrap = document.querySelector("[data-pof-export-table-wrap]");
+        const pagination = document.querySelector("[data-pof-export-preview-pagination]");
+        const verticalAnchor = document.querySelector(".pof-export-title");
 
-        if (!panel || !table) {
+        if (!preview || !panel || !table) {
             return;
         }
 
@@ -354,8 +463,25 @@
         const excelLink = document.querySelector("[data-pof-excel-link]");
         const excelAllLink = document.querySelector("[data-pof-excel-all-link]");
         const compactButton = panel.querySelector("[data-pof-export-compact]");
-        const rowCount = panel.dataset.rowCount || "0";
         const compactStorageKey = "pof_exportacion_tabla_columnas_compactas";
+        const searchLive = document.querySelector("#exportarReunidaLiveSearch");
+        const searchSelect = document.querySelector("#exportarReunidaColumnaSelect");
+        const searchInput = document.querySelector("#exportarReunidaColumnaInput");
+        const searchLoading = document.querySelector("#exportarReunidaBusquedaLoading");
+        const searchClear = document.querySelector("#exportarReunidaLimpiarBusqueda");
+        const searchStatus = document.querySelector("#exportarReunidaBusquedaStatus");
+        const searchStatusText = document.querySelector("#exportarReunidaBusquedaStatusText");
+        const searchBadges = document.querySelector("#exportarReunidaFiltrosActivos");
+        let searchLoadingToken = 0;
+        let searchInteractionDirty = false;
+        let searchRequestState = null;
+        let consultaEnCurso = false;
+        let queryControlsTimer = null;
+        const queryControlStates = new Map();
+        let appliedSearchState = {
+            columnId: searchSelect ? searchSelect.value : "",
+            value: (searchInput && searchInput.value || "").trim()
+        };
 
         /**
          * Mantiene seleccionadas las columnas operativas obligatorias del exportable.
@@ -384,6 +510,330 @@
             return checks
                 .map(function (check) { return check.dataset.columnKey; })
                 .filter(Boolean);
+        }
+
+        /**
+         * Elimina de una URL todos los filtros de columna del buscador común.
+         *
+         * - Solo opera sobre el prefijo controlado `col_`.
+         * - Evita trasladar la búsqueda del preview a una descarga Excel.
+         * - No altera el año, nivel, columnas ni otros parámetros funcionales.
+         */
+        function clearSearchParams(url) {
+            Array.from(url.searchParams.keys()).forEach(function (key) {
+                if (key.indexOf("col_") === 0) {
+                    url.searchParams.delete(key);
+                }
+            });
+        }
+
+        /**
+         * Sincroniza selector e input con los parámetros de búsqueda de la URL.
+         *
+         * - Reconoce únicamente las ocho opciones renderizadas por el backend.
+         * - Recorta valores directos de URL al mismo maxlength efectivo del servicio.
+         * - Actualiza siempre la referencia aplicada usada para detectar cambios.
+         * - Conserva selector e input locales mientras la interacción siga marcada como dirty.
+         */
+        function syncSearchControlFromUrl(url) {
+            if (!searchSelect || !searchInput) {
+                return;
+            }
+            const options = Array.from(searchSelect.options);
+            const activeOption = options.find(function (option) {
+                return (url.searchParams.get("col_" + option.value) || "").trim();
+            });
+            const inputMaxLength = searchInput.maxLength > 0 ? searchInput.maxLength : null;
+            const rawValue = activeOption
+                ? url.searchParams.get("col_" + activeOption.value) || ""
+                : url.searchParams.get("col_" + searchSelect.value) || "";
+            const activeValue = inputMaxLength === null
+                ? rawValue.trim()
+                : rawValue.slice(0, inputMaxLength).trim();
+            const activeState = activeOption
+                ? {
+                    columnId: activeOption.value,
+                    value: activeValue
+                }
+                : {
+                    columnId: searchSelect.value,
+                    value: activeValue
+                };
+            appliedSearchState = activeState;
+            if (searchInteractionDirty) {
+                return;
+            }
+            if (activeOption) {
+                searchSelect.value = activeOption.value;
+                searchInput.value = activeState.value;
+                return;
+            }
+            searchInput.value = activeState.value;
+        }
+
+        /**
+         * Obtiene el estado editable de la busqueda del preview sin iniciar consultas.
+         *
+         * - Normaliza el texto para comparar el valor que se enviara al backend.
+         * - Conserva la columna seleccionada aunque el texto este vacio.
+         * - Separa la interaccion pendiente del estado ya aplicado en la URL.
+         */
+        function getSearchState() {
+            return {
+                columnId: searchSelect ? searchSelect.value : "",
+                value: (searchInput && searchInput.value || "").trim()
+            };
+        }
+
+        /**
+         * Compara dos estados del buscador para evitar solicitudes duplicadas.
+         *
+         * - Considera iguales solo columna y texto normalizado.
+         * - Permite compartir la confirmacion entre clic externo y limpieza.
+         * - No compara pagina, columnas visibles ni otros parametros del preview.
+         */
+        function sameSearchState(left, right) {
+            return Boolean(left && right)
+                && left.columnId === right.columnId
+                && left.value === right.value;
+        }
+
+        /**
+         * Integra el estado editable de la barra en la URL vigente del preview.
+         *
+         * - Reemplaza cualquier parametro `col_` por la unica busqueda seleccionada.
+         * - Reinicia la pagina al confirmar expresamente el texto pendiente.
+         * - Conserva año, nivel y columnas visibles ya aplicados.
+         */
+        function applyPendingSearchToUrl(url) {
+            const nextState = getSearchState();
+            clearSearchParams(url);
+            if (nextState.value && nextState.columnId) {
+                url.searchParams.set("col_" + nextState.columnId, nextState.value);
+            }
+            url.searchParams.delete("page");
+            url.searchParams.delete("page_size");
+            return url;
+        }
+
+        /**
+         * Identifica controles interactivos que no deben confirmar la busqueda pendiente.
+         *
+         * - Cubre controles HTML y elementos con semantica de boton o enlace.
+         * - Mantiene los chips separados del clic neutral de confirmacion.
+         * - Evita clasificar individualmente las acciones propias del preview.
+         */
+        function isSearchInteractiveTarget(target) {
+            if (!target || typeof target.closest !== "function") {
+                return false;
+            }
+            return Boolean(target.closest(
+                "button, a, input, select, textarea, label, "
+                + "[role='button'], [role='link'], [contenteditable='true']"
+            ));
+        }
+
+        /**
+         * Marca cambios locales sin iniciar la busqueda del preview.
+         *
+         * - Evita que una respuesta AJAX reemplace texto que se esta editando.
+         * - No muestra spinner ni status durante la escritura.
+         * - Deja que solo un clic con puntero fuera del contenedor confirme el estado.
+         */
+        function markSearchInteractionDirty() {
+            searchInteractionDirty = true;
+        }
+
+        /**
+         * Confirma la busqueda al hacer pointerdown fuera del contenedor completo.
+         *
+         * - Detecta clics en zonas que no reciben foco.
+         * - Mantiene dentro de la barra los clics en selector, input y limpieza.
+         * - Deja que cada control interactivo ejecute solo su comportamiento propio.
+         */
+        function handleSearchPointerDown(event) {
+            if (consultaEnCurso) {
+                return;
+            }
+            if (searchLive && event.target && searchLive.contains(event.target)) {
+                return;
+            }
+            if (isSearchInteractiveTarget(event.target)) {
+                return;
+            }
+            submitColumnSearch();
+        }
+
+        /**
+         * Expone el estado ocupado del buscador sin bloquear la tabla completa.
+         *
+         * - Reutiliza el indicador y las clases visuales del Visualizador.
+         * - Mantiene `aria-hidden` sincronizado con la visibilidad del indicador.
+         */
+        function setSearchLoading(active) {
+            if (!searchLive || !searchLoading) {
+                return;
+            }
+            searchLive.classList.toggle("pof-visual-search-busy", active);
+            searchLoading.classList.toggle("pof-hidden", !active);
+            searchLoading.setAttribute("aria-hidden", active ? "false" : "true");
+            searchLive.setAttribute("aria-busy", active ? "true" : "false");
+            if (active) {
+                setSearchStatus("Buscando resultados...", "info");
+            } else {
+                setSearchStatus("", "");
+            }
+        }
+
+        /**
+         * Renderiza el estado discreto de busqueda debajo del buscador del preview.
+         *
+         * - Usa aria-live para anunciar solo una consulta realmente iniciada.
+         * - Conserva el espacio reservado del control y evita saltos de layout.
+         * - Oculta el texto al terminar, abortar o fallar la solicitud.
+         */
+        function setSearchStatus(message, tone) {
+            if (!searchStatus) {
+                return;
+            }
+            const visible = Boolean(message);
+            if (searchStatusText) {
+                searchStatusText.textContent = message || "";
+            }
+            searchStatus.classList.toggle("pof-visual-search-status-hidden", !visible);
+            searchStatus.classList.toggle("pof-visual-search-status-error", tone === "error");
+            searchStatus.setAttribute("aria-hidden", visible ? "false" : "true");
+        }
+
+        /**
+         * Representa la búsqueda rápida aplicada con el chip POF existente.
+         *
+         * - Mantiene una sola columna y un solo valor activos.
+         * - Construye el texto con nodos seguros, sin interpretar el valor como HTML.
+         * - Ofrece la misma limpieza desde el chip y desde `Limpiar filtros`.
+         */
+        function renderSearchBadge(state) {
+            if (!searchBadges) {
+                return;
+            }
+            searchBadges.replaceChildren();
+            const value = state ? String(state.value || "").trim() : "";
+            if (!value) {
+                searchBadges.hidden = true;
+                return;
+            }
+
+            const option = searchSelect
+                ? Array.from(searchSelect.options).find(function (item) {
+                    return item.value === state.columnId;
+                })
+                : null;
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "pof-filter-chip";
+            chip.dataset.pofExportSearchChip = "";
+
+            const icon = document.createElement("span");
+            icon.className = "pof-filter-chip-icon";
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = "🏷";
+            const text = document.createElement("span");
+            text.className = "pof-filter-chip-text";
+            text.textContent = (option ? option.textContent.trim() : state.columnId) + ": " + value;
+            const remove = document.createElement("span");
+            remove.className = "pof-filter-chip-remove";
+            remove.setAttribute("aria-hidden", "true");
+            remove.textContent = "×";
+            chip.append(icon, text, remove);
+
+            const clearAll = document.createElement("a");
+            clearAll.href = "#";
+            clearAll.className = "pof-filter-clear-all";
+            clearAll.dataset.pofExportSearchClearAll = "";
+            const clearIcon = document.createElement("span");
+            clearIcon.className = "pof-visual-clear-filters-icon";
+            clearIcon.setAttribute("aria-hidden", "true");
+            clearIcon.textContent = "🗑";
+            const clearText = document.createElement("span");
+            clearText.textContent = "Limpiar filtros";
+            clearAll.append(clearIcon, clearText);
+
+            searchBadges.append(chip, clearAll);
+            searchBadges.hidden = false;
+        }
+
+        /**
+         * Activa o restaura los controles que pueden refrescar el preview.
+         *
+         * - Usa `disabled` en el botón de limpieza y `aria-disabled` en paginación.
+         * - Conserva el estado previo para no habilitar enlaces propios al finalizar.
+         * - Mantiene disponibles columnas, paneles, scroll y acciones visuales.
+         */
+        function syncQueryControls(active) {
+            if (!active) {
+                Array.from(queryControlStates.entries()).forEach(function (entry) {
+                    const control = entry[0];
+                    const previous = entry[1];
+                    if ("disabled" in control && previous.disabled !== null) {
+                        control.disabled = previous.disabled;
+                    }
+                    if (previous.ariaDisabled === null) {
+                        control.removeAttribute("aria-disabled");
+                    } else {
+                        control.setAttribute("aria-disabled", previous.ariaDisabled);
+                    }
+                    control.classList.remove("pof-query-disabled");
+                });
+                queryControlStates.clear();
+                return;
+            }
+
+            const controls = document.querySelectorAll(
+                "#exportarReunidaLimpiarBusqueda, "
+                + "#exportarReunidaFiltrosActivos [data-pof-export-search-chip], "
+                + "#exportarReunidaFiltrosActivos [data-pof-export-search-clear-all], "
+                + "[data-pof-export-preview-pagination] a[href]"
+            );
+            controls.forEach(function (control) {
+                if (!queryControlStates.has(control)) {
+                    queryControlStates.set(control, {
+                        disabled: "disabled" in control ? control.disabled : null,
+                        ariaDisabled: control.getAttribute("aria-disabled")
+                    });
+                }
+                if ("disabled" in control) {
+                    control.disabled = true;
+                } else {
+                    control.setAttribute("aria-disabled", "true");
+                    control.classList.add("pof-query-disabled");
+                }
+            });
+        }
+
+        /**
+         * Centraliza el estado ocupado de toda actualización real del preview.
+         *
+         * - Muestra spinner y mensaje para búsqueda, paginación o limpieza.
+         * - Ignora una segunda acción de datos mientras la consulta está activa.
+         * - Difiere el bloqueo visual hasta completar el primer clic aceptado.
+         */
+        function setQueryBusy(active) {
+            consultaEnCurso = active;
+            setSearchLoading(active);
+            if (queryControlsTimer) {
+                window.clearTimeout(queryControlsTimer);
+                queryControlsTimer = null;
+            }
+            if (active) {
+                queryControlsTimer = window.setTimeout(function () {
+                    queryControlsTimer = null;
+                    if (consultaEnCurso) {
+                        syncQueryControls(true);
+                    }
+                }, 0);
+            } else {
+                syncQueryControls(false);
+            }
         }
 
         function setChecks(callback) {
@@ -417,6 +867,10 @@
             const url = new URL(window.location.href);
             url.searchParams.delete("accion");
             url.searchParams.delete("visible_col");
+            clearSearchParams(url);
+            if (document.querySelector("[data-pof-export-preview-pagination]")) {
+                url.searchParams.delete("page");
+            }
             url.searchParams.set("accion", "excel");
             keys.forEach(function (key) {
                 url.searchParams.append("visible_col", key);
@@ -478,7 +932,7 @@
             });
 
             if (count) {
-                count.textContent = keys.length + " columnas visibles \u00b7 " + rowCount + " filas";
+                count.textContent = keys.length + " columnas visibles \u00b7 " + (panel.dataset.rowCount || "0") + " filas";
             }
 
             if (counter) {
@@ -486,6 +940,265 @@
             }
 
             setExcelState(keys);
+        }
+
+        /**
+         * Construye la URL de una pagina del preview conservando el estado visual vigente.
+         *
+         * - Mantiene los parametros funcionales del enlace fallback, incluido `page`.
+         * - Reemplaza las columnas visibles por las seleccionadas actualmente en el panel.
+         * - No agrega `accion`, por lo que nunca convierte la navegacion del preview en Excel.
+         */
+        function buildPreviewHref(href) {
+            const url = new URL(href, window.location.href);
+            url.searchParams.delete("accion");
+            url.searchParams.delete("visible_col");
+            getVisibleKeys().forEach(function (key) {
+                url.searchParams.append("visible_col", key);
+            });
+            return url.toString();
+        }
+
+        /**
+         * Envía la búsqueda de columna usando el refresco AJAX existente del preview.
+         *
+         * - Reemplaza cualquier búsqueda anterior por una única columna permitida.
+         * - Reinicia la paginación para no conservar una página inválida del filtro previo.
+         * - Actualiza el estado aplicado solo después del éxito y deja reintentar si falla.
+         * - Cancela solicitudes obsoletas mediante `refreshPreviewFromUrl`.
+         */
+        function submitColumnSearch(options) {
+            const opts = options || {};
+            if (consultaEnCurso) {
+                return Promise.resolve(false);
+            }
+            const nextState = getSearchState();
+            if (sameSearchState(appliedSearchState, nextState)
+                || sameSearchState(searchRequestState, nextState)) {
+                searchInteractionDirty = false;
+                return Promise.resolve(false);
+            }
+            const loadingToken = ++searchLoadingToken;
+            searchRequestState = nextState;
+            searchInteractionDirty = false;
+            const url = applyPendingSearchToUrl(new URL(window.location.href));
+            const refreshOptions = Object.assign({}, opts);
+            delete refreshOptions.onFailure;
+            return refreshPreviewFromUrl(url.toString(), refreshOptions)
+                .then(function (succeeded) {
+                    const isCurrentRequest = sameSearchState(searchRequestState, nextState);
+                    if (isCurrentRequest) {
+                        if (succeeded === true) {
+                            appliedSearchState = nextState;
+                            searchInteractionDirty = false;
+                        } else {
+                            searchInteractionDirty = true;
+                            if (typeof opts.onFailure === "function") {
+                                opts.onFailure();
+                            }
+                        }
+                    }
+                    return succeeded;
+                })
+                .finally(function () {
+                    if (sameSearchState(searchRequestState, nextState)) {
+                        searchRequestState = null;
+                    }
+                    if (loadingToken === searchLoadingToken
+                        && searchInteractionDirty
+                        && sameSearchState(appliedSearchState, nextState) === false) {
+                        setSearchStatus("No se pudo actualizar la búsqueda.", "error");
+                    }
+                });
+        }
+
+        /**
+         * Quita el filtro activo y vuelve a cargar la primera pagina del preview.
+         *
+         * - Conserva columnas, año y nivel en la URL.
+         * - No modifica el queryset de Excel ni datos persistidos.
+         */
+        function clearColumnSearch() {
+            if (consultaEnCurso) {
+                return Promise.resolve(false);
+            }
+            const previousState = getSearchState();
+            if (searchInput) {
+                searchInput.value = "";
+            }
+            searchInteractionDirty = false;
+            return submitColumnSearch({
+                onFailure: function () {
+                    if (searchSelect) {
+                        searchSelect.value = previousState.columnId;
+                    }
+                    if (searchInput) {
+                        searchInput.value = previousState.value;
+                    }
+                }
+            });
+        }
+
+        /**
+         * Conserva la posicion de lectura mientras se reemplazan las filas del preview.
+         *
+         * - Recupera el scroll vertical de la ventana y el horizontal de la tabla.
+         * - Reaplica ambos valores despues del reemplazo y en el siguiente frame.
+         * - Corrige el scroll anchoring usando el encabezado estable del preview.
+         * - No oculta ni reconstruye la pagina completa durante la navegacion.
+         */
+        function restorePreviewScroll(scrollPosition) {
+            const restore = function () {
+                window.scrollTo({
+                    left: window.scrollX,
+                    top: scrollPosition.vertical,
+                    behavior: "auto"
+                });
+                document.documentElement.scrollTop = scrollPosition.vertical;
+                document.body.scrollTop = scrollPosition.vertical;
+                if (verticalAnchor && Number.isFinite(scrollPosition.anchorTop)) {
+                    const anchorDelta = verticalAnchor.getBoundingClientRect().top
+                        - scrollPosition.anchorTop;
+                    if (Math.abs(anchorDelta) > 0.5) {
+                        window.scrollBy(0, anchorDelta);
+                    }
+                }
+                if (tableWrap) {
+                    tableWrap.scrollLeft = scrollPosition.horizontal;
+                }
+            };
+
+            restore();
+            window.setTimeout(restore, 0);
+            window.setTimeout(restore, 50);
+            if (typeof window.requestAnimationFrame === "function") {
+                window.requestAnimationFrame(function () {
+                    restore();
+                    window.requestAnimationFrame(restore);
+                });
+            }
+        }
+
+        /**
+         * Aplica el HTML recibido al area visual de Exportar Reunida.
+         *
+         * - Sustituye solamente el `tbody`, el contador y la navegacion del preview.
+         * - Conserva la tabla, el panel de columnas, el modo compacto y los modales.
+         * - Toma el contenido ya renderizado por el backend sin recalcular datos funcionales.
+         */
+        function renderPreviewDocument(documento) {
+            const nextTable = documento.querySelector("[data-pof-export-table]");
+            const nextBody = nextTable && nextTable.querySelector("tbody");
+            const currentBody = table.querySelector("tbody");
+            if (!nextBody || !currentBody) {
+                throw new Error("La respuesta del preview no contiene una tabla valida.");
+            }
+
+            currentBody.replaceWith(nextBody.cloneNode(true));
+
+            const nextFooter = documento.querySelector("[data-pof-export-preview-pagination]");
+            const currentFooter = preview.querySelector("[data-pof-export-preview-pagination]");
+            if (nextFooter) {
+                const footerClone = nextFooter.cloneNode(true);
+                if (currentFooter) {
+                    currentFooter.replaceWith(footerClone);
+                } else if (tableWrap) {
+                    tableWrap.insertAdjacentElement("afterend", footerClone);
+                }
+            } else if (currentFooter) {
+                currentFooter.remove();
+            }
+
+            const nextCount = documento.querySelector("[data-pof-export-count]");
+            if (count && nextCount) {
+                count.textContent = nextCount.textContent.trim();
+            }
+
+            const nextPanel = documento.querySelector("[data-pof-export-columns-panel]");
+            if (nextPanel) {
+                panel.dataset.rowCount = nextPanel.dataset.rowCount || "0";
+            }
+        }
+
+        /**
+         * Actualiza una pagina del preview mediante fetch y conserva el historial del navegador.
+         *
+         * - Usa `pushState` para clicks y `replaceState` para Atrás/Adelante.
+         * - Descarta respuestas obsoletas y mantiene una sola solicitud activa.
+         * - Reemplaza solo la presentacion visible y restaura ambos desplazamientos.
+         */
+        let previewRequestToken = 0;
+        let previewController = null;
+
+        function refreshPreviewFromUrl(rawUrl, options) {
+            const opts = options || {};
+            if (consultaEnCurso) {
+                return Promise.resolve(false);
+            }
+            const targetUrl = new URL(rawUrl, window.location.href);
+            if (targetUrl.origin !== window.location.origin) {
+                return Promise.resolve(false);
+            }
+
+            const scrollPosition = {
+                vertical: window.scrollY,
+                anchorTop: verticalAnchor
+                    ? verticalAnchor.getBoundingClientRect().top
+                    : null,
+                horizontal: tableWrap ? tableWrap.scrollLeft : 0
+            };
+            const token = ++previewRequestToken;
+            if (previewController) {
+                previewController.abort();
+            }
+            previewController = new AbortController();
+            preview.setAttribute("aria-busy", "true");
+            setQueryBusy(true);
+
+            return fetch(targetUrl.toString(), {
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "text/html",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                signal: previewController.signal
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error("Error al actualizar el preview de Exportar Reunida.");
+                    }
+                    return response.text();
+                })
+                .then(function (html) {
+                    if (token !== previewRequestToken) {
+                        return false;
+                    }
+
+                    const documento = new DOMParser().parseFromString(html, "text/html");
+                    renderPreviewDocument(documento);
+                    syncSearchControlFromUrl(targetUrl);
+                    renderSearchBadge(appliedSearchState);
+                    if (opts.replace) {
+                        window.history.replaceState({}, "", targetUrl.toString());
+                    } else {
+                        window.history.pushState({}, "", targetUrl.toString());
+                    }
+                    updateColumns();
+                    restorePreviewScroll(scrollPosition);
+                    return true;
+                })
+                .catch(function (error) {
+                    if (error.name !== "AbortError") {
+                        window.console.error(error);
+                    }
+                    return false;
+                })
+                .finally(function () {
+                    if (token === previewRequestToken) {
+                        preview.removeAttribute("aria-busy");
+                        setQueryBusy(false);
+                    }
+                });
         }
 
         if (toggle) {
@@ -521,6 +1234,39 @@
             );
         }
 
+        if (searchLive) {
+            searchLive.addEventListener("keydown", function (event) {
+                if (event.key !== "Enter") {
+                    return;
+                }
+                event.preventDefault();
+            });
+            document.addEventListener("pointerdown", handleSearchPointerDown, true);
+        }
+        if (searchInput) {
+            searchInput.addEventListener("input", markSearchInteractionDirty);
+        }
+        if (searchSelect) {
+            searchSelect.addEventListener("change", markSearchInteractionDirty);
+        }
+
+        if (searchClear) {
+            searchClear.addEventListener("click", clearColumnSearch);
+        }
+
+        if (searchBadges) {
+            searchBadges.addEventListener("click", function (event) {
+                const clearControl = event.target.closest(
+                    "[data-pof-export-search-chip], [data-pof-export-search-clear-all]"
+                );
+                if (!clearControl) {
+                    return;
+                }
+                event.preventDefault();
+                clearColumnSearch();
+            });
+        }
+
         checks.forEach(function (check) {
             check.addEventListener("change", updateColumns);
         });
@@ -536,6 +1282,34 @@
             }
         });
 
+        if (pagination) {
+            preview.style.overflowAnchor = "none";
+            preview.addEventListener("click", function (event) {
+                const link = event.target.closest(
+                    "[data-pof-export-preview-pagination] a[href]"
+                );
+                if (!link) {
+                    return;
+                }
+                event.preventDefault();
+                if (consultaEnCurso || link.getAttribute("aria-disabled") === "true") {
+                    return;
+                }
+                refreshPreviewFromUrl(
+                    buildPreviewHref(link.href),
+                    { preservePage: true }
+                );
+            });
+
+        }
+
+        if (pagination || searchSelect) {
+            window.addEventListener("popstate", function () {
+                refreshPreviewFromUrl(window.location.href, { replace: true });
+            });
+        }
+
+        renderSearchBadge(appliedSearchState);
         updateColumns();
     }());
 </script>

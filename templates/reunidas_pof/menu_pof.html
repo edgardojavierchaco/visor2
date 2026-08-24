@@ -1,6 +1,6 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}?v=20260727-1">
-<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof_view_transitions.css' %}">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}?v=20260824-5">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof_view_transitions.css' %}?v=20260819-3">
 {% comment %}
     .pof-tabs-navbar {
         --pof-primary: #3B5CFF;
@@ -31,7 +31,7 @@
         width: 100%;
     }
 
-    .pof-tabs-link:first-of-type {
+    .pof-tabs-list .pof-guide-link {
         margin-left: auto;
     }
 
@@ -134,6 +134,11 @@
 <nav class="pof-tabs-navbar" aria-label="Navegaci&oacute;n POF">
     <div class="pof-tabs-list">
         <span class="pof-tabs-brand">&#127979; Gesti&oacute;n POF</span>
+        <button type="button"
+                class="pof-tabs-link pof-guide-link"
+                data-pof-guide-open
+                aria-controls="pofGuiaUsoModal"
+                aria-haspopup="dialog">&#10067; GU&Iacute;A DE USO</button>
         <a href="{% url 'reunidas_pof:inicio' %}" class="pof-tabs-link{% if seccion_activa == 'inicio' %} pof-tabs-link-active{% endif %}">INICIO</a>
         {% if not pof_solo_visualizacion %}
         <a href="{% url 'reunidas_pof:reunidas_pof' %}" class="pof-tabs-link{% if seccion_activa == 'reunidas' %} pof-tabs-link-active{% endif %}">POF</a>
@@ -147,6 +152,10 @@
         {% endif %}
     </div>
 </nav>
+
+{% include "reunidas_pof/guia_uso_pof.html" %}
+
+<script src="{% static 'reunidas_pof/js/guia_uso_pof.js' %}?v=20260818-2"></script>
 
 <script>
 (function() {

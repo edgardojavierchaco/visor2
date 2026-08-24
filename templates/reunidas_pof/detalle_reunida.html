@@ -5,6 +5,7 @@
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa=seccion_activa %}
+    <link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260824-1">
     <div class="pof-view-header">
         <h1>{{ cabecera_detalle_nombre|upper }} {{ reunida.anio }}{% if reunida.nivel %} &middot; {{ reunida.nivel }}{% endif %}</h1>
         <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUE, anexos y CUOF de la POF.{% endif %}</p>
@@ -47,24 +48,33 @@
 
                 <div class="pof-visual-toolbar">
                     <div class="pof-visual-live-search" id="detalleLiveSearch">
-                        <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
-                        <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
-                        <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
-                            {% for columna in detalle_busqueda_columnas %}
-                                <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
-                        <input type="text"
-                               id="detalleColumnaInput"
-                               class="pof-visual-search-input"
-                               value="{{ detalle_busqueda_columna_valor }}"
-                               placeholder="Buscar en esta columna"
-                               autocomplete="off">
-                        <span id="detalleBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
-                            <span class="pof-visually-hidden">Buscando</span>
-                        </span>
-                        <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                        <div class="pof-visual-search-control-row">
+                            <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
+                            <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                            <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                                {% for columna in detalle_busqueda_columnas %}
+                                    <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
+                            <div class="pof-visual-search-input-wrap">
+                                <input type="text"
+                                       id="detalleColumnaInput"
+                                       class="pof-visual-search-input"
+                                       value="{{ detalle_busqueda_columna_valor }}"
+                                       placeholder="Buscar en esta columna"
+                                       maxlength="120"
+                                       autocomplete="off">
+                                <span id="detalleBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                                    <span class="pof-visually-hidden">Buscando</span>
+                                </span>
+                            </div>
+                            <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                        </div>
+                        <div id="detalleBusquedaColumnaStatus" class="pof-visual-search-status pof-visual-search-status-hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+                            <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
+                            <span id="detalleBusquedaColumnaStatusText">Buscando resultados...</span>
+                        </div>
                     </div>
 
                     <div class="pof-visual-toolbar-actions">
@@ -78,27 +88,6 @@
                     </div>
                 </div>
 
-                <div class="pof-filter-active-list" id="detalleFiltrosActivos" aria-label="Filtros activos" {% if not filtros_detalle_activos %}hidden{% endif %}>
-                    {% for chip in filtros_detalle_chips %}
-                        <button type="button"
-                                class="pof-filter-chip"
-                                data-filter-chip
-                                data-filter-type="{{ chip.tipo }}"
-                                data-filter-index="{{ chip.indice|default:'' }}"
-                                data-filter-field="{{ chip.campo|default:'' }}">
-                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
-                            <span class="pof-filter-chip-text">{{ chip.texto }}</span>
-                            <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
-                        </button>
-                    {% endfor %}
-                    {% if filtros_detalle_activos %}
-                        <a class="pof-filter-clear-all"
-                            href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
-                            Limpiar todos
-                        </a>
-                    {% endif %}
-                </div>
-
                 {% if filtros_detalle_invalidos %}
                     <div class="pof-filter-warning">
                         <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
@@ -106,7 +95,7 @@
                     </div>
                 {% endif %}
 
-                <div id="detallePanelFiltros" class="pof-visual-panel" hidden>
+                <div id="detallePanelFiltros" class="pof-visual-panel" data-panel-option-search-type="filters" hidden>
                     <div class="pof-visual-panel-head">
                         <strong>Filtros</strong>
                     </div>
@@ -145,6 +134,34 @@
                     </div>
                 </div>
             </form>
+
+             <div class="pof-filter-active-list" id="detalleFiltrosActivos" aria-label="Filtros activos" {% if not filtros_detalle_chips %}hidden{% endif %}>
+                {% for chip in filtros_detalle_chips %}
+                    <div class="pof-filter-chip"
+                         data-filter-chip
+                         data-filter-type="{{ chip.tipo }}"
+                         data-filter-index="{{ chip.indice|default_if_none:'' }}"
+                         data-filter-field="{{ chip.campo|default:'' }}"
+                         data-filter-edit-field="{{ chip.campo_edicion|default:chip.campo|default:'' }}"
+                         data-filter-operator="{{ chip.operador|default:'' }}"
+                         data-filter-value="{{ chip.valor|default:'' }}">
+                        <button type="button" class="pof-filter-chip-edit" data-filter-chip-edit aria-label="Editar {{ chip.texto }}">
+                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                            <span class="pof-filter-chip-text">{{ chip.texto }}</span>
+                        </button>
+                        <button type="button" class="pof-filter-chip-remove" data-filter-chip-remove aria-label="Eliminar {{ chip.texto }}">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+                 {% if filtros_detalle_chips %}
+                    <a class="pof-filter-clear-all pof-visual-clear-filters-link"
+                        href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
+                        <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                        <span>Limpiar filtros</span>
+                    </a>
+                {% endif %}
+            </div>
 
             {{ filtros_detalle_opciones|json_script:"detalleFiltrosOpcionesData" }}
         {% endif %}
@@ -369,24 +386,33 @@
 
                 <div class="pof-visual-toolbar">
                     <div class="pof-visual-live-search" id="detalleLiveSearch">
-                        <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
-                        <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
-                        <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
-                            {% for columna in detalle_busqueda_columnas %}
-                                <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
-                        <input type="text"
-                               id="detalleColumnaInput"
-                               class="pof-visual-search-input"
-                               value="{{ detalle_busqueda_columna_valor }}"
-                               placeholder="Buscar en esta columna"
-                               autocomplete="off">
-                        <span id="detalleBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
-                            <span class="pof-visually-hidden">Buscando</span>
-                        </span>
-                        <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                        <div class="pof-visual-search-control-row">
+                            <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
+                            <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                            <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                                {% for columna in detalle_busqueda_columnas %}
+                                    <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
+                            <div class="pof-visual-search-input-wrap">
+                                <input type="text"
+                                       id="detalleColumnaInput"
+                                       class="pof-visual-search-input"
+                                       value="{{ detalle_busqueda_columna_valor }}"
+                                       placeholder="Buscar en esta columna"
+                                       maxlength="120"
+                                       autocomplete="off">
+                                <span id="detalleBusquedaColumnaLoading" class="pof-visual-search-loading pof-hidden" role="status" aria-hidden="true">
+                                    <span class="pof-visually-hidden">Buscando</span>
+                                </span>
+                            </div>
+                            <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                        </div>
+                        <div id="detalleBusquedaColumnaStatus" class="pof-visual-search-status pof-visual-search-status-hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+                            <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
+                            <span id="detalleBusquedaColumnaStatusText">Buscando resultados...</span>
+                        </div>
                     </div>
 
                     <div class="pof-visual-toolbar-actions">
@@ -400,30 +426,6 @@
                     </div>
                 </div>
 
-                <div class="pof-filter-active-list" id="detalleFiltrosActivos" aria-label="Filtros activos" {% if not filtros_detalle_activos %}hidden{% endif %}>
-                    {% for chip in filtros_detalle_chips %}
-                        <button type="button"
-                                class="pof-filter-chip"
-                                data-filter-chip
-                                data-filter-type="{{ chip.tipo }}"
-                                data-filter-index="{{ chip.indice|default:'' }}"
-                                data-filter-field="{{ chip.campo|default:'' }}">
-                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
-                            <span class="pof-filter-chip-text">{{ chip.texto }}</span>
-                            <span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
-                        </button>
-                    {% endfor %}
-                    {% if filtros_cargo_detalle_activos and not filtros_detalle_invalidos %}
-                        <span class="pof-filter-chip">Modo coincidencias</span>
-                    {% endif %}
-                    {% if filtros_detalle_activos %}
-                        <a class="pof-filter-clear-all"
-                            href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
-                            Limpiar todos
-                        </a>
-                    {% endif %}
-                </div>
-
                 {% if filtros_detalle_invalidos %}
                     <div class="pof-filter-warning">
                         <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
@@ -431,7 +433,7 @@
                     </div>
                 {% endif %}
 
-                <div id="detallePanelFiltros" class="pof-visual-panel" hidden>
+                <div id="detallePanelFiltros" class="pof-visual-panel" data-panel-option-search-type="filters" hidden>
                     <div class="pof-visual-panel-head">
                         <strong>Filtros</strong>
                     </div>
@@ -470,6 +472,37 @@
                     </div>
                 </div>
             </form>
+
+             <div class="pof-filter-active-list" id="detalleFiltrosActivos" aria-label="Filtros activos" {% if not filtros_detalle_chips %}hidden{% endif %}>
+                {% for chip in filtros_detalle_chips %}
+                    <div class="pof-filter-chip"
+                         data-filter-chip
+                         data-filter-type="{{ chip.tipo }}"
+                         data-filter-index="{{ chip.indice|default_if_none:'' }}"
+                         data-filter-field="{{ chip.campo|default:'' }}"
+                         data-filter-edit-field="{{ chip.campo_edicion|default:chip.campo|default:'' }}"
+                         data-filter-operator="{{ chip.operador|default:'' }}"
+                         data-filter-value="{{ chip.valor|default:'' }}">
+                        <button type="button" class="pof-filter-chip-edit" data-filter-chip-edit aria-label="Editar {{ chip.texto }}">
+                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                            <span class="pof-filter-chip-text">{{ chip.texto }}</span>
+                        </button>
+                        <button type="button" class="pof-filter-chip-remove" data-filter-chip-remove aria-label="Eliminar {{ chip.texto }}">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+                {% if filtros_cargo_detalle_activos and not filtros_detalle_invalidos %}
+                    <span class="pof-filter-chip">Modo coincidencias</span>
+                {% endif %}
+                 {% if filtros_detalle_chips %}
+                    <a class="pof-filter-clear-all pof-visual-clear-filters-link"
+                        href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
+                        <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                        <span>Limpiar filtros</span>
+                    </a>
+                {% endif %}
+            </div>
 
             {{ filtros_detalle_opciones|json_script:"detalleFiltrosOpcionesData" }}
 
@@ -812,5 +845,6 @@
 <script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260716-1"></script>
 <script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
 <script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
-<script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260717-1"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260824-2"></script>
+<script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260824-4"></script>
 {% endblock %}

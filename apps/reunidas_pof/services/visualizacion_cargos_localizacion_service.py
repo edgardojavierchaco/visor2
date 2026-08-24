@@ -1,12 +1,22 @@
 import logging
-from collections import defaultdict
 from decimal import Decimal
 from io import BytesIO
 
 from django.core.paginator import Paginator
 from django.db import DatabaseError, OperationalError, ProgrammingError
-from django.db.models import CharField, OuterRef, Prefetch, Q, Subquery
-from django.db.models.functions import Cast
+from django.db.models import (
+    Case,
+    CharField,
+    IntegerField,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
+from django.db.models.functions import Cast, Concat, Substr, Trim
 from django.http import QueryDict
 from django.utils import timezone
 
@@ -35,6 +45,7 @@ from .padron_materializadas_service import (
 GUION = "—"
 logger = logging.getLogger(__name__)
 CABECERA_PROYECTO_ESPECIAL = "PROYECTO_ESPECIAL"
+CUES_POR_PAGINA_VISUALIZACION = 5
 
 VISUALIZACION_CARGOS_COLUMNAS = [
     {"id": "cueanexo", "label": "CUEANEXO", "visible_default": True},
@@ -458,7 +469,7 @@ def _obtener_busqueda_general(request):
 def _obtener_busquedas_columna(request):
     busquedas = {}
     for columna_id in COLUMNAS_BUSCABLES_IDS:
-        valor = _limpiar_texto(request.GET.get(f"col_{columna_id}", ""), 180)
+        valor = _limpiar_texto(request.GET.get(f"col_{columna_id}", ""), 120)
         if valor:
             busquedas[columna_id] = valor
     return busquedas
@@ -1290,24 +1301,95 @@ def _obtener_clave_agrupacion_visualizacion(localizacion):
     return f"LOCALIZACION:{localizacion.pk}"
 
 
-def _construir_contexto_totales_generales(cargos):
-    claves_por_cargo = {}
-    totales_por_clave = defaultdict(Decimal)
+def _anotar_clave_total_general(queryset):
+    """
+    Anota la clave de agrupacion usada por Total General sin cargar cargos en Python.
 
-    for cargo in cargos:
-        clave_total_general = _obtener_clave_agrupacion_visualizacion(
-            cargo.localizacion
+    - Prioriza CUEANEXO y usa CUOF cuando el CUEANEXO esta vacio.
+    - Conserva la localizacion como ultimo respaldo para casos sin ambos valores.
+    - Replica la limpieza de espacios aplicada por la agrupacion historica.
+    """
+    queryset = queryset.annotate(
+        _cueanexo_total_general=Trim("localizacion__cueanexo"),
+        _cuof_total_general=Trim("localizacion__cuof"),
+    )
+    return queryset.annotate(
+        _clave_total_general=Case(
+            When(
+                Q(_cueanexo_total_general__isnull=False)
+                & ~Q(_cueanexo_total_general=""),
+                then=Concat(
+                    Value("CUEANEXO:"),
+                    "_cueanexo_total_general",
+                ),
+            ),
+            When(
+                Q(_cuof_total_general__isnull=False)
+                & ~Q(_cuof_total_general=""),
+                then=Concat(
+                    Value("CUOF:"),
+                    "_cuof_total_general",
+                ),
+            ),
+            default=Concat(
+                Value("LOCALIZACION:"),
+                Cast("localizacion_id", CharField()),
+            ),
+            output_field=CharField(),
         )
-        claves_por_cargo[cargo.id] = clave_total_general
-        totales_por_clave.setdefault(clave_total_general, Decimal("0"))
+    )
 
-        if cargo.estado_pof == CargoPof.EstadoPof.AFECTADO:
-            totales_por_clave[clave_total_general] += cargo.total or Decimal("0")
+
+def _armar_contexto_totales_desde_agregados(cargos, totales_agrupados):
+    """
+    Adapta los totales agregados al contrato usado por la serializacion de cargos.
+
+    - Conserva una clave por cada cargo materializado por el consumidor.
+    - Convierte agregados nulos, sin cargos AFECTADO, en cero.
+    - Mantiene las mismas claves de contexto que el calculo historico en Python.
+    """
+    claves_por_cargo = {
+        cargo.id: _obtener_clave_agrupacion_visualizacion(cargo.localizacion)
+        for cargo in cargos
+    }
+    totales_por_clave = {
+        clave: total or Decimal("0")
+        for clave, total in totales_agrupados
+    }
+    for clave in claves_por_cargo.values():
+        totales_por_clave.setdefault(clave, Decimal("0"))
 
     return {
         "claves_por_cargo": claves_por_cargo,
-        "totales_por_clave": dict(totales_por_clave),
+        "totales_por_clave": totales_por_clave,
     }
+
+
+def _construir_contexto_totales_generales_orm(queryset, cargos):
+    """
+    Calcula Total General en SQL desde el queryset autorizado recibido.
+
+    - Deduplica primero los cargos autorizados para evitar sumas por joins repetidos.
+    - Agrupa por CUEANEXO o por CUOF/localizacion con la semantica vigente.
+    - Suma exclusivamente cargo.total de registros con estado AFECTADO.
+    """
+    ids_autorizados = queryset.order_by().values("pk").distinct()
+    queryset_agregacion = CargoPof.objects.filter(
+        pk__in=Subquery(ids_autorizados)
+    )
+    totales_agrupados = (
+        _anotar_clave_total_general(queryset_agregacion)
+        .order_by()
+        .values("_clave_total_general")
+        .annotate(
+            _total_general=Sum(
+                "total",
+                filter=Q(estado_pof=CargoPof.EstadoPof.AFECTADO),
+            )
+        )
+        .values_list("_clave_total_general", "_total_general")
+    )
+    return _armar_contexto_totales_desde_agregados(cargos, totales_agrupados)
 
 
 def _serializar_cargo(cargo, contexto_totales_generales=None):
@@ -1390,6 +1472,20 @@ def _aplicar_no_repeticion_visual(fila_raw, clave_localizacion_anterior):
     return fila_display, clave_localizacion_actual or None
 
 
+def _obtener_claves_jerarquicas_visualizacion(fila_raw):
+    """
+    Obtiene las claves de CUE y anexo usadas para separar grupos visuales.
+
+    - Usa los primeros siete caracteres de CUEANEXO como CUE base.
+    - Usa el resto de CUEANEXO como anexo dentro del CUE.
+    - Conserva la misma semantica de agrupacion usada por la tabla.
+    """
+    cueanexo_actual = fila_raw.get("_cueanexo_visual", "")
+    cue_actual = cueanexo_actual[:7] if len(cueanexo_actual) >= 7 else ""
+    anexo_actual = cueanexo_actual[7:] if len(cueanexo_actual) > 7 else ""
+    return cueanexo_actual, cue_actual, anexo_actual
+
+
 def _aplicar_no_repeticion_total_general(fila_display, claves_totales_vistas):
     clave_total_general = fila_display.get("_clave_total_general")
     if clave_total_general in claves_totales_vistas:
@@ -1399,6 +1495,13 @@ def _aplicar_no_repeticion_total_general(fila_display, claves_totales_vistas):
 
 
 def _armar_filas_tabla(cargos, columnas, contexto_totales_generales):
+    """
+    Construye las filas visibles del visualizador conservando sus agrupaciones.
+
+    - Marca los cambios de CUE y CUEANEXO con la misma jerarquia del exportador.
+    - Mantiene la no repeticion visual por localizacion.
+    - Aplica Total General una sola vez por clave de agrupacion.
+    """
     filas = []
     clave_localizacion_anterior = None
     claves_totales_vistas = set()
@@ -1407,10 +1510,10 @@ def _armar_filas_tabla(cargos, columnas, contexto_totales_generales):
 
     for cargo in cargos:
         fila_raw = _serializar_cargo(cargo, contexto_totales_generales)
+        cueanexo_actual, cue_actual, anexo_actual = (
+            _obtener_claves_jerarquicas_visualizacion(fila_raw)
+        )
         clave_localizacion_actual = fila_raw.get("_clave_localizacion_grupo", "")
-        cueanexo_actual = fila_raw.get("_cueanexo_visual", "")
-        cue_actual = cueanexo_actual[:7] if len(cueanexo_actual) >= 7 else ""
-        anexo_actual = cueanexo_actual[7:] if len(cueanexo_actual) > 7 else ""
         es_inicio_cue = bool(
             filas and cue_actual and cue_actual != cue_anterior
         )
@@ -1497,35 +1600,30 @@ def _valor_filtro_label(campo_id, valor):
     return valor
 
 
-def _armar_chips(request, filtros, filtros_avanzados, busqueda, busquedas_columna):
-    chips = []
-    if busqueda:
-        chips.append({
-            "tipo": "busqueda",
-            "etiqueta": "Búsqueda",
-            "operador": "0",
-            "operador_label": OPERADORES_FILTRO["0"],
-            "valor": busqueda,
-            "texto": f"Búsqueda {OPERADORES_FILTRO['0']}: {busqueda}",
-            "querystring": _query_sin_parametros(request, ["q"]),
-        })
+def _armar_chips(
+    filtros_avanzados,
+    busqueda_columna_id="",
+    busqueda_columna_valor="",
+):
+    """
+    Construye los chips visibles de todos los criterios del visualizador.
 
-    labels_filtros = {
-        filtro["id"]: filtro["label"]
-        for filtro in list(FILTROS_TEXTO) + list(FILTROS_SELECT_DEFINICIONES)
-    }
-    for filtro_id, valor in filtros.items():
-        if not valor:
-            continue
+    - Representa la única búsqueda rápida activa sin cambiar su semántica de consulta.
+    - Excluye búsquedas generales y parámetros simples para evitar etiquetas redundantes.
+    - Resume el operador de igualdad con el formato `Campo: Valor`.
+    """
+    chips = []
+
+    if busqueda_columna_id and busqueda_columna_valor:
+        columna = COLUMNAS_POR_ID.get(busqueda_columna_id, {})
+        etiqueta = columna.get("label", busqueda_columna_id)
         chips.append({
-            "tipo": "simple",
-            "campo": filtro_id,
-            "etiqueta": labels_filtros.get(filtro_id, filtro_id),
-            "operador": "2",
-            "operador_label": OPERADORES_FILTRO["2"],
-            "valor": valor,
-            "texto": f"{labels_filtros.get(filtro_id, filtro_id)} {OPERADORES_FILTRO['2']}: {valor}",
-            "querystring": _query_sin_parametros(request, [filtro_id]),
+            "tipo": "columna",
+            "campo": busqueda_columna_id,
+            "etiqueta": etiqueta,
+            "valor": busqueda_columna_valor,
+            "valor_label": busqueda_columna_valor,
+            "texto": f"{etiqueta}: {busqueda_columna_valor}",
         })
 
     for filtro in filtros_avanzados:
@@ -1534,6 +1632,11 @@ def _armar_chips(request, filtros, filtros_avanzados, busqueda, busquedas_column
         operador = filtro["operador"]
         operador_label = OPERADORES_FILTRO.get(operador, OPERADORES_FILTRO["0"])
         valor_label = _valor_filtro_label(campo_id, filtro["valor"])
+        texto = (
+            f"{etiqueta}: {valor_label}"
+            if operador == "2"
+            else f"{etiqueta} {operador_label}: {valor_label}"
+        )
         chips.append({
             "tipo": "avanzado",
             "indice": filtro["indice"],
@@ -1543,20 +1646,7 @@ def _armar_chips(request, filtros, filtros_avanzados, busqueda, busquedas_column
             "operador_label": operador_label,
             "valor": filtro["valor"],
             "valor_label": valor_label,
-            "texto": f"{etiqueta} {operador_label}: {valor_label}",
-        })
-
-    for columna_id, valor in busquedas_columna.items():
-        etiqueta = f"Columna {COLUMNAS_POR_ID[columna_id]['label']}"
-        chips.append({
-            "tipo": "columna",
-            "campo": columna_id,
-            "etiqueta": etiqueta,
-            "operador": "0",
-            "operador_label": OPERADORES_FILTRO["0"],
-            "valor": valor,
-            "texto": f"{etiqueta} {OPERADORES_FILTRO['0']}: {valor}",
-            "querystring": _query_sin_parametros(request, [f"col_{columna_id}"]),
+            "texto": texto,
         })
 
     return chips
@@ -1598,7 +1688,126 @@ def _queryset_visualizacion(request, ignorar_filtros=False):
     return _aplicar_orden(queryset.distinct(), request)
 
 
+def _anotar_unidad_paginacion_cue(queryset):
+    """
+    Anota la unidad estable usada para paginar el visualizador POF.
+
+    - Agrupa los CUEANEXO por sus siete digitos de CUE base.
+    - Conserva el agrupador CUOF vigente para Proyecto Especial sin CUE.
+    - Opera sobre el queryset ya autorizado y filtrado que recibe.
+    """
+    sin_cue = Q(localizacion__cueanexo="") | Q(localizacion__cueanexo__isnull=True)
+    return queryset.annotate(
+        _unidad_paginacion_cue=Case(
+            When(
+                sin_cue,
+                then=Concat(Value("0:CUOF:"), "localizacion__cuof"),
+            ),
+            default=Concat(
+                Value("1:CUE:"),
+                Substr("localizacion__cueanexo", 1, 7),
+            ),
+            output_field=CharField(),
+        )
+    )
+
+
+def _orden_unidades_paginacion(request):
+    """
+    Resuelve el orden de las unidades CUE para la pagina solicitada.
+
+    - Mantiene orden descendente cuando el usuario ordena CUE o CUEANEXO asi.
+    - Usa orden ascendente estable para las demas columnas de cargo.
+    - No acepta campos libres como expresiones ORM.
+    """
+    orden = _limpiar_texto(request.GET.get("orden", ""))
+    direccion = _limpiar_texto(request.GET.get("dir", "asc")).lower()
+    if orden in {"cue", "cueanexo"} and direccion == "desc":
+        return "-_unidad_paginacion_cue"
+    return "_unidad_paginacion_cue"
+
+
+def _paginar_unidades_cue(queryset, request):
+    """
+    Obtiene desde PostgreSQL las cinco unidades CUE de la pagina pedida.
+
+    - Parte del queryset con alcance y filtros ya aplicados.
+    - Cuenta y pagina claves distintas sin materializar los cargos completos.
+    - Normaliza paginas invalidas o fuera de rango mediante `Paginator.get_page`.
+    """
+    unidades_queryset = (
+        _anotar_unidad_paginacion_cue(queryset)
+        .order_by(_orden_unidades_paginacion(request))
+        .values_list("_unidad_paginacion_cue", flat=True)
+        .distinct()
+    )
+    paginator = Paginator(unidades_queryset, CUES_POR_PAGINA_VISUALIZACION)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    unidades_pagina = list(page_obj.object_list)
+    return unidades_pagina, page_obj
+
+
+def _restringir_queryset_a_unidades_cue(queryset, unidades_pagina):
+    """
+    Restringe cargos ya autorizados a las unidades CUE de una pagina.
+
+    - No reconstruye el alcance ni consulta anexos fuera del queryset recibido.
+    - Mantiene juntos los cargos de cada CUE y el orden interno solicitado.
+    - Devuelve un queryset vacio cuando la pagina no contiene unidades.
+    """
+    if not unidades_pagina:
+        return queryset.none()
+
+    orden_actual = tuple(queryset.query.order_by)
+    orden_unidad = Case(
+        *[
+            When(_unidad_paginacion_cue=unidad, then=Value(indice))
+            for indice, unidad in enumerate(unidades_pagina)
+        ],
+        default=Value(len(unidades_pagina)),
+        output_field=IntegerField(),
+    )
+    return (
+        _anotar_unidad_paginacion_cue(queryset)
+        .filter(_unidad_paginacion_cue__in=unidades_pagina)
+        .annotate(_orden_unidad_paginacion=orden_unidad)
+        .order_by("_orden_unidad_paginacion", *orden_actual)
+    )
+
+
+def _construir_metadatos_paginacion(page_obj, total_registros_pagina):
+    """
+    Serializa metadatos minimos para la futura UI de paginacion por CUE.
+
+    - Conserva fija la pagina en cinco unidades completas.
+    - Informa navegacion anterior y siguiente sin alterar claves existentes.
+    - Distingue cargos visibles en la pagina del total de cargos filtrados.
+    """
+    return {
+        "pagina_actual": page_obj.number,
+        "total_paginas": page_obj.paginator.num_pages,
+        "cues_por_pagina": CUES_POR_PAGINA_VISUALIZACION,
+        "total_cues": page_obj.paginator.count,
+        "total_registros_pagina": total_registros_pagina,
+        "tiene_anterior": page_obj.has_previous(),
+        "pagina_anterior": (
+            page_obj.previous_page_number() if page_obj.has_previous() else None
+        ),
+        "tiene_siguiente": page_obj.has_next(),
+        "pagina_siguiente": (
+            page_obj.next_page_number() if page_obj.has_next() else None
+        ),
+    }
+
+
 def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opciones=True):
+    """
+    Construye la vista paginada del visualizador sin ampliar el alcance POF.
+
+    - Aplica permisos, contexto y filtros antes de seleccionar los CUE paginables.
+    - Materializa solo cargos de las cinco unidades CUE de la pagina.
+    - Conserva los calculos vigentes de cantidad, puntos, total y Total General.
+    """
     contexto_cabecera = _resolver_contexto_visualizacion(request)
     base_params_contexto = _params_contexto_visualizacion(contexto_cabecera)
     anios_visualizacion, anio_visualizacion = _contexto_anio_visualizacion(
@@ -1620,19 +1829,30 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
     queryset = _queryset_visualizacion(request)
 
     try:
-        cargos = list(queryset)
-        cargos_contexto_totales = list(
-            _queryset_visualizacion(request, ignorar_filtros=True)
+        total_registros = queryset.count()
+        unidades_pagina, page_obj = _paginar_unidades_cue(queryset, request)
+        queryset_pagina = _restringir_queryset_a_unidades_cue(
+            queryset,
+            unidades_pagina,
         )
-        contexto_totales_generales = _construir_contexto_totales_generales(
-            cargos_contexto_totales
+        cargos = list(queryset_pagina)
+        queryset_totales_pagina = _restringir_queryset_a_unidades_cue(
+            _queryset_visualizacion(request, ignorar_filtros=True),
+            unidades_pagina,
         )
-        total_registros = len(cargos)
+        contexto_totales_generales = _construir_contexto_totales_generales_orm(
+            queryset_totales_pagina,
+            cargos,
+        )
         filas = _armar_filas_tabla(cargos, columnas, contexto_totales_generales)
+        paginacion = _construir_metadatos_paginacion(page_obj, len(cargos))
         tabla_no_migrada = False
     except (ProgrammingError, OperationalError):
         total_registros = 0
         filas = []
+        paginator = Paginator([], CUES_POR_PAGINA_VISUALIZACION)
+        page_obj = paginator.get_page(1)
+        paginacion = _construir_metadatos_paginacion(page_obj, 0)
         tabla_no_migrada = True
 
     contexto = {
@@ -1649,11 +1869,9 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
         "busqueda_columna_id": busqueda_columna_id,
         "busqueda_columna_valor": busqueda_columna_valor,
         "filtros_activos": _armar_chips(
-            request,
-            filtros,
             filtros_avanzados,
-            busqueda,
-            busquedas_columna,
+            busqueda_columna_id,
+            busqueda_columna_valor,
         ),
         "limpiar_filtros_querystring": _query_limpia(columnas_visibles_ids, base_params_contexto),
         "columnas": columnas,
@@ -1666,6 +1884,7 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
         "querystring_exportar_filtros": _query_exportar_filtros(request, base_params_contexto),
         "querystring_exportar_todo": _query_params_desde_dict(base_params_contexto),
         "total_registros": total_registros,
+        "paginacion": paginacion,
         "tabla_visualizacion_no_migrada": tabla_no_migrada,
         "es_proyecto_especial": contexto_cabecera["es_proyecto_especial"],
         "anios_visualizacion": anios_visualizacion,
@@ -1680,6 +1899,13 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
 
 
 def construir_payload_visualizacion_cargos_localizacion(request):
+    """
+    Construye el contrato JSON del visualizador paginado por CUE.
+
+    - Mantiene todas las claves historicas del endpoint de datos.
+    - Agrega solo metadatos de paginacion para la Etapa 2.
+    - Reutiliza el mismo alcance, filtros y calculos de la vista HTML.
+    """
     contexto = construir_contexto_visualizacion_cargos_localizacion(
         request,
         incluir_opciones=False,
@@ -1696,6 +1922,7 @@ def construir_payload_visualizacion_cargos_localizacion(request):
         "querystring_exportar_filtros": contexto["querystring_exportar_filtros"],
         "querystring_exportar_todo": contexto["querystring_exportar_todo"],
         "total_registros": contexto["total_registros"],
+        "paginacion": contexto["paginacion"],
         "tabla_visualizacion_no_migrada": contexto["tabla_visualizacion_no_migrada"],
         "es_proyecto_especial": contexto["es_proyecto_especial"],
         "proyecto_especial_id": contexto["proyecto_especial_id"],
@@ -1761,15 +1988,44 @@ def _valor_excel_columna(columna_id, valor):
     return _valor_excel(valor)
 
 
+def _iterar_cargos_exportacion_por_lotes(queryset, chunk_size=1000):
+    """
+    Recorre el queryset de exportacion en lotes sin conservar su cache global.
+
+    - Usa `iterator` con un `chunk_size` explicito para mantener compatible el prefetch vigente.
+    - Conserva exactamente el orden del queryset recibido.
+    - Materializa solo el lote actual, que luego puede asociarse al mapa de claves por cargo.
+    """
+    lote = []
+    for cargo in queryset.iterator(chunk_size=chunk_size):
+        lote.append(cargo)
+        if len(lote) == chunk_size:
+            yield lote
+            lote = []
+    if lote:
+        yield lote
+
+
 def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=False):
+    """
+    Construye el Excel del visualizador con el alcance y formato vigentes.
+
+    - Calcula Total General en SQL desde el queryset autorizado sin filtros de pantalla.
+    - Recorre secuencialmente el queryset en lotes de 1.000 sin cachear todos los cargos.
+    - Calcula anchos durante la escritura y reutiliza estilos identicos por tipo de celda.
+    - Mantiene columnas, estilos y valores de la exportacion sin cambios funcionales.
+    """
+    from copy import copy as copy_style
+
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     contexto_cabecera = _resolver_contexto_visualizacion(request)
     queryset = _queryset_visualizacion(request, ignorar_filtros=exportar_todo)
-    contexto_totales_generales = _construir_contexto_totales_generales(
-        list(_queryset_visualizacion(request, ignorar_filtros=True))
+    contexto_totales_generales = _construir_contexto_totales_generales_orm(
+        _queryset_visualizacion(request, ignorar_filtros=True),
+        (),
     )
     columnas_ids, _ = _resolver_columnas_visibles(request, exportar_todo=exportar_todo)
     if not columnas_ids:
@@ -1779,6 +2035,24 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
     wb = Workbook()
     ws = wb.active
     ws.title = "Cargos POF"
+
+    titulo_font = Font(bold=True, size=13)
+    subtitulo_font = Font(size=10)
+    filtros_font = Font(size=10)
+    filtros_alignment = Alignment(wrap_text=True)
+    encabezado_font = Font(bold=True, color="FFFFFF")
+    encabezado_fill = PatternFill("solid", fgColor="2444D8")
+    encabezado_alignment = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True,
+    )
+    cuerpo_alignment = Alignment(
+        vertical="top",
+        wrap_text=True,
+    )
+    borde_superior_cue = Side(style="medium", color="2444D8")
+    borde_superior_anexo = Side(style="thin", color="111827")
 
     total_columnas = len(columnas)
     ultima_columna = get_column_letter(total_columnas)
@@ -1792,35 +2066,62 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
 
     ws.merge_cells(f"A1:{ultima_columna}1")
     ws["A1"] = titulo
-    ws["A1"].font = Font(bold=True, size=13)
+    ws["A1"].font = titulo_font
 
     ws.merge_cells(f"A2:{ultima_columna}2")
     ws["A2"] = subtitulo
-    ws["A2"].font = Font(size=10)
+    ws["A2"].font = subtitulo_font
 
     ws.merge_cells(f"A3:{ultima_columna}3")
     ws["A3"] = f"Filtros aplicados: {_texto_filtros_excel(request, exportar_todo)}"
-    ws["A3"].font = Font(size=10)
-    ws["A3"].alignment = Alignment(wrap_text=True)
+    ws["A3"].font = filtros_font
+    ws["A3"].alignment = filtros_alignment
 
     fila_encabezado = 4
+    anchos_columnas = [
+        max(12, min(len(columna["label"]) + 4, 42))
+        for columna in columnas
+    ]
     for indice, columna in enumerate(columnas, start=1):
         celda = ws.cell(row=fila_encabezado, column=indice, value=columna["label"])
-        celda.font = Font(bold=True, color="FFFFFF")
-        celda.fill = PatternFill("solid", fgColor="2444D8")
-        celda.alignment = Alignment(
-            horizontal="center",
-            vertical="center",
-            wrap_text=True,
-        )
+        celda.font = encabezado_font
+        celda.fill = encabezado_fill
+        celda.alignment = encabezado_alignment
 
-    paginator = Paginator(queryset, 1000)
     fila_actual = fila_encabezado + 1
     clave_localizacion_anterior = None
     claves_totales_vistas = set()
-    for numero_pagina in paginator.page_range:
-        for cargo in paginator.page(numero_pagina).object_list:
+    cue_anterior = None
+    anexo_anterior = None
+    for cargos_lote in _iterar_cargos_exportacion_por_lotes(queryset):
+        contexto_totales_generales["claves_por_cargo"] = {
+            cargo.id: _obtener_clave_agrupacion_visualizacion(cargo.localizacion)
+            for cargo in cargos_lote
+        }
+        for cargo in cargos_lote:
             fila_raw = _serializar_cargo(cargo, contexto_totales_generales)
+            _, cue_actual, anexo_actual = _obtener_claves_jerarquicas_visualizacion(
+                fila_raw
+            )
+            es_inicio_cue = bool(
+                fila_actual > fila_encabezado + 1
+                and cue_actual
+                and cue_actual != cue_anterior
+            )
+            es_inicio_anexo = bool(
+                fila_actual > fila_encabezado + 1
+                and not es_inicio_cue
+                and cue_actual == cue_anterior
+                and anexo_actual
+                and anexo_actual != anexo_anterior
+            )
+            borde_superior = (
+                borde_superior_cue
+                if es_inicio_cue
+                else borde_superior_anexo
+                if es_inicio_anexo
+                else None
+            )
             fila_display, clave_localizacion_anterior = _aplicar_no_repeticion_visual(
                 fila_raw,
                 clave_localizacion_anterior,
@@ -1830,29 +2131,34 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
                 claves_totales_vistas,
             )
             for indice, columna in enumerate(columnas, start=1):
+                valor_excel = _valor_excel_columna(
+                    columna["id"],
+                    fila_display.get(columna["id"], ""),
+                )
                 celda = ws.cell(
                     row=fila_actual,
                     column=indice,
-                    value=_valor_excel_columna(
-                        columna["id"],
-                        fila_display.get(columna["id"], ""),
-                    ),
+                    value=valor_excel,
                 )
-                celda.alignment = Alignment(
-                    vertical="top",
-                    wrap_text=True,
+                valor_texto = "" if valor_excel is None else str(valor_excel)
+                anchos_columnas[indice - 1] = max(
+                    anchos_columnas[indice - 1],
+                    min(len(valor_texto) + 2, 42),
                 )
+                celda.alignment = cuerpo_alignment
+                if borde_superior is not None:
+                    borde = copy_style(celda.border)
+                    borde.top = borde_superior
+                    celda.border = borde
             fila_actual += 1
+            cue_anterior = cue_actual or None
+            anexo_anterior = anexo_actual or None
 
     ws.freeze_panes = "A5"
     ws.auto_filter.ref = f"A{fila_encabezado}:{ultima_columna}{max(fila_actual - 1, fila_encabezado)}"
 
-    for indice, columna in enumerate(columnas, start=1):
+    for indice, ancho in enumerate(anchos_columnas, start=1):
         letra = get_column_letter(indice)
-        ancho = max(12, min(len(columna["label"]) + 4, 42))
-        for fila in ws.iter_rows(min_col=indice, max_col=indice, min_row=5):
-            valor = "" if fila[0].value is None else str(fila[0].value)
-            ancho = max(ancho, min(len(valor) + 2, 42))
         ws.column_dimensions[letra].width = ancho
 
     buffer = BytesIO()

@@ -1,9 +1,12 @@
 import re
 import unicodedata
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
+from django.core.paginator import Paginator
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Prefetch
+from django.db.models import Case, CharField, F, Min, Prefetch, Q, Sum, Value, When
+from django.db.models.functions import Cast, Concat, Substr
 
 from ..models import CargoPof, ProyectosEspecialesPof, ReunidaPof, SnapshotPadronLocalizacionPof
 from .exportacion_politicas import (
@@ -14,7 +17,9 @@ from .exportacion_politicas import (
 )
 from .exportacion_rows import (
     aplicar_vaciado_repetidos,
+    construir_filas_exportacion,
     construir_filas_normalizadas,
+    obtener_clave_total_general,
 )
 from .exportacion_columnas_config import (
     REPETIR_POR_CUE,
@@ -34,7 +39,6 @@ from .grilla_pof.proyecto_especial import (
 from .historial_service import (
     enriquecer_filas_con_historial_cantidad,
     enriquecer_filas_con_historial_observacion,
-    enriquecer_filas_con_historial_estado,
 )
 from .niveles_service import (
     NIVELES_VALIDOS as NOMBRES_NIVEL,
@@ -96,6 +100,124 @@ FUENTES_NO_REPETIR_PROYECTO_ESPECIAL = {
     "establecimiento",
     "total_general",
 }
+
+CUES_POR_PAGINA_EXPORTACION = 5
+
+COLUMNAS_BUSQUEDA_EXPORTACION = (
+    {"id": "cueanexo", "label": "CUE-Anexo"},
+    {"id": "cuof", "label": "CUOF"},
+    {"id": "ceic", "label": "CEIC"},
+    {"id": "cargo", "label": "Cargo"},
+    {"id": "puntos", "label": "Puntos"},
+    {"id": "oferta", "label": "Oferta"},
+    {"id": "estado_pof", "label": "Estado POF"},
+    {"id": "observacion", "label": "Observación"},
+)
+
+
+def _obtener_busqueda_columna_exportacion(request):
+    """
+    Lee el único filtro de columna permitido para el preview de Reunidas.
+
+    - Recorre una whitelist fija de las ocho columnas comunes.
+    - Ignora nombres de parámetros que no pertenezcan a esa whitelist.
+    - Limita la longitud del texto antes de construir el filtro ORM.
+    """
+    for columna in COLUMNAS_BUSQUEDA_EXPORTACION:
+        columna_id = columna["id"]
+        valor = limpiar_texto(request.GET.get(f"col_{columna_id}", ""), 120)
+        if valor:
+            return columna_id, valor
+    return COLUMNAS_BUSQUEDA_EXPORTACION[0]["id"], ""
+
+
+def _consulta_estado_pof_exportacion(valor):
+    """
+    Construye la consulta segura para Estado POF.
+
+    - Prioriza coincidencias exactas contra código o etiqueta visible.
+    - Si no hay coincidencia exacta, permite coincidencias parciales entre las choices.
+    - Mantiene la lista de estados derivada de las choices del modelo.
+    - No acepta nombres de campo ni expresiones ORM desde el navegador.
+    """
+    valor_normalizado = valor.casefold()
+    choices = tuple(CargoPof.EstadoPof.choices)
+    coincidencias_exactas = [
+        codigo
+        for codigo, etiqueta in choices
+        if valor_normalizado in {
+            str(codigo).casefold(),
+            str(etiqueta).casefold(),
+        }
+    ]
+    if coincidencias_exactas:
+        return Q(estado_pof__in=coincidencias_exactas)
+
+    coincidencias_parciales = [
+        codigo
+        for codigo, etiqueta in choices
+        if (
+            valor_normalizado in str(codigo).casefold()
+            or valor_normalizado in str(etiqueta).casefold()
+        )
+    ]
+    if coincidencias_parciales:
+        return Q(estado_pof__in=coincidencias_parciales)
+
+    return Q(pk__in=[])
+
+
+def _aplicar_busqueda_columna_exportacion(cargos_queryset, columna_id, valor):
+    """
+    Aplica la búsqueda común al queryset ya limitado a una Reunida.
+
+    - Resuelve cada columna mediante ramas explícitas y parametrizadas.
+    - Busca Oferta en el cargo o, cuando está vacía, en el snapshot vigente.
+    - Mantiene el filtrado en base de datos antes de paginar el preview.
+    - Devuelve el queryset sin modificar cargos ni materializar filas.
+    """
+    if not valor:
+        return cargos_queryset
+
+    if columna_id == "cueanexo":
+        return cargos_queryset.filter(localizacion__cueanexo__icontains=valor)
+    if columna_id == "cuof":
+        return cargos_queryset.filter(localizacion__cuof__icontains=valor)
+    if columna_id == "ceic":
+        return cargos_queryset.annotate(
+            ceic_busqueda_exportacion=Cast("ceic", CharField()),
+        ).filter(ceic_busqueda_exportacion__icontains=valor)
+    if columna_id == "cargo":
+        return cargos_queryset.filter(cargo__icontains=valor)
+    if columna_id == "puntos":
+        queryset = cargos_queryset.annotate(
+            puntos_busqueda_exportacion=Cast("puntos_asignados", CharField()),
+        )
+        consulta = Q(puntos_busqueda_exportacion__icontains=valor)
+        try:
+            numero = Decimal(valor.replace(",", "."))
+        except (InvalidOperation, TypeError, ValueError):
+            numero = None
+        if numero is not None:
+            consulta |= Q(puntos_asignados=numero)
+        return queryset.filter(consulta)
+    if columna_id == "oferta":
+        return cargos_queryset.filter(
+            Q(oferta__icontains=valor)
+            | (
+                Q(oferta="")
+                & Q(
+                    localizacion__snapshots_padron__vigente=True,
+                    localizacion__snapshots_padron__oferta__icontains=valor,
+                )
+            )
+        ).distinct()
+    if columna_id == "estado_pof":
+        return cargos_queryset.filter(_consulta_estado_pof_exportacion(valor))
+    if columna_id == "observacion":
+        return cargos_queryset.filter(observacion__icontains=valor)
+
+    return cargos_queryset
 
 
 def _obtener_columna_oferta_exportacion():
@@ -634,6 +756,275 @@ def _construir_secciones_preview(
     return secciones_preview
 
 
+def _anotar_claves_preview_reunida(cargos_queryset):
+    """
+    Anota las claves DB-first usadas para elegir las paginas del preview.
+
+    - Replica el CUE base derivado por la normalizacion, tomando los primeros
+      siete caracteres del CUEANEXO disponible.
+    - Aisla por localizacion los cargos sin CUEANEXO utilizable, como hace la
+      agrupacion visual existente para sus casos de fallback.
+    - Mantiene la consulta perezosa para que el queryset completo no se
+      materialice antes de elegir la pagina.
+    """
+    cue_disponible = Q(localizacion__cueanexo__regex=r"^.{7,}$")
+    return cargos_queryset.annotate(
+        _cue_paginacion_exportacion=Case(
+            When(
+                cue_disponible,
+                then=Substr("localizacion__cueanexo", 1, 7),
+            ),
+            default=Cast("localizacion_id", CharField()),
+            output_field=CharField(),
+        ),
+    ).annotate(
+        _unidad_paginacion_exportacion=Case(
+            When(
+                cue_disponible,
+                then=Concat(
+                    Value("CUE:"),
+                    F("_cue_paginacion_exportacion"),
+                    output_field=CharField(),
+                ),
+            ),
+            default=Concat(
+                Value("_sin_cue:"),
+                Cast("localizacion_id", CharField()),
+                output_field=CharField(),
+            ),
+            output_field=CharField(),
+        ),
+    )
+
+
+def _paginar_unidades_preview_reunida(cargos_queryset, request):
+    """
+    Selecciona primero los cinco CUE del preview mediante una consulta agrupada.
+
+    - Respeta el orden funcional actual usando la primera aparicion de cada
+      unidad y sus desempates de localizacion, CEIC e identificador.
+    - Devuelve solo las claves de las unidades de la pagina y el objeto Page
+      para construir los metadatos de navegacion.
+    - No consulta ni normaliza cargos fuera de las unidades seleccionadas.
+    """
+    unidades_queryset = (
+        _anotar_claves_preview_reunida(cargos_queryset)
+        .values("_unidad_paginacion_exportacion")
+        .annotate(
+            _primer_cueanexo=Min("localizacion__cueanexo"),
+            _primer_cuof=Min("localizacion__cuof"),
+            _primer_ceic=Min("ceic"),
+            _primer_id=Min("id"),
+        )
+        .order_by(
+            "_primer_cueanexo",
+            "_primer_cuof",
+            "_primer_ceic",
+            "_primer_id",
+            "_unidad_paginacion_exportacion",
+        )
+        .values_list("_unidad_paginacion_exportacion", flat=True)
+    )
+    paginator = Paginator(
+        unidades_queryset,
+        CUES_POR_PAGINA_EXPORTACION,
+    )
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    return list(page_obj.object_list), page_obj
+
+
+def _restringir_queryset_preview_reunida(cargos_queryset, unidades_pagina):
+    """
+    Restringe el queryset de cargos a las unidades CUE de la pagina actual.
+
+    - Mantiene todos los cargos y CUEANEXO pertenecientes a cada unidad
+      seleccionada.
+    - Conserva el orden de consulta base antes de aplicar la politica exacta
+      de orden de cada nivel en `ordenar_cargos_exportacion`.
+    - Devuelve un queryset vacio cuando la pagina no tiene unidades.
+    """
+    if not unidades_pagina:
+        return cargos_queryset.none()
+
+    return (
+        _anotar_claves_preview_reunida(cargos_queryset)
+        .filter(_unidad_paginacion_exportacion__in=unidades_pagina)
+        .order_by(
+            "localizacion__cueanexo",
+            "localizacion__cuof",
+            "ceic",
+            "id",
+        )
+    )
+
+
+def _obtener_totales_generales_preview_reunida(
+    cargos_queryset,
+    nivel_codigo,
+    unidades_pagina=None,
+):
+    """
+    Obtiene los totales generales completos de los grupos de la pagina.
+
+    - Suma exclusivamente cargos AFECTADOS de las unidades CUE seleccionadas.
+    - Reutiliza la clave de `exportacion_rows` para conservar la semantica de
+      cada nivel y evitar recalcular el total sobre un subconjunto de filas.
+    - Con `unidades_pagina` limita la lectura al preview; sin ese argumento
+      calcula el conjunto completo requerido por Excel.
+    - Devuelve un mapping vacio cuando el filtro no produjo unidades para la
+      pagina, sin intentar anotar un queryset `.none()`.
+    - No modifica cargos ni consulta grupos fuera del alcance solicitado.
+    """
+    schema = obtener_schema_exportacion(nivel_codigo)
+    grupo_total_general = list(schema.get("grupo_total_general") or [])
+    if grupo_total_general not in (["cue"], ["cue", "cuof"]):
+        return None
+    if unidades_pagina is not None and not unidades_pagina:
+        return {}
+
+    cargos_pagina = (
+        _restringir_queryset_preview_reunida(
+            cargos_queryset,
+            unidades_pagina,
+        )
+        if unidades_pagina is not None
+        else _anotar_claves_preview_reunida(cargos_queryset)
+    ).filter(estado_pof=CargoPof.EstadoPof.AFECTADO)
+    if grupo_total_general == ["cue"]:
+        cue_disponible = Q(localizacion__cueanexo__regex=r"^.{7,}$")
+        cargos_pagina = cargos_pagina.annotate(
+            _clave_total_general_exportacion=Case(
+                When(
+                    cue_disponible,
+                    then=F("_cue_paginacion_exportacion"),
+                ),
+                default=Cast("localizacion_id", CharField()),
+                output_field=CharField(),
+            ),
+        )
+        agrupadores = ["_clave_total_general_exportacion"]
+    else:
+        cargos_pagina = cargos_pagina.annotate(
+            _clave_total_general_exportacion=Case(
+                When(
+                    Q(localizacion__cueanexo__regex=r"^.{7,}$"),
+                    then=F("_cue_paginacion_exportacion"),
+                ),
+                default=F("localizacion__cueanexo"),
+                output_field=CharField(),
+            ),
+        )
+        agrupadores = [
+            "_clave_total_general_exportacion",
+            "localizacion__cuof",
+        ]
+
+    totales = {}
+    for agregado in (
+        cargos_pagina
+        .order_by()
+        .values(*agrupadores)
+        .annotate(_total_general=Sum("total"))
+    ):
+        clave_agregado = agregado.get("_clave_total_general_exportacion")
+        datos_agregado = {
+            "cue": clave_agregado,
+            "cueanexo": clave_agregado,
+            "cuof": agregado.get("localizacion__cuof", ""),
+            "localizacion_id": clave_agregado,
+        }
+        clave_total = obtener_clave_total_general(
+            datos_agregado,
+            schema,
+        )
+        totales[clave_total] = agregado.get("_total_general") or Decimal("0")
+    return totales
+
+
+def _aplicar_totales_generales_preview_reunida(
+    filas_normalizadas,
+    nivel_codigo,
+    totales_generales,
+):
+    """
+    Sustituye en memoria el total parcial por el agregado completo de la pagina.
+
+    - Usa exactamente la misma clave de agrupacion que la normalizacion y el
+      Excel para cada nivel.
+    - Mantiene cero cuando un grupo no tiene cargos AFECTADOS.
+    - Solo ajusta el diccionario renderizado; nunca escribe en persistencia.
+    """
+    if totales_generales is None:
+        return
+
+    schema = obtener_schema_exportacion(nivel_codigo)
+    for fila in filas_normalizadas:
+        clave_total = obtener_clave_total_general(fila, schema)
+        total_general = totales_generales.get(clave_total, Decimal("0"))
+        fila["total_general"] = total_general
+        fila["total_general_exportacion"] = total_general
+
+
+def _construir_paginacion_preview_reunida(page_obj, request):
+    """
+    Serializa los metadatos del paginador DB-first del preview común.
+
+    - Mantiene el rango de CUE, anterior/siguiente y el rango elidido de
+      paginas sin recorrer filas normalizadas.
+    - Excluye `page` y `accion` de los enlaces de preview para no limitar ni
+      contaminar Excel.
+    """
+    paginator = page_obj.paginator
+
+    parametros_preview = []
+    for clave, valores in request.GET.lists():
+        if clave in {"page", "accion"}:
+            continue
+        parametros_preview.extend((clave, valor) for valor in valores)
+
+    total_cue = paginator.count
+    total_paginas = (
+        (total_cue + CUES_POR_PAGINA_EXPORTACION - 1)
+        // CUES_POR_PAGINA_EXPORTACION
+        if total_cue
+        else 0
+    )
+    primer_cue = (
+        ((page_obj.number - 1) * CUES_POR_PAGINA_EXPORTACION) + 1
+        if total_cue
+        else 0
+    )
+    ultimo_cue = (
+        min(page_obj.number * CUES_POR_PAGINA_EXPORTACION, total_cue)
+        if total_cue
+        else 0
+    )
+
+    return {
+        "mostrar": bool(total_cue),
+        "pagina_actual": page_obj.number,
+        "total_paginas": total_paginas,
+        "cues_por_pagina": CUES_POR_PAGINA_EXPORTACION,
+        "total_cue": total_cue,
+        "primer_cue": primer_cue,
+        "ultimo_cue": ultimo_cue,
+        "tiene_anterior": page_obj.has_previous(),
+        "pagina_anterior": (
+            page_obj.previous_page_number() if page_obj.has_previous() else None
+        ),
+        "tiene_siguiente": page_obj.has_next(),
+        "pagina_siguiente": (
+            page_obj.next_page_number() if page_obj.has_next() else None
+        ),
+        "page_range": (
+            list(paginator.get_elided_page_range(number=page_obj.number))
+            if total_cue
+            else []
+        ),
+        "querystring_base": urlencode(parametros_preview),
+    }
+
+
 def _armar_excel_querystring_reunida(anio, nivel_codigo, columnas_visibles_keys):
     if not columnas_visibles_keys:
         return ""
@@ -956,7 +1347,17 @@ def _obtener_filas_reales_exportacion(
     nivel_codigo=None,
     incluir_historial_cantidad=False,
     incluir_historial_observacion=False,
+    incluir_historial_estado=False,
+    totales_generales=None,
 ):
+    """
+    Construye filas normalizadas para el conjunto de cargos recibido.
+
+    - Mantiene las politicas de orden y render existentes.
+    - Permite que el preview comun limite antes el queryset y sus historiales.
+    - Corrige en memoria los totales generales cuando fueron agregados sobre
+      todos los cargos de los CUE seleccionados.
+    """
     cargos_ordenados = ordenar_cargos_exportacion(cargos_queryset, nivel_codigo)
 
     if nivel_codigo:
@@ -965,11 +1366,21 @@ def _obtener_filas_reales_exportacion(
             nivel_codigo=nivel_codigo,
             contexto="REUNIDA",
             incluir_historial_cantidad=incluir_historial_cantidad,
+            incluir_historial_estado=incluir_historial_estado,
         )
         filas_normalizadas = grilla["filas_normalizadas"]
         if incluir_historial_observacion:
             enriquecer_filas_con_historial_observacion(filas_normalizadas)
-        return grilla["filas_exportacion"], filas_normalizadas
+        _aplicar_totales_generales_preview_reunida(
+            filas_normalizadas,
+            nivel_codigo,
+            totales_generales,
+        )
+        filas_exportacion = construir_filas_exportacion(
+            grilla["schema"],
+            filas_normalizadas,
+        )
+        return filas_exportacion, filas_normalizadas
 
     filas_normalizadas = construir_filas_normalizadas(cargos_ordenados, nivel_codigo)
     if incluir_historial_cantidad:
@@ -1174,6 +1585,13 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
 
 
 def construir_contexto_exportacion(request):
+    """
+    Construye el contexto de exportación manteniendo separado el preview del Excel.
+
+    - Usa solo los cinco CUE de la pagina para el preview web de Reunidas comunes.
+    - Conserva todas las filas normalizadas y proyectadas cuando la accion es Excel.
+    - Mantiene sin cambios Proyecto Especial, calculos, agrupaciones y orden de exportacion.
+    """
     cabecera_tipo = str(request.GET.get("cabecera_tipo", "") or "").strip().upper()
     proyecto_especial_id = limpiar_texto(request.GET.get("proyecto_especial_id", ""), 20)
     if cabecera_tipo == "PROYECTO_ESPECIAL" or proyecto_especial_id:
@@ -1267,6 +1685,13 @@ def construir_contexto_exportacion(request):
     separadores_filas_exportacion = []
     mensaje_exportacion = ""
     reunida_obj = None
+    cargos_queryset_reunida = None
+    es_excel = request.GET.get("accion") == "excel"
+    paginacion_preview = {}
+    busqueda_sin_resultados = False
+    busqueda_columna_id, busqueda_columna_valor = _obtener_busqueda_columna_exportacion(
+        request
+    )
 
     if not tiene_contexto:
         mensaje_exportacion = "Debe seleccionar una Reunida valida por anio y nivel."
@@ -1274,21 +1699,46 @@ def construir_contexto_exportacion(request):
         try:
             reunida_obj = ReunidaPof.objects.get(anio=int(anio), nivel=nivel_codigo)
             nivel_nombre = NOMBRES_NIVEL.get(nivel_codigo, reunida_obj.get_nivel_display())
-            _filas_schema, filas_normalizadas_exportacion = _obtener_filas_reales_exportacion(
-                obtener_columnas_por_nivel(nivel_exportacion),
-                _obtener_cargos_exportacion(reunida_obj),
-                nivel_codigo=nivel_codigo,
-                incluir_historial_cantidad=(
-                    request.GET.get("accion") != "excel"
-                    and tiene_columna_modificacion_cantidad
-                ),
-                incluir_historial_observacion=(
-                    request.GET.get("accion") != "excel"
-                ),
-            )
-            if request.GET.get("accion") != "excel":
-                enriquecer_filas_con_historial_estado(
-                    filas_normalizadas_exportacion
+            cargos_queryset_reunida = _obtener_cargos_exportacion(reunida_obj)
+            if es_excel:
+                _filas_schema, filas_normalizadas_exportacion = _obtener_filas_reales_exportacion(
+                    obtener_columnas_por_nivel(nivel_exportacion),
+                    cargos_queryset_reunida,
+                    nivel_codigo=nivel_codigo,
+                )
+            else:
+                cargos_queryset = _aplicar_busqueda_columna_exportacion(
+                    cargos_queryset_reunida,
+                    busqueda_columna_id,
+                    busqueda_columna_valor,
+                )
+                unidades_pagina, page_obj = _paginar_unidades_preview_reunida(
+                    cargos_queryset,
+                    request,
+                )
+                cargos_pagina = _restringir_queryset_preview_reunida(
+                    cargos_queryset,
+                    unidades_pagina,
+                )
+                totales_generales = _obtener_totales_generales_preview_reunida(
+                    cargos_queryset,
+                    nivel_codigo,
+                    unidades_pagina=unidades_pagina,
+                )
+                _filas_schema, filas_normalizadas_exportacion = _obtener_filas_reales_exportacion(
+                    obtener_columnas_por_nivel(nivel_exportacion),
+                    cargos_pagina,
+                    nivel_codigo=nivel_codigo,
+                    incluir_historial_cantidad=(
+                        tiene_columna_modificacion_cantidad
+                    ),
+                    incluir_historial_observacion=True,
+                    incluir_historial_estado=True,
+                    totales_generales=totales_generales,
+                )
+                paginacion_preview = _construir_paginacion_preview_reunida(
+                    page_obj,
+                    request,
                 )
             filas_exportacion = _proyectar_filas_exportacion(
                 nivel_exportacion,
@@ -1304,7 +1754,20 @@ def construir_contexto_exportacion(request):
                 filas_normalizadas_exportacion
             )
             if not filas_exportacion:
-                mensaje_exportacion = "La Reunida existe, pero no tiene cargos cargados para exportar."
+                if (
+                    not es_excel
+                    and busqueda_columna_valor
+                    and cargos_queryset_reunida is not None
+                    and cargos_queryset_reunida.exists()
+                ):
+                    busqueda_sin_resultados = True
+                    mensaje_exportacion = (
+                        "No se encontraron resultados para la búsqueda actual."
+                    )
+                else:
+                    mensaje_exportacion = (
+                        "La Reunida existe, pero no tiene cargos cargados para exportar."
+                    )
         except ReunidaPof.DoesNotExist:
             mensaje_exportacion = "No existe una Reunida POF para el anio y nivel seleccionados."
         except (ProgrammingError, OperationalError):
@@ -1316,14 +1779,14 @@ def construir_contexto_exportacion(request):
         filas=filas_exportacion,
         filas_normalizadas=filas_normalizadas_exportacion,
     )
-    secciones_exportacion_globales = agrupar_filas_por_seccion(
+    secciones_exportacion_globales_preview = agrupar_filas_por_seccion(
         nivel_codigo=nivel_exportacion,
         columnas=columnas_preview,
         filas=filas_exportacion_globales,
         filas_normalizadas=filas_normalizadas_exportacion,
     )
     secciones_preview = _construir_secciones_preview(
-        secciones_exportacion_globales,
+        secciones_exportacion_globales_preview,
         columnas_disponibles_base,
         columnas_visibles_keys,
         separadores_filas_exportacion,
@@ -1363,6 +1826,12 @@ def construir_contexto_exportacion(request):
         "separadores_filas_exportacion": separadores_filas_exportacion,
         "secciones_exportacion": secciones_exportacion,
         "secciones_preview": secciones_preview,
+        "columnas_busqueda": COLUMNAS_BUSQUEDA_EXPORTACION,
+        "busqueda_columna_id": busqueda_columna_id,
+        "busqueda_columna_valor": busqueda_columna_valor,
+        "busqueda_sin_resultados": busqueda_sin_resultados,
+        "filas_preview_count": len(filas_exportacion_globales),
+        "paginacion_preview": paginacion_preview,
         "columnas_preview_cantidad": len(columnas_disponibles),
         "columnas_visuales_extra": columnas_visuales_extra,
         "columnas_preview_colspan": len(columnas_disponibles) + columnas_visuales_extra,

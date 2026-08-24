@@ -46,7 +46,7 @@ from .visualizacion_cargos_localizacion_service import OFERTAS_FILTRO_VISUALIZAC
 
 
 PAGE_SIZE_OPTIONS = (10, 30, 50, 100)
-CUES_POR_PAGINA_DETALLE = 25
+CUES_POR_PAGINA_DETALLE = 5
 
 FILTROS_DETALLE_REUNIDA = (
     "cueanexo",
@@ -617,11 +617,18 @@ def _construir_opciones_filtros_detalle_reunida():
 
 
 def _obtener_busquedas_columna_detalle_reunida(request):
+    """
+    Normaliza las busquedas rapidas por columna recibidas por el Detalle.
+
+    - Acepta solo las columnas habilitadas para esta pantalla.
+    - Limita cada texto a 120 caracteres, igual que el control frontend.
+    - Omite criterios vacios sin alterar los filtros avanzados.
+    """
     busquedas = {}
     for columna_id in COLUMNAS_BUSQUEDA_DETALLE_IDS:
         valor = _normalizar_texto_filtro_detalle(
             request.GET.get(f"col_{columna_id}", ""),
-            180,
+            120,
         )
         if valor:
             busquedas[columna_id] = valor
@@ -795,6 +802,7 @@ def _construir_chips_filtros_detalle(
                 "clave": clave,
                 "etiqueta": etiqueta,
                 "valor": valor,
+                "valor_crudo": filtros.get(clave),
                 "querystring": querystrings.get(clave, ""),
             })
     return chips
@@ -818,14 +826,40 @@ def _construir_chips_detalle_dinamicos(
     filtros_avanzados,
     busquedas_columna,
 ):
+    """
+    Construye chips editables para los filtros activos del Detalle.
+
+    - Conserva el tipo, campo e indice usados para quitar cada criterio.
+    - Expone operador y valor sin formato para precargar el dialogo de edicion.
+    - Mapea los nombres historicos de filtros simples a su campo avanzado equivalente.
+    """
     chips = []
+    campos_edicion_simples = {
+        "cue_busqueda": "cue",
+        "establecimiento": "nombre_establecimiento",
+    }
+    filtros_simples_exactos = {
+        "cueanexo",
+        "cue_busqueda",
+        "anexo",
+        "cuof",
+        "ambito",
+        "categoria",
+        "jornada",
+        "ceic",
+        "estado_pof",
+        "unidad_cantidad",
+    }
 
     for chip in filtros_simples_chips:
         texto = f"{chip['etiqueta']}: {chip['valor']}"
         chips.append({
             "tipo": "simple",
             "campo": chip["clave"],
+            "campo_edicion": campos_edicion_simples.get(chip["clave"], chip["clave"]),
             "indice": "",
+            "operador": "2" if chip["clave"] in filtros_simples_exactos else "0",
+            "valor": chip.get("valor_crudo", chip["valor"]),
             "texto": texto,
         })
 
@@ -837,7 +871,10 @@ def _construir_chips_detalle_dinamicos(
         chips.append({
             "tipo": "avanzado",
             "campo": campo_id,
+            "campo_edicion": campo_id,
             "indice": filtro["indice"],
+            "operador": filtro["operador"],
+            "valor": filtro["valor"],
             "texto": f"{etiqueta} {operador}: {valor}",
         })
 
@@ -846,7 +883,10 @@ def _construir_chips_detalle_dinamicos(
         chips.append({
             "tipo": "columna",
             "campo": columna_id,
+            "campo_edicion": columna_id,
             "indice": "",
+            "operador": "0",
+            "valor": valor,
             "texto": f"Columna {etiqueta} {OPERADORES_FILTRO_DETALLE['0']}: {valor}",
         })
 

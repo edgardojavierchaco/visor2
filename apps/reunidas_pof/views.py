@@ -245,6 +245,69 @@ def _valor_excel_exportacion(valor):
 
     return valor
 
+
+def _escribir_filas_excel_optimizado(ws, filas, columnas, mensaje=""):
+    """
+    Escribe las mismas filas Excel y combina formato y anchos en una pasada.
+
+    - Conserva la conversion de `_valor_excel_exportacion`.
+    - Replica los formatos de texto, cantidades, puntos y totales vigentes.
+    - Mantiene los anchos minimo 10 y maximo 42 usados por el exportador.
+    - No altera filas, columnas, orden ni los bordes aplicados posteriormente.
+    """
+    from openpyxl.styles import Alignment
+    from openpyxl.utils import get_column_letter
+
+    metadata_columnas = [
+        (
+            _es_columna_texto_excel(columna),
+            _es_columna_numerica_excel(columna),
+            _es_columna_cantidad_entera_excel(columna),
+        )
+        for columna in columnas
+    ]
+    cuerpo_alignment = Alignment(
+        vertical="top",
+        wrap_text=True,
+    )
+
+    for fila in filas:
+        ws.append([_valor_excel_exportacion(valor) for valor in fila])
+
+    if mensaje and not filas:
+        ws.append([mensaje])
+
+    cantidad_columnas = max(ws.max_column, 1)
+    anchos_columnas = [10] * cantidad_columnas
+    for numero_fila, fila in enumerate(
+        ws.iter_rows(min_row=2),
+        start=2,
+    ):
+        for indice_columna, celda in enumerate(fila):
+            if numero_fila >= 3 and indice_columna < len(metadata_columnas):
+                celda.alignment = cuerpo_alignment
+                es_texto, es_numerica, es_cantidad_entera = metadata_columnas[
+                    indice_columna
+                ]
+                if es_texto:
+                    if celda.value not in (None, ""):
+                        celda.value = str(celda.value)
+                    celda.number_format = "@"
+                elif es_numerica and isinstance(celda.value, (int, float)):
+                    celda.number_format = (
+                        "#,##0" if es_cantidad_entera else "#,##0.00"
+                    )
+
+            valor = "" if celda.value is None else str(celda.value)
+            anchos_columnas[indice_columna] = max(
+                anchos_columnas[indice_columna],
+                min(len(valor) + 4, 42),
+            )
+
+    for indice_columna, ancho in enumerate(anchos_columnas, start=1):
+        ws.column_dimensions[get_column_letter(indice_columna)].width = ancho
+
+
 def _normalizar_columna_excel(valor):
     return str(valor or "").strip().lower()
 
@@ -376,11 +439,24 @@ def _aplicar_bordes_secciones_excel(ws, secciones, fila_inicio, max_columna):
         fila_actual = ultima_fila + 1
 
 
-def _aplicar_bordes_grupos_visual_excel(ws, separadores_filas, fila_inicio, max_columna):
+def _aplicar_bordes_grupos_visual_excel(
+    ws,
+    separadores_filas,
+    fila_inicio,
+    max_columna,
+    color_anexo="111827",
+):
+    """
+    Aplica los separadores visuales de CUE y CUEANEXO al workbook.
+
+    - Usa medium azul para nuevos CUE.
+    - Usa thin con el color recibido para nuevos CUEANEXO.
+    - Permite conservar el color histórico de Proyecto Especial.
+    """
     from openpyxl.styles import Border, Side
 
     borde_cue = Side(style="medium", color="2444D8")
-    borde_anexo = Side(style="thin", color="CBD5E1")
+    borde_anexo = Side(style="thin", color=color_anexo)
 
     for indice, separador in enumerate(separadores_filas or []):
         if separador.get("es_inicio_cue"):
@@ -402,12 +478,20 @@ def _aplicar_bordes_grupos_visual_excel(ws, separadores_filas, fila_inicio, max_
 
 
 def _crear_respuesta_excel_exportacion(contexto):
+    """
+    Genera el workbook Excel respetando el pipeline de filas ya construido.
+
+    - Optimiza solo Reunidas comunes combinando formato y anchos en una pasada.
+    - Conserva el recorrido baseline completo para Proyecto Especial.
+    - Mantiene bordes, filtros, freeze panes y encabezados existentes.
+    """
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
 
     wb = Workbook()
     ws = wb.active
     reunida = contexto.get("reunida", {})
+    es_proyecto_especial = contexto.get("es_proyecto_especial", False)
     columnas = contexto.get("columnas", [])
     filas = contexto.get("filas_exportacion", [])
     separadores_filas = contexto.get("separadores_filas_exportacion", [])
@@ -433,32 +517,43 @@ def _crear_respuesta_excel_exportacion(contexto):
             wrap_text=True,
         )
 
-    for fila in filas:
-        ws.append([_valor_excel_exportacion(valor) for valor in fila])
-
-    if mensaje and not filas:
-        ws.append([mensaje])
+    if es_proyecto_especial:
+        for fila in filas:
+            ws.append([_valor_excel_exportacion(valor) for valor in fila])
+        if mensaje and not filas:
+            ws.append([mensaje])
+    else:
+        _escribir_filas_excel_optimizado(
+            ws,
+            filas,
+            columnas,
+            mensaje=mensaje,
+        )
 
     max_columna = max(len(columnas), 1)
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_columna)
     ws.freeze_panes = "A3"
 
     _aplicar_autofiltro_excel(ws, fila_encabezado=2, max_columna=max_columna)
-    _aplicar_formato_columnas_excel(ws, columnas, fila_inicio=3)
-    _aplicar_bordes_secciones_excel(
-        ws,
-        secciones,
-        fila_inicio=3,
-        max_columna=max_columna,
-    )
+    if es_proyecto_especial:
+        _aplicar_formato_columnas_excel(ws, columnas, fila_inicio=3)
+    if es_proyecto_especial:
+        _aplicar_bordes_secciones_excel(
+            ws,
+            secciones,
+            fila_inicio=3,
+            max_columna=max_columna,
+        )
     _aplicar_bordes_grupos_visual_excel(
         ws,
         separadores_filas,
         fila_inicio=3,
         max_columna=max_columna,
+        color_anexo="CBD5E1" if es_proyecto_especial else "111827",
     )
 
-    _ajustar_ancho_columnas_excel(ws, fila_inicio=2)
+    if es_proyecto_especial:
+        _ajustar_ancho_columnas_excel(ws, fila_inicio=2)
 
     buffer = BytesIO()
     wb.save(buffer)
