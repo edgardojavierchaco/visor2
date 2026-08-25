@@ -255,10 +255,11 @@ def carga_seccion_form(request, seccion_id=None):
         messages.error(request, "Seleccioná un CUE-Anexo y un ciclo para cargar secciones.")
         return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
 
-    seccion_edicion = _seccion_segura(seccion_id, especial_context) if seccion_id else None
-    
-    if not seccion_edicion:
-        seccion_edicion = SeccionEspecial(
+    es_edicion = seccion_id is not None
+    seccion = _seccion_segura(seccion_id, especial_context) if es_edicion else None
+
+    if seccion is None:
+        seccion = SeccionEspecial(
             cueanexo=especial_context["cueanexo"],
             ciclo=especial_context["ciclo"]
         )
@@ -266,7 +267,7 @@ def carga_seccion_form(request, seccion_id=None):
     if request.method == "POST":
         form = EspecialSeccionForm(
             request.POST,
-            instance=seccion_edicion,
+            instance=seccion,
             ciclo=especial_context["ciclo"],
             cueanexo=especial_context["cueanexo"],
         )
@@ -279,7 +280,7 @@ def carga_seccion_form(request, seccion_id=None):
         messages.error(request, "Revisá los datos del formulario para guardar la sección.")
     else:
         form = EspecialSeccionForm(
-            instance=seccion_edicion,
+            instance=seccion,
             ciclo=especial_context["ciclo"],
             cueanexo=especial_context["cueanexo"],
         )
@@ -287,8 +288,9 @@ def carga_seccion_form(request, seccion_id=None):
     context.update(
         {
             "form": form,
-            "seccion_edicion": seccion_edicion,
-            "form_title": "Editar Sección" if seccion_edicion else "Agregar Sección",
+            "seccion_edicion": seccion if es_edicion else None,
+            "form_title": "Editar Sección" if es_edicion else "Agregar Sección",
+            "oferta_educativa_sin_configurar": form.oferta_educativa_sin_configurar,
         }
     )
     return render(request, "especial/form_seccion_especial.html", context)

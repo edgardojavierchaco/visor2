@@ -18,6 +18,7 @@ LONGITUD_CUEANEXO = 9
 PADRON_DB_ALIAS = "default"
 USUARIOS_DB_ALIAS = "default"
 PREFIJO_OFERTA_COMUN = "Común -"
+PREFIJO_OFERTA_ESPECIAL = "Especial -"
 TERMINO_MATRICULA_COMPARTIDA = "integracion"
 ROLES_AUTORIZADOS_ESPECIAL = {
     "Administrador",
@@ -249,6 +250,43 @@ def get_datos_establecimiento_especial(cueanexo):
         .filter(cueanexo=cueanexo)
         .order_by("cueanexo", "nom_est")
         .first()
+    )
+
+
+def get_ofertas_educativas_especiales(cueanexo, padron_queryset=None):
+    """Obtiene los nombres de ofertas activas de Especial para un CUE-Anexo."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return []
+
+    queryset = (
+        padron_queryset
+        if padron_queryset is not None
+        else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    )
+    valores = (
+        queryset
+        .filter(
+            cueanexo=cueanexo,
+            oferta__istartswith=PREFIJO_OFERTA_ESPECIAL,
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+        .exclude(oferta__isnull=True)
+        .exclude(oferta__exact="")
+        .values_list("oferta", flat=True)
+        .distinct()
+        .order_by("oferta")
+    )
+
+    ofertas_por_clave = {}
+    for valor in valores:
+        oferta = str(valor or "").strip()
+        if oferta:
+            ofertas_por_clave.setdefault(oferta.casefold(), oferta)
+    return sorted(
+        ofertas_por_clave.values(),
+        key=lambda oferta: (oferta.casefold(), oferta),
     )
 
 

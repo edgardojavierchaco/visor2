@@ -3,61 +3,702 @@
 {% block especial_subtitle %}Ficha integral de la sección/grupo seleccionado.{% endblock %}
 
 {% block especial_content %}
-<div class="cef-panel">
-    <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Gestionar sección <span>» Sección {{ seccion.nombre_seccion }}</span></h2>
-        <div class="cef-panel-actions">
-            <a class="btn btn-outline-secondary" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+<div class="cef-panel gestionar-seccion-page">
+    <div class="cef-panel-head gestionar-seccion-header">
+        <div class="gestionar-seccion-heading">
+            <span class="gestionar-seccion-kicker">Gestión de sección</span>
+            <h2 class="gestionar-seccion-title">Sección {{ seccion.nombre_seccion }}</h2>
+            <p class="gestionar-seccion-subtitle">Gestión integral de la sección</p>
+            <div class="gestionar-seccion-meta" aria-label="Contexto de la sección">
+                <span><i class="fa-solid fa-clock" aria-hidden="true"></i>{{ seccion.turno|default:"Sin turno" }}</span>
+                <span class="gestionar-seccion-meta-separator" aria-hidden="true">·</span>
+                <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i>{{ seccion.lugar_dictado|default:"Sin lugar de dictado" }}</span>
+                <span class="badge text-bg-{% if seccion.estado == 'activo' %}success{% elif seccion.estado == 'borrador' %}warning{% elif seccion.estado == 'cerrado' %}danger{% else %}secondary{% endif %} gestionar-seccion-header-status">
+                    {{ seccion.get_estado_display }}
+                </span>
+            </div>
+        </div>
+        <div class="cef-panel-actions gestionar-seccion-actions">
+            <a class="btn btn-outline-secondary gestionar-seccion-action" href="{% url 'especial:carga_seccion' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a Secciones
             </a>
             {% if especial_context.puede_operar %}
-            <a class="btn btn-outline-primary" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+            <a class="btn btn-outline-primary gestionar-seccion-action" href="{% url 'especial:carga_seccion_editar' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                 <i class="fa-solid fa-pen"></i> Editar sección
             </a>
-            <button class="btn btn-outline-primary" type="button" data-open-personas-modal>
+            <button class="btn btn-primary gestionar-seccion-action gestionar-seccion-action-primary" type="button" data-open-personas-modal>
                 <i class="fa-solid fa-user-plus"></i> Inscribir alumno
             </button>
-            <button class="btn btn-primary" type="button" data-open-docentes-modal>
+            <button class="btn btn-primary gestionar-seccion-action gestionar-seccion-action-primary" type="button" data-open-docentes-modal>
                 <i class="fa-solid fa-chalkboard-user"></i> Asignar docente
             </button>
             {% endif %}
         </div>
     </div>
 
-    <div class="cef-panel-body">
-        <div class="mb-3">
-            <span class="cef-context-pill">
-                <i class="fa-solid fa-clipboard-list"></i>
-                <span><strong>Sección {{ seccion.nombre_seccion }}</strong></span>
-                <span>{{ seccion.turno }}</span>
-                <span>{{ seccion.lugar_dictado|default:"Sin lugar de dictado" }}</span>
-            </span>
-        </div>
-
+    <div class="cef-panel-body gestionar-seccion-body">
         <div data-cef-fragment="gestion-resumen">
             {% include "especial/gestionar_seccion_resumen_especial.html" %}
         </div>
 
-        <div class="cef-edit-panel">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <h3 class="mb-0">Alumnos de la sección</h3>
+        <section class="gestionar-seccion-card gestionar-seccion-students-card" aria-labelledby="gestionar-seccion-alumnos-titulo">
+            <div class="gestionar-seccion-card-header">
+                <div class="gestionar-seccion-card-title-wrap">
+                    <span class="gestionar-seccion-card-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span>
+                    <div>
+                        <h3 id="gestionar-seccion-alumnos-titulo">Alumnos de la sección</h3>
+                        <span class="gestionar-seccion-card-caption">Inscripciones y estado de cada alumno</span>
+                    </div>
+                </div>
+                <span class="gestionar-seccion-card-count">{{ inscripciones|length }} registro{{ inscripciones|length|pluralize }}</span>
             </div>
             <div data-cef-fragment="inscripciones-seccion">
                 {% include "especial/inscripciones_seccion_lista_especial.html" %}
             </div>
-        </div>
+        </section>
 
-        <div class="cef-edit-panel">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <h3 class="mb-0">Docentes de la sección</h3>
+        <section class="gestionar-seccion-card gestionar-seccion-teachers-card" aria-labelledby="gestionar-seccion-docentes-titulo">
+            <div class="gestionar-seccion-card-header">
+                <div class="gestionar-seccion-card-title-wrap">
+                    <span class="gestionar-seccion-card-icon" aria-hidden="true"><i class="fa-solid fa-chalkboard-user"></i></span>
+                    <div>
+                        <h3 id="gestionar-seccion-docentes-titulo">Docentes de la sección</h3>
+                        <span class="gestionar-seccion-card-caption">Asignaciones y vigencia en la sección</span>
+                    </div>
+                </div>
+                <span class="gestionar-seccion-card-count">{{ docentes_activos_count|default:0 }} activos / {{ docentes|length }} total</span>
             </div>
             <div data-cef-fragment="docentes-seccion">
                 {% include "especial/docentes_seccion_lista_especial.html" %}
             </div>
-        </div>
+        </section>
 
     </div>
 </div>
 {% include "especial/modal_busqueda_alumno_especial.html" %}
 {% include "especial/modal_busqueda_docente_especial.html" %}
+
+<style>
+    .gestionar-seccion-page {
+        overflow: hidden;
+    }
+
+    .gestionar-seccion-page .gestionar-seccion-header {
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding: 1.35rem 1.5rem;
+    }
+
+    .gestionar-seccion-heading {
+        flex: 1 1 360px;
+        min-width: 0;
+    }
+
+    .gestionar-seccion-kicker {
+        color: var(--blue-700);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .08em;
+        margin-bottom: .25rem;
+        text-transform: uppercase;
+    }
+
+    .gestionar-seccion-title {
+        color: var(--slate-900);
+        font-size: clamp(1.45rem, 2.4vw, 2rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .gestionar-seccion-subtitle {
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+        margin: .35rem 0 .7rem;
+    }
+
+    .gestionar-seccion-meta {
+        align-items: center;
+        color: var(--slate-700);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: var(--fs-sm);
+        gap: .45rem;
+    }
+
+    .gestionar-seccion-meta > span:not(.badge) {
+        align-items: center;
+        display: inline-flex;
+        gap: .35rem;
+    }
+
+    .gestionar-seccion-meta i {
+        color: var(--primary);
+        font-size: .82rem;
+    }
+
+    .gestionar-seccion-meta-separator {
+        color: var(--text-faint);
+        font-weight: 700;
+    }
+
+    .gestionar-seccion-header-status {
+        align-items: center;
+        display: inline-flex;
+        min-height: 1.65rem;
+        padding: .28rem .65rem;
+    }
+
+    .gestionar-seccion-page .gestionar-seccion-actions {
+        align-items: stretch;
+        flex: 0 1 auto;
+        gap: .55rem;
+        justify-content: flex-end;
+    }
+
+    .gestionar-seccion-action {
+        align-items: center;
+        border-radius: var(--r-sm);
+        display: inline-flex;
+        flex: 0 1 168px;
+        font-size: var(--fs-sm);
+        gap: .45rem;
+        justify-content: center;
+        line-height: 1.2;
+        min-height: 36px;
+        min-width: 150px;
+        padding: .55rem .8rem;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .gestionar-seccion-action i {
+        flex: 0 0 1rem;
+        font-size: .9rem;
+        width: 1rem;
+    }
+
+    .gestionar-seccion-action-primary {
+        background: linear-gradient(155deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        border-color: var(--blue-800);
+        color: #fff;
+    }
+
+    .gestionar-seccion-action-primary:hover,
+    .gestionar-seccion-action-primary:focus-visible {
+        background: linear-gradient(155deg, var(--blue-500) 0%, var(--blue-700) 100%);
+        border-color: var(--blue-700);
+        color: #fff;
+    }
+
+    .gestionar-seccion-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+    .gestionar-seccion-body > [data-cef-fragment="gestion-resumen"] {
+        min-width: 0;
+    }
+
+    .gestionar-seccion-context-bar {
+        align-items: stretch;
+        background: #f7faff;
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        display: grid;
+        gap: 0;
+        grid-template-columns: minmax(135px, max-content) minmax(240px, 1fr) minmax(100px, max-content);
+        margin-bottom: 1.15rem;
+        overflow: hidden;
+    }
+
+    .gestionar-seccion-context-item {
+        min-width: 0;
+        padding: .65rem .85rem;
+    }
+
+    .gestionar-seccion-context-item + .gestionar-seccion-context-item {
+        border-left: 1px solid var(--border);
+    }
+
+    .gestionar-seccion-context-item span {
+        color: var(--text-muted);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .06em;
+        line-height: 1.1;
+        margin-bottom: .2rem;
+        text-transform: uppercase;
+    }
+
+    .gestionar-seccion-context-item strong {
+        color: var(--blue-900);
+        display: block;
+        font-size: var(--fs-sm);
+        font-weight: 800;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .gestionar-seccion-data-grid {
+        display: grid;
+        gap: .85rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-bottom: 1rem;
+    }
+
+    .gestionar-seccion-data-panel {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-xs);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .gestionar-seccion-data-panel h3 {
+        align-items: center;
+        background: #f7faff;
+        border-bottom: 1px solid var(--border);
+        color: var(--slate-900);
+        display: flex;
+        font-size: var(--fs-sm);
+        font-weight: 800;
+        gap: .45rem;
+        letter-spacing: .02em;
+        margin: 0;
+        padding: .7rem .85rem;
+    }
+
+    .gestionar-seccion-data-panel h3 i {
+        color: var(--primary);
+        font-size: .9rem;
+    }
+
+    .gestionar-seccion-data-list {
+        display: grid;
+        flex: 1 1 auto;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0;
+        padding: .25rem .85rem;
+    }
+
+    .gestionar-seccion-data-list > div {
+        border-bottom: 1px solid #e6edf4;
+        min-width: 0;
+        padding: .58rem .15rem;
+    }
+
+    .gestionar-seccion-data-list > div:nth-last-child(-n + 2) {
+        border-bottom: 0;
+    }
+
+    .gestionar-seccion-data-item-wide {
+        grid-column: 1 / -1;
+    }
+
+    .gestionar-seccion-data-list dt {
+        color: var(--text-muted);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0 0 .22rem;
+    }
+
+    .gestionar-seccion-data-list dd {
+        color: var(--slate-900);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        line-height: 1.3;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .gestionar-seccion-data-emphasis {
+        color: var(--blue-800) !important;
+        font-size: 1.05rem !important;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .gestionar-seccion-data-list .badge {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        min-height: 1.65rem;
+        padding: .28rem .65rem;
+    }
+
+    .gestionar-seccion-description {
+        background: #f8fbff;
+        border: 1px solid #e1eaf3;
+        border-radius: var(--r-md);
+        margin-bottom: .1rem;
+        padding: .8rem .95rem;
+    }
+
+    .gestionar-seccion-description h3 {
+        align-items: center;
+        color: var(--slate-800);
+        display: flex;
+        font-size: var(--fs-sm);
+        font-weight: 800;
+        gap: .45rem;
+        margin: 0 0 .35rem;
+    }
+
+    .gestionar-seccion-description h3 i {
+        color: var(--primary);
+    }
+
+    .gestionar-seccion-description p {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        line-height: 1.45;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .gestionar-seccion-summary-alert {
+        margin: 0;
+    }
+
+    .gestionar-seccion-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-xs);
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .gestionar-seccion-card-header {
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        justify-content: space-between;
+        padding: .9rem 1rem;
+    }
+
+    .gestionar-seccion-card-title-wrap {
+        align-items: center;
+        display: flex;
+        gap: .65rem;
+        min-width: 0;
+    }
+
+    .gestionar-seccion-card-icon {
+        align-items: center;
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: 50%;
+        color: var(--primary);
+        display: inline-flex;
+        flex: 0 0 32px;
+        height: 32px;
+        justify-content: center;
+        width: 32px;
+    }
+
+    .gestionar-seccion-card-header h3 {
+        color: var(--slate-900);
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .gestionar-seccion-card-caption {
+        color: var(--text-muted);
+        display: block;
+        font-size: var(--fs-xs);
+        line-height: 1.25;
+        margin-top: .18rem;
+    }
+
+    .gestionar-seccion-card-count {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: 999px;
+        color: var(--blue-800);
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        line-height: 1.2;
+        padding: .35rem .65rem;
+        white-space: nowrap;
+    }
+
+    .gestionar-seccion-card > [data-cef-fragment] {
+        padding: 0 1rem 1rem;
+    }
+
+    .gestionar-seccion-card .cef-tools {
+        margin-bottom: .85rem;
+        padding-top: .95rem;
+    }
+
+    .gestionar-seccion-card .cef-empty-state,
+    .gestionar-seccion-card > [data-cef-fragment] > .alert {
+        margin-top: .95rem;
+    }
+
+    .gestionar-seccion-card .cef-tfoot {
+        margin-top: .8rem;
+    }
+
+    .gestionar-seccion-card .cef-tools select,
+    .gestionar-seccion-card .cef-search-wrap {
+        box-sizing: border-box;
+        height: 34px;
+    }
+
+    .gestionar-seccion-card .cef-table-wrap {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .gestionar-seccion-data-table {
+        border-collapse: collapse;
+        margin: 0;
+        min-width: 930px;
+        width: 100%;
+    }
+
+    .gestionar-seccion-docentes-table {
+        min-width: 1120px;
+    }
+
+    .gestionar-seccion-data-table thead tr {
+        background: #eef3f8 !important;
+        border-bottom: 1px solid var(--border-strong);
+    }
+
+    .gestionar-seccion-data-table thead th {
+        background: #eef3f8 !important;
+        border-bottom: 1px solid var(--border-strong) !important;
+        color: var(--slate-700);
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        padding: .65rem .7rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: normal;
+    }
+
+    .gestionar-seccion-data-table tbody tr {
+        background: #fff !important;
+        transition: background-color .12s ease;
+    }
+
+    .gestionar-seccion-data-table tbody tr:hover {
+        background: #f3f8fd !important;
+    }
+
+    .gestionar-seccion-data-table tbody td {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(130, 151, 173, .3);
+        color: var(--slate-800);
+        font-size: var(--fs-sm);
+        line-height: 1.3;
+        padding: .72rem .7rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: normal;
+    }
+
+    .gestionar-seccion-data-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .gestionar-seccion-data-table .gestionar-col-persona {
+        min-width: 210px;
+        text-align: left;
+    }
+
+    .gestionar-seccion-data-table .gestionar-col-observaciones {
+        min-width: 170px;
+        text-align: left;
+    }
+
+    .gestionar-seccion-data-table .gestionar-col-centered,
+    .gestionar-seccion-data-table .gestionar-col-actions {
+        text-align: center;
+    }
+
+    .gestionar-seccion-data-table .gestionar-col-actions {
+        min-width: 170px;
+        white-space: nowrap;
+    }
+
+    .gestionar-seccion-data-table tbody td strong {
+        font-weight: 700;
+    }
+
+    .gestionar-seccion-data-table .badge {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: var(--fs-xs);
+        justify-content: center;
+        line-height: 1.2;
+        min-height: 1.65rem;
+        padding: .28rem .65rem;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .gestionar-seccion-row-actions {
+        align-items: center;
+        flex-wrap: nowrap !important;
+        justify-content: center;
+        min-width: max-content;
+    }
+
+    .gestionar-seccion-row-action {
+        align-items: center;
+        border-radius: var(--r-sm);
+        display: inline-flex;
+        font-size: var(--fs-xs);
+        gap: .3rem;
+        height: 32px;
+        justify-content: center;
+        line-height: 1.1;
+        padding: .35rem .55rem;
+        white-space: nowrap;
+    }
+
+    .gestionar-seccion-row-action i {
+        flex: 0 0 .9rem;
+        font-size: .8rem;
+        text-align: center;
+        width: .9rem;
+    }
+
+    .gestionar-seccion-row-action-edit {
+        background: #fff;
+        border-color: var(--blue-500) !important;
+        color: var(--blue-700) !important;
+    }
+
+    .gestionar-seccion-row-action-edit:hover,
+    .gestionar-seccion-row-action-edit:focus-visible {
+        background: var(--blue-50);
+        border-color: var(--blue-700) !important;
+        color: var(--blue-900) !important;
+    }
+
+    .gestionar-seccion-row-action-danger {
+        background: #fff;
+        border-color: #dc3545 !important;
+        color: #b02a37 !important;
+    }
+
+    .gestionar-seccion-row-action-danger:hover,
+    .gestionar-seccion-row-action-danger:focus-visible {
+        background: #fff5f5;
+        border-color: #b02a37 !important;
+        color: #842029 !important;
+    }
+
+    .gestionar-seccion-row-action-reassign {
+        background: #fff;
+        border-color: var(--green-500, #198754) !important;
+        color: var(--green-700, #146c43) !important;
+    }
+
+    .gestionar-seccion-row-action-reassign:hover,
+    .gestionar-seccion-row-action-reassign:focus-visible {
+        background: #f1fbf5;
+        border-color: var(--green-700, #146c43) !important;
+        color: var(--green-700, #146c43) !important;
+    }
+
+    .gestionar-seccion-data-table .gestionar-empty-value {
+        display: block;
+        text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+        .gestionar-seccion-data-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .gestionar-seccion-data-panel:last-child {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 1050px) {
+        .gestionar-seccion-page .gestionar-seccion-header {
+            flex-direction: column;
+        }
+
+        .gestionar-seccion-page .gestionar-seccion-actions {
+            justify-content: flex-start;
+            width: 100%;
+        }
+
+        .gestionar-seccion-action {
+            flex: 1 1 175px;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .gestionar-seccion-page .gestionar-seccion-header,
+        .gestionar-seccion-body {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .gestionar-seccion-page .gestionar-seccion-actions {
+            flex-direction: column;
+        }
+
+        .gestionar-seccion-action {
+            width: 100%;
+        }
+
+        .gestionar-seccion-card-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .gestionar-seccion-context-bar,
+        .gestionar-seccion-data-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .gestionar-seccion-context-item + .gestionar-seccion-context-item {
+            border-left: 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .gestionar-seccion-data-panel:last-child {
+            grid-column: auto;
+        }
+
+        .gestionar-seccion-data-list {
+            grid-template-columns: 1fr;
+        }
+
+        .gestionar-seccion-data-list > div:nth-last-child(-n + 2) {
+            border-bottom: 1px solid #e6edf4;
+        }
+
+        .gestionar-seccion-data-list > div:last-child {
+            border-bottom: 0;
+        }
+    }
+</style>
 {% endblock %}

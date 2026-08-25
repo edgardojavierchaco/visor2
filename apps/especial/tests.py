@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import threading
 from types import SimpleNamespace
+from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
@@ -13,10 +14,15 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, IntegrityError, close_old_connections, connection
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import Http404, HttpResponse
-from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings, skipUnless
+from django.template import Context, Engine
+from django.test import Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
-from .forms import EspecialDocenteSeccionForm, EspecialMatriculaCompartidaForm
+from .forms import (
+    EspecialDocenteSeccionForm,
+    EspecialMatriculaCompartidaForm,
+    EspecialSeccionForm,
+)
 from .models import (
     AlumnoSeccion,
     DocenteSeccion,
@@ -27,6 +33,7 @@ from .models import (
     _normalizar_oferta_matricula_compartida,
     cueanexo_tiene_oferta_comun,
     cueanexo_tiene_oferta_matricula_compartida,
+    get_ofertas_educativas_especiales,
 )
 from .permisos import (
     _resolver_permisos_especial,
@@ -48,7 +55,7 @@ from .views_contexto import (
     contexto_base,
     datos_establecimiento_items,
 )
-from .views_carga_seccion import _alta_docente_nuevo_gestionar
+from .views_carga_seccion import _alta_docente_nuevo_gestionar, carga_seccion_form
 from .views_ciclo import _exigir_admin
 from .services.docentes_seccion import dar_alta_docente_seccion
 from .services.alumnos import (
@@ -59,10 +66,15 @@ from .services.alumnos import (
 from .views_inscripcion_seccion import crear_inscripcion_activa, dar_alta_inscripcion_seccion
 from .views_alumnos import (
     _actualizar_matricula_compartida,
+    _alumnos_banco_sin_duplicados,
     _asegurar_alumno_banco,
     _matricula_compartida_habilitada,
+    _marcar_grupos_seccion,
+    _ordenar_alumnos_por_seccion,
+    _seccion_filtro_param,
     _serializar_cueanexos_matricula_compartida,
     _validar_matricula_compartida_form,
+    SECCION_SIN_ASIGNAR,
     alumnos,
 )
 from .views_localizaciones import (
@@ -75,6 +87,12 @@ from .views_localizaciones import (
     _get_items_base_cached,
     _get_items_base_authorized,
     visualizacion_localizaciones,
+)
+from .views_visualizador import (
+    _agrupar_directores,
+    _directores_queryset,
+    _filtros_directores,
+    _filtros_directores_querystring,
 )
 
 from apps.bnhalumnos.models import Alumno, CatalogoSinoTipo
@@ -738,6 +756,304 @@ class ContextoEspecialTests(SimpleTestCase):
         admin["escuelas_visualizacion"].__iter__.assert_not_called()
 
 
+class VisualizadorDirectoresTests(SimpleTestCase):
+    @staticmethod
+    def _fila(
+        cuil,
+        cueanexo,
+        establecimiento,
+        oferta,
+        localidad,
+        departamento,
+        estado="Activo",
+    ):
+        return SimpleNamespace(
+            cuil_limpio=cuil,
+            cueanexo=cueanexo,
+            padron_cueanexo="",
+            nom_est=establecimiento,
+            oferta=oferta,
+            localidad=localidad,
+            departamento=departamento,
+            estado_est=estado,
+            apellido_resp="Pérez",
+            nombre_resp="Ana",
+        )
+
+    def test_consolida_por_cuil_y_deduplica_solo_la_combinacion_exacta(self):
+        filas = [
+            self._fila(
+                "20123456789",
+                "220172800",
+                "U.E.G.P. N.º 100",
+                "Especial - Primaria",
+                "Presidencia Roque Sáenz Peña",
+                "Comandante Fernández",
+            ),
+            self._fila(
+                "20123456789",
+                "220172800",
+                "U.E.G.P. N.º 100",
+                "Especial - Primaria",
+                "Presidencia Roque Sáenz Peña",
+                "Comandante Fernández",
+                estado="Baja",
+            ),
+            self._fila(
+                "20123456789",
+                "220082800",
+                "E.E.E. N.º 8",
+                "Especial - Integración",
+                "Villa Ángela",
+                "Mayor Luis J. Fontana",
+            ),
+            self._fila(
+                "20123456789",
+                "220300100",
+                "E.E.E. N.º 12",
+                "Especial - Taller",
+                "Resistencia",
+                "San Fernando",
+            ),
+            self._fila(
+                "20987654321",
+                "220400100",
+                "E.E.E. N.º 20",
+                "Especial - Primaria",
+                "Charata",
+                "Chacabuco",
+            ),
+        ]
+
+        directores = _agrupar_directores(filas)
+
+        self.assertEqual(len(directores), 2)
+        director = next(item for item in directores if item["cuil"] == "20123456789")
+        self.assertEqual(len(director["vinculos"]), 3)
+        self.assertEqual(director["estados"], ["Activo", "Baja"])
+        self.assertEqual(
+            director["expand_id"],
+            "director-establecimientos-20123456789",
+        )
+
+    def test_filtros_aceptan_cue_escrito_y_oferta_exacta(self):
+        request = RequestFactory().get(
+            "/especial/visualizador/directores/",
+            {
+                "filtro_cueanexo": "22 0",
+                "oferta": "Especial - Integración",
+            },
+        )
+
+        filtros, errores = _filtros_directores(request)
+
+        self.assertEqual(errores, {})
+        self.assertEqual(filtros["cueanexo"], "220")
+        self.assertEqual(filtros["oferta"], "Especial - Integración")
+        querystring = _filtros_directores_querystring(request)
+        self.assertIn("filtro_cueanexo=22+0", querystring)
+        self.assertIn("oferta=Especial+-+Integraci%C3%B3n", querystring)
+
+        request_invalido = RequestFactory().get(
+            "/especial/visualizador/directores/",
+            {"filtro_cueanexo": "220A"},
+        )
+        _, errores_invalidos = _filtros_directores(request_invalido)
+        self.assertIn("cueanexo", errores_invalidos)
+
+    @patch("apps.especial.views_visualizador._padron_especial_queryset")
+    def test_consulta_aplica_cue_parcial_y_oferta_antes_de_agrupar(self, padron):
+        queryset = MagicMock()
+        queryset.annotate.return_value = queryset
+        queryset.exclude.return_value = queryset
+        queryset.filter.return_value = queryset
+        queryset.order_by.return_value = queryset
+        padron.return_value = queryset
+
+        _directores_queryset(
+            {
+                "cuil": "",
+                "cueanexo": "220",
+                "oferta": "Especial - Integración",
+                "establecimiento": "",
+                "localidad": "",
+                "departamento": "",
+            }
+        )
+
+        queryset.filter.assert_any_call(cueanexo__icontains="220")
+        queryset.filter.assert_any_call(oferta="Especial - Integración")
+
+    def test_template_limita_a_uno_y_genera_expansion_independiente(self):
+        filas = [
+            self._fila(
+                "20123456789",
+                "220172800",
+                "U.E.G.P. N.º 100",
+                "Especial - Primaria",
+                "Presidencia Roque Sáenz Peña",
+                "Comandante Fernández",
+            ),
+            self._fila(
+                "20123456789",
+                "220082800",
+                "E.E.E. N.º 8",
+                "Especial - Integración",
+                "Villa Ángela",
+                "Mayor Luis J. Fontana",
+            ),
+            self._fila(
+                "20123456789",
+                "220300100",
+                "E.E.E. N.º 12",
+                "Especial - Taller",
+                "Resistencia",
+                "San Fernando",
+            ),
+        ]
+        directores = _agrupar_directores(filas)
+        template = (
+            Path(__file__).resolve().parents[2]
+            / "templates"
+            / "especial"
+            / "visualizador_directores.html"
+        ).read_text(encoding="utf-8-sig")
+        context = {
+            "consulta_error": "",
+            "directores_visualizador": directores,
+            "total_directores": 1,
+            "filtros_directores": {
+                "cuil": "",
+                "cueanexo": "",
+                "oferta": "Especial - Integración",
+                "establecimiento": "",
+                "localidad": "",
+                "departamento": "",
+            },
+            "filtros_directores_errores": {},
+            "filtros_directores_querystring": "",
+            "cueanexos_directores_filtro": ["220172800"],
+            "ofertas_directores_filtro": ["Especial - Integración"],
+            "establecimientos_directores_filtro": [],
+            "localidades_directores_filtro": [],
+            "departamentos_directores_filtro": [],
+            "page_obj": SimpleNamespace(
+                has_previous=False,
+                has_next=False,
+                number=1,
+                paginator=SimpleNamespace(num_pages=1),
+            ),
+        }
+
+        rendered = Engine.get_default().from_string(template).render(Context(context))
+
+        self.assertEqual(rendered.count("+ 2 establecimientos más"), 1)
+        self.assertEqual(rendered.count("hidden data-director-vinculo-adicional"), 2)
+        self.assertIn('id="director-establecimientos-20123456789"', rendered)
+        self.assertIn('id="director-establecimientos-20123456789-toggle"', rendered)
+        self.assertIn('aria-controls="director-establecimientos-20123456789"', rendered)
+        self.assertIn('data-director-cue-autocomplete', rendered)
+        self.assertIn('data-director-cue-suggestion hidden', rendered)
+        self.assertIn('aria-controls="visualizador-directores-cue-sugerencias"', rendered)
+        self.assertIn('name="oferta"', rendered)
+        self.assertIn("Especial - Integración", rendered)
+        self.assertIn('colspan="2" class="director-asignaciones-cell"', rendered)
+        self.assertIn('class="director-asignaciones-list"', rendered)
+        self.assertIn('class="director-asignacion-row"', rendered)
+        self.assertIn('class="director-asignacion-cell director-asignacion-cue"', rendered)
+        self.assertIn(
+            'class="director-asignacion-cell director-asignacion-establecimiento"',
+            rendered,
+        )
+        self.assertIn('grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);', rendered)
+        self.assertIn('border-bottom: 1px solid #dbe3ef;', rendered)
+        self.assertIn("Mostrar menos", rendered)
+
+        context["directores_visualizador"] = _agrupar_directores(filas[:2])
+        rendered_dos = Engine.get_default().from_string(template).render(
+            Context(context)
+        )
+        self.assertIn(
+            'class="btn btn-link btn-sm director-establecimientos-toggle"',
+            rendered_dos,
+        )
+        self.assertIn("+ 1 establecimiento más", rendered_dos)
+        self.assertEqual(rendered_dos.count("hidden data-director-vinculo-adicional"), 1)
+
+        context["directores_visualizador"] = _agrupar_directores(filas[:1])
+        rendered_uno = Engine.get_default().from_string(template).render(Context(context))
+        self.assertNotIn(
+            'class="btn btn-link btn-sm director-establecimientos-toggle"',
+            rendered_uno,
+        )
+
+
+class VisualizadorCabeceraTests(SimpleTestCase):
+    def test_los_tres_visualizadores_comparten_cabecera_y_filtros_cerrados(self):
+        base = Path(__file__).resolve().parents[2] / "templates" / "especial"
+        visualizadores = {
+            "visualizador_alumnos.html": (
+                "Alumnos",
+                "fa-solid fa-user-graduate",
+                "especial-visualizador-alumnos-filtros",
+            ),
+            "visualizador_docentes.html": (
+                "Docentes",
+                "fa-solid fa-chalkboard-user",
+                "especial-visualizador-docentes-filtros",
+            ),
+            "visualizador_directores.html": (
+                "Directores y establecimientos",
+                "fa-solid fa-user-tie",
+                "especial-visualizador-directores-filtros",
+            ),
+        }
+
+        for nombre, (titulo, icono, panel_id) in visualizadores.items():
+            fuente = (base / nombre).read_text(encoding="utf-8-sig")
+            self.assertIn(
+                '{% include "especial/partials/visualizador_cabecera.html"',
+                fuente,
+            )
+            self.assertIn(f'visualizador_titulo="{titulo}"', fuente)
+            self.assertIn(f'visualizador_icono="{icono}"', fuente)
+            self.assertIn(f'visualizador_filtros_id="{panel_id}"', fuente)
+            self.assertIn(f'id="{panel_id}" hidden', fuente)
+
+            template = Engine.get_default().get_template(
+                f"especial/{nombre}"
+            )
+            self.assertIsNotNone(template)
+
+        cabecera = Engine.get_default().get_template(
+            "especial/partials/visualizador_cabecera.html"
+        )
+        rendered = cabecera.render(
+            Context(
+                {
+                    "visualizador_titulo": "Alumnos",
+                    "visualizador_icono": "fa-solid fa-user-graduate",
+                    "visualizador_filtros_id": "especial-visualizador-alumnos-filtros",
+                }
+            )
+        )
+        self.assertIn("data-filtros-toggle", rendered)
+        self.assertEqual(rendered.count("Volver"), 1)
+        self.assertIn(
+            'class="cef-panel especial-visualizador-header"',
+            rendered,
+        )
+        self.assertIn(
+            'class="especial-visualizador-header-body"',
+            rendered,
+        )
+        self.assertIn('aria-expanded="false"', rendered)
+        self.assertIn(
+            'aria-controls="especial-visualizador-alumnos-filtros"',
+            rendered,
+        )
+
+
 class AlcanceLocalizacionesTests(SimpleTestCase):
     def test_conserva_el_queryset_autorizado_sin_serializar_el_padron(self):
         permisos = {"escuelas_visualizacion": _FakeSchoolQuerySet(("111111111",))}
@@ -1201,6 +1517,88 @@ class ValidacionDocenteEspecialTests(SimpleTestCase):
         EspecialDocenteSeccionForm(instance=instance)
 
         self.assertEqual(instance.full_clean.__func__, DocenteSeccion.full_clean)
+
+
+class OrdenAlumnosEspecialTests(SimpleTestCase):
+    @staticmethod
+    def _seccion(pk, nombre):
+        return SimpleNamespace(
+            pk=pk,
+            nombre_seccion=nombre,
+            cd_tipo_seccion=SimpleNamespace(descripcion="Tipo"),
+        )
+
+    @staticmethod
+    def _inscripcion(alumno_id, seccion):
+        return SimpleNamespace(
+            alumno_id=alumno_id,
+            seccion_id=seccion.pk,
+            seccion=seccion,
+        )
+
+    @staticmethod
+    def _banco(pk, alumno_id, apellidos, nombres, estado):
+        return SimpleNamespace(
+            pk=pk,
+            alumno_id=alumno_id,
+            alumno=SimpleNamespace(
+                apellidos=apellidos,
+                nombres=nombres,
+            ),
+            estado=estado,
+        )
+
+    def test_ordena_por_seccion_principal_y_nombre_sin_duplicar(self):
+        seccion_a = self._seccion(1, "A - Multinivel")
+        seccion_b = self._seccion(2, "B - Multiple")
+        alumnos = [
+            self._banco(1, 1, "GOMEZ", "DELFINA", EspecialAlumnoBanco.Estado.ACTIVO),
+            self._banco(2, 2, "ACOSTA", "FRANCO", EspecialAlumnoBanco.Estado.ACTIVO),
+            self._banco(3, 3, "PEREZ", "FRANCO", EspecialAlumnoBanco.Estado.ACTIVO),
+        ]
+        inscripciones = {
+            1: [self._inscripcion(1, seccion_b), self._inscripcion(1, seccion_a)],
+            2: [self._inscripcion(2, seccion_a)],
+            3: [],
+        }
+
+        ordenados = _ordenar_alumnos_por_seccion(alumnos, inscripciones)
+        _marcar_grupos_seccion(ordenados)
+
+        self.assertEqual(
+            [alumno.alumno.apellidos for alumno in ordenados],
+            ["PEREZ", "ACOSTA", "GOMEZ"],
+        )
+        self.assertEqual(
+            [inscripcion.seccion.nombre_seccion for inscripcion in ordenados[2].inscripciones_seccion],
+            ["A - Multinivel", "B - Multiple"],
+        )
+        self.assertEqual(ordenados[0].seccion_principal_label, "Sin sección asignada")
+        self.assertEqual(
+            [alumno.muestra_grupo_seccion for alumno in ordenados],
+            [True, True, False],
+        )
+
+    def test_deduplica_bancos_del_mismo_alumno_y_prioriza_activo(self):
+        baja = self._banco(4, 1, "ACOSTA", "FRANCO", EspecialAlumnoBanco.Estado.BAJA)
+        activo = self._banco(5, 1, "ACOSTA", "FRANCO", EspecialAlumnoBanco.Estado.ACTIVO)
+        otro = self._banco(6, 2, "GOMEZ", "DELFINA", EspecialAlumnoBanco.Estado.BAJA)
+
+        resultado = _alumnos_banco_sin_duplicados([baja, activo, otro])
+
+        self.assertEqual({item.alumno_id for item in resultado}, {1, 2})
+        self.assertEqual(
+            next(item for item in resultado if item.alumno_id == 1).pk,
+            activo.pk,
+        )
+
+    def test_reconoce_el_filtro_sin_seccion_asignada(self):
+        request = RequestFactory().get("/", {"seccion": SECCION_SIN_ASIGNAR})
+
+        self.assertEqual(
+            _seccion_filtro_param(request),
+            (SECCION_SIN_ASIGNAR, ""),
+        )
 
 
 class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
@@ -2053,6 +2451,260 @@ class AutocompleteMatriculaCompartidaEspecialTests(SimpleTestCase):
 
         por_nombre, _ = self._serializar("Nombre compartido")
         self.assertEqual([resultado["id"] for resultado in por_nombre], ["100000005"])
+
+
+class EspecialSeccionOfertaFormTests(SimpleTestCase):
+    CUEANEXO = "220015500"
+    OFERTAS = [
+        "Especial - Integración",
+        "Especial - Jardín maternal",
+    ]
+
+    def test_fuente_filtra_cue_especial_y_estados_activos(self):
+        manager = MagicMock()
+        queryset = MagicMock()
+        valores = MagicMock()
+        manager.using.return_value = queryset
+        queryset.filter.return_value = queryset
+        queryset.exclude.return_value = queryset
+        queryset.values_list.return_value = valores
+        valores.distinct.return_value = valores
+        valores.order_by.return_value = [
+            " Especial - Jardín maternal ",
+            "Especial - Integración ",
+            "Especial - Integración",
+        ]
+
+        with patch("apps.especial.models.EspecialPadronOferta.objects", manager):
+            ofertas = get_ofertas_educativas_especiales(self.CUEANEXO)
+
+        self.assertEqual(ofertas, self.OFERTAS)
+        manager.using.assert_called_once_with("default")
+        queryset.filter.assert_called_once_with(
+            cueanexo=self.CUEANEXO,
+            oferta__istartswith="Especial -",
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+
+    def test_select_real_renderiza_name_id_placeholder_y_opciones(self):
+        ciclo = SimpleNamespace(pk=1, anio=2026)
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=self.OFERTAS,
+        ):
+            form = EspecialSeccionForm(
+                instance=SeccionEspecial(cueanexo=self.CUEANEXO),
+                cueanexo=self.CUEANEXO,
+                ciclo=ciclo,
+            )
+
+        html = str(form["oferta"])
+        self.assertEqual(form.fields["oferta"].__class__.__name__, "ChoiceField")
+        self.assertEqual(form["oferta"].name, "oferta")
+        self.assertEqual(form["oferta"].id_for_label, "id_oferta")
+        self.assertEqual(html.count("<option"), 3)
+        self.assertIn('<option value="" selected>---------</option>', html)
+        self.assertIn("Especial - Integración", html)
+
+
+class EspecialSeccionOfertaViewTests(SimpleTestCase):
+    CUEANEXO = "220015500"
+    CUEANEXO_ALTERNATIVO = "220015501"
+    OFERTA = "Especial - Integración"
+    OFERTA_ALTERNATIVA = "Especial - Jardín maternal"
+
+    def setUp(self):
+        ciclo_model = SeccionEspecial._meta.get_field("ciclo").remote_field.model
+        self.ciclo = ciclo_model(pk=7, anio=2026, activo=True, actual=True)
+        self.especial_context = {
+            "cueanexo": self.CUEANEXO,
+            "ciclo": self.ciclo,
+            "ciclo_cerrado": False,
+            "puede_operar": True,
+            "querystring": f"cueanexo={self.CUEANEXO}&ciclo={self.ciclo.pk}",
+        }
+
+    @staticmethod
+    def _vista_sin_decoradores():
+        vista = carga_seccion_form
+        while hasattr(vista, "__wrapped__"):
+            vista = vista.__wrapped__
+        return vista
+
+    def _form(self, *, cueanexo=None, data=None, oferta_guardada=""):
+        cueanexo = cueanexo or self.CUEANEXO
+        return EspecialSeccionForm(
+            data,
+            instance=SeccionEspecial(
+                cueanexo=cueanexo,
+                ciclo=self.ciclo,
+                oferta=oferta_guardada,
+            ),
+            cueanexo=cueanexo,
+            ciclo=self.ciclo,
+        )
+
+    def test_get_creacion_carga_ofertas_y_muestra_titulo_agregar(self):
+        request = RequestFactory().get(
+            reverse("especial:carga_seccion_nueva"),
+            {"cueanexo": self.CUEANEXO, "ciclo": self.ciclo.pk},
+        )
+        request.user = SimpleNamespace(is_authenticated=True)
+        context = {"especial_context": self.especial_context.copy()}
+
+        with patch(
+            "apps.especial.views_carga_seccion.contexto_base",
+            return_value=context,
+        ), patch(
+            "apps.especial.views_carga_seccion.render",
+            return_value=HttpResponse("ok"),
+        ) as render_mock, patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            response = self._vista_sin_decoradores()(request)
+
+        self.assertEqual(response.status_code, 200)
+        rendered_context = render_mock.call_args.args[2]
+        self.assertEqual(rendered_context["form_title"], "Agregar Sección")
+        self.assertIsNone(rendered_context["seccion_edicion"])
+        html = str(rendered_context["form"]["oferta"])
+        self.assertEqual(html.count("<option"), 3)
+        self.assertIn(self.OFERTA, html)
+
+    def test_post_reconstruye_opciones_antes_de_validar(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ) as obtener_ofertas:
+            form = self._form(
+                data={
+                    "oferta": self.OFERTA,
+                    "nombre_seccion": "",
+                    "capacidad_total": "15",
+                }
+            )
+            self.assertFalse(form.is_valid())
+
+        obtener_ofertas.assert_called_once_with(self.CUEANEXO)
+        self.assertEqual(form.ciclo.anio, 2026)
+
+    def test_error_en_otro_campo_conserva_oferta_visible_y_seleccionada(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            form = self._form(
+                data={
+                    "oferta": self.OFERTA,
+                    "nombre_seccion": "",
+                    "capacidad_total": "15",
+                }
+            )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("nombre_seccion", form.errors)
+        self.assertIn(
+            f'<option value="{self.OFERTA}" selected>',
+            str(form["oferta"]),
+        )
+
+    def test_oferta_de_otro_cueanexo_es_rechazada(self):
+        oferta_ajena = "Especial - Primaria de 7 años"
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA],
+        ):
+            form = self._form(
+                data={
+                    "oferta": oferta_ajena,
+                    "nombre_seccion": "Sección oferta",
+                    "capacidad_total": "15",
+                }
+            )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("oferta", form.errors)
+
+    def test_edicion_muestra_la_oferta_guardada(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            form = self._form(oferta_guardada=self.OFERTA)
+
+        self.assertIn(
+            f'<option value="{self.OFERTA}" selected>',
+            str(form["oferta"]),
+        )
+
+    def test_cambiar_escuela_elimina_ofertas_de_la_anterior(self):
+        def ofertas_por_cue(cueanexo):
+            if cueanexo == self.CUEANEXO_ALTERNATIVO:
+                return [self.OFERTA_ALTERNATIVA]
+            return [self.OFERTA]
+
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            side_effect=ofertas_por_cue,
+        ):
+            form = self._form(cueanexo=self.CUEANEXO_ALTERNATIVO)
+
+        html = str(form["oferta"])
+        self.assertIn(self.OFERTA_ALTERNATIVA, html)
+        self.assertNotIn(f'value="{self.OFERTA}"', html)
+
+    def test_sin_ofertas_deshabilita_selector_y_muestra_mensaje(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[],
+        ):
+            form = self._form()
+
+        self.assertTrue(form.fields["oferta"].disabled)
+        template = (
+            Path(__file__).resolve().parents[2]
+            / "templates"
+            / "especial"
+            / "form_seccion_especial.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "No hay ofertas educativas configuradas para este CUE-Anexo.",
+            template,
+        )
+
+    def test_post_valido_de_la_vista_envia_mismo_cue_y_ciclo_al_guardado(self):
+        request = RequestFactory().post(
+            reverse("especial:carga_seccion_nueva"),
+            {"oferta": self.OFERTA},
+        )
+        request.user = SimpleNamespace(is_authenticated=True)
+        form = MagicMock()
+        form.is_valid.return_value = True
+        form.oferta_educativa_sin_configurar = False
+        context = {"especial_context": self.especial_context.copy()}
+
+        with patch(
+            "apps.especial.views_carga_seccion.contexto_base",
+            return_value=context,
+        ), patch(
+            "apps.especial.views_carga_seccion.EspecialSeccionForm",
+            return_value=form,
+        ) as form_class, patch(
+            "apps.especial.views_carga_seccion._guardar_seccion",
+        ) as guardar, patch(
+            "apps.especial.views_carga_seccion.messages.success",
+        ), patch(
+            "apps.especial.views_carga_seccion.redirect",
+            return_value=HttpResponse(status=302),
+        ):
+            response = self._vista_sin_decoradores()(request)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(form_class.call_args.kwargs["cueanexo"], self.CUEANEXO)
+        self.assertIs(form_class.call_args.kwargs["ciclo"], self.ciclo)
+        guardar.assert_called_once_with(form, self.especial_context, request.user)
 
 
 class CierreIntegridadEspecialTests(SimpleTestCase):
