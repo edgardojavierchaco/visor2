@@ -705,6 +705,8 @@ def alumnos(request):
     baja_modal_alumno = None
     baja_form = EspecialBajaMotivoForm()
     baja_error = ""
+    modal_feedback = ""
+    modal_feedback_level = "error"
     busqueda_form = EspecialBusquedaAlumnoForm()
 
     if request.method == "POST" and request.POST.get("accion") == "baja_especial":
@@ -808,19 +810,28 @@ def alumnos(request):
                             )
                         )
                     else:
+                        modal_feedback = (
+                            "Ese alumno ya está activo en el banco de este "
+                            "establecimiento y ciclo."
+                        )
                         messages.info(
                             request,
-                            "Ese alumno ya está activo en el banco de este establecimiento y ciclo.",
+                            modal_feedback,
                         )
                 except ValidationError as exc:
-                    messages.error(request, "; ".join(exc.messages))
+                    modal_feedback = "; ".join(exc.messages)
+                    messages.error(request, modal_feedback)
                 except (OperationalError, ProgrammingError):
                     logger.exception("No se pudo crear el banco de alumnos Especial.")
+                    modal_feedback = MSG_BANCO_ALUMNOS_PENDIENTE
                     messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
                 except IntegrityError:
+                    modal_feedback = (
+                        "No se pudo agregar el alumno al banco. Verificá que no exista ya activo."
+                    )
                     messages.error(
                         request,
-                        "No se pudo agregar el alumno al banco. Verificá que no exista ya activo.",
+                        modal_feedback,
                     )
     else:
         busqueda_form = EspecialBusquedaAlumnoForm(
@@ -975,6 +986,8 @@ def alumnos(request):
             "baja_modal_alumno": baja_modal_alumno,
             "baja_form": baja_form,
             "baja_error": baja_error,
+            "modal_feedback": modal_feedback,
+            "modal_feedback_level": modal_feedback_level,
             "matricula_compartida_habilitada": matricula_compartida_habilitada,
             "mostrar_cueanexo_matricula": mostrar_cueanexo_matricula,
             "matricula_compartida_busqueda_url": reverse(

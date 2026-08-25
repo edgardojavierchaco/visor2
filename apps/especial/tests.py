@@ -3088,36 +3088,22 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 padron_queryset=_FakePadronQuerySet(False),
             )
 
-    def test_servicio_permite_los_dos_ordenes_de_dos_bancos_relacionados(self):
-        alumno_primero = _crear_alumno_db(self.ctx, 104)
-        alumno_segundo = _crear_alumno_db(self.ctx, 105)
+    def test_servicio_rechaza_alta_si_hay_otro_banco_activo(self):
+        alumno = _crear_alumno_db(self.ctx, 104)
         oferta_patch = patch(
             "apps.especial.services.alumnos.cueanexo_tiene_oferta_matricula_compartida",
             side_effect=self._oferta_integracion,
         )
-        with oferta_patch:
-            self._servicio_banco(alumno_primero, self.ctx.cueanexo_permitido)
-            banco_a, creado_a = self._servicio_banco(
-                alumno_primero,
+        with oferta_patch, self.assertRaisesRegex(
+            ValidationError,
+            r"ya está activo.*987654300.*darlo de baja",
+        ):
+            self._servicio_banco(alumno, self.ctx.cueanexo_permitido)
+            self._servicio_banco(
+                alumno,
                 self.ctx.cueanexo_ajeno,
                 self.ctx.cueanexo_permitido,
             )
-            banco_b, creado_b = self._servicio_banco(
-                alumno_segundo,
-                self.ctx.cueanexo_ajeno,
-                self.ctx.cueanexo_permitido,
-            )
-            banco_b_normal, creado_b_normal = self._servicio_banco(
-                alumno_segundo,
-                self.ctx.cueanexo_permitido,
-            )
-
-        self.assertTrue(creado_a)
-        self.assertTrue(creado_b)
-        self.assertTrue(creado_b_normal)
-        self.assertEqual(banco_a.matricula_compartida, self.ctx.cueanexo_permitido)
-        self.assertEqual(banco_b.matricula_compartida, self.ctx.cueanexo_permitido)
-        self.assertIsNone(banco_b_normal.matricula_compartida)
 
     def test_servicio_rechaza_dos_cues_normales_no_relacionados_y_tercero(self):
         alumno = _crear_alumno_db(self.ctx, 106)
@@ -3139,9 +3125,8 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 self.ctx.cueanexo_ajeno,
                 self.ctx.cueanexo_permitido,
             )
-            self._servicio_banco(alumno_dos, self.ctx.cueanexo_permitido)
-            with self.assertRaises(ValidationError):
-                self._servicio_banco(alumno_dos, "555555500")
+            with self.assertRaisesRegex(ValidationError, "ya está activo"):
+                self._servicio_banco(alumno_dos, self.ctx.cueanexo_permitido)
 
     def test_servicio_alta_repetida_es_idempotente(self):
         alumno = _crear_alumno_db(self.ctx, 107)
@@ -3177,7 +3162,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
                 self.ctx.cueanexo_ajeno,
                 self.ctx.cueanexo_permitido,
             )
-            self._servicio_banco(alumno, self.ctx.cueanexo_permitido)
+            _crear_alumno_banco_db(self.ctx, alumno, self.seccion)
             with self.assertRaises(ValidationError):
                 actualizar_matricula_compartida(
                     alumno_banco=banco_a,

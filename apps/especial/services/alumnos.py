@@ -308,6 +308,26 @@ def asegurar_alumno_banco(
             for banco in bancos
             if banco.estado == EspecialAlumnoBanco.Estado.ACTIVO
         ]
+        bancos_de_otro_cue = [
+            banco
+            for banco in bancos_activos
+            if banco.cueanexo != cueanexo
+        ]
+        if bancos_de_otro_cue:
+            cues_activos = sorted(
+                {normalizar_cueanexo(banco.cueanexo) for banco in bancos_de_otro_cue}
+            )
+            cues_activos = [cue for cue in cues_activos if cue]
+            if len(cues_activos) == 1:
+                detalle_cue = f"el CUE-Anexo {cues_activos[0]}"
+                instruccion_baja = "ese CUE-Anexo"
+            else:
+                detalle_cue = "los CUE-Anexos " + ", ".join(cues_activos)
+                instruccion_baja = "esos CUE-Anexos"
+            raise ValidationError(
+                f"El alumno ya está activo en {detalle_cue}. Primero debe "
+                f"darlo de baja de {instruccion_baja} antes de agregarlo a otra escuela."
+            )
         oferta_cache = {}
         _validar_bancos_activos(
             bancos_activos,
