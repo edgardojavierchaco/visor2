@@ -1,5 +1,5 @@
 {% if not docentes_activos %}
-    <div class="alert alert-danger mb-3" role="alert">
+    <div class="alert alert-danger gestionar-seccion-table-alert mb-3" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
         La sección no cuenta con ningún docente en alta: ni titular, ni suplente ni interino.
     </div>
@@ -27,46 +27,46 @@
 </div>
 
 {% if docentes_activos_duplicados %}
-    <div class="alert alert-warning mb-3">
+    <div class="alert alert-warning gestionar-seccion-table-alert mb-3">
         Se detectaron asignaciones activas duplicadas en esta sección. Revisá las filas y dejá activa solo una asignación por docente y rol.
     </div>
 {% endif %}
 
 {% if docentes %}
     <div class="cef-table-wrap">
-        <table class="cef-dt" data-cef-table>
+        <table class="cef-dt gestionar-seccion-data-table gestionar-seccion-docentes-table" data-cef-table>
             <thead>
                 <tr>
-                    <th>Docente</th>
-                    <th>CUIL</th>
-                    <th>DNI</th>
-                    <th>Rol</th>
-                    <th>Estado en esta sección</th>
-                    <th>Desde</th>
-                    <th>Hasta</th>
-                    <th>Observaciones</th>
-                    <th>Acciones</th>
+                    <th class="gestionar-col-persona">Docente</th>
+                    <th class="gestionar-col-centered">CUIL</th>
+                    <th class="gestionar-col-centered">DNI</th>
+                    <th class="gestionar-col-centered">Rol</th>
+                    <th class="gestionar-col-centered">Estado en esta sección</th>
+                    <th class="gestionar-col-centered">Desde</th>
+                    <th class="gestionar-col-centered">Hasta</th>
+                    <th class="gestionar-col-observaciones">Observaciones</th>
+                    <th class="gestionar-col-centered gestionar-col-actions">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for asignacion in docentes %}
                     <tr class="{% if asignacion.estado != 'activo' %}table-light text-muted{% endif %}">
-                        <td><strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong></td>
-                        <td>{{ asignacion.docente_cuil }}</td>
-                        <td>{{ asignacion.docente_dni_snapshot|default:"-" }}</td>
-                        <td>{{ asignacion.get_rol_display }}</td>
-                        <td>
-                            <span class="badge text-bg-{% if asignacion.estado == 'activo' %}success{% elif asignacion.estado == 'baja' %}secondary{% else %}primary{% endif %}">
+                        <td class="gestionar-col-persona"><strong>{{ asignacion.docente_nombre_snapshot|default:asignacion.docente_cuil }}</strong></td>
+                        <td class="gestionar-col-centered">{{ asignacion.docente_cuil|default:"—" }}</td>
+                        <td class="gestionar-col-centered">{{ asignacion.docente_dni_snapshot|default:"—" }}</td>
+                        <td class="gestionar-col-centered">{{ asignacion.get_rol_display|default:"—" }}</td>
+                        <td class="gestionar-col-centered">
+                            <span class="badge text-bg-{% if asignacion.estado == 'activo' %}success{% elif asignacion.estado == 'baja' or asignacion.estado == 'inactivo' %}danger{% else %}secondary{% endif %}">
                                 {{ asignacion.get_estado_display }}
                             </span>
                         </td>
-                        <td>{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-                        <td>{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-                        <td>{{ asignacion.observaciones|default:"-" }}</td>
+                        <td class="gestionar-col-centered">{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}{% if gestionar_seccion_modo %}—{% else %}-{% endif %}{% endif %}</td>
+                        <td class="gestionar-col-centered">{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}{% if gestionar_seccion_modo %}—{% else %}-{% endif %}{% endif %}</td>
+                        <td class="gestionar-col-observaciones">{% if asignacion.observaciones %}{{ asignacion.observaciones }}{% elif gestionar_seccion_modo %}<span class="gestionar-empty-value">—</span>{% else %}-{% endif %}</td>
                         {% if especial_context.puede_operar %}
-                        <td class="cef-act-cell">
-                            <div class="d-flex flex-wrap gap-1 align-items-center">
-                                <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:editar_docente_seccion' seccion.pk asignacion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% if gestionar_seccion_modo %}&volver=gestionar{% endif %}{% elif gestionar_seccion_modo %}?volver=gestionar{% endif %}">
+                        <td class="cef-act-cell gestionar-col-centered gestionar-col-actions">
+                            <div class="d-flex flex-wrap gap-1 align-items-center gestionar-seccion-row-actions">
+                                <a class="btn btn-outline-primary btn-sm gestionar-seccion-row-action gestionar-seccion-row-action-edit" href="{% url 'especial:editar_docente_seccion' seccion.pk asignacion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% if gestionar_seccion_modo %}&volver=gestionar{% endif %}{% elif gestionar_seccion_modo %}?volver=gestionar{% endif %}">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </a>
                                  {% if asignacion.estado == 'activo' %}
@@ -76,7 +76,7 @@
                                      {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                     <input type="hidden" name="accion" value="{% if gestionar_seccion_modo %}baja_docente{% else %}baja{% endif %}">
                                     <input type="hidden" name="{% if gestionar_seccion_modo %}docente_grupo_id{% else %}docente_seccion_id{% endif %}" value="{{ asignacion.pk }}">
-                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                    <button class="btn btn-outline-secondary btn-sm gestionar-seccion-row-action gestionar-seccion-row-action-danger" type="submit">
                                          <i class="fa-solid fa-user-minus"></i> Dar de baja
                                      </button>
                                  </form>
@@ -87,7 +87,7 @@
                                     {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
                                     <input type="hidden" name="accion" value="{% if gestionar_seccion_modo %}alta_docente{% else %}alta{% endif %}">
                                      <input type="hidden" name="{% if gestionar_seccion_modo %}docente_grupo_id{% else %}docente_seccion_id{% endif %}" value="{{ asignacion.pk }}">
-                                    <button class="btn btn-outline-success btn-sm" type="submit">
+                                    <button class="btn btn-outline-success btn-sm gestionar-seccion-row-action gestionar-seccion-row-action-reassign" type="submit">
                                         <i class="fa-solid fa-user-check"></i> Reasignar
                                     </button>
                                 </form>

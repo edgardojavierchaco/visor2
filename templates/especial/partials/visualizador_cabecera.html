@@ -1,0 +1,102 @@
+<style>
+    .especial-visualizador-header {
+        margin-bottom: 1rem;
+    }
+
+    .especial-visualizador-header-body {
+        padding: 1.1rem 1.25rem 1.2rem;
+    }
+
+    .especial-visualizador-heading {
+        align-items: center;
+        display: flex;
+        gap: .65rem;
+    }
+
+    .especial-visualizador-heading h1 {
+        align-items: center;
+        color: var(--primary-dark);
+        display: flex;
+        font-size: 1.45rem;
+        font-weight: 800;
+        gap: .6rem;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .especial-visualizador-heading h1 i {
+        color: var(--primary);
+    }
+
+    .especial-visualizador-toolbar {
+        align-items: center;
+        display: flex;
+        gap: .75rem;
+        justify-content: space-between;
+        margin-top: .8rem;
+    }
+
+    .especial-visualizador-toolbar .btn {
+        flex: 0 0 auto;
+    }
+
+    @media (max-width: 575.98px) {
+        .especial-visualizador-heading h1 {
+            font-size: 1.25rem;
+        }
+
+        .especial-visualizador-toolbar {
+            gap: .5rem;
+        }
+    }
+</style>
+
+<section class="cef-panel especial-visualizador-header">
+    <div class="especial-visualizador-header-body">
+        <div class="especial-visualizador-heading">
+            <h1><i class="{{ visualizador_icono }}" aria-hidden="true"></i>{{ visualizador_titulo }}</h1>
+        </div>
+        <div class="especial-visualizador-toolbar" aria-label="Acciones del visualizador">
+            <button
+                type="button"
+                class="btn btn-outline-primary"
+                data-filtros-toggle
+                aria-expanded="false"
+                aria-controls="{{ visualizador_filtros_id }}"
+            ><i class="fa-solid fa-filter me-1" aria-hidden="true"></i>Filtros</button>
+            <a class="btn btn-outline-secondary" href="{% url 'especial:visualizador_inicio' %}">
+                <i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>Volver
+            </a>
+        </div>
+    </div>
+</section>
+
+<script>
+(function () {
+    function inicializarFiltros() {
+        const toggle = document.querySelector('[data-filtros-toggle][aria-controls="{{ visualizador_filtros_id }}"]');
+        const panel = document.getElementById("{{ visualizador_filtros_id }}");
+        if (!toggle || !panel) return;
+
+        toggle.addEventListener("click", function () {
+            const mostrar = panel.hasAttribute("hidden");
+            panel.hidden = !mostrar;
+            toggle.setAttribute("aria-expanded", String(mostrar));
+        });
+
+        const form = panel.querySelector("form");
+        if (form) {
+            form.addEventListener("submit", function () {
+                panel.hidden = true;
+                toggle.setAttribute("aria-expanded", "false");
+            });
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", inicializarFiltros);
+    } else {
+        inicializarFiltros();
+    }
+})();
+</script>

@@ -1,0 +1,62 @@
+<div
+    class="especial-visualizador-director-detail-fragment"
+    data-director-detail-fragment
+    data-director-detail-title="{{ director.apellido_resp|default:'' }}, {{ director.nombre_resp|default:'' }}"
+    data-director-detail-cuil="{{ director.resploc_cuitcuil|default:cuil_buscado }}"
+>
+    <section class="especial-visualizador-detail-section">
+        <div class="especial-visualizador-detail-page-header" data-director-detail-page-header>
+            <div class="especial-visualizador-detail-heading">
+                <span class="especial-visualizador-detail-heading-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
+                <div class="especial-visualizador-detail-heading-text">
+                    <h2>{{ director.apellido_resp|default:"—" }}, {{ director.nombre_resp|default:"—" }}</h2>
+                    <span class="especial-visualizador-detail-heading-subtitle">Detalle completo del director o responsable</span>
+                    <span class="especial-visualizador-detail-heading-meta">CUIL/CUIT {{ director.resploc_cuitcuil|default:cuil_buscado }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i>Resumen operativo</h3></div>
+        <div class="especial-visualizador-detail-summary-grid mt-3">
+            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-school" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">CUE-Anexo principal</span><strong class="especial-visualizador-detail-summary-value">{{ director.cueanexo|default:"—" }}</strong></div></div>
+            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-building" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Registros relacionados</span><strong class="especial-visualizador-detail-summary-value">{{ escuelas|length }}</strong></div></div>
+            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Ofertas vinculadas</span><strong class="especial-visualizador-detail-summary-value">{{ escuelas|length }}</strong></div></div>
+            <div class="especial-visualizador-detail-summary-card"><span class="especial-visualizador-detail-summary-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span><div class="especial-visualizador-detail-summary-copy"><span class="especial-visualizador-detail-summary-label">Estado</span><strong class="especial-visualizador-detail-summary-value">{{ director.estado_est|default:"—" }}</strong></div></div>
+        </div>
+    </section>
+
+    <section class="especial-visualizador-detail-section">
+        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Datos del director/responsable</h3></div>
+        <div class="especial-visualizador-detail-personal-groups">
+            <div class="especial-visualizador-detail-data-group"><h4>Identificación</h4><div class="especial-visualizador-detail-data-grid">
+                <div class="especial-visualizador-detail-data-item"><span>Apellido</span><strong>{{ director.apellido_resp|default:"—" }}</strong></div>
+                <div class="especial-visualizador-detail-data-item"><span>Nombre</span><strong>{{ director.nombre_resp|default:"—" }}</strong></div>
+                <div class="especial-visualizador-detail-data-item"><span>CUIL/CUIT</span><strong>{{ director.resploc_cuitcuil|default:cuil_buscado }}</strong></div>
+            </div></div>
+            <div class="especial-visualizador-detail-data-group"><h4>Contacto</h4><div class="especial-visualizador-detail-data-grid">
+                <div class="especial-visualizador-detail-data-item"><span>Email</span><strong>{{ director.resploc_email|default:"—" }}</strong></div>
+                <div class="especial-visualizador-detail-data-item"><span>Teléfono</span><strong>{{ director.resploc_telefono|default:"—" }}</strong></div>
+            </div></div>
+        </div>
+    </section>
+
+    <section class="especial-visualizador-detail-section">
+        <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-school" aria-hidden="true"></i>Escuelas relacionadas</h3><span class="especial-visualizador-detail-section-count">{{ escuelas|length }} registro{{ escuelas|length|pluralize:"s" }}</span></div>
+        <div class="especial-visualizador-detail-table-scroll">
+            <table class="table especial-visualizador-detail-table">
+                <thead><tr><th>CUE-Anexo</th><th>Establecimiento</th><th>Oferta educativa</th><th>Localidad</th><th>Departamento</th><th>Estado</th></tr></thead>
+                <tbody>
+                    {% for escuela in escuelas %}
+                        <tr>
+                            <td data-label="CUE-Anexo"><span class="especial-visualizador-detail-chip">{{ escuela.cueanexo|default:"—" }}</span></td>
+                            <td data-label="Establecimiento"><strong class="detail-cell-primary">{{ escuela.nom_est|default:"—" }}</strong></td>
+                            <td data-label="Oferta educativa">{{ escuela.oferta|default:"—" }}</td>
+                            <td data-label="Localidad">{{ escuela.localidad|default:"—" }}</td>
+                            <td data-label="Departamento">{{ escuela.departamento|default:"—" }}</td>
+                            <td data-label="Estado"><span class="especial-visualizador-detail-status">{{ escuela.estado_est|default:"—" }}</span></td>
+                        </tr>
+                    {% empty %}<tr><td class="detail-table-empty" colspan="6">No se encontraron escuelas relacionadas con ese CUIL/CUIT.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
