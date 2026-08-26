@@ -9,9 +9,9 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
-from django.db.models import Count, Exists, OuterRef, Q
-from django.db.models.functions import Lower
-from django.http import Http404, HttpResponseNotAllowed, JsonResponse
+from django.db.models import CharField, Count, Exists, OuterRef, Q
+from django.db.models.functions import Cast, Lower
+from django.http import Http404, JsonResponse
 from django.urls import NoReverseMatch, reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from .forms import (
@@ -24,10 +24,10 @@ from .models import (
     EspecialAlumnoBanco,
     SeccionEspecial,
     cueanexo_tiene_oferta_matricula_compartida,
-    get_ofertas_comunes_queryset,
+    get_establecimientos_no_especiales_matricula_queryset,
     normalizar_cueanexo,
 )
-from .permisos import especial_required
+from .permisos import cueanexo_autorizado_especial, especial_required, get_permisos_especial_request
 from .services.alumnos import (
     actualizar_matricula_compartida,
     asegurar_alumno_banco,
@@ -39,6 +39,7 @@ from .views_inscripcion_seccion import crear_inscripcion_activa
 logger = logging.getLogger(__name__)
 
 SECCION_SIN_ASIGNAR = "sin_seccion"
+CUEANEXO_AUTOCOMPLETE_PAGE_SIZE = 20
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
     "El banco de alumnos de Educación Especial está pendiente de creación en base de datos."
@@ -288,82 +289,155 @@ def _actualizar_matricula_compartida(request, especial_context, habilitada):
     return True, "Matrícula compartida actualizada correctamente.", alumno_banco
 
 
-def _serializar_cueanexos_matricula_compartida(request, especial_context):
-    """Busca CUE-Anexos comunes, limitados y sin duplicar."""
-    term = (request.GET.get("q") or "").strip()[:80]
-    queryset = (
-        get_ofertas_comunes_queryset()
-        .exclude(cueanexo=especial_context["cueanexo"])
-        .exclude(cueanexo__isnull=True)
-    )
-    if term:
-        term_digits = _solo_digitos(term)
-        query = Q(nom_est__icontains=term)
-        if term_digits:
-            query |= Q(cueanexo__icontains=term_digits)
-        queryset = queryset.filter(query)
+def _normalizar_busqueda_cueanexo(valor):
+    """Normaliza un término de búsqueda sin convertir códigos a números."""
+    term = " ".join(str(valor or "").split())[:80]
+    if term and all(caracter.isdigit() or caracter in " .-" for caracter in term):
+        return re.sub(r"[ .-]", "", term)[:9], True
+    return term, False
 
+
+def _pagina_autocomplete(request):
+    try:
+        pagina = int(request.GET.get("page") or 1)
+    except (TypeError, ValueError):
+        pagina = 1
+    return max(pagina, 1)
+
+
+def _serializar_cueanexos_matricula_compartida(
+    request,
+    especial_context,
+    *,
+    return_pagination=False,
+):
+    """Busca CUE-Anexos no Especiales vigentes con paginación remota de Select2."""
+    term, term_es_numerico = _normalizar_busqueda_cueanexo(
+        request.GET.get("q") or request.GET.get("term")
+    )
+    queryset = (
+        get_establecimientos_no_especiales_matricula_queryset()
+        .exclude(cueanexo=especial_context["cueanexo"])
+        .exclude(padron_cueanexo=especial_context["cueanexo"])
+        .exclude(cueanexo__isnull=True)
+        .exclude(nom_est__isnull=True)
+        .exclude(nom_est__exact="")
+    )
+    if term_es_numerico and term:
+        queryset = queryset.annotate(
+            cueanexo_texto=Cast("cueanexo", output_field=CharField())
+        ).filter(cueanexo_texto__startswith=term)
+    elif term:
+        queryset = queryset.filter(nom_est__icontains=term)
+
+    pagina = _pagina_autocomplete(request)
+    inicio = (pagina - 1) * CUEANEXO_AUTOCOMPLETE_PAGE_SIZE
     queryset = (
         queryset
         .order_by("cueanexo", "nom_est", "id")
         .distinct("cueanexo")
-        .values("cueanexo", "nom_est")[:5]
+        .values("cueanexo", "nom_est")
     )
+    filas = list(
+        queryset[
+            inicio : inicio + CUEANEXO_AUTOCOMPLETE_PAGE_SIZE + 1
+        ]
+    )
+    hay_mas = len(filas) > CUEANEXO_AUTOCOMPLETE_PAGE_SIZE
     resultados = []
     vistos = set()
-    for item in queryset:
+    for item in filas[:CUEANEXO_AUTOCOMPLETE_PAGE_SIZE]:
         cueanexo = normalizar_cueanexo(item.get("cueanexo"))
-        if not cueanexo or cueanexo in vistos:
+        nombre = str(item.get("nom_est") or "").strip()
+        if not cueanexo or not nombre or cueanexo in vistos:
             continue
         vistos.add(cueanexo)
-        nombre = str(item.get("nom_est") or "Establecimiento sin nombre").strip()
         resultados.append(
             {
                 "id": cueanexo,
                 "text": f"{cueanexo} — {nombre}",
             }
         )
+    if return_pagination:
+        return resultados, hay_mas
     return resultados
+
+
+def _respuesta_error_autocomplete_cueanexo(detalle, status):
+    return JsonResponse(
+        {
+            "results": [],
+            "pagination": {"more": False},
+            "detail": detalle,
+        },
+        status=status,
+    )
 
 
 @especial_required
 def buscar_cueanexos_matricula_compartida(request):
-    """Endpoint protegido de autocomplete contra el padrón general."""
+    """Autocomplete protegido; solo acepta el contexto real de una sección Integración."""
     if request.method != "GET":
-        return HttpResponseNotAllowed(["GET"])
-
-    context = contexto_base(request, "alumnos")
-    especial_context = context["especial_context"]
-    if not especial_context["puede_operar"]:
-        return JsonResponse({"results": []})
-    matricula_compartida_habilitada = _matricula_compartida_habilitada(
-        especial_context
-    )
-    if matricula_compartida_habilitada is None:
-        return JsonResponse(
-            {"detail": "No se pudo consultar el padrón en este momento."},
-            status=503,
-        )
-    if not matricula_compartida_habilitada:
-        return JsonResponse(
-            {"detail": "La matrícula compartida no está habilitada para este CUE-Anexo."},
-            status=403,
+        return _respuesta_error_autocomplete_cueanexo(
+            "El buscador de CUE-Anexo sólo admite solicitudes GET.",
+            405,
         )
 
     try:
-        resultados = _serializar_cueanexos_matricula_compartida(
+        seccion_id = _pk_post(
+            request.GET.get("seccion_id") or request.GET.get("seccion")
+        )
+        seccion = (
+            SeccionEspecial.objects
+            .filter(pk=seccion_id)
+            .select_related("ciclo")
+            .first()
+            if seccion_id
+            else None
+        )
+        permisos = get_permisos_especial_request(request)
+        if not seccion or not cueanexo_autorizado_especial(
+            permisos,
+            seccion.cueanexo,
+            "cargables",
+        ):
+            return _respuesta_error_autocomplete_cueanexo(
+                "La sección indicada no es válida.",
+                404,
+            )
+        if seccion.estado != SeccionEspecial.Estado.ACTIVO:
+            return _respuesta_error_autocomplete_cueanexo(
+                "La sección no está activa.",
+                409,
+            )
+        if not seccion.es_oferta_integracion:
+            return JsonResponse({"results": [], "pagination": {"more": False}})
+
+        especial_context = {"cueanexo": seccion.cueanexo}
+        resultados, hay_mas = _serializar_cueanexos_matricula_compartida(
             request,
             especial_context,
+            return_pagination=True,
         )
     except (OperationalError, ProgrammingError):
         logger.exception(
             "No se pudo buscar CUE-Anexos de matrícula compartida en el padrón."
         )
-        return JsonResponse(
-            {"detail": "No se pudo consultar el padrón en este momento."},
-            status=503,
+        return _respuesta_error_autocomplete_cueanexo(
+            "No se pudo consultar el padrón en este momento.",
+            503,
         )
-    return JsonResponse({"results": resultados, "pagination": {"more": False}})
+    except Exception:
+        logger.exception(
+            "Error no controlado en autocomplete de CUE-Anexos de matrícula compartida."
+        )
+        return _respuesta_error_autocomplete_cueanexo(
+            "No se pudo cargar el buscador de CUE-Anexos en este momento.",
+            503,
+        )
+    return JsonResponse(
+        {"results": resultados, "pagination": {"more": hay_mas}}
+    )
 
 
 def _inscribir_alumno_desde_banco(request, especial_context):
@@ -687,19 +761,9 @@ def alumnos(request):
     cuil_error = ""
     alumno_en_banco = False
     alumno_banco_actual = None
-    matricula_compartida_habilitada = _matricula_compartida_habilitada(especial_context)
-    try:
-        mostrar_cueanexo_matricula = cueanexo_tiene_oferta_matricula_compartida(
-            especial_context.get("cueanexo")
-        )
-    except (OperationalError, ProgrammingError):
-        logger.exception(
-            "No se pudo verificar la oferta de integración para mostrar el CUE-Anexo de matrícula."
-        )
-        mostrar_cueanexo_matricula = False
-    matricula_compartida_error = ""
-    matricula_compartida_cueanexo = ""
-    matricula_compartida_posted = False
+    # La pantalla general nunca decide ni valida matrícula compartida.
+    matricula_compartida_habilitada = False
+    mostrar_cueanexo_matricula = False
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
     abrir_modal_baja = request.GET.get("abrir_modal_baja") == "1"
     baja_modal_alumno = None
@@ -728,34 +792,7 @@ def alumnos(request):
                 _url_alumnos(especial_context, seccion_id=filtro_seccion_id)
             )
         baja_error = baja_message
-    elif request.method == "POST" and request.POST.get("accion") == "actualizar_matricula_compartida":
-        abrir_modal = True
-        ok, matricula_message, alumno_banco_actual = _actualizar_matricula_compartida(
-            request,
-            especial_context,
-            matricula_compartida_habilitada,
-        )
-        alumno = alumno_banco_actual.alumno
-        cuil_buscado = _solo_digitos(getattr(alumno, "cuil", ""))
-        alumno_en_banco = True
-        matricula_compartida_posted = True
-        matricula_compartida_cueanexo = request.POST.get(
-            "cueanexo_matricula_compartida",
-            "",
-        )
-        if ok:
-            messages.success(request, matricula_message)
-            return redirect(
-                _url_alumnos(especial_context, seccion_id=filtro_seccion_id)
-            )
-        matricula_compartida_error = matricula_message
     elif request.method == "POST":
-        if request.POST.get("accion") == "inscribir_seccion":
-            _inscribir_alumno_desde_banco(request, especial_context)
-            return redirect(
-                _url_alumnos(especial_context, seccion_id=filtro_seccion_id)
-            )
-
         busqueda_form = EspecialBusquedaAlumnoForm(request.POST)
         abrir_modal = True
         if busqueda_form.is_valid():
@@ -773,66 +810,42 @@ def alumnos(request):
                 "Seleccioná un CUE-Anexo y un ciclo lectivo para agregar alumnos al banco.",
             )
         else:
-            matricula_form = _matricula_compartida_form(
-                request.POST,
-                especial_context,
-                matricula_compartida_habilitada,
-            )
-            matricula_compartida_posted = "cueanexo_matricula_compartida" in request.POST
-            matricula_compartida_cueanexo = request.POST.get(
-                "cueanexo_matricula_compartida",
-                "",
-            )
-            formulario_valido, formulario_error = _validar_matricula_compartida_form(
-                matricula_form
-            )
-            if not formulario_valido:
-                matricula_compartida_error = formulario_error
-            else:
-                matricula_compartida = matricula_form.cleaned_data["matricula_compartida"]
-                try:
-                    banco, creado = asegurar_alumno_banco(
-                        alumno=alumno,
-                        cueanexo=especial_context["cueanexo"],
-                        ciclo=especial_context["ciclo"],
-                        user=request.user,
-                        matricula_compartida=matricula_compartida,
-                        padron_queryset=matricula_form.padron_queryset,
+            try:
+                banco, creado = asegurar_alumno_banco(
+                    alumno=alumno,
+                    cueanexo=especial_context["cueanexo"],
+                    ciclo=especial_context["ciclo"],
+                    user=request.user,
+                    validar_relacion=False,
+                )
+                alumno_banco_actual = banco
+                alumno_en_banco = bool(banco)
+                if creado:
+                    messages.success(request, "Alumno agregado al banco de Educación Especial.")
+                    return redirect(
+                        _url_alumnos(
+                            especial_context,
+                            seccion_id=filtro_seccion_id,
+                        )
                     )
-                    alumno_banco_actual = banco
-                    alumno_en_banco = bool(banco)
-                    if creado:
-                        messages.success(request, "Alumno agregado al banco de Educación Especial.")
-                        return redirect(
-                            _url_alumnos(
-                                especial_context,
-                                seccion_id=filtro_seccion_id,
-                            )
-                        )
-                    else:
-                        modal_feedback = (
-                            "Ese alumno ya está activo en el banco de este "
-                            "establecimiento y ciclo."
-                        )
-                        messages.info(
-                            request,
-                            modal_feedback,
-                        )
-                except ValidationError as exc:
-                    modal_feedback = "; ".join(exc.messages)
-                    messages.error(request, modal_feedback)
-                except (OperationalError, ProgrammingError):
-                    logger.exception("No se pudo crear el banco de alumnos Especial.")
-                    modal_feedback = MSG_BANCO_ALUMNOS_PENDIENTE
-                    messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
-                except IntegrityError:
+                else:
                     modal_feedback = (
-                        "No se pudo agregar el alumno al banco. Verificá que no exista ya activo."
+                        "Ese alumno ya está activo en el banco de este "
+                        "establecimiento y ciclo."
                     )
-                    messages.error(
-                        request,
-                        modal_feedback,
-                    )
+                    messages.info(request, modal_feedback)
+            except ValidationError as exc:
+                modal_feedback = "; ".join(exc.messages)
+                messages.error(request, modal_feedback)
+            except (OperationalError, ProgrammingError):
+                logger.exception("No se pudo crear el banco de alumnos Especial.")
+                modal_feedback = MSG_BANCO_ALUMNOS_PENDIENTE
+                messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
+            except IntegrityError:
+                modal_feedback = (
+                    "No se pudo agregar el alumno al banco. Verificá que no exista ya activo."
+                )
+                messages.error(request, modal_feedback)
     else:
         busqueda_form = EspecialBusquedaAlumnoForm(
             request.GET if request.GET.get("cuil") else None
@@ -917,9 +930,6 @@ def alumnos(request):
         alumnos_banco = []
         alumnos_banco_tabla_pendiente = True
 
-    if alumno_banco_actual and not matricula_compartida_posted:
-        matricula_compartida_cueanexo = alumno_banco_actual.matricula_compartida or ""
-
     try:
         inscripciones_por_alumno = _inscripciones_por_alumno(
             especial_context,
@@ -990,11 +1000,6 @@ def alumnos(request):
             "modal_feedback_level": modal_feedback_level,
             "matricula_compartida_habilitada": matricula_compartida_habilitada,
             "mostrar_cueanexo_matricula": mostrar_cueanexo_matricula,
-            "matricula_compartida_busqueda_url": reverse(
-                "especial:buscar_cueanexos_matricula_compartida"
-            ),
-            "matricula_compartida_error": matricula_compartida_error,
-            "matricula_compartida_cueanexo": matricula_compartida_cueanexo,
         }
     )
     return render_especial(

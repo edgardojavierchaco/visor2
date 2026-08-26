@@ -582,6 +582,14 @@ def _resumen_cues_alumno(bancos):
 
 def _matriculas_compartidas_validas(bancos):
     """Valida CUE-Anexos compartidos activos sin modificar datos persistidos."""
+    relaciones_integracion_activas = {
+        (inscripcion.alumno_id, _solo_digitos(inscripcion.seccion.cueanexo), inscripcion.seccion.ciclo_id)
+        for inscripcion in AlumnoSeccion.objects.filter(
+            estado=AlumnoSeccion.Estado.ACTIVO,
+            seccion__estado=SeccionEspecial.Estado.ACTIVO,
+        ).select_related("seccion")
+        if inscripcion.seccion.es_oferta_integracion
+    }
     grupos = {}
     for banco in bancos:
         if banco.estado != EspecialAlumnoBanco.Estado.ACTIVO:
@@ -602,8 +610,15 @@ def _matriculas_compartidas_validas(bancos):
             cue_actual = _solo_digitos(banco.cueanexo)
             cue_asociado = _solo_digitos(valor)
             motivo_invalidez = ""
+            tiene_seccion_integracion = (
+                banco.alumno_id,
+                cue_actual,
+                banco.ciclo_id,
+            ) in relaciones_integracion_activas
 
-            if not valor and not hay_multiples_cues:
+            if not tiene_seccion_integracion:
+                continue
+            if not valor:
                 continue
             if valor and len(cue_asociado) != 9:
                 motivo_invalidez = "el CUE asociado no tiene 9 dígitos"
@@ -624,13 +639,6 @@ def _matriculas_compartidas_validas(bancos):
                     valor,
                     motivo_invalidez,
                 )
-                # Un valor persistido inválido no habilita la matrícula cuando
-                # el alumno solo tiene un CUE. Si hay dos CUE activos, la
-                # relación operativa se puede inferir del segundo CUE vigente.
-                if not hay_multiples_cues:
-                    continue
-
-            if not hay_multiples_cues:
                 continue
 
             bancos_validos.add(banco.pk)
