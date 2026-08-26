@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.gis.db import models
 from apps.alumnos.models import oferta
 
 
@@ -16,6 +16,10 @@ class CapaUnicaOfertas(models.Model):
     oferta = models.CharField(max_length=255)    
     acronimo = models.CharField(max_length=100)    
     resploc_cuitcuil= models.CharField(max_length=20)
+    geom = models.PointField(srid=4326, null=True)
+    long = models.FloatField(null=True)
+    lat = models.FloatField(null=True)
+    
 
     class Meta:
         managed = False
