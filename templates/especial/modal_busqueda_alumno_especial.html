@@ -1,224 +1,71 @@
 <div id="modalBusquedaAlumno" class="cef-overlay{% if modal_alumno_abierto %} is-open{% endif %}" aria-hidden="{% if modal_alumno_abierto %}false{% else %}true{% endif %}" data-volver-url="{{ modal_volver_url }}">
     <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="personasBusquedaTitulo">
-
-        <!-- Header -->
         <div class="cef-modal-head">
-            <h2 id="personasBusquedaTitulo" class="cef-modal-title">
-                <i class="fa-solid fa-magnifying-glass me-2"></i>Personas <span>» Búsqueda</span>
-            </h2>
-            <a class="cef-modal-close" href="{{ modal_volver_url }}" aria-label="Cerrar" data-modal-close>
-                <i class="fa-solid fa-xmark"></i>
-            </a>
+            <h2 id="personasBusquedaTitulo" class="cef-modal-title"><i class="fa-solid fa-magnifying-glass me-2"></i>Personas <span>» Búsqueda</span></h2>
+            <a class="cef-modal-close" href="{{ modal_volver_url }}" aria-label="Cerrar" data-modal-close><i class="fa-solid fa-xmark"></i></a>
         </div>
-
-        <!-- Body -->
         <div class="cef-modal-body">
-            <!-- Search -->
             <div class="cef-modal-search">
                 <span class="cef-modal-search-label">Buscar por CUIL</span>
                 <form method="get" action="{{ modal_action_url }}" class="cef-modal-search-form" novalidate data-modal-search-form>
-                    <input type="hidden" name="cueanexo" value="{{ especial_context.cueanexo }}">
-                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                    <input type="hidden" name="abrir_modal_alumno" value="1">
-                    <label class="cef-modal-input-wrap" for="cefCuilInput">
-                        <i class="fa-solid fa-id-card"></i>
-                        <input id="cefCuilInput" type="text" name="cuil" value="{{ cuil_buscado }}" placeholder="Ingresar CUIL" inputmode="numeric" maxlength="11" autocomplete="off">
-                    </label>
-                    <button class="cef-modal-search-btn" type="submit">
-                        <i class="fa-solid fa-magnifying-glass"></i> Buscar
-                    </button>
+                    {% if not modal_tiene_seccion %}<input type="hidden" name="cueanexo" value="{{ especial_context.cueanexo }}">{% if especial_context.ciclo %}<input type="hidden" name="ciclo" value="{{ especial_context.ciclo.pk }}">{% endif %}{% endif %}
+                    <input type="hidden" name="abrir_modal_alumno" value="1"><input type="hidden" name="seccion_id" value="{{ seccion.pk }}">
+                    <label class="cef-modal-input-wrap" for="cefCuilInput"><i class="fa-solid fa-id-card"></i><input id="cefCuilInput" type="text" name="cuil" value="{{ cuil_buscado }}" placeholder="Ingresar CUIL" inputmode="numeric" maxlength="11" autocomplete="off"></label>
+                    <button class="cef-modal-search-btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
                 </form>
             </div>
 
             <div class="cef-modal-search-results" data-cef-modal-search-results>
-                <div class="cef-modal-search-loading" aria-live="polite" role="status">
-                    <div class="especial-partial-loading">
-                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        Cargando...
-                    </div>
-                </div>
-
-                {% if modal_feedback %}
-                    <div class="alert alert-{% if modal_feedback_level == 'success' %}success{% else %}danger{% endif %} mb-3" data-cef-modal-feedback>
-                        {{ modal_feedback }}
-                    </div>
-                {% endif %}
-
-                <!-- Table -->
+                <div class="cef-modal-search-loading" aria-live="polite" role="status"><div class="especial-partial-loading"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando...</div></div>
+                {% if modal_feedback %}<div class="alert alert-{% if modal_feedback_level == 'success' %}success{% else %}danger{% endif %} mb-3" data-cef-modal-feedback>{{ modal_feedback }}</div>{% endif %}
                 <div class="cef-modal-table-wrap">
                     <table class="cef-modal-table">
-                    <colgroup>
-                        <col class="cef-modal-col-apellidos">
-                        <col class="cef-modal-col-nombres">
-                        <col class="cef-modal-col-tipo-doc">
-                        <col class="cef-modal-col-nro-doc">
-                        <col class="cef-modal-col-cuil">
-                        <col class="cef-modal-col-fecha-nac">
-                        <col class="cef-modal-col-sexo">
-                        <col class="cef-modal-col-lugar-nac">
-                        {% if matricula_compartida_habilitada %}<col class="cef-modal-col-matricula">{% endif %}
-                        <col class="cef-modal-col-acciones">
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th>Apellido</th>
-                            <th>Nombre</th>
-                            <th>Tipo Doc.</th>
-                            <th>Nro. Doc.</th>
-                            <th>CUIL</th>
-                            <th>Fecha Nac.</th>
-                            <th>Sexo</th>
-                            <th>Lugar de Nac.</th>
-                            {% if matricula_compartida_habilitada %}
-                                <th class="cef-matricula-compartida-heading">Matrícula compartida</th>
-                            {% endif %}
-                            <th class="cef-modal-actions-heading">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if alumno_row %}
-                            <tr>
-                                <td><strong>{{ alumno_row.apellidos|default:"—" }}</strong></td>
-                                <td>{{ alumno_row.nombres|default:"—" }}</td>
-                                <td>{{ alumno_row.tipo_doc|default:"—" }}</td>
-                                <td>{{ alumno_row.nro_doc|default:"—" }}</td>
-                                <td>{{ alumno_row.cuil|default:"—" }}</td>
-                                <td>{% if alumno_row.fecha_nac %}{{ alumno_row.fecha_nac|date:"d/m/Y" }}{% else %}—{% endif %}</td>
-                                <td>{{ alumno_row.sexo|default:"—" }}</td>
-                                <td>{{ alumno_row.lugar_nac|default:"—" }}</td>
-                                {% if matricula_compartida_habilitada %}
-                                    <td class="cef-matricula-compartida-cell">
-                                        <div class="cef-matricula-compartida-editor" data-especial-matricula-editor>
-                                            {% if alumno_en_banco %}
-                                                <form id="matriculaCompartidaActualizacion" method="post" action="{{ modal_action_url }}" data-modal-post-form data-especial-matricula-update-form data-initial-cue="{{ alumno_banco_actual.matricula_compartida|default:'' }}">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="accion" value="actualizar_matricula_compartida">
-                                                    <input type="hidden" name="alumno_banco_id" value="{{ alumno_banco_actual.pk }}">
-                                                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                        <colgroup><col class="cef-modal-col-apellidos"><col class="cef-modal-col-nombres"><col class="cef-modal-col-tipo-doc"><col class="cef-modal-col-nro-doc"><col class="cef-modal-col-cuil"><col class="cef-modal-col-fecha-nac"><col class="cef-modal-col-sexo"><col class="cef-modal-col-lugar-nac">{% if modal_tiene_seccion and seccion_es_oferta_integracion %}<col class="cef-modal-col-matricula">{% endif %}<col class="cef-modal-col-acciones"></colgroup>
+                        <thead><tr><th>Apellido</th><th>Nombre</th><th>Tipo Doc.</th><th>Nro. Doc.</th><th>CUIL</th><th>Fecha Nac.</th><th>Sexo</th><th>Lugar de Nac.</th>{% if modal_tiene_seccion and seccion_es_oferta_integracion %}<th class="cef-matricula-compartida-heading">Matrícula compartida</th>{% endif %}<th class="cef-modal-actions-heading">Acciones</th></tr></thead>
+                        <tbody>
+                            {% if alumno_row %}
+                                <tr>
+                                    <td><strong>{{ alumno_row.apellidos|default:"—" }}</strong></td><td>{{ alumno_row.nombres|default:"—" }}</td><td>{{ alumno_row.tipo_doc|default:"—" }}</td><td>{{ alumno_row.nro_doc|default:"—" }}</td><td>{{ alumno_row.cuil|default:"—" }}</td><td>{% if alumno_row.fecha_nac %}{{ alumno_row.fecha_nac|date:"d/m/Y" }}{% else %}—{% endif %}</td><td>{{ alumno_row.sexo|default:"—" }}</td><td>{{ alumno_row.lugar_nac|default:"—" }}</td>
+                                    {% if modal_tiene_seccion and seccion_es_oferta_integracion %}
+                                        <td class="cef-matricula-compartida-cell">
+                                            {% if not alumno_en_seccion %}
+                                                <div class="cef-matricula-compartida-editor" data-especial-matricula-editor>
                                                     <div class="cef-matricula-compartida-select-wrap">
-                                                        <label for="matriculaCompartidaCueActual">CUE-Anexo asociado</label>
-                                                        <select id="matriculaCompartidaCueActual" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
-                                                            {% if matricula_compartida_cueanexo %}
-                                                                <option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>
-                                                            {% endif %}
-                                                        </select>
-                                                        <span class="cef-matricula-compartida-help">Opcional en el banco. Se solicitará al inscribir en una sección de Integración.</span>
-                                                    </div>
-                                                    {% if matricula_compartida_error %}<p class="cef-matricula-compartida-error" data-cef-modal-feedback>{{ matricula_compartida_error }}</p>{% endif %}
-                                                    <button class="btn btn-outline-primary cef-matricula-compartida-save" type="submit" data-especial-matricula-save hidden>Guardar</button>
-                                                </form>
-                                            {% else %}
-                                                <div class="cef-matricula-compartida-select-wrap">
-                                                    <label for="matriculaCompartidaCueAlta">CUE-Anexo asociado</label>
-                                                    <select id="matriculaCompartidaCueAlta" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" form="altaAlumnoBancoForm" data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
-                                                        {% if matricula_compartida_cueanexo %}
-                                                            <option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>
-                                                        {% endif %}
+                                                    <label for="matriculaCompartidaCueSeccion">CUE-Anexo asociado <span aria-hidden="true">*</span></label>
+                                                    <select id="matriculaCompartidaCueSeccion" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" form="inscribirAlumnoSeccionForm" required data-especial-matricula-cue-select data-especial-matricula-alta data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ seccion.cueanexo }}">
+                                                        <option value=""{% if not matricula_compartida_cueanexo %} selected{% endif %}>Seleccioná un CUE-Anexo asociado...</option>
+                                                        {% if matricula_compartida_cueanexo and matricula_compartida_cueanexo != ultima_matricula_compartida.cueanexo %}<option value="{{ matricula_compartida_cueanexo }}" selected>{{ matricula_compartida_cueanexo }}</option>{% endif %}
+                                                        {% if ultima_matricula_compartida %}<option value="{{ ultima_matricula_compartida.cueanexo }}"{% if matricula_compartida_cueanexo == ultima_matricula_compartida.cueanexo %} selected{% endif %}>{{ ultima_matricula_compartida.cueanexo }} — {{ ultima_matricula_compartida.establecimiento }}</option>{% endif %}
                                                     </select>
-                                                    <span class="cef-matricula-compartida-help">Opcional en el banco. Se solicitará al inscribir en una sección de Integración.</span>
+                                                    </div>
+                                                    {% if ultima_matricula_compartida %}<div class="cef-matricula-compartida-history"><span class="cef-matricula-compartida-history-title">Última matrícula compartida utilizada</span><span class="cef-matricula-compartida-history-value">{{ ultima_matricula_compartida.cueanexo }} — {{ ultima_matricula_compartida.establecimiento }}</span><button type="button" class="btn btn-outline-primary btn-sm cef-matricula-compartida-use" data-especial-matricula-use-last data-cue="{{ ultima_matricula_compartida.cueanexo }}" data-label="{{ ultima_matricula_compartida.cueanexo }} — {{ ultima_matricula_compartida.establecimiento }}">Usar</button></div>{% endif %}
                                                 </div>
-                                                {% if matricula_compartida_error %}<p class="cef-matricula-compartida-error" data-cef-modal-feedback>{{ matricula_compartida_error }}</p>{% endif %}
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                {% endif %}
-                                <td class="cef-modal-actions-cell">
-                                    <div class="cef-modal-actions">
-                                        {# Lógica para Especial: usa especial_context.puede_operar #}
-                                        {% if modal_tiene_seccion %}
-                                            {% if seccion_es_oferta_integracion and alumno_en_banco %}
-                                                <div class="cef-matricula-compartida-select-wrap mb-2" data-especial-matricula-editor>
-                                                    <label for="matriculaCompartidaInscripcionSeccion">CUE-Anexo de matrícula compartida <span aria-hidden="true">*</span></label>
-                                                    <select id="matriculaCompartidaInscripcionSeccion" class="form-select cef-matricula-compartida-select" name="cueanexo_matricula_compartida" form="inscribirAlumnoSeccionForm" required data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}"></select>
-                                                    <span class="cef-matricula-compartida-help">Obligatorio para esta sección de Integración.</span>
-                                                </div>
-                                            {% endif %}
-                                            {% if alumno_en_seccion %}
-                                                <span class="cef-modal-bank-status">
-                                                    <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
-                                                    Ya está inscripto en esta sección.
-                                                </span>
-                                            {% elif alumno_en_banco %}
-                                                <form id="inscribirAlumnoSeccionForm" method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="accion" value="inscribir_alumno">
-                                                    <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
-                                                    <button class="cef-modal-inline-btn" type="submit">
-                                                        <i class="fa-solid fa-user-check"></i> Inscribir en la sección
-                                                    </button>
-                                                </form>
-                                            {% else %}
-                                                <span class="cef-modal-bank-status">El alumno no está en el banco de esta localización.</span>
-                                            {% endif %}
-                                        {% elif alumno_en_banco %}
-                                            <span class="cef-modal-bank-status">
-                                                <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
-                                                Ya está en el banco.
-                                            </span>
-                                        {% elif especial_context.puede_operar %}
-                                            <form id="altaAlumnoBancoForm" method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
-                                                {% csrf_token %}
-                                                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                                                <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
-                                                <button class="cef-modal-inline-btn" type="submit" data-especial-matricula-alta-submit>
-                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco
-                                                </button>
-                                            </form>
-                                        {% else %}
-                                            <span style="font-size:.8rem;color:#64748b;font-style:italic">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
-                                        {% endif %}
-
-                                        {% if especial_context.puede_operar and url_editar_alumno %}
-                                            <a class="cef-modal-link" href="{{ url_editar_alumno }}" target="_blank" rel="noopener noreferrer">
-                                                <i class="fa-solid fa-pen-to-square"></i> Editar datos
-                                            </a>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td colspan="{% if matricula_compartida_habilitada %}10{% else %}9{% endif %}">
-                                    {% if cuil_error %}
-                                        <div class="cef-modal-msg is-error">
-                                            <i class="fa-solid fa-triangle-exclamation"></i>
-                                            {{ cuil_error }}
-                                        </div>
-                                    {% elif not cuil_buscado %}
-                                        <div class="cef-modal-msg">
-                                            <i class="fa-solid fa-id-card" style="color:#bfdbfe"></i>
-                                            Ingrese CUIL para buscar una persona.
-                                        </div>
-                                    {% else %}
-                                        <div class="cef-modal-msg">
-                                            <i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i>
-                                            No se encontró ninguna persona con ese documento.
-                                            {% if url_carga_alumno %}
-                                                <a class="cef-modal-load-link" href="{{ url_carga_alumno }}" target="_blank" rel="noopener noreferrer">
-                                                    <i class="fa-solid fa-plus-circle"></i> Cargar datos del alumno
-                                                </a>
-                                            {% endif %}
-                                        </div>
+                                            {% else %}<span class="text-muted">Relación activa de esta inscripción.</span>{% endif %}
+                                        </td>
                                     {% endif %}
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
+                                    <td class="cef-modal-actions-cell"><div class="cef-modal-actions">
+                                        {% if modal_tiene_seccion %}
+                                            {% if not especial_context.puede_operar %}<span class="text-muted small">La sección no está disponible para nuevas inscripciones.</span>
+                                            {% elif alumno_en_seccion %}<span class="cef-modal-bank-status"><i class="fa-regular fa-circle-check" aria-hidden="true"></i> Ya está inscripto en esta sección.</span>
+                                            {% elif alumno_en_banco %}
+                                                <form id="inscribirAlumnoSeccionForm" method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>{% csrf_token %}<input type="hidden" name="accion" value="inscribir_alumno"><input type="hidden" name="cuil" value="{{ cuil_buscado }}"><button class="cef-modal-inline-btn" type="submit" data-especial-matricula-alta-submit{% if seccion_es_oferta_integracion %} data-especial-matricula-required{% endif %}><i class="fa-solid fa-user-check"></i> Inscribir en esta sección</button></form>
+                                            {% else %}
+                                                <form id="inscribirAlumnoSeccionForm" method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>{% csrf_token %}<input type="hidden" name="accion" value="inscribir_alumno"><input type="hidden" name="cuil" value="{{ cuil_buscado }}"><button class="cef-modal-inline-btn" type="submit" data-especial-matricula-alta-submit{% if seccion_es_oferta_integracion %} data-especial-matricula-required{% endif %}><i class="fa-solid fa-user-check"></i> Agregar al banco e inscribir</button></form>
+                                            {% endif %}
+                                        {% elif alumno_en_banco %}<span class="cef-modal-bank-status"><i class="fa-regular fa-circle-check" aria-hidden="true"></i> Ya está en el banco.</span>
+                                        {% elif especial_context.puede_operar %}<form id="altaAlumnoBancoForm" method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>{% csrf_token %}<input type="hidden" name="cuil" value="{{ cuil_buscado }}"><button class="cef-modal-inline-btn" type="submit"><i class="fa-solid fa-user-check"></i> Agregar al banco</button></form>
+                                        {% else %}<span class="text-muted small">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>{% endif %}
+                                        {% if url_editar_alumno %}<a class="cef-modal-link" href="{{ url_editar_alumno }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-pen-to-square"></i> Editar datos</a>{% endif %}
+                                    </div></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="{% if modal_tiene_seccion and seccion_es_oferta_integracion %}10{% else %}9{% endif %}">{% if cuil_error %}<div class="cef-modal-msg is-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ cuil_error }}</div>{% elif not cuil_buscado %}<div class="cef-modal-msg"><i class="fa-solid fa-id-card" style="color:#bfdbfe"></i> Ingrese CUIL para buscar una persona.</div>{% else %}<div class="cef-modal-msg"><i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i> No se encontró ninguna persona con ese documento.{% if url_carga_alumno %}<a class="cef-modal-load-link" href="{{ url_carga_alumno }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-plus-circle"></i> Cargar datos del alumno</a>{% endif %}</div>{% endif %}</td></tr>
+                            {% endif %}
+                        </tbody>
                     </table>
                 </div>
-
-                {% if alumno_row and not cuil_error %}
-                    <p style="font-size:.8125rem;color:#64748b;margin-top:.75rem;font-style:italic" data-cef-modal-search-help>
-                        Si ninguna de las personas encontradas es la solicitada, puede realizar la carga completa de datos.
-                        {% if url_carga_alumno %}
-                            <a class="cef-modal-load-link ms-1" href="{{ url_carga_alumno }}" target="_blank" rel="noopener noreferrer">Cargar datos del alumno</a>
-                        {% endif %}
-                    </p>
-                {% endif %}
+                {% if alumno_row and not cuil_error %}<p style="font-size:.8125rem;color:#64748b;margin-top:.75rem;font-style:italic" data-cef-modal-search-help>Si ninguna de las personas encontradas es la solicitada, puede realizar la carga completa de datos. {% if url_carga_alumno %}<a class="cef-modal-load-link ms-1" href="{{ url_carga_alumno }}" target="_blank" rel="noopener noreferrer">Cargar datos del alumno</a>{% endif %}</p>{% endif %}
             </div>
-
         </div>
     </div>
 </div>

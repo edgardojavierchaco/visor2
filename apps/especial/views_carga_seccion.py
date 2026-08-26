@@ -1,11 +1,13 @@
 # apps/especial/views_carga_seccion.py
 # -*- coding: utf-8 -*-
 
+import logging
 import re
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,7 +20,6 @@ from .forms import (
     EspecialBusquedaAlumnoForm,
     EspecialBusquedaDocenteForm,
     EspecialDocenteSeccionForm,
-    EspecialMatriculaCompartidaForm,
     EspecialSeccionForm,
 )
 from .models import (
@@ -27,20 +28,27 @@ from .models import (
     EspecialAlumnoBanco,
     EspecialDocenteBanco,
     SeccionEspecial,
-    cueanexo_tiene_oferta_matricula_compartida,
+    normalizar_cueanexo,
 )
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
-from .services.alumnos import actualizar_matricula_compartida
+from .services.alumnos import (
+    inscribir_alumno_en_seccion,
+    ultima_matricula_compartida,
+)
 from .views_inscripcion_seccion import (
     _alumno_row,
     _buscar_alumno,
+    _completar_contexto_desde_seccion,
     crear_inscripcion_activa,
     dar_alta_inscripcion_seccion,
     dar_baja_inscripcion_seccion,
 )
 from .views_docentes import _buscar_docente, _docente_row
+
+
+logger = logging.getLogger(__name__)
 
 def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -83,6 +91,12 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
             alumno=alumno,
             estado=AlumnoSeccion.Estado.ACTIVO,
         ).exists()
+    )
+    es_integracion = seccion.es_oferta_integracion
+    ultima_matricula = (
+        ultima_matricula_compartida(alumno, excluir_cueanexo=seccion.cueanexo)
+        if alumno and es_integracion
+        else None
     )
 
     cuil_docente = cuil_buscado if request.GET.get("abrir_modal_docente") == "1" else ""
@@ -130,11 +144,12 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         "alumno_row": _alumno_row(alumno),
         "alumno_en_banco": alumno_en_banco,
         "alumno_en_seccion": alumno_en_seccion,
-        "matricula_compartida_habilitada": False,
+        "matricula_compartida_habilitada": es_integracion,
         "matricula_compartida_busqueda_url": reverse(
             "especial:buscar_cueanexos_matricula_compartida"
-        ),
-        "seccion_es_oferta_integracion": seccion.es_oferta_integracion,
+        ) + f"?seccion_id={seccion.pk}",
+        "seccion_es_oferta_integracion": es_integracion,
+        "ultima_matricula_compartida": ultima_matricula,
         "modal_tiene_seccion": True,
         "docente": docente,
         "docente_row": _docente_row(docente),
@@ -337,12 +352,21 @@ def _gestionar_fragment_context(seccion, especial_context):
         inscripcion.cueanexo_matricula_compartida = (
             banco.matricula_compartida if banco else ""
         )
-    try:
-        mostrar_cueanexo_matricula = cueanexo_tiene_oferta_matricula_compartida(
-            seccion.cueanexo
+    mostrar_cueanexo_matricula = seccion.es_oferta_integracion
+    gestionar_seccion_url = redirect_con_contexto(
+        "especial:gestionar_seccion",
+        especial_context,
+        seccion_id=seccion.pk,
+    )
+    for inscripcion in inscripciones:
+        params = urlencode(
+            {
+                "abrir_modal_alumno": "1",
+                "cuil": getattr(inscripcion.alumno, "cuil", ""),
+            }
         )
-    except (OperationalError, ProgrammingError):
-        mostrar_cueanexo_matricula = False
+        separador = "&" if "?" in gestionar_seccion_url else "?"
+        inscripcion.reinscripcion_url = f"{gestionar_seccion_url}{separador}{params}"
     docentes_activos = [
         docente for docente in docentes if docente.estado == DocenteSeccion.Estado.ACTIVO
     ]
@@ -354,7 +378,7 @@ def _gestionar_fragment_context(seccion, especial_context):
         "docentes": docentes,
         "docentes_activos": docentes_activos,
         "gestionar_seccion_modo": True,
-        "gestionar_seccion_url": redirect_con_contexto("especial:gestionar_seccion", especial_context, seccion_id=seccion.pk),
+        "gestionar_seccion_url": gestionar_seccion_url,
         "docentes_activos_count": len(docentes_activos),
         "mostrar_cueanexo_matricula": mostrar_cueanexo_matricula,
     }
@@ -542,6 +566,7 @@ def gestionar_seccion(request, seccion_id):
     """Vista de gestión integral de una sección."""
     context = contexto_base(request, "secciones", "Gestionar sección")
     especial_context = context["especial_context"]
+    _completar_contexto_desde_seccion(request, seccion_id, especial_context)
 
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
         messages.error(
@@ -610,53 +635,29 @@ def gestionar_seccion(request, seccion_id):
                 )
         elif accion == "inscribir_alumno":
             cuil = _solo_digitos(request.POST.get("cuil"))
+            cueanexo_asociado_recibido = str(
+                request.POST.get("cueanexo_matricula_compartida") or ""
+            ).strip()
             alumno = _buscar_alumno(cuil)
             if not alumno:
                 ok, message = False, "No se encontró el alumno indicado."
             else:
+                logger.info(
+                    "Inscripción Especial desde gestión recibida: seccion_id=%s "
+                    "cue_especial=%s ciclo_id=%s cuil=%s cue_asociado=%s",
+                    seccion.pk,
+                    seccion.cueanexo,
+                    seccion.ciclo_id,
+                    cuil,
+                    normalizar_cueanexo(cueanexo_asociado_recibido)
+                    or cueanexo_asociado_recibido,
+                )
                 try:
-                    if seccion.es_oferta_integracion:
-                        matricula_form = EspecialMatriculaCompartidaForm(
-                            request.POST,
-                            cueanexo_actual=seccion.cueanexo,
-                            matricula_compartida_habilitada=True,
-                            matricula_compartida_requerida=True,
-                        )
-                        if not matricula_form.is_valid():
-                            raise ValidationError(
-                                _errores_form(matricula_form)
-                            )
-                        alumno_banco = get_object_or_404(
-                            EspecialAlumnoBanco.objects.filter(
-                                alumno=alumno,
-                                cueanexo=seccion.cueanexo,
-                                ciclo=seccion.ciclo,
-                                estado=EspecialAlumnoBanco.Estado.ACTIVO,
-                            ),
-                        )
-                        actualizar_matricula_compartida(
-                            alumno_banco=alumno_banco,
-                            user=request.user,
-                            matricula_compartida=matricula_form.cleaned_data[
-                                "matricula_compartida"
-                            ],
-                            alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
-                                cueanexo=seccion.cueanexo,
-                                ciclo=seccion.ciclo,
-                            ),
-                        )
-                    _, creada = crear_inscripcion_activa(
+                    _, creada, _ = inscribir_alumno_en_seccion(
                         seccion=seccion,
                         alumno=alumno,
                         user=request.user,
-                        seccion_queryset=SeccionEspecial.objects.filter(
-                            cueanexo=seccion.cueanexo,
-                            ciclo=seccion.ciclo,
-                        ),
-                        alumno_banco_queryset=EspecialAlumnoBanco.objects.filter(
-                            cueanexo=seccion.cueanexo,
-                            ciclo=seccion.ciclo,
-                        ),
+                        cueanexo_asociado=cueanexo_asociado_recibido,
                     )
                     ok = True
                     message = (
@@ -666,8 +667,58 @@ def gestionar_seccion(request, seccion_id):
                     )
                 except ValidationError as exc:
                     ok, message = False, "; ".join(exc.messages)
+                    logger.warning(
+                        "Inscripción Especial desde gestión rechazada: seccion_id=%s "
+                        "cuil=%s cue_asociado=%s motivo=%s",
+                        seccion.pk,
+                        cuil,
+                        normalizar_cueanexo(cueanexo_asociado_recibido)
+                        or cueanexo_asociado_recibido,
+                        message,
+                    )
                 except IntegrityError:
                     ok, message = False, "No se pudo crear la inscripción."
+                    logger.exception(
+                        "Inscripción Especial desde gestión rechazada por integridad: "
+                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        seccion.pk,
+                        cuil,
+                        normalizar_cueanexo(cueanexo_asociado_recibido)
+                        or cueanexo_asociado_recibido,
+                    )
+                except (OperationalError, ProgrammingError):
+                    ok, message = False, (
+                        "No se pudo consultar el padrón o la base de datos. "
+                        "Intentá nuevamente."
+                    )
+                    logger.exception(
+                        "Inscripción Especial desde gestión con error de base: "
+                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        seccion.pk,
+                        cuil,
+                        normalizar_cueanexo(cueanexo_asociado_recibido)
+                        or cueanexo_asociado_recibido,
+                    )
+                except DatabaseError:
+                    ok, message = False, "No se pudo completar la inscripción por un error de base de datos."
+                    logger.exception(
+                        "Inscripción Especial desde gestión con error de base no clasificado: "
+                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        seccion.pk,
+                        cuil,
+                        normalizar_cueanexo(cueanexo_asociado_recibido)
+                        or cueanexo_asociado_recibido,
+                    )
+                except Exception:
+                    ok, message = False, "No se pudo completar la inscripción. Revisá los datos e intentá nuevamente."
+                    logger.exception(
+                        "Inscripción Especial desde gestión con error no controlado: "
+                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        seccion.pk,
+                        cuil,
+                        normalizar_cueanexo(cueanexo_asociado_recibido)
+                        or cueanexo_asociado_recibido,
+                    )
             if _is_ajax(request):
                 return _ajax_gestionar_fragment_response(
                     request,

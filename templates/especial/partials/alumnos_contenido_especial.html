@@ -57,7 +57,6 @@
                             <th>CUIL</th>
                             <th>Documento</th>
                             <th>Estado en Especial</th>
-                            {% if mostrar_cueanexo_matricula %}<th>CUE-Anexo educación común</th>{% endif %}
                             <th>Fecha alta</th>
                             <th>Secciones / inscripciones</th>
                             <th>ACCIONES</th>
@@ -67,7 +66,7 @@
                         {% for item in alumnos %}
                             {% if item.muestra_grupo_seccion %}
                                 <tr class="cef-alumno-seccion-grupo" data-cef-table-group-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}">
-                                    <th colspan="{% if mostrar_cueanexo_matricula %}8{% else %}7{% endif %}" scope="rowgroup">
+                                    <th colspan="7" scope="rowgroup">
                                         <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
                                         {{ item.seccion_principal_label }}
                                     </th>
@@ -87,7 +86,6 @@
                                         </div>
                                     {% endif %}
                                 </td>
-                                {% if mostrar_cueanexo_matricula %}<td>{{ item.matricula_compartida|default:"—" }}</td>{% endif %}
                                 <td>{{ item.fecha_alta|date:"d/m/Y" }}</td>
                                 <td>
                                     {% with total_secciones=item.inscripciones_seccion|length %}
@@ -117,81 +115,18 @@
                                     {% endwith %}
                                 </td>
                                 <td class="cef-act-cell">
-                                    {% if especial_context.puede_operar and item.estado == 'activo' %}
-                                    <div class="dropdown cef-secciones-row-actions" data-cef-row-actions>
-                                        <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-actions-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false">
-                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                                        </button>
-                                        <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
-                                            <li>
-                                                <div class="cef-alumnos-actions">
-                                        {# En el listado/tabla NO se agrega al banco, eso se hace en el modal de búsqueda #}
-                                        
-                                        {# Inscripción a una sección del establecimiento y ciclo activos #}
-                                        {% if especial_context.puede_operar and item.estado == 'activo' %}
-                                            {% if item.secciones_asignables %}
-                                                <div class="dropdown" data-cef-alumno-dropdown>
-                                                    <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-action is-primary" type="button" data-cef-alumno-dropdown-toggle aria-expanded="false">
-                                                        <i class="fa-solid fa-user-plus"></i>
-                                                        Inscribir a secci&oacute;n
-                                                    </button>
-                                                    <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
-                                                        {% for seccion in item.secciones_asignables %}
-                                                            <li>
-                                                                <form method="post" action="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" class="m-0">
-                                                                    {% csrf_token %}
-                                                                    <input type="hidden" name="accion" value="inscribir_seccion">
-                                                                    <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
-                                                                    <input type="hidden" name="seccion_id" value="{{ seccion.pk }}">
-                                                                    <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
-                                                                    {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
-                                                                    {% if seccion.es_oferta_integracion %}
-                                                                    <button class="dropdown-item" type="button" data-especial-inscribir-integracion data-seccion-label="{{ seccion.nombre_seccion }}">
-                                                                    {% else %}
-                                                                    <button class="dropdown-item" type="submit">
-                                                                    {% endif %}
-                                                                        <span>{{ seccion.nombre_seccion }}</span>
-                                                                        <small>{{ seccion.cd_tipo_seccion }}{% if seccion.oferta %} · {{ seccion.oferta }}{% endif %}{% if seccion.turno %} · {{ seccion.turno }}{% endif %} · Cupo {{ seccion.capacidad_total }}</small>
-                                                                    </button>
-                                                                </form>
-                                                            </li>
-                                                        {% endfor %}
-                                                        {% if item.secciones_asignables and item.secciones_bloqueadas %}
-                                                            <li><hr class="dropdown-divider"></li>
-                                                        {% endif %}
-                                                        {% for inscripcion in item.secciones_bloqueadas %}
-                                                            <li>
-                                                                <span class="dropdown-item disabled" aria-disabled="true">
-                                                                    <span>{{ inscripcion.seccion.nombre_seccion }}</span>
-                                                                    <small>Ya inscripto{% if inscripcion.fecha_inscripcion %} desde {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}{% endif %}{% if inscripcion.seccion.cd_tipo_seccion %} · {{ inscripcion.seccion.cd_tipo_seccion }}{% endif %}</small>
-                                                                </span>
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-
-                                        {# Botón Editar Datos #}
-                                                </div>
-                                            </li>
-                                            <li>
-                                        {% if especial_context.puede_operar and item.url_editar_alumno %}
-                                            <a class="dropdown-item cef-secciones-action is-outline cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
+                                    <div class="cef-alumnos-actions">
+                                        {% if item.url_editar_alumno %}
+                                            <a class="btn btn-outline-primary btn-sm cef-secciones-action cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
                                                 <i class="fa-solid fa-pen-to-square"></i> Editar datos
                                             </a>
                                         {% endif %}
                                         {% if especial_context.puede_operar and item.estado == 'activo' %}
-                                            </li>
-                                            <li>
-                                                <a class="btn btn-danger btn-sm" href="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open>
+                                            <a class="btn btn-danger btn-sm" href="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open>
                                                 <i class="fa-solid fa-user-slash"></i> Dar de baja
                                             </a>
                                         {% endif %}
-                                            </li>
-                                        </ul>
                                     </div>
-                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -625,33 +560,3 @@
 
 {% include "especial/modal_busqueda_alumno_especial.html" %}
 {% include "especial/alumno_baja_especial_modal.html" %}
-
-<div id="modalInscripcionIntegracion" class="cef-overlay" aria-hidden="true" data-especial-inscripcion-integracion-modal>
-    <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="modalInscripcionIntegracionTitulo">
-        <div class="cef-modal-head">
-            <h2 id="modalInscripcionIntegracionTitulo" class="cef-modal-title">
-                <i class="fa-solid fa-link me-2"></i>Matrícula compartida
-            </h2>
-            <button class="cef-modal-close" type="button" aria-label="Cerrar" data-especial-inscripcion-integracion-close>
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="cef-modal-body">
-            <form data-especial-inscripcion-integracion-form>
-                <p class="mb-3">La sección <strong data-especial-inscripcion-integracion-seccion></strong> pertenece a la oferta Integración.</p>
-                <p class="text-muted small">Indicá el CUE-Anexo de Educación Común asociado para completar la inscripción.</p>
-                <div class="cef-matricula-compartida-select-wrap" data-especial-matricula-editor>
-                    <label for="matriculaCompartidaInscripcion">CUE-Anexo de matrícula compartida <span aria-hidden="true">*</span></label>
-                    <select id="matriculaCompartidaInscripcion" class="form-select cef-matricula-compartida-select" required data-especial-matricula-cue-select data-autocomplete-url="{{ matricula_compartida_busqueda_url }}" data-current-cue="{{ especial_context.cueanexo }}">
-                    </select>
-                    <span class="cef-matricula-compartida-help">Buscá por CUE-Anexo o establecimiento.</span>
-                    <p class="cef-matricula-compartida-error" hidden data-especial-inscripcion-integracion-error></p>
-                </div>
-                <div class="cef-form-actions mt-4">
-                    <button type="button" class="btn btn-outline-secondary" data-especial-inscripcion-integracion-close>Cancelar</button>
-                    <button type="submit" class="btn btn-primary" data-especial-inscripcion-integracion-confirm disabled>Continuar inscripción</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>

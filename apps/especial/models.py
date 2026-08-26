@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import unicodedata
+import logging
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -9,6 +10,8 @@ from django.db.models import CharField, Func, Q, Value
 from django.db.models.functions import Cast
 from django.utils import timezone
 from apps.bnhalumnos.models import Alumno
+
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # CONSTANTES DEL MODULO ESPECIAL
@@ -161,14 +164,66 @@ def get_ofertas_comunes_queryset(padron_queryset=None):
     return queryset.filter(oferta__istartswith=PREFIJO_OFERTA_COMUN)
 
 
+def get_establecimientos_comunes_matricula_queryset(padron_queryset=None):
+    """Obtiene establecimientos comunes vigentes para matrícula compartida."""
+    return (
+        get_ofertas_comunes_queryset(padron_queryset)
+        .exclude(acronimo__iexact=ACRONIMO_ESPECIAL)
+        .filter(
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+    )
+
+
+def get_establecimientos_no_especiales_matricula_queryset(padron_queryset=None):
+    """Obtiene ofertas vigentes que no pertenecen a Educación Especial.
+
+    La elegibilidad se determina por el acrónimo real del padrón. Se filtran
+    filas, no CUE-Anexos completos, para conservar un CUE que tenga alguna
+    oferta vigente no Especial aunque también posea otra oferta Especial.
+    """
+    queryset = (
+        padron_queryset
+        if padron_queryset is not None
+        else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    )
+    return (
+        queryset
+        .exclude(acronimo__iexact=ACRONIMO_ESPECIAL)
+        .filter(
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+        .exclude(oferta__isnull=True)
+        .exclude(oferta__exact="")
+    )
+
+
+def cueanexo_tiene_oferta_no_especial(cueanexo, padron_queryset=None):
+    """Indica si el CUE tiene una oferta vigente que no sea de Especial."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    queryset = get_establecimientos_no_especiales_matricula_queryset(
+        padron_queryset
+    )
+    return (
+        queryset.filter(cueanexo=cueanexo).exists()
+        or queryset.filter(padron_cueanexo=cueanexo).exists()
+    )
+
+
 def cueanexo_tiene_oferta_comun(cueanexo, padron_queryset=None):
     """Indica si el CUE-Anexo normalizado tiene alguna oferta Común."""
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
         return False
-    return get_ofertas_comunes_queryset(padron_queryset).filter(
-        cueanexo=cueanexo
-    ).exists()
+    queryset = get_establecimientos_comunes_matricula_queryset(padron_queryset)
+    return (
+        queryset.filter(cueanexo=cueanexo).exists()
+        or queryset.filter(padron_cueanexo=cueanexo).exists()
+    )
 
 
 def _normalizar_oferta_matricula_compartida(valor):
@@ -658,7 +713,23 @@ class SeccionEspecial(EspecialAuditoriaMixin):
         termino = _normalizar_oferta_matricula_compartida(
             TERMINO_MATRICULA_COMPARTIDA
         )
-        return bool(re.search(r"\b" + re.escape(termino) + r"\b", oferta))
+        es_integracion = bool(re.search(r"\b" + re.escape(termino) + r"\b", oferta))
+        if (
+            not es_integracion
+            and not str(self.oferta or "").strip()
+            and re.search(
+                r"\bintegracion\b",
+                _normalizar_oferta_matricula_compartida(self.nombre_seccion),
+            )
+        ):
+            logger.warning(
+                "Sección con nombre compatible con Integración pero sin Oferta educativa: "
+                "seccion_id=%s cueanexo=%s ciclo_id=%s",
+                self.pk,
+                self.cueanexo,
+                self.ciclo_id,
+            )
+        return es_integracion
 
     def save(self, *args, **kwargs):
         self.actualizar_snapshots()

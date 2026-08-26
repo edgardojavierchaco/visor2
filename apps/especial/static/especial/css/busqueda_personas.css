@@ -405,6 +405,42 @@
         width: 100%;
     }
 
+    .cef-matricula-compartida-history {
+        align-items: flex-start;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        display: grid;
+        gap: .12rem .45rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: .45rem .5rem;
+        width: 100%;
+    }
+
+    .cef-matricula-compartida-history-title {
+        color: #64748b;
+        font-size: .625rem;
+        font-weight: 700;
+        grid-column: 1 / -1;
+        line-height: 1.2;
+    }
+
+    .cef-matricula-compartida-history-value {
+        color: #334155;
+        font-size: .6875rem;
+        line-height: 1.25;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-modal .cef-matricula-compartida-use {
+        align-self: center;
+        font-size: .6875rem;
+        line-height: 1.1;
+        padding: .25rem .5rem;
+        white-space: nowrap;
+    }
+
     .cef-matricula-compartida-select-wrap {
         max-width: 230px;
         min-width: 0;

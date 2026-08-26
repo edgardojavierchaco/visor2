@@ -1,6 +1,8 @@
 # apps/especial/services/alumnos.py
 # -*- coding: utf-8 -*-
 
+import logging
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -10,10 +12,15 @@ from ..models import (
     AlumnoSeccion,
     EspecialAlumnoBanco,
     EspecialPadronOferta,
-    cueanexo_tiene_oferta_comun,
+    SeccionEspecial,
+    cueanexo_tiene_oferta_no_especial,
     cueanexo_tiene_oferta_matricula_compartida,
+    get_establecimientos_no_especiales_matricula_queryset,
     normalizar_cueanexo,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def obtener_alumno_banco_autorizado(alumno_banco_queryset, alumno_banco_id, *, for_update=False):
@@ -103,8 +110,6 @@ def dar_baja_alumno_banco(
         alumno_banco_bloqueado.estado = EspecialAlumnoBanco.Estado.BAJA
         alumno_banco_bloqueado.fecha_baja = timezone.localdate()
         alumno_banco_bloqueado.motivo_baja = motivo
-        alumno_banco_bloqueado.matricula_compartida = None
-
         fields = {
             field.name for field in EspecialAlumnoBanco._meta.concrete_fields
         }
@@ -112,7 +117,6 @@ def dar_baja_alumno_banco(
             "estado",
             "fecha_baja",
             "motivo_baja",
-            "matricula_compartida",
         ]
         if "actualizado_por" in fields:
             alumno_banco_bloqueado.actualizado_por = user
@@ -121,6 +125,373 @@ def dar_baja_alumno_banco(
             update_fields.append("actualizado_en")
         alumno_banco_bloqueado.save(update_fields=update_fields)
         return alumno_banco_bloqueado
+
+
+def _establecimiento_para_cue(cueanexo, padron_queryset=None):
+    """Devuelve el nombre de un establecimiento no Especial vigente."""
+    queryset = get_establecimientos_no_especiales_matricula_queryset(
+        _padron_queryset(padron_queryset)
+    )
+    for campo in ("cueanexo", "padron_cueanexo"):
+        nombre = (
+            queryset.filter(**{campo: cueanexo})
+            .exclude(nom_est__isnull=True)
+            .exclude(nom_est__exact="")
+            .values_list("nom_est", flat=True)
+            .order_by("nom_est")
+            .first()
+        )
+        if nombre:
+            return nombre
+    return ""
+
+
+def _cue_anexo_existe(cueanexo, padron_queryset=None):
+    queryset = _padron_queryset(padron_queryset)
+    return any(
+        queryset.filter(**{campo: cueanexo}).exists()
+        for campo in ("cueanexo", "padron_cueanexo")
+    )
+
+
+def ultima_matricula_compartida(alumno, *, excluir_cueanexo="", padron_queryset=None):
+    """Obtiene la última relación persistida como sugerencia, no como alta automática."""
+    alumno_id = getattr(alumno, "pk", alumno)
+    excluir_cueanexo = normalizar_cueanexo(excluir_cueanexo)
+    queryset = (
+        EspecialAlumnoBanco.objects.filter(
+            alumno_id=alumno_id,
+        )
+        .exclude(matricula_compartida__isnull=True)
+        .exclude(matricula_compartida__exact="")
+        .select_related("ciclo")
+        .order_by("-ciclo__anio", "-actualizado_en", "-pk")
+    )
+    for banco in queryset:
+        cue = normalizar_cueanexo(banco.matricula_compartida)
+        if not cue or cue == excluir_cueanexo:
+            continue
+        if not cueanexo_tiene_oferta_no_especial(cue, padron_queryset):
+            continue
+        establecimiento = _establecimiento_para_cue(cue, padron_queryset)
+        if establecimiento:
+            return {
+                "cueanexo": cue,
+                "establecimiento": establecimiento,
+                "ciclo": getattr(banco.ciclo, "anio", ""),
+                "banco_id": banco.pk,
+            }
+    return None
+
+
+def _inscripciones_activas_alumno_ciclo(alumno_id, ciclo_id, *, using):
+    return list(
+        AlumnoSeccion.objects.using(using)
+        .select_for_update()
+        .select_related("seccion")
+        .filter(
+            alumno_id=alumno_id,
+            seccion__ciclo_id=ciclo_id,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+            seccion__estado=SeccionEspecial.Estado.ACTIVO,
+        )
+        .order_by("pk")
+    )
+
+
+def validar_matricula_compartida_seccion(
+    *,
+    alumno,
+    seccion,
+    cueanexo_asociado,
+    padron_queryset=None,
+):
+    """Valida únicamente el dato de matrícula compartida seleccionado."""
+    cue_destino = normalizar_cueanexo(seccion.cueanexo)
+    cue_asociado = normalizar_cueanexo(cueanexo_asociado)
+    if not cue_asociado:
+        raise ValidationError(
+            "Esta sección de Integración requiere indicar el CUE-Anexo asociado."
+        )
+    if cue_asociado == cue_destino:
+        raise ValidationError(
+            "El CUE-Anexo asociado no puede ser el mismo que el de la sección de Integración."
+        )
+    if not _cue_anexo_existe(cue_asociado, padron_queryset):
+        raise ValidationError("El CUE-Anexo asociado no existe.")
+    if not cueanexo_tiene_oferta_no_especial(cue_asociado, padron_queryset):
+        raise ValidationError(
+            "El CUE-Anexo asociado no corresponde a un establecimiento no Especial vigente."
+        )
+
+    return {"cueanexo": cue_asociado}
+
+
+def _validar_inscripciones_para_seccion(
+    *,
+    alumno,
+    seccion,
+    inscripciones=None,
+):
+    """Aplica las reglas de duplicidad antes de crear la inscripción."""
+    alumno_id = getattr(alumno, "pk", alumno)
+    cue_destino = normalizar_cueanexo(seccion.cueanexo)
+    inscripciones = inscripciones if inscripciones is not None else []
+    for inscripcion in inscripciones:
+        cue_actual = normalizar_cueanexo(inscripcion.seccion.cueanexo)
+        if inscripcion.seccion_id == seccion.pk:
+            raise ValidationError("El alumno ya se encuentra inscripto en esta sección.")
+        if cue_actual == cue_destino:
+            nombre = inscripcion.seccion.nombre_seccion
+            raise ValidationError(
+                f"El alumno ya está inscripto en otra sección del mismo CUE-Anexo "
+                f"({nombre}, {cue_destino})."
+            )
+        if not seccion.es_oferta_integracion:
+            raise ValidationError(
+                f"El alumno ya está inscripto en otra sección "
+                f"({inscripcion.seccion.nombre_seccion}, {cue_actual}). "
+                "Una sección que no es Integración no puede tener una segunda inscripción activa."
+            )
+    return alumno_id
+
+
+def inscribir_alumno_en_seccion(
+    *,
+    alumno,
+    seccion,
+    user,
+    cueanexo_asociado=None,
+    padron_queryset=None,
+):
+    """Crea/reactiva banco e inscripción desde una sección en una única transacción."""
+    alumno_id = getattr(alumno, "pk", alumno)
+    if not alumno_id:
+        raise ValidationError("El alumno seleccionado no es válido.")
+    using = EspecialAlumnoBanco.objects.db
+
+    logger.info(
+        "Servicio inscripción Especial: seccion_id=%s cue_asociado_recibido=%s cuil=%s",
+        getattr(seccion, "pk", None),
+        normalizar_cueanexo(cueanexo_asociado),
+        getattr(alumno, "cuil", ""),
+    )
+
+    with transaction.atomic(using=using):
+        seccion_bloqueada = (
+            SeccionEspecial.objects.using(using)
+            .select_for_update()
+            .select_related("ciclo")
+            .get(pk=seccion.pk)
+        )
+        if seccion_bloqueada.estado != SeccionEspecial.Estado.ACTIVO:
+            raise ValidationError("La sección no está activa.")
+
+        logger.info(
+            "Servicio inscripción Especial contexto real: seccion_id=%s cue_especial=%s "
+            "ciclo_id=%s integracion=%s",
+            seccion_bloqueada.pk,
+            seccion_bloqueada.cueanexo,
+            seccion_bloqueada.ciclo_id,
+            seccion_bloqueada.es_oferta_integracion,
+        )
+
+        alumno_bloqueado = _bloquear_alumno(alumno_id, using=using)
+        bancos = _bancos_del_alumno_ciclo(alumno_id, seccion_bloqueada.ciclo_id, using=using)
+        bancos_activos = [
+            banco for banco in bancos
+            if banco.estado == EspecialAlumnoBanco.Estado.ACTIVO
+        ]
+        inscripciones = _inscripciones_activas_alumno_ciclo(
+            alumno_id,
+            seccion_bloqueada.ciclo_id,
+            using=using,
+        )
+        cue_asociado = None
+        if seccion_bloqueada.es_oferta_integracion:
+            relacion = validar_matricula_compartida_seccion(
+                alumno=alumno_bloqueado,
+                seccion=seccion_bloqueada,
+                cueanexo_asociado=cueanexo_asociado,
+                padron_queryset=padron_queryset,
+            )
+            cue_asociado = relacion["cueanexo"]
+        elif cueanexo_asociado not in (None, ""):
+            raise ValidationError(
+                "Una sección que no es Integración no acepta matrícula compartida."
+            )
+
+        _validar_inscripciones_para_seccion(
+            alumno=alumno_bloqueado,
+            seccion=seccion_bloqueada,
+            inscripciones=inscripciones,
+        )
+
+        cue_destino = normalizar_cueanexo(seccion_bloqueada.cueanexo)
+        if not seccion_bloqueada.es_oferta_integracion:
+            bancos_de_otro_cue = [
+                banco for banco in bancos_activos
+                if normalizar_cueanexo(banco.cueanexo) != cue_destino
+            ]
+        else:
+            bancos_de_otro_cue = []
+        if bancos_de_otro_cue:
+            cues_de_otro_banco = sorted({
+                normalizar_cueanexo(banco.cueanexo)
+                for banco in bancos_de_otro_cue
+            })
+            raise ValidationError(
+                "El alumno ya tiene un banco activo en otro CUE-Anexo "
+                f"({', '.join(cues_de_otro_banco)})."
+            )
+
+        banco_destino = next(
+            (
+                banco for banco in bancos_activos
+                if normalizar_cueanexo(banco.cueanexo)
+                == normalizar_cueanexo(seccion_bloqueada.cueanexo)
+            ),
+            None,
+        )
+        if banco_destino is None:
+            banco_destino = EspecialAlumnoBanco(
+                cueanexo=seccion_bloqueada.cueanexo,
+                ciclo_id=seccion_bloqueada.ciclo_id,
+                alumno=alumno_bloqueado,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO,
+                matricula_compartida=cue_asociado,
+                creado_por=user,
+                actualizado_por=user,
+            )
+            banco_destino.save()
+        elif seccion_bloqueada.es_oferta_integracion:
+            existente = normalizar_cueanexo(banco_destino.matricula_compartida)
+            if existente != cue_asociado:
+                banco_destino.matricula_compartida = cue_asociado
+                banco_destino.actualizado_por = user
+                banco_destino.save(update_fields=["matricula_compartida", "actualizado_por", "actualizado_en"])
+
+        inscripcion_activa = next(
+            (
+                inscripcion for inscripcion in inscripciones
+                if inscripcion.seccion_id == seccion_bloqueada.pk
+            ),
+            None,
+        )
+        if inscripcion_activa:
+            raise ValidationError("El alumno ya se encuentra inscripto en esta sección.")
+
+        inscripcion_baja = (
+            AlumnoSeccion.objects.using(using)
+            .select_for_update()
+            .filter(
+                seccion_id=seccion_bloqueada.pk,
+                alumno_id=alumno_id,
+                estado=AlumnoSeccion.Estado.BAJA,
+            )
+            .order_by("-pk")
+            .first()
+        )
+        if inscripcion_baja:
+            inscripcion_baja.estado = AlumnoSeccion.Estado.ACTIVO
+            inscripcion_baja.fecha_baja = None
+            inscripcion_baja.motivo_baja = ""
+            inscripcion_baja.actualizado_por = user
+            inscripcion_baja.save(update_fields=[
+                "estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"
+            ])
+            return inscripcion_baja, False, banco_destino
+
+        total_activos = AlumnoSeccion.objects.using(using).filter(
+            seccion_id=seccion_bloqueada.pk,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+        ).count()
+        if total_activos >= seccion_bloqueada.capacidad_total:
+            raise ValidationError("No se puede inscribir: la sección alcanzó su capacidad máxima.")
+
+        inscripcion = AlumnoSeccion.objects.using(using).create(
+            seccion=seccion_bloqueada,
+            alumno=alumno_bloqueado,
+            estado=AlumnoSeccion.Estado.ACTIVO,
+            creado_por=user,
+            actualizado_por=user,
+        )
+        return inscripcion, True, banco_destino
+
+
+def dar_baja_inscripcion_y_matricula_compartida(inscripcion, user, *, motivo_baja="Baja desde gestión"):
+    """Da de baja la inscripción y desactiva su relación compartida sin tocar la contraparte."""
+    using = EspecialAlumnoBanco.objects.db
+    with transaction.atomic(using=using):
+        inscripcion_bloqueada = (
+            AlumnoSeccion.objects.using(using)
+            .select_for_update()
+            .select_related("seccion", "seccion__ciclo")
+            .get(pk=inscripcion.pk)
+        )
+        if inscripcion_bloqueada.estado == AlumnoSeccion.Estado.BAJA:
+            raise ValidationError("La inscripción ya está dada de baja.")
+
+        inscripcion_bloqueada.estado = AlumnoSeccion.Estado.BAJA
+        inscripcion_bloqueada.fecha_baja = timezone.localdate()
+        inscripcion_bloqueada.motivo_baja = (motivo_baja or "Baja desde gestión").strip()
+        inscripcion_bloqueada.actualizado_por = user
+        inscripcion_bloqueada.save(update_fields=[
+            "estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"
+        ])
+
+        seccion = inscripcion_bloqueada.seccion
+        if not seccion.es_oferta_integracion:
+            return inscripcion_bloqueada
+
+        otras_integracion = [
+            otra for otra in _inscripciones_activas_alumno_ciclo(
+                inscripcion_bloqueada.alumno_id,
+                seccion.ciclo_id,
+                using=using,
+            )
+            if otra.seccion_id != seccion.pk
+            and normalizar_cueanexo(otra.seccion.cueanexo)
+            == normalizar_cueanexo(seccion.cueanexo)
+            and otra.seccion.es_oferta_integracion
+        ]
+        if otras_integracion:
+            return inscripcion_bloqueada
+
+        banco = (
+            EspecialAlumnoBanco.objects.using(using)
+            .select_for_update()
+            .filter(
+                alumno_id=inscripcion_bloqueada.alumno_id,
+                cueanexo=seccion.cueanexo,
+                ciclo_id=seccion.ciclo_id,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO,
+            )
+            .order_by("-pk")
+            .first()
+        )
+        if banco is not None and banco.matricula_compartida:
+            historial = EspecialAlumnoBanco(
+                cueanexo=banco.cueanexo,
+                ciclo_id=banco.ciclo_id,
+                alumno_id=banco.alumno_id,
+                estado=EspecialAlumnoBanco.Estado.BAJA,
+                fecha_alta=banco.fecha_alta,
+                fecha_baja=timezone.localdate(),
+                motivo_baja=f"Matrícula compartida finalizada: {inscripcion_bloqueada.motivo_baja}",
+                matricula_compartida=banco.matricula_compartida,
+                alumno_nombre_snapshot=banco.alumno_nombre_snapshot,
+                alumno_documento_snapshot=banco.alumno_documento_snapshot,
+                alumno_cuil_snapshot=banco.alumno_cuil_snapshot,
+                observaciones=banco.observaciones,
+                creado_por=user,
+                actualizado_por=user,
+            )
+            historial.save()
+            banco.matricula_compartida = None
+            banco.actualizado_por = user
+            banco.save(update_fields=["matricula_compartida", "actualizado_por", "actualizado_en"])
+        return inscripcion_bloqueada
 
 
 def _padron_queryset(padron_queryset=None):
@@ -178,9 +549,12 @@ def _validar_banco_proyectado(
             raise ValidationError(
                 "El CUE-Anexo asociado no puede ser igual al CUE-Anexo actual."
             )
-        if not cueanexo_tiene_oferta_comun(matricula_compartida, padron_queryset):
+        if not cueanexo_tiene_oferta_no_especial(
+            matricula_compartida,
+            padron_queryset,
+        ):
             raise ValidationError(
-                "El CUE-Anexo asociado debe existir en el padrón y tener al menos una oferta Común."
+                "El CUE-Anexo asociado debe existir en el padrón y tener al menos una oferta vigente no Especial."
             )
     elif matricula_compartida is not None:
         raise ValidationError(
@@ -286,6 +660,7 @@ def asegurar_alumno_banco(
     user,
     matricula_compartida=None,
     padron_queryset=None,
+    validar_relacion=True,
 ):
     """Crea de forma idempotente un banco respetando la matrícula compartida."""
     alumno_id = getattr(alumno, "pk", alumno)
@@ -329,17 +704,18 @@ def asegurar_alumno_banco(
                 f"darlo de baja de {instruccion_baja} antes de agregarlo a otra escuela."
             )
         oferta_cache = {}
-        _validar_bancos_activos(
-            bancos_activos,
-            padron_queryset=padron_queryset,
-            oferta_cache=oferta_cache,
-        )
-        _validar_banco_proyectado(
-            cueanexo=cueanexo,
-            matricula_compartida=matricula_compartida,
-            padron_queryset=padron_queryset,
-            oferta_cache=oferta_cache,
-        )
+        if validar_relacion:
+            _validar_bancos_activos(
+                bancos_activos,
+                padron_queryset=padron_queryset,
+                oferta_cache=oferta_cache,
+            )
+            _validar_banco_proyectado(
+                cueanexo=cueanexo,
+                matricula_compartida=matricula_compartida,
+                padron_queryset=padron_queryset,
+                oferta_cache=oferta_cache,
+            )
 
         existente = next(
             (banco for banco in bancos_activos if banco.cueanexo == cueanexo),
@@ -347,6 +723,8 @@ def asegurar_alumno_banco(
         )
         if existente is not None:
             if _matricula_guardada(existente) != matricula_compartida:
+                if not validar_relacion and matricula_compartida is None:
+                    return existente, False
                 raise ValidationError(
                     "El alumno ya está activo en este CUE-Anexo; use la actualización explícita "
                     "de matrícula compartida para modificarlo."
@@ -362,11 +740,12 @@ def asegurar_alumno_banco(
             creado_por=user,
             actualizado_por=user,
         )
-        _validar_bancos_activos(
-            bancos_activos + [banco],
-            padron_queryset=padron_queryset,
-            oferta_cache=oferta_cache,
-        )
+        if validar_relacion:
+            _validar_bancos_activos(
+                bancos_activos + [banco],
+                padron_queryset=padron_queryset,
+                oferta_cache=oferta_cache,
+            )
         banco.save()
         return banco, True
 

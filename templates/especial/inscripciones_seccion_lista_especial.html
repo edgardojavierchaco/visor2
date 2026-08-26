@@ -72,6 +72,10 @@
                                              <i class="fa-solid fa-user-minus"></i> Dar de baja
                                          </button>
                                      </form>
+                                {% elif inscripcion.estado == 'baja' and seccion.es_oferta_integracion %}
+                                    <a class="btn btn-outline-success btn-sm" href="{{ inscripcion.reinscripcion_url }}">
+                                        <i class="fa-solid fa-user-plus"></i> Reinscribir desde búsqueda
+                                    </a>
                                 {% elif inscripcion.estado == 'baja' %}
                                     <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Se creará una inscripción activa nueva para este alumno si no existe otra activa." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
                                         {% csrf_token %}
