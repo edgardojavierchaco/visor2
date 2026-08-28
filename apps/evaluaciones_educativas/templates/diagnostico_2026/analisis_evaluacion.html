@@ -171,6 +171,49 @@
         max-height: 400px !important;
     }
 
+    #vista_graficos .chart-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e7edf3;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+        box-shadow: 0 8px 24px rgba(31, 45, 61, 0.07);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #vista_graficos .chart-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3498db, #5dade2, #2ecc71);
+    }
+
+    #vista_graficos .chart-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px rgba(31, 45, 61, 0.11);
+    }
+
+    #vista_graficos .chart-card h4 {
+        margin: 2px 0 16px;
+        color: #243447;
+        font-size: 1.08rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    .charts-grid.language-charts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .language-charts-grid .chart-card {
+        box-sizing: border-box;
+        min-width: 0 !important;
+        width: 100%;
+    }
+
     .listado-container {
         background: white;
         padding: 25px;
@@ -252,6 +295,10 @@
         .chart-card {
             min-width: 100%;
             padding: 15px;
+        }
+
+        .charts-grid.language-charts-grid {
+            grid-template-columns: 1fr;
         }
 
         .flecha-responsiva {
@@ -438,7 +485,8 @@
                 </div>
             </div>
 
-            <div class="charts-grid" style="margin-top: 25px;">
+            <div class="charts-grid {% if materia_sel == 'lengua' %}language-charts-grid{% endif %}"
+                style="margin-top: 25px;">
                 {% if materia_sel == 'matematica' %}
                 <div class="chart-card" style="min-width: 0;">
                     <h4>Reconocimiento de Conceptos</h4><canvas id="CanvasMatReconocimiento"></canvas>
@@ -789,12 +837,58 @@
 
     const barOptions = {
         responsive: true, maintainAspectRatio: false,
-        layout: { padding: { top: 30 } },
-        plugins: {
-            datalabels: { display: true, anchor: 'end', align: 'top', color: '#2c3e50', font: { weight: 'bold', size: 14 }, formatter: percentageFormatter },
-            legend: { display: false }
+        layout: { padding: { top: 30, right: 8, bottom: 4, left: 8 } },
+        animation: { duration: 750, easing: 'easeOutQuart' },
+        datasets: {
+            bar: {
+                categoryPercentage: 0.76,
+                barPercentage: 0.72,
+                maxBarThickness: 56,
+                borderRadius: 8,
+                borderSkipped: false
+            }
         },
-        scales: { y: { display: false, beginAtZero: true, grace: '20%' }, x: { grid: { display: false } } }
+        plugins: {
+            datalabels: {
+                display: true,
+                anchor: 'end',
+                align: 'top',
+                clamp: true,
+                color: '#243447',
+                backgroundColor: 'rgba(255, 255, 255, 0.94)',
+                borderColor: '#dfe7ef',
+                borderWidth: 1,
+                borderRadius: 6,
+                padding: { top: 3, right: 6, bottom: 3, left: 6 },
+                font: { weight: '700', size: 12 },
+                formatter: percentageFormatter
+            },
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#243447',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                displayColors: false,
+                padding: 11,
+                cornerRadius: 8,
+                titleFont: { weight: '700' }
+            }
+        },
+        scales: {
+            y: { display: false, beginAtZero: true, grace: '20%' },
+            x: {
+                offset: true,
+                grid: { display: false },
+                ticks: {
+                    autoSkip: false,
+                    minRotation: 0,
+                    maxRotation: 0,
+                    padding: 8,
+                    color: '#607080',
+                    font: { size: 11, weight: '500' }
+                }
+            }
+        }
     };
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -1245,8 +1339,13 @@
             }));
         }
 
-        const etiquetasDesempeno = ['Por debajo del básico', 'Básico', 'Satisfactorio', 'Avanzado'];
-        const coloresDesempeno = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71'];
+        const etiquetasDesempeno = [
+            ['Por debajo', 'del básico'],
+            ['Básico'],
+            ['Satisfactorio'],
+            ['Avanzado']
+        ];
+        const coloresDesempeno = ['#ef6351', '#f59e0b', '#eab308', '#22b573'];
 
         const canvasGeneral = document.getElementById('GraficoGeneralBar');
         if (canvasGeneral) {
@@ -1257,7 +1356,7 @@
                     datasets: [{
                         data: {{ desempenos.general|default:"[0, 0, 0, 0]" }},
                         backgroundColor: coloresDesempeno,
-                        borderRadius: 4
+                        borderRadius: 8
                     }]
                 },
                 options: barOptions
@@ -1276,7 +1375,7 @@
             if (canvas) {
                 charts.push(new Chart(canvas, {
                     type: 'bar',
-                    data: { labels: etiquetasDesempeno, datasets: [{ data: datosMats[index], backgroundColor: coloresDesempeno, borderRadius: 4 }] },
+                    data: { labels: etiquetasDesempeno, datasets: [{ data: datosMats[index], backgroundColor: coloresDesempeno, borderRadius: 8 }] },
                     options: barOptions
                 }));
             }
@@ -1294,7 +1393,7 @@
             if (canvas) {
                 charts.push(new Chart(canvas, {
                     type: 'bar',
-                    data: { labels: etiquetasDesempeno, datasets: [{ data: datosLens[index], backgroundColor: coloresDesempeno, borderRadius: 4 }] },
+                    data: { labels: etiquetasDesempeno, datasets: [{ data: datosLens[index], backgroundColor: coloresDesempeno, borderRadius: 8 }] },
                     options: barOptions
                 }));
             }
