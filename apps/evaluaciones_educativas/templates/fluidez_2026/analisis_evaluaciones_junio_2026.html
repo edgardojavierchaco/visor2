@@ -1,4 +1,4 @@
- {% extends 'dashboard/bodydirector.html' %}
+{% extends 'dashboard/bodydirector.html' %}
 {% load static %} 
 
 {% block content %}
@@ -281,6 +281,23 @@
                 {{ form_cueanexo.cueanexo_seleccionado }}
             </form>
         </div>
+        
+        <h3>Seleccionar Condición</h3>
+        <div class="sidebar-form-container">
+            <form method="POST" id="form-condicion">
+                {% csrf_token %}
+                <input type="hidden" name="cueanexo_seleccionado"
+                    value="{{ form_cueanexo.cueanexo_seleccionado.value|default:'' }}">
+                <input type="hidden" name="sector"
+                    value="{% if form_director_nivel %}{{ form_director_nivel.sector.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.sector.value|default:'' }}{% endif %}">
+                <input type="hidden" name="ambito"
+                    value="{% if form_director_nivel %}{{ form_director_nivel.ambito.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.ambito.value|default:'' }}{% endif %}">
+                <input type="hidden" name="region"
+                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
+
+                {{ form_condicion.condicion_seleccion }}
+            </form>
+        </div>
 
         <h3>Seleccionar Grado</h3>
         <div class="sidebar-form-container">
@@ -288,7 +305,9 @@
                 {% csrf_token %}
                 <input type="hidden" name="cueanexo_seleccionado"
                     value="{{ form_cueanexo.cueanexo_seleccionado.value|default:'' }}">
-                <input type="hidden" name="sector"
+                <input type="hidden" name="condicion_seleccion"
+                    value="{{ form_condicion.condicion_seleccion.value|default:'' }}">
+                    <input type="hidden" name="sector"
                     value="{% if form_director_nivel %}{{ form_director_nivel.sector.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.sector.value|default:'' }}{% endif %}">
                 <input type="hidden" name="ambito"
                     value="{% if form_director_nivel %}{{ form_director_nivel.ambito.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.ambito.value|default:'' }}{% endif %}">
@@ -306,6 +325,8 @@
                 {% csrf_token %}
                 <input type="hidden" name="cueanexo_seleccionado"
                     value="{{ form_cueanexo.cueanexo_seleccionado.value|default:'' }}">
+                     <input type="hidden" name="condicion_seleccion"
+                    value="{{ form_condicion.condicion_seleccion.value|default:'' }}">
                 <input type="hidden" name="grado_seleccion" value="{{ form_grado.grado_seleccion.value|default:'' }}">
 
                 <input type="hidden" name="sector"
@@ -381,7 +402,6 @@
                 </div>
             </div>
             {% endif %}
-
             {% if grado == 'tercero' %}
             <h3 class="section-title">Análisis 3ro Grado: {% if seccion %}Sección {{seccion}}, Turno {{turno}}
                 {% else %}Todas las secciones{% endif %}</h3>
@@ -729,7 +749,7 @@
                 .on('select2:select', function () { $j('#form-cueanexo').submit(); });
         }
 
-        ["form-director-nivel", "form-director-regional", "form-cueanexo", "form-grado"].forEach(id => {
+         ["form-director-nivel", "form-director-regional", "form-cueanexo", "form-condicion", "form-grado"].forEach(id => {
             const form = document.getElementById(id);
             if (form) {
                 form.querySelectorAll("select").forEach(sel => {

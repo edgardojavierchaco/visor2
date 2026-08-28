@@ -357,29 +357,54 @@ class CueanexoForm(forms.Form):
 					]
 			else:
 				#region = obtener_regional(cuil)
-				if region== 'R.E. 10-AB':
-						region= ['R.E. 10-A','R.E. 10-B']
-				cueanexos=obtener_sector_ambito_region(sector,ambito,region)
-				#print(f"desde aca{cueanexos}")
-				cueanexo_grado= GradoFluidez2026.objects.filter(cueanexo__in=cueanexos).values_list('cueanexo',flat=True).order_by('cueanexo')
-				lista_enteros = [int(i) for i in cueanexo_grado]
-				#print(lista_enteros)
-				#print(f'listade cuenexos en ministro{cueanexo_grado}')
-				# 1. Traemos solo los campos necesarios (optimización)
-				# nombres_campos = [f.name for f in CapaUnicaOfertas._meta.get_fields()]
+				# if region== 'R.E. 10-AB':
+				# 		region= ['R.E. 10-A','R.E. 10-B']
+				#cueanexos=obtener_sector_ambito_region(sector,ambito,region)
+				consulta = EstablecimientosFluidez2026.objects.all()
 
-				#print(f'region que llega{region}')
-				#print(f'ambito que llega{ambito}')
-				#print(f'sector que llega{sector}')
-				if region=='TODOS' or isinstance(region, list):
-					qs = CapaUnicaOfertas.objects.filter(
-					 oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
-				).only('cueanexo','nom_est')
-				else:
-					#print(f"x{region}")
-					qs = CapaUnicaOfertas.objects.filter(
-						region_loc = region, oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
-					).only('cueanexo','nom_est')
+				if sector and sector != 'TODOS':
+					print(f'sector que llega{sector}')
+					if isinstance(sector, (list, tuple)):
+						consulta = consulta.filter(sector__in=sector)
+					else:
+						consulta = consulta.filter(sector=sector)
+
+				if ambito and ambito != 'TODOS':
+					if isinstance(ambito, (list, tuple)):
+						consulta = consulta.filter(ambito__in=ambito)
+					else:
+						consulta = consulta.filter(ambito=ambito)
+
+				if region and region != 'TODOS':
+					if isinstance(region, (list, tuple)):
+						consulta = consulta.filter(region__in=region)
+					else:
+						consulta = consulta.filter(region=region)
+
+				cueanexos = consulta.order_by('cueanexo')
+				qs=cueanexos
+				escuela=qs
+				print(f'cueanexos intento{len(cueanexos)}')
+				#print(f"desde aca{cueanexos}")
+				# cueanexo_grado= GradoFluidez2026.objects.filter(cueanexo__in=cueanexos).values_list('cueanexo',flat=True).order_by('cueanexo')
+				# lista_enteros = [int(i) for i in cueanexo_grado]
+				# #print(lista_enteros)
+				# #print(f'listade cuenexos en ministro{cueanexo_grado}')
+				# # 1. Traemos solo los campos necesarios (optimización)
+				# # nombres_campos = [f.name for f in CapaUnicaOfertas._meta.get_fields()]
+
+				# #print(f'region que llega{region}')
+				# #print(f'ambito que llega{ambito}')
+				# #print(f'sector que llega{sector}')
+				# if region=='TODOS' or isinstance(region, list):
+				# 	qs = CapaUnicaOfertas.objects.filter(
+				# 	 oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
+				# ).only('cueanexo','nom_est')
+				# else:
+				# 	#print(f"x{region}")
+				# 	qs = CapaUnicaOfertas.objects.filter(
+				# 		region_loc = region, oferta='Común - Primaria de 7 años ', cueanexo__in=lista_enteros
+				# 	).only('cueanexo','nom_est')
 					#print(f"x{qs}")
 				#print(f'ministro lista{qs}')
 				# choices = [
@@ -387,14 +412,14 @@ class CueanexoForm(forms.Form):
 				# 	('TODOS', '----TODOS LOS CUEANEXOS----'),
 				# 	]
 				
-			lista_cueanexos_validos=[]
-			#print(f'QS{qs}')
-			for i in qs:
-				lista_cueanexos_validos.append(i.cueanexo)
-				# label = f'{i.nom_est}-({i.cueanexo})'
-				# choices.append((i.cueanexo, label))
+			# lista_cueanexos_validos=[]
+			# #print(f'QS{qs}')
+			# for i in qs:
+			# 	lista_cueanexos_validos.append(i.cueanexo)
+			# 	# label = f'{i.nom_est}-({i.cueanexo})'
+			# 	# choices.append((i.cueanexo, label))
 
-			escuela= EstablecimientosFluidez2026.objects.filter(cueanexo__in=lista_cueanexos_validos).order_by('cueanexo')
+			# escuela= EstablecimientosFluidez2026.objects.filter(cueanexo__in=lista_cueanexos_validos).order_by('cueanexo')
 			#print('aca')
 			#2. Armamos la lista de opciones manualmente
 			choices = [
@@ -419,6 +444,20 @@ class CueanexoForm(forms.Form):
 			# 4. Asignamos la lista final al campo
 			self.fields['cueanexo_seleccionado'].choices = choices
 
+class AlumnoCondicionFluidez2026Form(forms.Form):
+	CONDICIONES = [
+		('', '--- Seleccionar Condición ---'),
+		('Ninguno', '--- Ninguno---'),
+		('Alumnos Con discapacidad', 'Alumnos Con discapacidad'),
+		('Comunidad Indígena', 'Comunidad Indígena'),
+	]
+	
+	condicion_seleccion = forms.ChoiceField(
+		choices=CONDICIONES,
+		label="Seleccione una Condición",
+		required=True,
+		widget=forms.Select()
+	)
 # 			#ENTENDER ESTE CODIGO Y POR QUE NO FUNCION EL NUESTRO
 class Grado_selec_2026_Form(forms.Form):
 	GRADOS_CHOICES = [
