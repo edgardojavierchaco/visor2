@@ -434,6 +434,14 @@
 
         <div id="vista_listado" class="listado-container" style="display: none;">
             <h3 class="section-title">Detalle de Alumnos - {{ grado|title }} Grado</h3>
+            {% if grado and listar %}
+            <div style="margin-bottom: 12px;">
+                <a href="{% url 'evaluaciones_educativas:fluidez_2026:descargar_listado_fluidez' %}?cueanexo={{ form_cueanexo.cueanexo_seleccionado.value|default:'' }}&grado={{ grado }}&condicion={{ condicion|default:'' }}&seccion={{ seccion|default:'TODOS' }}&turno={{ turno|default:'' }}"
+                   class="btn-sidebar btn-primary"
+                   style="display:inline-block; width:auto; padding: 8px 16px; font-size:0.85rem; text-decoration:none;"
+                   title="Descargar listado completo en PDF">📥 Descargar PDF del listado</a>
+            </div>
+            {% endif %}
             {% if listar %}
             <table id="tablaAlumnos" class="data-table">
                 <thead>
@@ -450,6 +458,7 @@
                         <th>P5</th>
                         <th>P6</th>
                         <th>Desempeño Comprensión</th>
+                        <th>PDF</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -490,6 +499,16 @@
                                         {% else %}<span class="badge" style="color: #2ecc71;">Avanzado</span>
                                         {% endif %}
                         </td>
+                        <td style="text-align:center;">
+                            {% if registro.asistencia != 'AUSENTE' %}
+                            <a href="{% url 'evaluaciones_educativas:fluidez_2026:descargar_ficha_alumno_fluidez' %}?cueanexo={{ form_cueanexo.cueanexo_seleccionado.value|default:'' }}&dni={{ registro.alumno.dni }}"
+                               class="btn-sidebar btn-primary"
+                               style="padding:4px 8px; font-size:0.75rem; text-decoration:none; display:inline-block; width:auto; margin:0;"
+                               title="Descargar ficha individual">📥 PDF</a>
+                            {% else %}
+                            <span style="color:#bdc3c7;">-</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                     {%else%}
@@ -529,6 +548,16 @@
                                         {% else %}<span class="badge" style="color: #2ecc71;">Avanzado</span>
                                         {% endif %}
                         </td>
+                        <td style="text-align:center;">
+                            {% if registro.asistencia != 'AUSENTE' %}
+                            <a href="{% url 'evaluaciones_educativas:fluidez_2026:descargar_ficha_alumno_fluidez' %}?cueanexo={{ form_cueanexo.cueanexo_seleccionado.value|default:'' }}&dni={{ registro.alumno.dni }}"
+                               class="btn-sidebar btn-primary"
+                               style="padding:4px 8px; font-size:0.75rem; text-decoration:none; display:inline-block; width:auto; margin:0;"
+                               title="Descargar ficha individual">📥 PDF</a>
+                            {% else %}
+                            <span style="color:#bdc3c7;">-</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                     {% endif %}
@@ -542,7 +571,7 @@
             {% if material_pdf %}
             <iframe src="{{ material_pdf }}" width="100%" height="100%" style="border: none;"></iframe>
             {% else %}
-            <p>No se ha cargado material para esta selección.</p>
+            <p><a href="https://drive.google.com/drive/folders/1zABOcFWwLrdr-2knq2MA5ZUC7Q1QMAEE?usp=sharing">Material Fluidez 2026</a></p>
             {% endif %}
         </div>
     </main>
