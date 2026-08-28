@@ -1,88 +1,20 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Prefetch, Q, Value, CharField
 from django.views.generic import ListView, DetailView
+
 from apps.consultasge.models_padron import CapaUnicaOfertas
-from django.db.models.functions import Replace, Cast
 
-from django.db.models import (
-    Count,
-    Prefetch,
-    Q,
-    Value,
-    CharField
-)
-
-from .models import (
-    Personas,
-    RegistroActividades
-)
-
-from .utils import get_cueanexos_usuario
-
-
-###################################
-# HELPER
-###################################
-def get_cueanexos_usuario(user):
-
-    """
-    Obtiene los cueanexos asociados
-    al usuario logueado.
-
-    resploc_cuitcuil:
-    20-12345678-3
-
-    username:
-    20123456783
-    """
-
-    return (
-        CapaUnicaOfertas.objects
-
-        # 🔥 normaliza CUIL
-        .annotate(
-            cuil_limpio=Replace(
-                Replace(
-                    'resploc_cuitcuil',
-                    Value('-'),
-                    Value('')
-                ),
-                Value(' '),
-                Value('')
-            ),
-
-            # 🔥 convierte cueanexo a string
-            cueanexo_str=Cast(
-                'cueanexo',
-                output_field=CharField()
-            )
-        )
-
-        # 🔥 compara con username
-        .filter(
-            cuil_limpio=user.username
-        )
-
-        .values_list(
-            'cueanexo_str',
-            flat=True
-        )
-    )
+from .models import Personas, RegistroActividades
+from .domain.access import get_user_cueanexos
 
 
 # =========================================================
 # LISTADO PERSONAS
 # =========================================================
-class PersonasListView(
-    LoginRequiredMixin,
-    ListView
-):
-
+class PersonasListView(LoginRequiredMixin, ListView):
     model = Personas
-
     template_name = "bnh/personas/list.html"
-
     context_object_name = "personas"
-
     paginate_by = 25
 
     # =====================================================
@@ -90,8 +22,7 @@ class PersonasListView(
     # =====================================================
     def dispatch(self, request, *args, **kwargs):
 
-        self.cueanexos_usuario = (
-            get_cueanexos_usuario(
+        self.cueanexos_usuario = (get_user_cueanexos(
                 request.user
             )
         )
@@ -217,15 +148,10 @@ class PersonaDetailView(
 
     context_object_name = "persona"
 
-    # =====================================================
-    # CACHE CUEANEXOS
-    # =====================================================
     def dispatch(self, request, *args, **kwargs):
 
-        self.cueanexos_usuario = list(
-            get_cueanexos_usuario(
-                request.user
-            )
+        self.cueanexos_usuario = get_user_cueanexos(
+            request.user
         )
 
         return super().dispatch(
@@ -234,58 +160,48 @@ class PersonaDetailView(
             **kwargs
         )
 
-    # =====================================================
-    # QUERYSET
-    # =====================================================
     def get_queryset(self):
 
         actividades_qs = (
-
             RegistroActividades.objects
-
             .filter(
                 cueanexo__in=self.cueanexos_usuario
             )
-
             .select_related(
                 "modalidad",
                 "niveles",
                 "ceic",
                 "sit_revista",
-                "cond_actividad"
+                "cond_actividad",
             )
-
             .order_by("-f_desde")
         )
 
         return (
-
             Personas.objects
-
             .filter(
                 actividades__cueanexo__in=self.cueanexos_usuario
             )
-
             .distinct()
-
             .select_related(
                 "sexo",
                 "provincia",
                 "localidad",
-                "codigo_area"
+                "codigo_area",
             )
-
             .prefetch_related(
                 Prefetch(
                     "actividades",
-                    queryset=actividades_qs
+                    queryset=actividades_qs,
                 )
             )
-
             .annotate(
                 total_actividades=Count(
                     "actividades",
-                    distinct=True
+                    filter=Q(
+                        actividades__cueanexo__in=self.cueanexos_usuario
+                    ),
+                    distinct=True,
                 )
             )
         )
