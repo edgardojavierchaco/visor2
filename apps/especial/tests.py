@@ -103,8 +103,11 @@ from .views_localizaciones import (
 from .views_visualizador import (
     _agrupar_directores,
     _directores_queryset,
+    _enriquecer_bancos,
     _filtros_directores,
     _filtros_directores_querystring,
+    _matriculas_compartidas_validas,
+    _resumen_cues_alumno,
 )
 
 from apps.bnhalumnos.models import Alumno, CatalogoSinoTipo
@@ -816,6 +819,86 @@ class ContextoEspecialTests(SimpleTestCase):
         )
         admin["escuelas_visualizacion"].values_list.assert_not_called()
         admin["escuelas_visualizacion"].__iter__.assert_not_called()
+
+
+class VisualizadorMatriculaCompartidaTests(SimpleTestCase):
+    @staticmethod
+    def _banco(
+        *,
+        pk=1,
+        alumno_id=11,
+        estado=EspecialAlumnoBanco.Estado.ACTIVO,
+        cueanexo="220015500",
+        matricula_compartida=None,
+    ):
+        return SimpleNamespace(
+            pk=pk,
+            alumno_id=alumno_id,
+            estado=estado,
+            cueanexo=cueanexo,
+            matricula_compartida=matricula_compartida,
+        )
+
+    def test_un_banco_activo_con_cue_asociado_valido_es_matricula_compartida(self):
+        banco = self._banco(matricula_compartida="98-765-432-1")
+
+        bancos_validos, cues_asociados = _matriculas_compartidas_validas([banco])
+
+        self.assertEqual(bancos_validos, {banco.pk})
+        self.assertEqual(cues_asociados, {banco.pk: "987654321"})
+
+    def test_banco_activo_sin_matricula_compartida_no_es_valido(self):
+        for valor in (None, ""):
+            with self.subTest(valor=valor):
+                banco = self._banco(matricula_compartida=valor)
+
+                bancos_validos, cues_asociados = _matriculas_compartidas_validas(
+                    [banco]
+                )
+
+                self.assertEqual(bancos_validos, set())
+                self.assertEqual(cues_asociados, {})
+
+    def test_banco_de_baja_con_valor_historico_no_es_vigente(self):
+        banco = self._banco(
+            estado=EspecialAlumnoBanco.Estado.BAJA,
+            matricula_compartida="987654321",
+        )
+
+        bancos_validos, cues_asociados = _matriculas_compartidas_validas([banco])
+
+        self.assertEqual(bancos_validos, set())
+        self.assertEqual(cues_asociados, {})
+
+    def test_valor_invalido_registra_advertencia_y_no_modifica_el_banco(self):
+        banco = self._banco(matricula_compartida="CUE inválido")
+        estado_original = vars(banco).copy()
+
+        with self.assertLogs("apps.especial.views_visualizador", level="WARNING") as logs:
+            bancos_validos, cues_asociados = _matriculas_compartidas_validas([banco])
+
+        self.assertEqual(bancos_validos, set())
+        self.assertEqual(cues_asociados, {})
+        self.assertEqual(vars(banco), estado_original)
+        self.assertIn("Matrícula compartida inválida en visualizador", logs.output[0])
+
+    @patch("apps.especial.views_visualizador._padron_por_cueanexo", return_value={})
+    def test_listado_y_modal_reciben_el_mismo_resultado(self, _padron_por_cueanexo):
+        banco = self._banco(matricula_compartida="987654321")
+
+        _enriquecer_bancos([banco])
+        resumen_modal = _resumen_cues_alumno([banco])
+
+        self.assertTrue(banco.visualizador_matricula_compartida)
+        self.assertEqual(banco.visualizador_cue_matricula, "987654321")
+        self.assertEqual(
+            banco.visualizador_matricula_compartida,
+            resumen_modal["matricula_compartida"],
+        )
+        self.assertEqual(
+            banco.visualizador_cue_matricula,
+            resumen_modal["cue_matricula"],
+        )
 
 
 class VisualizadorDirectoresTests(SimpleTestCase):
