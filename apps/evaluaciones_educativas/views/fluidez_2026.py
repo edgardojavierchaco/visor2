@@ -1,23 +1,28 @@
 from apps.evaluaciones_educativas.models.fluidez_2026 import *
 from apps.evaluaciones_educativas.forms.fluidez_2026 import *
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse,JsonResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.templatetags.static import static
-from django.db.models import Count,Q,Avg
+from django.db.models import Count, Q, Avg
 from datetime import date, datetime
 import psycopg2
 from psycopg2 import extras
 import os
+import io
 from openpyxl import Workbook
 import json
 #from apps.consultasge.models import CapaUnicaOfertas
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.urls import reverse
-from urllib.parse import urlencode # Necesario para armar los parámetros de la URL
+from urllib.parse import urlencode
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 
 # @login_required
@@ -850,11 +855,13 @@ def analisis_evaluaciones_junio_2026(request):
 		"form_seccion": None,
 		"rol": None,
 		"listar": True,
+		"condicion": None,
 	}
 
 	usuario = request.user
 	cuil = usuario.username
 	nivel_acceso = request.user.nivelacceso_id
+	condicion = None
 	# Formateo de CUIL
 	# cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
 	#nivel_acceso = "Director/a"
@@ -869,9 +876,14 @@ def analisis_evaluaciones_junio_2026(request):
 		if form_cueanexo.is_valid():
 			cueanexo = form_cueanexo.cleaned_data["cueanexo_seleccionado"]
 			# print(f'cueanexo intento{cueanexo}')
-			# Inicializamos el form de Grado (aquí podrías pasarle el cueanexo si el form fuera dinámico)
+			# Inicializamos el form de condicion y Grado
+			form_condicion = AlumnoCondicionFluidez2026Form(request.POST or None)
+			contexto["form_condicion"] = form_condicion
 			form_grado = Grado_selec_2026_Form(request.POST or None)
 			contexto["form_grado"] = form_grado
+			if form_condicion.is_valid():
+				condicion = form_condicion.cleaned_data["condicion_seleccion"]
+				contexto["condicion"] = condicion
 
 			if form_grado.is_valid():
 				nombre_grado = form_grado.cleaned_data["grado_seleccion"]
@@ -908,12 +920,12 @@ def analisis_evaluaciones_junio_2026(request):
 						if nombre_grado == "2do Año/Grado":
 							# if grado_obj.nombre_grado == '2do Año/Grado':
 							datos = analisis_segundo_grado_grafico(
-								nombre_grado, lista_cueanexos, secciones, turno
+								nombre_grado, lista_cueanexos, secciones, turno, condicion
 							)
 							contexto["grado"] = "segundo"
 						else:
 							datos = analisis_tercer_grado_grafico(
-								nombre_grado, lista_cueanexos, secciones, turno
+								nombre_grado, lista_cueanexos, secciones, turno, condicion
 							)
 							contexto["grado"] = "tercero"
 
@@ -944,10 +956,12 @@ def analisis_evaluaciones_regional_junio_2026(request):
 		"form_seccion": None,
 		"rol": None,
 		"listar": None,
+		"condicion": None,
 	}
 
 	usuario = request.user
 	cuil = usuario.username
+	condicion = None
 	# Formateo de CUIL
 	# cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
 	nivel_acceso = request.user.nivelacceso_id
@@ -983,9 +997,14 @@ def analisis_evaluaciones_regional_junio_2026(request):
 				else:
 					lista_cueanexos.append(cueanexo)
 					contexto["listar"] = True
-				# Inicializamos el form de Grado (aquí podrías pasarle el cueanexo si el form fuera dinámico)
+				# Inicializamos el form de condicion y Grado
+				form_condicion = AlumnoCondicionFluidez2026Form(request.POST or None)
+				contexto["form_condicion"] = form_condicion
 				form_grado = Grado_selec_2026_Form(request.POST or None)
 				contexto["form_grado"] = form_grado
+				if form_condicion.is_valid():
+					condicion = form_condicion.cleaned_data["condicion_seleccion"]
+					contexto["condicion"] = condicion
 
 				if form_grado.is_valid():
 					nombre_grado = form_grado.cleaned_data["grado_seleccion"]
@@ -1021,12 +1040,12 @@ def analisis_evaluaciones_regional_junio_2026(request):
 							if nombre_grado == "2do Año/Grado":
 								# if grado_obj.nombre_grado == '2do Año/Grado':
 								datos = analisis_segundo_grado_grafico(
-									nombre_grado, lista_cueanexos, secciones, turno
+									nombre_grado, lista_cueanexos, secciones, turno, condicion
 								)
 								contexto["grado"] = "segundo"
 							else:
 								datos = analisis_tercer_grado_grafico(
-									nombre_grado, lista_cueanexos, secciones, turno
+									nombre_grado, lista_cueanexos, secciones, turno, condicion
 								)
 								contexto["grado"] = "tercero"
 
@@ -1120,11 +1139,11 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 						# transformar varibale cueanexo a lista
 						# lista_cueanexos=[cueanexo]
 						# Usamos filter().first() para evitar errores si no existe
-						print(f'nombre_grado {nombre_grado}')
+						#print(f'nombre_grado {nombre_grado}')
 						grado_obj = GradoFluidez2026.objects.filter(
 							nombre_grado__icontains=nombre_grado, cueanexo__in=lista_cueanexos
 						)
-						print(len(grado_obj))
+						#print(len(grado_obj))
 						# grado_obj = Grado.objects.filter(nombre_grado=nombre_grado, cueanexo__in=lista_cueanexos).first()
 						if grado_obj:
 							# Inicializamos sección con el ID del grado
@@ -1146,7 +1165,7 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 
 							# CARGA DE DATOS: Se ejecuta si hay grado_obj, independientemente de la sección
 							if nombre_grado == "2do Año/Grado":
-								print('lista_cueanexos', len(lista_cueanexos))
+								#print('lista_cueanexos', len(lista_cueanexos))
 								# if grado_obj.nombre_grado == '2do Año/Grado':
 								datos = analisis_segundo_grado_grafico(
 									nombre_grado, lista_cueanexos, secciones, turno, condicion
@@ -1202,8 +1221,8 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 			nombre_grado__icontains=grado_seleccionado, cueanexo=cueanexo
 		)
 	else:
-		print('entre a else no type')
-		print(f'cueanexo {cueanexo}')
+		#print('entre a else no type')
+		#print(f'cueanexo {cueanexo}')
 		grado = GradoFluidez2026.objects.filter(
 			nombre_grado__icontains=grado_seleccionado, cueanexo__in=cueanexo
 		)
@@ -1215,7 +1234,7 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 	# print(seccion)
 	else:
 		secciones = SeccionFluidez2026.objects.filter(grado__in=grado)
-		print(f'cantidad de secciones {secciones.count()}')
+		#print(f'cantidad de secciones {secciones.count()}')
 	#----
 	#print(condicion)
 	if condicion == "Alumnos Con discapacidad":
@@ -1227,9 +1246,9 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
         Q(discapacidad='NO') | Q(discapacidad__isnull=True),seccion_id__in=secciones,
         comunidad_indigena__isnull=False).exclude(comunidad_indigena='NINGUNA')
 	else:
-		print('entre a else')
+		#print('entre a else')
 		alumnos = AlumnoFluidez2026.objects.filter(seccion_id__in=secciones)
-		print(f'cantidad de alumnos {alumnos.count()}')
+		#print(f'cantidad de alumnos {alumnos.count()}')
 	#----
 	evaluaciones = EvaluacionFluidezLectoraFluidez2026.objects.filter(
 		alumno__in=alumnos
@@ -1281,7 +1300,7 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 	alumnos_presentes_comunidad_indigena = datos["presentes_comunidad_indigena"]
 	alumnos_presentes_discapacidad = datos["presentes_discapacidad"]
 	alumnos_presentes_ambas = datos["presentes_ambas"]
-	print('alumnos_presentes_ambas',alumnos_presentes_ambas)
+	#print('alumnos_presentes_ambas',alumnos_presentes_ambas)
 	
 	# SOLUCIONAR LAS DIVISIONES POR 0
 	nivel_debajo_del_basico = (
@@ -1428,9 +1447,9 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
         Q(discapacidad='NO') | Q(discapacidad__isnull=True),seccion_id__in=secciones,
         comunidad_indigena__isnull=False).exclude(comunidad_indigena='NINGUNA')
 	else:
-		print('entre a else')
+		#print('entre a else')
 		alumnos = AlumnoFluidez2026.objects.filter(seccion_id__in=secciones)
-		print(f'cantidad de alumnos {alumnos.count()}')
+		#print(f'cantidad de alumnos {alumnos.count()}')
 	#----
 	evaluaciones = EvaluacionFluidezLectoraFluidez2026.objects.filter(
 		alumno__in=alumnos
@@ -1653,3 +1672,332 @@ def comprension_lectora(alumnos, grado_seleccionado):
 			# print(f'{i.puntaje_comprension} alumno:{i.alumno.nombre}' )
 
 	return evaluaciones, conteos  # Devolvemos la lista completa
+
+
+# ─── DESCARGA PDF LISTADO DE ALUMNOS FLUIDEZ 2026 ────────────────────────────
+@login_required
+def descargar_listado_fluidez(request):
+	# ── 1. PARÁMETROS GET ──────────────────────────────────────────────────────
+	selected_cue = request.GET.get('cueanexo', '').strip()
+	grado_param   = request.GET.get('grado', '').strip()   # 'segundo' o 'tercero'
+	condicion_param = request.GET.get('condicion', '').strip()
+	filtro_seccion = request.GET.get('seccion', 'TODOS').strip()
+	filtro_turno   = request.GET.get('turno', '').strip()
+
+	if not selected_cue or not grado_param:
+		messages.warning(request, "Faltan filtros para generar el reporte.")
+		return redirect(reverse('evaluaciones_educativas:fluidez_2026:analisis_evaluacion'))
+
+	# ── 2. MAPEO GRADO → nombre_grado ──────────────────────────────────────────
+	nombre_grado_map = {
+		'segundo': '2do Año/Grado',
+		'tercero': '3er Año/Grado',
+	}
+	nombre_grado = nombre_grado_map.get(grado_param)
+	if not nombre_grado:
+		messages.warning(request, "Grado no reconocido.")
+		return redirect(reverse('evaluaciones_educativas:fluidez_2026:analisis_evaluacion'))
+
+	# ── 3. CONSULTA DE EVALUACIONES ────────────────────────────────────────────
+	filtros = {
+		'alumno__seccion__grado__cueanexo': selected_cue,
+		'alumno__seccion__grado__nombre_grado': nombre_grado,
+	}
+	if filtro_seccion and filtro_seccion != 'TODOS':
+		filtros['alumno__seccion__seccion'] = filtro_seccion
+		if filtro_turno:
+			filtros['alumno__seccion__turno'] = filtro_turno
+	#ARREGLAR LOGICA DE CONDICION
+	# Filtro por discapacidad / comunidad indígena
+	q_condicion = Q()
+	if condicion_param == "Alumnos Con discapacidad":
+		q_condicion = (Q(alumno__comunidad_indigena='NINGUNA') | Q(alumno__comunidad_indigena__isnull=True)) & Q(alumno__discapacidad='SI')
+	elif condicion_param == "Comunidad Indígena":
+		q_condicion = (Q(alumno__discapacidad='NO') | Q(alumno__discapacidad__isnull=True)) & Q(alumno__comunidad_indigena__isnull=False) & ~Q(alumno__comunidad_indigena='NINGUNA')
+
+	evaluaciones = EvaluacionFluidezLectoraFluidez2026.objects.filter(
+		q_condicion,
+		**filtros
+	).select_related(
+		'alumno', 'alumno__seccion', 'alumno__seccion__grado'
+	).order_by('alumno__apellido', 'alumno__nombre')
+
+	# ── 4. FUNCIÓN AUXILIAR PUNTAJE COMPRENSIÓN ────────────────────────────────
+	def calcular_comprension(ev):
+		if ev.asistencia == 'AUSENTE':
+			return None
+		if grado_param == 'segundo':
+			p1 = 1    if ev.pregunta_1 == "B" else 0
+			p2 = 1    if ev.pregunta_2 == "C" else 0
+			p3 = 1    if ev.pregunta_3 == "A" else 0
+			p4 = 1.50 if ev.pregunta_4 == "D" else 0
+			p5 = 1.50 if ev.pregunta_5 == "A" else 0
+			p6 = 1.50 if ev.pregunta_6 == "A" else 0
+		else:
+			p1 = 1    if ev.pregunta_1 == "D" else 0
+			p2 = 1    if ev.pregunta_2 == "C" else 0
+			p3 = 1.50 if ev.pregunta_3 == "B" else 0
+			p4 = 1    if ev.pregunta_4 == "B" else 0
+			p5 = 1.50 if ev.pregunta_5 == "D" else 0
+			p6 = 1.50 if ev.pregunta_6 == "A" else 0
+		return round(p1 + p2 + p3 + p4 + p5 + p6, 2)
+
+	def nivel_comprension(puntaje):
+		if puntaje is None: return "-"
+		if puntaje < 3.40: return "Deb. del Bás"
+		elif puntaje <= 5.20: return "Básico"
+		elif puntaje <= 6.75: return "Satisfactorio"
+		else: return "Avanzado"
+
+	def nivel_fluidez(palabras, grado):
+		if palabras is None: return "-"
+		cortes = (20, 46, 70) if grado == 'segundo' else (30, 60, 90)
+		if palabras <= cortes[0]: return "Deb. del Bás."
+		elif palabras <= cortes[1]: return "Básico"
+		elif palabras <= cortes[2]: return "Satisfactorio"
+		else: return "Avanzado"
+
+	# ── 5. ARMADO DE TABLA PDF ─────────────────────────────────────────────────
+	styles = getSampleStyleSheet()
+	style_celda = styles['Normal']
+	style_celda.fontSize = 7
+	style_celda.leading = 8
+
+	cabeceras = ['DNI', 'Alumno', 'Sección', 'Turno', 'Asistencia',
+				 'P. Leídas', 'DES. FLUIDEZ',
+				 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'DES. COMP.']
+	data = [cabeceras]
+
+	for ev in evaluaciones:
+		al = ev.alumno
+		nombre_alumno = Paragraph(f"{al.apellido}, {al.nombre}", style_celda)
+		comp = calcular_comprension(ev)
+		data.append([
+			al.dni or '-',
+			nombre_alumno,
+			al.seccion.seccion if al.seccion else '-',
+			al.seccion.turno if al.seccion else '-',
+			ev.asistencia or '-',
+			ev.cantidad_palabras_leidas if ev.asistencia != 'AUSENTE' else '-',
+			nivel_fluidez(ev.cantidad_palabras_leidas if ev.asistencia != 'AUSENTE' else None, grado_param),
+			'NO.R' if ev.pregunta_1 == 'NORESPONDE' else ev.pregunta_1, 
+			'NO.R' if ev.pregunta_2 == 'NORESPONDE' else ev.pregunta_2, 
+			'NO.R' if ev.pregunta_3 == 'NORESPONDE' else ev.pregunta_3,
+			'NO.R' if ev.pregunta_4 == 'NORESPONDE' else ev.pregunta_4, 
+			'NO.R' if ev.pregunta_5 == 'NORESPONDE' else ev.pregunta_5, 
+			'NO.R' if ev.pregunta_6 == 'NORESPONDE' else ev.pregunta_6,
+			# comp if comp is not None else '-',
+			nivel_comprension(comp),
+		])
+
+	# ── 6. CONSTRUCCIÓN DEL PDF ────────────────────────────────────────────────
+	buffer = io.BytesIO()
+	doc = SimpleDocTemplate(
+		buffer, pagesize=landscape(A4),
+		leftMargin=15, rightMargin=15, topMargin=20, bottomMargin=20
+	)
+	story = []
+	story.append(Paragraph(
+		f"Listado de Alumnos - Fluidez Lectora 2026 - {nombre_grado}",
+		styles['Title']
+	))
+	story.append(Paragraph(
+		f"Cueanexo: {selected_cue} | Sección: {filtro_seccion} | Turno: {filtro_turno or 'Todos'}",
+		styles['Normal']
+	))
+	story.append(Spacer(1, 15))
+
+	col_widths = [43, 130, 30, 58, 50, 30, 65, 20, 20, 20, 20, 20, 20, 50, 100]
+	table = Table(data, colWidths=col_widths, repeatRows=1)
+	table.setStyle(TableStyle([
+		('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+		('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+		('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+		('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+		('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+		('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+		('ALIGN', (1, 1), (1, -1), 'LEFT'),
+		('FONTSIZE', (0, 0), (-1, -1), 7),
+		('PADDING', (0, 0), (-1, -1), 3),
+		('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f4f7f6')]),
+	]))
+	story.append(table)
+	doc.build(story)
+	buffer.seek(0)
+
+	sec_label = filtro_seccion if filtro_seccion != 'TODOS' else 'TODOS'
+	filename = f"Listado_Fluidez_2026_{grado_param}_grado_{selected_cue}_cueanexo_{sec_label}.pdf"
+	return FileResponse(buffer, as_attachment=True, filename=filename)
+
+
+# ─── DESCARGA PDF INDIVIDUAL POR ALUMNO FLUIDEZ 2026 ─────────────────────────
+@login_required
+def descargar_examen_individual_fluidez(request):
+	# ── 1. PARÁMETROS GET ──────────────────────────────────────────────────────
+	selected_cue = request.GET.get('cueanexo', '').strip()
+	dni_alumno   = request.GET.get('dni', '').strip()
+
+	if not selected_cue or not dni_alumno:
+		raise Http404("Faltan parámetros requeridos (CUE o DNI).")
+
+	# ── 2. OBTENER EL ALUMNO Y SU EVALUACIÓN ───────────────────────────────────
+	alumno = get_object_or_404(
+		AlumnoFluidez2026,
+		dni=dni_alumno,
+		seccion__grado__cueanexo=selected_cue,
+	)
+	evaluacion = EvaluacionFluidezLectoraFluidez2026.objects.filter(alumno=alumno).first()
+
+	if not evaluacion:
+		messages.warning(request, "El alumno no tiene evaluación cargada.")
+		return redirect(reverse('evaluaciones_educativas:fluidez_2026:analisis_evaluacion'))
+
+	# ── 3. CALCULAR PUNTAJE COMPRENSIÓN ────────────────────────────────────────
+	# nombre_grado debe definirse ANTES de llamar a calcular_comprension
+	nombre_grado = alumno.seccion.grado.nombre_grado if alumno.seccion and alumno.seccion.grado else '-'
+
+	def calcular_comprension(ev):
+		if ev.asistencia == 'AUSENTE':
+			return None
+		if '2do' in nombre_grado:
+			p1 = 1    if ev.pregunta_1 == "B" else 0
+			p2 = 1    if ev.pregunta_2 == "C" else 0
+			p3 = 1    if ev.pregunta_3 == "A" else 0
+			p4 = 1.50 if ev.pregunta_4 == "D" else 0
+			p5 = 1.50 if ev.pregunta_5 == "A" else 0
+			p6 = 1.50 if ev.pregunta_6 == "A" else 0
+		else:
+			p1 = 1    if ev.pregunta_1 == "D" else 0
+			p2 = 1    if ev.pregunta_2 == "C" else 0
+			p3 = 1.50 if ev.pregunta_3 == "B" else 0
+			p4 = 1    if ev.pregunta_4 == "B" else 0
+			p5 = 1.50 if ev.pregunta_5 == "D" else 0
+			p6 = 1.50 if ev.pregunta_6 == "A" else 0
+		return round(p1 + p2 + p3 + p4 + p5 + p6, 2)
+
+	def nivel_comprension(p):
+		if p is None: return "Ausente"
+		if p < 3.40: return "Debajo del Básico"
+		elif p <= 5.20: return "Básico"
+		elif p <= 6.75: return "Satisfactorio"
+		else: return "Avanzado"
+
+	def nivel_fluidez(palabras, nombre_grado):
+		if palabras is None: return "Ausente"
+		cortes = (20, 46, 70) if '2do' in nombre_grado else (30, 60, 90)
+		if palabras <= cortes[0]: return "Debajo del Básico"
+		elif palabras <= cortes[1]: return "Básico"
+		elif palabras <= cortes[2]: return "Satisfactorio"
+		else: return "Avanzado"
+
+	comp = calcular_comprension(evaluacion)
+
+	# ── 4. CONSTRUIR PDF (A4 vertical, estilo ficha) ───────────────────────────
+	buffer = io.BytesIO()
+	doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
+	styles = getSampleStyleSheet()
+	story = []
+
+	story.append(Paragraph("Evaluacion Individual - Fluidez Lectora 2026", styles['Title']))
+	story.append(Spacer(1, 15))
+
+	# Tabla datos del alumno
+	datos = [
+		[Paragraph("<b>DNI:</b>"), alumno.dni or '-'],
+		[Paragraph("<b>Alumno:</b>"), f"{alumno.apellido}, {alumno.nombre}"],
+		[Paragraph("<b>Establecimiento Cueanexo:</b>"), selected_cue],
+		[Paragraph("<b>Grado:</b>"), nombre_grado],
+		[Paragraph("<b>Sección y Turno:</b>"),
+		 f"{alumno.seccion.seccion} - {alumno.seccion.turno}" if alumno.seccion else "N/A"],
+		[Paragraph("<b>Asistencia:</b>"), evaluacion.asistencia or "N/A"],
+	]
+	t_datos = Table(datos, colWidths=[150, 330])
+	t_datos.setStyle(TableStyle([
+		('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E9ECEF')),
+		('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+		('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+		('PADDING', (0, 0), (-1, -1), 6),
+	]))
+	story.append(t_datos)
+	story.append(Spacer(1, 20))
+
+	if evaluacion.asistencia != 'AUSENTE':
+		# Tabla fluidez
+		story.append(Paragraph("<b>Fluidez Lectora:</b>", styles['Heading3']))
+		story.append(Spacer(1, 8))
+		t_fluidez = Table([
+			['Palabras Leídas', 'Desempeño Fluidez'],
+			[evaluacion.cantidad_palabras_leidas or '-',
+			 nivel_fluidez(evaluacion.cantidad_palabras_leidas, nombre_grado)],
+		], colWidths=[240, 240])
+		t_fluidez.setStyle(TableStyle([
+			('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+			('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+			('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+			('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+			('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+			('PADDING', (0, 0), (-1, -1), 6),
+		]))
+		story.append(t_fluidez)
+		story.append(Spacer(1, 20))
+
+		# Tabla respuestas comprensión
+		story.append(Paragraph("<b>Respuestas - Comprensión Lectora:</b>", styles['Heading3']))
+		story.append(Spacer(1, 8))
+		def format_resp(resp):
+			if not resp: return '-'
+			return 'NO.R' if resp == 'NO RESPONDE' else resp
+
+		if '2do' in nombre_grado:
+			respuestas = [
+				['Pregunta', 'Respuesta'],
+				['P1', format_resp(evaluacion.pregunta_1)],
+				['P2', format_resp(evaluacion.pregunta_2)],
+				['P3', format_resp(evaluacion.pregunta_3)],
+				['P4', format_resp(evaluacion.pregunta_4)],
+				['P5', format_resp(evaluacion.pregunta_5)],
+				['P6', format_resp(evaluacion.pregunta_6)],
+			]
+		else:
+			respuestas = [
+				['Pregunta', 'Respuesta'],
+				['P1', format_resp(evaluacion.pregunta_1)],
+				['P2', format_resp(evaluacion.pregunta_2)],
+				['P3', format_resp(evaluacion.pregunta_3)],
+				['P4', format_resp(evaluacion.pregunta_4)],
+				['P5', format_resp(evaluacion.pregunta_5)],
+				['P6', format_resp(evaluacion.pregunta_6)],
+			]
+		t_resp = Table(respuestas, colWidths=[160, 160, 160])
+		t_resp.setStyle(TableStyle([
+			('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
+			('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+			('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+			('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+			('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+			('PADDING', (0, 0), (-1, -1), 6),
+		]))
+		story.append(t_resp)
+		story.append(Spacer(1, 20))
+
+		# Tabla resultado comprensión
+		story.append(Paragraph("<b>Resultado Comprensión:</b>", styles['Heading3']))
+		story.append(Spacer(1, 8))
+		t_comp = Table([
+			['Desempeño Comprensión'],
+			[ nivel_comprension(comp)],
+		], colWidths=[240, 240])
+		t_comp.setStyle(TableStyle([
+			('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+			('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+			('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+			('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+			('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+			('PADDING', (0, 0), (-1, -1), 6),
+		]))
+		story.append(t_comp)
+
+	doc.build(story)
+	buffer.seek(0)
+	filename = f"Resultado_Fluidez_2026_{alumno.apellido},{alumno.nombre}_{alumno.dni}.pdf"
+	return FileResponse(buffer, as_attachment=True, filename=filename)
