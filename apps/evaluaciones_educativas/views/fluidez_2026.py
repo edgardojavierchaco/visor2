@@ -1060,10 +1060,12 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 		"form_seccion": None,
 		"rol": None,
 		"listar": None,
+		"condicion": None,
 	}
 
 	usuario = request.user
 	cuil = usuario.username
+	condicion = None
 	# Formateo de CUIL
 	# cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
 	nivel_acceso = request.user.nivelacceso_id
@@ -1104,9 +1106,13 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 					lista_cueanexos.append(cueanexo)
 					contexto["listar"] = True
 				# Inicializamos el form de Grado (aquí podrías pasarle el cueanexo si el form fuera dinámico)
+				form_condicion = AlumnoCondicionFluidez2026Form(request.POST or None)
+				contexto["form_condicion"] = form_condicion
 				form_grado = Grado_selec_2026_Form(request.POST or None)
 				contexto["form_grado"] = form_grado
-
+				if form_condicion.is_valid():
+					condicion = form_condicion.cleaned_data["condicion_seleccion"]
+					contexto["condicion"] = condicion
 				if form_grado.is_valid():
 					nombre_grado = form_grado.cleaned_data["grado_seleccion"]
 
@@ -1114,10 +1120,11 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 						# transformar varibale cueanexo a lista
 						# lista_cueanexos=[cueanexo]
 						# Usamos filter().first() para evitar errores si no existe
+						print(f'nombre_grado {nombre_grado}')
 						grado_obj = GradoFluidez2026.objects.filter(
-							nombre_grado=nombre_grado, cueanexo__in=lista_cueanexos
+							nombre_grado__icontains=nombre_grado, cueanexo__in=lista_cueanexos
 						)
-						# print(len(grado_obj))
+						print(len(grado_obj))
 						# grado_obj = Grado.objects.filter(nombre_grado=nombre_grado, cueanexo__in=lista_cueanexos).first()
 						if grado_obj:
 							# Inicializamos sección con el ID del grado
@@ -1139,14 +1146,15 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 
 							# CARGA DE DATOS: Se ejecuta si hay grado_obj, independientemente de la sección
 							if nombre_grado == "2do Año/Grado":
+								print('lista_cueanexos', len(lista_cueanexos))
 								# if grado_obj.nombre_grado == '2do Año/Grado':
 								datos = analisis_segundo_grado_grafico(
-									nombre_grado, lista_cueanexos, secciones, turno
+									nombre_grado, lista_cueanexos, secciones, turno, condicion
 								)
 								contexto["grado"] = "segundo"
 							else:
 								datos = analisis_tercer_grado_grafico(
-									nombre_grado, lista_cueanexos, secciones, turno
+									nombre_grado, lista_cueanexos, secciones, turno, condicion
 								)
 								contexto["grado"] = "tercero"
 
@@ -1186,7 +1194,7 @@ def ausentismo_evaluacion(instancia_evaluacion):
 ##---------LOGICA PARA ANALISIS DE LAS EVALUACIONES EDUCATIVAS--------------------------
 
 
-def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turno):
+def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turno, condicion):
 	# #-----------------------LOGICA PARA SEGUNDO GRADO------------------------
 	# print('entre a analisis 2do')
 	if type(cueanexo) is str:
@@ -1194,7 +1202,8 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 			nombre_grado__icontains=grado_seleccionado, cueanexo=cueanexo
 		)
 	else:
-		# print('ENTREEE')
+		print('entre a else no type')
+		print(f'cueanexo {cueanexo}')
 		grado = GradoFluidez2026.objects.filter(
 			nombre_grado__icontains=grado_seleccionado, cueanexo__in=cueanexo
 		)
@@ -1206,25 +1215,38 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 	# print(seccion)
 	else:
 		secciones = SeccionFluidez2026.objects.filter(grado__in=grado)
-	alumnos = AlumnoFluidez2026.objects.filter(seccion_id__in=secciones)
+		print(f'cantidad de secciones {secciones.count()}')
+	#----
+	#print(condicion)
+	if condicion == "Alumnos Con discapacidad":
+		alumnos = AlumnoFluidez2026.objects.filter(
+            Q(comunidad_indigena='NINGUNA') | Q(comunidad_indigena__isnull=True),
+            seccion_id__in=secciones, discapacidad='SI')
+	elif condicion == "Comunidad Indígena":
+		alumnos = AlumnoFluidez2026.objects.filter(
+        Q(discapacidad='NO') | Q(discapacidad__isnull=True),seccion_id__in=secciones,
+        comunidad_indigena__isnull=False).exclude(comunidad_indigena='NINGUNA')
+	else:
+		print('entre a else')
+		alumnos = AlumnoFluidez2026.objects.filter(seccion_id__in=secciones)
+		print(f'cantidad de alumnos {alumnos.count()}')
+	#----
 	evaluaciones = EvaluacionFluidezLectoraFluidez2026.objects.filter(
 		alumno__in=alumnos
 	)
-	# comprension lectora
-	# presentes=evaluaciones.filter(asistencia='PRESENTE')
-	# POSIBLE OLUCION
 	evaluaciones_con_comprension, conteos = comprension_lectora(
 		alumnos, grado_seleccionado
 	)
-	ES_INDIGENA = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena__in=["NINGUNA", "", None])
+	ES_INDIGENA = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena="NINGUNA") & ~Q(alumno__comunidad_indigena__isnull=True) & (Q(alumno__discapacidad='NO') | Q(alumno__discapacidad__isnull=True))
+	ES_AMBAS = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena="NINGUNA") & Q(alumno__discapacidad='SI') & ~Q(alumno__comunidad_indigena__isnull=True)
 	datos = evaluaciones.aggregate(
 		# Asistencia
 		presentes=Count("alumno_id", filter=Q(asistencia="PRESENTE")),
 		ausentes=Count("alumno_id", filter=Q(asistencia="AUSENTE")),
 		#ASISTENCIAS (CONDICIÓN)
 		presentes_comunidad_indigena=Count("alumno_id", filter=ES_INDIGENA),
-		presentes_discapacidad=Count("alumno_id", filter=Q(asistencia="PRESENTE", alumno__discapacidad="SI")),
-		presentes_ambas=Count("alumno_id", filter=ES_INDIGENA & Q(alumno__discapacidad="SI")),
+		presentes_discapacidad=Count("alumno_id", filter=Q(asistencia="PRESENTE", alumno__discapacidad="SI") & (Q(alumno__comunidad_indigena='NINGUNA') | Q(alumno__comunidad_indigena__isnull=True ))),
+		presentes_ambas=Count("alumno_id", filter=ES_AMBAS),
 		# Desempeño
 		promedio_general=Avg(
 			"cantidad_palabras_leidas", filter=Q(asistencia="PRESENTE")
@@ -1254,12 +1276,13 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 			filter=Q(asistencia="PRESENTE", cantidad_palabras_leidas__gt=70),
 		),
 	)
-	# print(datos['debajo_del_basico'])
 	alumnos_presentes = datos["presentes"]
 	alumnos_ausentes = datos["ausentes"]
 	alumnos_presentes_comunidad_indigena = datos["presentes_comunidad_indigena"]
 	alumnos_presentes_discapacidad = datos["presentes_discapacidad"]
 	alumnos_presentes_ambas = datos["presentes_ambas"]
+	print('alumnos_presentes_ambas',alumnos_presentes_ambas)
+	
 	# SOLUCIONAR LAS DIVISIONES POR 0
 	nivel_debajo_del_basico = (
 		round((datos["debajo_del_basico"] / alumnos_presentes) * 100, 1)
@@ -1315,14 +1338,14 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 		],
 		"asistencia_segundo_condicion": [
 			f"Com. Indígena {alumnos_presentes_comunidad_indigena}",
-            f"Discapacidad {alumnos_presentes_discapacidad}",
-            f"Ambas {alumnos_presentes_ambas}",
-        ],
-        "valores_asistencia_segundo_condicion": [
-            alumnos_presentes_comunidad_indigena,
-            alumnos_presentes_discapacidad,
-            alumnos_presentes_ambas,
-        ],
+			f"Discapacidad {alumnos_presentes_discapacidad}",
+			f"Ambas {alumnos_presentes_ambas}",
+		],
+		"valores_asistencia_segundo_condicion": [
+			alumnos_presentes_comunidad_indigena,
+			alumnos_presentes_discapacidad,
+			alumnos_presentes_ambas,
+		],
 		"valores_asistencia_segundo": [alumnos_presentes, alumnos_ausentes],
 		"etiquetas_nivel_desempeno_segundo": [
 			f"Debajo del Basico {nivel_debajo_del_basico}%",
@@ -1372,7 +1395,7 @@ def analisis_segundo_grado_grafico(grado_seleccionado, cueanexo, secciones, turn
 	# ----------------FIN LOGICA 2 GRADO ---------
 
 
-def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno):
+def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno,condicion):
 	# -----------------------LOGICA PARA TERCER GRADO------------------------
 	# PARTICIPACION
 	# print('entre a analisis 3ero')
@@ -1395,26 +1418,36 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 	# print(seccion)
 	else:
 		secciones = SeccionFluidez2026.objects.filter(grado__in=grado)
-	alumnos = AlumnoFluidez2026.objects.filter(seccion_id__in=secciones)
-
+   #----
+	if condicion == "Alumnos Con discapacidad":
+		alumnos = AlumnoFluidez2026.objects.filter(
+            Q(comunidad_indigena='NINGUNA') | Q(comunidad_indigena__isnull=True),
+            seccion_id__in=secciones, discapacidad='SI')
+	elif condicion == "Comunidad Indígena":
+		alumnos = AlumnoFluidez2026.objects.filter(
+        Q(discapacidad='NO') | Q(discapacidad__isnull=True),seccion_id__in=secciones,
+        comunidad_indigena__isnull=False).exclude(comunidad_indigena='NINGUNA')
+	else:
+		print('entre a else')
+		alumnos = AlumnoFluidez2026.objects.filter(seccion_id__in=secciones)
+		print(f'cantidad de alumnos {alumnos.count()}')
+	#----
 	evaluaciones = EvaluacionFluidezLectoraFluidez2026.objects.filter(
 		alumno__in=alumnos
 	)
-	# presentes=evaluaciones.filter(asistencia='PRESENTE')
-	# POSIBLE OLUCION
 	evaluaciones_con_comprension, conteos = comprension_lectora(
 		alumnos, grado_seleccionado
 	)
-	ES_INDIGENA = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena__in=["NINGUNA", "", None])
-	# evaluaciones_con_comprension,conteos=comprension_lectora(evaluaciones,grado_seleccionado)
+	ES_INDIGENA = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena="NINGUNA") & ~Q(alumno__comunidad_indigena__isnull=True) & (Q(alumno__discapacidad='NO') | Q(alumno__discapacidad__isnull=True))
+	ES_AMBAS = Q(asistencia="PRESENTE") & ~Q(alumno__comunidad_indigena="NINGUNA") & Q(alumno__discapacidad='SI') & ~Q(alumno__comunidad_indigena__isnull=True)
 	datos = evaluaciones.aggregate(
 		# Asistencia
 		presentes=Count("alumno_id", filter=Q(asistencia="PRESENTE")),
 		ausentes=Count("alumno_id", filter=Q(asistencia="AUSENTE")),
 		#ASISTENCIAS (CONDICIÓN)
 		presentes_comunidad_indigena=Count("alumno_id", filter=ES_INDIGENA),
-		presentes_discapacidad=Count("alumno_id", filter=Q(asistencia="PRESENTE", alumno__discapacidad="SI")),
-		presentes_ambas=Count("alumno_id", filter=ES_INDIGENA & Q(alumno__discapacidad="SI")),
+		presentes_discapacidad=Count("alumno_id", filter=Q(asistencia="PRESENTE", alumno__discapacidad="SI") & (Q(alumno__comunidad_indigena='NINGUNA') | Q(alumno__comunidad_indigena__isnull=True ))),
+		presentes_ambas=Count("alumno_id", filter=ES_AMBAS),
 		# Desempeño
 		promedio_general=Avg(
 			"cantidad_palabras_leidas", filter=Q(asistencia="PRESENTE")
@@ -1503,15 +1536,15 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 			f"Ausentes {alumnos_ausentes}",
 		],
 		 "asistencia_tercero_condicion": [
-            f"Com. Indígena {alumnos_presentes_comunidad_indigena}",
-            f"Discapacidad {alumnos_presentes_discapacidad}",
-            f"Ambas {alumnos_presentes_ambas}",
-        ],
-        "valores_asistencia_tercero_condicion": [
-            alumnos_presentes_comunidad_indigena,
-            alumnos_presentes_discapacidad,
-            alumnos_presentes_ambas,
-        ],
+			f"Com. Indígena {alumnos_presentes_comunidad_indigena}",
+			f"Discapacidad {alumnos_presentes_discapacidad}",
+			f"Ambas {alumnos_presentes_ambas}",
+		],
+		"valores_asistencia_tercero_condicion": [
+			alumnos_presentes_comunidad_indigena,
+			alumnos_presentes_discapacidad,
+			alumnos_presentes_ambas,
+		],
 		"valores_asistencia_tercero": [alumnos_presentes, alumnos_ausentes],
 		"etiquetas_nivel_desempeno_tercero": [
 			f"Debajo del Basico {nivel_debajo_del_basico}%",
