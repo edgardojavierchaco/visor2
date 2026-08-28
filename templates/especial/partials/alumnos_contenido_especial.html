@@ -50,7 +50,7 @@
 
         {% if alumnos %}
             <div class="cef-table-wrap">
-                <table class="cef-dt cef-alumnos-table" data-cef-table>
+                <table class="cef-dt cef-alumnos-table" data-cef-table data-cef-alumnos-seccion-groups>
                     <thead>
                         <tr>
                             <th>Alumno</th>
@@ -65,14 +65,17 @@
                     <tbody>
                         {% for item in alumnos %}
                             {% if item.muestra_grupo_seccion %}
-                                <tr class="cef-alumno-seccion-grupo" data-cef-table-group-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}">
+                                <tr class="cef-alumno-seccion-grupo" data-cef-table-group-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}" data-cef-alumno-seccion-header>
                                     <th colspan="7" scope="rowgroup">
-                                        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-                                        {{ item.seccion_principal_label }}
+                                        <button class="cef-alumno-seccion-toggle" type="button" data-cef-alumno-seccion-toggle aria-expanded="false">
+                                            <span class="cef-alumno-seccion-arrow" data-cef-alumno-seccion-arrow aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+                                            <span class="cef-alumno-seccion-label">{{ item.seccion_principal_label }}</span>
+                                            <span class="cef-alumno-seccion-count" data-cef-alumno-seccion-count></span>
+                                        </button>
                                     </th>
                                 </tr>
                             {% endif %}
-                            <tr class="{% if item.estado != 'activo' %}cef-row-inactive{% endif %}" data-cef-table-data-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}">
+                            <tr class="{% if item.estado != 'activo' %}cef-row-inactive {% endif %}oculta-por-seccion" data-cef-table-data-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}" data-cef-alumno-seccion-row>
                                 <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
                                 <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
                                 <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
@@ -171,7 +174,11 @@
     }
 
     .cef-alumnos-table tbody tr[data-cef-table-data-row]:hover {
-        background: var(--blue-50) !important;
+        background: #fff !important;
+    }
+
+    .oculta-por-seccion {
+        display: none !important;
     }
 
     .cef-alumno-seccion-item {
@@ -257,16 +264,52 @@
         background: var(--blue-50);
         border-bottom: 1px solid var(--blue-200);
         border-top: 2px solid var(--blue-300);
+        padding: 0;
+    }
+
+    .cef-alumno-seccion-toggle {
+        align-items: center;
+        background: var(--blue-50);
+        border: 0;
         color: var(--blue-900);
+        cursor: pointer;
+        display: flex;
         font-size: var(--fs-sm);
+        font-weight: 700;
+        gap: .45rem;
         letter-spacing: .02em;
         padding: .55rem .75rem;
         text-align: left;
+        width: 100%;
     }
 
-    .cef-alumno-seccion-grupo th i {
+    .cef-alumno-seccion-toggle:hover {
+        background: var(--blue-50);
+    }
+
+    .cef-alumno-seccion-toggle:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--primary);
+        outline: none;
+    }
+
+    .cef-alumno-seccion-arrow {
+        align-items: center;
         color: var(--primary);
-        margin-right: .35rem;
+        display: inline-flex;
+        flex: 0 0 1rem;
+        justify-content: center;
+        width: 1rem;
+    }
+
+    .cef-alumno-seccion-label {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-alumno-seccion-count {
+        color: var(--blue-700);
+        font-weight: 600;
+        margin-left: .15rem;
     }
 
     .cef-alumno-seccion-icon {

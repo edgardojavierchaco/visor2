@@ -5,7 +5,7 @@
     var reloadChecked = false;
     var activeSearchRequest = null;
     var activeBajaRequest = null;
-    var pendingIntegracionInscriptionForm = null;
+    var sectionGroupTableSequence = 0;
 
     function helpers() {
         return window.EspecialBusquedaPersonas;
@@ -213,7 +213,11 @@
                     ? modal.dataset.volverUrl || window.location.href
                     : method === "get" ? targetUrl : window.location.href;
                 if (!replaceAlumnoModal(modal, result.html, historyUrl)) {
-                    HTMLFormElement.prototype.submit.call(form);
+                    showAlumnoFeedback(
+                        modal,
+                        "No se pudo actualizar el resultado de la inscripción.",
+                        "error"
+                    );
                 }
             })
             .catch(function (error) {
@@ -221,7 +225,13 @@
                     isSearch
                     && (operation.cancelled || activeSearchRequest !== operation || (error && error.name === "AbortError"))
                 ) return;
-                HTMLFormElement.prototype.submit.call(form);
+                showAlumnoFeedback(
+                    modal,
+                    error && error.message
+                        ? error.message
+                        : "No se pudo completar la inscripción.",
+                    "error"
+                );
             })
             .finally(function () {
                 if (submitButton) submitButton.disabled = false;
@@ -328,6 +338,149 @@
         }
     }
 
+    function alumnoSectionTables(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        var tables = [];
+        if (root && root.matches && root.matches("table[data-cef-alumnos-seccion-groups]")) {
+            tables.push(root);
+        }
+        if (scope.querySelectorAll) {
+            Array.prototype.push.apply(
+                tables,
+                scope.querySelectorAll("table[data-cef-alumnos-seccion-groups]")
+            );
+        }
+        return tables;
+    }
+
+    function buildAlumnoSectionGroups(table) {
+        var groups = [];
+        var rows = table.querySelectorAll(
+            "tbody tr[data-cef-alumno-seccion-header], tbody tr[data-cef-alumno-seccion-row]"
+        );
+
+        Array.prototype.forEach.call(rows, function (row) {
+            var key = row.getAttribute("data-cef-table-group-key") || "";
+            var group = groups.filter(function (candidate) { return candidate.key === key; })[0];
+            if (!group) {
+                group = {
+                    key: key,
+                    id: "grupo-" + (groups.length + 1),
+                    header: null,
+                    rows: []
+                };
+                groups.push(group);
+            }
+            row.dataset.cefAlumnoSeccionId = group.id;
+            if (row.hasAttribute("data-cef-alumno-seccion-header")) group.header = row;
+            else group.rows.push(row);
+        });
+
+        return groups.filter(function (group) { return group.header; });
+    }
+
+    function setAlumnoSectionArrow(toggle, expanded) {
+        var arrow = toggle.querySelector("[data-cef-alumno-seccion-arrow]");
+        if (!arrow) return;
+        var icon = arrow.querySelector("i") || arrow;
+        icon.classList.toggle("fa-chevron-right", !expanded);
+        icon.classList.toggle("fa-chevron-down", expanded);
+    }
+
+    function updateAlumnoSectionAccessibility(table, group) {
+        var toggle = group.header.querySelector("[data-cef-alumno-seccion-toggle]");
+        if (!toggle) return;
+
+        var baseId = "cef-alumno-seccion-" + table._cefAlumnoSectionPrefix + "-" + group.id;
+        group.header.id = baseId + "-encabezado";
+        toggle.id = baseId + "-toggle";
+        var controls = group.rows.map(function (row, index) {
+            row.id = baseId + "-fila-" + (index + 1);
+            return row.id;
+        });
+        if (controls.length) toggle.setAttribute("aria-controls", controls.join(" "));
+
+        var count = group.header.querySelector("[data-cef-alumno-seccion-count]");
+        if (count) {
+            var total = group.rows.length;
+            count.textContent = " · " + total + (total === 1 ? " alumno" : " alumnos");
+        }
+    }
+
+    function setAlumnoSectionState(group, expanded) {
+        var toggle = group.header.querySelector("[data-cef-alumno-seccion-toggle]");
+        if (toggle) {
+            toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+            setAlumnoSectionArrow(toggle, expanded);
+        }
+        group.rows.forEach(function (row) {
+            row.classList.toggle("oculta-por-seccion", !expanded);
+        });
+    }
+
+    function refreshAlumnoSectionTable(table, reset) {
+        var groups = buildAlumnoSectionGroups(table);
+        var state = table._cefAlumnoSectionState || {};
+        table._cefAlumnoSectionGroups = groups;
+        if (reset) state = {};
+
+        groups.forEach(function (group) {
+            state[group.id] = Boolean(state[group.id]);
+            updateAlumnoSectionAccessibility(table, group);
+            setAlumnoSectionState(group, state[group.id]);
+        });
+        table._cefAlumnoSectionState = state;
+    }
+
+    function resetAlumnoSectionTable(table) {
+        refreshAlumnoSectionTable(table, true);
+    }
+
+    function toggleAlumnoSection(table, sectionId) {
+        var groups = table._cefAlumnoSectionGroups || [];
+        var group = groups.filter(function (candidate) {
+            return candidate.id === sectionId;
+        })[0];
+        if (!group) return;
+
+        var state = table._cefAlumnoSectionState || {};
+        state[group.id] = !state[group.id];
+        table._cefAlumnoSectionState = state;
+        setAlumnoSectionState(group, state[group.id]);
+    }
+
+    function bindAlumnoSectionTable(table) {
+        var root = table.closest(".cef-panel-body, .cef-panel") || document;
+        var search = root.querySelector("[data-cef-table-search]");
+        var size = root.querySelector("[data-cef-page-size]");
+        var pagination = root.querySelector("[data-cef-table-pagination]");
+        if (search) search.addEventListener("input", function () { resetAlumnoSectionTable(table); });
+        if (size) size.addEventListener("change", function () { resetAlumnoSectionTable(table); });
+        if (pagination) pagination.addEventListener("click", function () { resetAlumnoSectionTable(table); });
+
+        if (window.jQuery && window.jQuery.fn) {
+            window.jQuery(table)
+                .off("draw.dt.cefAlumnoSectionGroups")
+                .on("draw.dt.cefAlumnoSectionGroups", function () {
+                    resetAlumnoSectionTable(table);
+                });
+        }
+    }
+
+    function initAlumnoSectionTable(table) {
+        if (!table || table.dataset.cefAlumnoSectionReady === "1") return;
+        sectionGroupTableSequence += 1;
+        table._cefAlumnoSectionPrefix = "tabla-" + sectionGroupTableSequence;
+        table._cefAlumnoSectionState = {};
+        table.dataset.cefAlumnoSectionReady = "1";
+        bindAlumnoSectionTable(table);
+        resetAlumnoSectionTable(table);
+    }
+
+    function initAlumnoSectionTables(root) {
+        alumnoSectionTables(root).forEach(initAlumnoSectionTable);
+    }
+
     function installExpansion() {
         document.addEventListener("click", function (event) {
             var toggle = event.target.closest("[data-cef-alumno-secciones-toggle]");
@@ -357,17 +510,6 @@
         return editors;
     }
 
-    function updateMatriculaSave(editor) {
-        if (!editor) return;
-        var form = editor.querySelector("[data-especial-matricula-update-form]");
-        var saveButton = form && form.querySelector("[data-especial-matricula-save]");
-        if (!form || !saveButton) return;
-        var cueSelect = form.querySelector("[data-especial-matricula-cue-select]");
-        var currentCue = cueSelect ? String(cueSelect.value || "").trim() : "";
-        var initialCue = String(form.dataset.initialCue || "").trim();
-        saveButton.hidden = currentCue === initialCue;
-    }
-
     function syncMatriculaAlta(root) {
         var scope = root && root.querySelectorAll ? root : document;
         if (root && root.closest && root.closest("tr")) scope = root.closest("tr");
@@ -384,83 +526,10 @@
             var row = button.closest("tr");
             var cueSelect = row && row.querySelector("[data-especial-matricula-cue-select]");
             if (!cueSelect) return;
-            button.disabled = !String(cueSelect.value || "").trim();
+            var cue = String(cueSelect.value || "").replace(/\D/g, "");
+            var destino = String(cueSelect.dataset.currentCue || "").replace(/\D/g, "");
+            button.disabled = cue.length !== 9 || !destino || cue === destino;
         });
-    }
-
-    function integrationInscriptionModal() {
-        return document.querySelector("[data-especial-inscripcion-integracion-modal]");
-    }
-
-    function closeIntegrationInscriptionModal() {
-        var modal = integrationInscriptionModal();
-        if (!modal) return;
-        pendingIntegracionInscriptionForm = null;
-        modal.classList.remove("is-open");
-        modal.setAttribute("aria-hidden", "true");
-    }
-
-    function openIntegrationInscriptionModal(trigger) {
-        var modal = integrationInscriptionModal();
-        var form = trigger && trigger.closest("form");
-        if (!modal || !form) return;
-
-        pendingIntegracionInscriptionForm = form;
-        var sectionLabel = modal.querySelector("[data-especial-inscripcion-integracion-seccion]");
-        var error = modal.querySelector("[data-especial-inscripcion-integracion-error]");
-        var confirm = modal.querySelector("[data-especial-inscripcion-integracion-confirm]");
-        var select = modal.querySelector("[data-especial-matricula-cue-select]");
-        if (sectionLabel) sectionLabel.textContent = trigger.dataset.seccionLabel || "seleccionada";
-        if (error) {
-            error.hidden = true;
-            error.textContent = "";
-        }
-        if (select) {
-            if (window.jQuery && window.jQuery.fn && window.jQuery(select).data("select2")) {
-                window.jQuery(select).val(null).trigger("change");
-            } else {
-                select.value = "";
-            }
-        }
-        if (confirm) confirm.disabled = true;
-        modal.classList.add("is-open");
-        modal.setAttribute("aria-hidden", "false");
-        if (select && window.jQuery && window.jQuery.fn && window.jQuery(select).data("select2")) {
-            window.jQuery(select).select2("open");
-        } else if (select) {
-            select.focus();
-        }
-    }
-
-    function submitIntegrationInscription(event) {
-        var modalForm = event.target.closest("[data-especial-inscripcion-integracion-form]");
-        if (!modalForm) return;
-        event.preventDefault();
-
-        var select = modalForm.querySelector("[data-especial-matricula-cue-select]");
-        var value = select ? String(select.value || "").trim() : "";
-        var error = modalForm.querySelector("[data-especial-inscripcion-integracion-error]");
-        if (!value || !pendingIntegracionInscriptionForm) {
-            if (error) {
-                error.textContent = "Seleccioná un CUE-Anexo de Educación Común para continuar.";
-                error.hidden = false;
-            }
-            return;
-        }
-
-        var previous = pendingIntegracionInscriptionForm.querySelector(
-            "input[name='cueanexo_matricula_compartida']"
-        );
-        if (previous) previous.remove();
-        var hidden = document.createElement("input");
-        hidden.type = "hidden";
-        hidden.name = "cueanexo_matricula_compartida";
-        hidden.value = value;
-        pendingIntegracionInscriptionForm.appendChild(hidden);
-
-        var form = pendingIntegracionInscriptionForm;
-        closeIntegrationInscriptionModal();
-        HTMLFormElement.prototype.submit.call(form);
     }
 
     function matriculaCueParts(data) {
@@ -512,8 +581,11 @@
     }
 
     function normalizeMatriculaSearchTerm(term) {
-        var normalized = String(term || "");
-        return /^\d+$/.test(normalized) ? normalized.slice(0, 9) : normalized;
+        var normalized = String(term || "").trim();
+        if (/^[\d\s.-]+$/.test(normalized)) {
+            return normalized.replace(/[.\s-]/g, "").slice(0, 9);
+        }
+        return normalized;
     }
 
     function preventMatriculaNumericOverflow(event) {
@@ -556,9 +628,6 @@
 
     function initMatricula(root) {
         var editors = matriculaEditors(root);
-        editors.forEach(function (editor) {
-            updateMatriculaSave(editor);
-        });
         syncMatriculaAlta(root);
         if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) return;
         editors.forEach(function (editor) {
@@ -572,6 +641,9 @@
                 hasResults: false,
                 lastResults: [],
                 lastTerm: "",
+                lastPage: 1,
+                lastMore: false,
+                lastCacheKey: "",
                 selectedId: String(cueSelect.value || "").trim(),
                 openingWithCache: false,
                 restoreLastTerm: false
@@ -605,20 +677,27 @@
                     data: function (params) {
                         return {
                             q: normalizeMatriculaSearchTerm(params.term),
+                            page: params.page || 1,
                             cueanexo: cueSelect.dataset.currentCue || ""
                         };
                     },
                     transport: function (options, success, failure) {
                         var term = normalizeMatriculaSearchTerm(options.data && options.data.q);
-                        if (searchState.openingWithCache && searchState.hasResults) {
+                        var page = parseInt(options.data && options.data.page, 10) || 1;
+                        if (searchState.openingWithCache && searchState.hasResults && page === 1) {
                             term = searchState.lastTerm;
                         }
                         searchState.openingWithCache = false;
                         options.data = options.data || {};
                         options.data.q = term;
+                        options.data.page = page;
+                        var cacheKey = term + "|" + page;
 
-                        if (searchState.hasResults && term === searchState.lastTerm) {
-                            success({ results: searchState.lastResults.slice() });
+                        if (searchState.hasResults && searchState.lastCacheKey === cacheKey) {
+                            success({
+                                results: searchState.lastResults.slice(),
+                                pagination: { more: searchState.lastMore }
+                            });
                             return { abort: function () {} };
                         }
                         searchState.hasResults = false;
@@ -628,25 +707,34 @@
                         request.done(function (data) {
                             var results = data && Array.isArray(data.results) ? data.results.slice() : [];
                             searchState.lastTerm = term;
+                            searchState.lastPage = page;
                             searchState.lastResults = results;
+                            searchState.lastMore = Boolean(data && data.pagination && data.pagination.more);
+                            searchState.lastCacheKey = cacheKey;
                             searchState.hasResults = true;
-                            success({ results: results });
+                            success({
+                                results: results,
+                                pagination: { more: searchState.lastMore }
+                            });
                         });
                         request.fail(failure);
                         return request;
                     },
                     processResults: function (data) {
-                        return { results: Array.isArray(data.results) ? data.results : [] };
+                        return {
+                            results: Array.isArray(data.results) ? data.results : [],
+                            pagination: data.pagination || { more: false }
+                        };
                     }
                 },
                 language: {
-                    noResults: function () { return "No se encontraron CUE-Anexos."; },
+                    noResults: function () { return "No se encontraron establecimientos"; },
+                    errorLoading: function () { return "No se pudo consultar el padrón de establecimientos."; },
                     removeAllItems: function () { return "Limpiar selección"; },
                     searching: function () { return "Buscando..."; }
                 }
             });
             $cueSelect.on("change.especialMatricula", function () {
-                updateMatriculaSave(editor);
                 syncMatriculaAlta(editor);
             });
             $cueSelect.on("select2:select.especialMatricula", function (event) {
@@ -689,7 +777,6 @@
                 centerMatriculaDropdown(cueSelect);
                 searchState.restoreLastTerm = false;
             });
-            updateMatriculaSave(editor);
             syncMatriculaAlta(editor);
         });
     }
@@ -721,6 +808,15 @@
         installed = true;
         installExpansion();
         document.addEventListener("click", function (event) {
+            var toggle = event.target.closest("[data-cef-alumno-seccion-toggle]");
+            if (!toggle) return;
+            var table = toggle.closest("table[data-cef-alumnos-seccion-groups]");
+            if (!table) return;
+            if (table.dataset.cefAlumnoSectionReady !== "1") initAlumnoSectionTable(table);
+            event.preventDefault();
+            toggleAlumnoSection(table, toggle.closest("tr").dataset.cefAlumnoSeccionId);
+        });
+        document.addEventListener("click", function (event) {
             var opener = event.target.closest("[data-open-personas-modal]");
             if (opener && !event.defaultPrevented) {
                 var searchModal = document.getElementById("modalBusquedaAlumno");
@@ -749,33 +845,27 @@
             if (overlay && event.target === overlay) closeModal(overlay);
         });
         document.addEventListener("submit", submitModalForm);
-        document.addEventListener("submit", submitIntegrationInscription);
         document.addEventListener("click", function (event) {
-            var trigger = event.target.closest("[data-especial-inscribir-integracion]");
-            if (trigger) {
-                event.preventDefault();
-                openIntegrationInscriptionModal(trigger);
-                return;
+            var useLast = event.target.closest("[data-especial-matricula-use-last]");
+            if (!useLast) return;
+            var cell = useLast.closest("td");
+            var select = cell && cell.querySelector("[data-especial-matricula-cue-select]");
+            if (!select) return;
+            event.preventDefault();
+            var cue = String(useLast.dataset.cue || "").trim();
+            var label = String(useLast.dataset.label || cue).trim();
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 && window.jQuery(select).data("select2")) {
+                window.jQuery(select).append(new Option(label, cue, true, true)).trigger("change");
+            } else {
+                select.value = cue;
+                select.dispatchEvent(new Event("change", { bubbles: true }));
             }
-            var close = event.target.closest("[data-especial-inscripcion-integracion-close]");
-            if (close) {
-                event.preventDefault();
-                closeIntegrationInscriptionModal();
-                return;
-            }
-            var modal = event.target.closest("[data-especial-inscripcion-integracion-modal]");
-            if (modal && event.target === modal) closeIntegrationInscriptionModal();
         });
         document.addEventListener("change", function (event) {
             var cue = event.target.matches("[data-especial-matricula-cue-select]");
             if (!cue) return;
             var editor = event.target.closest("[data-especial-matricula-editor]");
-            updateMatriculaSave(editor);
             syncMatriculaAlta(editor || event.target);
-            if (event.target.closest("[data-especial-inscripcion-integracion-modal]")) {
-                var confirm = document.querySelector("[data-especial-inscripcion-integracion-confirm]");
-                if (confirm) confirm.disabled = !String(event.target.value || "").trim();
-            }
         });
         document.addEventListener("focusin", function (event) {
             if (event.target.matches("[data-especial-matricula-cue-select]")) {
@@ -793,6 +883,7 @@
     function init(root) {
         initCuilInput(root);
         initMatricula(root);
+        initAlumnoSectionTables(root);
     }
 
     function rootOwnsModal(root, modal) {

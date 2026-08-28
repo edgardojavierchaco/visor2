@@ -25,7 +25,10 @@
     }
 
     function parseResponse(response, errorMessage) {
-        if (!response.ok) throw new Error(errorMessage || "La operación devolvió un error HTTP.");
+        if (!response.ok) {
+            var message = errorMessage || "La operación devolvió un error HTTP.";
+            throw new Error(message + " (HTTP " + response.status + ").");
+        }
         var contentType = response.headers.get("content-type") || "";
         if (contentType.indexOf("application/json") !== -1) {
             return response.json().then(function (data) {

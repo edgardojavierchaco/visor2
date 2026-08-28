@@ -581,74 +581,42 @@ def _resumen_cues_alumno(bancos):
 
 
 def _matriculas_compartidas_validas(bancos):
-    """Valida CUE-Anexos compartidos activos sin modificar datos persistidos."""
-    relaciones_integracion_activas = {
-        (inscripcion.alumno_id, _solo_digitos(inscripcion.seccion.cueanexo), inscripcion.seccion.ciclo_id)
-        for inscripcion in AlumnoSeccion.objects.filter(
-            estado=AlumnoSeccion.Estado.ACTIVO,
-            seccion__estado=SeccionEspecial.Estado.ACTIVO,
-        ).select_related("seccion")
-        if inscripcion.seccion.es_oferta_integracion
-    }
-    grupos = {}
+    """Obtiene la matrícula compartida guardada en los bancos activos."""
+    bancos_validos = set()
+    cues_asociados = {}
     for banco in bancos:
         if banco.estado != EspecialAlumnoBanco.Estado.ACTIVO:
             continue
-        grupos.setdefault(banco.alumno_id, []).append(banco)
 
-    bancos_validos = set()
-    cues_asociados = {}
-    for alumno_id, bancos_activos in grupos.items():
-        cues_activos = {
-            _solo_digitos(banco.cueanexo)
-            for banco in bancos_activos
-            if len(_solo_digitos(banco.cueanexo)) == 9
-        }
-        hay_multiples_cues = len(cues_activos) > 1
-        for banco in bancos_activos:
-            valor = banco.matricula_compartida
-            cue_actual = _solo_digitos(banco.cueanexo)
-            cue_asociado = _solo_digitos(valor)
-            motivo_invalidez = ""
-            tiene_seccion_integracion = (
+        valor = getattr(banco, "matricula_compartida", None)
+        if valor in (None, ""):
+            continue
+
+        cue_actual = _solo_digitos(banco.cueanexo)
+        cue_asociado = _solo_digitos(valor)
+
+        if len(cue_asociado) != 9:
+            logger.warning(
+                "Matrícula compartida inválida en visualizador: "
+                "alumno_id=%s banco_id=%s valor=%s. No se modifica la base.",
                 banco.alumno_id,
+                banco.pk,
+                valor,
+            )
+            continue
+
+        if cue_asociado == cue_actual:
+            logger.warning(
+                "Matrícula compartida igual al CUE principal: "
+                "alumno_id=%s banco_id=%s cueanexo=%s. No se modifica la base.",
+                banco.alumno_id,
+                banco.pk,
                 cue_actual,
-                banco.ciclo_id,
-            ) in relaciones_integracion_activas
+            )
+            continue
 
-            if not tiene_seccion_integracion:
-                continue
-            if not valor:
-                continue
-            if valor and len(cue_asociado) != 9:
-                motivo_invalidez = "el CUE asociado no tiene 9 dígitos"
-            elif len(cues_activos) <= 1 and valor:
-                motivo_invalidez = "solo existe un CUE-Anexo activo"
-            elif valor and cue_asociado == cue_actual:
-                motivo_invalidez = "el CUE asociado coincide con el CUE actual"
-            elif valor and cue_asociado not in cues_activos:
-                motivo_invalidez = "el CUE asociado no pertenece a otro banco activo"
-
-            if motivo_invalidez:
-                logger.warning(
-                    "Matrícula compartida inconsistente: alumno_id=%s ciclo_id=%s "
-                    "cueanexo=%s matricula_compartida=%s (%s). No se modifica la base.",
-                    alumno_id,
-                    banco.ciclo_id,
-                    banco.cueanexo,
-                    valor,
-                    motivo_invalidez,
-                )
-                continue
-
-            bancos_validos.add(banco.pk)
-            if cue_asociado in cues_activos and cue_asociado != cue_actual:
-                cues_asociados[banco.pk] = cue_asociado
-                continue
-
-            alternativas = sorted(cue for cue in cues_activos if cue != cue_actual)
-            if alternativas:
-                cues_asociados[banco.pk] = alternativas[0]
+        bancos_validos.add(banco.pk)
+        cues_asociados[banco.pk] = cue_asociado
 
     return bancos_validos, cues_asociados
 
