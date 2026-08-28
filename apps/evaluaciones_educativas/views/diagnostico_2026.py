@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.http import FileResponse, JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
+from django.db import connection
 from django.db.models import Q
 import io
 import re
@@ -17,6 +18,34 @@ from ..utils import utilidades
 from django.core.paginator import Paginator
 from apps.consultasge.models import CapaUnicaOfertas
 from django.core.exceptions import PermissionDenied
+
+
+def _cueanexos_del_regional(username):
+	"""Devuelve los CUE de las regiones activas asignadas al usuario."""
+	with connection.cursor() as cursor:
+		cursor.execute(
+			"""
+			SELECT DISTINCT TRIM(v.cueanexo::text)
+			FROM public.v_capa_unica_ofertas_ant AS v
+			INNER JOIN public.usuarios_regionalusuarios AS r
+				ON TRIM(r.region_loc) = TRIM(v.region_loc)
+			WHERE r.usuario = %s
+			  AND (r.activo IS NULL OR r.activo = TRUE)
+			""",
+			[username],
+		)
+		return [str(cueanexo) for cueanexo, in cursor.fetchall() if cueanexo]
+
+
+def _validar_cue_del_regional(usuario, cueanexo):
+	if usuario.nivelacceso_id != 'Regional':
+		return
+
+	if str(cueanexo) not in _cueanexos_del_regional(usuario.username):
+		raise PermissionDenied(
+			"No tienes acceso a los registros de este establecimiento."
+		)
+
 
 def _orden_pregunta_field(field):
 	numeros = re.findall(r'\d+', field.name)
@@ -1774,18 +1803,12 @@ def analisis_evaluacion(request):
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
     
     lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
-    rol_dennied = 'Director/a'
     rol_usuario = usuario.nivelacceso_id
-    print(rol_usuario)
-    
-    # ── PROTECCIÓN DE ACCESO ─────────────────────────────────────
-    if rol_usuario == rol_dennied:
-        raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 
     if rol_usuario not in lista_usuarios_jerarquicos:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter, 
-            offer__icontains='Secundaria Completa req. 7 años'
+            oferta__icontains='Secundaria Completa req. 7 años'
         ).exists()
         if not has_oferta:
             raise PermissionDenied("No tienes permiso para acceder a esta sección.")
@@ -1804,7 +1827,12 @@ def analisis_evaluacion(request):
             filtros_establecimiento &= Q(sector=filtro_sector)
         if filtro_ambito and filtro_ambito != 'TODOS':
             filtros_establecimiento &= Q(ambito=filtro_ambito)
-        if filtro_region and filtro_region != 'TODOS':
+
+        if rol_usuario == 'Regional':
+            filtros_establecimiento &= Q(
+                cueanexo__in=_cueanexos_del_regional(name)
+            )
+        elif filtro_region and filtro_region != 'TODOS':
             filtros_establecimiento &= Q(region=filtro_region)
             
         cues_permitidos = Establecimientos2026.objects.filter(filtros_establecimiento).values_list('cueanexo', flat=True).distinct()
@@ -2129,21 +2157,15 @@ def progreso_alumnos(request):
     name = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
 
-    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro']
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
     rol_usuario = usuario.nivelacceso_id
-
-    # ── Protección de acceso ──────────────────────────────────────────────────
-    if rol_usuario == 'Director/a':
-        from django.core.exceptions import PermissionDenied
-        raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 
     if rol_usuario not in lista_usuarios_jerarquicos:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter,
-            offer__icontains='Secundaria Completa req. 7 años'
+            oferta__icontains='Secundaria Completa req. 7 años'
         ).exists()
         if not has_oferta:
-            from django.core.exceptions import PermissionDenied
             raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 
     # ── Parámetros de filtro ──────────────────────────────────────────────────
@@ -2163,6 +2185,15 @@ def progreso_alumnos(request):
 
     if cueanexo_int is None or anio_int is None:
         return JsonResponse({'error': 'Parámetros inválidos'}, status=400)
+
+    _validar_cue_del_regional(usuario, cueanexo_int)
+
+    if rol_usuario == 'Director/a':
+        cueanexos_director = [
+            str(cue) for cue in utilidades.obtener_cueanexos(usuario.username)
+        ]
+        if str(cueanexo_int) not in cueanexos_director:
+            raise PermissionDenied("No tienes acceso a los registros de este establecimiento.")
 
     # ── 1. Obtener alumnos + puntajes 2026 ───────────────────────────────────
     if materia == 'matematica':
@@ -2370,6 +2401,8 @@ def descargar_examen_individual(request, materia):
     if not selected_cue or not dni_alumno:
         raise Http404("Faltan parámetros requeridos (CUE o DNI).")
 
+    _validar_cue_del_regional(usuario, selected_cue)
+
     if rol_usuario not in lista_usuarios_jerarquicos:
         user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
         user_cueanexos = [str(c) for c in user_cueanexos_raw]
@@ -2520,6 +2553,15 @@ def descargar_reporte_listado(request, materia):
     if not all([selected_cue, filtro_anio, filtro_seccion, filtro_turno]):
         messages.warning(request, "Faltan filtros para generar el reporte.")
         return redirect('evaluaciones_educativas:diagnostico_2026:inicio')
+
+    _validar_cue_del_regional(usuario, selected_cue)
+
+    if rol_usuario == 'Director/a':
+        cueanexos_director = [
+            str(cue) for cue in utilidades.obtener_cueanexos(usuario.username)
+        ]
+        if selected_cue not in cueanexos_director:
+            raise PermissionDenied("No tienes acceso a los registros de este establecimiento.")
 
     # ── 2. CONFIGURACIÓN DE LA MATERIA ────────────────────────────────────────
     if materia == 'matematica':
