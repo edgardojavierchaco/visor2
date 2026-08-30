@@ -4,8 +4,13 @@
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="cargar" %}
     <div class="pof-view-header">
-        <h1>&#128221; AFECTAR CARGOS</h1>
-        <p>Registr&aacute; cargos y horas c&aacute;tedra asociados a una oferta educativa.</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">edit_document</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>AFECTAR CARGOS</h1>
+            <p>Registr&aacute; cargos y horas c&aacute;tedra asociados a una oferta educativa.</p>
+        </div>
     </div>
 
     <div class="pof-card pof-card-accent pof-cabecera-load-card">
@@ -28,7 +33,7 @@
                             <option value="{{ anio }}" {% if anio_activo == anio %}selected{% endif %}>{{ anio }}</option>
                         {% endfor %}
                     {% else %}
-                        <option value="">No hay reunidas cargadas</option>
+                        <option value="">No hay POF cargadas</option>
                     {% endif %}
                 </select>
             </div>
@@ -166,10 +171,10 @@
 
                 <div class="pof-cargo-entry-actions" id="cargoEntryActions">
                     <button type="button" class="pof-btn pof-observation-toggle" id="btnMostrarObservacion">
-                        💬 Agregar observación
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">text_ad</span> Agregar observación
                     </button>
                     <button type="button" class="pof-btn pof-cargo-primary-action" id="btnAgregarCargoLista">
-                        👤 Agregar cargo a la lista
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">person</span> Agregar cargo a la lista
                     </button>
                 </div>
 
@@ -178,7 +183,7 @@
                     <textarea id="observacionCargo" rows="2" placeholder="Opcional — escribí una aclaración para este cargo..."></textarea>
                     <div class="pof-observation-actions" id="observationCargoActions">
                         <button type="button" class="pof-btn pof-observation-remove" id="btnQuitarObservacion">
-                            ❌ Quitar observación
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_close_right</span> Quitar observación
                         </button>
                     </div>
                 </div>
@@ -285,6 +290,6 @@
 <script>
     {% include "reunidas_pof/_helpers_carga_cargos_comunes.html" %}
 </script>
-<script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}?v=20260717-2"></script>
+<script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}?v=20260828-1"></script>
+<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}?v=20260828-1"></script>
 {% endblock %}

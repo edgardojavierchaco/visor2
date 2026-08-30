@@ -18,19 +18,27 @@
 
 <div class="pof-home-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="inicio" %}
-    <div class="pof-view-header"><h1>&#127979; PLANTA ORG&Aacute;NICA FUNCIONAL</h1><p>Sistema de gesti&oacute;n de cargos, horas c&aacute;tedra y pof</p></div>
+    <div class="pof-view-header">
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">apartment</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>PLANTA ORG&Aacute;NICA FUNCIONAL</h1>
+            <p>Sistema de gesti&oacute;n de cargos, horas c&aacute;tedra y pof</p>
+        </div>
+    </div>
 
     <div class="pof-home-section-title">ACCESO R&Aacute;PIDO</div>
     <div class="pof-home-grid">
         {% if not pof_solo_visualizacion %}
-        <a href="{% url 'reunidas_pof:reunidas_pof' %}" class="pof-home-card"><span class="pof-home-icon">📚</span><h2 class="pof-home-title">Planta Org&aacute;nica Funcional</h2><p class="pof-home-text">Consultar y administrar la Planta Org&aacute;nica Funcional por a&ntilde;o, nivel y estado.</p></a>
-        <a href="{% url 'reunidas_pof:proyectos_especiales_pof' %}" class="pof-home-card"><span class="pof-home-icon">📔</span><h2 class="pof-home-title">Proyectos Especiales</h2><p class="pof-home-text">Crear, listar y cargar cargos para Proyectos Especiales POF.</p></a>
-        <a href="{% url 'reunidas_pof:cargos_pof' %}" class="pof-home-card"><span class="pof-home-icon">👥</span><h2 class="pof-home-title">Afectar cargos</h2><p class="pof-home-text">Registrar cargos y horas c&aacute;tedra asociados a una oferta.</p></a>
-        <a href="{% url 'reunidas_pof:consultar_cargos' %}" class="pof-home-card"><span class="pof-home-icon">⚙️</span><h2 class="pof-home-title">Admin. Cargos</h2><p class="pof-home-text">Buscar, revisar y modificar cargos cargados en POF.</p></a>
+        <a href="{% url 'reunidas_pof:reunidas_pof' %}" class="pof-home-card"><span class="pof-home-icon pof-icon material-symbols-outlined" aria-hidden="true">collections_bookmark</span><h2 class="pof-home-title">Planta Org&aacute;nica Funcional</h2><p class="pof-home-text">Consultar y administrar la Planta Org&aacute;nica Funcional por a&ntilde;o, nivel y estado.</p></a>
+        <a href="{% url 'reunidas_pof:proyectos_especiales_pof' %}" class="pof-home-card"><span class="pof-home-icon pof-icon material-symbols-outlined" aria-hidden="true">folder_special</span><h2 class="pof-home-title">Proyectos Especiales</h2><p class="pof-home-text">Crear, listar y cargar cargos para Proyectos Especiales POF.</p></a>
+        <a href="{% url 'reunidas_pof:cargos_pof' %}" class="pof-home-card"><span class="pof-home-icon pof-icon material-symbols-outlined" aria-hidden="true">group_add</span><h2 class="pof-home-title">Afectar cargos</h2><p class="pof-home-text">Registrar cargos y horas c&aacute;tedra asociados a una oferta.</p></a>
+        <a href="{% url 'reunidas_pof:consultar_cargos' %}" class="pof-home-card"><span class="pof-home-icon pof-icon material-symbols-outlined" aria-hidden="true">admin_panel_settings</span><h2 class="pof-home-title">Admin. Cargos</h2><p class="pof-home-text">Buscar, revisar y modificar cargos cargados en POF.</p></a>
         {% endif %}
-        <a href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}" class="pof-home-card"><span class="pof-home-icon">💻</span><h2 class="pof-home-title">Visualizador de Cargos por Localizaci&oacute;n</h2><p class="pof-home-text">Consultar cargos cargados en POF por CUEANEXO/localizaci&oacute;n, con datos de padr&oacute;n, CUOF, CUI y CEIC.</p></a>
+        <a href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}" class="pof-home-card"><span class="pof-home-icon pof-icon material-symbols-outlined" aria-hidden="true">laptop_chromebook</span><h2 class="pof-home-title">Visualizador de Cargos por Localizaci&oacute;n</h2><p class="pof-home-text">Consultar cargos cargados en POF por CUEANEXO/localizaci&oacute;n, con datos de padr&oacute;n, CUOF, CUI y CEIC.</p></a>
         {% if not pof_solo_visualizacion %}
-        <a href="{% url 'reunidas_pof:historial_movimientos' %}" class="pof-home-card"><span class="pof-home-icon">📜</span><h2 class="pof-home-title">Historial</h2><p class="pof-home-text">Ver movimientos, cambios y acciones registradas.</p></a>
+        <a href="{% url 'reunidas_pof:historial_movimientos' %}" class="pof-home-card"><span class="pof-home-icon pof-icon material-symbols-outlined" aria-hidden="true">tab_recent</span><h2 class="pof-home-title">Historial</h2><p class="pof-home-text">Ver movimientos, cambios y acciones registradas.</p></a>
         {% endif %}
     </div>
 </div>

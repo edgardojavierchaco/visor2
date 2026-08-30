@@ -2,12 +2,111 @@
     "use strict";
 
     function normalizeText(value) {
-        var text = String(value || "").toLocaleLowerCase("es");
+        var text = String(value == null ? "" : value).toLocaleLowerCase("es");
 
         return typeof text.normalize === "function"
             ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
             : text;
     }
+
+    /**
+     * Reutiliza reglas comunes de filtros POF entre paneles y dialogos.
+     *
+     * - Normaliza texto ignorando mayusculas, minusculas y diacriticos.
+     * - Evita que Enter en el buscador interno dispare el formulario.
+     * - Restaura todas las opciones con Escape y conserva el filtrado local sin requests.
+     */
+    function bindDialogOptionSearch(input, optionsRoot) {
+        if (!input || !optionsRoot) {
+            return;
+        }
+
+        function applySearch() {
+            var query = normalizeText(input.value.trim());
+            var visible = 0;
+
+            optionsRoot.querySelectorAll(".pof-visual-dialog-option").forEach(function (option) {
+                var label = option.querySelector("span");
+                var text = normalizeText(label ? label.textContent : option.textContent);
+                var matches = !query || text.indexOf(query) !== -1;
+                option.hidden = !matches;
+                if (matches) {
+                    visible += 1;
+                }
+            });
+
+            optionsRoot.querySelectorAll("[data-option-section]").forEach(function (section) {
+                section.hidden = Boolean(
+                    query
+                    && !section.querySelector(".pof-visual-dialog-option:not([hidden])")
+                );
+            });
+
+            return visible;
+        }
+
+        input.addEventListener("input", applySearch);
+        input.addEventListener("search", applySearch);
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+            } else if (event.key === "Escape") {
+                input.value = "";
+                applySearch();
+                event.preventDefault();
+            }
+        });
+
+        applySearch();
+    }
+
+    var filterOperatorPresets = {
+        text: [
+            { value: "0", label: "parecido a" },
+            { value: "1", label: "no parecido a" },
+            { value: "2", label: "igual a" },
+            { value: "7", label: "distinto de" }
+        ],
+        exact: [
+            { value: "2", label: "igual a" },
+            { value: "7", label: "distinto de" }
+        ],
+        numeric: [
+            { value: "2", label: "igual a" },
+            { value: "7", label: "distinto de" },
+            { value: "3", label: "mayor a" },
+            { value: "4", label: "mayor o igual a" },
+            { value: "5", label: "menor a" },
+            { value: "6", label: "menor o igual a" }
+        ]
+    };
+
+    function normalizeFilterValues(values) {
+        return (Array.isArray(values) ? values : [])
+            .map(function (value) { return String(value == null ? "" : value).trim(); })
+            .filter(Boolean)
+            .sort();
+    }
+
+    function sameFilterCriterion(left, right) {
+        return Boolean(left && right)
+            && String(left.operator || "") === String(right.operator || "")
+            && JSON.stringify(normalizeFilterValues(left.values))
+                === JSON.stringify(normalizeFilterValues(right.values));
+    }
+
+    function firstOperatorForConfig(config) {
+        var operators = filterOperatorPresets[config.operators] || filterOperatorPresets.text;
+        return operators.length ? operators[0].value : "0";
+    }
+
+    window.POFCommonFilterUI = window.POFCommonFilterUI || {};
+    window.POFCommonFilterUI.normalizeText = normalizeText;
+    window.POFCommonFilterUI.bindDialogOptionSearch = bindDialogOptionSearch;
+    window.POFCommonFilterUI.filterOperatorPresets = filterOperatorPresets;
+    window.POFCommonFilterUI.normalizeFilterValues = normalizeFilterValues;
+    window.POFCommonFilterUI.sameFilterCriterion = sameFilterCriterion;
+    window.POFCommonFilterUI.firstOperatorForConfig = firstOperatorForConfig;
 
     function getOptions(panel, type) {
         var selector = type === "filters"
@@ -157,9 +256,23 @@
         applySearch();
     }
 
+    /**
+     * Inicializa los buscadores locales declarados por cada panel POF.
+     *
+     * - Admite paneles identificados semanticamente sin depender de un ID de pantalla.
+     * - Conserva los IDs historicos de Visualizador como fallback retrocompatible.
+     * - Evita duplicar controles cuando un panel coincide con ambos mecanismos.
+     */
     function initialize() {
         var filtersPanel = document.getElementById("visualizacionPanelFiltros");
         var columnsPanel = document.getElementById("visualizacionPanelColumnas");
+
+        document.querySelectorAll("[data-panel-option-search-type]").forEach(function (panel) {
+            var type = panel.getAttribute("data-panel-option-search-type");
+            if (type === "filters" || type === "columns") {
+                createSearch(panel, type);
+            }
+        });
 
         if (filtersPanel) {
             createSearch(filtersPanel, "filters");

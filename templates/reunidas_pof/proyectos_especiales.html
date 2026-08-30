@@ -5,13 +5,18 @@
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="proyectos_especiales" %}
     <div class="pof-view-header">
-        <h1>📔PROYECTOS ESPECIALES</h1>
-        <p>Administr&aacute; cabeceras flexibles para cargas por proyecto, programa o dispositivo.</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">folder_special</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>PROYECTOS ESPECIALES</h1>
+            <p>Administr&aacute; cabeceras flexibles para cargas por proyecto, programa o dispositivo.</p>
+        </div>
     </div>
 
     <div class="pof-reunidas-top-actions">
         <a class="pof-btn pof-reunida-create-btn" href="{% url 'reunidas_pof:crear_proyecto_especial' %}">
-            <span aria-hidden="true">🗃️</span>
+            <span aria-hidden="true"><span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">splitscreen_add</span></span>
             <span>Crear Proyecto Especial</span>
         </a>
     </div>  
@@ -68,7 +73,7 @@
 
         {% if mensaje_filtros %}
             <div class="pof-filter-warning">
-                <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+                <span class="pof-filter-warning-icon pof-material-symbol pof-icon-warning material-symbols-outlined" aria-hidden="true">warning</span>
                 <span>{{ mensaje_filtros }}</span>
             </div>
         {% endif %}
@@ -110,20 +115,20 @@
                                             data-toggle="dropdown"
                                             aria-haspopup="true"
                                             aria-expanded="false">
-                                        &#9881;&#65039;
+                                        <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span>
                                     </button>
                                     <div class="dropdown-menu pof-grid-dropdown-menu pof-grid-actions-menu">
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-detail" href="{% url 'reunidas_pof:detalle_reunida' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
-                                            &#128065;&#65039; VER DETALLE
+                                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">mystery</span> VER DETALLE
                                         </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-primary" href="{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto.id }}">
-                                            &#10133; AFECTAR CARGOS
+                                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span> AFECTAR CARGOS
                                         </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-warning" href="{% url 'reunidas_pof:consultar_cargos' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
-                                            &#128736;&#65039; ADMIN. CARGOS
+                                            <span class="pof-action-icon pof-material-symbol pof-icon-tools material-symbols-outlined" aria-hidden="true">handyman</span> ADMIN. CARGOS
                                         </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-success" href="{% url 'reunidas_pof:exportar_reunida' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
-                                            &#128215; EXPORTAR PROYECTO ESPECIAL
+                                            <span class="pof-action-icon pof-material-symbol pof-icon-export material-symbols-outlined" aria-hidden="true">add_notes</span> EXPORTAR PROYECTO ESPECIAL
                                         </a>
                                         <div class="pof-grid-dropdown-form pof-grid-dropdown-form-danger">
                                             <button type="button"
@@ -134,7 +139,7 @@
                                                     data-pof-delete-label="{{ proyecto.nombre }} · {{ proyecto.anio }}"
                                                     data-pof-delete-warning="Esta operación solo se realizará si el proyecto no registra actividad administrativa y no es utilizado como base por otro Proyecto Especial."
                                                     data-pof-delete-url="{% url 'reunidas_pof:eliminar_proyecto_especial' proyecto.id %}">
-                                                &#128465;&#65039; ELIMINAR PROYECTO
+                                                <span class="pof-action-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span> ELIMINAR PROYECTO
                                             </button>
                                         </div>
                                     </div>
@@ -214,7 +219,7 @@
 
 {% block scripts %}
 {% load static %}
-<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260827-1"></script>
 <script>
 (function() {
     const filtroAnio = document.getElementById("filtroAnio");

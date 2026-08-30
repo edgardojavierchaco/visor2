@@ -9,11 +9,21 @@
 
     <div class="pof-view-header">
         {% if es_proyecto_especial and proyecto_especial %}
-            <h1>PROYECTO ESPECIAL {{ proyecto_especial.anio }} &middot; {{ proyecto_especial.nombre }}</h1>
-            <p>Visualizaci&oacute;n de cargos del Proyecto Especial POF{% if proyecto_especial.resolucion %}. Resoluci&oacute;n {{ proyecto_especial.resolucion }}{% endif %}.</p>
+            <div class="pof-view-header-icon-box" aria-hidden="true">
+                <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">laptop_chromebook</span>
+            </div>
+            <div class="pof-view-header-copy">
+                <h1>PROYECTO ESPECIAL {{ proyecto_especial.anio }} &middot; {{ proyecto_especial.nombre }}</h1>
+                <p>Visualizaci&oacute;n de cargos del Proyecto Especial POF{% if proyecto_especial.resolucion %}. Resoluci&oacute;n {{ proyecto_especial.resolucion }}{% endif %}.</p>
+            </div>
         {% else %}
-        <h1>💻 Visualizaci&oacute;n de Cargos por Localizaci&oacute;n</h1>
-        <p>Consulta global de cargos cargados en POF por CUEANEXO/localizaci&oacute;n, con datos de padr&oacute;n, CUOF, CUI y CEIC.</p>
+            <div class="pof-view-header-icon-box" aria-hidden="true">
+                <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">laptop_chromebook</span>
+            </div>
+            <div class="pof-view-header-copy">
+                <h1>Visualizaci&oacute;n de Cargos por Localizaci&oacute;n</h1>
+                <p>Consulta global de cargos cargados en POF por CUEANEXO/localizaci&oacute;n, con datos de padr&oacute;n, CUOF, CUI y CEIC.</p>
+            </div>
         {% endif %}
     </div>
 
@@ -37,7 +47,7 @@
             <div class="pof-visual-live-search" id="visualizacionLiveSearch">
                 <div class="pof-visual-search-control-row">
                     <label class="pof-visually-hidden" for="visualizacionColumnaSelect">Columna</label>
-                    <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                    <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
                     <select id="visualizacionColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
                         {% for columna in columnas %}
                             {% if columna.buscable %}
@@ -47,6 +57,7 @@
                     </select>
                     <label class="pof-visually-hidden" for="visualizacionColumnaInput">Buscar en columna</label>
                     <div class="pof-visual-search-input-wrap">
+                        <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
                         <input type="text"
                                id="visualizacionColumnaInput"
                                class="pof-visual-search-input"
@@ -58,11 +69,21 @@
                             <span class="pof-visually-hidden">Buscando resultados</span>
                         </span>
                     </div>
-                    <button type="button" class="pof-visual-search-clear" id="visualizacionLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
+                    <button type="button"
+                            class="pof-visual-search-submit"
+                            id="visualizacionBuscarBusquedaColumna"
+                            title="Buscar en la columna"
+                            aria-label="Buscar en la columna"
+                            disabled>Buscar</button>
+                    <button type="button"
+                            class="pof-visual-search-clear"
+                            id="visualizacionLimpiarBusquedaColumna"
+                            title="Limpiar b&uacute;squeda por columna"
+                            aria-label="Limpiar b&uacute;squeda por columna"
+                            disabled>&times;</button>
                 </div>
                 <div id="visualizacionBusquedaColumnaStatus" class="pof-visual-search-status pof-visual-search-status-hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
-                    <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
-                    <span id="visualizacionBusquedaColumnaStatusText">Buscando resultados...</span>
+                    <span id="visualizacionBusquedaColumnaStatusText"></span>
                 </div>
             </div>
 
@@ -88,7 +109,7 @@
                         data-panel-toggle="filtros"
                         aria-controls="visualizacionPanelFiltros"
                         aria-expanded="false">
-                    🔧 Filtros
+                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">filter_alt</span> Filtros
                 </button>
 
                 <button type="button"
@@ -96,7 +117,7 @@
                         data-panel-toggle="columnas"
                         aria-controls="visualizacionPanelColumnas"
                         aria-expanded="false">
-                    Columnas
+                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">table_rows_narrow</span> Columnas
                 </button>
 
                 <div class="dropdown pof-grid-dropdown">
@@ -113,12 +134,12 @@
                         class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
                         href="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}{% if querystring_exportar_filtros %}?{{ querystring_exportar_filtros }}{% endif %}"
                         data-export-base="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}">
-                            📊 Exportar vista actual
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Exportar vista actual
                         </a>
 
                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
                         href="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_todo' %}{% if querystring_exportar_todo %}?{{ querystring_exportar_todo }}{% endif %}">
-                            📁 Exportar todos los datos
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Exportar todos los datos
                         </a>
                     </div>
                 </div>
@@ -232,14 +253,14 @@
                         class="pof-filter-chip-edit"
                         data-filter-chip-edit
                         aria-label="Editar {{ chip.texto }}">
-                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                    <span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
                     <span class="pof-filter-chip-text">{{ chip.texto }}</span>
                 </button>
                 <button type="button"
                         class="pof-filter-chip-remove"
                         data-filter-chip-remove
                         aria-label="Eliminar {{ chip.texto }}">
-                    <span aria-hidden="true">&times;</span>
+                    <span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>
                 </button>
             </div>
         {% endfor %}
@@ -247,7 +268,7 @@
         {% if filtros_activos %}
             <a class="pof-filter-clear-all pof-visual-clear-filters-link"
             href="{% url 'reunidas_pof:visualizacion_cargos_localizacion' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">
-                <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                <span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>
                 <span>Limpiar filtros</span>
             </a>
         {% endif %}
@@ -333,7 +354,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260824-2"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
 <script>
 (function () {
     const form = document.getElementById("visualizacionCargosForm");
@@ -352,6 +373,7 @@
     const anioSelect = document.getElementById("visualizacionAnioSelect");
     const columnaSelect = document.getElementById("visualizacionColumnaSelect");
     const columnaInput = document.getElementById("visualizacionColumnaInput");
+    const buscarBusquedaColumnaBtn = document.getElementById("visualizacionBuscarBusquedaColumna");
     const limpiarBusquedaColumnaBtn = document.getElementById("visualizacionLimpiarBusquedaColumna");
     const busquedaColumnaLoading = document.getElementById("visualizacionBusquedaColumnaLoading");
     const busquedaColumnaStatus = document.getElementById("visualizacionBusquedaColumnaStatus");
@@ -385,6 +407,7 @@
     const FILTER_OPERATOR_PRESETS = commonFilterUI.filterOperatorPresets;
     const sameFilterCriterion = commonFilterUI.sameFilterCriterion;
     const firstOperatorForConfig = commonFilterUI.firstOperatorForConfig;
+    const hasUsefulFilterCriterion = commonFilterUI.hasUsefulFilterCriterion;
     const fieldConfig = {};
     let filterOptions = null;
     let filterOptionsRequest = null;
@@ -583,7 +606,7 @@
      *
      * - Mantiene el indicador dentro de la barra sin cambiar sus dimensiones.
      * - Marca la región como ocupada mientras existe una actualización AJAX.
-     * - Reinicia el mensaje de error cuando comienza una nueva búsqueda.
+     * - Oculta errores anteriores cuando comienza una nueva búsqueda.
      */
     function setColumnSearchLoading(active) {
         if (busquedaColumnaLoading) {
@@ -591,14 +614,14 @@
             busquedaColumnaLoading.setAttribute("aria-hidden", active ? "false" : "true");
         }
         if (liveSearch) {
-            liveSearch.classList.toggle("pof-visual-search-busy", active);
             liveSearch.setAttribute("aria-busy", active ? "true" : "false");
         }
         if (active) {
             columnSearchErrorToken = 0;
             columnSearchErrorMessage = "";
-            setColumnSearchStatus("Buscando resultados...", "info");
+            setColumnSearchStatus("", "");
         }
+        syncColumnSearchButtons();
     }
 
     /**
@@ -624,6 +647,7 @@
                 control.classList.remove("pof-query-disabled");
             });
             queryControlStates.clear();
+            syncColumnSearchButtons();
             return;
         }
 
@@ -632,6 +656,7 @@
             + ".pof-visual-sort-link, "
             + "#visualizacionPaginacion a[data-visual-page], "
             + "#visualizacionDialogFiltro .pof-filter-apply-btn, "
+            + "#visualizacionBuscarBusquedaColumna, "
             + ".pof-visual-filter-btn, "
             + "[data-column-action], "
             + ".pof-visual-column-check, "
@@ -659,7 +684,7 @@
     /**
      * Centraliza el estado ocupado de las consultas reales del visualizador.
      *
-     * - Muestra simultáneamente spinner y mensaje solo durante un fetch aceptado.
+     * - Muestra el spinner interno solo durante un fetch aceptado.
      * - Bloquea nuevas acciones de datos sin inmovilizar la interfaz completa.
      * - Difiere el bloqueo de controles hasta completar el primer clic aceptado.
      */
@@ -684,11 +709,11 @@
     }
 
     /**
-     * Renderiza el estado discreto de búsqueda o error debajo de la barra.
+     * Renderiza un error discreto debajo de la barra.
      *
      * - Usa texto accesible con aria-live sin alterar los parámetros enviados.
-     * - Conserva el espacio reservado para evitar saltos de layout.
-     * - Distingue visualmente una actualización fallida de la búsqueda activa.
+     * - Permanece oculto durante una actualización normal.
+     * - Muestra únicamente el mensaje de una actualización fallida.
      */
     function setColumnSearchStatus(message, tone) {
         if (!busquedaColumnaStatus) {
@@ -903,10 +928,34 @@
     }
 
     /**
+     * Sincroniza las acciones explícitas de la búsqueda por columna.
+     *
+     * - Habilita Buscar solo cuando el draft no vacío difiere del estado aplicado.
+     * - Habilita Limpiar solo cuando la barra tiene texto o representa su filtro aplicado.
+     * - Mantiene ambas acciones deshabilitadas durante una consulta en curso.
+     */
+    function syncColumnSearchButtons() {
+        const draft = getColumnSearchState();
+        const hasAppliedValue = Boolean(appliedColumnSearch && appliedColumnSearch.value);
+        const representsApplied = hasAppliedValue && sameColumnSearchState(draft, appliedColumnSearch);
+        const searchEnabled = Boolean(draft.value)
+            && !representsApplied
+            && !consultaEnCurso;
+        const clearEnabled = Boolean(draft.value) || representsApplied;
+
+        if (buscarBusquedaColumnaBtn) {
+            buscarBusquedaColumnaBtn.disabled = !searchEnabled || consultaEnCurso;
+        }
+        if (limpiarBusquedaColumnaBtn) {
+            limpiarBusquedaColumnaBtn.disabled = !clearEnabled || consultaEnCurso;
+        }
+    }
+
+    /**
      * Compara dos estados de busqueda rapida para evitar solicitudes duplicadas.
      *
      * - Considera iguales solo columna y texto normalizado.
-     * - Permite que el clic externo y el boton de limpieza compartan la misma ruta.
+     * - Permite que Enter, Buscar y el boton de limpieza compartan la misma ruta.
      * - No compara objetos ni parametros secundarios de la pagina.
      */
     function sameColumnSearchState(left, right) {
@@ -953,6 +1002,13 @@
                 candidates.push({ columnId: field, value: criteria[0].value });
             }
         });
+        const selectedCriteria = criteriaByField.get(columnaSelect && columnaSelect.value) || [];
+        if (selectedCriteria.length === 1 && selectedCriteria[0].operator === "0") {
+            return {
+                columnId: columnaSelect.value,
+                value: selectedCriteria[0].value
+            };
+        }
         if (candidates.length === 1) {
             return candidates[0];
         }
@@ -997,52 +1053,15 @@
     }
 
     /**
-     * Identifica controles interactivos que no deben confirmar la busqueda pendiente.
-     *
-     * - Cubre controles HTML y elementos con semantica de boton o enlace.
-     * - Mantiene chips y dialogos separados del clic neutral de confirmacion.
-     * - Evita clasificar individualmente cada accion de datos de la pantalla.
-     */
-    function isColumnSearchInteractiveTarget(target) {
-        if (!target || typeof target.closest !== "function") {
-            return false;
-        }
-        return Boolean(target.closest(
-            "button, a, input, select, textarea, label, " +
-            "[role='button'], [role='link'], [contenteditable='true'], " +
-            "[data-filter-chip], .pof-visual-dialog, .pof-visual-dialog-backdrop"
-        ));
-    }
-
-    /**
      * Marca cambios locales que todavia no fueron confirmados por el usuario.
      *
      * - Evita que una respuesta AJAX reemplace texto que se esta editando.
      * - No muestra carga ni ejecuta fetch.
-     * - Deja que solo un clic con puntero fuera del contenedor confirme el estado.
+     * - Actualiza inmediatamente el estado de las acciones explícitas.
      */
     function markColumnSearchInteractionDirty() {
         columnSearchInteractionDirty = true;
-    }
-
-    /**
-     * Confirma la busqueda al hacer pointerdown fuera del contenedor completo.
-     *
-     * - Permite detectar clics en zonas que no reciben foco.
-     * - Mantiene dentro de la barra los clics en selector, input y limpieza.
-     * - Deja que cada control interactivo ejecute solo su comportamiento propio.
-     */
-    function handleColumnSearchPointerDown(event) {
-        if (consultaEnCurso) {
-            return;
-        }
-        if (liveSearch && event.target && liveSearch.contains(event.target)) {
-            return;
-        }
-        if (isColumnSearchInteractiveTarget(event.target)) {
-            return;
-        }
-        submitColumnSearch();
+        syncColumnSearchButtons();
     }
 
     /**
@@ -1068,10 +1087,12 @@
                 : activeValue.trim().slice(0, inputMaxLength)
         };
         if (columnSearchInteractionDirty) {
+            syncColumnSearchButtons();
             return;
         }
         columnaSelect.value = activeColumn;
         columnaInput.value = appliedColumnSearch.value;
+        syncColumnSearchButtons();
     }
 
     function renderRows(filas, colspan) {
@@ -1131,12 +1152,12 @@
             + ' data-filter-value="' + escapeHtml(chip.valor || "") + '">' 
             + '<button type="button" class="pof-filter-chip-edit" data-filter-chip-edit'
             + ' aria-label="Editar ' + escapeHtml(texto) + '">'
-            + '<span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>'
+            + '<span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>'
             + '<span class="pof-filter-chip-text">' + escapeHtml(texto) + '</span>'
             + '</button>'
             + '<button type="button" class="pof-filter-chip-remove" data-filter-chip-remove'
             + ' aria-label="Eliminar ' + escapeHtml(texto) + '">'
-            + '<span aria-hidden="true">&times;</span>'
+            + '<span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>'
             + '</button></div>';
     }
 
@@ -1161,7 +1182,7 @@
 
         const limpiarHtml = activos.length
             ? '<a href="#" class="pof-filter-clear-all pof-visual-clear-filters-link">'
-                + '<span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>'
+                + '<span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>'
                 + '<span>Limpiar filtros</span></a>'
             : "";
 
@@ -1428,6 +1449,7 @@
      * - Mantiene separado el estado solicitado del estado aplicado hasta recibir éxito.
      * - Aplica unicamente el estado editable sobre el contexto ya vigente en la URL.
      * - Conserva reintento, indicador de carga, cancelación y rollback de limpieza.
+     * - No revierte una edición posterior cuando falla la solicitud anterior.
      */
     function submitColumnSearch(options) {
         const opts = options || {};
@@ -1435,18 +1457,17 @@
             return Promise.resolve(false);
         }
         const nextState = getColumnSearchState();
-        if (!nextState.value && !appliedColumnSearch.value) {
-            columnSearchInteractionDirty = false;
-            return Promise.resolve(false);
-        }
-        if (sameColumnSearchState(appliedColumnSearch, nextState)
+        if ((!opts.allowEmpty && !nextState.value)
+            || (!opts.allowEmpty && sameColumnSearchState(appliedColumnSearch, nextState))
             || sameColumnSearchState(columnSearchRequestState, nextState)) {
             columnSearchInteractionDirty = false;
+            syncColumnSearchButtons();
             return Promise.resolve(false);
         }
         const loadingToken = ++columnSearchLoadingToken;
         columnSearchRequestState = nextState;
         columnSearchInteractionDirty = false;
+        syncColumnSearchButtons();
         const url = applyPendingColumnSearchToUrl(new URL(window.location.href));
         setVisibleParams(url, true, opts.preservePage === true);
         const refreshOptions = Object.assign({}, opts, {
@@ -1462,15 +1483,11 @@
         return refreshTableFromUrl(url.toString(), refreshOptions)
             .then(function (succeeded) {
                 const isCurrentRequest = sameColumnSearchState(columnSearchRequestState, nextState);
-                if (isCurrentRequest) {
-                    if (succeeded === true) {
-                        appliedColumnSearch = nextState;
-                        columnSearchInteractionDirty = false;
-                    } else {
-                        columnSearchInteractionDirty = true;
-                        if (typeof opts.onFailure === "function") {
-                            opts.onFailure();
-                        }
+                if (isCurrentRequest && succeeded !== true) {
+                    const hasNewerInteraction = columnSearchInteractionDirty;
+                    columnSearchInteractionDirty = true;
+                    if (!hasNewerInteraction && typeof opts.onFailure === "function") {
+                        opts.onFailure();
                     }
                 }
                 return succeeded;
@@ -1491,8 +1508,16 @@
         if (columnaInput) {
             columnaInput.value = "";
         }
+        const representsApplied = Boolean(previousState.value)
+            && sameColumnSearchState(previousState, appliedColumnSearch);
+        if (!representsApplied) {
+            columnSearchInteractionDirty = true;
+            syncColumnSearchButtons();
+            return Promise.resolve(false);
+        }
         columnSearchInteractionDirty = false;
         return submitColumnSearch({
+            allowEmpty: true,
             onError: function () {
                 columnSearchErrorMessage = "No se pudo limpiar la búsqueda.";
             },
@@ -1635,6 +1660,12 @@
         };
     }
 
+    function getActiveFilterField() {
+        return (campoFiltroActivo && campoFiltroActivo.value)
+            || (filterDialogState && filterDialogState.field)
+            || "";
+    }
+
     function getCurrentFilterDialogState() {
         return {
             operator: operadorFiltro ? operadorFiltro.value : "",
@@ -1647,11 +1678,14 @@
             return;
         }
         const initial = filterDialogState && filterDialogState.initial;
-        filtroAplicarBtn.disabled = Boolean(
-            filterDialogState
-            && filterDialogState.disableUntilChanged
-            && sameFilterCriterion(initial, getCurrentFilterDialogState())
-        );
+        const current = getCurrentFilterDialogState();
+        if (!filterDialogState) {
+            filtroAplicarBtn.disabled = true;
+            return;
+        }
+        filtroAplicarBtn.disabled = filterDialogState.disableUntilChanged
+            ? sameFilterCriterion(initial, current)
+            : !hasUsefulFilterCriterion(fieldConfig[filterDialogState.field], current);
     }
 
     function renderTextValueControl(mode, field, initialValue) {
@@ -1829,9 +1863,7 @@
             disableUntilChanged: initial.disableUntilChanged,
             token: token
         };
-        if (filtroAplicarBtn) {
-            filtroAplicarBtn.disabled = initial.disableUntilChanged;
-        }
+        syncFilterApplyButton();
         dialog.hidden = false;
         dialogBackdrop.hidden = false;
     }
@@ -1862,7 +1894,7 @@
         renderLoadingValueControl();
         fetchFilterOptions().then(function (options) {
             if (filterDialogState && filterDialogState.token === token
-                && campoFiltroActivo.value === config.field) {
+                && getActiveFilterField() === config.field) {
                 renderChecklistValueControl(
                     config.field,
                     options[config.field],
@@ -1877,7 +1909,7 @@
                 message: error.message || error,
             });
             if (filterDialogState && filterDialogState.token === token
-                && campoFiltroActivo.value === config.field) {
+                && getActiveFilterField() === config.field) {
                 renderOptionsErrorControl(filterDialogState.initial.values[0] || "");
             }
         });
@@ -1901,7 +1933,7 @@
     }
 
     function collectFilterValues() {
-        const config = fieldConfig[campoFiltroActivo.value];
+        const config = fieldConfig[getActiveFilterField()];
         if (!config) {
             return [];
         }
@@ -2187,21 +2219,35 @@
     if (limpiarBusquedaColumnaBtn) {
         limpiarBusquedaColumnaBtn.addEventListener("click", clearColumnSearch);
     }
-    if (liveSearch) {
-        liveSearch.addEventListener("keydown", function (event) {
+    if (buscarBusquedaColumnaBtn) {
+        buscarBusquedaColumnaBtn.addEventListener("click", function () {
+            if (!buscarBusquedaColumnaBtn.disabled) {
+                void submitColumnSearch();
+            }
+        });
+    }
+    if (columnaInput) {
+        columnaInput.addEventListener("keydown", function (event) {
             if (event.key !== "Enter") {
                 return;
             }
             event.preventDefault();
+            if (buscarBusquedaColumnaBtn && !buscarBusquedaColumnaBtn.disabled) {
+                void submitColumnSearch();
+            }
         });
-        document.addEventListener("pointerdown", handleColumnSearchPointerDown, true);
-    }
-    if (columnaInput) {
         columnaInput.addEventListener("input", markColumnSearchInteractionDirty);
     }
     if (columnaSelect) {
-        columnaSelect.addEventListener("change", markColumnSearchInteractionDirty);
+        columnaSelect.addEventListener("change", function () {
+            if (columnaInput) {
+                columnaInput.value = "";
+            }
+            markColumnSearchInteractionDirty();
+        });
     }
+    updateSearchControlFromUrl(new URL(window.location.href));
+    syncColumnSearchButtons();
     if (anioSelect) {
         anioSelect.addEventListener("change", function () {
             if (consultaEnCurso) {
@@ -2241,7 +2287,7 @@
         if (consultaEnCurso) {
             return;
         }
-        const field = campoFiltroActivo.value;
+        const field = getActiveFilterField();
         if (!field) {
             return;
         }

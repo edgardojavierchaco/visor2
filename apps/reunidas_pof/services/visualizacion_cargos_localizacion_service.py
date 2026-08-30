@@ -46,6 +46,7 @@ GUION = "—"
 logger = logging.getLogger(__name__)
 CABECERA_PROYECTO_ESPECIAL = "PROYECTO_ESPECIAL"
 CUES_POR_PAGINA_VISUALIZACION = 5
+MAX_TERMINOS_BUSQUEDA_OBSERVACION = 5
 
 VISUALIZACION_CARGOS_COLUMNAS = [
     {"id": "cueanexo", "label": "CUEANEXO", "visible_default": True},
@@ -1268,6 +1269,20 @@ def _aplicar_busqueda_general(queryset, busqueda):
     return queryset
 
 
+def _observacion_parecido_q(valor):
+    """
+    Construye la consulta por términos para Observación con operador 0.
+
+    - Ignora espacios iniciales, finales y repetidos mediante `split()`.
+    - Limita la consulta a cinco términos útiles.
+    - Combina cada término con `AND` usando `observacion__icontains` en PostgreSQL.
+    """
+    consulta = Q()
+    for termino in str(valor or "").split()[:MAX_TERMINOS_BUSQUEDA_OBSERVACION]:
+        consulta &= Q(observacion__icontains=termino)
+    return consulta
+
+
 def _busqueda_columna_q(columna_id, valor):
     """
     Construye la consulta ORM de la búsqueda rápida de una columna.
@@ -1275,6 +1290,7 @@ def _busqueda_columna_q(columna_id, valor):
     - Centraliza la semántica `parecido a` que también usa el filtro avanzado
       canónico con operador 0.
     - Conserva búsquedas parciales, sufijos y estados según cada columna.
+    - Busca Observación por hasta cinco términos independientes solo con operador 0.
     - Devuelve solo expresiones Q; no consulta ni materializa registros.
     """
     if columna_id == "cueanexo":
@@ -1311,7 +1327,7 @@ def _busqueda_columna_q(columna_id, valor):
             extras={CargoPof.EstadoPof.DESAFECTADO: "Baja"},
         )
     if columna_id == "observacion":
-        return Q(observacion__icontains=valor)
+        return _observacion_parecido_q(valor)
     if columna_id == "actualizado_en":
         return Q(actualizado_busqueda__icontains=valor)
 

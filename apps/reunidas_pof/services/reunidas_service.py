@@ -1017,6 +1017,54 @@ def _obtener_cargos_pagina_detalle_sin_filtros(cargos_queryset, valor_pagina):
     }
 
 
+def _paginar_cues_coincidentes_detalle(cargos_queryset, valor_pagina):
+    """
+    Pagina en base de datos los CUE presentes en un resultado filtrado.
+
+    El queryset recibido define las coincidencias globales; la grilla se limita
+    despues a las cinco claves de la pagina mediante la metadata retornada.
+    """
+    cargos_anotados = cargos_queryset.annotate(
+        _cue_paginacion_detalle=Substr("localizacion__cueanexo", 1, 7),
+    )
+    cues_queryset = (
+        cargos_anotados
+        .order_by()
+        .values_list("_cue_paginacion_detalle", flat=True)
+        .distinct()
+        .order_by("_cue_paginacion_detalle")
+    )
+    paginator = Paginator(cues_queryset, CUES_POR_PAGINA_DETALLE)
+    page_obj = paginator.get_page(_normalizar_pagina_detalle(valor_pagina))
+    cues_pagina = list(page_obj.object_list)
+    total = paginator.count
+
+    return cues_pagina, {
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "grupos": [],
+        "total": total,
+        "showing_start": page_obj.start_index() if total else 0,
+        "showing_end": page_obj.end_index() if total else 0,
+        "page_size": CUES_POR_PAGINA_DETALLE,
+        "page_range": _obtener_page_range_detalle(paginator, page_obj),
+    }
+
+
+def _restringir_queryset_detalle_a_cues(cargos_queryset, cues):
+    """
+    Limita un queryset base o coincidente a los CUE de la pagina.
+
+    Conserva filtros, relaciones precargadas y orden del queryset recibido.
+    """
+    if not cues:
+        return cargos_queryset.none()
+
+    return cargos_queryset.annotate(
+        _cue_paginacion_detalle=Substr("localizacion__cueanexo", 1, 7),
+    ).filter(_cue_paginacion_detalle__in=cues)
+
+
 def _aplicar_filtros_detalle_reunida(queryset, filtros, incluir_cui=False):
     """
     Aplica filtros de grupo/localización antes de construir la grilla del Detalle.
@@ -1336,29 +1384,27 @@ def _aplicar_filtros_cargo_detalle_reunida(queryset, filtros):
     return queryset, " ".join(mensajes), errores
 
 
-def _calcular_resumen_resultado_detalle(grupos):
+def _calcular_resumen_resultado_detalle_queryset(cargos_queryset, cantidad_cues):
     """
-    Calcula los contadores globales del resultado visible del Detalle común.
+    Calcula el resumen global filtrado sin construir grupos en Python.
 
-    - Usa la misma estructura que se renderiza en pantalla para evitar divergencias.
-    - Cuenta cargos, CUE con resultados y anexos reales por CUE.
-    - No recalcula puntos ni modifica los totales completos de cada CUE.
+    Cuenta cargos y CUEANEXO distintos sobre todas las coincidencias, mientras
+    la cantidad de CUE reutiliza el total del paginador de claves distintas.
     """
-    cantidad_cargos = 0
-    anexos_por_cue = set()
-
-    for grupo_cue in grupos:
-        cue = str(grupo_cue.get("cue", "") or "")
-        for grupo_anexo in grupo_cue.get("anexos", []):
-            cueanexo = str(grupo_anexo.get("cueanexo", "") or "")
-            if cueanexo:
-                anexos_por_cue.add((cue, cueanexo))
-            cantidad_cargos += len(grupo_anexo.get("cargos", []))
+    cantidad_cargos = cargos_queryset.count()
+    cantidad_anexos = (
+        cargos_queryset
+        .exclude(localizacion__cueanexo="")
+        .order_by()
+        .values_list("localizacion__cueanexo", flat=True)
+        .distinct()
+        .count()
+    )
 
     return {
         "cargos": cantidad_cargos,
-        "cues": len(grupos),
-        "anexos": len(anexos_por_cue),
+        "cues": cantidad_cues,
+        "anexos": cantidad_anexos,
     }
 
 
@@ -1984,7 +2030,7 @@ def construir_contexto_detalle_reunida(request):
     paginacion_grupos_detalle = None
 
     if not anio_parametro or not anio_parametro.isdigit() or len(anio_parametro) != 4 or not nivel_codigo:
-        mensaje_detalle = "Debe seleccionar una Reunida válida por año y nivel."
+        mensaje_detalle = "Debe seleccionar una POF válida por año y nivel."
     else:
         try:
             reunida_obj = ReunidaPof.objects.get(anio=int(anio_parametro), nivel=nivel_codigo)
@@ -2007,6 +2053,38 @@ def construir_contexto_detalle_reunida(request):
                     cargos_alcance_detalle,
                     busquedas_columna_detalle,
                 )
+                cargos_coincidentes = cargos_alcance_detalle
+                if filtros_cargo_detalle_activos:
+                    (
+                        cargos_coincidentes,
+                        mensaje_filtros_cargo_detalle,
+                        errores_filtros_cargo_detalle,
+                    ) = _aplicar_filtros_cargo_detalle_reunida(
+                        cargos_coincidentes,
+                        filtros_detalle,
+                    )
+
+                cues_pagina, paginacion_grupos_detalle = (
+                    _paginar_cues_coincidentes_detalle(
+                        cargos_coincidentes,
+                        request.GET.get("page", 1),
+                    )
+                )
+                resumen_coincidencias_detalle = (
+                    _calcular_resumen_resultado_detalle_queryset(
+                        cargos_coincidentes,
+                        paginacion_grupos_detalle["total"],
+                    )
+                )
+                cargos_alcance_detalle = _restringir_queryset_detalle_a_cues(
+                    cargos_alcance_detalle,
+                    cues_pagina,
+                )
+                if filtros_cargo_detalle_activos:
+                    cargos_coincidentes = _restringir_queryset_detalle_a_cues(
+                        cargos_coincidentes,
+                        cues_pagina,
+                    )
             else:
                 (
                     cargos_alcance_detalle,
@@ -2036,20 +2114,7 @@ def construir_contexto_detalle_reunida(request):
                 anio_parametro,
                 nivel_codigo,
             )
-            if filtros_detalle_activos:
-                resumen_coincidencias_detalle = _calcular_resumen_resultado_detalle(
-                    grupos_operativos_detalle,
-                )
             if filtros_cargo_detalle_activos:
-                cargos_coincidentes = cargos_alcance_detalle
-                (
-                    cargos_coincidentes,
-                    mensaje_filtros_cargo_detalle,
-                    errores_filtros_cargo_detalle,
-                ) = _aplicar_filtros_cargo_detalle_reunida(
-                    cargos_coincidentes,
-                    filtros_detalle,
-                )
                 grilla_coincidencias = construir_grilla_pof_desde_cargos(
                     cargos=cargos_coincidentes,
                     nivel_codigo=nivel_codigo,
@@ -2060,14 +2125,13 @@ def construir_contexto_detalle_reunida(request):
                     grupos_operativos_detalle,
                     grilla_coincidencias.get("grupos_operativos_detalle", []),
                 )
-                resumen_coincidencias_detalle = _calcular_resumen_resultado_detalle(
-                    grupos_coincidentes_detalle,
-                )
+                if paginacion_grupos_detalle is not None:
+                    paginacion_grupos_detalle["grupos"] = grupos_coincidentes_detalle
         except ReunidaPof.DoesNotExist:
-            mensaje_detalle = "No existe una Reunida POF para el año y nivel seleccionados."
+            mensaje_detalle = "No existe una POF para el año y nivel seleccionados."
             paginacion_grupos_detalle = None
         except (ProgrammingError, OperationalError):
-            mensaje_detalle = "No se pudieron consultar los datos reales de la Reunida."
+            mensaje_detalle = "No se pudieron consultar los datos reales de la POF."
             paginacion_grupos_detalle = None
 
     if not columnas_detalle:
@@ -2120,14 +2184,14 @@ def construir_contexto_detalle_reunida(request):
     )
     mostrar_resumen_detalle = filtros_detalle_activos and not filtros_detalle_invalidos
 
-    if not filtros_detalle_invalidos:
+    if not filtros_detalle_invalidos and paginacion_grupos_detalle is None:
         if filtros_cargo_detalle_activos:
             paginacion_grupos_detalle = _paginar_grupos_cue_detalle(
                 grupos_coincidentes_detalle,
                 request.GET.get("page", 1),
             )
             grupos_coincidentes_detalle = paginacion_grupos_detalle["grupos"]
-        elif paginacion_grupos_detalle is None:
+        else:
             paginacion_grupos_detalle = _paginar_grupos_cue_detalle(
                 grupos_operativos_detalle,
                 request.GET.get("page", 1),

@@ -9,7 +9,7 @@
          aria-describedby="pofGuiaUsoDescripcion">
         <div class="pof-modal-header">
             <div>
-                <h2 id="pofGuiaUsoTitulo">❓ Gu&iacute;a de Uso</h2>
+                <h2 id="pofGuiaUsoTitulo"><span class="pof-guide-title-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">help</span> Gu&iacute;a de Uso</h2>
                 <p id="pofGuiaUsoDescripcion" class="pof-help">
                     Ayuda breve para trabajar en la pantalla actual de POF.
                 </p>
@@ -55,29 +55,29 @@
 
         {% if titulo_exportacion and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; esta vista para revisar las columnas disponibles y preparar la descarga de la cabecera seleccionada.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones de exportaci&oacute;n">
-                    <span class="pof-guide-chip">📊 Vista previa</span><span class="pof-guide-chip">⚙️ Columnas</span><span class="pof-guide-chip">📥 Excel</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Vista previa</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Columnas</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Excel</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de exportaci&oacute;n">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Revis&aacute; la vista previa</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Revis&aacute; la vista previa</h3>
                     <ul>
                         <li>Confirm&aacute; que la cabecera corresponda a la POF o al Proyecto Especial que quer&eacute;s exportar.</li>
                         <li>Us&aacute; <strong>Ir a Detalles</strong> si necesit&aacute;s volver a la revisi&oacute;n operativa.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Eleg&iacute; las columnas</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Eleg&iacute; las columnas</h3>
                     <ul>
                         <li>En <strong>Columnas</strong> pod&eacute;s mostrar todas, ocultarlas, volver a las predeterminadas o activar <strong>Modo compacto</strong>.</li>
                         <li>La vista previa se adapta a la selecci&oacute;n realizada.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Export&aacute; los datos</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Export&aacute; los datos</h3>
                     <ul>
                         <li><strong>Exportar vista actual</strong> descarga las columnas y datos visibles.</li>
                         <li><strong>Exportar todos los datos</strong> descarga el conjunto completo disponible para la cabecera.</li>
@@ -88,22 +88,22 @@
 
         {% elif cabecera_detalle_nombre and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; el detalle para revisar cargos agrupados por CUE y Anexo o por CUOF, seg&uacute;n la identidad disponible.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones del detalle">
-                    <span class="pof-guide-chip">🔎 Buscar</span><span class="pof-guide-chip">⚙️ Filtros</span><span class="pof-guide-chip">📊 Totales</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Buscar</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Filtros</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Totales</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos del detalle">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Ubic&aacute; la informaci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Ubic&aacute; la informaci&oacute;n</h3>
                     <ul>
                         <li>Eleg&iacute; una columna y escrib&iacute; el valor en <strong>Buscar en esta columna</strong>.</li>
                         <li>Us&aacute; <strong>Filtros</strong> para acotar los grupos o cargos y <strong>Limpiar todos</strong> para quitar los criterios activos.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Revis&aacute; cada localizaci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Revis&aacute; cada localizaci&oacute;n</h3>
                     <ul>
                         <li>Consult&aacute; los totales del grupo.</li>
                         <li>Mostr&aacute; los cargos de una localizaci&oacute;n para revisar su detalle.</li>
@@ -111,7 +111,7 @@
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Continu&aacute; con el flujo</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Continu&aacute; con el flujo</h3>
                     <ul>
                         <li>Desde la barra de acciones pod&eacute;s usar <strong>Afectar Cargos</strong> o <strong>{% if es_proyecto_especial %}Exportar Proyecto Especial{% else %}Exportar POF{% endif %}</strong>.</li>
                         {% if not pof_solo_visualizacion and not es_proyecto_especial %}
@@ -123,75 +123,75 @@
 
         {% elif seccion_activa == "inicio" %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; Inicio para identificar r&aacute;pidamente el flujo que necesit&aacute;s. Los accesos se muestran seg&uacute;n tu perfil.</p>
                 <div class="pof-guide-chip-list" aria-label="Accesos de Inicio">
-                    <span class="pof-guide-chip">🏠 Inicio</span>{% if not pof_solo_visualizacion %}<span class="pof-guide-chip">📚 POF</span>{% endif %}<span class="pof-guide-chip">📊 Visualizaci&oacute;n</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">home</span> Inicio</span>{% if not pof_solo_visualizacion %}<span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> POF</span>{% endif %}<span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Visualizaci&oacute;n</span>
                 </div>
             </div>
             <div class="pof-guide-sections pof-guide-home-sections" aria-label="Secciones principales de Inicio">
                 {% if not pof_solo_visualizacion %}
                 <article class="pof-card pof-guide-card pof-guide-card-pof">
-                    <h3>📚 POF</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> POF</h3>
                     <p>Consult&aacute; y administr&aacute; las Plantas Org&aacute;nicas Funcionales por a&ntilde;o y nivel.</p>
                 </article>
                 <article class="pof-card pof-guide-card pof-guide-card-proyectos">
-                    <h3>📁 Proyectos Especiales</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Proyectos Especiales</h3>
                     <p>Consult&aacute; proyectos especiales, sus cabeceras y cargas.</p>
                 </article>
                 <article class="pof-card pof-guide-card pof-guide-card-afectar">
-                    <h3>👥 Afectar Cargos</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> Afectar Cargos</h3>
                     <p>Inici&aacute; una nueva carga de cargos para la POF seleccionada.</p>
                 </article>
                 <article class="pof-card pof-guide-card pof-guide-card-administracion">
-                    <h3>⚙️ Administraci&oacute;n de Cargos</h3>
+                    <h3><span class="pof-guide-step-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Administraci&oacute;n de Cargos</h3>
                     <p>Revis&aacute; y gestion&aacute; los cargos existentes.</p>
                 </article>
                 {% endif %}
                 <article class="pof-card pof-guide-card pof-guide-card-visualizacion">
-                    <h3>🔎 Visualizaci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Visualizaci&oacute;n</h3>
                     <p>Consult&aacute; cargos con filtros, columnas y exportaciones.</p>
                 </article>
                 {% if not pof_solo_visualizacion %}
                 <article class="pof-card pof-guide-card pof-guide-card-historial">
-                    <h3>📜 Historial</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_recent</span> Historial</h3>
                     <p>Consult&aacute; los movimientos registrados en las cargas.</p>
                 </article>
                 {% endif %}
             </div>
             <div class="pof-guide-home-note" role="note">
-                <span aria-hidden="true">💡</span>
+                <span class="pof-guide-note-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span>
                 <strong>Ten&eacute; en cuenta:</strong>
                 <span>Esta gu&iacute;a cambia seg&uacute;n la pantalla en la que est&eacute;s.</span>
             </div>
 
         {% elif seccion_activa == "reunidas" and form and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Complet&aacute; la cabecera de la nueva POF y revis&aacute; la base inicial antes de confirmar.</p>
                 <div class="pof-guide-chip-list" aria-label="Datos de la nueva POF">
-                    <span class="pof-guide-chip">📚 POF</span><span class="pof-guide-chip">📅 A&ntilde;o</span><span class="pof-guide-chip">🏫 Nivel</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> POF</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">calendar_month</span> A&ntilde;o</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">apartment</span> Nivel</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos para crear una POF">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Indic&aacute; a&ntilde;o y nivel</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Indic&aacute; a&ntilde;o y nivel</h3>
                     <ul>
                         <li>Complet&aacute; los dos campos del formulario.</li>
                         <li>Us&aacute; <strong>Crear POF</strong> para continuar.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Revis&aacute; la base autom&aacute;tica</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Revis&aacute; la base autom&aacute;tica</h3>
                     <ul>
                         <li>Si existe una POF del a&ntilde;o inmediatamente anterior para el mismo nivel, se tomar&aacute; como base.</li>
                         <li>Se heredar&aacute;n localizaciones, cargos y estados <strong>AFECTADO</strong> y <strong>DESAFECTADO</strong>.</li>
                         <li>La POF anterior no se modifica.</li>
-                        <li><strong>💡 Ten&eacute; en cuenta:</strong> la base se determina autom&aacute;ticamente; no se elige otra POF desde este formulario.</li>
+                        <li><strong><span class="pof-guide-note-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> Ten&eacute; en cuenta:</strong> la base se determina autom&aacute;ticamente; no se elige otra POF desde este formulario.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Confirm&aacute; el resultado</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Confirm&aacute; el resultado</h3>
                     <ul>
                         <li>Si no existe una base anterior v&aacute;lida, la nueva POF comenzar&aacute; vac&iacute;a.</li>
                         <li>Us&aacute; <strong>Cancelar</strong> si no quer&eacute;s crearla.</li>
@@ -201,62 +201,62 @@
 
         {% elif seccion_activa == "reunidas" and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; el listado para encontrar una POF por a&ntilde;o y nivel y abrir la acci&oacute;n que necesit&aacute;s.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones de POF">
-                    <span class="pof-guide-chip">🔎 Filtros</span><span class="pof-guide-chip">📚 POF</span><span class="pof-guide-chip">⚙️ Acciones</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Filtros</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> POF</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Acciones</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de POF">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Aplic&aacute; filtros</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Aplic&aacute; filtros</h3>
                     <ul>
                         <li>Eleg&iacute; <strong>A&ntilde;o</strong> y <strong>Nivel</strong>.</li>
                         <li>Presion&aacute; <strong>Aplicar filtros</strong> o <strong>Limpiar filtros</strong>.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Abr&iacute; una POF</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Abr&iacute; una POF</h3>
                     <ul>
                         <li>Revis&aacute; a&ntilde;o, nivel y &uacute;ltima modificaci&oacute;n.</li>
                         <li>Abr&iacute; el men&uacute; de acci&oacute;n de la fila y eleg&iacute; <strong>VER DETALLE</strong>, <strong>AFECTAR CARGOS</strong>, <strong>ADMIN. CARGOS</strong> o <strong>EXPORTAR POF</strong>.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Eleg&iacute; la acci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Eleg&iacute; la acci&oacute;n</h3>
                     <ul>
                         <li>Us&aacute; <strong>ELIMINAR POF</strong> solo si necesit&aacute;s quitar esa POF y la pantalla habilita la operaci&oacute;n.</li>
-                        <li><strong>💡 Ten&eacute; en cuenta:</strong> el sistema verifica que no tenga actividad administrativa posterior ni sea base de otra POF.</li>
+                        <li><strong><span class="pof-guide-note-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> Ten&eacute; en cuenta:</strong> el sistema verifica que no tenga actividad administrativa posterior ni sea base de otra POF.</li>
                     </ul>
                 </article>
             </div>
 
         {% elif seccion_activa == "proyectos_especiales" and form and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Complet&aacute; los datos del Proyecto Especial y, si corresponde, eleg&iacute; un proyecto base para su estado inicial.</p>
                 <div class="pof-guide-chip-list" aria-label="Datos del Proyecto Especial">
-                    <span class="pof-guide-chip">📔 Proyecto</span><span class="pof-guide-chip">📅 A&ntilde;o</span><span class="pof-guide-chip">📍 Base anterior</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder_special</span> Proyecto</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">calendar_month</span> A&ntilde;o</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">view_apps</span> Base anterior</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de Proyecto Especial">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Complet&aacute; los datos</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Complet&aacute; los datos</h3>
                     <ul>
                         <li>Indic&aacute; <strong>A&ntilde;o</strong> y <strong>Nombre</strong>.</li>
                         <li>Resoluci&oacute;n, observaci&oacute;n y proyecto base anterior son campos disponibles en el formulario.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Eleg&iacute; la base opcional</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Eleg&iacute; la base opcional</h3>
                     <ul>
                         <li>El proyecto base anterior debe corresponder a un a&ntilde;o anterior.</li>
                         <li>Se utiliza para cargar el estado inicial del nuevo proyecto.</li>
-                        <li><strong>💡 Ten&eacute; en cuenta:</strong> si no eleg&iacute;s una base, el proyecto se inicia sin esa referencia.</li>
+                        <li><strong><span class="pof-guide-note-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> Ten&eacute; en cuenta:</strong> si no eleg&iacute;s una base, el proyecto se inicia sin esa referencia.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Guard&aacute; el proyecto</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Guard&aacute; el proyecto</h3>
                     <ul>
                         <li>Us&aacute; <strong>Guardar</strong> para confirmar o <strong>Cancelar</strong> para volver sin guardar.</li>
                         <li>Al editar, revis&aacute; los datos actuales antes de confirmar los cambios.</li>
@@ -266,29 +266,29 @@
 
         {% elif seccion_activa == "proyectos_especiales" and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; el listado para encontrar un Proyecto Especial y abrir su flujo operativo.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones de Proyectos Especiales">
-                    <span class="pof-guide-chip">🔎 Filtros</span><span class="pof-guide-chip">📔 Proyecto</span><span class="pof-guide-chip">⚙️ Acciones</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Filtros</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder_special</span> Proyecto</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Acciones</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de Proyectos Especiales">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Filtr&aacute; el listado</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Filtr&aacute; el listado</h3>
                     <ul>
                         <li>Eleg&iacute; <strong>A&ntilde;o</strong> y <strong>Proyecto Especial</strong>.</li>
                         <li>Presion&aacute; <strong>Aplicar filtros</strong> o <strong>Limpiar filtros</strong> para volver al listado general.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Revis&aacute; la cabecera</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Revis&aacute; la cabecera</h3>
                     <ul>
                         <li>Consult&aacute; nombre, resoluci&oacute;n, a&ntilde;o y proyecto base anterior.</li>
                         <li>Desde el men&uacute; de acci&oacute;n de la fila, eleg&iacute; <strong>VER DETALLE</strong> para consultar esa cabecera.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Continu&aacute; con la gesti&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Continu&aacute; con la gesti&oacute;n</h3>
                     <ul>
                         <li>Eleg&iacute; <strong>AFECTAR CARGOS</strong>, <strong>ADMIN. CARGOS</strong> o <strong>EXPORTAR PROYECTO ESPECIAL</strong> seg&uacute;n la tarea.</li>
                         <li>Us&aacute; <strong>ELIMINAR PROYECTO</strong> solo cuando la operaci&oacute;n est&eacute; habilitada.</li>
@@ -298,44 +298,44 @@
 
         {% elif seccion_activa == "cargar" and proyecto_especial_resolucion is not None and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Valid&aacute; el Proyecto Especial, defin&iacute; el origen de la localizaci&oacute;n y prepar&aacute; la lista antes de guardar.</p>
                 <div class="pof-guide-chip-list" aria-label="Flujo de carga de Proyecto Especial">
-                    <span class="pof-guide-chip">📔 Proyecto</span><span class="pof-guide-chip">🔎 Padr&oacute;n</span><span class="pof-guide-chip">👥 Cargos</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder_special</span> Proyecto</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Padr&oacute;n</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> Cargos</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos para afectar cargos de Proyecto Especial">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Valid&aacute; la cabecera</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Valid&aacute; la cabecera</h3>
                     <ul>
                         <li>Seleccion&aacute; el <strong>Proyecto Especial POF</strong>.</li>
                         <li>Presion&aacute; <strong>Validar cabecera</strong> antes de continuar.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Eleg&iacute; el origen</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Eleg&iacute; el origen</h3>
                     <ul>
                         <li>Us&aacute; <strong>Buscar en padr&oacute;n</strong> para localizar una oferta oficial.</li>
                         <li>Us&aacute; <strong>Ingreso manual controlado</strong> cuando corresponda a una referencia sin CUEANEXO.</li>
-                        <li><strong>💡 Ten&eacute; en cuenta:</strong> si la localizaci&oacute;n tiene CUEANEXO, la carga debe hacerse desde padr&oacute;n.</li>
+                        <li><strong><span class="pof-guide-note-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> Ten&eacute; en cuenta:</strong> si la localizaci&oacute;n tiene CUEANEXO, la carga debe hacerse desde padr&oacute;n.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Identific&aacute; la localizaci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Identific&aacute; la localizaci&oacute;n</h3>
                     <ul>
                         <li>En padr&oacute;n, indic&aacute; CUE y Anexo y seleccion&aacute; la oferta.</li>
                         <li>En ingreso manual, complet&aacute; la referencia solicitada. Si el CUOF tiene CUEANEXO, la pantalla indica que debe buscarse en padr&oacute;n.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>4. Carg&aacute; los cargos</h3>
+                    <h3><span class="pof-guide-step-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> 4. Carg&aacute; los cargos</h3>
                     <ul>
                         <li>Busc&aacute; el CEIC, indic&aacute; cantidad y unidad: <strong>Cargo</strong> u <strong>Horas C&aacute;tedra</strong>.</li>
                         <li>Revis&aacute; puntos, total y observaci&oacute;n y agreg&aacute; el cargo a la lista.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>5. Revis&aacute; y guard&aacute;</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> 5. Revis&aacute; y guard&aacute;</h3>
                     <ul>
                         <li>Comprob&aacute; la lista completa y presion&aacute; <strong>Guardar carga</strong>.</li>
                         <li>Confirm&aacute; el guardado cuando aparezca la confirmaci&oacute;n.</li>
@@ -345,22 +345,22 @@
 
         {% elif seccion_activa == "cargar" and anios_reunida and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Valid&aacute; la POF, busc&aacute; la localizaci&oacute;n en padr&oacute;n y prepar&aacute; la lista de cargos antes de guardar.</p>
                 <div class="pof-guide-chip-list" aria-label="Flujo de carga de POF">
-                    <span class="pof-guide-chip">📚 POF</span><span class="pof-guide-chip">🔎 Padr&oacute;n</span><span class="pof-guide-chip">👥 Cargos</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> POF</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Padr&oacute;n</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> Cargos</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos para afectar cargos de POF">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Valid&aacute; la cabecera</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Valid&aacute; la cabecera</h3>
                     <ul>
                         <li>Seleccion&aacute; <strong>A&ntilde;o</strong> y <strong>Nivel</strong>.</li>
                         <li>Presion&aacute; <strong>Validar POF</strong> antes de buscar.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Busc&aacute; la localizaci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Busc&aacute; la localizaci&oacute;n</h3>
                     <ul>
                         <li>Indic&aacute; CUE y Anexo para consultar el padr&oacute;n.</li>
                         <li>Presion&aacute; <strong>Buscar en padr&oacute;n</strong> y verific&aacute; el CUEANEXO encontrado.</li>
@@ -368,14 +368,14 @@
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Seleccion&aacute; la oferta</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Seleccion&aacute; la oferta</h3>
                     <ul>
                         <li>Eleg&iacute; una o m&aacute;s ofertas del mismo CUEANEXO.</li>
-                        <li><strong>💡 Ten&eacute; en cuenta:</strong> no mezcles ofertas de distintos CUEANEXO en una misma carga.</li>
+                        <li><strong><span class="pof-guide-note-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> Ten&eacute; en cuenta:</strong> no mezcles ofertas de distintos CUEANEXO en una misma carga.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>4. Busc&aacute; el CEIC</h3>
+                    <h3><span class="pof-guide-step-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> 4. Busc&aacute; el CEIC</h3>
                     <ul>
                         <li>Seleccion&aacute; el cargo y revis&aacute; los puntos informados.</li>
                         <li>Indic&aacute; cantidad y unidad: <strong>Cargo</strong> u <strong>Horas C&aacute;tedra</strong>.</li>
@@ -383,14 +383,14 @@
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>5. Arm&aacute; la lista</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> 5. Arm&aacute; la lista</h3>
                     <ul>
                         <li>Presion&aacute; <strong>Agregar cargo a la lista</strong> para incorporar cada cargo.</li>
                         <li>Si hace falta, complet&aacute; una observaci&oacute;n y revis&aacute; cantidad, puntos y total.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>6. Revis&aacute; y guard&aacute;</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_recent</span> 6. Revis&aacute; y guard&aacute;</h3>
                     <ul>
                         <li>Presion&aacute; <strong>Guardar carga</strong>.</li>
                         <li>Confirm&aacute; el guardado cuando aparezca la confirmaci&oacute;n.</li>
@@ -400,68 +400,68 @@
 
         {% elif seccion_activa == "cargar" and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Eleg&iacute; el tipo de cabecera donde quer&eacute;s iniciar la carga de cargos.</p>
                 <div class="pof-guide-chip-list" aria-label="Or&iacute;genes de carga">
-                    <span class="pof-guide-chip">📚 POF</span><span class="pof-guide-chip">📔 Proyecto Especial</span><span class="pof-guide-chip">👥 Cargos</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> POF</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder_special</span> Proyecto Especial</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> Cargos</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Opciones para afectar cargos">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Eleg&iacute; Plantas Org&aacute;nicas Funcionales</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Eleg&iacute; Plantas Org&aacute;nicas Funcionales</h3>
                     <ul>
                         <li>Us&aacute; esta opci&oacute;n para afectar cargos dentro de una POF.</li>
                         <li>El flujo comienza validando a&ntilde;o y nivel.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Eleg&iacute; Proyectos Especiales</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Eleg&iacute; Proyectos Especiales</h3>
                     <ul>
                         <li>Us&aacute; esta opci&oacute;n para afectar cargos en un Proyecto Especial.</li>
                         <li>El flujo comienza validando el Proyecto Especial POF.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Valid&aacute; antes de cargar</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Valid&aacute; antes de cargar</h3>
                     <ul>
                         <li>En la pantalla elegida, seleccion&aacute; la cabecera correspondiente.</li>
-                        <li>Us&aacute; <strong>Validar Reunida</strong> para POF o <strong>Validar cabecera</strong> para Proyecto Especial.</li>
+                        <li>Us&aacute; <strong>Validar POF</strong> o <strong>Validar cabecera</strong> para Proyecto Especial.</li>
                     </ul>
                 </article>
             </div>
 
         {% elif seccion_activa == "consultar" and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; los filtros para encontrar un cargo y abr&iacute; su gesti&oacute;n para revisar o actualizar los datos disponibles.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones de administraci&oacute;n">
-                    <span class="pof-guide-chip">🔎 Buscar</span><span class="pof-guide-chip">⚙️ Gesti&oacute;n</span><span class="pof-guide-chip">📋 Estado</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Buscar</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Gesti&oacute;n</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">check_box</span> Estado</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de Administraci&oacute;n de Cargos">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Aplic&aacute; filtros</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Aplic&aacute; filtros</h3>
                     <ul>
                         <li>Pod&eacute;s filtrar por a&ntilde;o, nivel, CUEANEXO, CUOF, CEIC, estado y unidad.</li>
                         <li>Aplic&aacute; o limpi&aacute; los filtros seg&uacute;n la consulta.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Abr&iacute; Gesti&oacute;n de cargo</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Abr&iacute; Gesti&oacute;n de cargo</h3>
                     <ul>
                         <li>Revis&aacute; cabecera, CUEANEXO, CUOF y establecimiento.</li>
                         <li>Si corresponde, seleccion&aacute; las ofertas asociadas.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Modific&aacute; lo disponible</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Modific&aacute; lo disponible</h3>
                     <ul>
                         <li>Pod&eacute;s modificar cantidad, unidad y observaci&oacute;n.</li>
                         <li>CEIC, cargo, puntos y total se muestran como referencia.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>4. Afect&aacute; o desafect&aacute;</h3>
+                    <h3><span class="pof-guide-step-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> 4. Afect&aacute; o desafect&aacute;</h3>
                     <ul>
                         <li>El control de <strong>Estado</strong> permite alternar entre <strong>AFECTAR</strong> y <strong>DESAFECTAR</strong>.</li>
                         <li>Al volver a <strong>AFECTADO</strong>, la cantidad debe ser un n&uacute;mero entero mayor que cero.</li>
@@ -473,15 +473,15 @@
 
         {% elif seccion_activa == "visualizacion_cargos" %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; el visualizador para encontrar informaci&oacute;n, ajustar la vista y exportar la consulta.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones de visualizaci&oacute;n">
-                    <span class="pof-guide-chip">🔎 Buscar</span><span class="pof-guide-chip">⚙️ Filtros</span><span class="pof-guide-chip">📊 Columnas</span><span class="pof-guide-chip">📥 Exportar</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Buscar</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> Filtros</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Columnas</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Exportar</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de Visualizaci&oacute;n">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Busc&aacute; informaci&oacute;n</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Busc&aacute; informaci&oacute;n</h3>
                     <ul>
                         <li>Eleg&iacute; una columna buscable y escrib&iacute; el valor en <strong>Buscar en esta columna</strong>.</li>
                         <li>Us&aacute; el bot&oacute;n de limpieza de b&uacute;squeda para quitar ese criterio.</li>
@@ -489,34 +489,34 @@
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Aplic&aacute; filtros</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Aplic&aacute; filtros</h3>
                     <ul>
                         <li>Us&aacute; <strong>Filtros</strong> y luego <strong>Agregar filtro</strong> para combinar criterios de localizaci&oacute;n, oferta, estado, cargo, cantidad, puntos o total.</li>
                         <li>Retir&aacute; un criterio desde sus chips o eleg&iacute; <strong>Limpiar todos</strong> para ampliar la consulta.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Eleg&iacute; columnas</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Eleg&iacute; columnas</h3>
                     <ul>
                         <li>En <strong>Columnas</strong> pod&eacute;s mostrar u ocultar informaci&oacute;n.</li>
                         <li>Us&aacute; <strong>Todas</strong>, <strong>Ocultar Todas</strong> o <strong>Por Defecto</strong> seg&uacute;n la vista que necesites.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>4. Orden&aacute; resultados</h3>
+                    <h3><span class="pof-guide-step-icon pof-guide-muted-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">settings_account_box</span> 4. Orden&aacute; resultados</h3>
                     <ul>
                         <li>Presion&aacute; el encabezado de una columna ordenable.</li>
                         <li>La paginaci&oacute;n mantiene agrupados los cargos por CUE.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>5. Us&aacute; modo compacto</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> 5. Us&aacute; modo compacto</h3>
                     <ul>
                         <li>Desde <strong>Columnas</strong>, activ&aacute; <strong>Modo compacto</strong> para ver m&aacute;s informaci&oacute;n en menos espacio.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>6. Export&aacute;</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_recent</span> 6. Export&aacute;</h3>
                     <ul>
                         <li>Desde <strong>Exportar</strong>, eleg&iacute; <strong>Exportar vista actual</strong> o <strong>Exportar todos los datos</strong>.</li>
                         <li>Las dos opciones generan un archivo Excel.</li>
@@ -526,29 +526,29 @@
 
         {% elif seccion_activa == "historial" and not pof_solo_visualizacion %}
             <div class="pof-card pof-card-accent">
-                <h2>C&oacute;mo aprovechar esta pantalla</h2>
+                <h2><span class="pof-guide-intro-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span> C&oacute;mo aprovechar esta pantalla</h2>
                 <p>Us&aacute; Historial para ubicar movimientos de una cabecera, localizaci&oacute;n, cargo o usuario y revisar sus cambios.</p>
                 <div class="pof-guide-chip-list" aria-label="Acciones de historial">
-                    <span class="pof-guide-chip">📜 Movimientos</span><span class="pof-guide-chip">🔎 Filtros</span><span class="pof-guide-chip">🔍 Detalle</span>
+                    <span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_recent</span> Movimientos</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Filtros</span><span class="pof-guide-chip"><span class="pof-guide-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span> Detalle</span>
                 </div>
             </div>
             <div class="pof-guide-sections" aria-label="Pasos de Historial">
                 <article class="pof-card pof-guide-card">
-                    <h3>1. Aplic&aacute; filtros</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">collections_bookmark</span> 1. Aplic&aacute; filtros</h3>
                     <ul>
                         <li>Pod&eacute;s filtrar por a&ntilde;o, nivel, CUEANEXO, CUOF, CEIC, CUIL y movimiento.</li>
                         <li>Presion&aacute; <strong>Aplicar filtros</strong> o <strong>Limpiar filtros</strong>; tambi&eacute;n pod&eacute;s usar las vistas r&aacute;pidas.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>2. Le&eacute; el resumen</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> 2. Le&eacute; el resumen</h3>
                     <ul>
                         <li>La tabla muestra fecha y hora, usuario, cabecera, localizaci&oacute;n, movimiento y detalle.</li>
                         <li>El indicador <strong>Obs.</strong> se&ntilde;ala que existe una observaci&oacute;n.</li>
                     </ul>
                 </article>
                 <article class="pof-card pof-guide-card">
-                    <h3>3. Consult&aacute; el detalle</h3>
+                    <h3><span class="pof-guide-step-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> 3. Consult&aacute; el detalle</h3>
                     <ul>
                         <li>Us&aacute; la lupa de la columna <strong>Acci&oacute;n</strong> para consultar el detalle del movimiento.</li>
                         <li>Revis&aacute; el resumen, los cambios detectados, los datos actuales y las observaciones.</li>

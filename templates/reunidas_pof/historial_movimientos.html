@@ -4,8 +4,16 @@
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="historial" %}
-    <div class="pof-view-header"><h1>&#128220; HISTORIAL DE MOVIMIENTOS</h1><p>Consult&aacute; movimientos, cambios y acciones registradas en el m&oacute;dulo POF.</p></div>
-    <form method="get" class="pof-filter-panel" id="historialFiltrosForm" data-pof-filter-form>
+    <div class="pof-view-header">
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">tab_recent</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>HISTORIAL DE MOVIMIENTOS</h1>
+            <p>Consult&aacute; movimientos, cambios y acciones registradas en el m&oacute;dulo POF.</p>
+        </div>
+    </div>
+    <form method="get" class="pof-filter-panel" id="historialFiltrosForm" data-pof-filter-form data-pof-filter-fields="anio,nivel,cueanexo,cuof,ceic,cuil,tipo,vista_rapida">
         <input type="hidden" name="page_size" value="{{ page_size }}">
         <select id="filtroVistaRapidaHistorial" name="vista_rapida" class="pof-visually-hidden" data-pof-filter-select aria-hidden="true" tabindex="-1">
             {% for codigo, nombre in vistas_rapidas.items %}<option value="{{ codigo }}" {% if filtros.vista_rapida == codigo %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
@@ -21,7 +29,6 @@
         </div>
         <div class="pof-filter-actions">
             <button type="submit" class="pof-filter-apply-btn">Aplicar filtros</button>
-            <a href="{% url 'reunidas_pof:historial_movimientos' %}?{{ limpiar_filtros_querystring }}" class="pof-filter-clear-btn">Limpiar filtros</a>
         </div>
     </form>
     <div class="pof-filter-summary" id="historialResultados">
@@ -46,20 +53,31 @@
     {% if filtros_activos %}
         <div class="pof-filter-active-list" aria-label="Filtros activos">
             {% for chip in filtros_activos %}
-                <a class="pof-filter-chip" href="{% url 'reunidas_pof:historial_movimientos' %}{% if chip.querystring %}?{{ chip.querystring }}{% endif %}">
-                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;&#65039;</span><span class="pof-filter-chip-text">{{ chip.etiqueta }}: {{ chip.valor }}</span><span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
-                </a>
+                <div class="pof-filter-chip">
+                    <span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
+                    <span class="pof-filter-chip-text">{{ chip.etiqueta }}: {{ chip.valor }}</span>
+                    <a class="pof-filter-chip-remove"
+                       href="{% url 'reunidas_pof:historial_movimientos' %}{% if chip.querystring %}?{{ chip.querystring }}{% endif %}"
+                       aria-label="Eliminar filtro {{ chip.etiqueta }}: {{ chip.valor }}">
+                        <span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>
+                    </a>
+                </div>
             {% endfor %}
+            <a class="pof-filter-clear-all"
+               href="{% url 'reunidas_pof:historial_movimientos' %}?{{ limpiar_filtros_querystring }}">
+                <span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>
+                <span>Limpiar filtros</span>
+            </a>
         </div>
     {% endif %}
     {% if mensaje_filtros %}
         <div class="pof-filter-warning">
-            <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+            <span class="pof-filter-warning-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">warning</span>
             <span>{{ mensaje_filtros }}</span>
         </div>
     {% endif %}
     <div class="pof-grid-table-wrap pof-history-table-wrap"><table class="pof-grid-table"><thead><tr><th class="pof-grid-icon-cell">Acci&oacute;n</th><th>Fecha/Hora</th><th>Usuario</th><th>Cabecera</th><th>Localizaci&oacute;n</th><th>Movimiento</th><th>Detalle</th></tr></thead><tbody>
-        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell"><button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}">&#128269;</button></td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">Nombre:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.nombre }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary">{{ movimiento.detalle_resumen }}{% if movimiento.tiene_observacion_real %} <span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</td></tr>{% empty %}
+        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell"><button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}"><span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span></button></td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">Nombre:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.nombre }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary">{{ movimiento.detalle_resumen }}{% if movimiento.tiene_observacion_real %} <span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</td></tr>{% empty %}
         <tr><td colspan="7" class="pof-grid-empty">No hay movimientos registrados todavía.</td></tr>{% endfor %}
     </tbody></table></div>
     <div class="pof-table-footer">
@@ -103,6 +121,7 @@
 {% block scripts %}
 {% load static %}
 <script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
 
 <script>
     const modalDetalleMovimiento = document.getElementById("modalDetalleMovimiento");

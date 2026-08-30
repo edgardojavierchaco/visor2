@@ -1,6 +1,8 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}?v=20260824-5">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}?v=20260829-3">
 <link rel="stylesheet" href="{% static 'reunidas_pof/css/pof_view_transitions.css' %}?v=20260819-3">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof-icons.css' %}?v=20260829-1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=add,add_notes,admin_panel_settings,apartment,arrow_circle_right,bubble_chart,calendar_month,cancel,check_box,clock_loader_10,clock_loader_80,cloud_download,collections_bookmark,data_table,delete,document_search,edit_document,expand_circle_down,expand_circle_right,explore_nearby,file_save,filter_alt,folder,folder_special,group,group_add,handyman,help,home,home_storage_gear,hourglass_top,info,label,laptop_chromebook,lightbulb_2,list_alt,mystery,person,person_edit,search_check_2,settings_account_box,splitscreen_add,star,tab_close_right,tab_recent,table_chart,table_rows_narrow,text_ad,view_apps,warning&amp;display=block">
 {% comment %}
     .pof-tabs-navbar {
         --pof-primary: #3B5CFF;
@@ -133,12 +135,12 @@
 
 <nav class="pof-tabs-navbar" aria-label="Navegaci&oacute;n POF">
     <div class="pof-tabs-list">
-        <span class="pof-tabs-brand">&#127979; Gesti&oacute;n POF</span>
+        <span class="pof-tabs-brand"><span class="pof-brand-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">home_storage_gear</span> Gesti&oacute;n POF</span>
         <button type="button"
                 class="pof-tabs-link pof-guide-link"
                 data-pof-guide-open
                 aria-controls="pofGuiaUsoModal"
-                aria-haspopup="dialog">&#10067; GU&Iacute;A DE USO</button>
+                aria-haspopup="dialog"><span class="pof-guide-icon pof-material-symbol pof-icon-help material-symbols-outlined" aria-hidden="true">help</span> GU&Iacute;A DE USO</button>
         <a href="{% url 'reunidas_pof:inicio' %}" class="pof-tabs-link{% if seccion_activa == 'inicio' %} pof-tabs-link-active{% endif %}">INICIO</a>
         {% if not pof_solo_visualizacion %}
         <a href="{% url 'reunidas_pof:reunidas_pof' %}" class="pof-tabs-link{% if seccion_activa == 'reunidas' %} pof-tabs-link-active{% endif %}">POF</a>

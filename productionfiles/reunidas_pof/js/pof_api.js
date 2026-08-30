@@ -441,6 +441,8 @@
         const warning = modal.querySelector("[data-pof-delete-warning]");
         const status = modal.querySelector("[data-pof-delete-status]");
         const confirmButton = modal.querySelector("[data-pof-delete-confirm]");
+        const confirmIcon = confirmButton && confirmButton.querySelector(".pof-delete-confirm-icon");
+        const confirmLabel = confirmButton && confirmButton.querySelector(".pof-delete-confirm-label");
 
         let triggerActivo = null;
 
@@ -450,14 +452,25 @@
             !label ||
             !warning ||
             !status ||
-            !confirmButton
+            !confirmButton ||
+            !confirmIcon ||
+            !confirmLabel
         ) {
             return;
         }
 
-        const contenidoConfirmacionOriginal = confirmButton.innerHTML;
-
         modal.dataset.pofDeleteBound = "true";
+
+        /**
+         * Actualiza la representación visual del botón de eliminación POF.
+         *
+         * - Conserva los spans del icono y del texto en ambos estados.
+         * - No modifica flags, permisos ni el envío de la solicitud.
+         */
+        function actualizarContenidoBotonEliminar(cargando) {
+            confirmIcon.textContent = cargando ? "hourglass_top" : "delete";
+            confirmLabel.textContent = cargando ? "Eliminando..." : "Eliminar permanentemente";
+        }
 
         /**
          * Devuelve la modal a su estado inicial y elimina datos temporales
@@ -471,7 +484,7 @@
 
             confirmButton.disabled = false;
             confirmButton.removeAttribute("aria-disabled");
-            confirmButton.innerHTML = contenidoConfirmacionOriginal;
+            actualizarContenidoBotonEliminar(false);
 
             clearStatus(status);
         }
@@ -529,7 +542,7 @@
 
                     confirmButton.disabled = false;
                     confirmButton.removeAttribute("aria-disabled");
-                    confirmButton.innerHTML = contenidoConfirmacionOriginal;
+                    actualizarContenidoBotonEliminar(false);
 
                     clearStatus(status);
 
@@ -577,7 +590,7 @@
 
             confirmButton.disabled = true;
             confirmButton.setAttribute("aria-disabled", "true");
-            confirmButton.textContent = "⏳ Eliminando...";
+            actualizarContenidoBotonEliminar(true);
 
             clearStatus(status);
 
@@ -601,7 +614,7 @@
 
                 confirmButton.disabled = false;
                 confirmButton.removeAttribute("aria-disabled");
-                confirmButton.innerHTML = contenidoConfirmacionOriginal;
+                actualizarContenidoBotonEliminar(false);
 
                 showStatus(
                     status,

@@ -617,7 +617,7 @@
         return renderizarBadgeEstadoOfertaComun(estado);
     }
 
-    function obtenerLineaPrincipalOferta(item, icono = "\uD83D\uDCCC") {
+    function obtenerLineaPrincipalOferta(item, icono = "") {
         const oferta = obtenerOfertaReal(item);
         const establecimiento = obtenerCampo(item, ["nom_est", "establecimiento", "nombre_establecimiento"]);
         const partes = [];
@@ -823,10 +823,6 @@
             resultadosPadronActuales = Array.isArray(data.resultados) ? data.resultados : [];
             renderizarResultadosPadron(resultadosPadronActuales);
 
-            if (resultadosPadronActuales.length > 0) {
-                cueBaseInput.disabled = true;
-            }
-
             mostrarEstado(estadoPadron, "ok", `Se encontraron ${resultadosPadronActuales.length} oferta(s) oficiales.`);
         } catch (error) {
             mostrarEstado(estadoPadron, "error", "No se pudo realizar la búsqueda en padrón.");
@@ -875,12 +871,12 @@
                                         data-oferta-toggle-index="${index}">
                                     <span class="pof-offer-card-heading">
                                         <span class="pof-offer-card-main">
-                                            <span class="pof-offer-card-title">${escaparHtml(obtenerLineaPrincipalOferta(item))}</span>
+                                            <span class="pof-offer-card-title"><span class="pof-offer-card-title-icon-box"><span class="pof-offer-card-title-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span></span><span>${escaparHtml(obtenerLineaPrincipalOferta(item))}</span></span>
                                             ${renderizarBadgeEstadoOferta(item)}
                                         </span>
                                         <span class="pof-offer-card-meta">${escaparHtml(obtenerLineaSecundariaLocalizacion(item))}</span>
                                     </span>
-                                    <span class="pof-offer-card-toggle" aria-hidden="true">${abierta ? "\uD83D\uDD3D" : "\u25B6\uFE0F"}</span>
+                                    <span class="pof-offer-card-toggle pof-material-symbol material-symbols-outlined" aria-hidden="true">${abierta ? "expand_circle_down" : "expand_circle_right"}</span>
                                 </button>
                             </div>
 
@@ -991,7 +987,7 @@
 
     function alternarOfertaPadron(index) {
         ofertaAbiertaIndex = ofertaAbiertaIndex === index ? null : index;
-        renderizarResultadosPadron(resultadosPadronActuales, true);
+        actualizarAperturaVisualOfertas(resultadosPadron, ofertaAbiertaIndex);
 
         if (ofertaAbiertaIndex !== null) {
             requestAnimationFrame(() => {
@@ -1832,7 +1828,7 @@
         detalleSeleccion.innerHTML = `
             <div class="pof-offer-selected-card">
                 <div class="pof-offer-selected-head">
-                    <span class="pof-offer-selected-title">✅ ${escaparHtml(titulo)}</span>
+                    <span class="pof-offer-selected-title"><span class="pof-offer-selected-title-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">check_box</span> ${escaparHtml(titulo)}</span>
                 </div>
                 <div class="pof-offer-card-main">
                     <span class="pof-offer-selected-main">${valorHtml(datoPrincipal)}</span>
@@ -2357,7 +2353,7 @@
                 </td>
                 <td class="pof-cargo-action-cell">
                     <button type="button" class="pof-cargo-remove-btn" title="Quitar cargo" aria-label="Quitar cargo" data-cargo-remove-index="${index}">
-                        &times;
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_close_right</span>
                     </button>
                 </td>
             </tr>

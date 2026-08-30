@@ -100,6 +100,110 @@
         return operators.length ? operators[0].value : "0";
     }
 
+    function hasUsefulFilterCriterion(config, criterion) {
+        var operators = config && filterOperatorPresets[config.operators]
+            ? filterOperatorPresets[config.operators]
+            : filterOperatorPresets.text;
+        var selectedOperator = operators.find(function (operator) {
+            return String(operator.value) === String(criterion && criterion.operator || "");
+        });
+
+        if (selectedOperator && selectedOperator.requiresValue === false) {
+            return Boolean(String(criterion.operator || "").trim());
+        }
+        return normalizeFilterValues(criterion && criterion.values).length > 0;
+    }
+
+    /**
+     * Captura solo los controles funcionales de un formulario de filtros.
+     *
+     * - Excluye por nombre los auxiliares como paginacion.
+     * - Normaliza espacios, valores multiples y el orden de selecciones.
+     * - Permite comparar el estado visible con el estado aplicado sin tocar la URL.
+     */
+    function getFilterFormState(form, fieldNames) {
+        var names = Array.isArray(fieldNames) ? fieldNames : [];
+
+        return names.map(function (name) {
+            var values = [];
+
+            Array.prototype.forEach.call(form ? form.elements : [], function (control) {
+                var type = String(control.type || "").toLowerCase();
+
+                if (control.name !== name || control.disabled) {
+                    return;
+                }
+                if ((type === "checkbox" || type === "radio") && !control.checked) {
+                    return;
+                }
+                if (control.tagName && control.tagName.toLowerCase() === "select" && control.multiple) {
+                    Array.prototype.forEach.call(control.selectedOptions, function (option) {
+                        values.push(option.value);
+                    });
+                    return;
+                }
+                values.push(control.value);
+            });
+
+            return [
+                String(name),
+                values.map(function (value) {
+                    return String(value == null ? "" : value).trim();
+                }).filter(Boolean).sort()
+            ];
+        });
+    }
+
+    function sameFilterFormState(left, right) {
+        return JSON.stringify(left || []) === JSON.stringify(right || []);
+    }
+
+    /**
+     * Mantiene Aplicar filtros deshabilitado mientras el formulario no difiera
+     * del estado que la pagina recibio. El submit tambien se protege para que
+     * Enter no genere una navegacion redundante cuando el boton esta disabled.
+     */
+    function bindFilterFormState(form) {
+        if (!form || form.dataset.pofFilterStateBound === "1") {
+            return;
+        }
+
+        var fieldNames = String(form.dataset.pofFilterFields || "")
+            .split(",")
+            .map(function (name) { return name.trim(); })
+            .filter(Boolean);
+        var applyButton = form.querySelector(".pof-filter-apply-btn");
+
+        if (!fieldNames.length || !applyButton) {
+            return;
+        }
+
+        var appliedState = getFilterFormState(form, fieldNames);
+        var controls = Array.prototype.filter.call(form.elements, function (control) {
+            return fieldNames.indexOf(control.name) !== -1;
+        });
+
+        function sync() {
+            applyButton.disabled = sameFilterFormState(
+                appliedState,
+                getFilterFormState(form, fieldNames)
+            );
+        }
+
+        controls.forEach(function (control) {
+            control.addEventListener("input", sync);
+            control.addEventListener("change", sync);
+        });
+        form.addEventListener("submit", function (event) {
+            sync();
+            if (applyButton.disabled) {
+                event.preventDefault();
+            }
+        });
+        form.dataset.pofFilterStateBound = "1";
+        sync();
+    }
+
     window.POFCommonFilterUI = window.POFCommonFilterUI || {};
     window.POFCommonFilterUI.normalizeText = normalizeText;
     window.POFCommonFilterUI.bindDialogOptionSearch = bindDialogOptionSearch;
@@ -107,6 +211,10 @@
     window.POFCommonFilterUI.normalizeFilterValues = normalizeFilterValues;
     window.POFCommonFilterUI.sameFilterCriterion = sameFilterCriterion;
     window.POFCommonFilterUI.firstOperatorForConfig = firstOperatorForConfig;
+    window.POFCommonFilterUI.hasUsefulFilterCriterion = hasUsefulFilterCriterion;
+    window.POFCommonFilterUI.getFilterFormState = getFilterFormState;
+    window.POFCommonFilterUI.sameFilterFormState = sameFilterFormState;
+    window.POFCommonFilterUI.bindFilterFormState = bindFilterFormState;
 
     function getOptions(panel, type) {
         var selector = type === "filters"
@@ -281,6 +389,8 @@
         if (columnsPanel) {
             createSearch(columnsPanel, "columns");
         }
+
+        document.querySelectorAll("[data-pof-filter-form]").forEach(bindFilterFormState);
     }
 
     if (document.readyState === "loading") {

@@ -1120,7 +1120,7 @@ def _validar_cargos_historial(cargos, exigir_afectados=True):
     if not (pertenecen_reunida_normal or pertenecen_proyecto_especial):
         raise ValidationError({
             "cargo_ids": [
-                "Los cargos deben pertenecer a una misma Reunida POF normal "
+                "Los cargos deben pertenecer a una misma POF "
                 "o a un mismo Proyecto Especial."
             ],
         })

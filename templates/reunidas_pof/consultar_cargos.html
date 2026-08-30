@@ -5,11 +5,18 @@
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="consultar" %}
     <div class="pof-view-header">
-        <h1>&#9881;&#65039; ADMINISTRACI&Oacute;N DE CARGOS</h1>
-        <p>Busc&aacute;, revis&aacute; y modific&aacute; cargos cargados en POF.</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">settings_account_box</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>ADMINISTRACI&Oacute;N DE CARGOS</h1>
+            <p>Busc&aacute;, revis&aacute; y modific&aacute; cargos cargados en POF.</p>
+        </div>
     </div>
 
-    <form method="get" class="pof-filter-panel">
+    <form method="get" class="pof-filter-panel"
+          data-pof-filter-form
+          data-pof-filter-fields="anio,nivel,cueanexo,cuof,ceic,estado_pof,unidad_cantidad">
         <input type="hidden" name="page_size" value="{{ page_size }}">
         <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
         <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
@@ -77,7 +84,6 @@
 
         <div class="pof-filter-actions">
             <button type="submit" class="pof-filter-apply-btn">Aplicar filtros</button>
-            <a class="pof-filter-clear-btn" href="{% url 'reunidas_pof:consultar_cargos' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">Limpiar filtros</a>
         </div>
     </form>
 
@@ -95,16 +101,27 @@
     {% if filtros_activos %}
         <div class="pof-filter-active-list" aria-label="Filtros activos">
             {% for chip in filtros_activos %}
-                <a class="pof-filter-chip" href="{% url 'reunidas_pof:consultar_cargos' %}{% if chip.querystring %}?{{ chip.querystring }}{% endif %}">
-                    <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;&#65039;</span><span class="pof-filter-chip-text">{{ chip.etiqueta }}: {{ chip.valor }}</span><span class="pof-filter-chip-remove" aria-hidden="true">&times;</span>
-                </a>
+                <div class="pof-filter-chip">
+                    <span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
+                    <span class="pof-filter-chip-text">{{ chip.etiqueta }}: {{ chip.valor }}</span>
+                    <a class="pof-filter-chip-remove"
+                       href="{% url 'reunidas_pof:consultar_cargos' %}{% if chip.querystring %}?{{ chip.querystring }}{% endif %}"
+                       aria-label="Eliminar filtro {{ chip.etiqueta }}: {{ chip.valor }}">
+                        <span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>
+                    </a>
+                </div>
             {% endfor %}
+            <a class="pof-filter-clear-all"
+               href="{% url 'reunidas_pof:consultar_cargos' %}{% if limpiar_filtros_querystring %}?{{ limpiar_filtros_querystring }}{% endif %}">
+                <span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>
+                <span>Limpiar filtros</span>
+            </a>
         </div>
     {% endif %}
 
     {% if mensaje_filtros %}
         <div class="pof-filter-warning">
-            <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+            <span class="pof-filter-warning-icon pof-material-symbol pof-icon-warning material-symbols-outlined" aria-hidden="true">warning</span>
             <span>{{ mensaje_filtros }}</span>
         </div>
     {% endif %}
@@ -138,7 +155,7 @@
                                     aria-label="Gesti&oacute;n de cargo"
                                     data-cargo-id="{{ cargo.id }}"
                                     data-cargo-gestion>
-                                🛠️
+                                <span class="pof-action-icon pof-material-symbol pof-icon-tools material-symbols-outlined" aria-hidden="true">handyman</span>
                             </button>
                         </td>
                         <td>{{ cargo.cabecera }}</td>
@@ -224,5 +241,6 @@
 
 {% block scripts %}
 <script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
 <script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
 {% endblock %}

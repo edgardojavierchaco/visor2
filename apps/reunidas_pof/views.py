@@ -852,7 +852,7 @@ def crear_proyecto_especial(request):
     return render(
         request,
         "reunidas_pof/proyecto_especial_form.html",
-        {"form": form, "titulo": "📔 Crear Proyecto Especial"},
+        {"form": form, "titulo": "CREAR PROYECTO ESPECIAL"},
     )
 
 
@@ -1270,7 +1270,7 @@ def detalle_reunida_grupo_cargos(request, reunida_id):
     except ReunidaPof.DoesNotExist:
         return api_error_no_encontrado(
             "No se encontro la Reunida solicitada.",
-            {"reunida_id": ["No se encontro la Reunida solicitada."]},
+            {"reunida_id": ["No se encontro la POF solicitada."]},
         )
 
     try:
@@ -1304,7 +1304,7 @@ def detalle_reunida_grupo_cargos(request, reunida_id):
         return api_error_no_encontrado(
             "No existe un grupo con el CUEANEXO indicado dentro de la Reunida.",
             {
-                "cueanexo": ["No existe un grupo con el CUEANEXO indicado en la Reunida."],
+                "cueanexo": ["No existe un grupo con el CUEANEXO indicado en la POF."],
             },
         )
 
@@ -1558,7 +1558,7 @@ def buscar_padron(request):
             return JsonResponse(
                 {
                     "ok": False,
-                    "mensaje": "Primero valide una Cabecera de Reunida con año y nivel.",
+                    "mensaje": "Primero valide una Cabecera POF con año y nivel.",
                     "errores": validacion_cabecera.get("errores", {}),
                     "resultados": [],
                 },

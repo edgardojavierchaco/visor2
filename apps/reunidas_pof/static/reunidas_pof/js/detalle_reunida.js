@@ -137,10 +137,9 @@
         const liveSearch = document.getElementById("detalleLiveSearch");
         const columnaSelect = document.getElementById("detalleColumnaSelect");
         const columnaInput = document.getElementById("detalleColumnaInput");
+        const buscarBusquedaColumnaBtn = document.getElementById("detalleBuscarBusquedaColumna");
         const limpiarBusquedaColumnaBtn = document.getElementById("detalleLimpiarBusquedaColumna");
         const busquedaColumnaLoading = document.getElementById("detalleBusquedaColumnaLoading");
-        const busquedaColumnaStatus = document.getElementById("detalleBusquedaColumnaStatus");
-        const busquedaColumnaStatusText = document.getElementById("detalleBusquedaColumnaStatusText");
         const panelFiltros = document.getElementById("detallePanelFiltros");
         const toggleFiltros = form.querySelector("[data-detalle-panel-toggle='filtros']");
         const filtrosActivos = document.getElementById("detalleFiltrosActivos");
@@ -159,6 +158,7 @@
         const FILTER_OPERATOR_PRESETS = commonFilterUI.filterOperatorPresets;
         const sameFilterCriterion = commonFilterUI.sameFilterCriterion;
         const firstOperatorForConfig = commonFilterUI.firstOperatorForConfig;
+        const hasUsefulFilterCriterion = commonFilterUI.hasUsefulFilterCriterion;
         const fieldConfig = {};
         let filterOptions = {};
         const opcionesFiltroUrl = form.dataset.detalleOpcionesFiltroUrl || "";
@@ -177,7 +177,7 @@
         ]);
         const loadedRemoteFilters = new Set();
         const remoteFilterRequests = new Map();
-        let searchInteractionDirty = false;
+        let consultaEnCurso = false;
         let filterDialogState = null;
         let appliedColumnSearch = {
             columnId: columnaSelect ? columnaSelect.value : "",
@@ -211,29 +211,69 @@
                 .replace(/'/g, "&#039;");
         }
 
-        function clearColumnSearchParams(url) {
-            SEARCH_COLUMNS.forEach(function (columnId) {
-                url.searchParams.delete("col_" + columnId);
-            });
-            return url;
-        }
-
+        /**
+         * Sincroniza el indicador interno y la accesibilidad de carga del Detalle.
+         *
+         * - Mantiene el spinner dentro del buscador durante la navegación.
+         * - Expone `aria-busy` sin agregar texto visible debajo de la barra.
+         * - Actualiza los botones según el estado ocupado vigente.
+         */
         function setColumnSearchLoading(active) {
             if (busquedaColumnaLoading) {
                 busquedaColumnaLoading.classList.toggle("pof-hidden", !active);
                 busquedaColumnaLoading.setAttribute("aria-hidden", active ? "false" : "true");
             }
             if (liveSearch) {
-                liveSearch.classList.toggle("pof-visual-search-busy", active);
                 liveSearch.setAttribute("aria-busy", active ? "true" : "false");
             }
-            if (busquedaColumnaStatus) {
-                busquedaColumnaStatus.classList.toggle("pof-visual-search-status-hidden", !active);
-                busquedaColumnaStatus.setAttribute("aria-hidden", active ? "false" : "true");
+            syncColumnSearchButtons();
+        }
+
+        /**
+         * Navega el Detalle manteniendo el feedback de carga del buscador.
+         *
+         * - Bloquea acciones repetidas mientras la navegacion esta pendiente.
+         * - Reutiliza `consultaEnCurso` y el mismo spinner/accesibilidad del buscador.
+         * - Conserva la URL ya construida por cada handler.
+         */
+        function navegarDetalleConLoading(url) {
+            if (consultaEnCurso) {
+                return;
             }
-            if (active && busquedaColumnaStatusText) {
-                busquedaColumnaStatusText.textContent = "Buscando resultados...";
-            }
+
+            consultaEnCurso = true;
+            setColumnSearchLoading(true);
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(function () {
+                    window.location.href = url.toString();
+                });
+            });
+        }
+
+        /**
+         * Obtiene la ultima busqueda por columna confirmada en la URL del Detalle.
+         *
+         * - Respeta el orden de los parametros para representar la busqueda confirmada mas reciente.
+         * - Acepta solo columnas que el backend renderizo como opciones validas.
+         * - Permite conservar selector, texto y limpieza explicita cuando coexisten varios `col_*`.
+         */
+        function getLatestAppliedColumnSearch(url) {
+            const options = columnaSelect ? Array.from(columnaSelect.options).map(function (option) {
+                return option.value;
+            }) : [];
+            const validColumns = SEARCH_COLUMNS.filter(function (columnId) {
+                return options.indexOf(columnId) !== -1;
+            });
+            let latest = null;
+            Array.from(url.searchParams.entries()).forEach(function (entry) {
+                const key = entry[0];
+                const value = (entry[1] || "").trim();
+                const columnId = key.indexOf("col_") === 0 ? key.slice(4) : "";
+                if (value && validColumns.indexOf(columnId) !== -1) {
+                    latest = { columnId: columnId, value: value };
+                }
+            });
+            return latest;
         }
 
         function getColumnSearchState() {
@@ -243,92 +283,102 @@
             };
         }
 
+        const latestAppliedColumnSearch = getLatestAppliedColumnSearch(new URL(window.location.href));
+        if (latestAppliedColumnSearch && columnaSelect && columnaInput) {
+            columnaSelect.value = latestAppliedColumnSearch.columnId;
+            columnaInput.value = latestAppliedColumnSearch.value;
+            appliedColumnSearch = latestAppliedColumnSearch;
+        }
+
+        /**
+         * Sincroniza las acciones explícitas de la búsqueda por columna del Detalle.
+         *
+         * - Habilita Buscar solo cuando el draft no vacío difiere del estado aplicado.
+         * - Habilita Limpiar cuando la barra tiene texto o representa su filtro aplicado.
+         * - Mantiene ambas acciones deshabilitadas durante la navegación de la consulta.
+         */
+        function syncColumnSearchButtons() {
+            const draft = getColumnSearchState();
+            const hasAppliedValue = Boolean(appliedColumnSearch && appliedColumnSearch.value);
+            const representsApplied = hasAppliedValue
+                && sameColumnSearchState(draft, appliedColumnSearch);
+            const searchEnabled = Boolean(draft.value)
+                && !representsApplied
+                && !consultaEnCurso;
+            const clearEnabled = Boolean(draft.value) || representsApplied;
+
+            if (buscarBusquedaColumnaBtn) {
+                buscarBusquedaColumnaBtn.disabled = !searchEnabled || consultaEnCurso;
+            }
+            if (limpiarBusquedaColumnaBtn) {
+                limpiarBusquedaColumnaBtn.disabled = !clearEnabled || consultaEnCurso;
+            }
+        }
+
         function sameColumnSearchState(left, right) {
             return Boolean(left && right)
                 && left.columnId === right.columnId
                 && left.value === right.value;
         }
 
-        function isColumnSearchInteractiveTarget(target) {
-            if (!target || typeof target.closest !== "function") {
-                return false;
-            }
-            return Boolean(target.closest(
-                "button, a, input, select, textarea, label, "
-                + "[role='button'], [role='link'], [contenteditable='true'], "
-                + "[data-filter-chip], .pof-visual-dialog, .pof-visual-dialog-backdrop"
-            ));
-        }
-
         function markColumnSearchInteractionDirty() {
-            searchInteractionDirty = true;
+            syncColumnSearchButtons();
         }
 
         function submitColumnSearch() {
+            if (consultaEnCurso) {
+                return;
+            }
             const nextState = getColumnSearchState();
-            if (sameColumnSearchState(appliedColumnSearch, nextState)) {
-                searchInteractionDirty = false;
+            if (!nextState.value || sameColumnSearchState(appliedColumnSearch, nextState)) {
                 setColumnSearchLoading(false);
                 return;
             }
             const value = (columnaInput ? columnaInput.value : "").trim();
             const columnId = columnaSelect ? columnaSelect.value : "";
             const url = new URL(window.location.href);
-            clearColumnSearchParams(url);
+            if (SEARCH_COLUMNS.indexOf(columnId) !== -1) {
+                url.searchParams.delete("col_" + columnId);
+            }
             if (value && SEARCH_COLUMNS.indexOf(columnId) !== -1) {
                 url.searchParams.set("col_" + columnId, value);
             }
             url.searchParams.delete("page");
             if (url.toString() === window.location.href) {
                 appliedColumnSearch = nextState;
-                searchInteractionDirty = false;
                 setColumnSearchLoading(false);
                 return;
             }
             appliedColumnSearch = nextState;
-            searchInteractionDirty = false;
-            setColumnSearchLoading(true);
-            window.requestAnimationFrame(function () {
-                window.requestAnimationFrame(function () {
-                    window.location.href = url.toString();
-                });
-            });
+            navegarDetalleConLoading(url);
         }
 
         function clearColumnSearch() {
-            const url = new URL(window.location.href);
-            clearColumnSearchParams(url);
-            url.searchParams.delete("page");
+            if (consultaEnCurso) {
+                return;
+            }
+            const previousState = getColumnSearchState();
+            const representsApplied = Boolean(previousState.value)
+                && sameColumnSearchState(previousState, appliedColumnSearch);
             if (columnaInput) {
                 columnaInput.value = "";
             }
+            if (!representsApplied) {
+                syncColumnSearchButtons();
+                return;
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.delete("col_" + previousState.columnId);
+            url.searchParams.delete("page");
             appliedColumnSearch = {
                 columnId: columnaSelect ? columnaSelect.value : "",
                 value: ""
             };
-            searchInteractionDirty = false;
             if (url.toString() === window.location.href) {
                 setColumnSearchLoading(false);
                 return;
             }
-            setColumnSearchLoading(true);
-            window.requestAnimationFrame(function () {
-                window.requestAnimationFrame(function () {
-                    window.location.href = url.toString();
-                });
-            });
-        }
-
-        function handleColumnSearchPointerDown(event) {
-            if (liveSearch && event.target && liveSearch.contains(event.target)) {
-                return;
-            }
-            if (isColumnSearchInteractiveTarget(event.target)) {
-                return;
-            }
-            if (searchInteractionDirty) {
-                submitColumnSearch();
-            }
+            navegarDetalleConLoading(url);
         }
 
         function togglePanelFiltros() {
@@ -422,11 +472,14 @@
                 return;
             }
             const initial = filterDialogState && filterDialogState.initial;
-            filtroAplicarBtn.disabled = Boolean(
-                filterDialogState
-                && filterDialogState.disableUntilChanged
-                && sameFilterCriterion(initial, getCurrentFilterDialogState())
-            );
+            const current = getCurrentFilterDialogState();
+            if (!filterDialogState) {
+                filtroAplicarBtn.disabled = true;
+                return;
+            }
+            filtroAplicarBtn.disabled = filterDialogState.disableUntilChanged
+                ? sameFilterCriterion(initial, current)
+                : !hasUsefulFilterCriterion(fieldConfig[filterDialogState.field], current);
         }
 
         function renderTextValueControl(mode, initialValue) {
@@ -620,9 +673,7 @@
                 },
                 disableUntilChanged: initial.disableUntilChanged
             };
-            if (filtroAplicarBtn) {
-                filtroAplicarBtn.disabled = initial.disableUntilChanged;
-            }
+            syncFilterApplyButton();
             dialog.hidden = false;
             dialogBackdrop.hidden = false;
         }
@@ -650,7 +701,7 @@
                         !cargadas ||
                         !filterDialogState ||
                         filterDialogState.field !== config.field ||
-                        campoFiltroActivo.value !== config.field
+                        getActiveFilterField() !== config.field
                     ) {
                         return;
                     }
@@ -663,6 +714,12 @@
             } else {
                 renderTextValueControl(config.mode, filterDialogState.initial.values[0] || "");
             }
+        }
+
+        function getActiveFilterField() {
+            return (campoFiltroActivo && campoFiltroActivo.value)
+                || (filterDialogState && filterDialogState.field)
+                || "";
         }
 
         function closeFilterDialog() {
@@ -682,7 +739,7 @@
         }
 
         function collectFilterValues() {
-            const config = fieldConfig[campoFiltroActivo.value];
+            const config = fieldConfig[getActiveFilterField()];
             if (!config) {
                 return [];
             }
@@ -811,7 +868,7 @@
                 url.searchParams.delete("col_" + field);
             }
             url.searchParams.delete("page");
-            window.location.href = url.toString();
+            navegarDetalleConLoading(url);
         }
 
         if (toggleFiltros) {
@@ -820,18 +877,34 @@
         if (limpiarBusquedaColumnaBtn) {
             limpiarBusquedaColumnaBtn.addEventListener("click", clearColumnSearch);
         }
+        if (buscarBusquedaColumnaBtn) {
+            buscarBusquedaColumnaBtn.addEventListener("click", function () {
+                if (!buscarBusquedaColumnaBtn.disabled) {
+                    submitColumnSearch();
+                }
+            });
+        }
         if (columnaInput) {
             columnaInput.addEventListener("keydown", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
+                if (event.key !== "Enter") {
+                    return;
+                }
+                event.preventDefault();
+                if (buscarBusquedaColumnaBtn && !buscarBusquedaColumnaBtn.disabled) {
+                    submitColumnSearch();
                 }
             });
             columnaInput.addEventListener("input", markColumnSearchInteractionDirty);
         }
         if (columnaSelect) {
-            columnaSelect.addEventListener("change", markColumnSearchInteractionDirty);
+            columnaSelect.addEventListener("change", function () {
+                if (columnaInput) {
+                    columnaInput.value = "";
+                }
+                markColumnSearchInteractionDirty();
+            });
         }
-        document.addEventListener("pointerdown", handleColumnSearchPointerDown, true);
+        syncColumnSearchButtons();
 
         filterButtons.forEach(function (button) {
             button.addEventListener("click", function () {
@@ -852,7 +925,11 @@
 
         form.addEventListener("submit", function (event) {
             event.preventDefault();
-            if (!campoFiltroActivo || !campoFiltroActivo.value) {
+            if (consultaEnCurso) {
+                return;
+            }
+            const field = getActiveFilterField();
+            if (!field) {
                 return;
             }
             if (filtroAplicarBtn && filtroAplicarBtn.disabled) {
@@ -860,7 +937,6 @@
             }
             const values = collectFilterValues();
             const url = new URL(window.location.href);
-            const field = campoFiltroActivo.value;
             const operator = operadorFiltro.value || "0";
             if (filterDialogState && filterDialogState.source === "columna") {
                 url.searchParams.delete("col_" + field);
@@ -885,8 +961,22 @@
                 replaceFilterValuesForField(url, field, operator, values);
             }
             closeFilterDialog();
-            window.location.href = url.toString();
+            navegarDetalleConLoading(url);
         });
+
+        const limpiarFiltrosLink = filtrosActivos
+            ? filtrosActivos.querySelector(".pof-visual-clear-filters-link")
+            : null;
+        if (limpiarFiltrosLink) {
+            limpiarFiltrosLink.addEventListener("click", function (event) {
+                if (event.defaultPrevented || event.button !== 0
+                    || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                    return;
+                }
+                event.preventDefault();
+                navegarDetalleConLoading(limpiarFiltrosLink.href);
+            });
+        }
 
         if (cerrarDialogoFiltro) {
             cerrarDialogoFiltro.addEventListener("click", closeFilterDialog);
@@ -1019,6 +1109,21 @@
         return celda;
       }
 
+      /**
+       * Crea un glyph Material Symbols para los elementos dinámicos del detalle.
+       *
+       * - Mantiene el nombre del símbolo como texto ligature dentro de un span explícito.
+       * - Conserva las clases visuales específicas recibidas por cada consumidor.
+       * - Marca el glyph como decorativo para no duplicar la información accesible del control.
+       */
+      function crearIconoMaterialDetalle(nombre, className) {
+        const icono = document.createElement("span");
+        icono.className = className;
+        icono.setAttribute("aria-hidden", "true");
+        icono.textContent = nombre;
+        return icono;
+      }
+
       function crearCeldaCantidadDetalleGrupo(cargo) {
         const celda = document.createElement("td");
         const contenido = document.createElement("span");
@@ -1030,14 +1135,20 @@
         if (cargo.tiene_modificacion_cantidad) {
           const button = document.createElement("button");
           button.type = "button";
-          button.className = "pof-history-detail-btn pof-quantity-history-btn";
+          button.className =
+            "pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn";
           button.dataset.pofQuantityHistory = "true";
           button.dataset.cargoIds = Array.isArray(cargo.cargo_ids)
             ? cargo.cargo_ids.join(",")
             : "";
           button.setAttribute("aria-label", "Ver historial de cantidad");
           button.title = "Ver historial de cantidad";
-          button.textContent = "\uD83D\uDD51";
+          button.appendChild(
+            crearIconoMaterialDetalle(
+              "clock_loader_80",
+              "pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined",
+            ),
+          );
           contenido.appendChild(button);
         }
 
@@ -1069,14 +1180,20 @@
         if (cargo.tiene_modificacion_observacion === true) {
           const button = document.createElement("button");
           button.type = "button";
-          button.className = "pof-history-detail-btn pof-quantity-history-btn";
+          button.className =
+            "pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn";
           button.dataset.pofObservationHistory = "true";
           button.dataset.cargoIds = Array.isArray(cargo.cargo_ids)
             ? cargo.cargo_ids.join(",")
             : "";
           button.setAttribute("aria-label", "Ver historial de observación");
           button.title = "Ver historial de observación";
-          button.textContent = "🕘";
+          button.appendChild(
+            crearIconoMaterialDetalle(
+              "clock_loader_80",
+              "pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined",
+            ),
+          );
           contenido.appendChild(button);
         }
 
@@ -1112,14 +1229,20 @@
         if (cargo.tiene_modificacion_estado === true) {
           const button = document.createElement("button");
           button.type = "button";
-          button.className = "pof-history-detail-btn pof-quantity-history-btn";
+          button.className =
+            "pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn";
           button.dataset.pofStateHistory = "true";
           button.dataset.cargoIds = Array.isArray(cargo.cargo_ids)
             ? cargo.cargo_ids.join(",")
             : "";
           button.setAttribute("aria-label", "Ver historial de Estado POF");
           button.title = "Ver historial de Estado POF";
-          button.textContent = "\uD83D\uDD51";
+          button.appendChild(
+            crearIconoMaterialDetalle(
+              "clock_loader_80",
+              "pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined",
+            ),
+          );
           contenido.appendChild(button);
         }
 
@@ -1183,7 +1306,12 @@
           "Gestionar cargo ID " + String(cargoId),
         );
 
-        boton.textContent = "✏️";
+        boton.appendChild(
+          crearIconoMaterialDetalle(
+            "person_edit",
+            "pof-action-icon pof-material-symbol material-symbols-outlined",
+          ),
+        );
 
         celda.appendChild(boton);
         return celda;
@@ -1204,13 +1332,20 @@
         cabecera.className = "pof-detalle-cargos-card-header";
 
         const titulo = document.createElement("strong");
-        titulo.textContent = contextoGrupo.cueanexo
-          ? "📂 Cargos del Anexo " +
+        const textoTitulo = contextoGrupo.cueanexo
+          ? "Cargos del Anexo " +
             obtenerTextoDetalleGrupo(contextoGrupo.anexo) +
             " · CUOF " +
             obtenerTextoDetalleGrupo(contextoGrupo.cuof)
-          : "📂 Cargos del CUOF " +
+          : "Cargos del CUOF " +
             obtenerTextoDetalleGrupo(contextoGrupo.cuof);
+        titulo.appendChild(
+          crearIconoMaterialDetalle(
+            "folder",
+            "pof-detail-cargos-title-icon pof-material-symbol material-symbols-outlined",
+          ),
+        );
+        titulo.appendChild(document.createTextNode(" " + textoTitulo));
 
         const contador = document.createElement("span");
         contador.className = "pof-grid-badge pof-grid-badge-modificacion";
@@ -1303,15 +1438,18 @@
       }
 
       function marcarBotonDetalleGrupo(button, cargando) {
+        const label = button.querySelector(".pof-detail-toggle-label");
         if (!button.dataset.labelDefault) {
           button.dataset.labelDefault =
-            button.textContent.trim() || "Ver cargos";
+            (label && label.textContent.trim()) || "Ver cargos";
         }
         button.disabled = !!cargando;
         button.setAttribute("aria-disabled", cargando ? "true" : "false");
-        button.textContent = cargando
-          ? "Cargando..."
-          : button.dataset.labelDefault;
+        if (label) {
+          label.textContent = cargando
+            ? "Cargando..."
+            : button.dataset.labelDefault;
+        }
       }
 
       /**
@@ -1376,14 +1514,14 @@
           }
 
           contenedor.dataset.loaded = "true";
-          button.dataset.labelDefault = "👁️‍🗨️ Ocultar cargos";
+          button.dataset.labelDefault = "Ocultar cargos";
           button.setAttribute("aria-expanded", "true");
         } catch (error) {
           limpiarContenedorDetalleGrupo(contenedor);
           contenedor.appendChild(
             crearEstadoDetalleGrupo(apiDetalle.formatError(error), "error"),
           );
-          button.dataset.labelDefault = "👁️Ver cargos";
+          button.dataset.labelDefault = "Ver cargos";
           button.setAttribute("aria-expanded", "false");
         } finally {
           marcarBotonDetalleGrupo(button, false);
@@ -1402,8 +1540,8 @@
           const visible = filaDetalleGrupo.hidden;
           mostrarContenedorDetalleGrupo(contenedor, visible);
           button.dataset.labelDefault = visible
-            ? "👁️‍🗨️ Ocultar cargos"
-            : "👁️‍🗨️ Mostrar cargos";
+            ? "Ocultar cargos"
+            : "Mostrar cargos";
           button.setAttribute("aria-expanded", visible ? "true" : "false");
           marcarBotonDetalleGrupo(button, false);
           return;

@@ -7,23 +7,28 @@
     {% include "reunidas_pof/menu_pof.html" with seccion_activa=seccion_activa %}
     <link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260824-1">
     <div class="pof-view-header">
-        <h1>{{ cabecera_detalle_nombre|upper }} {{ reunida.anio }}{% if reunida.nivel %} &middot; {{ reunida.nivel }}{% endif %}</h1>
-        <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUE, anexos y CUOF de la POF.{% endif %}</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">{% if es_proyecto_especial %}folder_special{% else %}collections_bookmark{% endif %}</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>{{ cabecera_detalle_nombre|upper }} {{ reunida.anio }}{% if reunida.nivel %} &middot; {{ reunida.nivel }}{% endif %}</h1>
+            <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUE, anexos y CUOF de la POF.{% endif %}</p>
+        </div>
     </div>
 
     <div class="pof-detalle-toolbar{% if not es_proyecto_especial %} pof-detalle-toolbar-comun{% endif %}" aria-label="Acciones de la POF">
         {% if reunida.existe %}
-            <a href="{% if es_proyecto_especial %}{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto_especial.id }}{% else %}{% url 'reunidas_pof:cargar_cargos' %}?{{ cabecera_querystring }}{% endif %}" class="pof-btn pof-btn-primary">
-                &#128101; Afectar Cargos
+            <a href="{% if es_proyecto_especial %}{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto_especial.id }}{% else %}{% url 'reunidas_pof:cargar_cargos' %}?{{ cabecera_querystring }}{% endif %}" class="pof-btn pof-btn-primary pof-detalle-afectar-btn">
+                <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> Afectar Cargos
             </a>
 
             <a href="{% url 'reunidas_pof:exportar_reunida' %}?{% if es_proyecto_especial and detalle_exportar_querystring %}{{ detalle_exportar_querystring }}{% else %}{{ cabecera_querystring }}{% endif %}" class="pof-btn pof-btn-excel">
-                &#128215; {% if es_proyecto_especial %}Exportar Proyecto Especial{% else %}Exportar POF{% endif %}
+                <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">file_save</span> {% if es_proyecto_especial %}Exportar Proyecto Especial{% else %}Exportar POF{% endif %}
             </a>
 
             {% if not es_proyecto_especial %}
                 <a href="{% url 'reunidas_pof:historial_movimientos' %}?{{ cabecera_querystring }}" class="pof-btn pof-btn-light">
-                    &#128344; Historial
+                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_80</span> Historial
                 </a>
             {% endif %}
         {% endif %}
@@ -50,7 +55,7 @@
                     <div class="pof-visual-live-search" id="detalleLiveSearch">
                         <div class="pof-visual-search-control-row">
                             <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
-                            <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                            <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
                             <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
                                 {% for columna in detalle_busqueda_columnas %}
                                     <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
@@ -58,6 +63,7 @@
                             </select>
                             <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
                             <div class="pof-visual-search-input-wrap">
+                                <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
                                 <input type="text"
                                        id="detalleColumnaInput"
                                        class="pof-visual-search-input"
@@ -69,11 +75,18 @@
                                     <span class="pof-visually-hidden">Buscando</span>
                                 </span>
                             </div>
-                            <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
-                        </div>
-                        <div id="detalleBusquedaColumnaStatus" class="pof-visual-search-status pof-visual-search-status-hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
-                            <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
-                            <span id="detalleBusquedaColumnaStatusText">Buscando resultados...</span>
+                            <button type="button"
+                                    class="pof-visual-search-submit"
+                                    id="detalleBuscarBusquedaColumna"
+                                    title="Buscar en la columna"
+                                    aria-label="Buscar en la columna"
+                                    disabled>Buscar</button>
+                            <button type="button"
+                                    class="pof-visual-search-clear"
+                                    id="detalleLimpiarBusquedaColumna"
+                                    title="Limpiar b&uacute;squeda por columna"
+                                    aria-label="Limpiar b&uacute;squeda por columna"
+                                    disabled>&times;</button>
                         </div>
                     </div>
 
@@ -83,14 +96,14 @@
                             data-detalle-panel-toggle="filtros"
                             aria-controls="detallePanelFiltros"
                             aria-expanded="false">
-                            🔧 Filtros
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">filter_alt</span> Filtros
                         </button>
                     </div>
                 </div>
 
                 {% if filtros_detalle_invalidos %}
                     <div class="pof-filter-warning">
-                        <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+                        <span class="pof-filter-warning-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">warning</span>
                         <span>{{ mensaje_filtros_detalle_general }}</span>
                     </div>
                 {% endif %}
@@ -146,18 +159,18 @@
                          data-filter-operator="{{ chip.operador|default:'' }}"
                          data-filter-value="{{ chip.valor|default:'' }}">
                         <button type="button" class="pof-filter-chip-edit" data-filter-chip-edit aria-label="Editar {{ chip.texto }}">
-                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                            <span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
                             <span class="pof-filter-chip-text">{{ chip.texto }}</span>
                         </button>
                         <button type="button" class="pof-filter-chip-remove" data-filter-chip-remove aria-label="Eliminar {{ chip.texto }}">
-                            <span aria-hidden="true">&times;</span>
+                            <span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>
                         </button>
                     </div>
                 {% endfor %}
                  {% if filtros_detalle_chips %}
                     <a class="pof-filter-clear-all pof-visual-clear-filters-link"
                         href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
-                        <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                        <span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>
                         <span>Limpiar filtros</span>
                     </a>
                 {% endif %}
@@ -173,9 +186,9 @@
                         <div class="pof-cue-title pof-cue-title-normal">
                             <strong>
                                 {% if grupo_proyecto.tipo_identidad == "CUE" %}
-                                    <span class="pof-cue-code">&#127979; CUE {{ grupo_proyecto.cue }}</span>
+                                    <span class="pof-cue-code"><span class="pof-cue-code-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">apartment</span> CUE {{ grupo_proyecto.cue }}</span>
                                 {% else %}
-                                    <span class="pof-cue-code">&#128193; CUOF {{ grupo_proyecto.cuof|default:"—" }}</span>
+                                    <span class="pof-cue-code"><span class="pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> CUOF {{ grupo_proyecto.cuof|default:"—" }}</span>
                                 {% endif %}
                                 <span class="pof-cue-separator">&middot;</span>
                                 <span class="pof-cue-name">{{ grupo_proyecto.establecimiento|default:"Proyecto Especial" }}</span>
@@ -187,7 +200,7 @@
                                             aria-expanded="false"
                                             aria-label="Ver informacion del CUE {{ grupo_proyecto.cue }}"
                                             title="Ver informacion del CUE">
-                                        &#128161; INFO CUE
+                                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> INFO CUE
                                     </button>
                                 {% endif %}
                             </strong>
@@ -197,21 +210,21 @@
                     <div class="pof-cue-totals-row" aria-label="Totales del grupo">
                         <div class="pof-cue-total">
                             {% if grupo_proyecto.tipo_identidad == "CUE" %}
-                                <span><span class="pof-cue-total-icon" aria-hidden="true">&#128193;</span> Total anexos</span>
+                                <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Total anexos</span>
                                 <strong>{{ grupo_proyecto.total_anexos|default:0 }}</strong>
                             {% else %}
-                                <span><span class="pof-cue-total-icon" aria-hidden="true">&#128205;</span> Total localizaciones</span>
+                                <span><span class="pof-cue-total-icon pof-material-symbol pof-icon-view-apps material-symbols-outlined" aria-hidden="true">view_apps</span> Total localizaciones</span>
                                 <strong>{{ grupo_proyecto.total_localizaciones|default:0 }}</strong>
                             {% endif %}
                         </div>
 
                         <div class="pof-cue-total">
-                            <span><span class="pof-cue-total-icon" aria-hidden="true">&#128188;</span> Total cargos</span>
+                            <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">bubble_chart</span> Total cargos</span>
                             <strong>{{ grupo_proyecto.total_cargos|default:0 }}</strong>
                         </div>
 
                         <div class="pof-cue-total">
-                            <span><span class="pof-cue-total-icon" aria-hidden="true">&#11088;</span> Total puntos</span>
+                            <span><span class="pof-cue-total-icon pof-cue-total-points-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">star</span> Total puntos</span>
                             <strong>{{ grupo_proyecto.total_puntos|default_if_none:"0" }}</strong>
                         </div>
                     </div>
@@ -261,14 +274,15 @@
                                                         data-cuof="{{ localizacion.cuof }}"
                                                         data-target="detalle-proyecto-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                                         title="Ver cargos de esta localizaci&oacute;n">
-                                                    &#128065;&#65039; Mostrar cargos
+                                                    <span class="pof-detail-toggle-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">mystery</span>
+                                                    <span class="pof-detail-toggle-label">Mostrar cargos</span>
                                                 </button>
                                                 {% if localizacion.admin_querystring %}
                                                     <a href="{% url 'reunidas_pof:consultar_cargos' %}?{{ localizacion.admin_querystring }}"
                                                        class="pof-btn pof-btn-light"
                                                        aria-label="Administrar cargos de esta localizaci&oacute;n"
                                                        title="Administrar cargos de esta localizaci&oacute;n">
-                                                        &#9881;&#65039; Administrar
+                                                         <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span> Administrar
                                                     </a>
                                                 {% endif %}
                                             </div>
@@ -389,7 +403,7 @@
                     <div class="pof-visual-live-search" id="detalleLiveSearch">
                         <div class="pof-visual-search-control-row">
                             <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
-                            <span class="pof-visual-search-icon" aria-hidden="true">&#128269;</span>
+                            <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
                             <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
                                 {% for columna in detalle_busqueda_columnas %}
                                     <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
@@ -397,6 +411,7 @@
                             </select>
                             <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
                             <div class="pof-visual-search-input-wrap">
+                                <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
                                 <input type="text"
                                        id="detalleColumnaInput"
                                        class="pof-visual-search-input"
@@ -408,11 +423,18 @@
                                     <span class="pof-visually-hidden">Buscando</span>
                                 </span>
                             </div>
-                            <button type="button" class="pof-visual-search-clear" id="detalleLimpiarBusquedaColumna" title="Limpiar b&uacute;squeda por columna" aria-label="Limpiar b&uacute;squeda por columna">&times;</button>
-                        </div>
-                        <div id="detalleBusquedaColumnaStatus" class="pof-visual-search-status pof-visual-search-status-hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
-                            <span class="pof-visual-search-status-icon" aria-hidden="true">&#9203;</span>
-                            <span id="detalleBusquedaColumnaStatusText">Buscando resultados...</span>
+                            <button type="button"
+                                    class="pof-visual-search-submit"
+                                    id="detalleBuscarBusquedaColumna"
+                                    title="Buscar en la columna"
+                                    aria-label="Buscar en la columna"
+                                    disabled>Buscar</button>
+                            <button type="button"
+                                    class="pof-visual-search-clear"
+                                    id="detalleLimpiarBusquedaColumna"
+                                    title="Limpiar b&uacute;squeda por columna"
+                                    aria-label="Limpiar b&uacute;squeda por columna"
+                                    disabled>&times;</button>
                         </div>
                     </div>
 
@@ -422,14 +444,14 @@
                                 data-detalle-panel-toggle="filtros"
                                 aria-controls="detallePanelFiltros"
                                 aria-expanded="false">
-                            🔧 Filtros
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">filter_alt</span> Filtros
                         </button>
                     </div>
                 </div>
 
                 {% if filtros_detalle_invalidos %}
                     <div class="pof-filter-warning">
-                        <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+                        <span class="pof-filter-warning-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">warning</span>
                         <span>{{ mensaje_filtros_detalle_general }}</span>
                     </div>
                 {% endif %}
@@ -485,11 +507,11 @@
                          data-filter-operator="{{ chip.operador|default:'' }}"
                          data-filter-value="{{ chip.valor|default:'' }}">
                         <button type="button" class="pof-filter-chip-edit" data-filter-chip-edit aria-label="Editar {{ chip.texto }}">
-                            <span class="pof-filter-chip-icon" aria-hidden="true">&#127991;</span>
+                            <span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
                             <span class="pof-filter-chip-text">{{ chip.texto }}</span>
                         </button>
                         <button type="button" class="pof-filter-chip-remove" data-filter-chip-remove aria-label="Eliminar {{ chip.texto }}">
-                            <span aria-hidden="true">&times;</span>
+                            <span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>
                         </button>
                     </div>
                 {% endfor %}
@@ -499,7 +521,7 @@
                  {% if filtros_detalle_chips %}
                     <a class="pof-filter-clear-all pof-visual-clear-filters-link"
                         href="{% url 'reunidas_pof:detalle_reunida' %}{% if detalle_limpiar_filtros_querystring %}?{{ detalle_limpiar_filtros_querystring }}{% endif %}">
-                        <span class="pof-visual-clear-filters-icon" aria-hidden="true">&#128465;</span>
+                        <span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>
                         <span>Limpiar filtros</span>
                     </a>
                 {% endif %}
@@ -509,12 +531,12 @@
 
             {% if mostrar_resumen_detalle %}
                 <div class="pof-detalle-search-summary">
-                    <strong>⭐ Resultado de búsqueda: {{ resumen_coincidencias_detalle.cargos|default:0 }} cargos · {{ resumen_coincidencias_detalle.cues|default:0 }} CUE · {{ resumen_coincidencias_detalle.anexos|default:0 }} Anexos</strong>
+                    <strong><span class="pof-detail-search-summary-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">star</span><span>Resultado de búsqueda: {{ resumen_coincidencias_detalle.cargos|default:0 }} cargos · {{ resumen_coincidencias_detalle.cues|default:0 }} CUE · {{ resumen_coincidencias_detalle.anexos|default:0 }} Anexos</span></strong>
                     <span>Los totales de cada CUE corresponden al CUE completo dentro del alcance mostrado.</span>
                 </div>
             {% elif not filtros_detalle_activos %}
                 <div class="pof-list-status">
-                    <span>&#9638; Resultados: Mostrando CUE {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}.</span>
+                    <span><span class="pof-detail-results-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">list_alt</span> Resultados: Mostrando CUE {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}.</span>
                 </div>
             {% endif %}
         {% endif %}
@@ -587,11 +609,11 @@
                                                         {{ cargo.cantidad|default:"—" }}
                                                         {% if cargo.tiene_modificacion_cantidad %}
                                                             <button type="button"
-                                                                    class="pof-history-detail-btn pof-quantity-history-btn"
+                                                        class="pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn"
                                                                     data-pof-quantity-history
                                                                     data-cargo-ids="{{ cargo.cargo_ids|join:',' }}"
                                                                     aria-label="Ver historial de cantidad"
-                                                                    title="Ver historial de cantidad">&#128337;</button>
+                                                                    title="Ver historial de cantidad"><span class="pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_10</span></button>
                                                         {% endif %}
                                                     </span>
                                                 </td>
@@ -611,11 +633,11 @@
                                                         {{ cargo.observacion|default:"—" }}
                                                         {% if cargo.tiene_modificacion_observacion %}
                                                             <button type="button"
-                                                                    class="pof-history-detail-btn pof-quantity-history-btn"
+                                                        class="pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn"
                                                                     data-pof-observation-history
                                                                     data-cargo-ids="{{ cargo.cargo_ids|join:',' }}"
                                                                     aria-label="Ver historial de observaci&oacute;n"
-                                                                    title="Ver historial de observaci&oacute;n">&#128337;</button>
+                                                                    title="Ver historial de observaci&oacute;n"><span class="pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_10</span></button>
                                                         {% endif %}
                                                     </span>
                                                 </td>
@@ -644,7 +666,7 @@
                 <div class="pof-cue-header pof-cue-header-normal">
                     <div class="pof-cue-title pof-cue-title-normal">
                         <strong>
-                            <span class="pof-cue-code">🏫 CUE {{ grupo_cue.cue|default:"—" }}</span>
+                            <span class="pof-cue-code"><span class="pof-cue-code-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">apartment</span> CUE {{ grupo_cue.cue|default:"—" }}</span>
                             <span class="pof-cue-separator">&middot;</span>
                             <span class="pof-cue-name">{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
                             {% if grupo_cue.info_cue %}
@@ -655,7 +677,7 @@
                                         aria-expanded="false"
                                         aria-label="Ver informacion del CUE {{ grupo_cue.cue|default_if_none:'' }}"
                                         title="Ver informacion del CUE">
-                                    💡 INFO CUE
+                                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">lightbulb_2</span> INFO CUE
                                 </button>
                             {% endif %}
                         </strong>
@@ -664,17 +686,17 @@
 
                 <div class="pof-cue-totals-row" aria-label="Totales del CUE">
                     <div class="pof-cue-total">
-                        <span><span class="pof-cue-total-icon" aria-hidden="true">&#128193;</span> Total anexos</span>
+                        <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Total anexos</span>
                         <strong>{{ grupo_cue.total_anexos|default:0 }}</strong>
                     </div>
 
                     <div class="pof-cue-total">
-                        <span><span class="pof-cue-total-icon" aria-hidden="true">&#128188;</span> Total cargos</span>
+                        <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">bubble_chart</span> Total cargos</span>
                         <strong>{{ grupo_cue.total_cargos|default:0 }}</strong>
                     </div>
 
                     <div class="pof-cue-total">
-                        <span><span class="pof-cue-total-icon" aria-hidden="true">&#11088;</span> Total puntos</span>
+                        <span><span class="pof-cue-total-icon pof-cue-total-points-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">star</span> Total puntos</span>
                         <strong>{{ grupo_cue.total_puntos|default_if_none:"0" }}</strong>
                     </div>
                 </div>
@@ -707,13 +729,14 @@
                                                     data-cuof="{{ grupo_anexo.cuof|default_if_none:'' }}"
                                                     data-target="detalle-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                                     title="Ver cargos del grupo {{ grupo_anexo.cueanexo|default_if_none:'' }} / {{ grupo_anexo.cuof|default_if_none:'' }}">
-                                                👁️ Mostrar cargos
+                                                <span class="pof-detail-toggle-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">mystery</span>
+                                                <span class="pof-detail-toggle-label">Mostrar cargos</span>
                                             </button>
                                             <a href="{% url 'reunidas_pof:consultar_cargos' %}?cabecera_tipo=REUNIDA&amp;anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}&amp;cueanexo={{ grupo_anexo.cueanexo|default_if_none:'' }}&amp;cuof={{ grupo_anexo.cuof|default_if_none:'' }}"
                                                class="pof-btn pof-btn-light"
                                                aria-label="Administrar cargos de este Anexo/CUOF"
                                                title="Administrar cargos de este Anexo/CUOF">
-                                                ⚙️ Administrar
+                                                <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span> Administrar
                                             </a>
                                         </div>
                                     </td>
@@ -791,7 +814,7 @@
                 </div>
             {% else %}
                 <div class="pof-detalle-empty">
-                    No hay cargos cargados para esta reunida.
+                    No hay cargos cargados para esta POF.
                 </div>
             {% endif %}
         {% endif %}
@@ -846,6 +869,6 @@
 <script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260716-1"></script>
 <script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
 <script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
-<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260824-2"></script>
-<script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260824-5"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
+    <script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260829-1"></script>
 {% endblock %}

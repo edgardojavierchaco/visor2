@@ -671,7 +671,7 @@ def _oficializar_cargos_desde_ceic(datos, reunida):
 
         if not ceic_real:
             mensaje = (
-                "El CEIC indicado no existe, está inactivo o no es compatible con el nivel de la Reunida."
+                "El CEIC indicado no existe, está inactivo o no es compatible con el nivel de la POF."
                 if reunida
                 else "El CEIC indicado no existe o está inactivo."
             )
@@ -1104,7 +1104,7 @@ def _serializar_cargo_detalle(cargo):
     )
 
     if reunida:
-        cabecera = f"Reunida {reunida.anio} - {reunida.get_nivel_display()}"
+        cabecera = f"POF {reunida.anio} - {reunida.get_nivel_display()}"
     elif proyecto:
         cabecera = f"Proyecto Especial {proyecto.anio} - {proyecto.nombre}"
     else:
@@ -1762,7 +1762,7 @@ def eliminar_reunida_pof(reunida_id):
             reunida = ReunidaPof.objects.select_for_update().get(pk=reunida_id)
             if reunida.reunidas_derivadas.exists():
                 return _resultado_eliminacion_bloqueada(
-                    "No se puede eliminar esta Reunida porque es utilizada como base por otra Reunida.",
+                    "No se puede eliminar esta POF porque es utilizada como base por otra POF.",
                     "reunida",
                 )
 
@@ -1771,27 +1771,27 @@ def eliminar_reunida_pof(reunida_id):
             )
             if not resultado_dependencias["ok"]:
                 return _resultado_eliminacion_bloqueada(
-                    "No se puede eliminar esta Reunida porque existen inconsistencias de integridad en sus dependencias.",
+                    "No se puede eliminar esta POF porque existen inconsistencias de integridad en sus dependencias.",
                     "reunida",
                 )
 
             dependencias = resultado_dependencias["dependencias"]
             if _existen_movimientos_cabecera(dependencias):
                 return _resultado_eliminacion_bloqueada(
-                    "No se puede eliminar esta Reunida porque registra actividad administrativa posterior.",
+                    "No se puede eliminar esta POF porque registra actividad administrativa posterior.",
                     "reunida",
                 )
 
             _eliminar_dependencias_cabecera(dependencias)
             reunida.delete()
-            return {"ok": True, "mensaje": "Reunida POF eliminada correctamente."}
+            return {"ok": True, "mensaje": "POF eliminada correctamente."}
     except ReunidaPof.DoesNotExist:
         return _resultado_eliminacion_bloqueada(
-            "La Reunida indicada no existe.", "reunida_id"
+            "La POF indicada no existe.", "reunida_id"
         )
     except ProtectedError:
         return _resultado_eliminacion_bloqueada(
-            "No se puede eliminar esta Reunida porque conserva referencias protegidas.",
+            "No se puede eliminar esta POF porque conserva referencias protegidas.",
             "reunida",
         )
     except (ValidationError, IntegrityError) as error:
