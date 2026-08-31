@@ -158,6 +158,7 @@
         const FILTER_OPERATOR_PRESETS = commonFilterUI.filterOperatorPresets;
         const sameFilterCriterion = commonFilterUI.sameFilterCriterion;
         const firstOperatorForConfig = commonFilterUI.firstOperatorForConfig;
+        const hasUsefulFilterCriterion = commonFilterUI.hasUsefulFilterCriterion;
         const fieldConfig = {};
         let filterOptions = {};
         const opcionesFiltroUrl = form.dataset.detalleOpcionesFiltroUrl || "";
@@ -226,6 +227,27 @@
                 liveSearch.setAttribute("aria-busy", active ? "true" : "false");
             }
             syncColumnSearchButtons();
+        }
+
+        /**
+         * Navega el Detalle manteniendo el feedback de carga del buscador.
+         *
+         * - Bloquea acciones repetidas mientras la navegacion esta pendiente.
+         * - Reutiliza `consultaEnCurso` y el mismo spinner/accesibilidad del buscador.
+         * - Conserva la URL ya construida por cada handler.
+         */
+        function navegarDetalleConLoading(url) {
+            if (consultaEnCurso) {
+                return;
+            }
+
+            consultaEnCurso = true;
+            setColumnSearchLoading(true);
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(function () {
+                    window.location.href = url.toString();
+                });
+            });
         }
 
         /**
@@ -328,13 +350,7 @@
                 return;
             }
             appliedColumnSearch = nextState;
-            consultaEnCurso = true;
-            setColumnSearchLoading(true);
-            window.requestAnimationFrame(function () {
-                window.requestAnimationFrame(function () {
-                    window.location.href = url.toString();
-                });
-            });
+            navegarDetalleConLoading(url);
         }
 
         function clearColumnSearch() {
@@ -362,13 +378,7 @@
                 setColumnSearchLoading(false);
                 return;
             }
-            consultaEnCurso = true;
-            setColumnSearchLoading(true);
-            window.requestAnimationFrame(function () {
-                window.requestAnimationFrame(function () {
-                    window.location.href = url.toString();
-                });
-            });
+            navegarDetalleConLoading(url);
         }
 
         function togglePanelFiltros() {
@@ -462,11 +472,14 @@
                 return;
             }
             const initial = filterDialogState && filterDialogState.initial;
-            filtroAplicarBtn.disabled = Boolean(
-                filterDialogState
-                && filterDialogState.disableUntilChanged
-                && sameFilterCriterion(initial, getCurrentFilterDialogState())
-            );
+            const current = getCurrentFilterDialogState();
+            if (!filterDialogState) {
+                filtroAplicarBtn.disabled = true;
+                return;
+            }
+            filtroAplicarBtn.disabled = filterDialogState.disableUntilChanged
+                ? sameFilterCriterion(initial, current)
+                : !hasUsefulFilterCriterion(fieldConfig[filterDialogState.field], current);
         }
 
         function renderTextValueControl(mode, initialValue) {
@@ -660,9 +673,7 @@
                 },
                 disableUntilChanged: initial.disableUntilChanged
             };
-            if (filtroAplicarBtn) {
-                filtroAplicarBtn.disabled = initial.disableUntilChanged;
-            }
+            syncFilterApplyButton();
             dialog.hidden = false;
             dialogBackdrop.hidden = false;
         }
@@ -690,7 +701,7 @@
                         !cargadas ||
                         !filterDialogState ||
                         filterDialogState.field !== config.field ||
-                        campoFiltroActivo.value !== config.field
+                        getActiveFilterField() !== config.field
                     ) {
                         return;
                     }
@@ -703,6 +714,12 @@
             } else {
                 renderTextValueControl(config.mode, filterDialogState.initial.values[0] || "");
             }
+        }
+
+        function getActiveFilterField() {
+            return (campoFiltroActivo && campoFiltroActivo.value)
+                || (filterDialogState && filterDialogState.field)
+                || "";
         }
 
         function closeFilterDialog() {
@@ -722,7 +739,7 @@
         }
 
         function collectFilterValues() {
-            const config = fieldConfig[campoFiltroActivo.value];
+            const config = fieldConfig[getActiveFilterField()];
             if (!config) {
                 return [];
             }
@@ -851,7 +868,7 @@
                 url.searchParams.delete("col_" + field);
             }
             url.searchParams.delete("page");
-            window.location.href = url.toString();
+            navegarDetalleConLoading(url);
         }
 
         if (toggleFiltros) {
@@ -908,7 +925,11 @@
 
         form.addEventListener("submit", function (event) {
             event.preventDefault();
-            if (!campoFiltroActivo || !campoFiltroActivo.value) {
+            if (consultaEnCurso) {
+                return;
+            }
+            const field = getActiveFilterField();
+            if (!field) {
                 return;
             }
             if (filtroAplicarBtn && filtroAplicarBtn.disabled) {
@@ -916,7 +937,6 @@
             }
             const values = collectFilterValues();
             const url = new URL(window.location.href);
-            const field = campoFiltroActivo.value;
             const operator = operadorFiltro.value || "0";
             if (filterDialogState && filterDialogState.source === "columna") {
                 url.searchParams.delete("col_" + field);
@@ -941,8 +961,22 @@
                 replaceFilterValuesForField(url, field, operator, values);
             }
             closeFilterDialog();
-            window.location.href = url.toString();
+            navegarDetalleConLoading(url);
         });
+
+        const limpiarFiltrosLink = filtrosActivos
+            ? filtrosActivos.querySelector(".pof-visual-clear-filters-link")
+            : null;
+        if (limpiarFiltrosLink) {
+            limpiarFiltrosLink.addEventListener("click", function (event) {
+                if (event.defaultPrevented || event.button !== 0
+                    || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                    return;
+                }
+                event.preventDefault();
+                navegarDetalleConLoading(limpiarFiltrosLink.href);
+            });
+        }
 
         if (cerrarDialogoFiltro) {
             cerrarDialogoFiltro.addEventListener("click", closeFilterDialog);

@@ -206,6 +206,21 @@
     font-size: 13px;
 }
 
+.pof-filter-chip-remove-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-primary-dark);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 19px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    transition: color 140ms ease, font-variation-settings 140ms ease;
+}
+
+.pof-filter-chip-remove:hover .pof-filter-chip-remove-icon.material-symbols-outlined,
+.pof-filter-chip-remove:focus-visible .pof-filter-chip-remove-icon.material-symbols-outlined {
+    color: var(--pof-danger);
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
 .pof-cue-total-icon.pof-material-symbol.material-symbols-outlined {
     display: inline-flex;
     font-size: 13px;
