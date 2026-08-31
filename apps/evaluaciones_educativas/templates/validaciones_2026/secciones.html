@@ -355,7 +355,7 @@
         </div>
         <div class="stat-mini-item">
           <div class="stat-mini-dot validado"></div>
-          <span>Validadas: <strong id="cntValidado">{{ total|add:"-1"|add:"1" }}</strong></span>
+          <span>Validadas: <strong id="cntValidado">{{ total }}</strong></span>
         </div>
         <div class="stat-mini-item">
           <div class="stat-mini-dot deshabilitado"></div>
@@ -458,41 +458,42 @@
                   {% elif seccion.seccion_creada %}
                     <small style="color:var(--primary); font-size:0.72rem;"><i class="bi bi-plus-circle me-1"></i>Creada manualmente</small>
                   {% elif seccion.estado_validacion == 'APROBADO' %}
-                    <small style="color:var(--success); font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Validada Correctamente</small>
+                    <small style="color:var(--green); font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Validada Correctamente</small>
                     {% else %}—{% endif %}
                 </td>
                 <td>
                   <div class="acciones-wrap" id="acciones-{{ seccion.public_id }}">
-                    {% if establecimiento.carga_completa %}
-                      <!-- Carga completa: todos los botones deshabilitados -->
-                      <button class="btn-accion btn-accion-disabled" disabled>
-                        <i class="bi bi-lock-fill"></i>Bloqueado
-                      </button>
-                    {% elif seccion.estado_validacion == 'PENDIENTE' %}
-                      <button class="btn-accion btn-validar"
-                              onclick="accionConProteccion(this, () => validarSeccion('{{ seccion.public_id }}'))">
+                    {% if seccion.estado_validacion == 'PENDIENTE' %}
+                      <button class="btn-accion btn-validar {% if establecimiento.carga_completa %}btn-accion-disabled{% endif %}"
+                              {% if not establecimiento.carga_completa %}onclick="accionConProteccion(this, () => validarSeccion('{{ seccion.public_id }}'))"{% endif %}
+                              {% if establecimiento.carga_completa %}disabled{% endif %}>
                         <i class="bi bi-check-lg"></i>Validar
                       </button>
-                      <button class="btn-accion btn-deshab"
-                              onclick="accionConProteccion(this, () => abrirModalDeshabilitar('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}'))">
+                      <button class="btn-accion btn-deshab {% if establecimiento.carga_completa %}btn-accion-disabled{% endif %}"
+                              {% if not establecimiento.carga_completa %}onclick="accionConProteccion(this, () => abrirModalDeshabilitar('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}'))"{% endif %}
+                              {% if establecimiento.carga_completa %}disabled{% endif %}>
                         <i class="bi bi-slash-circle"></i>Deshabilitar
                       </button>
-                      <button class="btn-accion btn-modmat"
-                              onclick="abrirModalModificarMat('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}', {{ seccion.matricula|default:'null' }})">
+                      <button class="btn-accion btn-modmat {% if establecimiento.carga_completa %}btn-accion-disabled{% endif %}"
+                              {% if not establecimiento.carga_completa %}onclick="abrirModalModificarMat('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}', {{ seccion.matricula|default:'null' }})"{% endif %}
+                              {% if establecimiento.carga_completa %}disabled{% endif %}>
                         <i class="bi bi-pencil"></i>Modificar Matrícula
                       </button>
                     {% elif seccion.estado_validacion == 'APROBADO' or seccion.estado_validacion == 'MODIFICADO' %}
-                      <button class="btn-accion btn-deshab"
-                              onclick="accionConProteccion(this, () => abrirModalDeshabilitar('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}'))">
+                      <button class="btn-accion btn-deshab {% if establecimiento.carga_completa %}btn-accion-disabled{% endif %}"
+                              {% if not establecimiento.carga_completa %}onclick="accionConProteccion(this, () => abrirModalDeshabilitar('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}'))"{% endif %}
+                              {% if establecimiento.carga_completa %}disabled{% endif %}>
                         <i class="bi bi-slash-circle"></i>Deshabilitar
                       </button>
-                      <button class="btn-accion btn-modmat"
-                              onclick="abrirModalModificarMat('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}', {{ seccion.matricula|default:'null' }})">
+                      <button class="btn-accion btn-modmat {% if establecimiento.carga_completa %}btn-accion-disabled{% endif %}"
+                              {% if not establecimiento.carga_completa %}onclick="abrirModalModificarMat('{{ seccion.public_id }}', '{{ seccion.seccion }}-{{ seccion.get_turno_display|escapejs }}', {{ seccion.matricula|default:'null' }})"{% endif %}
+                              {% if establecimiento.carga_completa %}disabled{% endif %}>
                         <i class="bi bi-pencil"></i>Modificar Matrícula
                       </button>
                     {% elif seccion.estado_validacion == 'DESHABILITADO' %}
-                      <button class="btn-accion btn-validar"
-                              onclick="accionConProteccion(this, () => validarSeccion('{{ seccion.public_id }}'))">
+                      <button class="btn-accion btn-validar {% if establecimiento.carga_completa %}btn-accion-disabled{% endif %}"
+                              {% if not establecimiento.carga_completa %}onclick="accionConProteccion(this, () => validarSeccion('{{ seccion.public_id }}'))"{% endif %}
+                              {% if establecimiento.carga_completa %}disabled{% endif %}>
                         <i class="bi bi-check-lg"></i>Re-habilitar
                       </button>
                     {% endif %}
@@ -1042,7 +1043,7 @@
           if (motivo) {
             tdMot.innerHTML = `<small class="text-muted" style="font-size:0.72rem;">${motivo}</small>`;
           } else if (estado === 'APROBADO') {
-            tdMot.innerHTML = `<small style="color:var(--success); font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Validada Correctamente</small>`;
+            tdMot.innerHTML = `<small style="color:var(--green); font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Validada Correctamente</small>`;
           } else if (estado !== 'DESHABILITADO') {
             tdMot.innerHTML = '—';
           }
@@ -1098,11 +1099,35 @@
             if (data.carga_completa) {
               btnVC.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>Modificar carga`;
               btnVC.classList.add('activa');
-              btnVC.disabled = false; // el toggle lo re-habilitamos
-              // Bloquear todos los botones de acción y agregar sección
-              document.querySelectorAll('.acciones-wrap .btn-accion').forEach(b => {
-                b.disabled = true;
-                b.classList.add('btn-accion-disabled');
+              btnVC.disabled = false;
+              // Bloquear: deshabilitar botones según el estado de cada sección
+              document.querySelectorAll('#tablaSecciones tr[id^="fila-"]').forEach(fila => {
+                const pid = fila.id.replace('fila-', '');
+                const accDiv = document.getElementById('acciones-' + pid);
+                if (!accDiv) return;
+                const secLetra = (fila.dataset.seccion || '').toUpperCase();
+                const secTurno = fila.querySelector('td:nth-child(4) span')?.textContent || '';
+                const badgeTd  = document.getElementById('td-est-' + pid);
+                const badgeEl  = badgeTd ? badgeTd.querySelector('.estado-badge') : null;
+                let estado = 'PENDIENTE';
+                if (badgeEl) {
+                  if (badgeEl.classList.contains('badge-validado'))       estado = 'APROBADO';
+                  else if (badgeEl.classList.contains('badge-modificado'))    estado = 'MODIFICADO';
+                  else if (badgeEl.classList.contains('badge-deshabilitado')) estado = 'DESHABILITADO';
+                }
+                if (estado === 'APROBADO' || estado === 'MODIFICADO') {
+                  accDiv.innerHTML = `
+                    <button class="btn-accion btn-deshab btn-accion-disabled" disabled><i class="bi bi-slash-circle"></i>Deshabilitar</button>
+                    <button class="btn-accion btn-modmat btn-accion-disabled" disabled><i class="bi bi-pencil"></i>Modificar Matrícula</button>`;
+                } else if (estado === 'DESHABILITADO') {
+                  accDiv.innerHTML = `
+                    <button class="btn-accion btn-validar btn-accion-disabled" disabled><i class="bi bi-check-lg"></i>Re-habilitar</button>`;
+                } else {
+                  accDiv.innerHTML = `
+                    <button class="btn-accion btn-validar btn-accion-disabled" disabled><i class="bi bi-check-lg"></i>Validar</button>
+                    <button class="btn-accion btn-deshab btn-accion-disabled" disabled><i class="bi bi-slash-circle"></i>Deshabilitar</button>
+                    <button class="btn-accion btn-modmat btn-accion-disabled" disabled><i class="bi bi-pencil"></i>Modificar Matrícula</button>`;
+                }
               });
               if (btnAgregar) { btnAgregar.disabled = true; btnAgregar.style.opacity = '0.5'; btnAgregar.style.cursor = 'not-allowed'; }
               showToast('✅ <strong>Carga completa</strong> confirmada para este establecimiento.', 'success');
@@ -1110,10 +1135,34 @@
               btnVC.innerHTML = `<i class="bi bi-patch-check me-1"></i>Validación completa`;
               btnVC.classList.remove('activa');
               btnVC.disabled = false;
-              // Re-habilitar los botones de acción
-              document.querySelectorAll('.acciones-wrap .btn-accion').forEach(b => {
-                b.disabled = false;
-                b.classList.remove('btn-accion-disabled');
+              // Desbloquear: regenerar botones correctos según estado actual de cada sección
+              document.querySelectorAll('#tablaSecciones tr[id^="fila-"]').forEach(fila => {
+                const pid = fila.id.replace('fila-', '');
+                const accDiv = document.getElementById('acciones-' + pid);
+                if (!accDiv) return;
+                const secLetra = (fila.dataset.seccion || '').toUpperCase();
+                const secTurno = fila.querySelector('td:nth-child(4) span')?.textContent || '';
+                const badgeTd = document.getElementById('td-est-' + pid);
+                const badgeEl = badgeTd ? badgeTd.querySelector('.estado-badge') : null;
+                let estado = 'PENDIENTE';
+                if (badgeEl) {
+                  if (badgeEl.classList.contains('badge-validado'))      estado = 'APROBADO';
+                  else if (badgeEl.classList.contains('badge-modificado'))   estado = 'MODIFICADO';
+                  else if (badgeEl.classList.contains('badge-deshabilitado')) estado = 'DESHABILITADO';
+                }
+                if (estado === 'APROBADO' || estado === 'MODIFICADO') {
+                  accDiv.innerHTML = `
+                    <button class="btn-accion btn-deshab" onclick="accionConProteccion(this, () => abrirModalDeshabilitar('${pid}', '${secLetra}-${secTurno}'))"><i class="bi bi-slash-circle"></i>Deshabilitar</button>
+                    <button class="btn-accion btn-modmat" onclick="abrirModalModificarMat('${pid}', '${secLetra}-${secTurno}', null)"><i class="bi bi-pencil"></i>Modificar Matrícula</button>`;
+                } else if (estado === 'DESHABILITADO') {
+                  accDiv.innerHTML = `
+                    <button class="btn-accion btn-validar" onclick="accionConProteccion(this, () => validarSeccion('${pid}'))"><i class="bi bi-check-lg"></i>Re-habilitar</button>`;
+                } else {
+                  accDiv.innerHTML = `
+                    <button class="btn-accion btn-validar" onclick="accionConProteccion(this, () => validarSeccion('${pid}'))"><i class="bi bi-check-lg"></i>Validar</button>
+                    <button class="btn-accion btn-deshab" onclick="accionConProteccion(this, () => abrirModalDeshabilitar('${pid}', '${secLetra}-${secTurno}'))"><i class="bi bi-slash-circle"></i>Deshabilitar</button>
+                    <button class="btn-accion btn-modmat" onclick="abrirModalModificarMat('${pid}', '${secLetra}-${secTurno}', null)"><i class="bi bi-pencil"></i>Modificar Matrícula</button>`;
+                }
               });
               if (btnAgregar) { btnAgregar.disabled = false; btnAgregar.style.opacity = ''; btnAgregar.style.cursor = ''; }
               showToast('Carga reabierta. Podés modificar las secciones.', 'info');

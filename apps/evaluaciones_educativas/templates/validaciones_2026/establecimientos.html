@@ -291,6 +291,15 @@
 
       /* Hidden card for search */
       .est-card.hidden-search { display: none; }
+
+      /* ── BADGE CARGA COMPLETA ── */
+      .badge-carga {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.68rem; font-weight: 700; border-radius: 20px; padding: 3px 10px;
+        letter-spacing: 0.3px; margin-top: 6px;
+      }
+      .badge-carga-ok  { background: #dcfce7; color: #14532d; }
+      .badge-carga-inc { background: #fef3c7; color: #92400e; }
     </style>
   </head>
   <body>
@@ -432,13 +441,24 @@
             <!-- Badge estado -->
             <div id="badge-{{ est.cueanexo }}">
               {% if est.participa_aprender == 'participa' %}
-                <span class="badge-estado badge-validado"><i class="bi bi-check-circle-fill"></i>Validado</span>
+                <span class="badge-estado badge-validado"><i class="bi bi-check-circle-fill"></i>Est. Validado</span>
               {% elif est.participa_aprender == 'no participa' %}
                 <span class="badge-estado badge-no-participa"><i class="bi bi-x-circle-fill"></i>No participa</span>
               {% else %}
                 <span class="badge-estado badge-sin-validar"><i class="bi bi-clock"></i>Sin validar</span>
               {% endif %}
             </div>
+
+            {% if est.participa_aprender != 'no participa' %}
+            <!-- Badge carga completa de secciones -->
+            <div id="carga-badge-{{ est.cueanexo }}" style="margin-top:4px;">
+              {% if est.carga_completa %}
+                <span class="badge-carga badge-carga-ok"><i class="bi bi-patch-check-fill"></i>Carga de secciones/matriculas completa</span>
+              {% else %}
+                <span class="badge-carga badge-carga-inc"><i class="bi bi-hourglass-split"></i>Carga de secciones/matriculas incompleta</span>
+              {% endif %}
+            </div>
+            {% endif %}
 
             <!-- Info cabecera (solo si participa) -->
             <div id="cabecera-info-{{ est.cueanexo }}" class="card-cabecera-info {% if not est.cabecera %}d-none{% endif %}">
@@ -584,12 +604,11 @@
               Seleccioná la cabecera correspondiente. Podés buscar por nombre, localidad o dirección.
             </p>
             <input type="text" class="cabecera-search" id="cabeceraSearch"
-                   placeholder="&#xF52A;  Buscar cabecera..." oninput="filtrarCabeceras()" />
+                   placeholder="Buscar cabecera..." oninput="filtrarCabeceras()" />
             <div class="tabla-cabeceras-wrap">
               <table class="tabla-cabeceras" id="tablaCabeceras">
                 <thead>
                   <tr>
-                    <th>Cód. Depto.</th>
                     <th>Nombre</th>
                     <th>Localidad</th>
                     <th>Dirección</th>
@@ -600,7 +619,6 @@
                   <tr onclick="seleccionarCabecera({{ cab.pk }}, '{{ cab.nombre_cabecera|escapejs }}', '{{ cab.localidad|default:''|escapejs }}', '{{ cab.codigo_departamento|default:''|escapejs }}', '{{ cab.direccion|default:''|escapejs }}')"
                       data-search="{{ cab.nombre_cabecera|lower }} {{ cab.localidad|default:''|lower }} {{ cab.direccion|default:''|lower }} {{ cab.codigo_departamento|default:''|lower }}"
                       id="cabRow-{{ cab.pk }}">
-                    <td>{{ cab.codigo_departamento|default:"—" }}</td>
                     <td class="fw-semibold">{{ cab.nombre_cabecera }}</td>
                     <td>{{ cab.localidad|default:"—" }}</td>
                     <td>{{ cab.direccion|default:"—" }}</td>
@@ -798,10 +816,11 @@
         const card  = document.getElementById('card-' + cue);
         const bar   = document.getElementById('status-bar-' + cue);
         const badge = document.getElementById('badge-' + cue);
-        const motivoInfo = document.getElementById('motivo-info-' + cue);
-        const cabInfo    = document.getElementById('cabecera-info-' + cue);
-        const btnSec     = document.getElementById('btn-secciones-' + cue);
-        const btnModCab  = document.getElementById('btn-mod-cab-' + cue);
+        const motivoInfo  = document.getElementById('motivo-info-' + cue);
+        const cabInfo     = document.getElementById('cabecera-info-' + cue);
+        const btnSec      = document.getElementById('btn-secciones-' + cue);
+        const btnModCab   = document.getElementById('btn-mod-cab-' + cue);
+        const cargaBadge  = document.getElementById('carga-badge-' + cue);
 
         // Clases de la card
         card.classList.remove('sin-validar', 'validado', 'no-participa');
@@ -810,8 +829,9 @@
         if (participa) {
           card.classList.add('validado');
           bar.classList.add('validado');
-          badge.innerHTML = `<span class="badge-estado badge-validado"><i class="bi bi-check-circle-fill"></i>Validado</span>`;
+          badge.innerHTML = `<span class="badge-estado badge-validado"><i class="bi bi-check-circle-fill"></i>Est. Validado</span>`;
           motivoInfo.classList.add('d-none');
+          if (cargaBadge) cargaBadge.style.display = ''; // mostrar badge de carga
           if (btnSec) btnSec.disabled = true; // aún no tiene cabecera
         } else {
           card.classList.add('no-participa');
@@ -819,6 +839,7 @@
           badge.innerHTML = `<span class="badge-estado badge-no-participa"><i class="bi bi-x-circle-fill"></i>No participa</span>`;
           motivoInfo.classList.remove('d-none');
           motivoInfo.innerHTML = `<i class="bi bi-info-circle"></i>${motivo}`;
+          if (cargaBadge) cargaBadge.style.display = 'none'; // ocultar badge de carga
           if (cabInfo) cabInfo.classList.add('d-none');
           if (btnSec) { btnSec.disabled = true; btnSec.outerHTML = `<button class="btn-ir-secciones" disabled id="btn-secciones-${cue}" onclick="event.stopPropagation()"><i class="bi bi-list-check"></i>Ver secciones</button>`; }
           if (btnModCab) btnModCab.innerHTML = '';
