@@ -24,8 +24,16 @@ class BaseStep:
     name = "BaseStep"
 
     @classmethod
+    def before(cls, obj, context):
+        pass
+
+    @classmethod
     def apply(cls, obj, context):
         return obj
+
+    @classmethod
+    def after(cls, obj, context):
+        pass
 
 
 class Pipeline:
