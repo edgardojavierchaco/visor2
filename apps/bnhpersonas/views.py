@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db import transaction
@@ -151,7 +152,7 @@ def filtrar_localidades(request):
 
     return JsonResponse(list(qs), safe=False)
 
-
+@login_required
 def buscar_persona(request):
     cuil = request.GET.get("cuil")
 

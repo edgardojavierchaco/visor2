@@ -1,6 +1,15 @@
 from django.urls import path
 
-from .api import catalogos, expediente, ofertas, regiones, regionales, supervisor
+from .api import (
+    catalogos, 
+    expediente, 
+    ofertas, 
+    regiones, 
+    regionales, 
+    supervisor,
+    mapa,
+)
+
 from .views import (
     SupervisoresList,
     SupervisorEditar,
@@ -72,4 +81,7 @@ urlpatterns = [
     path("supervisores/<int:pk>/detalle/", detalle_supervisor, name="detalle"),
     path("supervisores/<int:pk>/editar/", SupervisorEditar, name="editar"),
     path("supervisores/exportar-excel/", exportar_excel, name="exportar_excel"),
+    
+    # Mapa Escuelas asignadas
+    path("api/mapa/supervisores/",mapa.mapa_supervisores,name="mapa_supervisores"),
 ]
