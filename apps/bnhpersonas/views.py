@@ -222,7 +222,8 @@ def carga_personal(request, pk=None):
 
     persona_form = PersonaForm(
         request.POST or None,
-        instance=persona
+        instance=persona,
+        initial={"cuil": request.GET.get("cuil", "")} if not persona else None,
     )
 
 
@@ -433,6 +434,9 @@ def carga_personal(request, pk=None):
             "actividad_form":actividad_form,
 
             "actividades":actividades,
+            "especial_alta": request.GET.get("especial_alta") == "1",
+            "especial_callback_url": request.GET.get("especial_callback_url", ""),
+            "especial_next_url": request.GET.get("next", ""),
 
         }
     )
@@ -605,7 +609,7 @@ def guardar_persona_ajax(request):
         obj.usuario_modificacion = request.user
         obj.save()
         
-        is_new=persona_id is None
+        is_new=not persona_id
 
         return JsonResponse({
             "ok": True,
