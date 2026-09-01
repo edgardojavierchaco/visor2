@@ -501,7 +501,14 @@ def _asegurar_docente_banco(docente, especial_context, user):
         return None, False, True
 
 
-def _url_carga_docente(cuil, next_url=None, return_label="Volver a Especial"):
+def _url_carga_docente(
+    cuil,
+    next_url=None,
+    return_label="Volver a Especial",
+    *,
+    alta_banco_especial=False,
+    especial_context=None,
+):
     params = {}
     if cuil:
         params["cuil"] = cuil
@@ -509,6 +516,15 @@ def _url_carga_docente(cuil, next_url=None, return_label="Volver a Especial"):
         params["next"] = next_url
     if return_label:
         params["return_label"] = return_label
+    if alta_banco_especial and especial_context:
+        cueanexo = especial_context.get("cueanexo")
+        ciclo = especial_context.get("ciclo")
+        if cueanexo and ciclo:
+            params["especial_alta"] = "1"
+            params["especial_callback_url"] = (
+                f"{reverse('especial:agregar_docente_banco_desde_bnh')}?"
+                f"{urlencode({'cueanexo': cueanexo, 'ciclo': ciclo.pk})}"
+            )
     return f"{URL_CARGA_DOCENTE}?{urlencode(params)}" if params else URL_CARGA_DOCENTE
 
 
@@ -522,6 +538,48 @@ def _url_modal_docentes(especial_context, cuil=""):
     if cuil:
         params["cuil"] = cuil
     return f"{reverse('especial:docentes')}?{urlencode(params)}"
+
+
+@especial_required
+def agregar_docente_banco_desde_bnh(request):
+    """Agrega al banco un docente recién creado en BNH."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido."}, status=405)
+
+    context = contexto_base(request, "docentes")
+    especial_context = context["especial_context"]
+    if not especial_context.get("puede_operar") or especial_context.get("ciclo_cerrado"):
+        return JsonResponse(
+            {"ok": False, "error": "El contexto seleccionado no permite operar."},
+            status=403,
+        )
+
+    cuil = _solo_digitos(request.POST.get("cuil"))
+    if len(cuil) != 11:
+        return JsonResponse({"ok": False, "error": "El CUIL no es válido."}, status=400)
+
+    docente = _buscar_docente(cuil)
+    if not docente:
+        return JsonResponse(
+            {"ok": False, "error": "El docente no existe todavía en BNH."},
+            status=404,
+        )
+
+    try:
+        banco, creado, tabla_pendiente = _asegurar_docente_banco(
+            docente,
+            especial_context,
+            request.user,
+        )
+    except (IntegrityError, ValidationError):
+        return JsonResponse(
+            {"ok": False, "error": "No se pudo agregar el docente al banco."},
+            status=409,
+        )
+
+    if tabla_pendiente:
+        return JsonResponse({"ok": False, "error": MSG_BANCO_DOCENTES_PENDIENTE}, status=503)
+    return JsonResponse({"ok": True, "created": creado, "banco_id": banco.pk if banco else None})
 
 
 def _url_docentes(
@@ -1055,6 +1113,13 @@ def docentes(request):
 
     next_url = _url_modal_docentes(especial_context, cuil_buscado)
     url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
+    url_carga_profesor = _url_carga_docente(
+        cuil_buscado,
+        next_url,
+        "Volver a Docentes Especial",
+        alta_banco_especial=True,
+        especial_context=especial_context,
+    )
     docentes_banco_tabla_pendiente = False
     page_obj = Paginator([], DOCENTES_POR_PAGINA).get_page(1)
     secciones_disponibles = []
@@ -1188,6 +1253,7 @@ def docentes(request):
             "cuil_buscado": cuil_buscado,
             "cuil_error": cuil_error,
             "url_carga_docente": url_carga_docente,
+            "url_carga_profesor": url_carga_profesor,
             "url_editar_docente": url_carga_docente,
             "modal_docente_abierto": abrir_modal,
             "abrir_modal_asignaciones": abrir_modal_asignaciones,

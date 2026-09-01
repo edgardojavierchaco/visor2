@@ -3,6 +3,10 @@
 {% csrf_token %}
 
 <input type="hidden" name="persona_id" id="persona_id">
+{% if especial_alta %}
+<input type="hidden" name="especial_callback_url" value="{{ especial_callback_url }}">
+<input type="hidden" name="especial_next_url" value="{{ especial_next_url }}">
+{% endif %}
 
 
 <div class="row g-3">
@@ -14,7 +18,8 @@
             type="text"
             id="id_cuil"
             name="cuil"
-            autocomplete="off">
+            autocomplete="off"
+            value="{{ form.cuil.value|default:'' }}">
         <small id="cuil_status"></small>
     </div>
 
