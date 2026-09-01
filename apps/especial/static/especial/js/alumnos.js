@@ -339,6 +339,27 @@
 
     function installExpansion() {
         document.addEventListener("click", function (event) {
+            var actionOptionsToggle = event.target.closest("[data-especial-alumno-action-options-toggle]");
+            if (actionOptionsToggle) {
+                event.preventDefault();
+                var optionsId = actionOptionsToggle.getAttribute("aria-controls");
+                var options = optionsId && document.getElementById(optionsId);
+                if (!options) return;
+                var expanded = actionOptionsToggle.getAttribute("aria-expanded") === "true";
+                document.querySelectorAll("[data-especial-alumno-action-options]").forEach(function (otherOptions) {
+                    if (otherOptions === options) return;
+                    otherOptions.hidden = true;
+                    var otherToggle = document.querySelector(
+                        "[aria-controls='" + otherOptions.id + "']"
+                    );
+                    if (otherToggle) otherToggle.setAttribute("aria-expanded", "false");
+                });
+                options.hidden = expanded;
+                actionOptionsToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+                if (!expanded) positionAlumnoActionOptions(actionOptionsToggle, options);
+                return;
+            }
+
             var toggle = event.target.closest("[data-cef-alumno-secciones-toggle]");
             if (toggle) {
                 var secciones = toggle.closest(".cef-alumno-secciones");
@@ -361,26 +382,7 @@
             toggle = event.target.closest("[data-especial-historial-toggle]");
             if (toggle) {
                 event.preventDefault();
-                var detailId = toggle.getAttribute("data-especial-historial-detail");
-                var detail = detailId && document.getElementById(detailId);
-                if (!detail) return;
-                var historyTable = toggle.closest("table");
-                var historyExpanded = toggle.getAttribute("aria-expanded") === "true";
-                if (!historyExpanded && historyTable) {
-                    historyTable.querySelectorAll("[data-especial-historial-toggle][aria-expanded='true']").forEach(function (otherToggle) {
-                        if (otherToggle === toggle) return;
-                        otherToggle.setAttribute("aria-expanded", "false");
-                        var otherId = otherToggle.getAttribute("data-especial-historial-detail");
-                        var otherDetail = otherId && document.getElementById(otherId);
-                        if (otherDetail) {
-                            otherDetail.hidden = true;
-                            otherDetail.setAttribute("aria-hidden", "true");
-                        }
-                    });
-                }
-                detail.hidden = historyExpanded;
-                detail.setAttribute("aria-hidden", historyExpanded ? "true" : "false");
-                toggle.setAttribute("aria-expanded", historyExpanded ? "false" : "true");
+                toggleHistorial(toggle);
                 return;
             }
 
@@ -416,6 +418,91 @@
             } else if (window.confirm("Se iniciará un nuevo período activo en Educación Especial para el establecimiento y ciclo seleccionados.")) {
                 submitReincorporacion(form);
             }
+        });
+    }
+
+    function setHistorialState(toggle, expanded) {
+        if (!toggle) return;
+        var detailId = toggle.getAttribute("data-especial-historial-detail")
+            || toggle.getAttribute("aria-controls");
+        var detail = detailId && document.getElementById(detailId);
+        if (!detail) return;
+        detail.hidden = !expanded;
+        detail.setAttribute("aria-hidden", expanded ? "false" : "true");
+        var scope = toggle.closest("table") || document;
+        scope.querySelectorAll("[data-especial-historial-toggle]").forEach(function (historyToggle) {
+            var controlledId = historyToggle.getAttribute("data-especial-historial-detail")
+                || historyToggle.getAttribute("aria-controls");
+            if (controlledId === detail.id) {
+                historyToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+            }
+        });
+    }
+
+    function toggleHistorial(toggle) {
+        var historyExpanded = toggle.getAttribute("aria-expanded") === "true";
+        var detailId = toggle.getAttribute("data-especial-historial-detail")
+            || toggle.getAttribute("aria-controls");
+        var detail = detailId && document.getElementById(detailId);
+        if (!detail) return;
+
+        var historyTable = toggle.closest("table");
+        if (!historyExpanded && historyTable) {
+            historyTable.querySelectorAll("[data-especial-historial-toggle]").forEach(function (otherToggle) {
+                var otherId = otherToggle.getAttribute("data-especial-historial-detail")
+                    || otherToggle.getAttribute("aria-controls");
+                if (otherId !== detail.id) setHistorialState(otherToggle, false);
+            });
+        }
+        setHistorialState(toggle, !historyExpanded);
+    }
+
+    function positionAlumnoActionOptions(toggle, options) {
+        if (!toggle || !options || options.hidden) return;
+
+        var viewportPadding = 8;
+        var gap = 8;
+        var width = Math.min(220, Math.max(120, window.innerWidth - viewportPadding * 2));
+        var toggleRect = toggle.getBoundingClientRect();
+
+        options.style.position = "fixed";
+        options.style.width = width + "px";
+        options.style.maxHeight = "none";
+        options.style.overflowY = "visible";
+
+        var contentHeight = Math.max(options.scrollHeight, 1);
+        var maxHeight = Math.max(40, window.innerHeight - viewportPadding * 2);
+        var height = Math.min(contentHeight, maxHeight);
+        var left = toggleRect.left - width - gap;
+        if (left < viewportPadding) left = toggleRect.right + gap;
+        left = Math.max(
+            viewportPadding,
+            Math.min(left, window.innerWidth - width - viewportPadding)
+        );
+
+        var top = toggleRect.top;
+        if (top + height > window.innerHeight - viewportPadding) {
+            top = window.innerHeight - height - viewportPadding;
+        }
+        top = Math.max(
+            viewportPadding,
+            Math.min(top, window.innerHeight - height - viewportPadding)
+        );
+
+        options.style.left = left + "px";
+        options.style.right = "auto";
+        options.style.top = top + "px";
+        options.style.bottom = "auto";
+        options.style.maxHeight = height + "px";
+        options.style.overflowY = contentHeight > height ? "auto" : "visible";
+        options.style.zIndex = "1095";
+    }
+
+    function repositionAlumnoActionOptions() {
+        document.querySelectorAll("[data-especial-alumno-action-options]").forEach(function (options) {
+            if (options.hidden) return;
+            var toggle = document.querySelector("[aria-controls='" + options.id + "']");
+            if (toggle) positionAlumnoActionOptions(toggle, options);
         });
     }
 
@@ -794,6 +881,8 @@
         };
         if (document.readyState === "complete") onWindowLoad();
         else window.addEventListener("load", onWindowLoad, { once: true });
+        window.addEventListener("scroll", repositionAlumnoActionOptions, true);
+        window.addEventListener("resize", repositionAlumnoActionOptions);
     }
 
     function init(root) {

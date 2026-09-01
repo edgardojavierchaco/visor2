@@ -1,12 +1,16 @@
 # apps/especial/views_carga_seccion.py
 # -*- coding: utf-8 -*-
 
+from collections import defaultdict
 import logging
 import re
+import unicodedata
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Count, Q
@@ -50,6 +54,20 @@ from .views_docentes import _buscar_docente, _docente_row
 
 logger = logging.getLogger(__name__)
 
+SECCIONES_VISTA_DEFAULT = "actuales"
+SECCIONES_VISTAS = {"actuales", "historial"}
+SECCIONES_POR_PAGINA = 10
+SECCIONES_BUSQUEDA_MAX_LENGTH = 100
+SECCIONES_BUSQUEDA_EQUIVALENCIAS = {
+    "a": "aáàäâãå",
+    "e": "eéèëê",
+    "i": "iíìïî",
+    "n": "nñ",
+    "o": "oóòöôõ",
+    "u": "uúùüû",
+}
+
+
 def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
 
@@ -64,6 +82,276 @@ def _errores_form(form):
 
 def _solo_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
+
+
+def _secciones_vista_param(request):
+    vista = (request.GET.get("vista") or SECCIONES_VISTA_DEFAULT).strip().lower()
+    return vista if vista in SECCIONES_VISTAS else SECCIONES_VISTA_DEFAULT
+
+
+def _secciones_busqueda_param(request):
+    bruto = " ".join(str(request.GET.get("q") or "").split())
+    if not bruto:
+        return "", ""
+    if len(bruto) > SECCIONES_BUSQUEDA_MAX_LENGTH:
+        return (
+            "",
+            f"El término de búsqueda no puede superar los {SECCIONES_BUSQUEDA_MAX_LENGTH} caracteres.",
+        )
+    return bruto, ""
+
+
+def _pagina_secciones_param(request):
+    try:
+        pagina = int(request.GET.get("page") or 1)
+    except (TypeError, ValueError):
+        pagina = 1
+    return max(pagina, 1)
+
+
+def _secciones_state_params(
+    especial_context,
+    *,
+    vista=SECCIONES_VISTA_DEFAULT,
+    termino="",
+    pagina=None,
+):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    if vista in SECCIONES_VISTAS:
+        params["vista"] = vista
+    if termino:
+        params["q"] = termino
+    if pagina and pagina > 1:
+        params["page"] = pagina
+    return params
+
+
+def _url_secciones(
+    especial_context,
+    *,
+    vista=SECCIONES_VISTA_DEFAULT,
+    termino="",
+    pagina=None,
+):
+    querystring = urlencode(
+        _secciones_state_params(
+            especial_context,
+            vista=vista,
+            termino=termino,
+            pagina=pagina,
+        )
+    )
+    url = reverse("especial:carga_seccion")
+    return f"{url}?{querystring}" if querystring else url
+
+
+def _secciones_busqueda_tokens(valor):
+    texto = unicodedata.normalize("NFD", str(valor or "")).casefold()
+    texto = "".join(
+        caracter
+        for caracter in texto
+        if unicodedata.category(caracter) != "Mn"
+    )
+    texto = re.sub(r"(\d)[,./-](?=\d)", r"\1", texto)
+    return [token for token in re.split(r"[\s,./-]+", texto) if token]
+
+
+def _secciones_busqueda_patron(token):
+    caracteres = []
+    for caracter in token:
+        equivalencias = SECCIONES_BUSQUEDA_EQUIVALENCIAS.get(caracter)
+        caracteres.append(
+            f"[{equivalencias}]" if equivalencias else re.escape(caracter)
+        )
+    return "".join(caracteres)
+
+
+def _secciones_historial_queryset(especial_context, termino=""):
+    if not especial_context["puede_consultar"]:
+        return SeccionEspecial.objects.none()
+
+    queryset = SeccionEspecial.objects.filter(
+        cueanexo=especial_context["cueanexo"],
+    )
+    for token in _secciones_busqueda_tokens(termino):
+        patron = _secciones_busqueda_patron(token)
+        filtros = (
+            Q(nombre_seccion__iregex=patron)
+            | Q(oferta__iregex=patron)
+            | Q(cd_tipo_seccion__descripcion__iregex=patron)
+            | Q(tipo_estructura_especial__descripcion__iregex=patron)
+            | Q(turno__descripcion__iregex=patron)
+            | Q(modalidad__descripcion__iregex=patron)
+            | Q(rango_etario__descripcion__iregex=patron)
+            | Q(cueanexo__iregex=patron)
+        )
+        if token.isdigit():
+            try:
+                numero = int(token)
+            except (TypeError, ValueError, OverflowError):
+                numero = None
+            if numero is not None and numero <= 9223372036854775807:
+                filtros |= Q(pk=numero)
+                if 1900 <= numero <= 2100:
+                    filtros |= Q(ciclo__anio=numero)
+        queryset = queryset.filter(filtros)
+    return queryset
+
+
+def _seccion_historial_key(seccion):
+    """Identidad operativa de una sección a través de sus ciclos."""
+    return (
+        seccion.cd_tipo_seccion_id,
+        seccion.nombre_seccion or "",
+        seccion.oferta or "",
+    )
+
+
+def _secciones_historial_sort_key(key):
+    tipo_id, nombre, oferta = key
+    nombre_normalizado = unicodedata.normalize("NFD", nombre or "").casefold()
+    oferta_normalizada = unicodedata.normalize("NFD", oferta or "").casefold()
+    return (
+        "".join(c for c in nombre_normalizado if unicodedata.category(c) != "Mn"),
+        "".join(c for c in oferta_normalizada if unicodedata.category(c) != "Mn"),
+        tipo_id or 0,
+    )
+
+
+def _ultimo_por_clave(asignaciones, clave):
+    vistos = set()
+    resultado = []
+    for asignacion in asignaciones:
+        valor = clave(asignacion)
+        if valor in vistos:
+            continue
+        vistos.add(valor)
+        resultado.append(asignacion)
+    return resultado
+
+
+def _secciones_historial_paginado(especial_context, queryset, pagina):
+    """Agrupa los registros de SeccionEspecial por sección operativa."""
+    matching_sections = list(
+        queryset.select_related(
+            "cd_tipo_seccion",
+            "turno",
+            "rango_etario",
+            "modalidad",
+            "tipo_estructura_especial",
+            "ciclo",
+        ).order_by(
+            "nombre_seccion",
+            "oferta",
+            "cd_tipo_seccion_id",
+            "-ciclo__anio",
+            "-pk",
+        )
+    )
+    keys = sorted(
+        {_seccion_historial_key(seccion) for seccion in matching_sections},
+        key=_secciones_historial_sort_key,
+    )
+    page_obj = Paginator(keys, SECCIONES_POR_PAGINA).get_page(pagina)
+    page_keys = list(page_obj.object_list)
+    if not page_keys:
+        return [], page_obj
+
+    key_filter = Q()
+    for tipo_id, nombre, oferta in page_keys:
+        key_filter |= Q(
+            cd_tipo_seccion_id=tipo_id,
+            nombre_seccion=nombre,
+            oferta=oferta,
+        )
+    sections = list(
+        SeccionEspecial.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+        )
+        .filter(key_filter)
+        .select_related(
+            "cd_tipo_seccion",
+            "turno",
+            "rango_etario",
+            "modalidad",
+            "tipo_estructura_especial",
+            "ciclo",
+        )
+        .order_by("nombre_seccion", "oferta", "-ciclo__anio", "-pk")
+    )
+    section_ids = [seccion.pk for seccion in sections]
+    alumnos = list(
+        AlumnoSeccion.objects.filter(seccion_id__in=section_ids)
+        .select_related("seccion", "alumno")
+        .order_by(
+            "seccion_id",
+            "alumno__apellidos",
+            "alumno__nombres",
+            "-fecha_inscripcion",
+            "-pk",
+        )
+    ) if section_ids else []
+    docentes = list(
+        DocenteSeccion.objects.filter(seccion_id__in=section_ids)
+        .select_related("seccion")
+        .order_by(
+            "seccion_id",
+            "docente_nombre_snapshot",
+            "docente_cuil",
+            "-pk",
+        )
+    ) if section_ids else []
+
+    alumnos_por_seccion = defaultdict(list)
+    for alumno in alumnos:
+        alumnos_por_seccion[alumno.seccion_id].append(alumno)
+    docentes_por_seccion = defaultdict(list)
+    for docente in docentes:
+        docentes_por_seccion[docente.seccion_id].append(docente)
+
+    secciones_por_clave = defaultdict(list)
+    for seccion in sections:
+        secciones_por_clave[_seccion_historial_key(seccion)].append(seccion)
+    ciclo_seleccionado_id = getattr(especial_context.get("ciclo"), "pk", None)
+    items = []
+    for key in page_keys:
+        periodos = []
+        for seccion in secciones_por_clave[key]:
+            inscripciones = _ultimo_por_clave(
+                alumnos_por_seccion.get(seccion.pk, []),
+                lambda item: item.alumno_id,
+            )
+            asignaciones = _ultimo_por_clave(
+                docentes_por_seccion.get(seccion.pk, []),
+                lambda item: item.docente_cuil,
+            )
+            periodos.append(
+                SimpleNamespace(
+                    seccion=seccion,
+                    inscripciones=inscripciones,
+                    asignaciones=asignaciones,
+                )
+            )
+        seccion_actual = next(
+            (
+                periodo.seccion
+                for periodo in periodos
+                if periodo.seccion.ciclo_id == ciclo_seleccionado_id
+            ),
+            periodos[0].seccion,
+        )
+        items.append(
+            SimpleNamespace(
+                historial_key=key,
+                seccion=seccion_actual,
+                historial_periodos=periodos,
+            )
+        )
+    return items, page_obj
 
 
 def _preparar_modales_gestionar(request, seccion, especial_context):
@@ -177,6 +465,7 @@ def _secciones_queryset(especial_context):
             "rango_etario",
             "modalidad",
             "tipo_estructura_especial",
+            "ciclo",
         )
         .annotate(
             alumnos_activos=Count(
@@ -216,20 +505,86 @@ def carga_seccion(request):
     """Vista principal de gestión de secciones."""
     context = contexto_base(request, "secciones")
     especial_context = context["especial_context"]
+    vista = _secciones_vista_param(request)
+    termino_busqueda, busqueda_error = _secciones_busqueda_param(request)
+    pagina_solicitada = _pagina_secciones_param(request)
 
-    if request.GET.get("accion") == "agregar":
+    if request.method == "POST" and vista != SECCIONES_VISTA_DEFAULT:
+        messages.error(request, "El historial es consultivo y no admite operaciones.")
+        return redirect(
+            _url_secciones(
+                especial_context,
+                vista=vista,
+                termino=termino_busqueda,
+                pagina=pagina_solicitada,
+            )
+        )
+
+    if request.GET.get("accion") == "agregar" and vista == SECCIONES_VISTA_DEFAULT:
         return redirect(redirect_con_contexto("especial:carga_seccion_nueva", especial_context))
 
     secciones = (
         list(_secciones_queryset(especial_context))
-        if especial_context["puede_consultar"]
+        if especial_context["puede_consultar"] and vista == SECCIONES_VISTA_DEFAULT
         else []
+    )
+    secciones_historial = []
+    page_obj_secciones = Paginator([], SECCIONES_POR_PAGINA).get_page(1)
+    if vista == "historial" and not busqueda_error:
+        secciones_historial, page_obj_secciones = _secciones_historial_paginado(
+            especial_context,
+            _secciones_historial_queryset(especial_context, termino_busqueda),
+            pagina_solicitada,
+        )
+
+    pagina_estado = pagina_solicitada if vista == "historial" else None
+    actuales_url = _url_secciones(
+        especial_context,
+        vista=SECCIONES_VISTA_DEFAULT,
+        termino=termino_busqueda,
+    )
+    historial_url = _url_secciones(
+        especial_context,
+        vista="historial",
+        termino=termino_busqueda,
+        pagina=1,
+    )
+    pagina_anterior_secciones_url = (
+        _url_secciones(
+            especial_context,
+            vista="historial",
+            termino=termino_busqueda,
+            pagina=page_obj_secciones.previous_page_number(),
+        )
+        if vista == "historial" and page_obj_secciones.has_previous()
+        else ""
+    )
+    pagina_siguiente_secciones_url = (
+        _url_secciones(
+            especial_context,
+            vista="historial",
+            termino=termino_busqueda,
+            pagina=page_obj_secciones.next_page_number(),
+        )
+        if vista == "historial" and page_obj_secciones.has_next()
+        else ""
     )
 
     context.update(
         {
             "secciones": secciones,
             "total_secciones": len(secciones),
+            "secciones_historial": secciones_historial,
+            "total_secciones_historial": page_obj_secciones.paginator.count,
+            "actuales_secciones_url": actuales_url,
+            "historial_secciones_url": historial_url,
+            "modo_historial_secciones": vista == "historial",
+            "vista_secciones": vista,
+            "termino_busqueda_secciones": termino_busqueda,
+            "busqueda_error_secciones": busqueda_error,
+            "page_obj_secciones": page_obj_secciones,
+            "pagina_anterior_secciones_url": pagina_anterior_secciones_url,
+            "pagina_siguiente_secciones_url": pagina_siguiente_secciones_url,
         }
     )
     return render_especial(

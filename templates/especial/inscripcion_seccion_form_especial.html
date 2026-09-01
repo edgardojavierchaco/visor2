@@ -1,11 +1,12 @@
 {% extends "especial/base_operativo_especial.html" %}
 
-{% block especial_subtitle %}Edición del estado de la inscripción del alumno en la sección seleccionada.{% endblock %}
+{% block especial_header_title %}Editar inscripción · {{ seccion.nombre_seccion }}{% endblock %}
+{% block especial_subtitle %}Edición del estado del alumno en la sección seleccionada.{% endblock %}
 
 {% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Secciones <span>&raquo; Editar inscripción</span></h2>
+        <h2 class="cef-panel-title">Secciones <span>&raquo; Editar inscripción del alumno</span></h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{{ volver_url }}">
                 <i class="fa-solid fa-arrow-left"></i> Volver a inscripción
@@ -14,6 +15,15 @@
     </div>
 
     <div class="cef-panel-body">
+        <div class="mb-3">
+            <span class="cef-context-pill" aria-label="Sección que se está editando">
+                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                <span><strong>Sección que se está editando: {{ seccion.nombre_seccion }}</strong></span>
+                <span>CUE-Anexo {{ seccion.cueanexo }}</span>
+                <span>Ciclo {{ seccion.ciclo.anio }}</span>
+            </span>
+        </div>
+
         {% if grupo %}
             <div class="mb-3">
                 <span class="cef-context-pill">

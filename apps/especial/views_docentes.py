@@ -1,14 +1,19 @@
 # apps/especial/views_docentes.py
 # -*- coding: utf-8 -*-
-from multiprocessing import context
+from collections import defaultdict
 import logging
 import re
+import unicodedata
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
+from django.db.models import Min, Q
+from django.db.models.functions import Lower
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
@@ -22,6 +27,7 @@ from .models import (
     EspecialDocenteBanco,
     DocenteSeccion,
     SeccionEspecial,
+    EspecialTrasladoDocente,
     PADRON_DB_ALIAS,
 )
 from .permisos import especial_required
@@ -34,6 +40,19 @@ MSG_BANCO_DOCENTES_PENDIENTE = (
     "El banco de docentes de Educación Especial está pendiente de creación en base de datos."
 )
 logger = logging.getLogger(__name__)
+
+DOCENTES_VISTA_DEFAULT = "actuales"
+DOCENTES_VISTAS = {"actuales", "historial"}
+DOCENTES_POR_PAGINA = 10
+DOCENTES_BUSQUEDA_MAX_LENGTH = 100
+DOCENTES_BUSQUEDA_EQUIVALENCIAS = {
+    "a": "aáàäâãå",
+    "e": "eéèëê",
+    "i": "iíìïî",
+    "n": "nñ",
+    "o": "oóòöôõ",
+    "u": "uúùüû",
+}
 
 
 def _solo_digitos(valor):
@@ -64,6 +83,277 @@ def _docente_row(docente):
         "dni": docente.dni or "",
         "estado": docente.estado or "",
     }
+
+
+def _docentes_vista_param(request):
+    vista = (request.GET.get("vista") or DOCENTES_VISTA_DEFAULT).strip().lower()
+    return vista if vista in DOCENTES_VISTAS else DOCENTES_VISTA_DEFAULT
+
+
+def _docentes_busqueda_param(request):
+    bruto = " ".join(str(request.GET.get("q") or "").split())
+    if not bruto:
+        return "", ""
+    if len(bruto) > DOCENTES_BUSQUEDA_MAX_LENGTH:
+        return (
+            "",
+            f"El término de búsqueda no puede superar los {DOCENTES_BUSQUEDA_MAX_LENGTH} caracteres.",
+        )
+    return bruto, ""
+
+
+def _pagina_docentes_param(request):
+    try:
+        pagina = int(request.GET.get("page") or 1)
+    except (TypeError, ValueError):
+        pagina = 1
+    return max(pagina, 1)
+
+
+def _docentes_state_params(
+    especial_context,
+    *,
+    vista=DOCENTES_VISTA_DEFAULT,
+    termino="",
+    pagina=None,
+):
+    params = {}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    if vista in DOCENTES_VISTAS:
+        params["vista"] = vista
+    if termino:
+        params["q"] = termino
+    if pagina and pagina > 1:
+        params["page"] = pagina
+    return params
+
+
+def _docentes_busqueda_tokens(valor):
+    texto = unicodedata.normalize("NFD", str(valor or "")).casefold()
+    texto = "".join(
+        caracter
+        for caracter in texto
+        if unicodedata.category(caracter) != "Mn"
+    )
+    texto = re.sub(r"(\d)[,./-](?=\d)", r"\1", texto)
+    return [token for token in re.split(r"[\s,./-]+", texto) if token]
+
+
+def _docentes_busqueda_patron(token):
+    caracteres = []
+    for caracter in token:
+        equivalencias = DOCENTES_BUSQUEDA_EQUIVALENCIAS.get(caracter)
+        caracteres.append(
+            f"[{equivalencias}]" if equivalencias else re.escape(caracter)
+        )
+    return "".join(caracteres)
+
+
+def _aplicar_busqueda_docentes_historial(queryset, especial_context, termino):
+    tokens = _docentes_busqueda_tokens(termino)
+    if not tokens:
+        return queryset.none() if termino else queryset
+
+    filtros_globales = Q()
+    for token in tokens:
+        if token.isdigit():
+            patron = r"\D*".join(re.escape(digito) for digito in token)
+        else:
+            patron = _docentes_busqueda_patron(token)
+        filtros_token = (
+            Q(docente_cuil__iregex=patron)
+            | Q(docente_nombre_snapshot__iregex=patron)
+            | Q(docente_dni_snapshot__iregex=patron)
+        )
+        filtros_token |= Q(
+            docente_cuil__in=DocenteSeccion.objects.filter(
+                seccion__cueanexo=especial_context["cueanexo"],
+                seccion__nombre_seccion__iregex=patron,
+            ).values("docente_cuil")
+        )
+        filtros_globales &= filtros_token
+    return queryset.filter(filtros_globales)
+
+
+def _docentes_historial_queryset(especial_context, termino=""):
+    """Obtiene todos los registros del docente para el CUE seleccionado."""
+    if not especial_context["puede_consultar"]:
+        return EspecialDocenteBanco.objects.none()
+    queryset = EspecialDocenteBanco.objects.filter(
+        cueanexo=especial_context["cueanexo"],
+    )
+    return _aplicar_busqueda_docentes_historial(
+        queryset,
+        especial_context,
+        termino,
+    )
+
+
+def _asignaciones_para_periodo_docente(banco, asignaciones):
+    """Devuelve las asignaciones del ciclo sin repetir secciones."""
+    asignaciones_periodo = []
+    secciones_vistas = set()
+    for asignacion in asignaciones:
+        if asignacion.seccion.ciclo_id != banco.ciclo_id:
+            continue
+        # Al reactivar una asignación se reutiliza el mismo registro y se
+        # limpia fecha_hasta; no debe reaparecer como activa en un banco que
+        # ya quedó de baja.
+        if (
+            banco.estado == EspecialDocenteBanco.Estado.BAJA
+            and asignacion.estado == DocenteSeccion.Estado.ACTIVO
+        ):
+            continue
+        if banco.fecha_baja and asignacion.fecha_desde and asignacion.fecha_desde > banco.fecha_baja:
+            continue
+        if asignacion.fecha_hasta and asignacion.fecha_hasta < banco.fecha_alta:
+            continue
+        if asignacion.seccion_id in secciones_vistas:
+            continue
+        secciones_vistas.add(asignacion.seccion_id)
+        asignaciones_periodo.append(asignacion)
+    return asignaciones_periodo
+
+
+def _historial_docentes_paginado(especial_context, queryset, pagina):
+    """Agrupa el historial por docente y conserva todas sus asignaciones."""
+    docentes_ids = (
+        queryset.order_by()
+        .values("docente_cuil")
+        .annotate(nombre=Min("docente_nombre_snapshot"))
+        .order_by(
+            Lower("nombre"),
+            "nombre",
+            "docente_cuil",
+        )
+        .values_list("docente_cuil", flat=True)
+    )
+    page_obj = Paginator(docentes_ids, DOCENTES_POR_PAGINA).get_page(pagina)
+    page_cuiles = list(page_obj.object_list)
+    if not page_cuiles:
+        return [], page_obj
+
+    bancos = list(
+        EspecialDocenteBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            docente_cuil__in=page_cuiles,
+        )
+        .select_related("ciclo")
+        .order_by("docente_cuil", "-ciclo__anio", "-fecha_alta", "-pk")
+    )
+    asignaciones = list(
+        DocenteSeccion.objects.filter(
+            seccion__cueanexo=especial_context["cueanexo"],
+            docente_cuil__in=page_cuiles,
+        )
+        .select_related(
+            "seccion",
+            "seccion__ciclo",
+            "seccion__cd_tipo_seccion",
+        )
+        .order_by(
+            "docente_cuil",
+            "-seccion__ciclo__anio",
+            Lower("seccion__nombre_seccion"),
+            "seccion__nombre_seccion",
+            "rol",
+            "pk",
+        )
+    )
+    traslados = list(
+        EspecialTrasladoDocente.objects.filter(
+            cueanexo_origen=especial_context["cueanexo"],
+            docente_cuil__in=page_cuiles,
+            estado__in=[
+                EspecialTrasladoDocente.Estado.EN_TRANSITO,
+                EspecialTrasladoDocente.Estado.APLICADO,
+            ],
+        )
+        .select_related("ciclo_origen", "ciclo_destino")
+        .order_by("docente_cuil", "ciclo_origen__anio", "cueanexo_destino")
+    )
+    bancos_por_cuil = defaultdict(list)
+    for banco in bancos:
+        bancos_por_cuil[banco.docente_cuil].append(banco)
+    asignaciones_por_cuil_ciclo = defaultdict(list)
+    for asignacion in asignaciones:
+        asignaciones_por_cuil_ciclo[
+            (asignacion.docente_cuil, asignacion.seccion.ciclo_id)
+        ].append(asignacion)
+    destinos_por_cuil_ciclo = defaultdict(set)
+    for traslado in traslados:
+        destinos_por_cuil_ciclo[
+            (traslado.docente_cuil, traslado.ciclo_origen_id)
+        ].add(traslado.cueanexo_destino)
+
+    items = []
+    ciclo_seleccionado_id = getattr(especial_context.get("ciclo"), "pk", None)
+    for docente_cuil in page_cuiles:
+        bancos_docente = bancos_por_cuil.get(docente_cuil, [])
+        if not bancos_docente:
+            continue
+        periodos = [
+            SimpleNamespace(
+                banco=banco,
+                cueanexo_asociado=(
+                    f"{banco.cueanexo} → "
+                    f"{', '.join(sorted(destinos_por_cuil_ciclo[(docente_cuil, banco.ciclo_id)]))}"
+                    if destinos_por_cuil_ciclo[(docente_cuil, banco.ciclo_id)]
+                    else banco.cueanexo
+                ),
+                estado_label=banco.get_estado_display(),
+                asignaciones=_asignaciones_para_periodo_docente(
+                    banco,
+                    asignaciones_por_cuil_ciclo[
+                        (docente_cuil, banco.ciclo_id)
+                    ],
+                ),
+            )
+            for banco in bancos_docente
+        ]
+        bancos_ciclo_seleccionado = [
+            banco for banco in bancos_docente
+            if banco.ciclo_id == ciclo_seleccionado_id
+        ]
+        banco_actual = next(
+            (
+                banco for banco in bancos_ciclo_seleccionado
+                if banco.estado == EspecialDocenteBanco.Estado.ACTIVO
+            ),
+            None,
+        ) or (bancos_ciclo_seleccionado[0] if bancos_ciclo_seleccionado else bancos_docente[0])
+        nombre_snapshot = next(
+            (
+                banco.docente_nombre_snapshot
+                for banco in bancos_docente
+                if banco.docente_nombre_snapshot
+            ),
+            "",
+        )
+        dni_snapshot = next(
+            (
+                banco.docente_dni_snapshot
+                for banco in bancos_docente
+                if banco.docente_dni_snapshot
+            ),
+            "",
+        )
+        items.append(
+            SimpleNamespace(
+                docente_cuil=docente_cuil,
+                docente_nombre_snapshot=nombre_snapshot,
+                docente_dni_snapshot=dni_snapshot,
+                ciclo=banco_actual.ciclo,
+                estado=banco_actual.estado,
+                estado_label=banco_actual.get_estado_display(),
+                accion_actual="—",
+                historial_periodos=periodos,
+            )
+        )
+    return items, page_obj
 
 
 def _docentes_especial(especial_context):
@@ -234,12 +524,19 @@ def _url_modal_docentes(especial_context, cuil=""):
     return f"{reverse('especial:docentes')}?{urlencode(params)}"
 
 
-def _url_docentes(especial_context):
-    params = {}
-    if especial_context.get("cueanexo"):
-        params["cueanexo"] = especial_context["cueanexo"]
-    if especial_context.get("ciclo"):
-        params["ciclo"] = especial_context["ciclo"].pk
+def _url_docentes(
+    especial_context,
+    *,
+    vista=DOCENTES_VISTA_DEFAULT,
+    termino="",
+    pagina=None,
+):
+    params = _docentes_state_params(
+        especial_context,
+        vista=vista,
+        termino=termino,
+        pagina=pagina,
+    )
     querystring = urlencode(params)
     url = reverse("especial:docentes")
     return f"{url}?{querystring}" if querystring else url
@@ -408,12 +705,26 @@ def editar_docente_seccion(request, seccion_id, docente_id):
 def docentes(request):
     context = contexto_base(request, "docentes")
     especial_context = context["especial_context"]
+    vista = _docentes_vista_param(request)
+    termino_busqueda, busqueda_error = _docentes_busqueda_param(request)
+    pagina_solicitada = _pagina_docentes_param(request)
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
         messages.error(
             request,
             "El ciclo seleccionado está cerrado y sólo puede consultarse.",
         )
         return redirect(request.get_full_path())
+
+    if request.method == "POST" and vista != DOCENTES_VISTA_DEFAULT:
+        messages.error(request, "El historial es consultivo y no admite operaciones.")
+        return redirect(
+            _url_docentes(
+                especial_context,
+                vista=vista,
+                termino=termino_busqueda,
+                pagina=pagina_solicitada,
+            )
+        )
 
     docente = None
     cuil_buscado = ""
@@ -445,7 +756,12 @@ def docentes(request):
     )
     baja_error = ""
     baja_asignaciones_activas = []
-    url_docentes = _url_docentes(especial_context)
+    url_docentes = _url_docentes(
+        especial_context,
+        vista=vista,
+        termino=termino_busqueda,
+        pagina=pagina_solicitada if vista == "historial" else None,
+    )
 
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -740,51 +1056,67 @@ def docentes(request):
     next_url = _url_modal_docentes(especial_context, cuil_buscado)
     url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
     docentes_banco_tabla_pendiente = False
+    page_obj = Paginator([], DOCENTES_POR_PAGINA).get_page(1)
+    secciones_disponibles = []
 
-    try:
-        docentes = list(_docentes_especial(especial_context))
-        if docente and not docente_en_banco:
-            docente_en_banco = _docente_en_banco_activo(docente, especial_context)
-    except (OperationalError, ProgrammingError):
-        docentes = []
-        docentes_banco_tabla_pendiente = True
+    if vista == "historial":
+        try:
+            docentes, page_obj = _historial_docentes_paginado(
+                especial_context,
+                _docentes_historial_queryset(
+                    especial_context,
+                    termino_busqueda,
+                ),
+                pagina_solicitada,
+            )
+        except (OperationalError, ProgrammingError):
+            docentes = []
+            docentes_banco_tabla_pendiente = True
+    else:
+        try:
+            docentes = list(_docentes_especial(especial_context))
+            if docente and not docente_en_banco:
+                docente_en_banco = _docente_en_banco_activo(docente, especial_context)
+        except (OperationalError, ProgrammingError):
+            docentes = []
+            docentes_banco_tabla_pendiente = True
 
-    try:
-        asignaciones_por_docente = _asignaciones_por_docente(especial_context, docentes)
-    except (OperationalError, ProgrammingError):
-        asignaciones_por_docente = {}
+        try:
+            asignaciones_por_docente = _asignaciones_por_docente(especial_context, docentes)
+        except (OperationalError, ProgrammingError):
+            asignaciones_por_docente = {}
 
-    secciones_disponibles = list(_secciones_disponibles(especial_context))
+        secciones_disponibles = list(_secciones_disponibles(especial_context))
 
-    for item in docentes:
-        item.asignaciones_seccion = asignaciones_por_docente.get(item.docente_cuil, [])
-        asignaciones_activas = [
-            asignacion
-            for asignacion in item.asignaciones_seccion
-            if asignacion.estado == DocenteSeccion.Estado.ACTIVO
-        ]
-        item.secciones_asignadas = [
-            asignacion
-            for asignacion in item.asignaciones_seccion
-            if asignacion.estado in {
-                DocenteSeccion.Estado.ACTIVO,
-                DocenteSeccion.Estado.INACTIVO,
-            }
-        ]
-        secciones_ocupadas_ids = _secciones_ocupadas_ids(
-            especial_context,
-            item.docente_cuil,
-        )
-        item.secciones_asignables = [
-            seccion for seccion in secciones_disponibles if seccion.pk not in secciones_ocupadas_ids
-        ]
-        item.secciones_bloqueadas = asignaciones_activas
-        item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
-        item.url_editar_docente = _url_carga_docente(
-            item.docente_cuil,
-            url_docentes,
-            "Volver a Docentes Especial",
-        )
+        for item in docentes:
+            item.asignaciones_seccion = asignaciones_por_docente.get(item.docente_cuil, [])
+            asignaciones_activas = [
+                asignacion
+                for asignacion in item.asignaciones_seccion
+                if asignacion.estado == DocenteSeccion.Estado.ACTIVO
+            ]
+            item.secciones_asignadas = [
+                asignacion
+                for asignacion in item.asignaciones_seccion
+                if asignacion.estado in {
+                    DocenteSeccion.Estado.ACTIVO,
+                    DocenteSeccion.Estado.INACTIVO,
+                }
+            ]
+            secciones_ocupadas_ids = _secciones_ocupadas_ids(
+                especial_context,
+                item.docente_cuil,
+            )
+            item.secciones_asignables = [
+                seccion for seccion in secciones_disponibles if seccion.pk not in secciones_ocupadas_ids
+            ]
+            item.secciones_bloqueadas = asignaciones_activas
+            item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
+            item.url_editar_docente = _url_carga_docente(
+                item.docente_cuil,
+                url_docentes,
+                "Volver a Docentes Especial",
+            )
 
     if abrir_modal_baja and baja_modal_docente is None:
         try:
@@ -803,6 +1135,37 @@ def docentes(request):
             raise
 
     docente_grupo_form = EspecialDocenteSeccionForm()
+    docentes_actuales_url = _url_docentes(
+        especial_context,
+        vista=DOCENTES_VISTA_DEFAULT,
+        termino=termino_busqueda,
+    )
+    docentes_historial_url = _url_docentes(
+        especial_context,
+        vista="historial",
+        termino=termino_busqueda,
+        pagina=1,
+    )
+    pagina_anterior_docentes_url = (
+        _url_docentes(
+            especial_context,
+            vista="historial",
+            termino=termino_busqueda,
+            pagina=page_obj.previous_page_number(),
+        )
+        if vista == "historial" and page_obj.has_previous()
+        else ""
+    )
+    pagina_siguiente_docentes_url = (
+        _url_docentes(
+            especial_context,
+            vista="historial",
+            termino=termino_busqueda,
+            pagina=page_obj.next_page_number(),
+        )
+        if vista == "historial" and page_obj.has_next()
+        else ""
+    )
     
     context.update(
         {
@@ -810,6 +1173,15 @@ def docentes(request):
             "docente": docente,
             "docente_row": _docente_row(docente),
             "docentes": docentes,
+            "docentes_actuales_url": docentes_actuales_url,
+            "docentes_historial_url": docentes_historial_url,
+            "modo_historial_docentes": vista == "historial",
+            "vista_docentes": vista,
+            "termino_busqueda_docentes": termino_busqueda,
+            "busqueda_error_docentes": busqueda_error,
+            "pagina_anterior_docentes_url": pagina_anterior_docentes_url,
+            "pagina_siguiente_docentes_url": pagina_siguiente_docentes_url,
+            "page_obj_docentes": page_obj,
             "secciones_disponibles": secciones_disponibles,
             "docentes_banco_tabla_pendiente": docentes_banco_tabla_pendiente,
             "docente_en_banco": docente_en_banco,

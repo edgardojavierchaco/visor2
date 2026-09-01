@@ -195,6 +195,12 @@
         pagination.append(previous, current, next);
     }
 
+    function clientPageSize(control) {
+        var select = control && control.querySelector("[data-especial-search-page-size]");
+        var size = select ? parseInt(select.value, 10) : CLIENT_PAGE_SIZE;
+        return size > 0 ? size : CLIENT_PAGE_SIZE;
+    }
+
     function renderClientSearch(control) {
         if (searchMode(control) !== "client") return;
         var results = resultsElement(control);
@@ -205,7 +211,8 @@
         var filteredRows = rows.filter(function (row) {
             return matchesClientSearch(row, tokens);
         });
-        var pages = Math.max(1, Math.ceil(filteredRows.length / CLIENT_PAGE_SIZE));
+        var pageSize = clientPageSize(control);
+        var pages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
         var page = Math.min(
             Math.max(parseInt(control._especialSearchClientPage, 10) || 1, 1),
             pages
@@ -213,8 +220,8 @@
         control._especialSearchClientPage = page;
 
         var pageRows = filteredRows.slice(
-            (page - 1) * CLIENT_PAGE_SIZE,
-            page * CLIENT_PAGE_SIZE
+            (page - 1) * pageSize,
+            page * pageSize
         );
         var pageRowSet = new Set(pageRows);
         rows.forEach(function (row) {
@@ -228,7 +235,10 @@
         if (emptyState) emptyState.hidden = filteredRows.length !== 0;
 
         var count = results.querySelector("[data-cef-table-count]");
-        if (count) count.textContent = filteredRows.length + " alumnos";
+        if (count) {
+            var countLabel = results.getAttribute("data-especial-search-count-label") || "alumnos";
+            count.textContent = filteredRows.length + " " + countLabel;
+        }
         renderClientPagination(
             results.querySelector("[data-especial-client-pagination]"),
             page,
@@ -283,8 +293,11 @@
         if (!control || control.dataset.especialSearchReady === "1") return;
         var input = control.querySelector("[data-especial-search-input]");
         if (!input) return;
+        var pageSizeControl = control.querySelector("[data-especial-search-page-size]");
 
         control.dataset.especialSearchReady = "1";
+        control._especialSearchInput = input;
+        control._especialSearchPageSizeControl = pageSizeControl;
         control._especialSearchClientPage = 1;
         control._especialSearchHasActiveTerm = Boolean(readTerm(control));
         control._especialSearchOnInput = function () {
@@ -303,9 +316,16 @@
             control._especialSearchClientPage = page;
             renderClientSearch(control);
         };
+        control._especialSearchOnPageSizeChange = function () {
+            control._especialSearchClientPage = 1;
+            if (searchMode(control) === "client") renderClientSearch(control);
+        };
         syncAppliedState(control);
         input.addEventListener("input", control._especialSearchOnInput);
         control.addEventListener("click", control._especialSearchOnPaginationClick);
+        if (pageSizeControl) {
+            pageSizeControl.addEventListener("change", control._especialSearchOnPageSizeChange);
+        }
         if (searchMode(control) === "client") applyClientSearch(control);
     }
 
@@ -315,6 +335,17 @@
 
     function refresh(root) {
         searchControls(root).forEach(function (control) {
+            var input = control.querySelector("[data-especial-search-input]");
+            var pageSizeControl = control.querySelector("[data-especial-search-page-size]");
+            if (
+                control.dataset.especialSearchReady === "1"
+                && (
+                    control._especialSearchInput !== input
+                    || control._especialSearchPageSizeControl !== pageSizeControl
+                )
+            ) {
+                destroy(control);
+            }
             if (control.dataset.especialSearchReady !== "1") {
                 initControl(control);
                 return;
@@ -348,10 +379,19 @@
             if (control._especialSearchOnPaginationClick) {
                 control.removeEventListener("click", control._especialSearchOnPaginationClick);
             }
+            if (control._especialSearchPageSizeControl && control._especialSearchOnPageSizeChange) {
+                control._especialSearchPageSizeControl.removeEventListener(
+                    "change",
+                    control._especialSearchOnPageSizeChange
+                );
+            }
             if (owns(root, control)) {
                 delete control.dataset.especialSearchReady;
+                delete control._especialSearchInput;
+                delete control._especialSearchPageSizeControl;
                 delete control._especialSearchOnInput;
                 delete control._especialSearchOnPaginationClick;
+                delete control._especialSearchOnPageSizeChange;
                 delete control._especialSearchHasActiveTerm;
                 delete control._especialSearchClientPage;
             }
