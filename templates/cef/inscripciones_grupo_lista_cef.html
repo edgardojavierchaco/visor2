@@ -33,7 +33,7 @@
                     {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}
                         <th>Estado actual en este grupo</th>
                     {% else %}
-                        <th>Fecha inscripción</th>
+                        <th>Fecha de incorporación al grupo</th>
                         <th>Estado</th>
                     {% endif %}
                     {% if not inscripciones_solo_lectura %}<th>Acciones</th>{% endif %}
@@ -86,7 +86,7 @@
                                   {% endif %}
                                 {% elif inscripcion.estado == 'baja' %}
                                   {% if not gestionar_grupo_modo or inscripciones_permite_retorno and inscripcion.puede_reinscribir %}
-                                    <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ inscripcion_grupo_url }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Se creará una inscripción activa nueva para este alumno si no existe otra activa." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
+                                    <form method="post" action="{% if gestionar_grupo_modo %}{{ gestionar_grupo_url }}{% else %}{{ inscripcion_grupo_url }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-require-fecha-inscripcion data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Indicá la fecha efectiva de incorporación antes de crear una inscripción activa nueva." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
                                         {% csrf_token %}
                                         <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                         {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
@@ -109,7 +109,7 @@
                                 <div class="cef-history-detail-panel">
                                     <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de inscripciones</strong><span>Movimientos registrados: {{ inscripcion.historial_inscripciones|length }}</span></div>
                                     <div class="cef-table-wrap cef-history-detail-table-wrap"><table class="cef-dt cef-history-detail-table">
-                                    <thead><tr><th>Ciclo</th><th>Estado</th><th>Fecha de inscripción</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th></tr></thead>
+                                    <thead><tr><th>Ciclo</th><th>Estado</th><th>Fecha de incorporación al grupo</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th></tr></thead>
                                     <tbody>{% for periodo in inscripcion.historial_inscripciones %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
                                         <td><strong>{{ grupo.ciclo.anio }}</strong></td>
                                         <td><span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{% if grupo.ciclo.cerrado and periodo.estado == 'activo' %}Activo al cierre{% else %}{{ periodo.get_estado_display }}{% endif %}</span></td>

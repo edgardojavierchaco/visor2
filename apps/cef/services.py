@@ -3,6 +3,7 @@
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from .models import (
     CefAlumnoCef,
@@ -261,6 +262,23 @@ def asegurar_docente_banco_activo(docente_cuil, cueanexo, ciclo, user):
         raise
 
 
+def validar_fecha_inscripcion_grupo(grupo, fecha_inscripcion):
+    """Valida la fecha efectiva de incorporación de un alumno a un grupo."""
+
+    if isinstance(fecha_inscripcion, str):
+        try:
+            fecha_inscripcion = parse_date(fecha_inscripcion.strip())
+        except ValueError:
+            fecha_inscripcion = None
+    if not fecha_inscripcion or not getattr(fecha_inscripcion, "year", None):
+        raise ValidationError("Indicá la fecha de incorporación al grupo.")
+    if fecha_inscripcion.year != grupo.ciclo.anio:
+        raise ValidationError(
+            "La fecha de incorporación al grupo debe pertenecer al año del ciclo."
+        )
+    return fecha_inscripcion
+
+
 def crear_inscripcion_activa(
     grupo,
     alumno,
@@ -269,11 +287,14 @@ def crear_inscripcion_activa(
 ):
     """Crea una inscripcion activa nueva sin reactivar periodos historicos."""
 
-    fecha_inscripcion = fecha_inscripcion or timezone.localdate()
     try:
         with transaction.atomic():
             grupo = CefGrupo.objects.select_for_update().get(pk=grupo.pk)
             validar_ciclo_escribible(grupo.ciclo_id)
+            fecha_inscripcion = validar_fecha_inscripcion_grupo(
+                grupo,
+                fecha_inscripcion,
+            )
             if grupo.estado != CefGrupo.Estado.ACTIVO:
                 raise ValidationError(
                     "No se puede inscribir alumnos en un grupo dado de baja."

@@ -22,6 +22,7 @@ from .services import (
     dar_baja_inscripcion,
     reinscribir_alumno,
     validar_ciclo_escribible,
+    validar_fecha_inscripcion_grupo,
 )
 from .views_alumnos import MSG_BANCO_ALUMNOS_PENDIENTE, _calcular_edad
 from .views_contexto import (
@@ -280,7 +281,11 @@ def _alta_alumno_grupo(request, grupo, cef_context):
         pk=inscripcion_id,
     )
     try:
-        reinscribir_alumno(inscripcion, request.user)
+        reinscribir_alumno(
+            inscripcion,
+            request.user,
+            fecha_inscripcion=request.POST.get("fecha_inscripcion"),
+        )
         return True, "Alumno reinscripto correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)
@@ -401,6 +406,15 @@ def inscripcion_grupo(request, grupo_id):
     if request.method == "POST":
         busqueda_form = CefBusquedaAlumnoForm(request.POST)
         abrir_modal = True
+        fecha_inscripcion = None
+        fecha_inscripcion_error = ""
+        try:
+            fecha_inscripcion = validar_fecha_inscripcion_grupo(
+                grupo,
+                request.POST.get("fecha_inscripcion"),
+            )
+        except ValidationError as exc:
+            fecha_inscripcion_error = "; ".join(exc.messages)
 
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
@@ -411,6 +425,10 @@ def inscripcion_grupo(request, grupo_id):
 
         if not alumno:
             ajax_message = "Primero buscá un alumno existente por CUIL."
+            if not _is_ajax(request):
+                messages.error(request, ajax_message)
+        elif fecha_inscripcion_error:
+            ajax_message = fecha_inscripcion_error
             if not _is_ajax(request):
                 messages.error(request, ajax_message)
         else:
@@ -447,6 +465,7 @@ def inscripcion_grupo(request, grupo_id):
                         grupo=grupo,
                         alumno=alumno,
                         user=request.user,
+                        fecha_inscripcion=fecha_inscripcion,
                     )
                     if _is_ajax(request):
                         inscripcion_abierta = CefInscripcion.objects.filter(
@@ -612,7 +631,7 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
     )
 
     if request.method == "POST":
-        form = CefInscripcionForm(request.POST, instance=inscripcion)
+        form = CefInscripcionForm(request.POST, instance=inscripcion, grupo=grupo)
         if form.is_valid():
             inscripcion = form.save(commit=False)
             inscripcion.actualizado_por = request.user
@@ -628,7 +647,7 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
 
         messages.error(request, "Revisá los datos de la inscripción.")
     else:
-        form = CefInscripcionForm(instance=inscripcion)
+        form = CefInscripcionForm(instance=inscripcion, grupo=grupo)
 
     context.update(
         {

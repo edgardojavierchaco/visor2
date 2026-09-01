@@ -104,25 +104,57 @@
         region.dataset.especialSubtitle = incomingRegion.dataset.especialSubtitle || "";
     }
 
-    function fallback(url) {
+    function findTarget(root, selector) {
+        if (!root || !selector || !root.querySelector) return null;
+        try {
+            return root.querySelector(selector);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function replaceTarget(target, incomingTarget) {
+        var nodes = [];
+        incomingTarget.childNodes.forEach(function (node) {
+            if (node.nodeType === 1 && node.tagName === "SCRIPT") return;
+            nodes.push(document.importNode(node, true));
+        });
+        target.replaceChildren.apply(target, nodes);
+    }
+
+    function fallback(url, mode) {
+        if (mode === "replace") {
+            window.location.replace(url.toString());
+            return;
+        }
         window.location.href = url.toString();
     }
 
-    function navigate(url, mode) {
+    function navigate(url, mode, options) {
+        options = options || {};
         var region = findRegion(document);
         var section = findSectionForUrl(url);
+        var target = findTarget(region, options.targetSelector);
         if (!compatibleShell() || !region || !isSupportedSection(section)) {
-            fallback(url);
+            fallback(url, mode);
+            return;
+        }
+        if (options.targetSelector && !target) {
+            fallback(url, mode);
             return;
         }
         if (activeRequest) activeRequest.controller.abort();
         var controller = new AbortController();
         var requestId = ++requestSequence;
         activeRequest = { controller: controller, id: requestId };
-        if (window.EspecialUI && typeof window.EspecialUI.destroy === "function") {
-            window.EspecialUI.destroy(region);
+        if (target) {
+            target.setAttribute("aria-busy", "true");
+        } else {
+            if (window.EspecialUI && typeof window.EspecialUI.destroy === "function") {
+                window.EspecialUI.destroy(region);
+            }
+            setLoading(region);
         }
-        setLoading(region);
 
         fetch(url.toString(), {
             method: "GET",
@@ -147,19 +179,35 @@
                 if (!incomingRegion || incomingRegion.dataset.especialSection !== section) {
                     throw new Error("La respuesta parcial no contiene la seccion esperada.");
                 }
-                replaceRegion(region, incomingRegion);
+                if (target) {
+                    var incomingTarget = findTarget(incomingRegion, options.targetSelector);
+                    if (!incomingTarget) {
+                        throw new Error("La respuesta parcial no contiene el bloque esperado.");
+                    }
+                    if (window.EspecialUI && typeof window.EspecialUI.destroy === "function") {
+                        window.EspecialUI.destroy(target);
+                    }
+                    replaceTarget(target, incomingTarget);
+                    setReady(target);
+                    if (window.EspecialUI && typeof window.EspecialUI.init === "function") {
+                        window.EspecialUI.init(target);
+                    }
+                } else {
+                    replaceRegion(region, incomingRegion);
+                    setReady(region);
+                    if (window.EspecialUI && typeof window.EspecialUI.init === "function") {
+                        window.EspecialUI.init(region);
+                    }
+                }
                 updateHeader(region);
                 updateNavbar(section);
-                setReady(region);
-                if (window.EspecialUI && typeof window.EspecialUI.init === "function") {
-                    window.EspecialUI.init(region);
-                }
                 if (mode === "push") window.history.pushState({ especialSection: section }, "", url.toString());
+                if (mode === "replace") window.history.replaceState({ especialSection: section }, "", url.toString());
             })
             .catch(function (error) {
                 if (error && error.name === "AbortError") return;
                 if (!activeRequest || activeRequest.id !== requestId) return;
-                fallback(url);
+                fallback(url, mode);
             })
             .finally(function () {
                 if (activeRequest && activeRequest.id === requestId) activeRequest = null;
@@ -189,4 +237,6 @@
         if (isSupportedSection(section) && compatibleShell()) navigate(url, "pop");
         else fallback(url);
     });
+
+    window.EspecialPartialNavigation = { navigate: navigate };
 })();

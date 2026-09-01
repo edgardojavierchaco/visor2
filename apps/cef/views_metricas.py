@@ -26,7 +26,7 @@ def _contexto_pagina_metricas(request):
     """Contexto global que deliberadamente no resuelve ni escribe contexto operativo."""
     permisos = get_permisos_cef_request(request)
     return {
-        "title": "Métricas CEF",
+        "title": "Consultas CEF",
         "active_menu": "metricas",
         "es_admin_cef": permisos.get("es_admin", False),
         "puede_metricas": permisos.get("puede_metricas", False),
@@ -48,7 +48,7 @@ def metricas(request):
 @require_GET
 def metricas_consulta(request):
     try:
-        resultado = ejecutar_consulta_metricas(request.GET)
+        resultado = ejecutar_consulta_metricas(request.GET, limite_detalle=500)
     except MetricasValidationError as exc:
         return JsonResponse(
             {"ok": False, "message": str(exc)},
@@ -179,12 +179,12 @@ def _crear_excel_metricas(resultado):
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Métricas CEF"
+    ws.title = "Consultas CEF"
     ancho = max(2, len(columnas))
     ultima_columna = get_column_letter(ancho)
 
     ws.merge_cells(f"A1:{ultima_columna}1")
-    ws["A1"] = "Informe de Métricas CEF"
+    ws["A1"] = "Consulta CEF"
     ws["A1"].font = Font(bold=True, size=14, color="FFFFFF")
     ws["A1"].fill = PatternFill("solid", fgColor="17365D")
     ws["A1"].alignment = Alignment(horizontal="left", vertical="center")
@@ -194,12 +194,10 @@ def _crear_excel_metricas(resultado):
     metadatos = [
         ("Fecha de generación", generado),
         ("Área", _consulta_valor(consulta, "area_label", "area_etiqueta", "area")),
-        ("Indicador", _consulta_valor(consulta, "indicator_label", "indicador_label", "indicador_etiqueta", "indicador")),
+        ("Información", _consulta_valor(consulta, "indicator_label", "indicador_label", "indicador_etiqueta", "indicador")),
         ("Ciclos", _consulta_valor(consulta, "cycle_labels", "ciclos_etiquetas", "ciclos")),
         ("CEF", _cefs_consulta_texto(consulta)),
         ("Filtros", _filtros_consulta_texto(consulta)),
-        ("Desglose", _consulta_valor(consulta, "group_label", "agrupar_label", "agrupar_etiqueta", "agrupar", vacio="Sólo total general")),
-        ("Comparación", _consulta_valor(consulta, "compare_label", "comparar_label", "comparar_etiqueta", "comparar", vacio="No comparar")),
         ("Definición", definicion or "—"),
     ]
     if notas:
@@ -256,7 +254,7 @@ def _crear_excel_metricas(resultado):
 @require_GET
 def metricas_exportar(request):
     try:
-        resultado = ejecutar_consulta_metricas(request.GET)
+        resultado = ejecutar_consulta_metricas(request.GET, limite_detalle=None)
     except MetricasValidationError as exc:
         return HttpResponse(str(exc), status=400, content_type="text/plain; charset=utf-8")
     except Exception:
@@ -268,7 +266,7 @@ def metricas_exportar(request):
         )
 
     contenido = _crear_excel_metricas(resultado)
-    nombre = f"Metricas_CEF_{timezone.localtime().strftime('%Y%m%d_%H%M')}.xlsx"
+    nombre = f"Consulta_CEF_{timezone.localtime().strftime('%Y%m%d_%H%M')}.xlsx"
     response = HttpResponse(
         contenido,
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

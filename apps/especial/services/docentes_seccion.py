@@ -73,7 +73,7 @@ def dar_baja_docente_seccion(asignacion, user):
             seccion_id=asignacion.seccion_id,
         )
         if asignacion_bloqueada.estado == DocenteSeccion.Estado.BAJA:
-            raise ValidationError("La asignaciÃ³n ya estÃ¡ en baja.")
+            raise ValidationError("La asignación ya está en baja.")
         asignacion_bloqueada.estado = DocenteSeccion.Estado.BAJA
         asignacion_bloqueada.fecha_hasta = timezone.localdate()
         asignacion_bloqueada.actualizado_por = user

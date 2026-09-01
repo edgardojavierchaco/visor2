@@ -1106,7 +1106,8 @@
         font-weight: 600;
     }
 
-    .cef-tools select {
+    .cef-tools select,
+    .cef-metricas-chart-type {
         appearance: auto;
         background: var(--surface);
         border: 1.5px solid var(--border-strong);
@@ -1119,7 +1120,8 @@
         transition: border-color .15s ease, box-shadow .15s ease;
     }
 
-    .cef-tools select:focus {
+    .cef-tools select:focus,
+    .cef-metricas-chart-type:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.12);
         outline: none;
@@ -2385,6 +2387,10 @@
                                 <strong class="cef-confirm-summary-value" data-cef-confirm-summary-value></strong>
                             </span>
                         </div>
+                        <div class="mt-3" data-cef-confirm-fecha-inscripcion-wrap hidden>
+                            <label class="form-label" for="cefConfirmFechaInscripcion">Fecha de incorporación al grupo</label>
+                            <input id="cefConfirmFechaInscripcion" type="date" class="form-control" data-cef-confirm-fecha-inscripcion>
+                        </div>
                         <div class="mt-3" data-cef-confirm-motivo-wrap hidden>
                             <label class="form-label" for="cefConfirmMotivoBaja">Motivo de baja (opcional)</label>
                             <textarea id="cefConfirmMotivoBaja" class="form-control" rows="3" maxlength="255" data-cef-confirm-motivo></textarea>
@@ -2562,10 +2568,12 @@
                         confirmModal.hidden = false;
                         confirmModal.removeAttribute("aria-hidden");
                         confirmModal.setAttribute("aria-modal", "true");
+                        var fechaInscripcion = confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion]");
                         var motivo = confirmModal.querySelector("[data-cef-confirm-motivo]");
                         var accept = confirmModal.querySelector("[data-cef-confirm-accept]");
                         window.requestAnimationFrame(function() {
-                            if (motivo && !motivo.closest("[hidden]")) motivo.focus();
+                            if (fechaInscripcion && !fechaInscripcion.closest("[hidden]")) fechaInscripcion.focus();
+                            else if (motivo && !motivo.closest("[hidden]")) motivo.focus();
                             else if (accept) accept.focus();
                         });
                     },
@@ -2605,6 +2613,17 @@
                 if (input) input.value = "";
             }
 
+            function prepareConfirmFechaInscripcion(form) {
+                var wrap = confirmModal ? confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion-wrap]") : null;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion]") : null;
+                var required = Boolean(form && form.hasAttribute("data-cef-require-fecha-inscripcion"));
+                if (wrap) wrap.hidden = !required;
+                if (input) {
+                    input.required = required;
+                    input.value = "";
+                }
+            }
+
             function prepareConfirmSummary(form) {
                 var summary = confirmModal ? confirmModal.querySelector("[data-cef-confirm-summary]") : null;
                 if (!summary) return;
@@ -2632,6 +2651,26 @@
                 return true;
             }
 
+            function applyConfirmFechaInscripcion(form) {
+                if (!form || !form.hasAttribute("data-cef-require-fecha-inscripcion")) return true;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion]") : null;
+                var fechaInscripcion = input ? input.value : "";
+                if (!fechaInscripcion) {
+                    setConfirmFeedback("Indicá la fecha de incorporación al grupo.");
+                    if (input) input.focus();
+                    return false;
+                }
+                var hidden = form.querySelector("input[name='fecha_inscripcion']");
+                if (!hidden) {
+                    hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "fecha_inscripcion";
+                    form.appendChild(hidden);
+                }
+                hidden.value = fechaInscripcion;
+                return true;
+            }
+
             function openConfirmForm(form) {
                 if (!form) return false;
                 var controller = modalController();
@@ -2642,6 +2681,7 @@
                 setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
                 setConfirmFeedback("");
                 prepareConfirmSummary(form);
+                prepareConfirmFechaInscripcion(form);
                 prepareConfirmMotivo(form);
                 try {
                     controller.show();
@@ -2793,6 +2833,7 @@
 
                 if (!event.target.closest("[data-cef-confirm-accept]")) return;
                 if (!pendingConfirmForm) return;
+                if (!applyConfirmFechaInscripcion(pendingConfirmForm)) return;
                 if (!applyConfirmMotivo(pendingConfirmForm)) return;
                 if (pendingConfirmForm.hasAttribute("data-cef-ajax-post")) {
                     submitAjaxForm(pendingConfirmForm, event.target.closest("[data-cef-confirm-accept]"));

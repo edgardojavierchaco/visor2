@@ -576,7 +576,11 @@ def _alta_alumno_gestionar(request, grupo):
         pk=inscripcion_id,
     )
     try:
-        reinscribir_alumno(inscripcion, request.user)
+        reinscribir_alumno(
+            inscripcion,
+            request.user,
+            fecha_inscripcion=request.POST.get("fecha_inscripcion"),
+        )
         return True, "Alumno reinscripto correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)

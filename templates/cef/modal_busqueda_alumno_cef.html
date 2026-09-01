@@ -400,12 +400,14 @@
                                             {% if inscripcion_abierta %}
                                                 <span style="font-size:.8rem;color:#64748b;font-style:italic">Ya inscripto</span>
                                             {% else %}
-                                                <form method="post" action="{{ modal_action_url }}" style="display:contents" data-modal-post-form>
+                                                <form method="post" action="{{ modal_action_url }}" class="d-flex flex-column gap-1 align-items-stretch" data-modal-post-form>
                                                     {% csrf_token %}
                                                     <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                                     {% if origen %}<input type="hidden" name="origen" value="{{ origen }}">{% endif %}
                                                     <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
+                                                    <label class="form-label small fw-bold mb-0" for="cefFechaInscripcionGrupo">Fecha de incorporación al grupo</label>
+                                                    <input id="cefFechaInscripcionGrupo" class="form-control form-control-sm" type="date" name="fecha_inscripcion" required>
                                                     <button class="cef-modal-inline-btn" type="submit">
                                                         <i class="fa-solid fa-user-check"></i> Inscribir
                                                     </button>

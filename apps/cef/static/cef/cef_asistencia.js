@@ -104,6 +104,19 @@
         return url.toString();
     }
 
+    function submitDateForm(dateForm) {
+        if (typeof dateForm.requestSubmit === "function") {
+            dateForm.requestSubmit();
+        } else if (dateForm.reportValidity() && confirmNavigation()) {
+            loadDate(formUrl(dateForm));
+        }
+    }
+
+    function hasCompleteDateValue(dateInput) {
+        return /^\d{4}-\d{2}-\d{2}$/.test(dateInput.value)
+            && !dateInput.validity.badInput;
+    }
+
     function showTab(name, moveFocus) {
         var target = workspace();
         if (!target) return;
@@ -151,12 +164,13 @@
 
     document.addEventListener("change", function (event) {
         if (event.target.matches("[data-cef-asistencia-fecha] input[name='fecha']")) {
+            var dateInput = event.target;
             var dateForm = event.target.form;
-            if (typeof dateForm.requestSubmit === "function") {
-                dateForm.requestSubmit();
-            } else if (dateForm.reportValidity() && confirmNavigation()) {
-                loadDate(formUrl(dateForm));
-            }
+            var expectedYear = dateForm.dataset.cefAsistenciaAnio;
+            if (!hasCompleteDateValue(dateInput)) return;
+            if (dateInput === document.activeElement
+                && dateInput.value.slice(0, 4) !== expectedYear) return;
+            submitDateForm(dateForm);
             return;
         }
         if (event.target.matches("[data-cef-asistencia-guardado] select[name^='asistencia_']")) {
@@ -165,6 +179,19 @@
             updateProgress(target);
         }
     });
+
+    document.addEventListener("blur", function (event) {
+        if (!event.target.matches("[data-cef-asistencia-fecha] input[name='fecha']")) {
+            return;
+        }
+        var dateInput = event.target;
+        var dateForm = dateInput.form;
+        if (!hasCompleteDateValue(dateInput)
+            || dateInput.value.slice(0, 4) === dateForm.dataset.cefAsistenciaAnio) {
+            return;
+        }
+        submitDateForm(dateForm);
+    }, true);
 
     document.addEventListener("keydown", function (event) {
         var tab = event.target.closest("[data-cef-asistencia-tab]");

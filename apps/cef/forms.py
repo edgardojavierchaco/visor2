@@ -26,6 +26,7 @@ from .models import (
     CefRangoEtario,
     CefTurno,
 )
+from .services import validar_fecha_inscripcion_grupo
 
 
 def _solo_digitos(valor):
@@ -565,16 +566,29 @@ class CefInscripcionForm(forms.ModelForm):
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
-            "fecha_inscripcion": "Fecha de inscripción",
+            "fecha_inscripcion": "Fecha de incorporación al grupo",
             "observaciones": "Observaciones",
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, grupo=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.grupo = grupo
+        if self.grupo is None and getattr(self.instance, "pk", None):
+            self.grupo = self.instance.grupo
+        self.fields["fecha_inscripcion"].required = True
         if not self.is_bound and not getattr(self.instance, "pk", None):
-            self.fields["fecha_inscripcion"].initial = timezone.localdate
+            self.fields["fecha_inscripcion"].initial = None
+            self.initial["fecha_inscripcion"] = None
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+    def clean_fecha_inscripcion(self):
+        fecha_inscripcion = self.cleaned_data.get("fecha_inscripcion")
+        if self.grupo is None:
+            raise forms.ValidationError(
+                "No se pudo validar el ciclo del grupo seleccionado."
+            )
+        return validar_fecha_inscripcion_grupo(self.grupo, fecha_inscripcion)
 
 
 class CefBusquedaDocenteForm(forms.Form):

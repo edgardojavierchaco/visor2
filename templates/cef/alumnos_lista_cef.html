@@ -79,14 +79,14 @@
                                             <ul class="dropdown-menu cef-alumno-dropdown-menu" data-cef-alumno-dropdown-menu>
                                             {% for grupo in item.grupos_asignables %}
                                                 <li>
-                                                <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0">
+                                                <form method="post" action="{% url 'cef:alumnos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-require-fecha-inscripcion data-cef-confirm-title="Inscribir alumno al grupo" data-cef-confirm-message="Indicá la fecha efectiva de incorporación antes de confirmar la inscripción." data-cef-confirm-entity="{{ item.alumno_nombre_snapshot|default:item.alumno }} · Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="accion" value="inscribir_grupo">
                                                     <input type="hidden" name="alumno_banco_id" value="{{ item.pk }}">
                                                     <input type="hidden" name="grupo_id" value="{{ grupo.pk }}">
                                                     <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                                                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
-                                                    <button class="dropdown-item" type="submit">
+                                                    <button class="dropdown-item" type="button" data-cef-confirm-open>
                                                         <span>Grupo {{ grupo.actividad }} Nro. {{ grupo.numero }}</span>
                                                         <small>{{ grupo.turno }} · Rango: {{ grupo.rango_etario|default:"-" }} · {{ grupo.get_estado_display }}</small>
                                                     </button>
@@ -107,7 +107,7 @@
                                             </ul>
                                         </div>
                                     {% elif item.estado == 'activo' %}
-                                        <span class="text-muted small">Sin grupos cargados</span>
+                                        <span class="text-muted small mr-2">Sin grupos cargados</span>
                                     {% endif %}
                                     {% if item.url_editar_alumno %}
                                         <a class="btn btn-outline-primary btn-sm" title="Editar datos del alumno" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">

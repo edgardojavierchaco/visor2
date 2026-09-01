@@ -21,7 +21,7 @@
             </div>
 
             <div id="cef-asistencia-date-edit" class="cef-asistencia-date-edit"{% if fecha and not fecha_error %} hidden{% endif %} data-cef-asistencia-fecha-edit>
-                <form method="get" action="{{ asistencia_url }}" data-cef-asistencia-fecha>
+                <form method="get" action="{{ asistencia_url }}" data-cef-asistencia-fecha data-cef-asistencia-anio="{{ grupo.ciclo.anio }}">
                     <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
                     {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                     {% if modo_historial %}<input type="hidden" name="modo" value="historial">{% endif %}

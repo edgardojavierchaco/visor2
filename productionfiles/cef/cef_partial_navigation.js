@@ -4,6 +4,7 @@
     var controller = null;
     var requestId = 0;
     var loadingDelay = 200;
+    var activeMenuStateKey = "cef-active-menu-before-page-navigation";
     var navigationSelector =
         "[data-cef-section-link][data-cef-fragment-url], " +
         "[data-cef-view-link][data-cef-fragment-url]";
@@ -47,6 +48,33 @@
             if (active) link.setAttribute("aria-current", "page");
             else link.removeAttribute("aria-current");
         });
+    }
+
+    function saveActiveMenuState() {
+        var activeLink = document.querySelector(".cef-module-nav .nav-link.active");
+        if (!activeLink) return;
+        try {
+            window.sessionStorage.setItem(activeMenuStateKey, activeLink.href);
+        } catch (error) {
+            return;
+        }
+    }
+
+    function restoreActiveMenuState() {
+        var activeHref;
+        try {
+            activeHref = window.sessionStorage.getItem(activeMenuStateKey);
+            window.sessionStorage.removeItem(activeMenuStateKey);
+        } catch (error) {
+            return;
+        }
+        if (!activeHref) return;
+        var activeLink = Array.prototype.slice.call(
+            document.querySelectorAll(".cef-module-nav .nav-link")
+        ).find(function (link) {
+            return link.href === activeHref;
+        });
+        if (activeLink) setActive(activeLink);
     }
 
     function setViewActive(activeLink) {
@@ -334,4 +362,10 @@
         }
         load(link, targetUrl, false);
     });
+
+    window.CEFPartialNavigation = {
+        saveActiveMenuState: saveActiveMenuState,
+        setActive: setActive,
+        restoreActiveMenuState: restoreActiveMenuState
+    };
 })();
