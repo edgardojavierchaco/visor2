@@ -1,18 +1,44 @@
 <div class="cef-panel cef-docentes-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Docentes <span>» Gestión de Docentes</span></h2>
-        {% if especial_context.puede_operar %}
-            <div class="cef-panel-actions">
+        <div class="cef-panel-actions{% if not especial_context.puede_operar or modo_historial_docentes %} is-empty{% endif %}" data-especial-subview-actions>
+            {% if especial_context.puede_operar and not modo_historial_docentes %}
                 <button class="btn btn-primary" type="button" data-open-docentes-modal>
                     <i class="fa-solid fa-chalkboard-user"></i> Agregar docente
                 </button>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
-    <div class="cef-panel-body">
-        <div data-cef-fragment="profesores-banco">
-            {% include "especial/partials/docentes_tabla_especial.html" %}
+    <div class="cef-panel-body" data-especial-search data-especial-search-view="{{ vista_docentes }}" data-especial-search-view-param="vista" data-especial-search-term-param="q" data-especial-search-page-param="page" data-especial-search-results-selector="[data-especial-search-results]">
+        <div class="cef-alumnos-view-tabs" data-especial-view-tabs role="tablist" aria-label="Vista de docentes">
+            <a class="cef-alumnos-view-tab{% if not modo_historial_docentes %} is-active{% endif %}" href="{{ docentes_actuales_url }}" data-especial-search-state-link data-especial-subview-link data-especial-target-selector="[data-especial-search-results]" data-especial-subview="actuales" data-especial-section="docentes" role="tab" aria-selected="{% if not modo_historial_docentes %}true{% else %}false{% endif %}">Actuales</a>
+            <a class="cef-alumnos-view-tab{% if modo_historial_docentes %} is-active{% endif %}" href="{{ docentes_historial_url }}" data-especial-search-state-link data-especial-subview-link data-especial-target-selector="[data-especial-search-results]" data-especial-subview="historial" data-especial-section="docentes" role="tab" aria-selected="{% if modo_historial_docentes %}true{% else %}false{% endif %}">Historial</a>
+            <span class="cef-alumnos-view-indicator" data-especial-view-indicator aria-hidden="true"></span>
+        </div>
+
+        <div class="cef-tools">
+            <div class="cef-tools-left">
+                <div class="cef-search-wrap">
+                    <span class="especial-material-symbol cef-search-icon" aria-hidden="true">tab_search</span>
+                    <input id="searchProfesores" type="text" value="{{ termino_busqueda_docentes }}" placeholder="Buscar por nombre, CUIL, DNI o sección..." maxlength="100" autocomplete="off" data-especial-search-input aria-label="Buscar docentes por nombre, CUIL, DNI o sección">
+                </div>
+            </div>
+            <div class="cef-tools-right" data-especial-current-only>
+                <span class="cef-tools-label">Mostrar</span>
+                <select data-cef-page-size data-especial-search-page-size>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="cef-tools-label">registros</span>
+            </div>
+        </div>
+
+        <div data-especial-search-results data-especial-search-mode="{% if modo_historial_docentes %}server{% else %}client{% endif %}" data-especial-search-count-label="docentes">
+            <div data-cef-fragment="profesores-banco">
+                {% include "especial/partials/docentes_tabla_especial.html" %}
+            </div>
         </div>
     </div>
 </div>
@@ -489,6 +515,581 @@
         .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-card-actions .btn,
         .cef-docente-overlay[data-cef-asignaciones-modal] .cef-asignacion-role-form select {
             width: 100%;
+        }
+    }
+
+    .cef-docentes-panel .cef-alumnos-view-tabs {
+        align-items: flex-end;
+        border-bottom: 1px solid var(--blue-100);
+        display: flex;
+        gap: 1.25rem;
+        margin: 0 0 1rem;
+        min-height: 2.25rem;
+        position: relative;
+        width: max-content;
+    }
+
+    .cef-docentes-panel .cef-alumnos-view-tab {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 500;
+        min-height: 2.25rem;
+        padding: .35rem .1rem .55rem;
+        text-decoration: none;
+        transition: color 150ms ease;
+    }
+
+    .cef-docentes-panel .cef-alumnos-view-tab:hover,
+    .cef-docentes-panel .cef-alumnos-view-tab:focus-visible,
+    .cef-docentes-panel .cef-alumnos-view-tab.is-active,
+    .cef-docentes-panel .cef-alumnos-view-tab.is-pending {
+        color: var(--primary-dark);
+    }
+
+    .cef-docentes-panel .cef-alumnos-view-tab.is-active,
+    .cef-docentes-panel .cef-alumnos-view-tab.is-pending {
+        font-weight: 700;
+    }
+
+    .cef-docentes-panel .cef-alumnos-view-indicator {
+        background: var(--primary-dark);
+        border-radius: 2px 2px 0 0;
+        bottom: -1px;
+        height: 3px;
+        left: 0;
+        pointer-events: none;
+        position: absolute;
+        transform: translateX(0);
+        transition: transform 180ms cubic-bezier(.2, 0, 0, 1);
+        width: 4.5rem;
+    }
+
+    .cef-docentes-panel [data-especial-current-only] {
+        align-items: center;
+        display: flex;
+        gap: .5rem;
+    }
+
+    .cef-docentes-panel:has([data-especial-search-results][data-especial-search-mode="server"]) [data-especial-current-only] {
+        display: none;
+    }
+
+    .cef-docentes-panel .cef-alumnos-table thead th,
+    .cef-docentes-panel .cef-alumnos-table tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .cef-docentes-panel .cef-alumnos-table tbody tr[data-especial-search-row],
+    .cef-docentes-panel .cef-alumnos-table tbody tr[data-especial-search-row]:hover {
+        background: #fff !important;
+    }
+
+    .cef-docentes-panel .cef-historial-table thead tr {
+        background: var(--blue-900);
+        border-bottom: 2px solid var(--blue-800);
+    }
+
+    .cef-docentes-panel .cef-historial-table thead th {
+        color: var(--surface);
+        text-align: left;
+    }
+
+    .cef-docentes-panel .cef-historial-table th,
+    .cef-docentes-panel .cef-historial-table td {
+        vertical-align: middle;
+    }
+
+    .cef-docentes-panel .cef-historial-table th:nth-child(n + 2),
+    .cef-docentes-panel .cef-historial-table td:nth-child(n + 2) {
+        text-align: center;
+    }
+
+    .cef-docentes-panel .cef-historial-table .cef-historial-detail-row > td {
+        text-align: left;
+    }
+
+    .cef-docentes-panel .cef-historial-summary-row > td {
+        padding-bottom: .7rem;
+        padding-top: .7rem;
+    }
+
+    .cef-docentes-panel .cef-historial-alumno {
+        align-items: center;
+        display: flex;
+        gap: .55rem;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .cef-docentes-panel .cef-historial-alumno > strong {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-docentes-panel .cef-historial-summary-chevron {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        color: var(--slate-600);
+        cursor: pointer;
+        display: inline-flex;
+        flex: 0 0 20px;
+        font-size: 20px;
+        justify-content: center;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        transition: transform 150ms ease, color 150ms ease;
+    }
+
+    .cef-docentes-panel .cef-historial-summary-chevron:focus-visible {
+        border-radius: var(--r-sm);
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+    }
+
+    .cef-docentes-panel .cef-historial-summary-row:has([data-especial-historial-toggle][aria-expanded="true"]) .cef-historial-summary-chevron {
+        color: var(--primary);
+        transform: rotate(90deg);
+    }
+
+    .cef-docentes-panel .cef-historial-person {
+        align-items: center;
+        background: var(--blue-50);
+        border-radius: 50%;
+        color: var(--primary);
+        display: inline-flex;
+        flex: 0 0 36px;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+    }
+
+    .cef-docentes-panel .cef-historial-person .especial-material-symbol {
+        font-size: 23px;
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    }
+
+    .cef-docentes-panel .cef-historial-status {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        gap: .35rem;
+        line-height: 1.15;
+        min-height: 24px;
+        padding: .25rem .55rem;
+        white-space: nowrap;
+    }
+
+    .cef-docentes-panel .cef-historial-status.is-active {
+        background: var(--green-100);
+        border: 1px solid currentColor;
+        color: var(--green-700);
+    }
+
+    .cef-docentes-panel .cef-historial-status.is-closed {
+        background: var(--red-100);
+        border: 1px solid currentColor;
+        color: var(--red-700);
+    }
+
+    .cef-docentes-panel .cef-historial-status-context {
+        color: var(--text-faint);
+        display: block;
+        font-size: var(--fs-xs);
+        margin-top: .25rem;
+        text-align: center;
+    }
+
+    .cef-docentes-panel .cef-historial-toggle {
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid currentColor;
+        color: var(--blue-800);
+        display: inline-flex;
+        gap: .35rem;
+        justify-content: center;
+        line-height: 1;
+        min-height: 36px;
+        padding: .3rem .65rem;
+    }
+
+    .cef-docentes-panel .cef-historial-toggle:hover,
+    .cef-docentes-panel .cef-historial-toggle:focus-visible {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-docentes-panel .cef-historial-toggle:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+
+    .cef-docentes-panel .cef-historial-icon,
+    .cef-docentes-panel .cef-historial-node-icon {
+        font-size: 24px;
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+        line-height: 1;
+    }
+
+    .cef-docentes-panel .cef-historial-detail-row > td {
+        background: var(--surface-muted);
+        padding: .5rem;
+    }
+
+    .cef-docentes-panel .cef-historial-detail {
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-xs);
+        padding: .75rem 1rem 1rem;
+    }
+
+    .cef-docentes-panel .cef-historial-detail-head {
+        align-items: baseline;
+        border-bottom: 1px solid var(--blue-100);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        justify-content: space-between;
+        margin-bottom: .75rem;
+        padding-bottom: .6rem;
+    }
+
+    .cef-docentes-panel .cef-historial-detail-head strong {
+        color: var(--blue-900);
+    }
+
+    .cef-docentes-panel .cef-historial-detail-head span {
+        color: var(--text-faint);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cef-docentes-panel .cef-historial-timeline {
+        border-left: 2px solid var(--slate-300);
+        margin-left: .7rem;
+        padding-left: 1.25rem;
+    }
+
+    .cef-docentes-panel .cef-historial-grid-head,
+    .cef-docentes-panel .cef-historial-periodo-grid {
+        display: grid;
+        gap: .65rem;
+        grid-template-columns:
+            minmax(2.75rem, .5fr)
+            minmax(0, .65fr)
+            minmax(0, .8fr)
+            minmax(0, 1fr)
+            minmax(0, 1fr)
+            minmax(0, 1.25fr)
+            minmax(0, 1.15fr)
+            minmax(0, .95fr)
+            minmax(10rem, 2.25fr);
+    }
+
+    .cef-docentes-panel .cef-historial-grid-head {
+        background: var(--blue-50);
+        border-bottom: 1px solid var(--blue-200);
+        color: var(--slate-700);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        padding: .5rem .65rem;
+        text-transform: uppercase;
+    }
+
+    .cef-docentes-panel .cef-historial-grid-head span:first-child {
+        visibility: hidden;
+    }
+
+    .cef-docentes-panel .cef-historial-periodo {
+        padding: .75rem .65rem;
+        position: relative;
+    }
+
+    .cef-docentes-panel .cef-historial-periodo + .cef-historial-periodo {
+        border-top: 1px solid var(--slate-200);
+    }
+
+    .cef-docentes-panel .cef-historial-periodo:last-child {
+        padding-bottom: 0;
+    }
+
+    .cef-docentes-panel .cef-historial-timeline-node {
+        background: var(--surface);
+        color: var(--slate-500);
+        left: -1.98rem;
+        line-height: 1;
+        position: absolute;
+        top: 1rem;
+    }
+
+    .cef-docentes-panel .cef-historial-periodo.is-active .cef-historial-timeline-node {
+        color: var(--green-600);
+    }
+
+    .cef-docentes-panel .cef-historial-periodo.is-closed .cef-historial-timeline-node {
+        color: var(--red-700);
+    }
+
+    .cef-docentes-panel .cef-historial-periodo-grid {
+        align-items: start;
+    }
+
+    .cef-docentes-panel .cef-historial-periodo-calendar {
+        align-items: center;
+        background: var(--slate-100);
+        border-radius: var(--r-sm);
+        color: var(--slate-600);
+        display: flex;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+    }
+
+    .cef-docentes-panel .cef-historial-periodo.is-active .cef-historial-periodo-calendar {
+        background: var(--green-100);
+        color: var(--green-700);
+    }
+
+    .cef-docentes-panel .cef-historial-periodo.is-closed .cef-historial-periodo-calendar {
+        background: var(--red-100);
+        color: var(--red-700);
+    }
+
+    .cef-docentes-panel .cef-historial-periodo-cell {
+        color: var(--slate-800);
+        line-height: 1.35;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        padding-top: .35rem;
+    }
+
+    .cef-docentes-panel .cef-historial-periodo-cell .cef-historial-status {
+        padding-left: .5rem;
+        padding-right: .5rem;
+    }
+
+    .cef-docentes-panel .cef-historial-inscripciones,
+    .cef-docentes-panel .cef-historial-asignaciones-estado {
+        align-items: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        min-width: 0;
+    }
+
+    .cef-docentes-panel .cef-historial-asignaciones-list {
+        align-items: flex-start;
+        display: flex;
+        flex: 1 1 100%;
+        flex-direction: column;
+        flex-wrap: wrap;
+        gap: .4rem;
+        list-style: none;
+        margin: 0;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .cef-docentes-panel .cef-historial-asignaciones-list li {
+        flex: 0 0 auto;
+        margin: 0;
+        max-width: 100%;
+        padding: 0;
+        width: 100%;
+    }
+
+    .cef-docentes-panel .cef-historial-asignaciones-status-list li {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        min-height: 36px;
+    }
+
+    .cef-docentes-panel .cef-alumno-seccion-item {
+        align-items: center;
+        align-self: center;
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-md);
+        box-sizing: border-box;
+        color: inherit;
+        display: flex;
+        gap: .4rem;
+        max-width: 100%;
+        padding: .35rem .5rem;
+        text-align: left;
+        text-decoration: none;
+        width: 270px;
+    }
+
+    .cef-docentes-panel .cef-alumno-seccion-item.cef-historial-inscripcion-cabecera {
+        align-self: flex-start;
+        border-color: var(--blue-200);
+        box-shadow: none;
+        cursor: default;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .cef-docentes-panel .cef-alumno-seccion-icon {
+        align-items: center;
+        background: var(--blue-50);
+        border-radius: 50%;
+        color: var(--primary);
+        display: flex;
+        flex: 0 0 24px;
+        font-size: .75rem;
+        height: 24px;
+        justify-content: center;
+        width: 24px;
+    }
+
+    .cef-docentes-panel .cef-alumno-seccion-text {
+        color: var(--blue-800);
+        font-size: var(--fs-xs);
+        font-weight: 600;
+        line-height: 1.25;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-docentes-panel .cef-alumno-seccion-type {
+        color: var(--blue-700);
+        font-weight: 600;
+    }
+
+    .cef-docentes-panel .cef-historial-inscripcion-name {
+        line-height: 1.3;
+    }
+
+    .cef-docentes-panel .cef-historial-docente-assignment-meta {
+        color: var(--text-faint);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        margin-top: .2rem;
+    }
+
+    .cef-docentes-panel .cef-historial-assignment-status {
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: .68rem;
+        line-height: 1.1;
+        padding: .12rem .35rem;
+    }
+
+    .cef-docentes-panel .cef-historial-assignment-status.is-active {
+        background: var(--green-100);
+        color: var(--green-700);
+    }
+
+    .cef-docentes-panel .cef-historial-assignment-status.is-closed {
+        background: var(--red-100);
+        color: var(--red-700);
+    }
+
+    @media (max-width: 960px) {
+        .cef-docentes-panel .cef-historial-grid-head {
+            display: none;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-grid {
+            grid-template-columns: 2.75rem repeat(2, minmax(0, 1fr));
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-calendar {
+            grid-column: 1;
+            grid-row: 1 / span 5;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(2),
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(4),
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(6),
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(8) {
+            grid-column: 2;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(3),
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(5),
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(7),
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(9) {
+            grid-column: 3;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-cell::before {
+            color: var(--text-faint);
+            content: attr(data-label);
+            display: block;
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: .15rem;
+            text-transform: uppercase;
+        }
+
+        .cef-docentes-panel .cef-historial-inscripciones::before,
+        .cef-docentes-panel .cef-historial-asignaciones-estado::before {
+            flex: 0 0 100%;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(9) {
+            grid-column: 2 / -1;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .cef-docentes-panel .cef-historial-periodo-grid {
+            grid-template-columns: 2.75rem minmax(0, 1fr);
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-calendar {
+            grid-column: 1;
+            grid-row: 1 / span 8;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-cell:nth-child(n + 2) {
+            grid-column: 2;
+        }
+
+        .cef-docentes-panel .cef-historial-periodo-cell {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .cef-docentes-panel .cef-historial-detail-row > td {
+            padding-inline: .35rem;
+        }
+
+        .cef-docentes-panel .cef-historial-detail {
+            padding-inline: .65rem;
+        }
+
+        .cef-docentes-panel .cef-historial-timeline {
+            margin-left: .4rem;
+            padding-left: 1rem;
+        }
+
+        .cef-docentes-panel .cef-historial-timeline-node {
+            left: -1.7rem;
+        }
+
+        .cef-docentes-panel .cef-historial-toggle {
+            white-space: normal;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .cef-docentes-panel .cef-panel-actions[data-especial-subview-actions].is-empty {
+            min-height: 0;
         }
     }
 

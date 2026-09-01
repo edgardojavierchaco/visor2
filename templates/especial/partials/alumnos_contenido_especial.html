@@ -81,17 +81,79 @@
                                     {% endwith %}
                                 </td>
                                 <td class="cef-act-cell">
-                                    <div class="cef-alumnos-actions">
-                                        {% if item.url_editar_alumno %}
-                                            <a class="btn btn-outline-primary btn-sm cef-secciones-action cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener">
-                                                <i class="fa-solid fa-pen-to-square"></i> Editar datos
-                                            </a>
-                                        {% endif %}
-                                        {% if especial_context.puede_operar and item.estado == 'activo' %}
-                                            <a class="btn btn-danger btn-sm" href="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open>
-                                                <i class="fa-solid fa-user-slash"></i> Dar de baja
-                                            </a>
-                                        {% endif %}
+                                    <div class="dropdown cef-secciones-row-actions" data-cef-row-actions>
+                                        <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-actions-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false" aria-haspopup="menu" title="Acciones del alumno" aria-label="Acciones del alumno">
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                        </button>
+                                        <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu role="menu">
+                                            <li role="none">
+                                                <div class="cef-alumnos-actions">
+                                                    {% if especial_context.puede_operar and item.estado == 'activo' and item.secciones_asignables %}
+                                                        <button class="btn btn-sm cef-secciones-action is-primary" type="button" data-especial-alumno-action-options-toggle aria-expanded="false" aria-controls="alumno-inscribir-opciones-{{ item.pk }}">
+                                                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Inscribir a secci&oacute;n
+                                                        </button>
+                                                        <div id="alumno-inscribir-opciones-{{ item.pk }}" class="cef-alumno-action-options" data-especial-alumno-action-options hidden>
+                                                            {% for seccion in item.secciones_asignables %}
+                                                                <a class="cef-alumno-action-option" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" role="menuitem">
+                                                                    <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                                                                    <span>{{ seccion.nombre_seccion }}</span>
+                                                                </a>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        <button class="btn btn-sm cef-secciones-action is-primary" type="button" disabled aria-disabled="true">
+                                                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Inscribir a secci&oacute;n
+                                                        </button>
+                                                    {% endif %}
+
+                                                    {% if especial_context.puede_operar and item.estado == 'activo' and item.inscripciones_seccion %}
+                                                        {% if item.inscripciones_seccion|length == 1 %}
+                                                            {% with inscripcion=item.inscripciones_seccion.0 %}
+                                                                <a class="btn btn-sm cef-secciones-action is-outline" href="{% url 'especial:editar_inscripcion_seccion' inscripcion.seccion.pk inscripcion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" role="menuitem">
+                                                                    <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar secci&oacute;n
+                                                                </a>
+                                                            {% endwith %}
+                                                        {% else %}
+                                                            <button class="btn btn-sm cef-secciones-action is-outline" type="button" data-especial-alumno-action-options-toggle aria-expanded="false" aria-controls="alumno-editar-seccion-opciones-{{ item.pk }}">
+                                                                <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar secci&oacute;n
+                                                            </button>
+                                                            <div id="alumno-editar-seccion-opciones-{{ item.pk }}" class="cef-alumno-action-options" data-especial-alumno-action-options hidden>
+                                                                {% for inscripcion in item.inscripciones_seccion %}
+                                                                    <a class="cef-alumno-action-option" href="{% url 'especial:editar_inscripcion_seccion' inscripcion.seccion.pk inscripcion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" role="menuitem">
+                                                                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                                                                        <span>{{ inscripcion.seccion.nombre_seccion }}</span>
+                                                                    </a>
+                                                                {% endfor %}
+                                                            </div>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <button class="btn btn-sm cef-secciones-action is-outline" type="button" disabled aria-disabled="true">
+                                                            <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar secci&oacute;n
+                                                        </button>
+                                                    {% endif %}
+
+                                                    {% if item.url_editar_alumno %}
+                                                        <a class="btn btn-sm cef-secciones-action is-outline cef-modal-link" href="{{ item.url_editar_alumno }}" target="_blank" rel="noopener" role="menuitem">
+                                                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar datos
+                                                        </a>
+                                                    {% else %}
+                                                        <button class="btn btn-sm cef-secciones-action is-outline" type="button" disabled aria-disabled="true">
+                                                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar datos
+                                                        </button>
+                                                    {% endif %}
+
+                                                    {% if especial_context.puede_operar and item.estado == 'activo' %}
+                                                        <a class="btn btn-danger btn-sm cef-secciones-action" href="{% url 'especial:alumnos' %}{% if alumnos_querystring %}?{{ alumnos_querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&alumno_banco_id={{ item.pk }}" data-especial-baja-open role="menuitem">
+                                                            <i class="fa-solid fa-user-slash" aria-hidden="true"></i> Dar de baja
+                                                        </a>
+                                                    {% else %}
+                                                        <button class="btn btn-danger btn-sm cef-secciones-action" type="button" disabled aria-disabled="true">
+                                                            <i class="fa-solid fa-user-slash" aria-hidden="true"></i> Dar de baja
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </td>
                             </tr>
@@ -117,7 +179,9 @@
                             <tr class="cef-historial-summary-row" id="alumno-historial-resumen-{{ item.alumno_id }}">
                                 <td>
                                     <div class="cef-historial-alumno">
-                                        <span class="especial-material-symbol cef-historial-summary-chevron" aria-hidden="true">chevron_right</span>
+                                        <button class="especial-material-symbol cef-historial-summary-chevron" type="button" data-especial-historial-toggle data-especial-historial-detail="alumno-historial-detalle-{{ item.alumno_id }}" aria-expanded="false" aria-controls="alumno-historial-detalle-{{ item.alumno_id }}" aria-label="Abrir o cerrar historial del alumno">
+                                            chevron_right
+                                        </button>
                                         <span class="cef-historial-person" aria-hidden="true">
                                             <span class="especial-material-symbol">person</span>
                                         </span>
@@ -343,10 +407,26 @@
     }
 
     .cef-historial-summary-chevron {
+        align-items: center;
+        background: transparent;
+        border: 0;
         color: var(--slate-600);
+        cursor: pointer;
+        display: inline-flex;
         flex: 0 0 20px;
         font-size: 20px;
+        justify-content: center;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
+        text-align: center;
         transition: transform 150ms ease, color 150ms ease;
+    }
+
+    .cef-historial-summary-chevron:focus-visible {
+        border-radius: var(--r-sm);
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
     }
 
     .cef-historial-summary-row:has([data-especial-historial-toggle][aria-expanded="true"]) .cef-historial-summary-chevron {
@@ -1084,7 +1164,10 @@
     }
 
     .cef-alumnos-table .cef-row-actions-menu > li > .cef-alumnos-actions {
-        display: block;
+        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: .4rem;
         margin: 0;
         max-width: none;
         width: 100%;
@@ -1174,6 +1257,68 @@
         flex: 0 0 1rem;
         text-align: center;
         width: 1rem;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action {
+        align-items: center;
+        box-sizing: border-box;
+        display: flex;
+        height: 36px;
+        justify-content: center;
+        line-height: 1;
+        min-height: 36px;
+        max-height: 36px;
+        margin: 0;
+        padding: 0 .65rem;
+        width: 100%;
+    }
+
+    .cef-alumnos-table .cef-row-actions-menu .cef-secciones-action:disabled {
+        cursor: not-allowed;
+        opacity: .58;
+        transform: none;
+    }
+
+    .cef-alumno-action-options {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-100);
+        border-radius: var(--r-sm);
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+        box-shadow: var(--shadow-lg);
+        margin: 0;
+        padding: .3rem;
+        position: fixed;
+    }
+
+    .cef-alumno-action-option {
+        align-items: center;
+        border-radius: var(--r-sm);
+        color: var(--blue-800);
+        display: flex;
+        gap: .45rem;
+        min-height: 30px;
+        padding: .35rem .45rem;
+        text-decoration: none;
+    }
+
+    .cef-alumno-action-option:hover,
+    .cef-alumno-action-option:focus-visible {
+        background: var(--surface);
+        color: var(--blue-900);
+        text-decoration: none;
+    }
+
+    .cef-alumno-action-option i {
+        flex: 0 0 1rem;
+        text-align: center;
+        width: 1rem;
+    }
+
+    .cef-alumno-action-option span {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
 </style>

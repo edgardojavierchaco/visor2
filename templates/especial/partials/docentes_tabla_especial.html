@@ -1,28 +1,7 @@
 <!-- templates/especial/partials/docentes_tabla_especial.html -->
-<div class="cef-tools">
-    <div class="cef-tools-left">
-        <span class="cef-tools-label">Mostrar</span>
-        <select data-cef-page-size>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-        </select>
-        <span class="cef-tools-label">registros</span>
-    </div>
-    <div class="cef-tools-right">
-        <div class="cef-search-wrap">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input id="searchProfesores" type="search" placeholder="Buscar..." data-cef-table-search>
-            <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-{% if docentes %}
+{% if docentes and not modo_historial_docentes %}
     <div class="cef-table-wrap">
-        <table class="cef-dt docentes-table" data-cef-table>
+        <table class="cef-dt docentes-table" data-cef-table data-especial-search-table>
             <thead>
                 <tr>
                     <th>Profesor</th>
@@ -37,7 +16,7 @@
             </thead>
             <tbody>
                 {% for docente_banco in docentes %}
-                    <tr>
+                    <tr data-especial-search-row data-especial-search-text="{{ docente_banco.docente_nombre_snapshot }} {{ docente_banco.docente_cuil }} {{ docente_banco.docente_dni_snapshot }} {{ docente_banco.docente_estado_bnh_snapshot }} {% for asignacion in docente_banco.asignaciones_seccion %}{{ asignacion.seccion.nombre_seccion }} {{ asignacion.get_rol_display }} {{ asignacion.get_estado_display }} {% endfor %}">
                         <td><strong>{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}</strong></td>
                         <td>{{ docente_banco.docente_cuil }}</td>
                         <td>{{ docente_banco.docente_dni_snapshot|default:"-" }}</td>
@@ -217,6 +196,145 @@
         {% endfor %}
     </div>
 
+{% elif docentes and modo_historial_docentes %}
+    <div class="cef-table-wrap">
+        <table class="cef-dt cef-alumnos-table cef-historial-table docentes-historial-table" data-especial-search-table>
+            <thead>
+                <tr>
+                    <th>DOCENTE</th>
+                    <th>CUIL</th>
+                    <th>DNI</th>
+                    <th>ESTADO ACTUAL</th>
+                    <th>ACCIÓN ACTUAL</th>
+                    <th>HISTORIAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in docentes %}
+                    <tr class="cef-historial-summary-row" id="docente-historial-resumen-{{ item.docente_cuil }}">
+                        <td>
+                            <div class="cef-historial-alumno">
+                                <button class="especial-material-symbol cef-historial-summary-chevron" type="button" data-especial-historial-toggle data-especial-historial-detail="docente-historial-detalle-{{ item.docente_cuil }}" aria-expanded="false" aria-controls="docente-historial-detalle-{{ item.docente_cuil }}" aria-label="Abrir o cerrar historial del docente">
+                                    chevron_right
+                                </button>
+                                <span class="cef-historial-person" aria-hidden="true">
+                                    <span class="especial-material-symbol">person</span>
+                                </span>
+                                <strong>{{ item.docente_nombre_snapshot|default:item.docente_cuil }}</strong>
+                            </div>
+                        </td>
+                        <td>{{ item.docente_cuil|default:"—" }}</td>
+                        <td>{{ item.docente_dni_snapshot|default:"—" }}</td>
+                        <td>
+                            <span class="cef-historial-status{% if item.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">
+                                {{ item.estado_label }}
+                            </span>
+                            <small class="cef-historial-status-context">en ciclo {{ item.ciclo.anio|default:"—" }}</small>
+                        </td>
+                        <td><span class="text-muted">{{ item.accion_actual|default:"—" }}</span></td>
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm cef-historial-toggle" type="button" data-especial-historial-toggle data-especial-historial-detail="docente-historial-detalle-{{ item.docente_cuil }}" aria-expanded="false" aria-controls="docente-historial-detalle-{{ item.docente_cuil }}">
+                                <span class="especial-material-symbol cef-historial-icon" aria-hidden="true">calendar_clock</span>
+                                Historial ({{ item.historial_periodos|length }})
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="cef-historial-detail-row" id="docente-historial-detalle-{{ item.docente_cuil }}" data-especial-historial-detail-row hidden aria-hidden="true" aria-labelledby="docente-historial-resumen-{{ item.docente_cuil }}">
+                        <td colspan="6">
+                            <section class="cef-historial-detail" aria-label="Historial del docente en Educación Especial">
+                                <header class="cef-historial-detail-head">
+                                    <strong>Historial del docente en Educación Especial</strong>
+                                    <span>Registros: {{ item.historial_periodos|length }}</span>
+                                </header>
+                                <div class="cef-historial-timeline">
+                                    <div class="cef-historial-grid-head">
+                                        <span aria-hidden="true"></span>
+                                        <span>CICLO</span>
+                                        <span>ESTADO</span>
+                                        <span>FECHA DE ALTA</span>
+                                        <span>FECHA DE BAJA</span>
+                                        <span>MOTIVO</span>
+                                        <span>CUE-ANEXO ASOCIADO</span>
+                                        <span>ESTADO DE LA ASIGNACIÓN</span>
+                                        <span>SECCIONES / ASIGNACIONES</span>
+                                    </div>
+                                    {% for periodo in item.historial_periodos %}
+                                        <article class="cef-historial-periodo{% if periodo.banco.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">
+                                            <div class="cef-historial-timeline-node" aria-hidden="true">
+                                                <span class="especial-material-symbol cef-historial-node-icon">fiber_manual_record</span>
+                                            </div>
+                                            <div class="cef-historial-periodo-grid">
+                                                <div class="cef-historial-periodo-calendar" aria-hidden="true">
+                                                    <span class="especial-material-symbol cef-historial-icon">calendar_month</span>
+                                                </div>
+                                                <div class="cef-historial-periodo-cell" data-label="Ciclo">{{ periodo.banco.ciclo.anio|default:"—" }}</div>
+                                                <div class="cef-historial-periodo-cell" data-label="Estado">
+                                                    <span class="cef-historial-status{% if periodo.banco.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">
+                                                        {{ periodo.estado_label }}
+                                                    </span>
+                                                </div>
+                                                <div class="cef-historial-periodo-cell" data-label="Fecha de alta">{{ periodo.banco.fecha_alta|date:"d/m/Y"|default:"—" }}</div>
+                                                <div class="cef-historial-periodo-cell" data-label="Fecha de baja">{{ periodo.banco.fecha_baja|date:"d/m/Y"|default:"—" }}</div>
+                                                <div class="cef-historial-periodo-cell" data-label="Motivo">{{ periodo.banco.motivo_baja|default:"—" }}</div>
+                                                <div class="cef-historial-periodo-cell" data-label="CUE-Anexo asociado">{{ periodo.cueanexo_asociado|default:"—" }}</div>
+                                                <div class="cef-historial-periodo-cell cef-historial-asignaciones-estado" data-label="Estado de la asignación">
+                                                    {% if periodo.asignaciones %}
+                                                        <ul class="cef-historial-asignaciones-list cef-historial-asignaciones-status-list">
+                                                            {% for asignacion in periodo.asignaciones %}
+                                                                <li>
+                                                                    <span class="cef-historial-assignment-status{% if asignacion.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">{{ asignacion.get_estado_display }}</span>
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% else %}
+                                                        <span>—</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="cef-historial-periodo-cell cef-historial-inscripciones" data-label="Secciones / asignaciones">
+                                                    {% if periodo.asignaciones %}
+                                                        <ul class="cef-historial-asignaciones-list">
+                                                            {% for asignacion in periodo.asignaciones %}
+                                                                <li>
+                                                                    <div class="cef-alumno-seccion-item cef-historial-inscripcion-cabecera">
+                                                                        <span class="cef-alumno-seccion-icon" aria-hidden="true">
+                                                                            <i class="fa-solid fa-layer-group"></i>
+                                                                        </span>
+                                                                        <span class="cef-alumno-seccion-text cef-historial-inscripcion-name">
+                                                                            {{ asignacion.seccion.nombre_seccion }}{% if asignacion.seccion.cd_tipo_seccion %}<span class="cef-alumno-seccion-type"> · {{ asignacion.seccion.cd_tipo_seccion }}</span>{% endif %} · {{ asignacion.get_rol_display }}
+                                                                        </span>
+                                                                    </div>
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% else %}
+                                                        <span>Sin sección asignada</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% elif docentes_banco_tabla_pendiente %}
+    <div class="cef-empty-state">No se pudo consultar el banco de docentes en este momento.</div>
+{% elif not especial_context.puede_consultar %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        Seleccioná un CUE-Anexo y un ciclo para ver docentes.
+    </div>
+{% elif busqueda_error_docentes %}
+    <div class="cef-empty-state">No se pudo aplicar la búsqueda solicitada.</div>
+{% elif modo_historial_docentes and termino_busqueda_docentes %}
+    <div class="cef-empty-state">No se encontraron docentes históricos para la búsqueda indicada.</div>
+{% elif modo_historial_docentes %}
+    <div class="cef-empty-state">No hay registros históricos de docentes para este establecimiento.</div>
 {% elif especial_context.puede_consultar %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-chalkboard-user" style="font-size:1.5rem;color:var(--text-faint)"></i>
@@ -229,7 +347,21 @@
     </div>
 {% endif %}
 
+{% if not modo_historial_docentes and docentes %}
+    <div class="cef-empty-state" data-especial-client-empty hidden>No se encontraron docentes para la búsqueda indicada.</div>
+{% endif %}
+
 <div class="cef-tfoot">
-    <span class="cef-tfoot-count" data-cef-table-count>{{ docentes|length }} registros</span>
-    <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+    <span class="cef-tfoot-count" data-cef-table-count>
+        {% if modo_historial_docentes %}{{ page_obj_docentes.paginator.count }} docentes{% else %}{{ docentes|length }} docentes{% endif %}
+    </span>
+    {% if modo_historial_docentes and page_obj_docentes.paginator.num_pages > 1 %}
+        <nav class="cef-tfoot-pagination" data-cef-table-pagination aria-label="Paginación de docentes">
+            {% if page_obj_docentes.has_previous %}<a class="btn btn-outline-primary btn-sm" href="{{ pagina_anterior_docentes_url }}" data-page-prev data-especial-section-link data-especial-section="docentes">Anterior</a>{% endif %}
+            <span class="page-num">Página {{ page_obj_docentes.number }} de {{ page_obj_docentes.paginator.num_pages }}</span>
+            {% if page_obj_docentes.has_next %}<a class="btn btn-outline-primary btn-sm" href="{{ pagina_siguiente_docentes_url }}" data-page-next data-especial-section-link data-especial-section="docentes">Siguiente</a>{% endif %}
+        </nav>
+    {% elif not modo_historial_docentes %}
+        <nav class="cef-tfoot-pagination" data-especial-client-pagination data-cef-table-pagination aria-label="Paginación de docentes"></nav>
+    {% endif %}
 </div>
